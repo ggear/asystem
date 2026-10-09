@@ -446,7 +446,7 @@ var metricBuildersByID = []builder{
 		description: "restarts of the service container since it was created",
 		template:    "supervisor/$HOST/$SCOPE/service/$SERVICE/restart_count",
 		persisted:   true,
-		pulseRule:   All(Gated(GateServiceAggregate), Bounded(Self, AtMost, 80)), trendRule: All(Gated(GateServiceAggregate), Bounded(Self, AtMost, 70)),
+		pulseRule:   All(Gated(GateServiceAggregate), Bounded(Self, AtMost, 5)), trendRule: All(Gated(GateServiceAggregate), Bounded(Self, AtMost, 0)),
 	},
 }
 

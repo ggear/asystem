@@ -249,8 +249,8 @@ func TestZigbee_Report(t *testing.T) {
 		{name: "bulb", available: false, lqi: 40, hasLQI: true},
 	}}
 	points := reportZigbee(latest, now, map[string]float64{"plug": 64.5, "bulb": 40}, 61.25, 70)
-	if len(points) != 4 {
-		t.Fatalf("points: got %d want 4 (two devices and two scores)", len(points))
+	if len(points) != 5+len(zigbeeRouters) {
+		t.Fatalf("points: got %d want %d (two devices, two scores, the coordinator and each router)", len(points), 5+len(zigbeeRouters))
 	}
 	if lqi, ok := zigbeeLQI.Read(points[0]); !ok || lqi != 65 {
 		t.Errorf("lqi[plug]: got %d (set %v) want the window median 65, not the latest 7", lqi, ok)
@@ -267,13 +267,56 @@ func TestZigbee_Report(t *testing.T) {
 	for index, expected := range map[int]struct {
 		name  string
 		value float64
-	}{2: {"router", 61}, 3: {"mesh", 70}} {
+	}{3: {"router", 61}, 4: {"mesh", 70}} {
 		if name, _ := zigbeeExperienceName.Read(points[index]); name != expected.name {
 			t.Errorf("score[%d]: got %q want %q", index, name, expected.name)
 		}
 		if value, _ := zigbeeExperiencePct.Read(points[index]); value != expected.value {
 			t.Errorf("value[%s]: got %v want %v", expected.name, value, expected.value)
 		}
+	}
+}
+
+func TestZigbee_ReportRouters(t *testing.T) {
+	now := time.Date(2026, 10, 7, 9, 0, 0, 0, time.UTC)
+	latest := zigbeeSample{online: false, devices: []zigbeeReading{
+		{name: zigbeeRouters[0], available: true, lqi: 7, hasLQI: true},
+		{name: zigbeeRouters[1], available: false, lqi: 40, hasLQI: true},
+		{name: "bulb", available: true, lqi: 90, hasLQI: true},
+	}}
+	type row struct {
+		name      string
+		available bool
+		lqi       int64
+		hasLQI    bool
+	}
+	var rows []row
+	for _, point := range reportZigbee(latest, now, map[string]float64{zigbeeRouters[0]: 80.4, zigbeeRouters[1]: 40, "bulb": 90}, 60, 70) {
+		name, ok := zigbeeRouterName.Read(point)
+		if !ok {
+			continue
+		}
+		available, _ := zigbeeRouterAvailable.Read(point)
+		lqi, hasLQI := zigbeeRouterLQI.Read(point)
+		rows = append(rows, row{name, available, lqi, hasLQI})
+	}
+	expected := []row{{zigbeeCoordinator, false, 0, false}, {zigbeeRouters[0], true, 80, true}, {zigbeeRouters[1], false, 0, false}}
+	for _, name := range zigbeeRouters[2:] {
+		expected = append(expected, row{name, false, 0, false})
+	}
+	if !slices.Equal(rows, expected) {
+		t.Errorf("routers: got %v want %v", rows, expected)
+	}
+}
+
+func TestZigbee_ReportOnlyTheCoordinatorWithoutDevices(t *testing.T) {
+	points := reportZigbee(zigbeeSample{online: false}, time.Now(), nil, 0, 0)
+	if len(points) != 1 {
+		t.Fatalf("points: got %d want only the coordinator without a device catalogue", len(points))
+	}
+	name, _ := zigbeeRouterName.Read(points[0])
+	if available, ok := zigbeeRouterAvailable.Read(points[0]); name != zigbeeCoordinator || !ok || available {
+		t.Errorf("coordinator: got %q available %v (set %v) want %q unavailable", name, available, ok, zigbeeCoordinator)
 	}
 }
 

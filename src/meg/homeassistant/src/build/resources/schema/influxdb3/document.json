@@ -744,6 +744,7 @@
             "entities": [
               "ada_tablet",
               "ada_tablet_2",
+              "chromecast8482",
               "kitchen_home",
               "lounge_tv",
               "nesthubfb4d",
@@ -790,6 +791,7 @@
               "ada_tablet_2",
               "edwin_group",
               "edwin_home",
+              "edwin_room",
               "kitchen_five",
               "kitchen_move",
               "lounge_arc",

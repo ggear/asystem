@@ -554,9 +554,9 @@ command_stow() {
 }
 
 space_shares() {
-  local drives="${1}"
-  shift
-  "$@" aspace --mode local --filter "${drives}" --symbols ascii --theme mono || true
+  local mode="${1}" drives="${2}"
+  shift 2
+  "$@" aspace --mode "${mode}" --filter "${drives}" --symbols ascii --theme mono || true
 }
 
 process_drives() {
@@ -640,7 +640,7 @@ command_move() {
     print_header "$(hostname)" "move" 0
   fi
   local share_drives="/share/${SHARE_PATH_INDEX},/share/${dest}"
-  space_shares "${share_drives}" "${share_ssh[@]}"
+  space_shares remote "${share_drives}" "${share_ssh[@]}"
   echo ""
   local share_kill_remote="pkill -9 -f 'rsync .*/share/${dest}/'"
   # shellcheck disable=SC2064
@@ -693,13 +693,13 @@ fi
 exit ${result}
 EOF
   echo ""
-  space_shares "${share_drives}" "${share_ssh[@]}"
+  space_shares remote "${share_drives}" "${share_ssh[@]}"
   return ${result}
 }
 
 command_space() {
   print_header "$(hostname)" "space" 0
-  space_shares "$(process_drives)"
+  space_shares local "$(process_drives)"
 }
 
 command_refresh() {

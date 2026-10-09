@@ -2,6 +2,7 @@ from grafana_foundation_sdk.cog import builder as cogbuilder
 from grafana_foundation_sdk.cog import variants as cogvariants
 from grafana_foundation_sdk.models import dashboardv2
 
+from asystem.schema.document import BETTER_HIGHER, BETTER_LOWER
 from asystem.schema.query import expanded, literals, select
 
 STATISTICS = {
@@ -16,6 +17,7 @@ BATCH = 2
 QUARTERS = 4
 TRANSFORMS = ("invert", "baseline", "percent", "complement", "counter", "peak", "trough", "bearing", "compass")
 COMBINES = ("sum", "min", "max", "avg")
+LEVELLED_TRANSFORMS = ("invert", "complement", "percent", "peak", "trough", "min", "max", "avg")
 PERIOD = "@"
 
 
@@ -94,6 +96,24 @@ def valued(expression, measure, transforms):
     if "percent" in transforms:
         expression = "{} * 100".format(expression)
     return expression
+
+
+def judged(better, amber, red, inclusive, unit, transforms):
+    if not set(transforms) <= set(LEVELLED_TRANSFORMS) or ("percent" in transforms and unit):
+        return None
+    pole = -100 if unit == "%" else 0
+    if "invert" in transforms and pole in (amber, red):
+        return None
+    for transform, convert, flips in (
+            ("invert", (lambda bound: 10000.0 / (100 + bound) - 100) if unit == "%" else (lambda bound: 1.0 / bound), True),
+            ("complement", lambda bound: 1 - bound, True),
+            ("percent", lambda bound: bound * 100, False)):
+        if transform in transforms:
+            amber, red = (None if amber is None else round(convert(amber), 6)), (None if red is None else round(convert(red), 6))
+            better = ({BETTER_HIGHER: BETTER_LOWER, BETTER_LOWER: BETTER_HIGHER}[better] if flips else better)
+    if {BETTER_HIGHER: {"peak", "max"}, BETTER_LOWER: {"trough", "min"}}[better] & set(transforms):
+        return None
+    return better, amber, red, inclusive
 
 
 def aggregated(expression, transforms):

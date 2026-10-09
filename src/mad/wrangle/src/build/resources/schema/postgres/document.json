@@ -1,6 +1,6 @@
 {
   "warning": "WARNING: This file is written by the build process, any manual edits will be lost!",
-  "source": "f4f90731fa9578991fd5071764f5a9223bebbed1d578d122885598b1e0bbfeb4",
+  "source": "b9a2c01fcbd958ea93628fb29e766fb53a3b4d4a557a8b19ad9e8ba7c2e9b96f",
   "module": "wrangle",
   "discovered": false,
   "database": {
@@ -30,7 +30,26 @@
             "description": "closing rate for the currency pair",
             "persist": true,
             "period": "1d",
-            "levels": null
+            "levels": {
+              "better": "lower",
+              "amber": null,
+              "red": null,
+              "inclusive": true,
+              "entities": {
+                "AUD/USD": {
+                  "amber": 0.6494,
+                  "red": 0.7937
+                },
+                "AUD/GBP": {
+                  "amber": 0.4785,
+                  "red": 0.5848
+                },
+                "AUD/SGD": {
+                  "amber": 0.8265,
+                  "red": 1.0101
+                }
+              }
+            }
           },
           {
             "key": "delta",

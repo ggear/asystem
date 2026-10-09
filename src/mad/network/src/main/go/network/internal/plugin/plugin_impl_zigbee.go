@@ -32,6 +32,7 @@ const (
 	zigbeeRouterSickBelow = 35.0
 	zigbeeMeshSickBelow   = 50.0
 	zigbeeRouterWeight    = 0.7
+	zigbeeCoordinator     = "Coordinator"
 )
 
 var (
@@ -43,6 +44,11 @@ var (
 	zigbeeLQI       = zigbeeDevice.Int("lqi", "", "median link quality across the window while available")
 	zigbeeWeak      = zigbeeDevice.Bool("weak", "device median link quality below the weak threshold")
 	zigbeeLastSeen  = zigbeeDevice.Int("last_seen_s", "s", "age of the device's latest report")
+
+	zigbeeRouter          = schema.Declare("zigbee/router", "the coordinator and the always on outlets routing the mesh, one row per key device", aggregateCadence).Entities(append([]string{zigbeeCoordinator}, zigbeeRouters...)...)
+	zigbeeRouterName      = zigbeeRouter.Subject("router", "coordinator, or the friendly name of a routing outlet")
+	zigbeeRouterAvailable = zigbeeRouter.Bool("available", "coordinator online, or router reporting available").Levels(schema.Truthy())
+	zigbeeRouterLQI       = zigbeeRouter.Int("lqi", "", "router median link quality across the window while available")
 
 	zigbeeExperience     = schema.Declare("zigbee/experience", "mesh experience, one row per part of the mesh", aggregateCadence).Entities("router", "mesh")
 	zigbeeExperienceName = zigbeeExperience.Subject("experience", "router is the always on outlets weighted by availability, mesh is every available device")
@@ -340,7 +346,7 @@ func diagnoseZigbee(samples []Sample) Aggregate {
 }
 
 func reportZigbee(latest zigbeeSample, at time.Time, medians map[string]float64, router, mesh float64) []schema.Point {
-	points := make([]schema.Point, 0, len(latest.devices)+2)
+	points := make([]schema.Point, 0, len(latest.devices)+3+len(zigbeeRouters))
 	for _, device := range latest.devices {
 		point := []schema.Value{
 			zigbeeName.Of(device.name),
@@ -356,10 +362,22 @@ func reportZigbee(latest zigbeeSample, at time.Time, medians map[string]float64,
 		}
 		points = append(points, zigbeeDevice.Point(point...))
 	}
+	points = append(points, zigbeeRouter.Point(zigbeeRouterName.Of(zigbeeCoordinator), zigbeeRouterAvailable.Of(latest.online)))
 	if len(latest.devices) > 0 {
 		points = append(points,
 			zigbeeExperience.Point(zigbeeExperienceName.Of("router"), zigbeeExperiencePct.Of(round(router, 0))),
 			zigbeeExperience.Point(zigbeeExperienceName.Of("mesh"), zigbeeExperiencePct.Of(round(mesh, 0))))
+		available := make(map[string]bool, len(latest.devices))
+		for _, device := range latest.devices {
+			available[device.name] = device.available
+		}
+		for _, name := range zigbeeRouters {
+			point := []schema.Value{zigbeeRouterName.Of(name), zigbeeRouterAvailable.Of(available[name])}
+			if median, ok := medians[name]; ok && available[name] {
+				point = append(point, zigbeeRouterLQI.Of(int64(math.Round(median))))
+			}
+			points = append(points, zigbeeRouter.Point(point...))
+		}
 	}
 	return points
 }

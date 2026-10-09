@@ -7,3 +7,5 @@ less
 curl
 vim
 jq
+python3
+py3-pip

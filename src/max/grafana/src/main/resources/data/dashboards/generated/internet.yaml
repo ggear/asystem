@@ -143,9 +143,7 @@ spec:
                   - color: green
                     value: null
                   - color: yellow
-                    value: 50
-                  - color: red
-                    value: 100
+                    value: 100.000001
                 unit: ms
               overrides: []
             options:
@@ -376,14 +374,23 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
                   showPoints: never
                   spanNulls: true
+                  thresholdsStyle:
+                    mode: dashed
                 decimals: 0
                 displayName: ${__field.labels.metric}
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: green
+                    value: null
+                  - color: yellow
+                    value: 100.000001
                 unit: ms
               overrides: []
             options:
@@ -455,14 +462,23 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
                   showPoints: never
                   spanNulls: true
+                  thresholdsStyle:
+                    mode: dashed
                 decimals: 0
                 displayName: ${__field.labels.metric}
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: green
+                    value: null
+                  - color: yellow
+                    value: 30.000001
                 unit: ms
               overrides: []
             options:
@@ -534,14 +550,23 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
                   showPoints: never
                   spanNulls: true
+                  thresholdsStyle:
+                    mode: dashed
                 decimals: 1
                 displayName: ${__field.labels.metric}
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: green
+                    value: null
+                  - color: yellow
+                    value: 2.000001
                 unit: percent
               overrides: []
             options:
@@ -613,7 +638,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -663,6 +688,85 @@ spec:
                           value AS value
                       FROM (
                           SELECT
+                              $__dateBin(time)  AS time,
+                              endpoint          AS entity,
+                              'validity_pct'    AS measure,
+                              avg(validity_pct) AS value
+                          FROM certificate
+                          WHERE
+                              $__timeFilter(time)
+                              AND module = 'network'
+                              AND endpoint IS NOT NULL
+                              AND validity_pct IS NOT NULL
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: A
+            queryOptions:
+              interval: 15m
+            transformations: []
+        description: 'Generated: share of the certificate lifetime still remaining'
+        id: 17
+        links: []
+        title: Certificate Validity
+        vizConfig:
+          group: timeseries
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                custom:
+                  axisWidth: 80
+                  fillOpacity: 0
+                  lineInterpolation: linear
+                  lineWidth: 1
+                  showPoints: never
+                  spanNulls: true
+                decimals: 1
+                displayName: ${__field.labels.metric}
+                unit: percent
+              overrides: []
+            options:
+              legend:
+                calcs:
+                - min
+                - max
+                - mean
+                displayMode: table
+                placement: right
+                showLegend: true
+                width: 400
+              tooltip:
+                mode: multi
+                sort: desc
+          version: ''
+    panel-18:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: influxdb3-home
+                  group: influxdb
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
                               $__dateBin(time) AS time,
                               endpoint         AS entity,
                               'verified'       AS measure,
@@ -682,47 +786,115 @@ spec:
               interval: 15m
             transformations: []
         description: 'Generated: endpoint reachable and its certificate verified'
-        id: 17
+        id: 18
         links: []
         title: Certificate Verified
         vizConfig:
-          group: state-timeline
+          group: volkovlabs-echarts-panel
           kind: VizConfig
           spec:
             fieldConfig:
               defaults:
-                color:
-                  mode: thresholds
-                custom:
-                  axisWidth: 200
-                  fillOpacity: 80
-                  lineWidth: 0
                 decimals: 2
                 displayName: ${__field.labels.metric}
-                thresholds:
-                  mode: absolute
-                  steps:
-                  - color: red
-                    value: null
-                  - color: green
-                    value: 1
                 unit: none
               overrides: []
             options:
-              alignValue: left
-              legend:
-                calcs: []
-                displayMode: list
-                placement: right
-                showLegend: true
-                width: 400
-              mergeValues: true
-              perPage: 20
-              rowHeight: 0.8
-              showValue: never
-              tooltip:
-                mode: single
-                sort: asc
+              editorMode: code
+              getOption: |
+                const layout = {"axis": 80, "legend": 400, "states": [{"from": null, "colour": "red", "text": "Unverified"}, {"from": 1, "colour": "green", "text": "Verified"}]};
+                const theme = context.grafana.theme;
+                const start = context.panel.data.timeRange.from.valueOf();
+                const end = context.panel.data.timeRange.to.valueOf();
+                const names = [];
+                const spans = [];
+                for (const frame of context.panel.data.series) {
+                  const time = frame.fields.find((field) => field.type === 'time');
+                  if (!time) {
+                    continue;
+                  }
+                  for (const field of frame.fields) {
+                    if (field === time || field.type !== 'number') {
+                      continue;
+                    }
+                    const name = field.state?.displayName ?? field.labels?.metric ?? field.name;
+                    let row = names.indexOf(name);
+                    if (row < 0) {
+                      row = names.push(name) - 1;
+                    }
+                    let open = null;
+                    for (let index = 0; index < time.values.length; index++) {
+                      const value = field.values[index];
+                      if (value === null || value === undefined) {
+                        continue;
+                      }
+                      const shown = layout.states.findLast((state) => state.from === null || value >= state.from);
+                      if (open && open.text === shown.text) {
+                        continue;
+                      }
+                      if (open) {
+                        open.value[2] = time.values[index];
+                      }
+                      open = {value: [row, Math.max(time.values[index], start), end], text: shown.text, itemStyle: {color: theme.visualization.getColorByName(shown.colour)}};
+                      spans.push(open);
+                    }
+                  }
+                }
+                const clock = (millis) => context.echarts.time.format(millis, end - start > 86400000 ? '{MM}/{dd} {HH}:{mm}' : '{HH}:{mm}', false);
+                const padding = theme.spacing.gridSize;
+                const left = layout.axis + padding;
+                const right = layout.legend + 2 * padding;
+                const steps = [1, 2, 5, 10, 15, 30, 60, 120, 180, 360, 720, 1440, 2880, 10080].map((minutes) => minutes * 60000);
+                const step = steps.find((millis) => (context.panel.chart.getWidth() - left - right) * millis / (end - start) >= 40) ?? steps[steps.length - 1];
+                const tick = (millis) => context.echarts.time.format(millis, step >= 1440 * 60000 ? '{MM}/{dd}' : '{HH}:{mm}', false);
+                const local = -new Date(start).getTimezoneOffset() * 60000;
+                const ticks = [];
+                for (let at = Math.ceil((start + local) / step) * step - local; at <= end; at += step) {
+                  ticks.push(at);
+                }
+                return {
+                  backgroundColor: 'transparent',
+                  textStyle: {fontFamily: theme.typography.fontFamily, fontSize: 12},
+                  grid: {left: left, right: right, top: 4, bottom: 24},
+                  tooltip: {
+                    trigger: 'item',
+                    formatter: (item) => `${names[item.value[0]]}<br/>${item.data.text} ${clock(item.value[1])} to ${clock(item.value[2])}`,
+                  },
+                  xAxis: {
+                    type: 'time',
+                    min: start,
+                    max: end,
+                    axisLine: {show: false},
+                    axisTick: {show: false, customValues: ticks},
+                    axisLabel: {color: theme.colors.text.secondary, customValues: ticks, formatter: tick},
+                    splitLine: {show: true, lineStyle: {color: theme.colors.border.weak}},
+                  },
+                  yAxis: {
+                    type: 'category',
+                    data: names,
+                    inverse: true,
+                    position: 'right',
+                    axisLine: {show: false},
+                    axisTick: {show: false},
+                    axisLabel: {color: theme.colors.text.primary, width: layout.legend - 24, overflow: 'truncate', align: 'left', margin: 12, interval: 0},
+                  },
+                  series: [{
+                    type: 'custom',
+                    encode: {x: [1, 2], y: 0},
+                    data: spans,
+                    renderItem: (params, api) => {
+                      const from = api.coord([api.value(1), api.value(0)]);
+                      const to = api.coord([api.value(2), api.value(0)]);
+                      const height = api.size([0, 1])[1] * 0.8;
+                      const shape = context.echarts.graphic.clipRectByRect(
+                        {x: from[0], y: from[1] - height / 2, width: to[0] - from[0], height: height},
+                        {x: params.coordSys.x, y: params.coordSys.y, width: params.coordSys.width, height: params.coordSys.height},
+                      );
+                      return shape && {type: 'rect', shape: shape, style: {fill: api.visual('color'), opacity: 0.8}};
+                    },
+                  }],
+                };
+              renderer: canvas
           version: ''
     panel-2:
       kind: Panel
@@ -1139,12 +1311,10 @@ spec:
                 thresholds:
                   mode: absolute
                   steps:
-                  - color: red
-                    value: null
                   - color: yellow
-                    value: 95
+                    value: null
                   - color: green
-                    value: 99.9
+                    value: 100
                 unit: percent
               overrides: []
             options:
@@ -1220,12 +1390,10 @@ spec:
                 thresholds:
                   mode: absolute
                   steps:
-                  - color: red
-                    value: null
                   - color: yellow
-                    value: 95
+                    value: null
                   - color: green
-                    value: 99.9
+                    value: 100
                 unit: percent
               overrides: []
             options:
@@ -1330,7 +1498,7 @@ spec:
             queryOptions: {}
             transformations: []
         description: ''
-        id: 18
+        id: 19
         links: []
         title: ''
         transparent: true
@@ -1507,10 +1675,19 @@ spec:
           element:
             kind: ElementReference
             name: panel-17
-          height: 4
+          height: 10
           width: 24
           x: 0
           y: 49
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-18
+          height: 4
+          width: 24
+          x: 0
+          y: 59
   links: []
   preload: false
   tags:

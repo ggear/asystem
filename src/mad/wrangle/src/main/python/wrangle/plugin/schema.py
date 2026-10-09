@@ -1,7 +1,16 @@
-from asystem.schema.document import SchemaDatabaseDimension, SchemaDatabaseMeasure, SchemaDatabaseRelation
+from asystem.schema.document import (
+    BETTER_LOWER,
+    SchemaDatabaseBounds,
+    SchemaDatabaseDimension,
+    SchemaDatabaseLevels,
+    SchemaDatabaseMeasure,
+    SchemaDatabaseRelation,
+)
 
 from .currency import PAIRS as CURRENCY_PAIRS
 from .currency import PERIODS as CURRENCY_PERIODS
+from .currency import TYPICAL_RATES as CURRENCY_TYPICAL_RATES
+from .currency import TYPICAL_SPREAD as CURRENCY_TYPICAL_SPREAD
 from .equity import DIMENSIONS_CHANGE_PERIODS
 from .equity import PORTFOLIO_TICKER_MAP as EQUITY_PORTFOLIO_TICKERS
 from .equity import PORTFOLIO_TICKERS_MANUAL as EQUITY_MANUAL_TICKERS
@@ -35,7 +44,10 @@ def table_name(relation):
 
 
 def _currency():
-    measures_all = [_measure("snapshot", "1d", "$", "closing rate for the currency pair")]
+    measures_all = [_measure("snapshot", "1d", "$", "closing rate for the currency pair", SchemaDatabaseLevels(
+        better=BETTER_LOWER,
+        entities={pair: SchemaDatabaseBounds(amber=round(typical / (1 + CURRENCY_TYPICAL_SPREAD), 4), red=round(typical / (1 - CURRENCY_TYPICAL_SPREAD), 4))
+                  for pair, typical in CURRENCY_TYPICAL_RATES.items()}))]
     measures_all += [_measure("delta", f"{days:0.0f}d", "%", f"change in the rate across [{label}]")
                      for label, days in CURRENCY_PERIODS.items()]
     return SchemaDatabaseRelation(
@@ -79,5 +91,5 @@ def _equity():
         measures=measures_all)
 
 
-def _measure(metric_type, period, unit, description):
-    return SchemaDatabaseMeasure(key=metric_type, kind="float", unit=unit, description=description, period=period)
+def _measure(metric_type, period, unit, description, levels=None):
+    return SchemaDatabaseMeasure(key=metric_type, kind="float", unit=unit, description=description, period=period, levels=levels)

@@ -6,7 +6,7 @@ require (
 	github.com/InfluxCommunity/influxdb3-go v0.14.0
 	github.com/eclipse/paho.mqtt.golang v1.5.1
 	github.com/spf13/cobra v1.10.2
-	golang.org/x/net v0.59.0
+	golang.org/x/net v0.60.0
 )
 
 require (
@@ -24,7 +24,7 @@ require (
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/zeebo/xxh3 v1.1.0 // indirect
-	golang.org/x/exp v0.0.0-20261005173118-76772065c9b0 // indirect
+	golang.org/x/exp v0.0.0-20261007192929-f45ad48fbe92 // indirect
 	golang.org/x/mod v0.41.0 // indirect
 	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect

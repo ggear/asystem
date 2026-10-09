@@ -9,6 +9,8 @@ RUN apk update && \
     apk add --upgrade --no-cache curl=8.22.0-r0 && \
     apk add --upgrade --no-cache vim=9.2.1091-r0 && \
     apk add --upgrade --no-cache jq=1.8.2-r0 && \
+    apk add --upgrade --no-cache python3=3.14.8-r0 && \
+    apk add --upgrade --no-cache py3-pip=26.1.2-r0 && \
     (apk cache clean || true) && rm -rf /var/cache/apk/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
 
@@ -26,6 +28,10 @@ RUN cd /tmp && \
 
 FROM image_base AS image_build
 COPY target/package/main/resources/image/. /asystem/etc
+COPY src/main/python/. /asystem/bin/python
+RUN set -eux; \
+    [ -f /asystem/bin/python/.py_deps.txt ] && pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir -r /asystem/bin/python/.py_deps.txt; \
+    pip3 cache purge
 
 FROM image_build AS image_runtime
 WORKDIR /asystem/etc

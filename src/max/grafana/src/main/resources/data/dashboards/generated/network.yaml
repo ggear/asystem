@@ -195,6 +195,7 @@ spec:
                               AND module = 'network'
                               AND experience IS NOT NULL
                               AND device IS NULL
+                              AND router IS NULL
                               AND experience_pct IS NOT NULL
                               AND experience IN ('router')
                           GROUP BY 1, 2
@@ -303,9 +304,9 @@ spec:
                   - color: green
                     value: null
                   - color: yellow
-                    value: 80
+                    value: 80.000001
                   - color: red
-                    value: 95
+                    value: 95.000001
                 unit: percent
               overrides: []
             options:
@@ -381,14 +382,23 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
                   showPoints: never
                   spanNulls: true
+                  thresholdsStyle:
+                    mode: dashed
                 decimals: 1
                 displayName: ${__field.labels.metric}
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: green
+                    value: null
+                  - color: red
+                    value: 90.000001
                 unit: percent
               overrides: []
             options:
@@ -495,14 +505,23 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
                   showPoints: never
                   spanNulls: true
+                  thresholdsStyle:
+                    mode: dashed
                 decimals: 1
                 displayName: ${__field.labels.metric}
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: yellow
+                    value: null
+                  - color: green
+                    value: 85
                 unit: percent
               overrides: []
             options:
@@ -609,7 +628,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -723,7 +742,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -837,7 +856,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -951,7 +970,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -1066,7 +1085,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -1219,7 +1238,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -1298,7 +1317,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -1358,6 +1377,7 @@ spec:
                               AND module = 'network'
                               AND experience IS NOT NULL
                               AND device IS NULL
+                              AND router IS NULL
                               AND experience_pct IS NOT NULL
                           GROUP BY 1, 2
                       ) AS arms
@@ -1378,7 +1398,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -1403,6 +1423,175 @@ spec:
                 sort: desc
           version: ''
     panel-23:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: influxdb3-home
+                  group: influxdb
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__dateBin(time) AS time,
+                              router           AS entity,
+                              'lqi'            AS measure,
+                              avg(lqi)         AS value
+                          FROM zigbee
+                          WHERE
+                              $__timeFilter(time)
+                              AND module = 'network'
+                              AND router IS NOT NULL
+                              AND device IS NULL
+                              AND experience IS NULL
+                              AND lqi IS NOT NULL
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: A
+            queryOptions:
+              interval: 15m
+            transformations: []
+        description: 'Generated: router median link quality across the window while available'
+        id: 23
+        links: []
+        title: Zigbee Router Link Quality
+        vizConfig:
+          group: timeseries
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                custom:
+                  axisWidth: 80
+                  fillOpacity: 0
+                  lineInterpolation: linear
+                  lineWidth: 1
+                  showPoints: never
+                  spanNulls: true
+                decimals: 0
+                displayName: ${__field.labels.metric}
+                unit: none
+              overrides: []
+            options:
+              legend:
+                calcs:
+                - min
+                - max
+                - mean
+                displayMode: table
+                placement: right
+                showLegend: true
+                width: 400
+              tooltip:
+                mode: multi
+                sort: desc
+          version: ''
+    panel-24:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: influxdb3-home
+                  group: influxdb
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__dateBin(time) AS time,
+                              console          AS entity,
+                              'quality_pct'    AS measure,
+                              avg(quality_pct) AS value
+                          FROM weewx
+                          WHERE
+                              $__timeFilter(time)
+                              AND module = 'network'
+                              AND console IS NOT NULL
+                              AND quality_pct IS NOT NULL
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: A
+            queryOptions:
+              interval: 15m
+            transformations: []
+        description: 'Generated: console coms signal quality'
+        id: 24
+        links: []
+        title: Weather Console Signal
+        vizConfig:
+          group: timeseries
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                custom:
+                  axisWidth: 80
+                  fillOpacity: 0
+                  lineInterpolation: linear
+                  lineWidth: 1
+                  showPoints: never
+                  spanNulls: true
+                  thresholdsStyle:
+                    mode: dashed
+                decimals: 1
+                displayName: ${__field.labels.metric}
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: yellow
+                    value: null
+                  - color: green
+                    value: 50
+                unit: percent
+              overrides: []
+            options:
+              legend:
+                calcs:
+                - min
+                - max
+                - mean
+                displayMode: table
+                placement: right
+                showLegend: true
+                width: 400
+              tooltip:
+                mode: multi
+                sort: desc
+          version: ''
+    panel-25:
       kind: Panel
       spec:
         data:
@@ -1485,7 +1674,7 @@ spec:
               interval: 15m
             transformations: []
         description: 'Generated: Home Assistant value; hottest temperature sensor the device reports'
-        id: 23
+        id: 25
         links: []
         title: Network Device Temperature
         vizConfig:
@@ -1495,7 +1684,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -1519,7 +1708,7 @@ spec:
                 mode: multi
                 sort: desc
           version: ''
-    panel-24:
+    panel-26:
       kind: Panel
       spec:
         data:
@@ -1599,49 +1788,117 @@ spec:
               interval: 15m
             transformations: []
         description: 'Generated: device connected and seen by the controller recently'
-        id: 24
+        id: 26
         links: []
         title: Network Devices Up
         vizConfig:
-          group: state-timeline
+          group: volkovlabs-echarts-panel
           kind: VizConfig
           spec:
             fieldConfig:
               defaults:
-                color:
-                  mode: thresholds
-                custom:
-                  axisWidth: 200
-                  fillOpacity: 80
-                  lineWidth: 0
                 decimals: 2
                 displayName: ${__field.labels.metric}
-                thresholds:
-                  mode: absolute
-                  steps:
-                  - color: red
-                    value: null
-                  - color: green
-                    value: 1
                 unit: none
               overrides: []
             options:
-              alignValue: left
-              legend:
-                calcs: []
-                displayMode: list
-                placement: right
-                showLegend: true
-                width: 400
-              mergeValues: true
-              perPage: 20
-              rowHeight: 0.8
-              showValue: never
-              tooltip:
-                mode: single
-                sort: asc
+              editorMode: code
+              getOption: |
+                const layout = {"axis": 80, "legend": 400, "states": [{"from": null, "colour": "red", "text": "Down"}, {"from": 1, "colour": "green", "text": "Up"}]};
+                const theme = context.grafana.theme;
+                const start = context.panel.data.timeRange.from.valueOf();
+                const end = context.panel.data.timeRange.to.valueOf();
+                const names = [];
+                const spans = [];
+                for (const frame of context.panel.data.series) {
+                  const time = frame.fields.find((field) => field.type === 'time');
+                  if (!time) {
+                    continue;
+                  }
+                  for (const field of frame.fields) {
+                    if (field === time || field.type !== 'number') {
+                      continue;
+                    }
+                    const name = field.state?.displayName ?? field.labels?.metric ?? field.name;
+                    let row = names.indexOf(name);
+                    if (row < 0) {
+                      row = names.push(name) - 1;
+                    }
+                    let open = null;
+                    for (let index = 0; index < time.values.length; index++) {
+                      const value = field.values[index];
+                      if (value === null || value === undefined) {
+                        continue;
+                      }
+                      const shown = layout.states.findLast((state) => state.from === null || value >= state.from);
+                      if (open && open.text === shown.text) {
+                        continue;
+                      }
+                      if (open) {
+                        open.value[2] = time.values[index];
+                      }
+                      open = {value: [row, Math.max(time.values[index], start), end], text: shown.text, itemStyle: {color: theme.visualization.getColorByName(shown.colour)}};
+                      spans.push(open);
+                    }
+                  }
+                }
+                const clock = (millis) => context.echarts.time.format(millis, end - start > 86400000 ? '{MM}/{dd} {HH}:{mm}' : '{HH}:{mm}', false);
+                const padding = theme.spacing.gridSize;
+                const left = layout.axis + padding;
+                const right = layout.legend + 2 * padding;
+                const steps = [1, 2, 5, 10, 15, 30, 60, 120, 180, 360, 720, 1440, 2880, 10080].map((minutes) => minutes * 60000);
+                const step = steps.find((millis) => (context.panel.chart.getWidth() - left - right) * millis / (end - start) >= 40) ?? steps[steps.length - 1];
+                const tick = (millis) => context.echarts.time.format(millis, step >= 1440 * 60000 ? '{MM}/{dd}' : '{HH}:{mm}', false);
+                const local = -new Date(start).getTimezoneOffset() * 60000;
+                const ticks = [];
+                for (let at = Math.ceil((start + local) / step) * step - local; at <= end; at += step) {
+                  ticks.push(at);
+                }
+                return {
+                  backgroundColor: 'transparent',
+                  textStyle: {fontFamily: theme.typography.fontFamily, fontSize: 12},
+                  grid: {left: left, right: right, top: 4, bottom: 24},
+                  tooltip: {
+                    trigger: 'item',
+                    formatter: (item) => `${names[item.value[0]]}<br/>${item.data.text} ${clock(item.value[1])} to ${clock(item.value[2])}`,
+                  },
+                  xAxis: {
+                    type: 'time',
+                    min: start,
+                    max: end,
+                    axisLine: {show: false},
+                    axisTick: {show: false, customValues: ticks},
+                    axisLabel: {color: theme.colors.text.secondary, customValues: ticks, formatter: tick},
+                    splitLine: {show: true, lineStyle: {color: theme.colors.border.weak}},
+                  },
+                  yAxis: {
+                    type: 'category',
+                    data: names,
+                    inverse: true,
+                    position: 'right',
+                    axisLine: {show: false},
+                    axisTick: {show: false},
+                    axisLabel: {color: theme.colors.text.primary, width: layout.legend - 24, overflow: 'truncate', align: 'left', margin: 12, interval: 0},
+                  },
+                  series: [{
+                    type: 'custom',
+                    encode: {x: [1, 2], y: 0},
+                    data: spans,
+                    renderItem: (params, api) => {
+                      const from = api.coord([api.value(1), api.value(0)]);
+                      const to = api.coord([api.value(2), api.value(0)]);
+                      const height = api.size([0, 1])[1] * 0.8;
+                      const shape = context.echarts.graphic.clipRectByRect(
+                        {x: from[0], y: from[1] - height / 2, width: to[0] - from[0], height: height},
+                        {x: params.coordSys.x, y: params.coordSys.y, width: params.coordSys.width, height: params.coordSys.height},
+                      );
+                      return shape && {type: 'rect', shape: shape, style: {fill: api.visual('color'), opacity: 0.8}};
+                    },
+                  }],
+                };
+              renderer: canvas
           version: ''
-    panel-25:
+    panel-27:
       kind: Panel
       spec:
         data:
@@ -1667,17 +1924,17 @@ spec:
                           value AS value
                       FROM (
                           SELECT
-                              $__dateBin(time)   AS time,
-                              switch             AS entity,
-                              'restarted'        AS measure,
-                              avg(1 - restarted) AS value
+                              $__dateBin(time)     AS time,
+                              switch               AS entity,
+                              'overheating'        AS measure,
+                              avg(1 - overheating) AS value
                           FROM ethernet
                           WHERE
                               $__timeFilter(time)
                               AND module = 'network'
                               AND switch IS NOT NULL
                               AND powered IS NULL
-                              AND restarted IS NOT NULL
+                              AND overheating IS NOT NULL
                           GROUP BY 1, 2
                       ) AS arms
                       ORDER BY time
@@ -1702,16 +1959,16 @@ spec:
                           value AS value
                       FROM (
                           SELECT
-                              $__dateBin(time)   AS time,
-                              accesspoint        AS entity,
-                              'restarted'        AS measure,
-                              avg(1 - restarted) AS value
+                              $__dateBin(time)     AS time,
+                              accesspoint          AS entity,
+                              'overheating'        AS measure,
+                              avg(1 - overheating) AS value
                           FROM wireless
                           WHERE
                               $__timeFilter(time)
                               AND module = 'network'
                               AND accesspoint IS NOT NULL
-                              AND restarted IS NOT NULL
+                              AND overheating IS NOT NULL
                           GROUP BY 1, 2
                       ) AS arms
                       ORDER BY time
@@ -1720,50 +1977,118 @@ spec:
             queryOptions:
               interval: 15m
             transformations: []
-        description: 'Generated: device came up since the previous check'
-        id: 25
+        description: 'Generated: controller flags the device as overheating'
+        id: 27
         links: []
-        title: Network Devices Restarted
+        title: Network Devices Overheating
         vizConfig:
-          group: state-timeline
+          group: volkovlabs-echarts-panel
           kind: VizConfig
           spec:
             fieldConfig:
               defaults:
-                color:
-                  mode: thresholds
-                custom:
-                  axisWidth: 200
-                  fillOpacity: 80
-                  lineWidth: 0
                 decimals: 2
                 displayName: ${__field.labels.metric}
-                thresholds:
-                  mode: absolute
-                  steps:
-                  - color: red
-                    value: null
-                  - color: green
-                    value: 1
                 unit: none
               overrides: []
             options:
-              alignValue: left
-              legend:
-                calcs: []
-                displayMode: list
-                placement: right
-                showLegend: true
-                width: 400
-              mergeValues: true
-              perPage: 20
-              rowHeight: 0.8
-              showValue: never
-              tooltip:
-                mode: single
-                sort: asc
+              editorMode: code
+              getOption: |
+                const layout = {"axis": 80, "legend": 400, "states": [{"from": null, "colour": "red", "text": "Overheating"}, {"from": 1, "colour": "green", "text": "Normal"}]};
+                const theme = context.grafana.theme;
+                const start = context.panel.data.timeRange.from.valueOf();
+                const end = context.panel.data.timeRange.to.valueOf();
+                const names = [];
+                const spans = [];
+                for (const frame of context.panel.data.series) {
+                  const time = frame.fields.find((field) => field.type === 'time');
+                  if (!time) {
+                    continue;
+                  }
+                  for (const field of frame.fields) {
+                    if (field === time || field.type !== 'number') {
+                      continue;
+                    }
+                    const name = field.state?.displayName ?? field.labels?.metric ?? field.name;
+                    let row = names.indexOf(name);
+                    if (row < 0) {
+                      row = names.push(name) - 1;
+                    }
+                    let open = null;
+                    for (let index = 0; index < time.values.length; index++) {
+                      const value = field.values[index];
+                      if (value === null || value === undefined) {
+                        continue;
+                      }
+                      const shown = layout.states.findLast((state) => state.from === null || value >= state.from);
+                      if (open && open.text === shown.text) {
+                        continue;
+                      }
+                      if (open) {
+                        open.value[2] = time.values[index];
+                      }
+                      open = {value: [row, Math.max(time.values[index], start), end], text: shown.text, itemStyle: {color: theme.visualization.getColorByName(shown.colour)}};
+                      spans.push(open);
+                    }
+                  }
+                }
+                const clock = (millis) => context.echarts.time.format(millis, end - start > 86400000 ? '{MM}/{dd} {HH}:{mm}' : '{HH}:{mm}', false);
+                const padding = theme.spacing.gridSize;
+                const left = layout.axis + padding;
+                const right = layout.legend + 2 * padding;
+                const steps = [1, 2, 5, 10, 15, 30, 60, 120, 180, 360, 720, 1440, 2880, 10080].map((minutes) => minutes * 60000);
+                const step = steps.find((millis) => (context.panel.chart.getWidth() - left - right) * millis / (end - start) >= 40) ?? steps[steps.length - 1];
+                const tick = (millis) => context.echarts.time.format(millis, step >= 1440 * 60000 ? '{MM}/{dd}' : '{HH}:{mm}', false);
+                const local = -new Date(start).getTimezoneOffset() * 60000;
+                const ticks = [];
+                for (let at = Math.ceil((start + local) / step) * step - local; at <= end; at += step) {
+                  ticks.push(at);
+                }
+                return {
+                  backgroundColor: 'transparent',
+                  textStyle: {fontFamily: theme.typography.fontFamily, fontSize: 12},
+                  grid: {left: left, right: right, top: 4, bottom: 24},
+                  tooltip: {
+                    trigger: 'item',
+                    formatter: (item) => `${names[item.value[0]]}<br/>${item.data.text} ${clock(item.value[1])} to ${clock(item.value[2])}`,
+                  },
+                  xAxis: {
+                    type: 'time',
+                    min: start,
+                    max: end,
+                    axisLine: {show: false},
+                    axisTick: {show: false, customValues: ticks},
+                    axisLabel: {color: theme.colors.text.secondary, customValues: ticks, formatter: tick},
+                    splitLine: {show: true, lineStyle: {color: theme.colors.border.weak}},
+                  },
+                  yAxis: {
+                    type: 'category',
+                    data: names,
+                    inverse: true,
+                    position: 'right',
+                    axisLine: {show: false},
+                    axisTick: {show: false},
+                    axisLabel: {color: theme.colors.text.primary, width: layout.legend - 24, overflow: 'truncate', align: 'left', margin: 12, interval: 0},
+                  },
+                  series: [{
+                    type: 'custom',
+                    encode: {x: [1, 2], y: 0},
+                    data: spans,
+                    renderItem: (params, api) => {
+                      const from = api.coord([api.value(1), api.value(0)]);
+                      const to = api.coord([api.value(2), api.value(0)]);
+                      const height = api.size([0, 1])[1] * 0.8;
+                      const shape = context.echarts.graphic.clipRectByRect(
+                        {x: from[0], y: from[1] - height / 2, width: to[0] - from[0], height: height},
+                        {x: params.coordSys.x, y: params.coordSys.y, width: params.coordSys.width, height: params.coordSys.height},
+                      );
+                      return shape && {type: 'rect', shape: shape, style: {fill: api.visual('color'), opacity: 0.8}};
+                    },
+                  }],
+                };
+              renderer: canvas
           version: ''
-    panel-26:
+    panel-28:
       kind: Panel
       spec:
         data:
@@ -1790,14 +2115,15 @@ spec:
                       FROM (
                           SELECT
                               $__dateBin(time) AS time,
-                              device           AS entity,
+                              router           AS entity,
                               'available'      AS measure,
                               avg(available)   AS value
                           FROM zigbee
                           WHERE
                               $__timeFilter(time)
                               AND module = 'network'
-                              AND device IS NOT NULL
+                              AND router IS NOT NULL
+                              AND device IS NULL
                               AND experience IS NULL
                               AND available IS NOT NULL
                           GROUP BY 1, 2
@@ -1808,48 +2134,271 @@ spec:
             queryOptions:
               interval: 15m
             transformations: []
-        description: 'Generated: device reporting available'
-        id: 26
+        description: 'Generated: coordinator online, or router reporting available'
+        id: 28
         links: []
-        title: Zigbee Devices Available
+        title: Zigbee Routers Available
         vizConfig:
-          group: state-timeline
+          group: volkovlabs-echarts-panel
           kind: VizConfig
           spec:
             fieldConfig:
               defaults:
-                color:
-                  mode: thresholds
-                custom:
-                  axisWidth: 200
-                  fillOpacity: 80
-                  lineWidth: 0
                 decimals: 2
                 displayName: ${__field.labels.metric}
-                thresholds:
-                  mode: absolute
-                  steps:
-                  - color: red
-                    value: null
-                  - color: green
-                    value: 1
                 unit: none
               overrides: []
             options:
-              alignValue: left
-              legend:
-                calcs: []
-                displayMode: list
-                placement: right
-                showLegend: true
-                width: 400
-              mergeValues: true
-              perPage: 20
-              rowHeight: 0.8
-              showValue: never
-              tooltip:
-                mode: single
-                sort: asc
+              editorMode: code
+              getOption: |
+                const layout = {"axis": 80, "legend": 400, "states": [{"from": null, "colour": "red", "text": "Unavailable"}, {"from": 1, "colour": "green", "text": "Available"}]};
+                const theme = context.grafana.theme;
+                const start = context.panel.data.timeRange.from.valueOf();
+                const end = context.panel.data.timeRange.to.valueOf();
+                const names = [];
+                const spans = [];
+                for (const frame of context.panel.data.series) {
+                  const time = frame.fields.find((field) => field.type === 'time');
+                  if (!time) {
+                    continue;
+                  }
+                  for (const field of frame.fields) {
+                    if (field === time || field.type !== 'number') {
+                      continue;
+                    }
+                    const name = field.state?.displayName ?? field.labels?.metric ?? field.name;
+                    let row = names.indexOf(name);
+                    if (row < 0) {
+                      row = names.push(name) - 1;
+                    }
+                    let open = null;
+                    for (let index = 0; index < time.values.length; index++) {
+                      const value = field.values[index];
+                      if (value === null || value === undefined) {
+                        continue;
+                      }
+                      const shown = layout.states.findLast((state) => state.from === null || value >= state.from);
+                      if (open && open.text === shown.text) {
+                        continue;
+                      }
+                      if (open) {
+                        open.value[2] = time.values[index];
+                      }
+                      open = {value: [row, Math.max(time.values[index], start), end], text: shown.text, itemStyle: {color: theme.visualization.getColorByName(shown.colour)}};
+                      spans.push(open);
+                    }
+                  }
+                }
+                const clock = (millis) => context.echarts.time.format(millis, end - start > 86400000 ? '{MM}/{dd} {HH}:{mm}' : '{HH}:{mm}', false);
+                const padding = theme.spacing.gridSize;
+                const left = layout.axis + padding;
+                const right = layout.legend + 2 * padding;
+                const steps = [1, 2, 5, 10, 15, 30, 60, 120, 180, 360, 720, 1440, 2880, 10080].map((minutes) => minutes * 60000);
+                const step = steps.find((millis) => (context.panel.chart.getWidth() - left - right) * millis / (end - start) >= 40) ?? steps[steps.length - 1];
+                const tick = (millis) => context.echarts.time.format(millis, step >= 1440 * 60000 ? '{MM}/{dd}' : '{HH}:{mm}', false);
+                const local = -new Date(start).getTimezoneOffset() * 60000;
+                const ticks = [];
+                for (let at = Math.ceil((start + local) / step) * step - local; at <= end; at += step) {
+                  ticks.push(at);
+                }
+                return {
+                  backgroundColor: 'transparent',
+                  textStyle: {fontFamily: theme.typography.fontFamily, fontSize: 12},
+                  grid: {left: left, right: right, top: 4, bottom: 24},
+                  tooltip: {
+                    trigger: 'item',
+                    formatter: (item) => `${names[item.value[0]]}<br/>${item.data.text} ${clock(item.value[1])} to ${clock(item.value[2])}`,
+                  },
+                  xAxis: {
+                    type: 'time',
+                    min: start,
+                    max: end,
+                    axisLine: {show: false},
+                    axisTick: {show: false, customValues: ticks},
+                    axisLabel: {color: theme.colors.text.secondary, customValues: ticks, formatter: tick},
+                    splitLine: {show: true, lineStyle: {color: theme.colors.border.weak}},
+                  },
+                  yAxis: {
+                    type: 'category',
+                    data: names,
+                    inverse: true,
+                    position: 'right',
+                    axisLine: {show: false},
+                    axisTick: {show: false},
+                    axisLabel: {color: theme.colors.text.primary, width: layout.legend - 24, overflow: 'truncate', align: 'left', margin: 12, interval: 0},
+                  },
+                  series: [{
+                    type: 'custom',
+                    encode: {x: [1, 2], y: 0},
+                    data: spans,
+                    renderItem: (params, api) => {
+                      const from = api.coord([api.value(1), api.value(0)]);
+                      const to = api.coord([api.value(2), api.value(0)]);
+                      const height = api.size([0, 1])[1] * 0.8;
+                      const shape = context.echarts.graphic.clipRectByRect(
+                        {x: from[0], y: from[1] - height / 2, width: to[0] - from[0], height: height},
+                        {x: params.coordSys.x, y: params.coordSys.y, width: params.coordSys.width, height: params.coordSys.height},
+                      );
+                      return shape && {type: 'rect', shape: shape, style: {fill: api.visual('color'), opacity: 0.8}};
+                    },
+                  }],
+                };
+              renderer: canvas
+          version: ''
+    panel-29:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: influxdb3-home
+                  group: influxdb
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__dateBin(time) AS time,
+                              console          AS entity,
+                              'fresh'          AS measure,
+                              avg(fresh)       AS value
+                          FROM weewx
+                          WHERE
+                              $__timeFilter(time)
+                              AND module = 'network'
+                              AND console IS NOT NULL
+                              AND fresh IS NOT NULL
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: A
+            queryOptions:
+              interval: 15m
+            transformations: []
+        description: 'Generated: console reported a pulse inside the freshness window'
+        id: 29
+        links: []
+        title: Weather Console Fresh
+        vizConfig:
+          group: volkovlabs-echarts-panel
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                decimals: 2
+                displayName: ${__field.labels.metric}
+                unit: none
+              overrides: []
+            options:
+              editorMode: code
+              getOption: |
+                const layout = {"axis": 80, "legend": 400, "states": [{"from": null, "colour": "red", "text": "Stale"}, {"from": 1, "colour": "green", "text": "Fresh"}]};
+                const theme = context.grafana.theme;
+                const start = context.panel.data.timeRange.from.valueOf();
+                const end = context.panel.data.timeRange.to.valueOf();
+                const names = [];
+                const spans = [];
+                for (const frame of context.panel.data.series) {
+                  const time = frame.fields.find((field) => field.type === 'time');
+                  if (!time) {
+                    continue;
+                  }
+                  for (const field of frame.fields) {
+                    if (field === time || field.type !== 'number') {
+                      continue;
+                    }
+                    const name = field.state?.displayName ?? field.labels?.metric ?? field.name;
+                    let row = names.indexOf(name);
+                    if (row < 0) {
+                      row = names.push(name) - 1;
+                    }
+                    let open = null;
+                    for (let index = 0; index < time.values.length; index++) {
+                      const value = field.values[index];
+                      if (value === null || value === undefined) {
+                        continue;
+                      }
+                      const shown = layout.states.findLast((state) => state.from === null || value >= state.from);
+                      if (open && open.text === shown.text) {
+                        continue;
+                      }
+                      if (open) {
+                        open.value[2] = time.values[index];
+                      }
+                      open = {value: [row, Math.max(time.values[index], start), end], text: shown.text, itemStyle: {color: theme.visualization.getColorByName(shown.colour)}};
+                      spans.push(open);
+                    }
+                  }
+                }
+                const clock = (millis) => context.echarts.time.format(millis, end - start > 86400000 ? '{MM}/{dd} {HH}:{mm}' : '{HH}:{mm}', false);
+                const padding = theme.spacing.gridSize;
+                const left = layout.axis + padding;
+                const right = layout.legend + 2 * padding;
+                const steps = [1, 2, 5, 10, 15, 30, 60, 120, 180, 360, 720, 1440, 2880, 10080].map((minutes) => minutes * 60000);
+                const step = steps.find((millis) => (context.panel.chart.getWidth() - left - right) * millis / (end - start) >= 40) ?? steps[steps.length - 1];
+                const tick = (millis) => context.echarts.time.format(millis, step >= 1440 * 60000 ? '{MM}/{dd}' : '{HH}:{mm}', false);
+                const local = -new Date(start).getTimezoneOffset() * 60000;
+                const ticks = [];
+                for (let at = Math.ceil((start + local) / step) * step - local; at <= end; at += step) {
+                  ticks.push(at);
+                }
+                return {
+                  backgroundColor: 'transparent',
+                  textStyle: {fontFamily: theme.typography.fontFamily, fontSize: 12},
+                  grid: {left: left, right: right, top: 4, bottom: 24},
+                  tooltip: {
+                    trigger: 'item',
+                    formatter: (item) => `${names[item.value[0]]}<br/>${item.data.text} ${clock(item.value[1])} to ${clock(item.value[2])}`,
+                  },
+                  xAxis: {
+                    type: 'time',
+                    min: start,
+                    max: end,
+                    axisLine: {show: false},
+                    axisTick: {show: false, customValues: ticks},
+                    axisLabel: {color: theme.colors.text.secondary, customValues: ticks, formatter: tick},
+                    splitLine: {show: true, lineStyle: {color: theme.colors.border.weak}},
+                  },
+                  yAxis: {
+                    type: 'category',
+                    data: names,
+                    inverse: true,
+                    position: 'right',
+                    axisLine: {show: false},
+                    axisTick: {show: false},
+                    axisLabel: {color: theme.colors.text.primary, width: layout.legend - 24, overflow: 'truncate', align: 'left', margin: 12, interval: 0},
+                  },
+                  series: [{
+                    type: 'custom',
+                    encode: {x: [1, 2], y: 0},
+                    data: spans,
+                    renderItem: (params, api) => {
+                      const from = api.coord([api.value(1), api.value(0)]);
+                      const to = api.coord([api.value(2), api.value(0)]);
+                      const height = api.size([0, 1])[1] * 0.8;
+                      const shape = context.echarts.graphic.clipRectByRect(
+                        {x: from[0], y: from[1] - height / 2, width: to[0] - from[0], height: height},
+                        {x: params.coordSys.x, y: params.coordSys.y, width: params.coordSys.width, height: params.coordSys.height},
+                      );
+                      return shape && {type: 'rect', shape: shape, style: {fill: api.visual('color'), opacity: 0.8}};
+                    },
+                  }],
+                };
+              renderer: canvas
           version: ''
     panel-3:
       kind: Panel
@@ -2191,12 +2740,10 @@ spec:
                 thresholds:
                   mode: absolute
                   steps:
-                  - color: red
-                    value: null
                   - color: yellow
-                    value: 95
+                    value: null
                   - color: green
-                    value: 99.9
+                    value: 100
                 unit: percent
               overrides: []
             options:
@@ -2378,7 +2925,7 @@ spec:
             queryOptions: {}
             transformations: []
         description: ''
-        id: 27
+        id: 30
         links: []
         title: ''
         transparent: true
@@ -2618,7 +3165,7 @@ spec:
           element:
             kind: ElementReference
             name: panel-24
-          height: 5
+          height: 10
           width: 24
           x: 0
           y: 119
@@ -2627,19 +3174,46 @@ spec:
           element:
             kind: ElementReference
             name: panel-25
-          height: 5
+          height: 10
           width: 24
           x: 0
-          y: 124
+          y: 129
       - kind: GridLayoutItem
         spec:
           element:
             kind: ElementReference
             name: panel-26
-          height: 16
+          height: 5
           width: 24
           x: 0
-          y: 129
+          y: 139
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-27
+          height: 5
+          width: 24
+          x: 0
+          y: 144
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-28
+          height: 6
+          width: 24
+          x: 0
+          y: 149
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-29
+          height: 4
+          width: 24
+          x: 0
+          y: 155
   links: []
   preload: false
   tags:

@@ -14,6 +14,8 @@ import (
 const (
 	deviceStaleAfter          = 5 * time.Minute
 	deviceExperienceSickBelow = 85.0
+	devicePoEBudgetSickAbove  = 80.0
+	devicePoEBudgetDeadAbove  = 95.0
 	deviceCPUKnee             = 0.8
 	deviceMemoryKnee          = 0.9
 	deviceNetworkKnee         = 0.8
@@ -62,7 +64,7 @@ func declareDevices(path, description, subject, subjectDescription string, names
 	devices := deviceSchema{
 		relation:    relation,
 		name:        relation.Subject(subject, subjectDescription),
-		up:          relation.Bool("up", "device connected and seen by the controller recently"),
+		up:          relation.Bool("up", "device connected and seen by the controller recently").Levels(schema.Truthy()),
 		restarted:   relation.Bool("restarted", "device came up since the previous check"),
 		overheating: relation.Bool("overheating", "controller flags the device as overheating"),
 		experience:  relation.Float("experience_pct", "%", "experience reported by the controller, capped by processor, memory and busiest link headroom").Levels(schema.AmberBelow(deviceExperienceSickBelow)),
@@ -75,7 +77,7 @@ func declareDevices(path, description, subject, subjectDescription string, names
 	if wired {
 		temperature := relation.Float("temperature", "°C", "hottest temperature sensor the device reports")
 		poe := relation.Float("poe_w", "W", "power over ethernet drawn by the powered ports")
-		poeBudget := relation.Float("poe_pct", "%", "power over ethernet drawn against the device's budget")
+		poeBudget := relation.Float("poe_pct", "%", "power over ethernet drawn against the device's budget").Levels(schema.AmberAbove(devicePoEBudgetSickAbove).RedFrom(devicePoEBudgetDeadAbove))
 		devices.temperature, devices.poe, devices.poeBudget = &temperature, &poe, &poeBudget
 	}
 	return devices

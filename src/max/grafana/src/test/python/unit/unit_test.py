@@ -25,6 +25,7 @@ sys.path.insert(0, join(DIR_REPOSITORY, "src/all/_/src/build/python"))
 sys.argv = [GENERATE]
 
 from asystem.schema.dialects import influxdb3, postgres
+from asystem.schema.panel import judged
 from asystem.schema.document import (
     SchemaDatabaseDimension,
     SchemaDatabaseMeasure,
@@ -186,17 +187,34 @@ class LevelsTest(unittest.TestCase):
 
     def test_levels_drop_wherever_the_number_shown_is_not_the_number_judged(self):
         switches = generate.Relation("network", "ethernet/switch")
-        for transforms in [("avg",), ("sum",), ("percent",), ("baseline",)]:
+        for transforms in [("sum",), ("percent",), ("baseline",)]:
             self.assertIsNone(switches.query(["experience_pct"], None, transforms).levels, str(transforms))
         self.assertIsNone(switches.query(["experience_pct", "cpu_pct"]).levels)
-        defaults = generate.stat("Mean", switches.query(["experience_pct"]), "mean").build(1).build().spec.viz_config.spec.field_config.defaults
-        self.assertEqual([(step.value, step.color) for step in defaults.thresholds.steps], generate.NEUTRAL_LADDER)
+        self.assertIsNotNone(switches.query(["experience_pct"], None, ("avg",)).levels)
+        declared = declared_levels(switches, "experience_pct")
+        mean = generate.stat("Mean", switches.query(["experience_pct"]), "mean").build(1).build().spec.viz_config.spec.field_config.defaults
+        best = generate.stat("Best", switches.query(["experience_pct"]), "max").build(1).build().spec.viz_config.spec.field_config.defaults
+        self.assertEqual([(step.value, step.color) for step in mean.thresholds.steps],
+                         generate.levelled(generate.Levels(declared.better, declared.amber, declared.red, declared.inclusive)))
+        self.assertEqual([(step.value, step.color) for step in best.thresholds.steps], generate.NEUTRAL_LADDER)
 
     def test_hand_written_thresholds_on_a_levelled_stat_are_refused_unless_deliberate(self):
         query = generate.Relation("network", "ethernet/switch").query(["experience_pct"], None, ("min",))
         with self.assertRaises(ValueError):
             generate.stat("Wired", query).thresholds(generate.higher_better(85, 95))
         generate.stat("Wired", query).thresholds(generate.higher_better(85, 95), override=True).build(1)
+
+    def test_a_time_series_draws_its_measures_levels_as_a_dashed_line(self):
+        def drawn(panel):
+            defaults = panel.build(1).build().spec.viz_config.spec.field_config.defaults
+            return getattr(defaults.custom.thresholds_style, "mode", None), [(step.value, step.color) for step in (defaults.thresholds.steps if defaults.thresholds else [])]
+        loss = generate.Relation("network", "internet/target")
+        declared = declared_levels(loss, "loss_pct")
+        self.assertEqual(drawn(generate.series("Loss", loss.query(["loss_pct"]))),
+                         ("dashed", generate.levelled(generate.Levels(declared.better, declared.amber, declared.red, declared.inclusive))))
+        self.assertEqual(drawn(generate.series("Clients", generate.Relation("network", "wireless/accesspoint").query(["clients"])))[0], None)
+        experience = generate.Relation("network", "zigbee/experience")
+        self.assertEqual(drawn(generate.series("Zigbee", experience.query(["experience_pct"])))[0], None)
 
     def test_queries_whose_levels_disagree_need_explicit_thresholds(self):
         experience = generate.Relation("network", "zigbee/experience")
@@ -207,6 +225,29 @@ class LevelsTest(unittest.TestCase):
 
 
 class PanelSqlTest(unittest.TestCase):
+
+    def test_a_level_follows_every_transform_that_keeps_its_meaning(self):
+        for transforms, unit, levels, wanted in [
+            ((), "", ("higher", 1, None, True), ("higher", 1, None, True)),
+            (("percent", "avg"), "", ("higher", None, 1, True), ("higher", None, 100, True)),
+            (("percent",), "%", ("higher", 85, None, True), None),
+            (("complement",), "", ("higher", 1, None, True), ("lower", 0, None, True)),
+            (("complement", "percent"), "", ("higher", 0.9, 0.5, True), ("lower", 10, 50, True)),
+            (("invert",), "$", ("lower", 0.5, 0.8, True), ("higher", 2, 1.25, True)),
+            (("invert",), "%", ("lower", 25, None, True), ("higher", -20, None, True)),
+            (("invert",), "", ("lower", 0, 0.8, True), None),
+            (("invert",), "%", ("higher", None, -100, True), None),
+            (("peak",), "", ("lower", 100, None, True), ("lower", 100, None, True)),
+            (("trough", "min"), "", ("higher", 35, None, True), ("higher", 35, None, True)),
+            (("peak",), "", ("higher", 35, None, True), None),
+            (("trough",), "", ("lower", 100, None, True), None),
+            (("max",), "", ("higher", 35, None, True), None),
+            (("sum",), "", ("higher", 1, None, True), None),
+            (("counter",), "", ("lower", 5, None, True), None),
+            (("baseline",), "$", ("lower", 0.5, None, True), None),
+            (("compass",), "°", ("lower", 1, None, True), None),
+        ]:
+            self.assertEqual(judged(*levels, unit, transforms), wanted, "{}: levels got wrong".format(transforms))
 
     def test_transforms_render_into_the_series_statement(self):
         for dialect, relation, document, measures, transforms, wanted in [
@@ -331,16 +372,17 @@ class SeriesTest(unittest.TestCase):
             defaults = generate.series("Decimals", query).build(1).build().spec.viz_config.spec.field_config.defaults
             self.assertEqual(defaults.decimals, decimals)
 
-    def test_a_state_timeline_colours_by_the_binary_thresholds(self):
-        defaults = generate.state("Up", generate.Relation("network", "ethernet/switch").query(["up"])) \
-            .build(1).build().spec.viz_config.spec.field_config.defaults
-        self.assertEqual((defaults.color.mode, [(step.value, step.color) for step in defaults.thresholds.steps]),
-                         ("thresholds", generate.STATE_LADDER))
-
-    def test_time_series_and_state_timelines_share_one_axis_width_so_their_plots_start_together(self):
+    def test_a_state_timeline_draws_its_labelled_states_inside_the_time_series_margins(self):
+        visualization = generate.state("Up", generate.Relation("network", "ethernet/switch").query(["up"]), ("Down", "Up")).build(1).build().spec.viz_config
+        layout = json.loads(visualization.spec.options["getOption"].split("\n", 1)[0].removeprefix("const layout = ").removesuffix(";"))
+        self.assertEqual((visualization.group, layout), (generate.ECHARTS_PANEL, {
+            "axis": generate.AXIS_WIDTH,
+            "legend": generate.LEGEND_WIDTH,
+            "states": [{"from": None, "colour": "red", "text": "Down"}, {"from": 1, "colour": "green", "text": "Up"}],
+        }))
         query = generate.Series(influxdb3, generate.INFLUXDB3, "SELECT 1", "", "", "", "time_series")
         widths = {build.__name__: build("Plot", query).build(1).build().spec.viz_config.spec.field_config.defaults.custom.axis_width
-                  for build in (generate.series, generate.steps, generate.points, generate.bars, generate.state)}
+                  for build in (generate.series, generate.steps, generate.points, generate.bars)}
         self.assertEqual(widths, dict.fromkeys(widths, generate.AXIS_WIDTH))
 
     def test_a_unit_maps_to_its_grafana_unit_or_falls_back_to_a_suffix(self):
@@ -357,19 +399,6 @@ class SeriesTest(unittest.TestCase):
                          ["Newest", "Oldest", "Availability", "Entities", "Metrics", "Volume"])
         steps = panels[5].build(1).build().spec.viz_config.spec.field_config.defaults.thresholds.steps
         self.assertEqual([(step.value, step.color) for step in steps], generate.VOLUME_LADDER)
-
-    def test_status_and_health_timelines_read_up_down_and_healthy_unhealthy(self):
-        resource = yaml.safe_load(Path(join(DIR_DASHBOARDS, "generated/containers.yaml")).read_text())
-        mappings = {element["spec"]["title"]: [(mapping["options"].get("from"), mapping["options"].get("to"), mapping["options"]["result"]["text"])
-                                               for mapping in element["spec"]["vizConfig"]["spec"]["fieldConfig"]["defaults"]["mappings"]]
-                    for element in resource["spec"]["elements"].values() if element["spec"]["title"] in ("Container Running", "Container Healthy")}
-        self.assertEqual(mappings, {
-            "Container Running": [(None, 0.999, "Down"), (1, None, "Up")],
-            "Container Healthy": [(None, 0.999, "Unhealthy"), (1, None, "Healthy")],
-        })
-
-
-class SqlTest(unittest.TestCase):
 
     def test_a_template_takes_its_table_entity_and_scope_from_the_relation(self):
         ticker = generate.Relation("wrangle", "equity/ticker")

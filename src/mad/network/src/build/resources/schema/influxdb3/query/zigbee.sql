@@ -27,6 +27,7 @@ WHERE
     module = 'network'
     AND device IS NOT NULL
     AND experience IS NULL
+    AND router IS NULL
     AND time >= now() - INTERVAL '100 day'
     AND time >= (SELECT max(time) FROM zigbee) - INTERVAL '1 day'
 GROUP BY "Bucket", device
@@ -50,7 +51,33 @@ WHERE
     module = 'network'
     AND experience IS NOT NULL
     AND device IS NULL
+    AND router IS NULL
     AND time >= now() - INTERVAL '100 day'
     AND time >= (SELECT max(time) FROM zigbee) - INTERVAL '1 day'
 GROUP BY "Bucket", experience
 ORDER BY "Bucket", experience;
+
+-- zigbee/router [the coordinator and the always on outlets routing the mesh, one row per key device] every 15m, bucketed [1 day] across the newest two buckets
+-- part 1 of 1:
+SELECT
+    date_bin(INTERVAL '1 day', time + INTERVAL '480 minute') AS "Bucket",
+    router                                                   AS "Router",
+    count(*)                                                 AS "Rows",
+    min(time) + INTERVAL '480 minute'                        AS "Oldest",
+    max(time) + INTERVAL '480 minute'                        AS "Newest",
+    round(avg(available), 1)                                 AS "Available Fraction",
+    count(available)                                         AS "Available Count",
+    count(DISTINCT available)                                AS "Available Distinct",
+    round(last_value(lqi ORDER BY time), 1)                  AS "Lqi",
+    count(lqi)                                               AS "Lqi Count",
+    count(DISTINCT lqi)                                      AS "Lqi Distinct"
+FROM zigbee
+WHERE
+    module = 'network'
+    AND router IS NOT NULL
+    AND device IS NULL
+    AND experience IS NULL
+    AND time >= now() - INTERVAL '100 day'
+    AND time >= (SELECT max(time) FROM zigbee) - INTERVAL '1 day'
+GROUP BY "Bucket", router
+ORDER BY "Bucket", router;

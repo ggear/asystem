@@ -2,6 +2,7 @@ package metric
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -63,7 +64,7 @@ func Relations(hosts []string, services []string, cadence string) []schema.Relat
 			Unit:        builder.unit,
 			Description: builder.description,
 			Persist:     builder.persisted,
-			Levels:      levelsOf(builder.pulseRule, true),
+			Levels:      levelsOf(builder.pulseRule, true, builder.valueKind == ValueBool),
 		})
 		if builder.persisted {
 			relation.Measures = append(relation.Measures, schema.Measure{
@@ -72,7 +73,7 @@ func Relations(hosts []string, services []string, cadence string) []schema.Relat
 				Unit:        builder.unit,
 				Description: builder.description + ", smoothed across the trend window",
 				Persist:     true,
-				Levels:      levelsOf(builder.trendRule, false),
+				Levels:      levelsOf(builder.trendRule, false, builder.valueKind == ValueBool),
 			})
 		}
 	}
@@ -387,23 +388,37 @@ const (
 	AvailabilityOffline = "offline"
 )
 
-func levelsOf(rule Rule, red bool) *schema.Levels {
-	if rule.kind != ruleBounded || rule.target != Self {
+func levelsOf(rule Rule, red, flag bool) *schema.Levels {
+	judged := []Rule{rule}
+	if rule.kind == ruleAll {
+		judged = slices.Clone(rule.children)
+	}
+	judged = slices.DeleteFunc(judged, func(child Rule) bool { return child.kind == ruleGated || child.kind == ruleHealthy })
+	switch {
+	case len(judged) == 0 && flag:
+		rule = Truthy()
+	case len(judged) == 1:
+		rule = judged[0]
+	default:
 		return nil
 	}
 	levels := &schema.Levels{Better: schema.BetterLower, Inclusive: true}
-	switch rule.comparator {
-	case AtMost:
-	case Below:
+	limit := rule.limit
+	switch {
+	case rule.kind == ruleTruthy:
+		levels.Better, limit = schema.BetterHigher, 1
+	case rule.kind != ruleBounded || rule.target != Self:
+		return nil
+	case rule.comparator == AtMost:
+	case rule.comparator == Below:
 		levels.Inclusive = false
-	case AtLeast:
+	case rule.comparator == AtLeast:
 		levels.Better = schema.BetterHigher
-	case Above:
+	case rule.comparator == Above:
 		levels.Better, levels.Inclusive = schema.BetterHigher, false
 	default:
 		return nil
 	}
-	limit := rule.limit
 	if red {
 		levels.Red = &limit
 	} else {

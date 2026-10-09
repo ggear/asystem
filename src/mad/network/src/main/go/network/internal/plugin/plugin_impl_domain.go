@@ -29,7 +29,7 @@ var domainServers = []domainServer{
 var (
 	domainResolver     = schema.Declare("domain/resolver", "public DNS resolution of the monitored domain, one row per public resolver", aggregateCadence).Entities(domainServerNames()...)
 	domainResolverName = domainResolver.Subject("resolver", "public DNS resolver queried")
-	domainOK           = domainResolver.Bool("ok", "resolver agreed with the consensus address set")
+	domainOK           = domainResolver.Bool("ok", "resolver agreed with the consensus address set").Levels(schema.Truthy())
 	domainResolved     = domainResolver.Bool("resolved", "resolver returned an address")
 	domainLatencyMs    = domainResolver.Float("latency_ms", "ms", "time taken to resolve")
 )

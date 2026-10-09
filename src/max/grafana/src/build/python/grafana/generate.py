@@ -10,7 +10,6 @@ from grafana_foundation_sdk.builders import (
     timeseries,
 )
 from grafana_foundation_sdk.builders import stat as stats
-from grafana_foundation_sdk.builders import statetimeline as statetimelines
 from grafana_foundation_sdk.builders import text as texts
 from grafana_foundation_sdk.cog.encoder import JSONEncoder
 from grafana_foundation_sdk.models import common as kinds
@@ -19,7 +18,7 @@ from grafana_foundation_sdk.models import text as textkinds
 
 from asystem import *
 from asystem.schema.document import BETTER_HIGHER, BETTER_LOWER
-from asystem.schema.panel import Query, aggregated, entitled, selected, subjected
+from asystem.schema.panel import Query, aggregated, entitled, judged, selected, subjected
 from asystem.schema.query import duration, expanded
 
 
@@ -43,6 +42,10 @@ def main():
     host_names = server_hosts.entities(("all",))
     internet_targets = Relation("network", "internet/target")
     hass_temperatures = Relation("homeassistant", "sensor__temperature")
+    temperature_units = [unit for dimension in hass_temperatures.relation.dimensions if dimension.key == "unit_of_measurement" for unit in dimension.entities]
+    if len(temperature_units) != 1:
+        raise failed(f"relation [{hass_temperatures.relation.path}] declares [unit_of_measurement] [{','.join(temperature_units)}], expected one unit")
+    temperature_unit = temperature_units[0]
     rack_group = "Rack"
     rack_ids = [unique_id for unique_id, grouped in zip(metadata_df["unique_id"], metadata_df["grafana_group"], strict=True)
                 if rack_group in [group.strip() for group in str(grouped).split(",")]]
@@ -51,7 +54,6 @@ def main():
     rack_temperatures = friendly_names(metadata_df, rack_ids)
 
     # Build Home dashboard [weather]
-    perth_midnight = "TIMESTAMP '1969-12-31T16:00:00'"
     forecast_bounds = {
         "bom_darlington_temp_max_1": "Max",
         "bom_darlington_temp_min_1": "Min",
@@ -89,8 +91,8 @@ FROM observed JOIN forecast ON observed.day = forecast.day
 ORDER BY time
 """
     forecast_series = hass_temperatures.sql(
-        forecast_sql, "°C", "BOM's next-day forecast against the observed roof temperature per Perth day, with the error as bars",
-        midnight=perth_midnight,
+        forecast_sql, temperature_unit, "BOM's next-day forecast against the observed roof temperature per Perth day, with the error as bars",
+        midnight="TIMESTAMP '1969-12-31T16:00:00'",
         bound=entitled("NULL", hass_temperatures.subject, list(forecast_bounds), forecast_bounds),
         forecast=hass_temperatures.scope("value", list(forecast_bounds)),
         observed=hass_temperatures.scope("value", ["compensation_sensor_roof_temperature"]),
@@ -164,24 +166,17 @@ ORDER BY time
     metadata_dashboard("electricity", home_span, graphed_metadata_df)
 
     # Build Finance dashboard [currency]
-    typical_rates = {
-        "AUD/GBP": 1.9,
-        "AUD/USD": 1.4,
-        "AUD/SGD": 1.1,
-    }
-    typical_spread = 0.1
-    display_names = {code: "/".join(reversed(code.split("/"))) for code in typical_rates}
     currency_rates = Relation("wrangle", "currency/rate")
+    currency_pairs = currency_rates.entities()
+    display_names = {code: "/".join(reversed(code.split("/"))) for code in currency_pairs}
     header_panels = header([(currency_rates, None)], "wrangle", TRADING_SPAN)
     dashboard("currency", YEAR_WINDOW, header_panels, [
         [
-            *(stat(display_names[code], currency_rates.query(["snapshot"], [code], ("invert",), display_names))
-              .thresholds(higher_better(round(typical * (1 - typical_spread), 3), round(typical * (1 + typical_spread), 3)))
-              for code, typical in typical_rates.items()),
-            *(stat(f"{display_names[code]} Day", currency_rates.query(["delta@1d"], [code], ("invert",), display_names)).thresholds(CHANGE_LADDER) for code in typical_rates),
+            *(stat(display_names[code], currency_rates.query(["snapshot"], [code], ("invert",), display_names)) for code in currency_pairs),
+            *(stat(f"{display_names[code]} Day", currency_rates.query(["delta@1d"], [code], ("invert",), display_names)).thresholds(CHANGE_LADDER) for code in currency_pairs),
         ],
         [series("CCY/AUD Range Deltas", currency_rates.query(["snapshot"], None, ("invert", "baseline"), display_names))],
-        [series(f"{display_names[code]} End of Days", currency_rates.query(["snapshot"], [code], ("invert",), display_names)) for code in typical_rates],
+        [series(f"{display_names[code]} End of Days", currency_rates.query(["snapshot"], [code], ("invert",), display_names)) for code in currency_pairs],
     ])
 
     # Build Finance dashboard [interest]
@@ -245,15 +240,6 @@ ORDER BY time
 
     # Build Systems dashboard [containers]
     containers_window = TimeRange("now-1h", "10s", SHORT_RANGES)
-
-    def state_mappings(below, at):
-        return [
-            models.RangeMap(options=models.Dashboardv2RangeMapOptions(from_val=None, to=0.999, result=models.ValueMappingResult(text=below, color=RED))),
-            models.RangeMap(options=models.Dashboardv2RangeMapOptions(from_val=1, to=None, result=models.ValueMappingResult(text=at, color=GREEN))),
-        ]
-
-    up_mappings = state_mappings("Down", "Up")
-    healthy_mappings = state_mappings("Unhealthy", "Healthy")
     service_names = SUPERVISOR_SERVICES.entities()
     header_panels = header([(SUPERVISOR_SERVICES, service_names)], "supervisor", SUPERVISOR_SPAN)
     dashboard("containers", containers_window, header_panels, [
@@ -261,29 +247,28 @@ ORDER BY time
             stat("Running", SUPERVISOR_SERVICES.query(["status"], service_names, ("sum",))),
             stat("Not Running", SUPERVISOR_SERVICES.query(["status"], service_names, ("complement", "sum"))).thresholds(lower_better(1, 1)),
             stat("Configured", SUPERVISOR_SERVICES.query(["configured_status"], service_names, ("sum",))),
-            stat("Running Rate", SUPERVISOR_SERVICES.query(["status"], service_names, ("percent", "avg")), "mean").thresholds(higher_better(90, 99)),
-            stat("Healthy Rate", SUPERVISOR_SERVICES.query(["health_status"], service_names, ("percent", "avg")), "mean").thresholds(higher_better(90, 99)),
+            stat("Running Rate", SUPERVISOR_SERVICES.query(["status"], service_names, ("percent", "avg")), "mean"),
+            stat("Healthy Rate", SUPERVISOR_SERVICES.query(["health_status"], service_names, ("percent", "avg")), "mean"),
             stat("Restarts", SUPERVISOR_SERVICES.query(["restart_count"], service_names, ("counter", "sum")), "delta").thresholds(lower_better(1, 5)),
         ],
         [series("Container CPU Usage", SUPERVISOR_SERVICES.query(["used_processor"], service_names))],
         [series("Container RAM Usage", SUPERVISOR_SERVICES.query(["used_memory"], service_names))],
         [series("Container Disk Usage", SUPERVISOR_SERVICES.query(["used_disk_rate"], service_names))],
         [series("Container Network Usage", SUPERVISOR_SERVICES.query(["used_network"], service_names))],
-        [state("Container Running", SUPERVISOR_SERVICES.query(["status"], service_names), 16).mappings(up_mappings)],
-        [state("Container Healthy", SUPERVISOR_SERVICES.query(["health_status"], service_names), 16).mappings(healthy_mappings)],
-        [state("Container Backed Up", SUPERVISOR_SERVICES.query(["backup_status"], service_names), 16)],
+        [state("Container Running", SUPERVISOR_SERVICES.query(["status"], service_names), ("Down", "Up"), 16)],
+        [state("Container Healthy", SUPERVISOR_SERVICES.query(["health_status"], service_names), ("Unhealthy", "Healthy"), 16)],
+        [state("Container Backed Up", SUPERVISOR_SERVICES.query(["backup_status"], service_names), ("Failed", "Backed Up"), 16)],
     ])
 
     # Build Systems dashboard [servers]
     servers_window = TimeRange("now-2d", "10s", SHORT_RANGES)
-    used_ladder = lower_better(70, 90)
     header_panels = header([(server_hosts, host_names)], "supervisor", SUPERVISOR_SPAN)
     dashboard("servers", servers_window, header_panels, [
         [
-            stat("Availability", server_hosts.query(["status"], host_names, ("percent", "min")), "mean").thresholds(higher_better(90, 99)),
-            stat("CPU Mean", server_hosts.query(["used_processor"], host_names, ("avg",)), "mean").thresholds(used_ladder),
-            stat("RAM Mean", server_hosts.query(["used_memory"], host_names, ("avg",)), "mean").thresholds(used_ladder),
-            stat("Temperature Mean", server_hosts.query(["temperature"], host_names, ("avg",)), "mean").thresholds(lower_better(70, 85)),
+            stat("Availability", server_hosts.query(["status"], host_names, ("percent", "min")), "mean"),
+            stat("CPU Trend Max", server_hosts.query(["used_processor_trend"], host_names, ("max",))),
+            stat("RAM Trend Max", server_hosts.query(["used_memory_trend"], host_names, ("max",))),
+            stat("Temperature Trend Max", server_hosts.query(["temperature_trend"], host_names, ("max",))),
             stat("Home Volume Max", server_hosts.query(["used_home_space"], host_names, ("max",))),
             stat("Share Volume Max", server_hosts.query(["used_share_space"], host_names, ("max",))),
         ],
@@ -295,7 +280,7 @@ ORDER BY time
         [series("Server Network Usage", server_hosts.query(["used_network"], host_names))],
         [series("Server Temperature", [
             server_hosts.query(["temperature"], host_names),
-            hass_temperatures.query(["value"], list(rack_temperatures), (), {unique_id: name.lower().replace(" ", "-") for unique_id, name in rack_temperatures.items()}, "°C"),
+            hass_temperatures.query(["value"], list(rack_temperatures), (), {unique_id: name.lower().replace(" ", "-") for unique_id, name in rack_temperatures.items()}, temperature_unit),
         ])],
         [series("Server Temperature Warning", server_hosts.query(["warn_temperature"], host_names))],
         [series("Server Fan Speed", server_hosts.query(["spin_fan_speed"], host_names))],
@@ -311,20 +296,21 @@ ORDER BY time
 
     # Build Systems dashboard [network]
     access_points = Relation("network", "wireless/accesspoint")
-    zigbee_devices = Relation("network", "zigbee/device")
+    zigbee_routers = Relation("network", "zigbee/router")
     zigbee_experience = Relation("network", "zigbee/experience")
     network_diagnosis = Relation("network", "diagnosis/plugin")
     wired_switches = Relation("network", "ethernet/switch")
     powered_devices = Relation("network", "ethernet/powered")
+    weewx_consoles = Relation("network", "weewx/console")
     header_panels = header([(access_points, None)], "network")
     dashboard("network", HOURS_WINDOW, header_panels, [
         [
-            stat("Gateway", internet_targets.query(["reachable"], ["gateway"], ("percent",)), "mean").thresholds(higher_better(95, 99.9)),
+            stat("Gateway", internet_targets.query(["reachable"], ["gateway"], ("percent",)), "mean"),
             stat("Wireless Clients", access_points.query(["clients"], None, ("sum",))),
             stat("Wireless Experience", access_points.query(["experience_pct"], None, ("min",))),
             stat("Wired Experience", wired_switches.query(["experience_pct"], None, ("min",))),
             stat("Zigbee Experience", zigbee_experience.query(["experience_pct"], ["router"])),
-            stat("PoE Budget", wired_switches.query(["poe_pct"], None, ("max",))).thresholds(lower_better(80, 95)),
+            stat("PoE Budget", wired_switches.query(["poe_pct"], None, ("max",))),
         ],
         [series("Network Utilisation", server_hosts.query(["used_network"], host_names))],
         [series("Network Device Experience", [wired_switches.query(["experience_pct"]), access_points.query(["experience_pct"])])],
@@ -336,10 +322,14 @@ ORDER BY time
         [series("Access Point Clients", access_points.query(["clients"]))],
         [series("Network Diagnosis", network_diagnosis.query(["score"]))],
         [series("Zigbee Experience", zigbee_experience.query(["experience_pct"]))],
-        [series("Network Device Temperature", [hass_temperatures.query(["value"], list(rack_temperatures), (), rack_temperatures, "°C"), wired_switches.query(["temperature"])])],
-        [state("Network Devices Up", [wired_switches.query(["up"]), access_points.query(["up"])], 5)],
-        [state("Network Devices Restarted", [wired_switches.query(["restarted"], None, ("complement",)), access_points.query(["restarted"], None, ("complement",))], 5)],
-        [state("Zigbee Devices Available", zigbee_devices.query(["available"]), 16)],
+        [series("Zigbee Router Link Quality", zigbee_routers.query(["lqi"])).decimals(0)],
+        [series("Weather Console Signal", weewx_consoles.query(["quality_pct"]))],
+        [series("Network Device Temperature", [hass_temperatures.query(["value"], list(rack_temperatures), (), rack_temperatures, temperature_unit), wired_switches.query(["temperature"])])],
+        [state("Network Devices Up", [wired_switches.query(["up"]), access_points.query(["up"])], ("Down", "Up"), 5)],
+        [state("Network Devices Overheating", [wired_switches.query(["overheating"], None, ("complement",)), access_points.query(["overheating"], None, ("complement",))],
+               ("Overheating", "Normal"), 5)],
+        [state("Zigbee Routers Available", zigbee_routers.query(["available"]), ("Unavailable", "Available"), 6)],
+        [state("Weather Console Fresh", weewx_consoles.query(["fresh"]), ("Stale", "Fresh"), 4)],
     ])
 
     # Build Systems dashboard [internet]
@@ -349,10 +339,10 @@ ORDER BY time
     header_panels = header([(internet_targets, None)], "network")
     dashboard("internet", HOURS_WINDOW, header_panels, [
         [
-            stat("Reachability", internet_targets.query(["reachable"], public_targets, ("percent", "avg")), "mean").thresholds(higher_better(95, 99.9)),
-            stat("Resolution", dns_resolvers.query(["ok"], None, ("percent", "avg")), "mean").thresholds(higher_better(95, 99.9)),
+            stat("Reachability", internet_targets.query(["reachable"], public_targets, ("percent", "avg")), "mean"),
+            stat("Resolution", dns_resolvers.query(["ok"], None, ("percent", "avg")), "mean"),
             stat("Certificate", certificate_endpoints.query(["expiry_days"], None, ("min",))),
-            stat("Latency Mean", internet_targets.query(["rtt_ms"], public_targets, ("avg",)), "mean").thresholds(lower_better(50, 100)),
+            stat("Latency Mean", internet_targets.query(["rtt_ms"], public_targets, ("avg",)), "mean"),
             stat("Latency Max", internet_targets.query(["rtt_ms"], public_targets, ("peak", "max")), "max"),
             stat("Loss Max", internet_targets.query(["loss_pct"], public_targets, ("peak", "max")), "max"),
         ],
@@ -360,7 +350,8 @@ ORDER BY time
         [series("Internet Jitter", internet_targets.query(["jitter_ms"]))],
         [series("Internet Loss", internet_targets.query(["loss_pct"]))],
         [series("Domain Resolution", dns_resolvers.query(["latency_ms"]))],
-        [state("Certificate Verified", certificate_endpoints.query(["verified"]), 4)],
+        [series("Certificate Validity", certificate_endpoints.query(["validity_pct"]))],
+        [state("Certificate Verified", certificate_endpoints.query(["verified"]), ("Unverified", "Verified"), 4)],
     ])
 
     # Write generated dashboards
@@ -493,12 +484,13 @@ class Relation:
         units = {"%"} if "percent" in transforms or "baseline" in transforms else {measure.unit for measure in picked}
         descriptions = sorted({measure.description for measure in picked if measure.description})
         levels = None
-        if len(picked) == 1 and picked[0].levels is not None and set(transforms) <= WORST_TRANSFORMS[picked[0].levels.better]:
-            judged = picked[0].levels
-            bounds = {(judged.entities[entity].amber, judged.entities[entity].red) if entity in judged.entities else (judged.amber, judged.red)
+        if len(picked) == 1 and picked[0].levels is not None:
+            declared = picked[0].levels
+            bounds = {(declared.entities[entity].amber, declared.entities[entity].red) if entity in declared.entities else (declared.amber, declared.red)
                       for entity in (entities or self.relation.entities or [None])}
             if len(bounds) == 1 and bounds != {(None, None)}:
-                levels = Levels(judged.better, *bounds.pop(), judged.inclusive)
+                shown = judged(declared.better, *bounds.pop(), declared.inclusive, picked[0].unit, transforms)
+                levels = Levels(*shown) if shown else None
         return Series(
             self.dialect,
             self.datasource,
@@ -596,9 +588,9 @@ class Panel:
         displays = {query.dialect.DISPLAY for query in self.queries}
         if len(displays) == 1 and "" not in displays and all(query.form == "time_series" for query in self.queries):
             self.visualization.display_name(displays.pop())
-        judged = {query.levels for query in self.queries}
-        self.levels = next(iter(judged)) if len(judged) == 1 else None
-        self.disagreeing = len(judged) > 1 and judged != {None}
+        declared = {query.levels for query in self.queries}
+        self.levels: Levels | None = next(iter(declared)) if len(declared) == 1 else None
+        self.disagreeing = len(declared) > 1 and declared != {None}
         self.explicit = False
 
     def __getattr__(self, name):
@@ -619,9 +611,9 @@ class Panel:
             raise failed(f"panel [{self.title}] takes its thresholds from its measure's levels, "
                          f"declare them in the owning schema or pass override=True to replace them deliberately")
         self.explicit = True
-        return self._coloured(ladder)
+        return self.coloured(ladder)
 
-    def _coloured(self, ladder):
+    def coloured(self, ladder):
         self.visualization.thresholds(dashboardv2.ThresholdsConfig().mode(models.ThresholdsMode.ABSOLUTE).steps([
             models.Threshold(value=value, color=color) for value, color in ladder
         ]))
@@ -655,9 +647,10 @@ def stat(title, queries, reducer="lastNotNull", unit=None, height=4):
                      .justify_mode(kinds.BigValueJustifyMode.CENTER)
                      .reduce_options(common.ReduceDataOptions().calcs([reducer])))
     panel = Panel(title, queries, 4, height, visualization, unit)
-    if panel.levels is not None and reducer not in WORST_REDUCERS[panel.levels.better]:
-        panel.levels, panel.disagreeing = None, False
-    return panel._coloured(levelled(panel.levels) if panel.levels is not None else NEUTRAL_LADDER)
+    levels = panel.levels
+    if levels is not None and reducer not in LEVELLED_REDUCERS[levels.better]:
+        levels, panel.levels, panel.disagreeing = None, None, False
+    return panel.coloured(levelled(levels) if levels is not None else NEUTRAL_LADDER)
 
 
 def series(title, queries, unit=None, interpolation=kinds.LineInterpolation.LINEAR):
@@ -676,7 +669,11 @@ def series(title, queries, unit=None, interpolation=kinds.LineInterpolation.LINE
                              .width(LEGEND_WIDTH)
                              .calcs(["min", "max", "mean"])))
     panel = Panel(title, queries, GRID_WIDTH, 10, visualization, unit)
-    panel.levels, panel.disagreeing = None, False
+    panel.disagreeing = False
+    levels = panel.levels
+    if levels is not None:
+        visualization.thresholds_style(common.GraphThresholdsStyleConfig().mode(kinds.GraphThresholdsStyleMode.DASHED))
+        panel.coloured(levelled(levels))
     return panel
 
 
@@ -692,27 +689,21 @@ def bars(title, queries, unit=None):
     return series(title, queries, unit).draw_style(kinds.GraphDrawStyle.BARS).fill_opacity(80)
 
 
-def compass_scale(panel):
-    return panel.min(0).max(len(COMPASS_POINTS)).mappings(COMPASS_MAPPINGS)
-
-
-def state(title, queries, height=10):
-    visualization = (statetimelines.VisualizationV2()
-                     .show_value(kinds.VisibilityMode.NEVER)
-                     .merge_values(True)
-                     .row_height(0.8)
-                     .fill_opacity(80)
-                     .line_width(0)
-                     .color_scheme(dashboardv2.FieldColor().mode(models.FieldColorModeId.THRESHOLDS))
-                     .axis_width(AXIS_WIDTH)
-                     .legend(common.VizLegendOptions()
-                             .show_legend(True)
-                             .display_mode(kinds.LegendDisplayMode.LIST)
-                             .placement(kinds.LegendPlacement.RIGHT)
-                             .width(LEGEND_WIDTH)))
+def state(title, queries, labels, height=10):
+    states = [{"from": onset, "colour": colour, "text": text} for (onset, colour), text in zip(STATE_LADDER, labels, strict=True)]
+    layout = json.dumps({"axis": AXIS_WIDTH, "legend": LEGEND_WIDTH, "states": states})
+    visualization = dashboardv2.VizConfigKind().group(ECHARTS_PANEL).options({
+        "renderer": "canvas",
+        "editorMode": "code",
+        "getOption": f"const layout = {layout};\n{TIMELINE_SCRIPT.strip()}\n",
+    })
     panel = Panel(title, queries, GRID_WIDTH, height, visualization)
     panel.levels, panel.disagreeing = None, False
-    return panel._coloured(STATE_LADDER)
+    return panel
+
+
+def compass_scale(panel):
+    return panel.min(0).max(len(COMPASS_POINTS)).mappings(COMPASS_MAPPINGS)
 
 
 def header(sources, service, ceiling=None):
@@ -994,8 +985,102 @@ TITLES = {uid: title for declared in FOLDERS.values() for uid, title in declared
 DASHBOARD_TAG = "asystem"
 
 GRID_WIDTH = 24
-AXIS_WIDTH = 200
+AXIS_WIDTH = 80
 LEGEND_WIDTH = 400
+ECHARTS_PANEL = "volkovlabs-echarts-panel"
+TIMELINE_SCRIPT = """
+const theme = context.grafana.theme;
+const start = context.panel.data.timeRange.from.valueOf();
+const end = context.panel.data.timeRange.to.valueOf();
+const names = [];
+const spans = [];
+for (const frame of context.panel.data.series) {
+  const time = frame.fields.find((field) => field.type === 'time');
+  if (!time) {
+    continue;
+  }
+  for (const field of frame.fields) {
+    if (field === time || field.type !== 'number') {
+      continue;
+    }
+    const name = field.state?.displayName ?? field.labels?.metric ?? field.name;
+    let row = names.indexOf(name);
+    if (row < 0) {
+      row = names.push(name) - 1;
+    }
+    let open = null;
+    for (let index = 0; index < time.values.length; index++) {
+      const value = field.values[index];
+      if (value === null || value === undefined) {
+        continue;
+      }
+      const shown = layout.states.findLast((state) => state.from === null || value >= state.from);
+      if (open && open.text === shown.text) {
+        continue;
+      }
+      if (open) {
+        open.value[2] = time.values[index];
+      }
+      open = {value: [row, Math.max(time.values[index], start), end], text: shown.text, itemStyle: {color: theme.visualization.getColorByName(shown.colour)}};
+      spans.push(open);
+    }
+  }
+}
+const clock = (millis) => context.echarts.time.format(millis, end - start > 86400000 ? '{MM}/{dd} {HH}:{mm}' : '{HH}:{mm}', false);
+const padding = theme.spacing.gridSize;
+const left = layout.axis + padding;
+const right = layout.legend + 2 * padding;
+const steps = [1, 2, 5, 10, 15, 30, 60, 120, 180, 360, 720, 1440, 2880, 10080].map((minutes) => minutes * 60000);
+const step = steps.find((millis) => (context.panel.chart.getWidth() - left - right) * millis / (end - start) >= 40) ?? steps[steps.length - 1];
+const tick = (millis) => context.echarts.time.format(millis, step >= 1440 * 60000 ? '{MM}/{dd}' : '{HH}:{mm}', false);
+const local = -new Date(start).getTimezoneOffset() * 60000;
+const ticks = [];
+for (let at = Math.ceil((start + local) / step) * step - local; at <= end; at += step) {
+  ticks.push(at);
+}
+return {
+  backgroundColor: 'transparent',
+  textStyle: {fontFamily: theme.typography.fontFamily, fontSize: 12},
+  grid: {left: left, right: right, top: 4, bottom: 24},
+  tooltip: {
+    trigger: 'item',
+    formatter: (item) => `${names[item.value[0]]}<br/>${item.data.text} ${clock(item.value[1])} to ${clock(item.value[2])}`,
+  },
+  xAxis: {
+    type: 'time',
+    min: start,
+    max: end,
+    axisLine: {show: false},
+    axisTick: {show: false, customValues: ticks},
+    axisLabel: {color: theme.colors.text.secondary, customValues: ticks, formatter: tick},
+    splitLine: {show: true, lineStyle: {color: theme.colors.border.weak}},
+  },
+  yAxis: {
+    type: 'category',
+    data: names,
+    inverse: true,
+    position: 'right',
+    axisLine: {show: false},
+    axisTick: {show: false},
+    axisLabel: {color: theme.colors.text.primary, width: layout.legend - 24, overflow: 'truncate', align: 'left', margin: 12, interval: 0},
+  },
+  series: [{
+    type: 'custom',
+    encode: {x: [1, 2], y: 0},
+    data: spans,
+    renderItem: (params, api) => {
+      const from = api.coord([api.value(1), api.value(0)]);
+      const to = api.coord([api.value(2), api.value(0)]);
+      const height = api.size([0, 1])[1] * 0.8;
+      const shape = context.echarts.graphic.clipRectByRect(
+        {x: from[0], y: from[1] - height / 2, width: to[0] - from[0], height: height},
+        {x: params.coordSys.x, y: params.coordSys.y, width: params.coordSys.width, height: params.coordSys.height},
+      );
+      return shape && {type: 'rect', shape: shape, style: {fill: api.visual('color'), opacity: 0.8}};
+    },
+  }],
+};
+"""
 TimeRange = namedtuple("TimeRange", "start refresh options")
 SHORT_RANGES = ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d", "60d", "90d"]
 LONG_RANGES = ["7d", "30d", "90d", "180d", "1y", "5y", "10y", "25y", "50y"]
@@ -1080,8 +1165,7 @@ ORIGIN_GENERATED = "Generated"
 ORIGIN_WRITTEN = "Hand-written"
 Series = namedtuple("Series", "dialect datasource sql unit interval description form origin levels", defaults=[ORIGIN_GENERATED, None])
 Levels = namedtuple("Levels", "better amber red inclusive")
-WORST_TRANSFORMS = {BETTER_HIGHER: {"trough", "min"}, BETTER_LOWER: {"peak", "max"}}
-WORST_REDUCERS = {BETTER_HIGHER: {"lastNotNull", "min"}, BETTER_LOWER: {"lastNotNull", "max"}}
+LEVELLED_REDUCERS = {BETTER_HIGHER: {"lastNotNull", "mean", "min"}, BETTER_LOWER: {"lastNotNull", "mean", "max"}}
 LEVEL_EPSILON = 1e-6
 SCHEMA_ARTIFACTS = {}
 

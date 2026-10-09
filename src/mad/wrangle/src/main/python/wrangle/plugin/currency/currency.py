@@ -9,7 +9,9 @@ import polars.selectors as cs
 from wrangle import plugin
 from wrangle.plugin.logger import dataframe_print
 
-PAIRS = ['AUD/USD', 'AUD/GBP', 'AUD/SGD']
+TYPICAL_RATES = {'AUD/USD': 0.7143, 'AUD/GBP': 0.5263, 'AUD/SGD': 0.9091}
+PAIRS = list(TYPICAL_RATES)
+TYPICAL_SPREAD = 0.1
 
 PERIODS = OrderedDict([
     ('1 Day Delta', 1),

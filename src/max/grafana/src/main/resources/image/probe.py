@@ -3,6 +3,7 @@ import os
 import sys
 from os.path import abspath, basename, dirname, join, realpath
 from pathlib import Path
+from typing import Any
 
 import requests
 import yaml
@@ -20,11 +21,12 @@ SECONDS = {
 }
 
 if __name__ == "__main__":
-    server = sys.argv[1] if len(sys.argv) > 1 else "http://{}:{}".format(
-        os.environ["GRAFANA_SERVICE_PROD"], os.environ["GRAFANA_HTTP_PORT"])
+    # noinspection HttpUrlsUsage
+    server = sys.argv[1] if len(sys.argv) > 1 else f"http://{os.environ['GRAFANA_SERVICE_PROD']}:{os.environ['GRAFANA_HTTP_PORT']}"
+    dashboards = sys.argv[2] if len(sys.argv) > 2 else DIR_DASHBOARDS
     credentials = (os.environ["GRAFANA_USER"], os.environ["GRAFANA_TOKEN"])
     faults, probed = [], 0
-    for path in sorted(glob.glob(join(DIR_DASHBOARDS, "generated/*.yaml")) + glob.glob(join(DIR_DASHBOARDS, "custom/*.yaml"))):
+    for path in sorted(glob.glob(join(dashboards, "generated/*.yaml")) + glob.glob(join(dashboards, "custom/*.yaml"))):
         resource = yaml.safe_load(Path(path).read_text())
         if resource.get("kind") != "Dashboard":
             continue
@@ -37,8 +39,9 @@ if __name__ == "__main__":
                 floor = group.get("queryOptions", {}).get("interval") or "1s"
                 interval = max(int(floor[:-1]) * SECONDS[floor[-1]],
                                int(start[4:-1]) * SECONDS[start[-1]] // POINTS) * 1000
+                result: dict[str, Any]
                 try:
-                    response = requests.post("{}/api/ds/query".format(server), auth=credentials, timeout=TIMEOUT, json={
+                    response = requests.post(f"{server}/api/ds/query", auth=credentials, timeout=TIMEOUT, json={
                         "from": start,
                         "to": "now",
                         "queries": [{
@@ -51,7 +54,8 @@ if __name__ == "__main__":
                             **spec["spec"],
                         }],
                     })
-                    result = response.json().get("results", {}).get("A", {})
+                    answer = response.json()
+                    result = answer.get("results", {}).get("A") or {"error": answer.get("message") or f"status [{response.status_code}]"}
                 except (requests.RequestException, ValueError) as error:
                     result = {"error": str(error)}
                 frames = [frame for frame in result.get("frames", [])
@@ -59,6 +63,6 @@ if __name__ == "__main__":
                 if result.get("error") or not frames:
                     faults.append((basename(path)[:-5], element["spec"]["title"], result.get("error") or "empty"))
     for dashboard, title, fault in faults:
-        print("Probe fault dashboard [{}] panel [{}] fault [{}]".format(dashboard, title, fault))
-    print("Probe ran [{}] queries with [{}] faults".format(probed, len(faults)))
+        print(f"Probe fault dashboard [{dashboard}] panel [{title}] fault [{fault}]")
+    print(f"Probe ran [{probed}] queries with [{len(faults)}] faults")
     sys.exit(1 if faults else 0)

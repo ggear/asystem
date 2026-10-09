@@ -442,7 +442,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -527,7 +527,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -626,7 +626,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1

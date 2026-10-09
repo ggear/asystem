@@ -65,3 +65,4 @@ dist
 **/monary/**
 *.mbox
 
+src/max/grafana/src/main/resources/image/plugins

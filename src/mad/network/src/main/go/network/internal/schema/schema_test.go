@@ -152,6 +152,8 @@ func TestSchema_Levels(t *testing.T) {
 	relation.Float("loss", "%", "measure judged lower is better").Levels(AmberAbove(2))
 	relation.Float("mesh", "%", "measure judged per entity").Levels(Levels{Better: BetterHigher, Inclusive: true}.Entity("router", 35).Entity("mesh", 50))
 	relation.Float("plain", "%", "measure judged by no bound")
+	relation.Bool("up", "flag judged healthy only while true").Levels(Truthy())
+	relation.Float("budget", "%", "measure judged amber then red").Levels(AmberAbove(80).RedFrom(95))
 	measures := relation.Relation().Measures
 	if levels := measures[0].Levels; levels == nil || levels.Better != BetterHigher || *levels.Amber != 85 || levels.Red != nil || !levels.Inclusive {
 		t.Errorf("fit levels: got %+v want amber below 85, the bound itself fit", levels)
@@ -164,6 +166,12 @@ func TestSchema_Levels(t *testing.T) {
 	}
 	if measures[3].Levels != nil {
 		t.Errorf("plain levels: got %+v want none", measures[3].Levels)
+	}
+	if levels := measures[4].Levels; levels == nil || levels.Better != BetterHigher || *levels.Amber != 1 || levels.Red != nil || !levels.Inclusive {
+		t.Errorf("up levels: got %+v want amber below 1, so only always true is fit", levels)
+	}
+	if levels := measures[5].Levels; levels == nil || levels.Better != BetterLower || *levels.Amber != 80 || levels.Red == nil || *levels.Red != 95 {
+		t.Errorf("budget levels: got %+v want amber above 80 and red above 95", levels)
 	}
 }
 

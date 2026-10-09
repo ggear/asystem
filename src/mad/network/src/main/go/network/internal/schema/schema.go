@@ -283,6 +283,15 @@ func AmberAbove(limit float64) Levels {
 	return Levels{Better: BetterLower, Amber: &limit, Inclusive: true}
 }
 
+func Truthy() Levels {
+	return AmberBelow(1)
+}
+
+func (l Levels) RedFrom(limit float64) Levels {
+	l.Red = &limit
+	return l
+}
+
 func (l Levels) Entity(name string, amber float64) Levels {
 	entities := make(map[string]Bounds, len(l.Entities)+1)
 	maps.Copy(entities, l.Entities)
@@ -326,6 +335,11 @@ type BoolKey struct{ key }
 
 func (k BoolKey) Transient() BoolKey {
 	k.owner.transient(k.index)
+	return k
+}
+
+func (k BoolKey) Levels(levels Levels) BoolKey {
+	k.owner.relation.Measures[k.index].Levels = &levels
 	return k
 }
 

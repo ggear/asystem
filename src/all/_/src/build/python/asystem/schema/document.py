@@ -194,8 +194,7 @@ def load_schema_document(module_root=None, config=None, args=None):
               "description": "<text>",      OPTIONAL  What the measure records
               "persist":     <true|false>,  OPTIONAL  Declared but never written when false, defaults to true
               "period":      "<duration>",  OPTIONAL  Span the value covers, part of the row key, defaults to cadence
-              "levels":      {              OPTIONAL  Where the service's own judgement of the value turns amber or
-                                                      red, null where it judges the value by no simple bound
+              "levels":      {              OPTIONAL  Service's own amber and red bounds, null if none, bool as share true
                 "better":      "<better>",  REQUIRED  [higher|lower], the direction a healthier value moves
                 "amber":       <number>,    REQUIRED  Bound past which the value is amber, null when none
                 "red":         <number>,    REQUIRED  Bound past which the value is red, null when none
@@ -638,8 +637,8 @@ def _validate(document):
 def _validate_levels(document, relation, measure):
     levels = measure.levels
     owner = "relation [{}] measure [{}] levels".format(relation.path, measure.key)
-    if measure.kind not in ("float", "int"):
-        raise ValueError("Build generate script [{}] {} on a [{}] measure, only a number has levels"
+    if measure.kind not in ("float", "int", "bool"):
+        raise ValueError("Build generate script [{}] {} on a [{}] measure, only a number or a bool has levels"
                          .format(document.module, owner, measure.kind))
     if levels.better not in LEVELS_BETTER:
         raise ValueError("Build generate script [{}] {} declare unknown better [{}] expected one of [{}]"
@@ -648,6 +647,9 @@ def _validate_levels(document, relation, measure):
     if not any(bound.amber is not None or bound.red is not None for bound in bounds):
         raise ValueError("Build generate script [{}] {} declare no amber or red bound".format(document.module, owner))
     for bound in bounds:
+        if measure.kind == "bool" and any(limit is not None and not 0 <= limit <= 1 for limit in (bound.amber, bound.red)):
+            raise ValueError("Build generate script [{}] {} bound a bool outside [0,1], a bool level is the share of time it is true"
+                             .format(document.module, owner))
         if bound.amber is not None and bound.red is not None and \
                 (bound.red > bound.amber if levels.better == "higher" else bound.red < bound.amber):
             raise ValueError("Build generate script [{}] {} put red [{}] on the healthier side of amber [{}]"

@@ -82,11 +82,12 @@ func TestMetricSchema_PersistMirrorsSkipHist(t *testing.T) {
 }
 
 func TestMetricSchema_LevelsOf(t *testing.T) {
-	limit := 90.0
+	limit, always := 90.0, 1.0
 	tests := []struct {
 		name     string
 		rule     Rule
 		red      bool
+		flag     bool
 		expected *schema.Levels
 	}{
 		{name: "at_most_pulse_is_inclusive_red", rule: Bounded(Self, AtMost, limit), red: true, expected: &schema.Levels{Better: schema.BetterLower, Red: &limit, Inclusive: true}},
@@ -96,12 +97,20 @@ func TestMetricSchema_LevelsOf(t *testing.T) {
 		{name: "above_is_strict_higher_better", rule: Bounded(Self, Above, limit), red: true, expected: &schema.Levels{Better: schema.BetterHigher, Red: &limit}},
 		{name: "exactly_exports_nothing", rule: Bounded(Self, Exactly, 0), red: true},
 		{name: "a_sibling_bound_exports_nothing", rule: Bounded(MetricHostUsedMemory, AtMost, limit), red: true},
-		{name: "a_compound_rule_exports_nothing", rule: All(Bounded(Self, AtMost, limit), Healthy(MetricHostFailedDrives)), red: true},
-		{name: "truthy_exports_nothing", rule: Truthy(), red: true},
+		{name: "a_sibling_verdict_leaves_its_bound", rule: All(Bounded(Self, AtMost, limit), Healthy(MetricHostFailedDrives)), red: true, expected: &schema.Levels{Better: schema.BetterLower, Red: &limit, Inclusive: true}},
+		{name: "a_bool_of_sibling_verdicts_is_red_below_always_true", rule: All(Healthy(MetricHostUsedMemory), Healthy(MetricHostFailedDrives)), red: true, flag: true, expected: &schema.Levels{Better: schema.BetterHigher, Red: &always, Inclusive: true}},
+		{name: "an_either_rule_exports_nothing", rule: Any(Healthy(MetricHostWarnTemperature), Against(MetricHostWarnTemperature, AtLeast)), red: true},
+		{name: "two_own_bounds_export_nothing", rule: All(Bounded(Self, AtMost, limit), Bounded(Self, AtLeast, 0)), red: true},
+		{name: "truthy_pulse_is_red_below_always_true", rule: Truthy(), red: true, expected: &schema.Levels{Better: schema.BetterHigher, Red: &always, Inclusive: true}},
+		{name: "truthy_trend_is_amber_below_always_true", rule: Truthy(), expected: &schema.Levels{Better: schema.BetterHigher, Amber: &always, Inclusive: true}},
+		{name: "a_gated_bool_is_red_below_always_true", rule: Gated(GateServiceAggregate), red: true, flag: true, expected: &schema.Levels{Better: schema.BetterHigher, Red: &always, Inclusive: true}},
+		{name: "a_gated_value_exports_nothing", rule: Gated(GateServiceAggregate), red: true},
+		{name: "a_gate_leaves_its_bound", rule: All(Gated(GateServiceAggregate), Bounded(Self, AtMost, limit)), red: true, expected: &schema.Levels{Better: schema.BetterLower, Red: &limit, Inclusive: true}},
+		{name: "an_unjudged_bool_exports_nothing", rule: Rule{}, red: true, flag: true},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := levelsOf(test.rule, test.red)
+			got := levelsOf(test.rule, test.red, test.flag)
 			if (got == nil) != (test.expected == nil) {
 				t.Fatalf("levels: got %+v want %+v", got, test.expected)
 			}

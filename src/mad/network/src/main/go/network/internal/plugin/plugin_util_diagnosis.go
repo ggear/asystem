@@ -7,7 +7,7 @@ import (
 var (
 	diagnosis       = schema.Declare("diagnosis/plugin", "health and diagnosis score of one network plugin", aggregateCadence)
 	diagnosisPlugin = diagnosis.Subject("plugin", "name of the diagnosed plugin")
-	diagnosisOK     = diagnosis.Bool("ok", "plugin reported a fit or sick diagnosis rather than dead")
+	diagnosisOK     = diagnosis.Bool("ok", "plugin reported a fit or sick diagnosis rather than dead").Levels(schema.Truthy())
 	diagnosisScore  = diagnosis.Int("score", "", "diagnosis score from 0 to 100")
 )
 

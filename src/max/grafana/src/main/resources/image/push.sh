@@ -3,10 +3,10 @@
 set -eo pipefail
 
 DASHBOARDS_HOME="/asystem/mnt/dashboards"
+SERVER_URL="http://${GRAFANA_SERVICE}:${GRAFANA_HTTP_PORT}"
 
 gcx() {
-  env -u GRAFANA_TOKEN GCX_AGENT_MODE=false GRAFANA_SERVER="http://${GRAFANA_SERVICE}:${GRAFANA_HTTP_PORT}" GRAFANA_ORG_ID=1 \
-    GRAFANA_USER="${GRAFANA_USER}" GRAFANA_PASSWORD="${GRAFANA_TOKEN}" gcx --no-color "$@"
+  env -u GRAFANA_TOKEN GCX_AGENT_MODE=false GRAFANA_SERVER="${SERVER_URL}" GRAFANA_ORG_ID=1 GRAFANA_USER="${GRAFANA_USER}" GRAFANA_PASSWORD="${GRAFANA_TOKEN}" gcx --no-color "$@"
 }
 
 echo "Pushing folders and dashboards ..."
@@ -30,3 +30,10 @@ for DASHBOARD in ${SERVED}; do
 done
 
 gcx api /api/admin/stats
+
+echo "Probing every panel ..."
+if [ "${INFLUXDB3_SERVICE}" == "${INFLUXDB3_SERVICE_PROD}" ]; then
+  python3 "$(dirname "$(readlink -f "$0")")/probe.py" "${SERVER_URL}" "${DASHBOARDS_HOME}" || true
+else
+  echo "Skipped as the datasources are not production"
+fi

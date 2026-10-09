@@ -26,7 +26,7 @@ Retire nginx and use cloudflared for homeasistant?
 Improve sys tests with datbase/broker asserts for all modules
 
 
-
+Review complete patch
 Review updateability of dashbaords, generate.py locally collect each definition nicely? inline consts/queries etc?
 Validate Conditions, Diagnostics, electcirty, Rain
 Validte Currency, Equity, Interest
@@ -40,7 +40,7 @@ Validate Containers, Internet, Network, Servers
 Increase Aloc RAM to warn at 90, error at 95 and increase supervisor mem
 Chnage yellow on rack screen to better colour
 
-code review this patch which is not in git yet.
+code review plugin
 Make sure project guidleines are followed.
 Check all logic.
 No comments except for clear excpetions eg document interface/complicated process.

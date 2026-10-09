@@ -1,6 +1,6 @@
 {
   "warning": "WARNING: This file is written by the build process, any manual edits will be lost!",
-  "source": "b35681becf9103820f4bc6fa490de7b9cba6c8d0baf1b989f0988704264f729e",
+  "source": "325f96522ae1fc338dafbf086e26eaa5c58eb9a5b2c9338017117db1e4adf83a",
   "module": "supervisor",
   "discovered": false,
   "database": {
@@ -34,7 +34,13 @@
             "description": "every host/service is reporting and all metrics are ok",
             "persist": true,
             "period": "",
-            "levels": null
+            "levels": {
+              "better": "higher",
+              "amber": null,
+              "red": 1,
+              "inclusive": true,
+              "entities": {}
+            }
           },
           {
             "key": "cluster_trend",
@@ -43,7 +49,13 @@
             "description": "every host/service is reporting and all metrics are ok, smoothed across the trend window",
             "persist": true,
             "period": "",
-            "levels": null
+            "levels": {
+              "better": "higher",
+              "amber": 1,
+              "red": null,
+              "inclusive": true,
+              "entities": {}
+            }
           },
           {
             "key": "status",
@@ -52,7 +64,13 @@
             "description": "host is reporting metrics and all host metrics are ok",
             "persist": true,
             "period": "",
-            "levels": null
+            "levels": {
+              "better": "higher",
+              "amber": null,
+              "red": 1,
+              "inclusive": true,
+              "entities": {}
+            }
           },
           {
             "key": "status_trend",
@@ -61,7 +79,13 @@
             "description": "host is reporting metrics and all host metrics are ok, smoothed across the trend window",
             "persist": true,
             "period": "",
-            "levels": null
+            "levels": {
+              "better": "higher",
+              "amber": 1,
+              "red": null,
+              "inclusive": true,
+              "entities": {}
+            }
           },
           {
             "key": "used_processor",
@@ -268,7 +292,13 @@
             "description": "rated endurance consumed by the most worn drive mounted on this host",
             "persist": true,
             "period": "",
-            "levels": null
+            "levels": {
+              "better": "lower",
+              "amber": null,
+              "red": 90,
+              "inclusive": true,
+              "entities": {}
+            }
           },
           {
             "key": "used_drive_life_trend",
@@ -277,7 +307,13 @@
             "description": "rated endurance consumed by the most worn drive mounted on this host, smoothed across the trend window",
             "persist": true,
             "period": "",
-            "levels": null
+            "levels": {
+              "better": "lower",
+              "amber": 80,
+              "red": null,
+              "inclusive": true,
+              "entities": {}
+            }
           },
           {
             "key": "used_home_space",
@@ -505,7 +541,13 @@
             "description": "every configured service is running and healthy",
             "persist": false,
             "period": "",
-            "levels": null
+            "levels": {
+              "better": "higher",
+              "amber": null,
+              "red": 1,
+              "inclusive": true,
+              "entities": {}
+            }
           },
           {
             "key": "services_max_memory",
@@ -604,7 +646,13 @@
             "description": "service is running and reporting metrics",
             "persist": true,
             "period": "",
-            "levels": null
+            "levels": {
+              "better": "higher",
+              "amber": null,
+              "red": 1,
+              "inclusive": true,
+              "entities": {}
+            }
           },
           {
             "key": "status_trend",
@@ -613,7 +661,13 @@
             "description": "service is running and reporting metrics, smoothed across the trend window",
             "persist": true,
             "period": "",
-            "levels": null
+            "levels": {
+              "better": "higher",
+              "amber": 1,
+              "red": null,
+              "inclusive": true,
+              "entities": {}
+            }
           },
           {
             "key": "backup_status",
@@ -622,7 +676,13 @@
             "description": "module backup completed successfully in the latest run",
             "persist": true,
             "period": "",
-            "levels": null
+            "levels": {
+              "better": "higher",
+              "amber": null,
+              "red": 1,
+              "inclusive": true,
+              "entities": {}
+            }
           },
           {
             "key": "backup_status_trend",
@@ -631,7 +691,13 @@
             "description": "module backup completed successfully in the latest run, smoothed across the trend window",
             "persist": true,
             "period": "",
-            "levels": null
+            "levels": {
+              "better": "higher",
+              "amber": 1,
+              "red": null,
+              "inclusive": true,
+              "entities": {}
+            }
           },
           {
             "key": "health_status",
@@ -640,7 +706,13 @@
             "description": "service container healthcheck reported healthy",
             "persist": true,
             "period": "",
-            "levels": null
+            "levels": {
+              "better": "higher",
+              "amber": null,
+              "red": 1,
+              "inclusive": true,
+              "entities": {}
+            }
           },
           {
             "key": "health_status_trend",
@@ -649,7 +721,13 @@
             "description": "service container healthcheck reported healthy, smoothed across the trend window",
             "persist": true,
             "period": "",
-            "levels": null
+            "levels": {
+              "better": "higher",
+              "amber": 1,
+              "red": null,
+              "inclusive": true,
+              "entities": {}
+            }
           },
           {
             "key": "configured_status",
@@ -658,7 +736,13 @@
             "description": "this service is expected to be running on this host",
             "persist": true,
             "period": "",
-            "levels": null
+            "levels": {
+              "better": "higher",
+              "amber": null,
+              "red": 1,
+              "inclusive": true,
+              "entities": {}
+            }
           },
           {
             "key": "configured_status_trend",
@@ -667,7 +751,13 @@
             "description": "this service is expected to be running on this host, smoothed across the trend window",
             "persist": true,
             "period": "",
-            "levels": null
+            "levels": {
+              "better": "higher",
+              "amber": 1,
+              "red": null,
+              "inclusive": true,
+              "entities": {}
+            }
           },
           {
             "key": "name",
@@ -694,7 +784,13 @@
             "description": "processor time used by the service across all cores",
             "persist": true,
             "period": "",
-            "levels": null
+            "levels": {
+              "better": "lower",
+              "amber": null,
+              "red": 90,
+              "inclusive": true,
+              "entities": {}
+            }
           },
           {
             "key": "used_processor_trend",
@@ -703,7 +799,13 @@
             "description": "processor time used by the service across all cores, smoothed across the trend window",
             "persist": true,
             "period": "",
-            "levels": null
+            "levels": {
+              "better": "lower",
+              "amber": 70,
+              "red": null,
+              "inclusive": true,
+              "entities": {}
+            }
           },
           {
             "key": "used_memory",
@@ -712,7 +814,13 @@
             "description": "memory in use by the service, excluding page cache, against its configured ceiling",
             "persist": true,
             "period": "",
-            "levels": null
+            "levels": {
+              "better": "lower",
+              "amber": null,
+              "red": 90,
+              "inclusive": true,
+              "entities": {}
+            }
           },
           {
             "key": "used_memory_trend",
@@ -721,7 +829,13 @@
             "description": "memory in use by the service, excluding page cache, against its configured ceiling, smoothed across the trend window",
             "persist": true,
             "period": "",
-            "levels": null
+            "levels": {
+              "better": "lower",
+              "amber": 75,
+              "red": null,
+              "inclusive": true,
+              "entities": {}
+            }
           },
           {
             "key": "used_disk_rate",
@@ -730,7 +844,13 @@
             "description": "block device throughput used by the service against a 100 MiB per second budget",
             "persist": true,
             "period": "",
-            "levels": null
+            "levels": {
+              "better": "lower",
+              "amber": null,
+              "red": 90,
+              "inclusive": true,
+              "entities": {}
+            }
           },
           {
             "key": "used_disk_rate_trend",
@@ -739,7 +859,13 @@
             "description": "block device throughput used by the service against a 100 MiB per second budget, smoothed across the trend window",
             "persist": true,
             "period": "",
-            "levels": null
+            "levels": {
+              "better": "lower",
+              "amber": 80,
+              "red": null,
+              "inclusive": true,
+              "entities": {}
+            }
           },
           {
             "key": "used_network",
@@ -748,7 +874,13 @@
             "description": "network throughput used by the service against a 1000 Mbit per second budget",
             "persist": true,
             "period": "",
-            "levels": null
+            "levels": {
+              "better": "lower",
+              "amber": null,
+              "red": 90,
+              "inclusive": true,
+              "entities": {}
+            }
           },
           {
             "key": "used_network_trend",
@@ -757,7 +889,13 @@
             "description": "network throughput used by the service against a 1000 Mbit per second budget, smoothed across the trend window",
             "persist": true,
             "period": "",
-            "levels": null
+            "levels": {
+              "better": "lower",
+              "amber": 80,
+              "red": null,
+              "inclusive": true,
+              "entities": {}
+            }
           },
           {
             "key": "up_time",
@@ -784,7 +922,13 @@
             "description": "restarts of the service container since it was created",
             "persist": true,
             "period": "",
-            "levels": null
+            "levels": {
+              "better": "lower",
+              "amber": null,
+              "red": 5,
+              "inclusive": true,
+              "entities": {}
+            }
           },
           {
             "key": "restart_count_trend",
@@ -793,7 +937,13 @@
             "description": "restarts of the service container since it was created, smoothed across the trend window",
             "persist": true,
             "period": "",
-            "levels": null
+            "levels": {
+              "better": "lower",
+              "amber": 0,
+              "red": null,
+              "inclusive": true,
+              "entities": {}
+            }
           }
         ]
       }

@@ -107,20 +107,20 @@ spec:
                       SELECT
                           time,
                           measure AS metric,
-                          avg(value) AS value
+                          max(value) AS value
                       FROM (
                           SELECT
-                              $__dateBin(time) AS time,
-                              host             AS entity,
-                              'temperature'    AS measure,
-                              avg(temperature) AS value
+                              $__dateBin(time)       AS time,
+                              host                   AS entity,
+                              'temperature_trend'    AS measure,
+                              avg(temperature_trend) AS value
                           FROM supervisor
                           WHERE
                               $__timeFilter(time)
                               AND module = 'supervisor'
                               AND host IS NOT NULL
                               AND service IS NULL
-                              AND temperature IS NOT NULL
+                              AND temperature_trend IS NOT NULL
                               AND host IN (
                                   'macmini-mad', 'macmini-max', 'macmini-may', 'macmini-meg', 'raspbpi-jen',
                                   'raspbpi-jil'
@@ -134,10 +134,10 @@ spec:
             queryOptions:
               interval: 6s
             transformations: []
-        description: 'Generated: the hosts processor temperature'
+        description: 'Generated: the hosts processor temperature, smoothed across the trend window'
         id: 10
         links: []
-        title: Temperature Mean
+        title: Temperature Trend Max
         vizConfig:
           group: stat
           kind: VizConfig
@@ -152,9 +152,7 @@ spec:
                   - color: green
                     value: null
                   - color: yellow
-                    value: 70
-                  - color: red
-                    value: 85
+                    value: 70.000001
                 unit: celsius
               overrides: []
             options:
@@ -165,7 +163,7 @@ spec:
               percentChangeColorMode: standard
               reduceOptions:
                 calcs:
-                - mean
+                - lastNotNull
               showPercentChange: false
               textMode: value
               wideLayout: true
@@ -398,14 +396,23 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
                   showPoints: never
                   spanNulls: true
+                  thresholdsStyle:
+                    mode: dashed
                 decimals: 1
                 displayName: ${__field.labels.metric}
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: green
+                    value: null
+                  - color: red
+                    value: 90.000001
                 unit: percent
               overrides: []
             options:
@@ -482,14 +489,23 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
                   showPoints: never
                   spanNulls: true
+                  thresholdsStyle:
+                    mode: dashed
                 decimals: 1
                 displayName: ${__field.labels.metric}
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: green
+                    value: null
+                  - color: red
+                    value: 95.000001
                 unit: percent
               overrides: []
             options:
@@ -566,14 +582,23 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
                   showPoints: never
                   spanNulls: true
+                  thresholdsStyle:
+                    mode: dashed
                 decimals: 1
                 displayName: ${__field.labels.metric}
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: green
+                    value: null
+                  - color: red
+                    value: 80.000001
                 unit: percent
               overrides: []
             options:
@@ -686,7 +711,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -770,14 +795,23 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
                   showPoints: never
                   spanNulls: true
+                  thresholdsStyle:
+                    mode: dashed
                 decimals: 1
                 displayName: ${__field.labels.metric}
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: green
+                    value: null
+                  - color: red
+                    value: 90.000001
                 unit: percent
               overrides: []
             options:
@@ -854,14 +888,23 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
                   showPoints: never
                   spanNulls: true
+                  thresholdsStyle:
+                    mode: dashed
                 decimals: 1
                 displayName: ${__field.labels.metric}
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: green
+                    value: null
+                  - color: red
+                    value: 90.000001
                 unit: percent
               overrides: []
             options:
@@ -975,7 +1018,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -1138,14 +1181,23 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
                   showPoints: never
                   spanNulls: true
+                  thresholdsStyle:
+                    mode: dashed
                 decimals: 1
                 displayName: ${__field.labels.metric}
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: green
+                    value: null
+                  - color: red
+                    value: 80
                 unit: percent
               overrides: []
             options:
@@ -1222,7 +1274,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -1306,14 +1358,23 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
                   showPoints: never
                   spanNulls: true
+                  thresholdsStyle:
+                    mode: dashed
                 decimals: 1
                 displayName: ${__field.labels.metric}
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: green
+                    value: null
+                  - color: red
+                    value: 95.000001
                 unit: percent
               overrides: []
             options:
@@ -1390,14 +1451,23 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
                   showPoints: never
                   spanNulls: true
+                  thresholdsStyle:
+                    mode: dashed
                 decimals: 1
                 displayName: ${__field.labels.metric}
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: green
+                    value: null
+                  - color: red
+                    value: 90.000001
                 unit: percent
               overrides: []
             options:
@@ -1474,7 +1544,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -1558,7 +1628,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -1642,14 +1712,23 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
                   showPoints: never
                   spanNulls: true
+                  thresholdsStyle:
+                    mode: dashed
                 decimals: 1
                 displayName: ${__field.labels.metric}
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: green
+                    value: null
+                  - color: red
+                    value: 10.000001
                 unit: percent
               overrides: []
             options:
@@ -1726,7 +1805,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -1810,7 +1889,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -1890,14 +1969,23 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
                   showPoints: never
                   spanNulls: true
+                  thresholdsStyle:
+                    mode: dashed
                 decimals: 1
                 displayName: ${__field.labels.metric}
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: red
+                    value: null
+                  - color: green
+                    value: 100
                 unit: percent
               overrides: []
             options:
@@ -2261,10 +2349,8 @@ spec:
                   steps:
                   - color: red
                     value: null
-                  - color: yellow
-                    value: 90
                   - color: green
-                    value: 99
+                    value: 100
                 unit: percent
               overrides: []
             options:
@@ -2303,20 +2389,20 @@ spec:
                       SELECT
                           time,
                           measure AS metric,
-                          avg(value) AS value
+                          max(value) AS value
                       FROM (
                           SELECT
-                              $__dateBin(time)    AS time,
-                              host                AS entity,
-                              'used_processor'    AS measure,
-                              avg(used_processor) AS value
+                              $__dateBin(time)          AS time,
+                              host                      AS entity,
+                              'used_processor_trend'    AS measure,
+                              avg(used_processor_trend) AS value
                           FROM supervisor
                           WHERE
                               $__timeFilter(time)
                               AND module = 'supervisor'
                               AND host IS NOT NULL
                               AND service IS NULL
-                              AND used_processor IS NOT NULL
+                              AND used_processor_trend IS NOT NULL
                               AND host IN (
                                   'macmini-mad', 'macmini-max', 'macmini-may', 'macmini-meg', 'raspbpi-jen',
                                   'raspbpi-jil'
@@ -2330,10 +2416,10 @@ spec:
             queryOptions:
               interval: 6s
             transformations: []
-        description: 'Generated: processor time used across all cores'
+        description: 'Generated: processor time used across all cores, smoothed across the trend window'
         id: 8
         links: []
-        title: CPU Mean
+        title: CPU Trend Max
         vizConfig:
           group: stat
           kind: VizConfig
@@ -2348,9 +2434,7 @@ spec:
                   - color: green
                     value: null
                   - color: yellow
-                    value: 70
-                  - color: red
-                    value: 90
+                    value: 70.000001
                 unit: percent
               overrides: []
             options:
@@ -2361,7 +2445,7 @@ spec:
               percentChangeColorMode: standard
               reduceOptions:
                 calcs:
-                - mean
+                - lastNotNull
               showPercentChange: false
               textMode: value
               wideLayout: true
@@ -2389,20 +2473,20 @@ spec:
                       SELECT
                           time,
                           measure AS metric,
-                          avg(value) AS value
+                          max(value) AS value
                       FROM (
                           SELECT
-                              $__dateBin(time) AS time,
-                              host             AS entity,
-                              'used_memory'    AS measure,
-                              avg(used_memory) AS value
+                              $__dateBin(time)       AS time,
+                              host                   AS entity,
+                              'used_memory_trend'    AS measure,
+                              avg(used_memory_trend) AS value
                           FROM supervisor
                           WHERE
                               $__timeFilter(time)
                               AND module = 'supervisor'
                               AND host IS NOT NULL
                               AND service IS NULL
-                              AND used_memory IS NOT NULL
+                              AND used_memory_trend IS NOT NULL
                               AND host IN (
                                   'macmini-mad', 'macmini-max', 'macmini-may', 'macmini-meg', 'raspbpi-jen',
                                   'raspbpi-jil'
@@ -2416,10 +2500,10 @@ spec:
             queryOptions:
               interval: 6s
             transformations: []
-        description: 'Generated: memory in use against the total installed'
+        description: 'Generated: memory in use against the total installed, smoothed across the trend window'
         id: 9
         links: []
-        title: RAM Mean
+        title: RAM Trend Max
         vizConfig:
           group: stat
           kind: VizConfig
@@ -2434,9 +2518,7 @@ spec:
                   - color: green
                     value: null
                   - color: yellow
-                    value: 70
-                  - color: red
-                    value: 90
+                    value: 90.000001
                 unit: percent
               overrides: []
             options:
@@ -2447,7 +2529,7 @@ spec:
               percentChangeColorMode: standard
               reduceOptions:
                 calcs:
-                - mean
+                - lastNotNull
               showPercentChange: false
               textMode: value
               wideLayout: true

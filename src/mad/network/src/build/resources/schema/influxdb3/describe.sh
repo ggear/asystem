@@ -303,6 +303,7 @@ WHERE
     module = 'network'
     AND device IS NOT NULL
     AND experience IS NULL
+    AND router IS NULL
 UNION ALL
 SELECT
     'zigbee/experience'        AS relation,
@@ -317,6 +318,22 @@ WHERE
     module = 'network'
     AND experience IS NOT NULL
     AND device IS NULL
+    AND router IS NULL
+UNION ALL
+SELECT
+    'zigbee/router'            AS relation,
+    'router*'                  AS dimension,
+    2                          AS measures,
+    '15m'                      AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM zigbee
+WHERE
+    module = 'network'
+    AND router IS NOT NULL
+    AND device IS NULL
+    AND experience IS NULL
 ORDER BY rows DESC;
 
 -- measures
@@ -985,6 +1002,7 @@ WHERE
     module = 'network'
     AND device IS NOT NULL
     AND experience IS NULL
+    AND router IS NULL
 UNION ALL
 SELECT
     'zigbee/device'                                           AS relation,
@@ -1000,6 +1018,7 @@ WHERE
     module = 'network'
     AND device IS NOT NULL
     AND experience IS NULL
+    AND router IS NULL
 UNION ALL
 SELECT
     'zigbee/device'                                            AS relation,
@@ -1015,6 +1034,7 @@ WHERE
     module = 'network'
     AND device IS NOT NULL
     AND experience IS NULL
+    AND router IS NULL
 UNION ALL
 SELECT
     'zigbee/device'                                                   AS relation,
@@ -1030,6 +1050,7 @@ WHERE
     module = 'network'
     AND device IS NOT NULL
     AND experience IS NULL
+    AND router IS NULL
 UNION ALL
 SELECT
     'zigbee/experience'                                                  AS relation,
@@ -1045,6 +1066,39 @@ WHERE
     module = 'network'
     AND experience IS NOT NULL
     AND device IS NULL
+    AND router IS NULL
+UNION ALL
+SELECT
+    'zigbee/router'                                                 AS relation,
+    'available'                                                     AS measure,
+    'bool'                                                          AS kind,
+    '-'                                                             AS unit,
+    '15m'                                                           AS period,
+    count(available)                                                AS rows,
+    CAST(min(time) FILTER (WHERE available IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE available IS NOT NULL) AS VARCHAR) AS newest
+FROM zigbee
+WHERE
+    module = 'network'
+    AND router IS NOT NULL
+    AND device IS NULL
+    AND experience IS NULL
+UNION ALL
+SELECT
+    'zigbee/router'                                           AS relation,
+    'lqi'                                                     AS measure,
+    'int'                                                     AS kind,
+    '-'                                                       AS unit,
+    '15m'                                                     AS period,
+    count(lqi)                                                AS rows,
+    CAST(min(time) FILTER (WHERE lqi IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE lqi IS NOT NULL) AS VARCHAR) AS newest
+FROM zigbee
+WHERE
+    module = 'network'
+    AND router IS NOT NULL
+    AND device IS NULL
+    AND experience IS NULL
 UNION ALL
 SELECT
     '-'                   AS relation,
@@ -1061,7 +1115,7 @@ WHERE
     AND column_name NOT IN (
         'available', 'coordinator', 'coordinator_trend', 'degraded', 'degraded_trend',
         'device', 'errors', 'errors_trend', 'experience', 'experience_pct', 'full_duplex',
-        'full_duplex_trend', 'last_seen_s', 'lqi', 'module', 'port', 'port_trend',
+        'full_duplex_trend', 'last_seen_s', 'lqi', 'module', 'port', 'port_trend', 'router',
         'speed_mbps', 'speed_mbps_trend', 'time', 'weak'
     )
 ORDER BY rows DESC NULLS LAST;
@@ -1194,6 +1248,7 @@ WHERE
     module = 'network'
     AND device IS NOT NULL
     AND experience IS NULL
+    AND router IS NULL
 GROUP BY device
 UNION ALL
 SELECT
@@ -1209,7 +1264,30 @@ WHERE
     module = 'network'
     AND experience IS NOT NULL
     AND device IS NULL
+    AND router IS NULL
 GROUP BY experience, CASE WHEN experience IN ('router', 'mesh') THEN 'yes' ELSE 'no' END
+UNION ALL
+SELECT
+    'zigbee/router'            AS relation,
+    'router*'                  AS dimension,
+    router                     AS entity,
+    CASE WHEN router IN (
+        'Coordinator', 'Ada Desk Outlet', 'Deck Fans Outlet', 'Edwin Desk Outlet',
+        'Kitchen Fan Outlet'
+    ) THEN 'yes' ELSE 'no' END AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM zigbee
+WHERE
+    module = 'network'
+    AND router IS NOT NULL
+    AND device IS NULL
+    AND experience IS NULL
+GROUP BY router, CASE WHEN router IN (
+    'Coordinator', 'Ada Desk Outlet', 'Deck Fans Outlet', 'Edwin Desk Outlet',
+    'Kitchen Fan Outlet'
+) THEN 'yes' ELSE 'no' END
 ORDER BY rows DESC;
 SCHEMA_SQL
 }

@@ -10,6 +10,7 @@
 #     ada_tablet_2,
 #     edwin_group,
 #     edwin_home,
+#     edwin_room,
 #     kitchen_five,
 #     kitchen_move,
 #     lounge_arc,

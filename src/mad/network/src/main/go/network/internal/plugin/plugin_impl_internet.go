@@ -38,7 +38,7 @@ var (
 var (
 	internetTarget    = schema.Declare("internet/target", "internet reachability, one row per ping target", aggregateCadence).Entities(append([]string{internetGatewayName}, internetPublicTargets...)...)
 	internetName      = internetTarget.Subject("target", "ping target, either the local gateway or a public address")
-	internetReachable = internetTarget.Bool("reachable", "target answered at least one ping across the window")
+	internetReachable = internetTarget.Bool("reachable", "target answered at least one ping across the window").Levels(schema.Truthy())
 	internetLoss      = internetTarget.Float("loss_pct", "%", "packet loss across the window").Levels(schema.AmberAbove(internetLossFitMax))
 	internetRTT       = internetTarget.Float("rtt_ms", "ms", "mean round trip time across the window").Levels(schema.AmberAbove(internetRTTFitMax))
 	internetJitter    = internetTarget.Float("jitter_ms", "ms", "mean jitter across the window").Levels(schema.AmberAbove(internetJitterFitMax))

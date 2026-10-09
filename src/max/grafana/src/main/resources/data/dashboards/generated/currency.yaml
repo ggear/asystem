@@ -105,7 +105,7 @@ spec:
                       FROM (
                           SELECT
                               $__timeGroupAlias(time, $__interval),
-                              CASE entity WHEN 'AUD/GBP' THEN 'GBP/AUD' ELSE entity END AS entity,
+                              CASE entity WHEN 'AUD/USD' THEN 'USD/AUD' ELSE entity END AS entity,
                               'delta'                                                   AS measure,
                               avg(10000.0 / (100 + value) - 100)                        AS value
                           FROM currency
@@ -114,7 +114,7 @@ spec:
                               AND type = 'delta'
                               AND period = '1d'
                               AND unit = '%'
-                              AND entity IN ('AUD/GBP')
+                              AND entity IN ('AUD/USD')
                           GROUP BY 1, 2
                       ) AS arms
                       ORDER BY time
@@ -126,7 +126,7 @@ spec:
         description: 'Generated: change in the rate across [1 Day Delta]'
         id: 10
         links: []
-        title: GBP/AUD Day
+        title: USD/AUD Day
         vizConfig:
           group: stat
           kind: VizConfig
@@ -183,7 +183,7 @@ spec:
                       FROM (
                           SELECT
                               $__timeGroupAlias(time, $__interval),
-                              CASE entity WHEN 'AUD/USD' THEN 'USD/AUD' ELSE entity END AS entity,
+                              CASE entity WHEN 'AUD/GBP' THEN 'GBP/AUD' ELSE entity END AS entity,
                               'delta'                                                   AS measure,
                               avg(10000.0 / (100 + value) - 100)                        AS value
                           FROM currency
@@ -192,7 +192,7 @@ spec:
                               AND type = 'delta'
                               AND period = '1d'
                               AND unit = '%'
-                              AND entity IN ('AUD/USD')
+                              AND entity IN ('AUD/GBP')
                           GROUP BY 1, 2
                       ) AS arms
                       ORDER BY time
@@ -204,7 +204,7 @@ spec:
         description: 'Generated: change in the rate across [1 Day Delta]'
         id: 11
         links: []
-        title: USD/AUD Day
+        title: GBP/AUD Day
         vizConfig:
           group: stat
           kind: VizConfig
@@ -373,7 +373,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -423,7 +423,7 @@ spec:
                       FROM (
                           SELECT
                               $__timeGroupAlias(time, $__interval),
-                              CASE entity WHEN 'AUD/GBP' THEN 'GBP/AUD' ELSE entity END AS entity,
+                              CASE entity WHEN 'AUD/USD' THEN 'USD/AUD' ELSE entity END AS entity,
                               'snapshot'                                                AS measure,
                               avg(1.0 / value)                                          AS value
                           FROM currency
@@ -432,7 +432,7 @@ spec:
                               AND type = 'snapshot'
                               AND period = '1d'
                               AND unit = '$'
-                              AND entity IN ('AUD/GBP')
+                              AND entity IN ('AUD/USD')
                           GROUP BY 1, 2
                       ) AS arms
                       ORDER BY time
@@ -444,7 +444,7 @@ spec:
         description: 'Generated: closing rate for the currency pair'
         id: 14
         links: []
-        title: GBP/AUD End of Days
+        title: USD/AUD End of Days
         vizConfig:
           group: timeseries
           kind: VizConfig
@@ -452,13 +452,24 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
                   showPoints: never
                   spanNulls: true
+                  thresholdsStyle:
+                    mode: dashed
                 decimals: 3
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: red
+                    value: null
+                  - color: yellow
+                    value: 1.259922
+                  - color: green
+                    value: 1.539883
                 unit: currencyUSD
               overrides: []
             options:
@@ -502,7 +513,7 @@ spec:
                       FROM (
                           SELECT
                               $__timeGroupAlias(time, $__interval),
-                              CASE entity WHEN 'AUD/USD' THEN 'USD/AUD' ELSE entity END AS entity,
+                              CASE entity WHEN 'AUD/GBP' THEN 'GBP/AUD' ELSE entity END AS entity,
                               'snapshot'                                                AS measure,
                               avg(1.0 / value)                                          AS value
                           FROM currency
@@ -511,7 +522,7 @@ spec:
                               AND type = 'snapshot'
                               AND period = '1d'
                               AND unit = '$'
-                              AND entity IN ('AUD/USD')
+                              AND entity IN ('AUD/GBP')
                           GROUP BY 1, 2
                       ) AS arms
                       ORDER BY time
@@ -523,7 +534,7 @@ spec:
         description: 'Generated: closing rate for the currency pair'
         id: 15
         links: []
-        title: USD/AUD End of Days
+        title: GBP/AUD End of Days
         vizConfig:
           group: timeseries
           kind: VizConfig
@@ -531,13 +542,24 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
                   showPoints: never
                   spanNulls: true
+                  thresholdsStyle:
+                    mode: dashed
                 decimals: 3
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: red
+                    value: null
+                  - color: yellow
+                    value: 1.709986
+                  - color: green
+                    value: 2.089864
                 unit: currencyUSD
               overrides: []
             options:
@@ -610,13 +632,24 @@ spec:
             fieldConfig:
               defaults:
                 custom:
-                  axisWidth: 200
+                  axisWidth: 80
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
                   showPoints: never
                   spanNulls: true
+                  thresholdsStyle:
+                    mode: dashed
                 decimals: 3
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: red
+                    value: null
+                  - color: yellow
+                    value: 0.990001
+                  - color: green
+                    value: 1.209921
                 unit: currencyUSD
               overrides: []
             options:
@@ -1013,7 +1046,7 @@ spec:
                       FROM (
                           SELECT
                               $__timeGroupAlias(time, $__interval),
-                              CASE entity WHEN 'AUD/GBP' THEN 'GBP/AUD' ELSE entity END AS entity,
+                              CASE entity WHEN 'AUD/USD' THEN 'USD/AUD' ELSE entity END AS entity,
                               'snapshot'                                                AS measure,
                               avg(1.0 / value)                                          AS value
                           FROM currency
@@ -1022,7 +1055,7 @@ spec:
                               AND type = 'snapshot'
                               AND period = '1d'
                               AND unit = '$'
-                              AND entity IN ('AUD/GBP')
+                              AND entity IN ('AUD/USD')
                           GROUP BY 1, 2
                       ) AS arms
                       ORDER BY time
@@ -1034,7 +1067,7 @@ spec:
         description: 'Generated: closing rate for the currency pair'
         id: 7
         links: []
-        title: GBP/AUD
+        title: USD/AUD
         vizConfig:
           group: stat
           kind: VizConfig
@@ -1048,9 +1081,9 @@ spec:
                   - color: red
                     value: null
                   - color: yellow
-                    value: 1.71
+                    value: 1.259922
                   - color: green
-                    value: 2.09
+                    value: 1.539883
                 unit: currencyUSD
               overrides: []
             options:
@@ -1093,7 +1126,7 @@ spec:
                       FROM (
                           SELECT
                               $__timeGroupAlias(time, $__interval),
-                              CASE entity WHEN 'AUD/USD' THEN 'USD/AUD' ELSE entity END AS entity,
+                              CASE entity WHEN 'AUD/GBP' THEN 'GBP/AUD' ELSE entity END AS entity,
                               'snapshot'                                                AS measure,
                               avg(1.0 / value)                                          AS value
                           FROM currency
@@ -1102,7 +1135,7 @@ spec:
                               AND type = 'snapshot'
                               AND period = '1d'
                               AND unit = '$'
-                              AND entity IN ('AUD/USD')
+                              AND entity IN ('AUD/GBP')
                           GROUP BY 1, 2
                       ) AS arms
                       ORDER BY time
@@ -1114,7 +1147,7 @@ spec:
         description: 'Generated: closing rate for the currency pair'
         id: 8
         links: []
-        title: USD/AUD
+        title: GBP/AUD
         vizConfig:
           group: stat
           kind: VizConfig
@@ -1128,9 +1161,9 @@ spec:
                   - color: red
                     value: null
                   - color: yellow
-                    value: 1.26
+                    value: 1.709986
                   - color: green
-                    value: 1.54
+                    value: 2.089864
                 unit: currencyUSD
               overrides: []
             options:
@@ -1208,9 +1241,9 @@ spec:
                   - color: red
                     value: null
                   - color: yellow
-                    value: 0.99
+                    value: 0.990001
                   - color: green
-                    value: 1.21
+                    value: 1.209921
                 unit: currencyUSD
               overrides: []
             options:

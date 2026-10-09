@@ -756,6 +756,28 @@ WHERE
 HAVING count(*) FILTER (WHERE column_name = 'experience_pct') = 0
 UNION ALL
 SELECT
+    'zigbee/router' AS relation,
+    'available'     AS measure,
+    '15m'           AS period,
+    '-'             AS unit,
+    'missing'       AS fault
+FROM information_schema.columns
+WHERE
+    table_name = 'zigbee'
+HAVING count(*) FILTER (WHERE column_name = 'available') = 0
+UNION ALL
+SELECT
+    'zigbee/router' AS relation,
+    'lqi'           AS measure,
+    '15m'           AS period,
+    '-'             AS unit,
+    'missing'       AS fault
+FROM information_schema.columns
+WHERE
+    table_name = 'zigbee'
+HAVING count(*) FILTER (WHERE column_name = 'lqi') = 0
+UNION ALL
+SELECT
     'zigbee'     AS relation,
     column_name  AS measure,
     '-'          AS period,
@@ -767,7 +789,7 @@ WHERE
     AND column_name NOT IN (
         'available', 'coordinator', 'coordinator_trend', 'degraded', 'degraded_trend',
         'device', 'errors', 'errors_trend', 'experience', 'experience_pct', 'full_duplex',
-        'full_duplex_trend', 'last_seen_s', 'lqi', 'module', 'port', 'port_trend',
+        'full_duplex_trend', 'last_seen_s', 'lqi', 'module', 'port', 'port_trend', 'router',
         'speed_mbps', 'speed_mbps_trend', 'time', 'weak'
     )
 ORDER BY fault, measure;
