@@ -25,7 +25,9 @@ SCHEMA_LEAF = "payload"
 
 
 def _client():
-    return mqtt.Client("".join(random.choice(string.ascii_lowercase) for _ in range(10)), True)
+    return mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,
+                       client_id="".join(random.choice(string.ascii_lowercase) for _ in range(10)),
+                       clean_session=True)
 
 
 def _assert_vitals(payload):
@@ -40,10 +42,10 @@ def test_publishes_vitals_and_accepts_switch_command():
     def test():
         received = {}
 
-        def on_connect(client, _user_data, _flags, return_code):
+        def on_connect(client, _user_data, _flags, reason_code, _properties):
             client.subscribe(STATUS_TOPIC, 1)
             client.subscribe(DATA_TOPIC, 1)
-            print("Connected [code={}]".format(return_code))
+            print("Connected [code={}]".format(reason_code))
 
         def on_message(_client, _user_data, message):
             received[message.topic] = message.payload
