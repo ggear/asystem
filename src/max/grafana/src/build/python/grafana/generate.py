@@ -1039,7 +1039,7 @@ for (const frame of context.panel.data.series) {
       if (open) {
         open.value[2] = time.values[index];
       }
-      open = {value: [row, Math.max(time.values[index], start), end], text: shown.text, itemStyle: {color: theme.visualization.getColorByName(shown.colour)}};
+      open = {value: [row, open ? time.values[index] : start, end], text: shown.text, itemStyle: {color: theme.visualization.getColorByName(shown.colour)}};
       spans.push(open);
     }
   }
