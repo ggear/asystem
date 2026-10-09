@@ -18,19 +18,21 @@ def test_pubsub():
     def test():
         messages = []
 
-        def on_connect(client, user_data, flags, return_code):
+        def on_connect(client, user_data, flags, reason_code, properties):
             client.connected = True
-            print("CONNECTION [{}]".format(return_code))
+            print("CONNECTION [{}]".format(reason_code))
 
         def on_message(client, user_data, message):
             messages.append(message.payload)
             print("RECEIVED MESSAGE [{}]".format(message.payload))
 
-        def on_disconnect(client, user_data, return_code):
+        def on_disconnect(client, user_data, flags, reason_code, properties):
             client.connected = False
-            print("DISCONNECTED [{}]".format(return_code))
+            print("DISCONNECTED [{}]".format(reason_code))
 
-        client = mqtt.Client("".join(random.choice(string.ascii_lowercase) for i in range(10)), True)
+        client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,
+                             client_id="".join(random.choice(string.ascii_lowercase) for i in range(10)),
+                             clean_session=True)
         client.connected = False
         client.on_connect = on_connect
         client.on_message = on_message

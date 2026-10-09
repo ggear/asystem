@@ -27,10 +27,10 @@ def test_publishes_readings():
     def test():
         received = {}
 
-        def on_connect(client, _user_data, _flags, return_code):
+        def on_connect(client, _user_data, _flags, reason_code, _properties):
             client.subscribe(STATE_TOPIC, 1)
             client.subscribe(STATUS_TOPIC, 1)
-            print("Connected [code={}]".format(return_code))
+            print("Connected [code={}]".format(reason_code))
 
         def on_message(_client, _user_data, message):
             received[message.topic] = message.payload
@@ -41,9 +41,9 @@ def test_publishes_readings():
             print("Message [{}]\n{}".format(message.topic, body))
 
         client = mqtt.Client(
-            mqtt.CallbackAPIVersion.VERSION1,
-            "".join(random.choice(string.ascii_lowercase) for _ in range(10)),
-            True,
+            mqtt.CallbackAPIVersion.VERSION2,
+            client_id="".join(random.choice(string.ascii_lowercase) for _ in range(10)),
+            clean_session=True,
         )
         client.on_connect = on_connect
         client.on_message = on_message
