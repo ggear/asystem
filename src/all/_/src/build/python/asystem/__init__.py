@@ -54,7 +54,9 @@ from asystem.container import *
 from asystem.schema import (
     SchemaBrokerMember,
     SchemaBrokerPayload,
+    SchemaDatabaseBounds,
     SchemaDatabaseDimension,
+    SchemaDatabaseLevels,
     SchemaDatabaseMeasure,
     SchemaDatabaseRelation,
     SchemaDocument,

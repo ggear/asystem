@@ -338,6 +338,7 @@ def schema_source(module_root):
 
 
 def render_schema_artifact(document, source=""):
+    _validate(document)
     return json.dumps({
         "warning": WARNING,
         "source": source,

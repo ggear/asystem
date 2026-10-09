@@ -9,7 +9,37 @@ if __name__ == "__main__":
     write_container_bootstrap(working_dir=join(DIR_ROOT, "src/main/resources/data"))
     write_container_healthchecks(working_dir=join(DIR_ROOT, "src/main/resources/data"))
 
-    write_schema_database(dialects.influxdb3.Discover(label="Home Assistant").document())
+    hass_document = dialects.influxdb3.Discover(label="Home Assistant").document()
+    if hass_document is not None:
+        levelled_dicts = {row["unique_id"]: row.dropna().to_dict() for _, row in metadata_hass_df[
+            metadata_hass_df["levels_better"].notna() & metadata_hass_df["unique_id"].notna()].iterrows()}
+        levelled_found = set()
+        for hass_relation in hass_document.relations:
+            hass_entities = {entity for dimension in hass_relation.dimensions
+                             if dimension.key == "entity_id" for entity in dimension.entities}
+            hass_value = next((measure for measure in hass_relation.measures if measure.key == "value"), None)
+            hass_levelled = {unique_id: levels for unique_id, levels in levelled_dicts.items() if unique_id in hass_entities}
+            if hass_value is None or not hass_levelled:
+                continue
+            for unique_id, levels in hass_levelled.items():
+                if not pd.api.types.is_bool(levels.get("levels_inclusive", True)):
+                    raise ValueError(f"Build generate script [homeassistant] entity [{unique_id}] "
+                                     f"levels_inclusive [{levels['levels_inclusive']}] is not TRUE or FALSE")
+            hass_better = {levels["levels_better"] for levels in hass_levelled.values()}
+            hass_inclusive = {bool(levels.get("levels_inclusive", True)) for levels in hass_levelled.values()}
+            if len(hass_better) > 1 or len(hass_inclusive) > 1:
+                raise ValueError(f"Build generate script [homeassistant] relation [{hass_relation.path}] "
+                                 f"entities [{','.join(sorted(hass_levelled))}] disagree on levels_better or levels_inclusive")
+            hass_value.levels = SchemaDatabaseLevels(better=hass_better.pop(), inclusive=hass_inclusive.pop(), entities={
+                unique_id: SchemaDatabaseBounds(
+                    float(levels["levels_amber"]) if "levels_amber" in levels else None,
+                    float(levels["levels_red"]) if "levels_red" in levels else None)
+                for unique_id, levels in sorted(hass_levelled.items())})
+            levelled_found.update(hass_levelled)
+        for unique_id in sorted(set(levelled_dicts) - levelled_found):
+            print(f"Build generate script [homeassistant] entity [{unique_id}] has levels but no homeassistant measurement "
+                  f"with a value, run [fab generate] once it has written")
+    write_schema_database(hass_document)
 
     # Verify entity IDs
     metadata_verify_df = metadata_hass_df[
