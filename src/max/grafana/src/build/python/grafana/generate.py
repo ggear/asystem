@@ -255,9 +255,9 @@ ORDER BY time
         [series("Container RAM Usage", SUPERVISOR_SERVICES.query(["used_memory"], service_names))],
         [series("Container Disk Usage", SUPERVISOR_SERVICES.query(["used_disk_rate"], service_names))],
         [series("Container Network Usage", SUPERVISOR_SERVICES.query(["used_network"], service_names))],
-        [state("Container Running", SUPERVISOR_SERVICES.query(["status"], service_names), ("Down", "Up"), 16)],
-        [state("Container Healthy", SUPERVISOR_SERVICES.query(["health_status"], service_names), ("Unhealthy", "Healthy"), 16)],
-        [state("Container Backed Up", SUPERVISOR_SERVICES.query(["backup_status"], service_names), ("Failed", "Backed Up"), 16)],
+        [state("Container Running", SUPERVISOR_SERVICES.query(["status"], service_names), ("Down", "Up"), len(service_names))],
+        [state("Container Healthy", SUPERVISOR_SERVICES.query(["health_status"], service_names), ("Unhealthy", "Healthy"), len(service_names))],
+        [state("Container Backed Up", SUPERVISOR_SERVICES.query(["backup_status"], service_names), ("Failed", "Backed Up"), len(service_names))],
     ])
 
     # Build Systems dashboard [servers]
@@ -291,8 +291,8 @@ ORDER BY time
         [series("Server Log Errors", server_hosts.query(["failed_log_messages"], host_names))],
         [series("Server Backup Stage Failures", server_hosts.query(["failed_backup_stages"], host_names))],
         [series("Server Backup Stage Halts", server_hosts.query(["halted_backup_stages"], host_names))],
-        [state("Server Healthy", server_hosts.query(["status"], host_names), ("Unhealthy", "Healthy"), 8)],
-        [state("Cluster Health", server_hosts.query(["cluster"]), ("Unhealthy", "Healthy"), 4)],
+        [state("Server Healthy", server_hosts.query(["status"], host_names), ("Unhealthy", "Healthy"), len(host_names))],
+        [state("Cluster Health", server_hosts.query(["cluster"], ["all"]), ("Unhealthy", "Healthy"), 1)],
     ])
 
     # Build Systems dashboard [network]
@@ -304,6 +304,7 @@ ORDER BY time
     wired_switches = Relation("network", "ethernet/switch")
     powered_devices = Relation("network", "ethernet/powered")
     weewx_consoles = Relation("network", "weewx/console")
+    network_devices = len(wired_switches.entities()) + len(access_points.entities())
     header_panels = header([(access_points, None)], "network")
     dashboard("network", HOURS_WINDOW, header_panels, [
         [
@@ -327,15 +328,15 @@ ORDER BY time
         [series("Zigbee Router Link Quality", zigbee_routers.query(["lqi"])).decimals(0)],
         [series("Weather Console Signal", weewx_consoles.query(["quality_pct"]))],
         [series("Network Device Temperature", [hass_temperatures.query(["value"], list(rack_temperatures), (), rack_temperatures, temperature_unit), wired_switches.query(["temperature"])])],
-        [state("Network Devices Up", [wired_switches.query(["up"]), access_points.query(["up"])], ("Down", "Up"), 5)],
+        [state("Network Devices Up", [wired_switches.query(["up"]), access_points.query(["up"])], ("Down", "Up"), network_devices)],
         [state("Network Devices Overheating", [wired_switches.query(["overheating"], None, ("complement",)), access_points.query(["overheating"], None, ("complement",))],
-               ("Overheating", "Normal"), 5)],
+               ("Overheating", "Normal"), network_devices)],
         [state("Network Devices Restarted", [wired_switches.query(["restarted"], None, ("complement",)), access_points.query(["restarted"], None, ("complement",))],
-               ("Restarted", "Steady"), 5)],
-        [state("Zigbee Routers Available", zigbee_routers.query(["available"]), ("Unavailable", "Available"), 6)],
-        [state("Zigbee Devices Weak", zigbee_devices.query(["weak"], None, ("complement",)), ("Weak", "Strong"), 34)],
-        [state("Weather Console Fresh", weewx_consoles.query(["fresh"]), ("Stale", "Fresh"), 4)],
-        [state("Network Plugins Alive", network_diagnosis.query(["ok"]), ("Dead", "Alive"), 8)],
+               ("Restarted", "Steady"), network_devices)],
+        [state("Zigbee Routers Available", zigbee_routers.query(["available"]), ("Unavailable", "Available"), len(zigbee_routers.entities()))],
+        [state("Zigbee Devices Weak", zigbee_devices.query(["weak"], None, ("complement",)), ("Weak", "Strong"), 53)],
+        [state("Weather Console Fresh", weewx_consoles.query(["fresh"]), ("Stale", "Fresh"), len(weewx_consoles.entities()))],
+        [state("Network Plugins Alive", network_diagnosis.query(["ok"]), ("Dead", "Alive"), len(network_diagnosis.entities()))],
     ])
 
     # Build Systems dashboard [internet]
@@ -357,9 +358,9 @@ ORDER BY time
         [series("Internet Loss", internet_targets.query(["loss_pct"]))],
         [series("Domain Resolution", dns_resolvers.query(["latency_ms"]))],
         [series("Certificate Validity", certificate_endpoints.query(["validity_pct"]))],
-        [state("Internet Reachable", internet_targets.query(["reachable"]), ("Unreachable", "Reachable"), 5)],
-        [state("Domain Resolution Agreed", dns_resolvers.query(["ok"]), ("Disagreed", "Agreed"), 5)],
-        [state("Certificate Verified", certificate_endpoints.query(["verified"]), ("Unverified", "Verified"), 4)],
+        [state("Internet Reachable", internet_targets.query(["reachable"]), ("Unreachable", "Reachable"), len(internet_targets.entities()))],
+        [state("Domain Resolution Agreed", dns_resolvers.query(["ok"]), ("Disagreed", "Agreed"), len(dns_resolvers.entities()))],
+        [state("Certificate Verified", certificate_endpoints.query(["verified"]), ("Unverified", "Verified"), len(certificate_endpoints.entities()))],
     ])
 
     # Write generated dashboards
@@ -697,9 +698,11 @@ def bars(title, queries, unit=None):
     return series(title, queries, unit).draw_style(kinds.GraphDrawStyle.BARS).fill_opacity(80)
 
 
-def state(title, queries, labels, height=10):
+def state(title, queries, labels, rows):
     states = [{"from": onset, "colour": colour, "text": text} for (onset, colour), text in zip(STATE_LADDER, labels, strict=True)]
-    layout = json.dumps({"axis": AXIS_WIDTH, "legend": LEGEND_WIDTH, "states": states})
+    layout = json.dumps({"axis": AXIS_WIDTH, "legend": LEGEND_WIDTH, "top": TIMELINE_TOP, "bottom": TIMELINE_BOTTOM, "bar": TIMELINE_BAR, "states": states})
+    pixels = rows * TIMELINE_ROW + TIMELINE_TOP + TIMELINE_BOTTOM + PANEL_CHROME + GRID_GAP
+    height = -(-pixels // (GRID_CELL + GRID_GAP))
     visualization = dashboardv2.VizConfigKind().group(ECHARTS_PANEL).options({
         "renderer": "canvas",
         "editorMode": "code",
@@ -995,6 +998,13 @@ DASHBOARD_TAG = "asystem"
 GRID_WIDTH = 24
 AXIS_WIDTH = 80
 LEGEND_WIDTH = 400
+GRID_CELL = 30
+GRID_GAP = 8
+PANEL_CHROME = 56
+TIMELINE_ROW = 22
+TIMELINE_BAR = 18
+TIMELINE_TOP = 4
+TIMELINE_BOTTOM = 24
 ECHARTS_PANEL = "volkovlabs-echarts-panel"
 TIMELINE_SCRIPT = """
 const theme = context.grafana.theme;
@@ -1049,7 +1059,7 @@ for (let at = Math.ceil((start + local) / step) * step - local; at <= end; at +=
 return {
   backgroundColor: 'transparent',
   textStyle: {fontFamily: theme.typography.fontFamily, fontSize: 12},
-  grid: {left: left, right: right, top: 4, bottom: 24},
+  grid: {left: left, right: right, top: layout.top, bottom: layout.bottom},
   tooltip: {
     trigger: 'item',
     formatter: (item) => `${names[item.value[0]]}<br/>${item.data.text} ${clock(item.value[1])} to ${clock(item.value[2])}`,
@@ -1079,7 +1089,7 @@ return {
     renderItem: (params, api) => {
       const from = api.coord([api.value(1), api.value(0)]);
       const to = api.coord([api.value(2), api.value(0)]);
-      const height = api.size([0, 1])[1] * 0.8;
+      const height = Math.min(api.size([0, 1])[1] * 0.8, layout.bar);
       const shape = context.echarts.graphic.clipRectByRect(
         {x: from[0], y: from[1] - height / 2, width: to[0] - from[0], height: height},
         {x: params.coordSys.x, y: params.coordSys.y, width: params.coordSys.width, height: params.coordSys.height},

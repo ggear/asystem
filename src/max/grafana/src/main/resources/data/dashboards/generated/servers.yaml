@@ -1979,7 +1979,7 @@ spec:
             options:
               editorMode: code
               getOption: |
-                const layout = {"axis": 80, "legend": 400, "states": [{"from": null, "colour": "red", "text": "Unhealthy"}, {"from": 1, "colour": "green", "text": "Healthy"}]};
+                const layout = {"axis": 80, "legend": 400, "top": 4, "bottom": 24, "bar": 18, "states": [{"from": null, "colour": "red", "text": "Unhealthy"}, {"from": 1, "colour": "green", "text": "Healthy"}]};
                 const theme = context.grafana.theme;
                 const start = context.panel.data.timeRange.from.valueOf();
                 const end = context.panel.data.timeRange.to.valueOf();
@@ -2032,7 +2032,7 @@ spec:
                 return {
                   backgroundColor: 'transparent',
                   textStyle: {fontFamily: theme.typography.fontFamily, fontSize: 12},
-                  grid: {left: left, right: right, top: 4, bottom: 24},
+                  grid: {left: left, right: right, top: layout.top, bottom: layout.bottom},
                   tooltip: {
                     trigger: 'item',
                     formatter: (item) => `${names[item.value[0]]}<br/>${item.data.text} ${clock(item.value[1])} to ${clock(item.value[2])}`,
@@ -2062,7 +2062,7 @@ spec:
                     renderItem: (params, api) => {
                       const from = api.coord([api.value(1), api.value(0)]);
                       const to = api.coord([api.value(2), api.value(0)]);
-                      const height = api.size([0, 1])[1] * 0.8;
+                      const height = Math.min(api.size([0, 1])[1] * 0.8, layout.bar);
                       const shape = context.echarts.graphic.clipRectByRect(
                         {x: from[0], y: from[1] - height / 2, width: to[0] - from[0], height: height},
                         {x: params.coordSys.x, y: params.coordSys.y, width: params.coordSys.width, height: params.coordSys.height},
@@ -2185,6 +2185,7 @@ spec:
                               AND host IS NOT NULL
                               AND service IS NULL
                               AND cluster IS NOT NULL
+                              AND host IN ('all')
                           GROUP BY 1, 2
                       ) AS arms
                       ORDER BY time
@@ -2210,7 +2211,7 @@ spec:
             options:
               editorMode: code
               getOption: |
-                const layout = {"axis": 80, "legend": 400, "states": [{"from": null, "colour": "red", "text": "Unhealthy"}, {"from": 1, "colour": "green", "text": "Healthy"}]};
+                const layout = {"axis": 80, "legend": 400, "top": 4, "bottom": 24, "bar": 18, "states": [{"from": null, "colour": "red", "text": "Unhealthy"}, {"from": 1, "colour": "green", "text": "Healthy"}]};
                 const theme = context.grafana.theme;
                 const start = context.panel.data.timeRange.from.valueOf();
                 const end = context.panel.data.timeRange.to.valueOf();
@@ -2263,7 +2264,7 @@ spec:
                 return {
                   backgroundColor: 'transparent',
                   textStyle: {fontFamily: theme.typography.fontFamily, fontSize: 12},
-                  grid: {left: left, right: right, top: 4, bottom: 24},
+                  grid: {left: left, right: right, top: layout.top, bottom: layout.bottom},
                   tooltip: {
                     trigger: 'item',
                     formatter: (item) => `${names[item.value[0]]}<br/>${item.data.text} ${clock(item.value[1])} to ${clock(item.value[2])}`,
@@ -2293,7 +2294,7 @@ spec:
                     renderItem: (params, api) => {
                       const from = api.coord([api.value(1), api.value(0)]);
                       const to = api.coord([api.value(2), api.value(0)]);
-                      const height = api.size([0, 1])[1] * 0.8;
+                      const height = Math.min(api.size([0, 1])[1] * 0.8, layout.bar);
                       const shape = context.echarts.graphic.clipRectByRect(
                         {x: from[0], y: from[1] - height / 2, width: to[0] - from[0], height: height},
                         {x: params.coordSys.x, y: params.coordSys.y, width: params.coordSys.width, height: params.coordSys.height},
@@ -3056,7 +3057,7 @@ spec:
           element:
             kind: ElementReference
             name: panel-29
-          height: 8
+          height: 6
           width: 24
           x: 0
           y: 169
@@ -3065,10 +3066,10 @@ spec:
           element:
             kind: ElementReference
             name: panel-30
-          height: 4
+          height: 3
           width: 24
           x: 0
-          y: 177
+          y: 175
   links: []
   preload: false
   tags:

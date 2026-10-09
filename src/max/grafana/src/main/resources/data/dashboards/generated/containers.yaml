@@ -794,7 +794,7 @@ spec:
             options:
               editorMode: code
               getOption: |
-                const layout = {"axis": 80, "legend": 400, "states": [{"from": null, "colour": "red", "text": "Down"}, {"from": 1, "colour": "green", "text": "Up"}]};
+                const layout = {"axis": 80, "legend": 400, "top": 4, "bottom": 24, "bar": 18, "states": [{"from": null, "colour": "red", "text": "Down"}, {"from": 1, "colour": "green", "text": "Up"}]};
                 const theme = context.grafana.theme;
                 const start = context.panel.data.timeRange.from.valueOf();
                 const end = context.panel.data.timeRange.to.valueOf();
@@ -847,7 +847,7 @@ spec:
                 return {
                   backgroundColor: 'transparent',
                   textStyle: {fontFamily: theme.typography.fontFamily, fontSize: 12},
-                  grid: {left: left, right: right, top: 4, bottom: 24},
+                  grid: {left: left, right: right, top: layout.top, bottom: layout.bottom},
                   tooltip: {
                     trigger: 'item',
                     formatter: (item) => `${names[item.value[0]]}<br/>${item.data.text} ${clock(item.value[1])} to ${clock(item.value[2])}`,
@@ -877,7 +877,7 @@ spec:
                     renderItem: (params, api) => {
                       const from = api.coord([api.value(1), api.value(0)]);
                       const to = api.coord([api.value(2), api.value(0)]);
-                      const height = api.size([0, 1])[1] * 0.8;
+                      const height = Math.min(api.size([0, 1])[1] * 0.8, layout.bar);
                       const shape = context.echarts.graphic.clipRectByRect(
                         {x: from[0], y: from[1] - height / 2, width: to[0] - from[0], height: height},
                         {x: params.coordSys.x, y: params.coordSys.y, width: params.coordSys.width, height: params.coordSys.height},
@@ -956,7 +956,7 @@ spec:
             options:
               editorMode: code
               getOption: |
-                const layout = {"axis": 80, "legend": 400, "states": [{"from": null, "colour": "red", "text": "Unhealthy"}, {"from": 1, "colour": "green", "text": "Healthy"}]};
+                const layout = {"axis": 80, "legend": 400, "top": 4, "bottom": 24, "bar": 18, "states": [{"from": null, "colour": "red", "text": "Unhealthy"}, {"from": 1, "colour": "green", "text": "Healthy"}]};
                 const theme = context.grafana.theme;
                 const start = context.panel.data.timeRange.from.valueOf();
                 const end = context.panel.data.timeRange.to.valueOf();
@@ -1009,7 +1009,7 @@ spec:
                 return {
                   backgroundColor: 'transparent',
                   textStyle: {fontFamily: theme.typography.fontFamily, fontSize: 12},
-                  grid: {left: left, right: right, top: 4, bottom: 24},
+                  grid: {left: left, right: right, top: layout.top, bottom: layout.bottom},
                   tooltip: {
                     trigger: 'item',
                     formatter: (item) => `${names[item.value[0]]}<br/>${item.data.text} ${clock(item.value[1])} to ${clock(item.value[2])}`,
@@ -1039,7 +1039,7 @@ spec:
                     renderItem: (params, api) => {
                       const from = api.coord([api.value(1), api.value(0)]);
                       const to = api.coord([api.value(2), api.value(0)]);
-                      const height = api.size([0, 1])[1] * 0.8;
+                      const height = Math.min(api.size([0, 1])[1] * 0.8, layout.bar);
                       const shape = context.echarts.graphic.clipRectByRect(
                         {x: from[0], y: from[1] - height / 2, width: to[0] - from[0], height: height},
                         {x: params.coordSys.x, y: params.coordSys.y, width: params.coordSys.width, height: params.coordSys.height},
@@ -1118,7 +1118,7 @@ spec:
             options:
               editorMode: code
               getOption: |
-                const layout = {"axis": 80, "legend": 400, "states": [{"from": null, "colour": "red", "text": "Failed"}, {"from": 1, "colour": "green", "text": "Backed Up"}]};
+                const layout = {"axis": 80, "legend": 400, "top": 4, "bottom": 24, "bar": 18, "states": [{"from": null, "colour": "red", "text": "Failed"}, {"from": 1, "colour": "green", "text": "Backed Up"}]};
                 const theme = context.grafana.theme;
                 const start = context.panel.data.timeRange.from.valueOf();
                 const end = context.panel.data.timeRange.to.valueOf();
@@ -1171,7 +1171,7 @@ spec:
                 return {
                   backgroundColor: 'transparent',
                   textStyle: {fontFamily: theme.typography.fontFamily, fontSize: 12},
-                  grid: {left: left, right: right, top: 4, bottom: 24},
+                  grid: {left: left, right: right, top: layout.top, bottom: layout.bottom},
                   tooltip: {
                     trigger: 'item',
                     formatter: (item) => `${names[item.value[0]]}<br/>${item.data.text} ${clock(item.value[1])} to ${clock(item.value[2])}`,
@@ -1201,7 +1201,7 @@ spec:
                     renderItem: (params, api) => {
                       const from = api.coord([api.value(1), api.value(0)]);
                       const to = api.coord([api.value(2), api.value(0)]);
-                      const height = api.size([0, 1])[1] * 0.8;
+                      const height = Math.min(api.size([0, 1])[1] * 0.8, layout.bar);
                       const shape = context.echarts.graphic.clipRectByRect(
                         {x: from[0], y: from[1] - height / 2, width: to[0] - from[0], height: height},
                         {x: params.coordSys.x, y: params.coordSys.y, width: params.coordSys.width, height: params.coordSys.height},
