@@ -40,7 +40,7 @@ Validate Containers, Internet, Network, Servers
 Increase Aloc RAM to warn at 90, error at 95 and increase supervisor mem
 Chnage yellow on rack screen to better colour
 
-code review plugin
+code review what is not in git yet
 Make sure project guidleines are followed.
 Check all logic.
 No comments except for clear excpetions eg document interface/complicated process.
