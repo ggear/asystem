@@ -33,7 +33,7 @@ if __name__ == "__main__":
     counts = {name: sum(len(element["spec"]["data"]["spec"]["queries"]) for element in resource["spec"]["elements"].values())
               for name, resource in resources.items()}
     resources = {name: resource for name, resource in resources.items() if counts[name]}
-    name_width, dots_width = max(map(len, resources), default=0), max(counts.values(), default=0)
+    name_width = max(map(len, resources), default=0)
     faults, probed = [], 0
     for name, resource in resources.items():
         print(f"  {name:<{name_width}}  ", end="", flush=True)
@@ -73,7 +73,7 @@ if __name__ == "__main__":
                     faults.append((name, element["spec"]["title"], result.get("error") or "empty"))
                 print("x" if failed else ".", end="", flush=True)
         missed = len(faults) - faulted
-        print(f"{' ' * (dots_width - counts[name])}  done [{counts[name]}] queries" + (f" [{missed}] faults" if missed else ""), flush=True)
+        print(f" done [{counts[name]}] queries" + (f" [{missed}] faults" if missed else ""), flush=True)
     for dashboard, title, fault in faults:
         print(f"Probe fault dashboard [{dashboard}] panel [{title}] fault [{fault}]")
     print(f"Probe ran [{probed}] queries with [{len(faults)}] faults")
