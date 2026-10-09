@@ -9,14 +9,16 @@
 #     dining_air_purifier_pm25,
 #     lounge_air_purifier_pm25,
 #     parents_air_purifier_pm25,
+#     template_dining_air_purifier_pm25,
 #     template_sensor_36]
 #   tag unit_of_measurement [Home Assistant unit_of_measurement:
+#     µg/m³,
 #     μg/m³]
 #   field value - <on-change> [Home Assistant value]
 
 sensor__pm25,
   module=homeassistant,
   entity_id=<string>,
-  unit_of_measurement=μg/m³
+  unit_of_measurement=<string>
     value=<float>
   <timestamp>
