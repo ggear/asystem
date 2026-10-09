@@ -20,6 +20,7 @@ template:
   - binary_sensor:
       #################################################################################
       - unique_id: back_door_state
+        default_entity_id: binary_sensor.template_back_door_state
         icon: >-
           {% if states('binary_sensor.template_back_door_sensor_contact_last') == 'off' and states('lock.back_door_lock') == 'locked' %}
             mdi:shield-lock
@@ -34,6 +35,7 @@ template:
           {% endif %}
       #################################################################################
       - unique_id: front_door_state
+        default_entity_id: binary_sensor.template_front_door_state
         icon: >-
           {% if states('binary_sensor.template_front_door_sensor_contact_last') == 'off' and states('lock.front_door_lock') == 'locked' %}
             mdi:shield-lock
@@ -48,6 +50,7 @@ template:
           {% endif %}
       #################################################################################
       - unique_id: back_door_sensor_contact_last
+        default_entity_id: binary_sensor.template_back_door_sensor_contact_last
         device_class: door
         state: >-
           {% if states('binary_sensor.back_door_sensor_contact') not in ['unavailable', 'unknown', 'none', 'n/a'] %}
@@ -57,6 +60,7 @@ template:
           {% endif %}
       #################################################################################
       - unique_id: front_door_sensor_contact_last
+        default_entity_id: binary_sensor.template_front_door_sensor_contact_last
         device_class: door
         state: >-
           {% if states('binary_sensor.front_door_sensor_contact') not in ['unavailable', 'unknown', 'none', 'n/a'] %}
@@ -68,6 +72,7 @@ template:
   - sensor:
       #################################################################################
       - unique_id: back_door_sensor_battery_last
+        default_entity_id: sensor.template_back_door_sensor_battery_last
         device_class: battery
         state_class: measurement
         unit_of_measurement: "%"
@@ -79,6 +84,7 @@ template:
           {% endif %}
       #################################################################################
       - unique_id: front_door_sensor_battery_last
+        default_entity_id: sensor.template_front_door_sensor_battery_last
         device_class: battery
         state_class: measurement
         unit_of_measurement: "%"

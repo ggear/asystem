@@ -54,6 +54,7 @@ template:
   - sensor:
       #################################################################################
       - unique_id: weatherstation_console_battery_percent_int
+        default_entity_id: sensor.template_weatherstation_console_battery_percent_int
         device_class: battery
         state_class: measurement
         unit_of_measurement: "%"
@@ -61,6 +62,7 @@ template:
           {{ states('sensor.compensation_sensor_weatherstation_console_battery_voltage') | int(None) }}
       #################################################################################
       - unique_id: weatherstation_coms_signal_quality_percentage
+        default_entity_id: sensor.template_weatherstation_coms_signal_quality_percentage
         device_class: signal_strength
         state_class: measurement
         unit_of_measurement: "%"

@@ -1,3 +1,4 @@
+import yaml
 from asystem import *
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
@@ -79,13 +80,26 @@ if __name__ == "__main__":
                     print("Build generate script [homeassistant] entity metadata [{}.{}] verified"
                           .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"]))
             else:
-                if "hass_display_mode" in metadata_verify_dict and metadata_verify_dict["entity_namespace"] not in [
-                    "action"]:
+                if ("hass_display_mode" in metadata_verify_dict and metadata_verify_dict["entity_namespace"] not in [
+                    "action"]) or metadata_verify_dict["unique_id"].startswith("template_"):
                     print("Build generate script [homeassistant] entity metadata [{}.{}] not found"
                           .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"]),
                           file=sys.stderr)
         except Exception as exception:
             print("Build generate script [homeassistant] could not connect to HASS with error [{}]".format(exception))
+    try:
+        states_response = get(
+            "http://{}:{}/api/states".format(env["HOMEASSISTANT_SERVICE_PROD"], env["HOMEASSISTANT_HTTP_PORT"]),
+            headers={
+                "Authorization": "Bearer {}".format(env["HOMEASSISTANT_API_TOKEN"]),
+                "content-type": "application/json",
+            }, timeout=30)
+        for state in states_response.json() if states_response.status_code == 200 else []:
+            if re.fullmatch(r"(\w+)\.template_\1(_\d+)?", state["entity_id"]):
+                print("Build generate script [homeassistant] entity [{}] has an auto generated id, "
+                      "pin it with a default_entity_id and re-register it".format(state["entity_id"]), file=sys.stderr)
+    except Exception as exception:
+        print("Build generate script [homeassistant] could not connect to HASS with error [{}]".format(exception))
 
     # Build customise YAML
     metadata_customise_df = metadata_hass_df[
@@ -462,17 +476,27 @@ template:
                 metadata_proxy_file.write("      " + """
       #################################################################################
       - unique_id: {}
+        default_entity_id: sensor.{}
         device_class: {}
         state_class: {}
         unit_of_measurement: "{}"
         state: '{{{{ states("sensor.{}") | float(None) }}}}'
                     """.format(
                     metadata_proxy_dict["unique_id"].replace("template_", ""),
+                    metadata_proxy_dict["unique_id"],
                     metadata_proxy_dict["device_class"],
                     metadata_proxy_dict["state_class"],
                     metadata_proxy_dict["unit_of_measurement"],
                     metadata_proxy_dict["linked_entity"],
                 ).strip() + "\n")
+                if "linked_availability" in metadata_proxy_dict:
+                    metadata_proxy_file.write("        " + """
+        availability: >-
+          {{{{ is_state('{}', 'on') and states('sensor.{}') | float(-1) >= 0 }}}}
+                        """.format(
+                        metadata_proxy_dict["linked_availability"],
+                        metadata_proxy_dict["linked_entity"],
+                    ).strip() + "\n")
             metadata_proxy_file.write("""
 #######################################################################################
                 """.strip() + "\n")
@@ -613,6 +637,7 @@ template:
                 metadata_security_file.write("      " + """
       #################################################################################
       - unique_id: {}
+        default_entity_id: binary_sensor.template_{}
         icon: >-
           {{% if states('binary_sensor.{}') == 'off' and states('lock.{}') == 'locked' %}}
             mdi:shield-lock
@@ -627,6 +652,7 @@ template:
           {{% endif %}}
                """.format(
                     metadata_lock_dict["unique_id"].replace("_lock", "_state"),
+                    metadata_lock_dict["unique_id"].replace("_lock", "_state"),
                     metadata_contact,
                     metadata_lock,
                     metadata_contact,
@@ -636,6 +662,7 @@ template:
                 metadata_security_file.write("      " + """
       #################################################################################
       - unique_id: {}
+        default_entity_id: binary_sensor.{}
         device_class: door
         state: >-
           {{% if states('binary_sensor.{}') not in ['unavailable', 'unknown', 'none', 'n/a'] %}}
@@ -645,6 +672,7 @@ template:
           {{% endif %}}
                 """.format(
                     metadata_contact_dict["unique_id"].replace("template_", ""),
+                    metadata_contact_dict["unique_id"],
                     metadata_contact_dict["unique_id"].replace("template_", "").replace("_last", "").lower(),
                     metadata_contact_dict["unique_id"].replace("template_", "").replace("_last", "").lower(),
                     metadata_contact_dict["unique_id"],
@@ -657,6 +685,7 @@ template:
                 metadata_security_file.write("      " + """
       #################################################################################
       - unique_id: {}
+        default_entity_id: sensor.{}
         device_class: battery
         state_class: measurement
         unit_of_measurement: "%"
@@ -668,6 +697,7 @@ template:
           {{% endif %}}
                 """.format(
                     metadata_contact_dict["unique_id"].replace("contact", "battery").replace("template_", ""),
+                    metadata_contact_dict["unique_id"].replace("contact", "battery"),
                     metadata_contact_dict["unique_id"].replace("contact", "battery").replace("template_", "").replace(
                         "_last", "").lower(),
                     metadata_contact_dict["unique_id"].replace("contact", "battery").replace("template_", "").replace(
@@ -1209,6 +1239,7 @@ template:
   - sensor:
       #################################################################################
       - unique_id: weatherstation_console_battery_percent_int
+        default_entity_id: sensor.template_weatherstation_console_battery_percent_int
         device_class: battery
         state_class: measurement
         unit_of_measurement: "%"
@@ -1216,6 +1247,7 @@ template:
           {{ states('sensor.compensation_sensor_weatherstation_console_battery_voltage') | int(None) }}
       #################################################################################
       - unique_id: weatherstation_coms_signal_quality_percentage
+        default_entity_id: sensor.template_weatherstation_coms_signal_quality_percentage
         device_class: signal_strength
         state_class: measurement
         unit_of_measurement: "%"
@@ -1401,10 +1433,12 @@ template:
                 metadata_electricity_file.write("      " + """
       #################################################################################
       - unique_id: {}
+        default_entity_id: binary_sensor.{}
         state: >-
           {{{{ {} }}}}
                 """.format(
                     metadata_electricity_proxy_dict["unique_id"].replace("template_", ""),
+                    metadata_electricity_proxy_dict["unique_id"],
                     metadata_electricity_proxy_state,
                 ).strip() + "\n")
                 if "device_model" in metadata_electricity_proxy_dict and metadata_electricity_proxy_dict[
@@ -1617,3 +1651,33 @@ script:
             """.strip() + "\n")
             print("Build generate script [homeassistant] entity group [{}] persisted to lovelace [{}]"
                   .format(group.lower(), metadata_lovelace_path))
+
+    # Verify template entity IDs
+    class TemplateLoader(yaml.SafeLoader):
+        pass
+
+    TemplateLoader.add_multi_constructor("!", lambda loader, suffix, node: None)
+    template_entity_ids = set()
+    for template_package_path in sorted(glob.glob(join(DIR_ROOT, "src/main/resources/data/custom_packages/*.yaml"))):
+        with open(template_package_path) as template_package_file:
+            template_package = yaml.load(template_package_file, Loader=TemplateLoader) or {}
+        for template_block in template_package.get("template", []):
+            for template_domain, template_entities in template_block.items():
+                if not isinstance(template_entities, list):
+                    continue
+                for template_entity in template_entities:
+                    template_entity_id = "{}.template_{}".format(template_domain, template_entity.get("unique_id"))
+                    if template_entity.get("default_entity_id") != template_entity_id:
+                        raise ValueError("Build generate script [homeassistant] template entity [{}] in [{}] declares default_entity_id [{}] "
+                                         "expected [{}]".format(template_entity.get("unique_id"), basename(template_package_path),
+                                                                template_entity.get("default_entity_id"), template_entity_id))
+                    template_entity_ids.add(template_entity_id)
+    template_rows = {"{}.{}".format(row["entity_namespace"], row["unique_id"]) for _, row in metadata_hass_df[
+        (metadata_hass_df["index"] > 0) &
+        (metadata_hass_df["entity_status"] == "Enabled") &
+        (metadata_hass_df["unique_id"].str.startswith("template_"))].iterrows()}
+    template_unwritten = sorted(template_rows - template_entity_ids)
+    if template_unwritten:
+        raise ValueError("Build generate script [homeassistant] template entities [{}] are enabled in the entity metadata "
+                         "but no package writes them".format(",".join(template_unwritten)))
+    print("Build generate script [homeassistant] template entity ids verified [{}]".format(len(template_entity_ids)))

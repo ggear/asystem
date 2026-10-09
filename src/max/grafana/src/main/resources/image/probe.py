@@ -25,11 +25,19 @@ if __name__ == "__main__":
     server = sys.argv[1] if len(sys.argv) > 1 else f"http://{os.environ['GRAFANA_SERVICE_PROD']}:{os.environ['GRAFANA_HTTP_PORT']}"
     dashboards = sys.argv[2] if len(sys.argv) > 2 else DIR_DASHBOARDS
     credentials = (os.environ["GRAFANA_USER"], os.environ["GRAFANA_TOKEN"])
-    faults, probed = [], 0
+    resources = {}
     for path in sorted(glob.glob(join(dashboards, "generated/*.yaml")) + glob.glob(join(dashboards, "custom/*.yaml"))):
         resource = yaml.safe_load(Path(path).read_text())
-        if resource.get("kind") != "Dashboard":
-            continue
+        if resource.get("kind") == "Dashboard":
+            resources[basename(path)[:-5]] = resource
+    counts = {name: sum(len(element["spec"]["data"]["spec"]["queries"]) for element in resource["spec"]["elements"].values())
+              for name, resource in resources.items()}
+    resources = {name: resource for name, resource in resources.items() if counts[name]}
+    name_width, dots_width = max(map(len, resources), default=0), max(counts.values(), default=0)
+    faults, probed = [], 0
+    for name, resource in resources.items():
+        print(f"  {name:<{name_width}}  ", end="", flush=True)
+        faulted = len(faults)
         start = resource["spec"]["timeSettings"]["from"]
         for element in resource["spec"]["elements"].values():
             group = element["spec"]["data"]["spec"]
@@ -60,8 +68,12 @@ if __name__ == "__main__":
                     result = {"error": str(error)}
                 frames = [frame for frame in result.get("frames", [])
                           if (frame.get("data", {}).get("values") or [[]])[0]]
-                if result.get("error") or not frames:
-                    faults.append((basename(path)[:-5], element["spec"]["title"], result.get("error") or "empty"))
+                failed = bool(result.get("error") or not frames)
+                if failed:
+                    faults.append((name, element["spec"]["title"], result.get("error") or "empty"))
+                print("x" if failed else ".", end="", flush=True)
+        missed = len(faults) - faulted
+        print(f"{' ' * (dots_width - counts[name])}  done [{counts[name]}] queries" + (f" [{missed}] faults" if missed else ""), flush=True)
     for dashboard, title, fault in faults:
         print(f"Probe fault dashboard [{dashboard}] panel [{title}] fault [{fault}]")
     print(f"Probe ran [{probed}] queries with [{len(faults)}] faults")

@@ -120,15 +120,19 @@ sensor.roof_wind_chill_temperature:
 sensor.template_dining_air_purifier_pm25:
   friendly_name: 'Dining'
   icon: 'mdi:virus-outline'
+  unit_of_measurement: 'µg/m³'
 sensor.template_lounge_air_purifier_pm25:
   friendly_name: 'Lounge'
   icon: 'mdi:virus-outline'
+  unit_of_measurement: 'µg/m³'
 sensor.template_parents_air_purifier_pm25:
   friendly_name: 'Parents'
   icon: 'mdi:virus-outline'
+  unit_of_measurement: 'µg/m³'
 sensor.template_kitchen_air_purifier_pm25:
   friendly_name: 'Kitchen'
   icon: 'mdi:virus-outline'
+  unit_of_measurement: 'µg/m³'
 sensor.roof_humidity:
   friendly_name: 'Roof'
   icon: 'mdi:water-percent'

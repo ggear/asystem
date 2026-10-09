@@ -532,14 +532,17 @@ template:
   - binary_sensor:
       #################################################################################
       - unique_id: kitchen_coffee_machine_plug_proxy
+        default_entity_id: binary_sensor.template_kitchen_coffee_machine_plug_proxy
         state: >-
           {{ states('switch.kitchen_coffee_machine_plug') }}
       #################################################################################
       - unique_id: kitchen_fan_plug_proxy
+        default_entity_id: binary_sensor.template_kitchen_fan_plug_proxy
         state: >-
           {{ states('fan.kitchen_fan_plug') }}
       #################################################################################
       - unique_id: dining_air_purifier_proxy
+        default_entity_id: binary_sensor.template_dining_air_purifier_proxy
         state: >-
           {{ states('fan.dining_air_purifier') }}
         attributes:
@@ -547,6 +550,7 @@ template:
             {{ states('sensor.dining_air_purifier_fan_speed') | int(0) }}
       #################################################################################
       - unique_id: lounge_air_purifier_proxy
+        default_entity_id: binary_sensor.template_lounge_air_purifier_proxy
         state: >-
           {{ states('fan.lounge_air_purifier') }}
         attributes:
@@ -554,6 +558,7 @@ template:
             {{ states('sensor.lounge_air_purifier_fan_speed') | int(0) }}
       #################################################################################
       - unique_id: parents_air_purifier_proxy
+        default_entity_id: binary_sensor.template_parents_air_purifier_proxy
         state: >-
           {{ states('fan.parents_air_purifier') }}
         attributes:
@@ -561,6 +566,7 @@ template:
             {{ states('sensor.parents_air_purifier_fan_speed') | int(0) }}
       #################################################################################
       - unique_id: kitchen_air_purifier_proxy
+        default_entity_id: binary_sensor.template_kitchen_air_purifier_proxy
         state: >-
           {{ states('fan.kitchen_air_purifier') }}
         attributes:
@@ -568,54 +574,67 @@ template:
             {{ states('sensor.kitchen_air_purifier_fan_speed') | int(0) }}
       #################################################################################
       - unique_id: deck_festoons_plug_proxy
+        default_entity_id: binary_sensor.template_deck_festoons_plug_proxy
         state: >-
           {{ states('light.deck_festoons_plug') }}
       #################################################################################
       - unique_id: landing_festoons_plug_proxy
+        default_entity_id: binary_sensor.template_landing_festoons_plug_proxy
         state: >-
           {{ states('light.landing_festoons_plug') }}
       #################################################################################
       - unique_id: bathroom_rails_plug_proxy
+        default_entity_id: binary_sensor.template_bathroom_rails_plug_proxy
         state: >-
           {{ states('switch.bathroom_rails_plug') }}
       #################################################################################
       - unique_id: ceiling_water_booster_plug_proxy
+        default_entity_id: binary_sensor.template_ceiling_water_booster_plug_proxy
         state: >-
           {{ states('switch.ceiling_water_booster_plug') }}
       #################################################################################
       - unique_id: garden_pool_filter_plug_proxy
+        default_entity_id: binary_sensor.template_garden_pool_filter_plug_proxy
         state: >-
           {{ states('switch.garden_pool_filter_plug') }}
       #################################################################################
       - unique_id: lounge_tv_plug_proxy
+        default_entity_id: binary_sensor.template_lounge_tv_plug_proxy
         state: >-
           {{ states('switch.lounge_tv_plug') }}
       #################################################################################
       - unique_id: kitchen_dish_washer_plug_proxy
+        default_entity_id: binary_sensor.template_kitchen_dish_washer_plug_proxy
         state: >-
           {{ states('switch.kitchen_dish_washer_plug') }}
       #################################################################################
       - unique_id: kitchen_fridge_plug_proxy
+        default_entity_id: binary_sensor.template_kitchen_fridge_plug_proxy
         state: >-
           {{ states('switch.kitchen_fridge_plug') }}
       #################################################################################
       - unique_id: deck_freezer_plug_proxy
+        default_entity_id: binary_sensor.template_deck_freezer_plug_proxy
         state: >-
           {{ states('switch.deck_freezer_plug') }}
       #################################################################################
       - unique_id: garden_sewerage_blower_plug_proxy
+        default_entity_id: binary_sensor.template_garden_sewerage_blower_plug_proxy
         state: >-
           {{ states('switch.garden_sewerage_blower_plug') }}
       #################################################################################
       - unique_id: server_jen_plug_proxy
+        default_entity_id: binary_sensor.template_server_jen_plug_proxy
         state: >-
           {{ states('switch.server_jen_plug') }}
       #################################################################################
       - unique_id: rack_outlet_plug_proxy
+        default_entity_id: binary_sensor.template_rack_outlet_plug_proxy
         state: >-
           {{ states('switch.rack_outlet_plug') }}
       #################################################################################
       - unique_id: ceiling_network_switch_plug_proxy
+        default_entity_id: binary_sensor.template_ceiling_network_switch_plug_proxy
         state: >-
           {{ states('switch.ceiling_network_switch_plug') }}
       #################################################################################

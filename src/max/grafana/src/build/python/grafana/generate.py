@@ -375,7 +375,7 @@ ORDER BY time
         sections = []
         for folder, declared in FOLDERS.items():
             label = f'<span style="color:{SECTION_COLOUR}">**{declared.title.upper()}**</span>'
-            links = [f"**{TITLES[uid]}**" if uid == current else f"[{TITLES[uid]}](/d/{uid}?${{__url_time_range}})"
+            links = [f"**{TITLES[uid]}**" if uid == current else f"[{TITLES[uid]}](/d/{uid})"
                      for uid in ordered if folder_of[uid] == folder]
             sections.append(" · ".join([label] + links))
         return " &nbsp;&nbsp;|&nbsp;&nbsp; ".join(sections)

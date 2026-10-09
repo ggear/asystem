@@ -1214,7 +1214,7 @@ spec:
               defaults: {}
               overrides: []
             options:
-              content: <span style="color:#8e8e8e">**HOME**</span> · [Weather](/d/weather?${__url_time_range}) · [Conditions](/d/conditions?${__url_time_range}) · [Electricity](/d/electricity?${__url_time_range}) &nbsp;&nbsp;|&nbsp;&nbsp; <span style="color:#8e8e8e">**FINANCE**</span> · [Currency](/d/currency?${__url_time_range}) · **Interest** · [Equity](/d/equity?${__url_time_range}) &nbsp;&nbsp;|&nbsp;&nbsp; <span style="color:#8e8e8e">**SYSTEMS**</span> · [Containers](/d/containers?${__url_time_range}) · [Servers](/d/servers?${__url_time_range}) · [Network](/d/network?${__url_time_range}) · [Internet](/d/internet?${__url_time_range})
+              content: <span style="color:#8e8e8e">**HOME**</span> · [Weather](/d/weather) · [Conditions](/d/conditions) · [Electricity](/d/electricity) &nbsp;&nbsp;|&nbsp;&nbsp; <span style="color:#8e8e8e">**FINANCE**</span> · [Currency](/d/currency) · **Interest** · [Equity](/d/equity) &nbsp;&nbsp;|&nbsp;&nbsp; <span style="color:#8e8e8e">**SYSTEMS**</span> · [Containers](/d/containers) · [Servers](/d/servers) · [Network](/d/network) · [Internet](/d/internet)
               mode: markdown
           version: ''
   layout:
