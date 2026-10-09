@@ -1939,17 +1939,21 @@ spec:
                           value AS value
                       FROM (
                           SELECT
-                              $__dateBin(time)   AS time,
-                              host               AS entity,
-                              'cluster'          AS measure,
-                              avg(cluster * 100) AS value
+                              $__dateBin(time) AS time,
+                              host             AS entity,
+                              'status'         AS measure,
+                              avg(status)      AS value
                           FROM supervisor
                           WHERE
                               $__timeFilter(time)
                               AND module = 'supervisor'
                               AND host IS NOT NULL
                               AND service IS NULL
-                              AND cluster IS NOT NULL
+                              AND status IS NOT NULL
+                              AND host IN (
+                                  'macmini-mad', 'macmini-max', 'macmini-may', 'macmini-meg', 'raspbpi-jen',
+                                  'raspbpi-jil'
+                              )
                           GROUP BY 1, 2
                       ) AS arms
                       ORDER BY time
@@ -1958,49 +1962,116 @@ spec:
             queryOptions:
               interval: 6s
             transformations: []
-        description: 'Generated: every host/service is reporting and all metrics are ok'
+        description: 'Generated: host is reporting metrics and all host metrics are ok'
         id: 29
         links: []
-        title: Cluster Health
+        title: Server Healthy
         vizConfig:
-          group: timeseries
+          group: volkovlabs-echarts-panel
           kind: VizConfig
           spec:
             fieldConfig:
               defaults:
-                custom:
-                  axisWidth: 80
-                  fillOpacity: 0
-                  lineInterpolation: linear
-                  lineWidth: 1
-                  showPoints: never
-                  spanNulls: true
-                  thresholdsStyle:
-                    mode: dashed
-                decimals: 1
+                decimals: 2
                 displayName: ${__field.labels.metric}
-                thresholds:
-                  mode: absolute
-                  steps:
-                  - color: red
-                    value: null
-                  - color: green
-                    value: 100
-                unit: percent
+                unit: none
               overrides: []
             options:
-              legend:
-                calcs:
-                - min
-                - max
-                - mean
-                displayMode: table
-                placement: right
-                showLegend: true
-                width: 400
-              tooltip:
-                mode: multi
-                sort: desc
+              editorMode: code
+              getOption: |
+                const layout = {"axis": 80, "legend": 400, "states": [{"from": null, "colour": "red", "text": "Unhealthy"}, {"from": 1, "colour": "green", "text": "Healthy"}]};
+                const theme = context.grafana.theme;
+                const start = context.panel.data.timeRange.from.valueOf();
+                const end = context.panel.data.timeRange.to.valueOf();
+                const names = [];
+                const spans = [];
+                for (const frame of context.panel.data.series) {
+                  const time = frame.fields.find((field) => field.type === 'time');
+                  if (!time) {
+                    continue;
+                  }
+                  for (const field of frame.fields) {
+                    if (field === time || field.type !== 'number') {
+                      continue;
+                    }
+                    const name = field.state?.displayName ?? field.labels?.metric ?? field.name;
+                    let row = names.indexOf(name);
+                    if (row < 0) {
+                      row = names.push(name) - 1;
+                    }
+                    let open = null;
+                    for (let index = 0; index < time.values.length; index++) {
+                      const value = field.values[index];
+                      if (value === null || value === undefined) {
+                        continue;
+                      }
+                      const shown = layout.states.findLast((state) => state.from === null || value >= state.from);
+                      if (open && open.text === shown.text) {
+                        continue;
+                      }
+                      if (open) {
+                        open.value[2] = time.values[index];
+                      }
+                      open = {value: [row, Math.max(time.values[index], start), end], text: shown.text, itemStyle: {color: theme.visualization.getColorByName(shown.colour)}};
+                      spans.push(open);
+                    }
+                  }
+                }
+                const clock = (millis) => context.echarts.time.format(millis, end - start > 86400000 ? '{MM}/{dd} {HH}:{mm}' : '{HH}:{mm}', false);
+                const padding = theme.spacing.gridSize;
+                const left = layout.axis + padding;
+                const right = layout.legend + 2 * padding;
+                const steps = [1, 2, 5, 10, 15, 30, 60, 120, 180, 360, 720, 1440, 2880, 10080].map((minutes) => minutes * 60000);
+                const step = steps.find((millis) => (context.panel.chart.getWidth() - left - right) * millis / (end - start) >= 40) ?? steps[steps.length - 1];
+                const tick = (millis) => context.echarts.time.format(millis, step >= 1440 * 60000 ? '{MM}/{dd}' : '{HH}:{mm}', false);
+                const local = -new Date(start).getTimezoneOffset() * 60000;
+                const ticks = [];
+                for (let at = Math.ceil((start + local) / step) * step - local; at <= end; at += step) {
+                  ticks.push(at);
+                }
+                return {
+                  backgroundColor: 'transparent',
+                  textStyle: {fontFamily: theme.typography.fontFamily, fontSize: 12},
+                  grid: {left: left, right: right, top: 4, bottom: 24},
+                  tooltip: {
+                    trigger: 'item',
+                    formatter: (item) => `${names[item.value[0]]}<br/>${item.data.text} ${clock(item.value[1])} to ${clock(item.value[2])}`,
+                  },
+                  xAxis: {
+                    type: 'time',
+                    min: start,
+                    max: end,
+                    axisLine: {show: false},
+                    axisTick: {show: false, customValues: ticks},
+                    axisLabel: {color: theme.colors.text.secondary, customValues: ticks, formatter: tick},
+                    splitLine: {show: true, lineStyle: {color: theme.colors.border.weak}},
+                  },
+                  yAxis: {
+                    type: 'category',
+                    data: names,
+                    inverse: true,
+                    position: 'right',
+                    axisLine: {show: false},
+                    axisTick: {show: false},
+                    axisLabel: {color: theme.colors.text.primary, width: layout.legend - 24, overflow: 'truncate', align: 'left', margin: 12, interval: 0},
+                  },
+                  series: [{
+                    type: 'custom',
+                    encode: {x: [1, 2], y: 0},
+                    data: spans,
+                    renderItem: (params, api) => {
+                      const from = api.coord([api.value(1), api.value(0)]);
+                      const to = api.coord([api.value(2), api.value(0)]);
+                      const height = api.size([0, 1])[1] * 0.8;
+                      const shape = context.echarts.graphic.clipRectByRect(
+                        {x: from[0], y: from[1] - height / 2, width: to[0] - from[0], height: height},
+                        {x: params.coordSys.x, y: params.coordSys.y, width: params.coordSys.width, height: params.coordSys.height},
+                      );
+                      return shape && {type: 'rect', shape: shape, style: {fill: api.visual('color'), opacity: 0.8}};
+                    },
+                  }],
+                };
+              renderer: canvas
           version: ''
     panel-3:
       kind: Panel
@@ -2076,6 +2147,162 @@ spec:
               showPercentChange: false
               textMode: value
               wideLayout: true
+          version: ''
+    panel-30:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: influxdb3-home
+                  group: influxdb
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__dateBin(time) AS time,
+                              host             AS entity,
+                              'cluster'        AS measure,
+                              avg(cluster)     AS value
+                          FROM supervisor
+                          WHERE
+                              $__timeFilter(time)
+                              AND module = 'supervisor'
+                              AND host IS NOT NULL
+                              AND service IS NULL
+                              AND cluster IS NOT NULL
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: A
+            queryOptions:
+              interval: 6s
+            transformations: []
+        description: 'Generated: every host/service is reporting and all metrics are ok'
+        id: 30
+        links: []
+        title: Cluster Health
+        vizConfig:
+          group: volkovlabs-echarts-panel
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                decimals: 2
+                displayName: ${__field.labels.metric}
+                unit: none
+              overrides: []
+            options:
+              editorMode: code
+              getOption: |
+                const layout = {"axis": 80, "legend": 400, "states": [{"from": null, "colour": "red", "text": "Unhealthy"}, {"from": 1, "colour": "green", "text": "Healthy"}]};
+                const theme = context.grafana.theme;
+                const start = context.panel.data.timeRange.from.valueOf();
+                const end = context.panel.data.timeRange.to.valueOf();
+                const names = [];
+                const spans = [];
+                for (const frame of context.panel.data.series) {
+                  const time = frame.fields.find((field) => field.type === 'time');
+                  if (!time) {
+                    continue;
+                  }
+                  for (const field of frame.fields) {
+                    if (field === time || field.type !== 'number') {
+                      continue;
+                    }
+                    const name = field.state?.displayName ?? field.labels?.metric ?? field.name;
+                    let row = names.indexOf(name);
+                    if (row < 0) {
+                      row = names.push(name) - 1;
+                    }
+                    let open = null;
+                    for (let index = 0; index < time.values.length; index++) {
+                      const value = field.values[index];
+                      if (value === null || value === undefined) {
+                        continue;
+                      }
+                      const shown = layout.states.findLast((state) => state.from === null || value >= state.from);
+                      if (open && open.text === shown.text) {
+                        continue;
+                      }
+                      if (open) {
+                        open.value[2] = time.values[index];
+                      }
+                      open = {value: [row, Math.max(time.values[index], start), end], text: shown.text, itemStyle: {color: theme.visualization.getColorByName(shown.colour)}};
+                      spans.push(open);
+                    }
+                  }
+                }
+                const clock = (millis) => context.echarts.time.format(millis, end - start > 86400000 ? '{MM}/{dd} {HH}:{mm}' : '{HH}:{mm}', false);
+                const padding = theme.spacing.gridSize;
+                const left = layout.axis + padding;
+                const right = layout.legend + 2 * padding;
+                const steps = [1, 2, 5, 10, 15, 30, 60, 120, 180, 360, 720, 1440, 2880, 10080].map((minutes) => minutes * 60000);
+                const step = steps.find((millis) => (context.panel.chart.getWidth() - left - right) * millis / (end - start) >= 40) ?? steps[steps.length - 1];
+                const tick = (millis) => context.echarts.time.format(millis, step >= 1440 * 60000 ? '{MM}/{dd}' : '{HH}:{mm}', false);
+                const local = -new Date(start).getTimezoneOffset() * 60000;
+                const ticks = [];
+                for (let at = Math.ceil((start + local) / step) * step - local; at <= end; at += step) {
+                  ticks.push(at);
+                }
+                return {
+                  backgroundColor: 'transparent',
+                  textStyle: {fontFamily: theme.typography.fontFamily, fontSize: 12},
+                  grid: {left: left, right: right, top: 4, bottom: 24},
+                  tooltip: {
+                    trigger: 'item',
+                    formatter: (item) => `${names[item.value[0]]}<br/>${item.data.text} ${clock(item.value[1])} to ${clock(item.value[2])}`,
+                  },
+                  xAxis: {
+                    type: 'time',
+                    min: start,
+                    max: end,
+                    axisLine: {show: false},
+                    axisTick: {show: false, customValues: ticks},
+                    axisLabel: {color: theme.colors.text.secondary, customValues: ticks, formatter: tick},
+                    splitLine: {show: true, lineStyle: {color: theme.colors.border.weak}},
+                  },
+                  yAxis: {
+                    type: 'category',
+                    data: names,
+                    inverse: true,
+                    position: 'right',
+                    axisLine: {show: false},
+                    axisTick: {show: false},
+                    axisLabel: {color: theme.colors.text.primary, width: layout.legend - 24, overflow: 'truncate', align: 'left', margin: 12, interval: 0},
+                  },
+                  series: [{
+                    type: 'custom',
+                    encode: {x: [1, 2], y: 0},
+                    data: spans,
+                    renderItem: (params, api) => {
+                      const from = api.coord([api.value(1), api.value(0)]);
+                      const to = api.coord([api.value(2), api.value(0)]);
+                      const height = api.size([0, 1])[1] * 0.8;
+                      const shape = context.echarts.graphic.clipRectByRect(
+                        {x: from[0], y: from[1] - height / 2, width: to[0] - from[0], height: height},
+                        {x: params.coordSys.x, y: params.coordSys.y, width: params.coordSys.width, height: params.coordSys.height},
+                      );
+                      return shape && {type: 'rect', shape: shape, style: {fill: api.visual('color'), opacity: 0.8}};
+                    },
+                  }],
+                };
+              renderer: canvas
           version: ''
     panel-4:
       kind: Panel
@@ -2544,7 +2771,7 @@ spec:
             queryOptions: {}
             transformations: []
         description: ''
-        id: 30
+        id: 31
         links: []
         title: ''
         transparent: true
@@ -2829,10 +3056,19 @@ spec:
           element:
             kind: ElementReference
             name: panel-29
-          height: 10
+          height: 8
           width: 24
           x: 0
           y: 169
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-30
+          height: 4
+          width: 24
+          x: 0
+          y: 177
   links: []
   preload: false
   tags:

@@ -2114,30 +2114,63 @@ spec:
                           value AS value
                       FROM (
                           SELECT
-                              $__dateBin(time) AS time,
-                              router           AS entity,
-                              'available'      AS measure,
-                              avg(available)   AS value
-                          FROM zigbee
+                              $__dateBin(time)   AS time,
+                              switch             AS entity,
+                              'restarted'        AS measure,
+                              avg(1 - restarted) AS value
+                          FROM ethernet
                           WHERE
                               $__timeFilter(time)
                               AND module = 'network'
-                              AND router IS NOT NULL
-                              AND device IS NULL
-                              AND experience IS NULL
-                              AND available IS NOT NULL
+                              AND switch IS NOT NULL
+                              AND powered IS NULL
+                              AND restarted IS NOT NULL
                           GROUP BY 1, 2
                       ) AS arms
                       ORDER BY time
                   version: v0
                 refId: A
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: influxdb3-home
+                  group: influxdb
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__dateBin(time)   AS time,
+                              accesspoint        AS entity,
+                              'restarted'        AS measure,
+                              avg(1 - restarted) AS value
+                          FROM wireless
+                          WHERE
+                              $__timeFilter(time)
+                              AND module = 'network'
+                              AND accesspoint IS NOT NULL
+                              AND restarted IS NOT NULL
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: B
             queryOptions:
               interval: 15m
             transformations: []
-        description: 'Generated: coordinator online, or router reporting available'
+        description: 'Generated: device came up since the previous check'
         id: 28
         links: []
-        title: Zigbee Routers Available
+        title: Network Devices Restarted
         vizConfig:
           group: volkovlabs-echarts-panel
           kind: VizConfig
@@ -2151,7 +2184,7 @@ spec:
             options:
               editorMode: code
               getOption: |
-                const layout = {"axis": 80, "legend": 400, "states": [{"from": null, "colour": "red", "text": "Unavailable"}, {"from": 1, "colour": "green", "text": "Available"}]};
+                const layout = {"axis": 80, "legend": 400, "states": [{"from": null, "colour": "red", "text": "Restarted"}, {"from": 1, "colour": "green", "text": "Steady"}]};
                 const theme = context.grafana.theme;
                 const start = context.panel.data.timeRange.from.valueOf();
                 const end = context.panel.data.timeRange.to.valueOf();
@@ -2272,15 +2305,17 @@ spec:
                       FROM (
                           SELECT
                               $__dateBin(time) AS time,
-                              console          AS entity,
-                              'fresh'          AS measure,
-                              avg(fresh)       AS value
-                          FROM weewx
+                              router           AS entity,
+                              'available'      AS measure,
+                              avg(available)   AS value
+                          FROM zigbee
                           WHERE
                               $__timeFilter(time)
                               AND module = 'network'
-                              AND console IS NOT NULL
-                              AND fresh IS NOT NULL
+                              AND router IS NOT NULL
+                              AND device IS NULL
+                              AND experience IS NULL
+                              AND available IS NOT NULL
                           GROUP BY 1, 2
                       ) AS arms
                       ORDER BY time
@@ -2289,10 +2324,10 @@ spec:
             queryOptions:
               interval: 15m
             transformations: []
-        description: 'Generated: console reported a pulse inside the freshness window'
+        description: 'Generated: coordinator online, or router reporting available'
         id: 29
         links: []
-        title: Weather Console Fresh
+        title: Zigbee Routers Available
         vizConfig:
           group: volkovlabs-echarts-panel
           kind: VizConfig
@@ -2306,7 +2341,7 @@ spec:
             options:
               editorMode: code
               getOption: |
-                const layout = {"axis": 80, "legend": 400, "states": [{"from": null, "colour": "red", "text": "Stale"}, {"from": 1, "colour": "green", "text": "Fresh"}]};
+                const layout = {"axis": 80, "legend": 400, "states": [{"from": null, "colour": "red", "text": "Unavailable"}, {"from": 1, "colour": "green", "text": "Available"}]};
                 const theme = context.grafana.theme;
                 const start = context.panel.data.timeRange.from.valueOf();
                 const end = context.panel.data.timeRange.to.valueOf();
@@ -2474,6 +2509,473 @@ spec:
               showPercentChange: false
               textMode: value
               wideLayout: true
+          version: ''
+    panel-30:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: influxdb3-home
+                  group: influxdb
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__dateBin(time) AS time,
+                              device           AS entity,
+                              'weak'           AS measure,
+                              avg(1 - weak)    AS value
+                          FROM zigbee
+                          WHERE
+                              $__timeFilter(time)
+                              AND module = 'network'
+                              AND device IS NOT NULL
+                              AND experience IS NULL
+                              AND router IS NULL
+                              AND weak IS NOT NULL
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: A
+            queryOptions:
+              interval: 15m
+            transformations: []
+        description: 'Generated: device median link quality below the weak threshold'
+        id: 30
+        links: []
+        title: Zigbee Devices Weak
+        vizConfig:
+          group: volkovlabs-echarts-panel
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                decimals: 2
+                displayName: ${__field.labels.metric}
+                unit: none
+              overrides: []
+            options:
+              editorMode: code
+              getOption: |
+                const layout = {"axis": 80, "legend": 400, "states": [{"from": null, "colour": "red", "text": "Weak"}, {"from": 1, "colour": "green", "text": "Strong"}]};
+                const theme = context.grafana.theme;
+                const start = context.panel.data.timeRange.from.valueOf();
+                const end = context.panel.data.timeRange.to.valueOf();
+                const names = [];
+                const spans = [];
+                for (const frame of context.panel.data.series) {
+                  const time = frame.fields.find((field) => field.type === 'time');
+                  if (!time) {
+                    continue;
+                  }
+                  for (const field of frame.fields) {
+                    if (field === time || field.type !== 'number') {
+                      continue;
+                    }
+                    const name = field.state?.displayName ?? field.labels?.metric ?? field.name;
+                    let row = names.indexOf(name);
+                    if (row < 0) {
+                      row = names.push(name) - 1;
+                    }
+                    let open = null;
+                    for (let index = 0; index < time.values.length; index++) {
+                      const value = field.values[index];
+                      if (value === null || value === undefined) {
+                        continue;
+                      }
+                      const shown = layout.states.findLast((state) => state.from === null || value >= state.from);
+                      if (open && open.text === shown.text) {
+                        continue;
+                      }
+                      if (open) {
+                        open.value[2] = time.values[index];
+                      }
+                      open = {value: [row, Math.max(time.values[index], start), end], text: shown.text, itemStyle: {color: theme.visualization.getColorByName(shown.colour)}};
+                      spans.push(open);
+                    }
+                  }
+                }
+                const clock = (millis) => context.echarts.time.format(millis, end - start > 86400000 ? '{MM}/{dd} {HH}:{mm}' : '{HH}:{mm}', false);
+                const padding = theme.spacing.gridSize;
+                const left = layout.axis + padding;
+                const right = layout.legend + 2 * padding;
+                const steps = [1, 2, 5, 10, 15, 30, 60, 120, 180, 360, 720, 1440, 2880, 10080].map((minutes) => minutes * 60000);
+                const step = steps.find((millis) => (context.panel.chart.getWidth() - left - right) * millis / (end - start) >= 40) ?? steps[steps.length - 1];
+                const tick = (millis) => context.echarts.time.format(millis, step >= 1440 * 60000 ? '{MM}/{dd}' : '{HH}:{mm}', false);
+                const local = -new Date(start).getTimezoneOffset() * 60000;
+                const ticks = [];
+                for (let at = Math.ceil((start + local) / step) * step - local; at <= end; at += step) {
+                  ticks.push(at);
+                }
+                return {
+                  backgroundColor: 'transparent',
+                  textStyle: {fontFamily: theme.typography.fontFamily, fontSize: 12},
+                  grid: {left: left, right: right, top: 4, bottom: 24},
+                  tooltip: {
+                    trigger: 'item',
+                    formatter: (item) => `${names[item.value[0]]}<br/>${item.data.text} ${clock(item.value[1])} to ${clock(item.value[2])}`,
+                  },
+                  xAxis: {
+                    type: 'time',
+                    min: start,
+                    max: end,
+                    axisLine: {show: false},
+                    axisTick: {show: false, customValues: ticks},
+                    axisLabel: {color: theme.colors.text.secondary, customValues: ticks, formatter: tick},
+                    splitLine: {show: true, lineStyle: {color: theme.colors.border.weak}},
+                  },
+                  yAxis: {
+                    type: 'category',
+                    data: names,
+                    inverse: true,
+                    position: 'right',
+                    axisLine: {show: false},
+                    axisTick: {show: false},
+                    axisLabel: {color: theme.colors.text.primary, width: layout.legend - 24, overflow: 'truncate', align: 'left', margin: 12, interval: 0},
+                  },
+                  series: [{
+                    type: 'custom',
+                    encode: {x: [1, 2], y: 0},
+                    data: spans,
+                    renderItem: (params, api) => {
+                      const from = api.coord([api.value(1), api.value(0)]);
+                      const to = api.coord([api.value(2), api.value(0)]);
+                      const height = api.size([0, 1])[1] * 0.8;
+                      const shape = context.echarts.graphic.clipRectByRect(
+                        {x: from[0], y: from[1] - height / 2, width: to[0] - from[0], height: height},
+                        {x: params.coordSys.x, y: params.coordSys.y, width: params.coordSys.width, height: params.coordSys.height},
+                      );
+                      return shape && {type: 'rect', shape: shape, style: {fill: api.visual('color'), opacity: 0.8}};
+                    },
+                  }],
+                };
+              renderer: canvas
+          version: ''
+    panel-31:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: influxdb3-home
+                  group: influxdb
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__dateBin(time) AS time,
+                              console          AS entity,
+                              'fresh'          AS measure,
+                              avg(fresh)       AS value
+                          FROM weewx
+                          WHERE
+                              $__timeFilter(time)
+                              AND module = 'network'
+                              AND console IS NOT NULL
+                              AND fresh IS NOT NULL
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: A
+            queryOptions:
+              interval: 15m
+            transformations: []
+        description: 'Generated: console reported a pulse inside the freshness window'
+        id: 31
+        links: []
+        title: Weather Console Fresh
+        vizConfig:
+          group: volkovlabs-echarts-panel
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                decimals: 2
+                displayName: ${__field.labels.metric}
+                unit: none
+              overrides: []
+            options:
+              editorMode: code
+              getOption: |
+                const layout = {"axis": 80, "legend": 400, "states": [{"from": null, "colour": "red", "text": "Stale"}, {"from": 1, "colour": "green", "text": "Fresh"}]};
+                const theme = context.grafana.theme;
+                const start = context.panel.data.timeRange.from.valueOf();
+                const end = context.panel.data.timeRange.to.valueOf();
+                const names = [];
+                const spans = [];
+                for (const frame of context.panel.data.series) {
+                  const time = frame.fields.find((field) => field.type === 'time');
+                  if (!time) {
+                    continue;
+                  }
+                  for (const field of frame.fields) {
+                    if (field === time || field.type !== 'number') {
+                      continue;
+                    }
+                    const name = field.state?.displayName ?? field.labels?.metric ?? field.name;
+                    let row = names.indexOf(name);
+                    if (row < 0) {
+                      row = names.push(name) - 1;
+                    }
+                    let open = null;
+                    for (let index = 0; index < time.values.length; index++) {
+                      const value = field.values[index];
+                      if (value === null || value === undefined) {
+                        continue;
+                      }
+                      const shown = layout.states.findLast((state) => state.from === null || value >= state.from);
+                      if (open && open.text === shown.text) {
+                        continue;
+                      }
+                      if (open) {
+                        open.value[2] = time.values[index];
+                      }
+                      open = {value: [row, Math.max(time.values[index], start), end], text: shown.text, itemStyle: {color: theme.visualization.getColorByName(shown.colour)}};
+                      spans.push(open);
+                    }
+                  }
+                }
+                const clock = (millis) => context.echarts.time.format(millis, end - start > 86400000 ? '{MM}/{dd} {HH}:{mm}' : '{HH}:{mm}', false);
+                const padding = theme.spacing.gridSize;
+                const left = layout.axis + padding;
+                const right = layout.legend + 2 * padding;
+                const steps = [1, 2, 5, 10, 15, 30, 60, 120, 180, 360, 720, 1440, 2880, 10080].map((minutes) => minutes * 60000);
+                const step = steps.find((millis) => (context.panel.chart.getWidth() - left - right) * millis / (end - start) >= 40) ?? steps[steps.length - 1];
+                const tick = (millis) => context.echarts.time.format(millis, step >= 1440 * 60000 ? '{MM}/{dd}' : '{HH}:{mm}', false);
+                const local = -new Date(start).getTimezoneOffset() * 60000;
+                const ticks = [];
+                for (let at = Math.ceil((start + local) / step) * step - local; at <= end; at += step) {
+                  ticks.push(at);
+                }
+                return {
+                  backgroundColor: 'transparent',
+                  textStyle: {fontFamily: theme.typography.fontFamily, fontSize: 12},
+                  grid: {left: left, right: right, top: 4, bottom: 24},
+                  tooltip: {
+                    trigger: 'item',
+                    formatter: (item) => `${names[item.value[0]]}<br/>${item.data.text} ${clock(item.value[1])} to ${clock(item.value[2])}`,
+                  },
+                  xAxis: {
+                    type: 'time',
+                    min: start,
+                    max: end,
+                    axisLine: {show: false},
+                    axisTick: {show: false, customValues: ticks},
+                    axisLabel: {color: theme.colors.text.secondary, customValues: ticks, formatter: tick},
+                    splitLine: {show: true, lineStyle: {color: theme.colors.border.weak}},
+                  },
+                  yAxis: {
+                    type: 'category',
+                    data: names,
+                    inverse: true,
+                    position: 'right',
+                    axisLine: {show: false},
+                    axisTick: {show: false},
+                    axisLabel: {color: theme.colors.text.primary, width: layout.legend - 24, overflow: 'truncate', align: 'left', margin: 12, interval: 0},
+                  },
+                  series: [{
+                    type: 'custom',
+                    encode: {x: [1, 2], y: 0},
+                    data: spans,
+                    renderItem: (params, api) => {
+                      const from = api.coord([api.value(1), api.value(0)]);
+                      const to = api.coord([api.value(2), api.value(0)]);
+                      const height = api.size([0, 1])[1] * 0.8;
+                      const shape = context.echarts.graphic.clipRectByRect(
+                        {x: from[0], y: from[1] - height / 2, width: to[0] - from[0], height: height},
+                        {x: params.coordSys.x, y: params.coordSys.y, width: params.coordSys.width, height: params.coordSys.height},
+                      );
+                      return shape && {type: 'rect', shape: shape, style: {fill: api.visual('color'), opacity: 0.8}};
+                    },
+                  }],
+                };
+              renderer: canvas
+          version: ''
+    panel-32:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: influxdb3-home
+                  group: influxdb
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__dateBin(time) AS time,
+                              plugin           AS entity,
+                              'ok'             AS measure,
+                              avg(ok)          AS value
+                          FROM diagnosis
+                          WHERE
+                              $__timeFilter(time)
+                              AND module = 'network'
+                              AND plugin IS NOT NULL
+                              AND ok IS NOT NULL
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: A
+            queryOptions:
+              interval: 15m
+            transformations: []
+        description: 'Generated: plugin reported a fit or sick diagnosis rather than dead'
+        id: 32
+        links: []
+        title: Network Plugins Alive
+        vizConfig:
+          group: volkovlabs-echarts-panel
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                decimals: 2
+                displayName: ${__field.labels.metric}
+                unit: none
+              overrides: []
+            options:
+              editorMode: code
+              getOption: |
+                const layout = {"axis": 80, "legend": 400, "states": [{"from": null, "colour": "red", "text": "Dead"}, {"from": 1, "colour": "green", "text": "Alive"}]};
+                const theme = context.grafana.theme;
+                const start = context.panel.data.timeRange.from.valueOf();
+                const end = context.panel.data.timeRange.to.valueOf();
+                const names = [];
+                const spans = [];
+                for (const frame of context.panel.data.series) {
+                  const time = frame.fields.find((field) => field.type === 'time');
+                  if (!time) {
+                    continue;
+                  }
+                  for (const field of frame.fields) {
+                    if (field === time || field.type !== 'number') {
+                      continue;
+                    }
+                    const name = field.state?.displayName ?? field.labels?.metric ?? field.name;
+                    let row = names.indexOf(name);
+                    if (row < 0) {
+                      row = names.push(name) - 1;
+                    }
+                    let open = null;
+                    for (let index = 0; index < time.values.length; index++) {
+                      const value = field.values[index];
+                      if (value === null || value === undefined) {
+                        continue;
+                      }
+                      const shown = layout.states.findLast((state) => state.from === null || value >= state.from);
+                      if (open && open.text === shown.text) {
+                        continue;
+                      }
+                      if (open) {
+                        open.value[2] = time.values[index];
+                      }
+                      open = {value: [row, Math.max(time.values[index], start), end], text: shown.text, itemStyle: {color: theme.visualization.getColorByName(shown.colour)}};
+                      spans.push(open);
+                    }
+                  }
+                }
+                const clock = (millis) => context.echarts.time.format(millis, end - start > 86400000 ? '{MM}/{dd} {HH}:{mm}' : '{HH}:{mm}', false);
+                const padding = theme.spacing.gridSize;
+                const left = layout.axis + padding;
+                const right = layout.legend + 2 * padding;
+                const steps = [1, 2, 5, 10, 15, 30, 60, 120, 180, 360, 720, 1440, 2880, 10080].map((minutes) => minutes * 60000);
+                const step = steps.find((millis) => (context.panel.chart.getWidth() - left - right) * millis / (end - start) >= 40) ?? steps[steps.length - 1];
+                const tick = (millis) => context.echarts.time.format(millis, step >= 1440 * 60000 ? '{MM}/{dd}' : '{HH}:{mm}', false);
+                const local = -new Date(start).getTimezoneOffset() * 60000;
+                const ticks = [];
+                for (let at = Math.ceil((start + local) / step) * step - local; at <= end; at += step) {
+                  ticks.push(at);
+                }
+                return {
+                  backgroundColor: 'transparent',
+                  textStyle: {fontFamily: theme.typography.fontFamily, fontSize: 12},
+                  grid: {left: left, right: right, top: 4, bottom: 24},
+                  tooltip: {
+                    trigger: 'item',
+                    formatter: (item) => `${names[item.value[0]]}<br/>${item.data.text} ${clock(item.value[1])} to ${clock(item.value[2])}`,
+                  },
+                  xAxis: {
+                    type: 'time',
+                    min: start,
+                    max: end,
+                    axisLine: {show: false},
+                    axisTick: {show: false, customValues: ticks},
+                    axisLabel: {color: theme.colors.text.secondary, customValues: ticks, formatter: tick},
+                    splitLine: {show: true, lineStyle: {color: theme.colors.border.weak}},
+                  },
+                  yAxis: {
+                    type: 'category',
+                    data: names,
+                    inverse: true,
+                    position: 'right',
+                    axisLine: {show: false},
+                    axisTick: {show: false},
+                    axisLabel: {color: theme.colors.text.primary, width: layout.legend - 24, overflow: 'truncate', align: 'left', margin: 12, interval: 0},
+                  },
+                  series: [{
+                    type: 'custom',
+                    encode: {x: [1, 2], y: 0},
+                    data: spans,
+                    renderItem: (params, api) => {
+                      const from = api.coord([api.value(1), api.value(0)]);
+                      const to = api.coord([api.value(2), api.value(0)]);
+                      const height = api.size([0, 1])[1] * 0.8;
+                      const shape = context.echarts.graphic.clipRectByRect(
+                        {x: from[0], y: from[1] - height / 2, width: to[0] - from[0], height: height},
+                        {x: params.coordSys.x, y: params.coordSys.y, width: params.coordSys.width, height: params.coordSys.height},
+                      );
+                      return shape && {type: 'rect', shape: shape, style: {fill: api.visual('color'), opacity: 0.8}};
+                    },
+                  }],
+                };
+              renderer: canvas
           version: ''
     panel-4:
       kind: Panel
@@ -2925,7 +3427,7 @@ spec:
             queryOptions: {}
             transformations: []
         description: ''
-        id: 30
+        id: 33
         links: []
         title: ''
         transparent: true
@@ -3201,7 +3703,7 @@ spec:
           element:
             kind: ElementReference
             name: panel-28
-          height: 6
+          height: 5
           width: 24
           x: 0
           y: 149
@@ -3210,10 +3712,37 @@ spec:
           element:
             kind: ElementReference
             name: panel-29
+          height: 6
+          width: 24
+          x: 0
+          y: 154
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-30
+          height: 34
+          width: 24
+          x: 0
+          y: 160
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-31
           height: 4
           width: 24
           x: 0
-          y: 155
+          y: 194
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-32
+          height: 8
+          width: 24
+          x: 0
+          y: 198
   links: []
   preload: false
   tags:

@@ -291,12 +291,14 @@ ORDER BY time
         [series("Server Log Errors", server_hosts.query(["failed_log_messages"], host_names))],
         [series("Server Backup Stage Failures", server_hosts.query(["failed_backup_stages"], host_names))],
         [series("Server Backup Stage Halts", server_hosts.query(["halted_backup_stages"], host_names))],
-        [series("Cluster Health", server_hosts.query(["cluster"], None, ("percent",)))],
+        [state("Server Healthy", server_hosts.query(["status"], host_names), ("Unhealthy", "Healthy"), 8)],
+        [state("Cluster Health", server_hosts.query(["cluster"]), ("Unhealthy", "Healthy"), 4)],
     ])
 
     # Build Systems dashboard [network]
     access_points = Relation("network", "wireless/accesspoint")
     zigbee_routers = Relation("network", "zigbee/router")
+    zigbee_devices = Relation("network", "zigbee/device")
     zigbee_experience = Relation("network", "zigbee/experience")
     network_diagnosis = Relation("network", "diagnosis/plugin")
     wired_switches = Relation("network", "ethernet/switch")
@@ -328,8 +330,12 @@ ORDER BY time
         [state("Network Devices Up", [wired_switches.query(["up"]), access_points.query(["up"])], ("Down", "Up"), 5)],
         [state("Network Devices Overheating", [wired_switches.query(["overheating"], None, ("complement",)), access_points.query(["overheating"], None, ("complement",))],
                ("Overheating", "Normal"), 5)],
+        [state("Network Devices Restarted", [wired_switches.query(["restarted"], None, ("complement",)), access_points.query(["restarted"], None, ("complement",))],
+               ("Restarted", "Steady"), 5)],
         [state("Zigbee Routers Available", zigbee_routers.query(["available"]), ("Unavailable", "Available"), 6)],
+        [state("Zigbee Devices Weak", zigbee_devices.query(["weak"], None, ("complement",)), ("Weak", "Strong"), 34)],
         [state("Weather Console Fresh", weewx_consoles.query(["fresh"]), ("Stale", "Fresh"), 4)],
+        [state("Network Plugins Alive", network_diagnosis.query(["ok"]), ("Dead", "Alive"), 8)],
     ])
 
     # Build Systems dashboard [internet]
@@ -351,6 +357,8 @@ ORDER BY time
         [series("Internet Loss", internet_targets.query(["loss_pct"]))],
         [series("Domain Resolution", dns_resolvers.query(["latency_ms"]))],
         [series("Certificate Validity", certificate_endpoints.query(["validity_pct"]))],
+        [state("Internet Reachable", internet_targets.query(["reachable"]), ("Unreachable", "Reachable"), 5)],
+        [state("Domain Resolution Agreed", dns_resolvers.query(["ok"]), ("Disagreed", "Agreed"), 5)],
         [state("Certificate Verified", certificate_endpoints.query(["verified"]), ("Unverified", "Verified"), 4)],
     ])
 
