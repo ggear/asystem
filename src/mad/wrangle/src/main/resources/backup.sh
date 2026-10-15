@@ -287,8 +287,20 @@ WRANGLE_BACKUP_EXCLUDES=(
   "data/wrangle-run.lock"
 )
 
+WRANGLE_BACKUP_LOCK_SECONDS=600
+
 backup_written() {
+  local wrangle_lock_path="${BACKUP_SOURCE_PATH:?}/data/wrangle-run.lock" wrangle_lock_fd wrangle_status
+  exec {wrangle_lock_fd}>>"${wrangle_lock_path}" || return 1
+  if ! flock -w "${WRANGLE_BACKUP_LOCK_SECONDS}" "${wrangle_lock_fd}"; then
+    echo "Run lock [${wrangle_lock_path}] not acquired within [${WRANGLE_BACKUP_LOCK_SECONDS}] seconds, not copying mid run" >&2
+    exec {wrangle_lock_fd}>&-
+    return 1
+  fi
   backup_files "." WRANGLE_BACKUP_INCLUDES WRANGLE_BACKUP_EXCLUDES
+  wrangle_status=$?
+  exec {wrangle_lock_fd}>&-
+  return "${wrangle_status}"
 }
 
 [ "${BASH_SOURCE[0]}" = "${0}" ] || return 0

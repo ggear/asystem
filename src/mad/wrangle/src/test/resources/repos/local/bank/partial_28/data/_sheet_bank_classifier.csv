@@ -1,5 +1,5 @@
 Category,Bucket,Budgeted,Bank Code,Merchant Code,Pattern
-Groceries,Living,Yes,,,
-Restaurants,Discretionary,Yes,,,
+Groceries,Living,Yes,,5411,
+Restaurants,Discretionary,Yes,,5812,
 Car,Maintenance,Yes,,,
-Transfer,Transfers,No,,,
+Transfer,Transfers,No,TRANSFER_OUT,,

@@ -738,18 +738,208 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A reclassified transaction loses its tick on a forced reprocess, while one whose manual category holds and one whose category stands keep theirs
+    # A forced reprocess re-derives every row: a vetted row whose category moves loses its tick, one no pattern matches any more is blanked and loses its tick, and
+    # one held by a manual category keeps its tick while its derived category follows the classifier
     def test_bank_local_partial_41(self):
         self._bank_run(
             "partial_41",
-            standing=1,
+            standing=2,
             rerun=False,
             force=True,
+            errored={plugin.CTR_SRC_DATA: 1},
             file_asserts={
                 "redbark_transactions_2025.csv": [
-                    assert_file_column_values("Category Derived", ["Food"] * 9 + ["Groceries", "Groceries"], sort_by=["Description"]),
-                    assert_file_column_values("Vetted", ["Yes"] * 9 + [None, "Yes"], sort_by=["Description"]),
+                    assert_file_column_values("Category Derived", [None] * 9 + ["Groceries", "Groceries"], sort_by=["Description"]),
+                    assert_file_column_values("Vetted", [None] * 10 + ["Yes"], sort_by=["Description"]),
                 ],
+            },
+        )
+
+    # A classifier edit re-derives every row on the next run: a vetted row whose category moves loses its tick, a manual row keeps category and tick while its derived
+    # category follows, an unmatched row is blanked and loses its tick, the snapshot is replaced, and each change is logged once in the run's month, the closed month
+    # untouched, the rerun and reprocess moving nothing more
+    def test_bank_local_partial_47(self):
+        self._bank_run(
+            "partial_47",
+            standing=2,
+            errored={plugin.CTR_SRC_DATA: 1},
+            file_asserts={
+                "redbark_transactions_2025.csv": [
+                    assert_file_column_values("Category Derived", ["Restaurants", "Restaurants"] + [None] * 7 + ["Groceries"], sort_by=["Description"]),
+                    assert_file_column_values("Vetted", [None, "Yes"] + [None] * 7 + ["Yes"], sort_by=["Description"]),
+                ],
+                "bank_reclassified_2026_01.csv": [
+                    assert_file_column_values("Description", ["Cafe One", "Cafe Two", "Gone One"], sort_by=["Description"]),
+                    assert_file_column_values("Source", ["classifier"] * 3, sort_by=["Description"]),
+                    assert_file_column_values("Derived Before", ["Food"] * 3, sort_by=["Description"]),
+                    assert_file_column_values("Derived After", ["Restaurants", "Restaurants", None], sort_by=["Description"]),
+                    assert_file_column_values("Vetted After", [None, "Yes", None], sort_by=["Description"]),
+                    assert_file_nones_per_col(include=r"File MD5"),
+                ],
+                "bank_reclassified_2025_12.csv": [assert_file_size(min_rows=1, max_rows=1)],
+                "__bank_classifier.csv": [assert_file_column_values("Category", ["Groceries", "Food", "Restaurants"])],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["TRANSACTIONS_MOVED", "TRANSACTIONS_UNCLASSIFIED", "TRANSACTIONS_UNVETTED"], sort_by=["Code"])],
+            },
+        )
+
+    # With the tab unchanged a standard run leaves a category no rule produces, as the release's first run does, and logs nothing
+    def test_bank_local_partial_48(self):
+        self._bank_run(
+            "partial_48",
+            standing=2,
+            rerun=False,
+            file_asserts={
+                "redbark_transactions_2025.csv": [
+                    assert_file_column_values("Category Derived", [None] * 4 + ["Legacy", "Groceries"], sort_by=["Description"]),
+                    assert_file_column_values("Vetted", [None] * 4 + ["Yes", "Yes"], sort_by=["Description"]),
+                ],
+                "bank_reclassified_2026_01.csv": [assert_file_does_not_exist()],
+            },
+        )
+
+    # With the tab unchanged a reprocess, as the release's second run, blanks the category no rule produces and clears its tick, logging the change
+    def test_bank_local_partial_48_reprocess(self):
+        self._bank_run(
+            "partial_48",
+            standing=2,
+            rerun=False,
+            force=True,
+            errored={plugin.CTR_SRC_DATA: 1},
+            file_asserts={
+                "redbark_transactions_2025.csv": [
+                    assert_file_column_values("Category Derived", [None] * 5 + ["Groceries"], sort_by=["Description"]),
+                    assert_file_column_values("Vetted", [None] * 5 + ["Yes"], sort_by=["Description"]),
+                ],
+                "bank_reclassified_2026_01.csv": [
+                    assert_file_column_values("Description", ["Old One"]),
+                    assert_file_column_values("Derived Before", ["Legacy"]),
+                    assert_file_column_values("Derived After", [None]),
+                    assert_file_column_values("Vetted After", [None]),
+                ],
+            },
+        )
+
+    # A classifier edit with a pattern in two categories is held: rows keep the last applied tab's categories and ticks, a new row is classified by it, and the
+    # snapshot is kept so the edit applies once the tab is fixed
+    def test_bank_local_corrupt_33(self):
+        self._bank_run(
+            "corrupt_33",
+            standing=2,
+            rerun=False,
+            errored={plugin.CTR_SRC_SOURCES: 2, plugin.CTR_SRC_DATA: 1},
+            file_asserts={
+                "redbark_transactions_2025.csv": [
+                    assert_file_column_values("Category Derived", ["Food"] + [None] * 3 + ["Food", "Groceries"], sort_by=["Description"]),
+                    assert_file_column_values("Vetted", ["Yes"] + [None] * 4 + ["Yes"], sort_by=["Description"]),
+                ],
+                "__bank_classifier.csv": [assert_file_column_values("Category", ["Food", "Groceries"])],
+                "__bank_logs.csv": [
+                    assert_file_column_values(
+                        "Code",
+                        ["CLASSIFIER_HELD", "CLASSIFIER_PATTERN_CONFLICT", "TRANSACTIONS_MOVED", "TRANSACTIONS_UNCLASSIFIED", "TRANSACTIONS_UNVETTED"],
+                        sort_by=["Code"],
+                    )
+                ],
+            },
+        )
+
+    # A reprocess holds the same edit, re-deriving every row with the last applied tab
+    def test_bank_local_corrupt_33_reprocess(self):
+        self._bank_run(
+            "corrupt_33",
+            standing=2,
+            rerun=False,
+            force=True,
+            errored={plugin.CTR_SRC_SOURCES: 2, plugin.CTR_SRC_DATA: 1},
+            file_asserts={
+                "redbark_transactions_2025.csv": [
+                    assert_file_column_values("Category Derived", ["Food"] + [None] * 3 + ["Food", "Groceries"], sort_by=["Description"]),
+                    assert_file_column_values("Vetted", ["Yes"] + [None] * 4 + ["Yes"], sort_by=["Description"]),
+                ],
+                "__bank_classifier.csv": [assert_file_column_values("Category", ["Food", "Groceries"])],
+                "__bank_logs.csv": [
+                    assert_file_column_values(
+                        "Code",
+                        ["CLASSIFIER_HELD", "CLASSIFIER_PATTERN_CONFLICT", "TRANSACTIONS_MOVED", "TRANSACTIONS_UNCLASSIFIED", "TRANSACTIONS_UNVETTED"],
+                        sort_by=["Code"],
+                    )
+                ],
+            },
+        )
+
+    # A bucket-only classifier edit clears no tick and logs nothing, the month totals regrouped under the new bucket
+    def test_bank_local_partial_49(self):
+        self._bank_run(
+            "partial_49",
+            standing=2,
+            file_asserts={
+                "redbark_transactions_2025.csv": [assert_file_column_values("Vetted", ["Yes"] + [None] * 6 + ["Yes"], sort_by=["Description"])],
+                "bank_reclassified_2026_01.csv": [assert_file_does_not_exist()],
+                "_sheet_bank_transactions.csv": [
+                    assert_file_column_values("Category", ["Food", "Groceries", "Uncategorised"]),
+                    assert_file_column_values("Bucket", ["Discretionary", "Living", "Unbucketed"]),
+                ],
+            },
+        )
+
+    # With the tab unchanged a normal run re-derives the files its edits changed: a ticked uncategorised row gains a category and loses the tick, an edited manual
+    # description is reclassified, the untouched row keeps its category and tick, and each change is logged by its source
+    def test_bank_local_partial_50(self):
+        self._bank_run(
+            "partial_50",
+            standing=3,
+            sheet_downloads=1,
+            errored={plugin.CTR_SRC_DATA: 1},
+            file_asserts={
+                "redbark_transactions_2025.csv": [
+                    assert_file_column_values("Category Derived", ["Food"] + [None] * 4 + ["Groceries"], sort_by=["Description"]),
+                    assert_file_column_values("Vetted", ["Yes"] + [None] * 5, sort_by=["Description"]),
+                ],
+                "manual_transactions_2025.csv": [
+                    assert_file_column_values("Description", ["Shop Three"]),
+                    assert_file_column_values("Category Derived", ["Groceries"]),
+                ],
+                "bank_reclassified_2026_01.csv": [
+                    assert_file_column_values("Source", ["classifier", "classifier", "sheet"], sort_by=["Source", "Description"]),
+                    assert_file_column_values("Description", ["Shop Three", "Shop Two", "Shop Two"], sort_by=["Source", "Description"]),
+                    assert_file_column_values("Vetted After", [None, None, "Yes"], sort_by=["Source", "Description"]),
+                    assert_file_column_values("Derived After", ["Groceries", "Groceries", None], sort_by=["Source", "Description"]),
+                ],
+            },
+        )
+
+    # A manual category equal to the row's category keeps its tick and a different one left unticked clears it; a stale tab, its derived category from before a move,
+    # cannot re-tick the row but can untick one, and only the edits are logged
+    def test_bank_local_partial_51(self):
+        self._bank_run(
+            "partial_51",
+            standing=2,
+            sheet_downloads=1,
+            file_asserts={
+                "redbark_transactions_2025.csv": [
+                    assert_file_column_values("Vetted", [None] * 4 + ["Yes", None, None, None], sort_by=["Description"]),
+                    assert_file_column_values("Category Manual", [None] * 4 + ["Groceries", "Food", None, None], sort_by=["Description"]),
+                ],
+                "bank_reclassified_2026_01.csv": [
+                    assert_file_column_values("Description", ["Shop A", "Shop B", "Shop D"], sort_by=["Description"]),
+                    assert_file_column_values("Source", ["sheet"] * 3, sort_by=["Description"]),
+                    assert_file_column_values("Vetted After", ["Yes", None, None], sort_by=["Description"]),
+                ],
+            },
+        )
+
+    # A failed drive sync leaves the run's changes unlogged with an error, the classifier edit still applied
+    def test_bank_local_corrupt_34(self):
+        self._bank_run(
+            "corrupt_34",
+            standing=2,
+            rerun=False,
+            drive_failed=True,
+            errored={plugin.CTR_SRC_SOURCES: 2, plugin.CTR_SRC_DATA: 1},
+            file_asserts={
+                "redbark_transactions_2025.csv": [assert_file_column_values("Vetted", [None, "Yes"] + [None] * 7 + ["Yes"], sort_by=["Description"])],
+                "bank_reclassified_2026_01.csv": [assert_file_does_not_exist()],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["CHANGES_UNLOGGED", "TRANSACTIONS_MOVED", "TRANSACTIONS_UNCLASSIFIED", "TRANSACTIONS_UNVETTED"], sort_by=["Code"])],
             },
         )
 
@@ -995,12 +1185,13 @@ class WrangleTest(unittest.TestCase):
         )
 
     # Classification by the longest literal pattern, then merchant code, then bank code: nested patterns across categories, padded whitespace, a metacharacter
-    # matched literally, a merchant code over a bank code and an unmapped income code left blank; the changed tab fills every blank row, and forced reprocessing
-    # reclassifies every row, the history's own category included, while a category manual still wins
+    # matched literally, a merchant code over a bank code and an unmapped income code left blank; the changed tab re-derives every row, the history's own category
+    # included, clearing the tick of the vetted row it moves, while a category manual still wins and keeps its tick
     def test_bank_local_partial_24(self):
         self._bank_run(
             "partial_24",
             standing=2,
+            errored={plugin.CTR_SRC_DATA: 1},
             file_asserts={
                 "redbark_transactions_2026.csv": [
                     assert_file_column_values(
@@ -1008,6 +1199,7 @@ class WrangleTest(unittest.TestCase):
                         ["Groceries", "Restaurants", "Groceries", "Restaurants", None, "Shopping", None, "Groceries", "Restaurants", None, None, None, None, None, None],
                         sort_by=["Date", "Amount"],
                     ),
+                    assert_file_column_values("Vetted", [None] * 8 + ["Yes"] + [None] * 6, sort_by=["Date", "Amount"]),
                 ],
                 "__bank_transactions_current.csv": [
                     assert_file_column_values(
@@ -1020,19 +1212,27 @@ class WrangleTest(unittest.TestCase):
         )
 
     # Classifier standing errors, one source error each: a bank code not a CDR code, a merchant code not four digits, two code rows for one category, and two patterns
-    # of equal length from different categories matching one description, which takes neither
+    # of equal length from different categories matching one description, which takes neither; the edit is held, and with no tab yet applied nothing is classified
     def test_bank_local_corrupt_22(self):
         self._bank_run(
             "corrupt_22",
             standing=2,
             rerun=False,
-            errored={plugin.CTR_SRC_SOURCES: 4},
+            errored={plugin.CTR_SRC_SOURCES: 5},
             file_asserts={
                 "redbark_transactions_2026.csv": [assert_file_column_values("Category Derived", [None] * 7)],
                 "__bank_logs.csv": [
                     assert_file_column_values(
                         "Code",
-                        ["CLASSIFIER_BANK_CODE", "CLASSIFIER_CODE_ROWS", "CLASSIFIER_MERCHANT_CODE", "CLASSIFIER_TIE", "TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED_CURRENT"],
+                        [
+                            "CLASSIFIER_BANK_CODE",
+                            "CLASSIFIER_CODE_ROWS",
+                            "CLASSIFIER_HELD",
+                            "CLASSIFIER_MERCHANT_CODE",
+                            "CLASSIFIER_TIE",
+                            "TRANSACTIONS_UNCLASSIFIED_CURRENT",
+                            "TRANSACTIONS_UNVETTED_CURRENT",
+                        ],
                         sort_by=["Code"],
                     )
                 ],
@@ -1270,15 +1470,15 @@ class WrangleTest(unittest.TestCase):
         )
 
     # Classifier standing errors, one source error per code: a blank category, a category in two buckets, a blank budgeted, categories differing only in case, a
-    # short pattern, a code list on a pattern row, one pattern in two categories, a pattern matching over the share, and a category in use the tab lacks
+    # short pattern, a code list on a pattern row, one pattern in two categories, a pattern matching over the share, and a category in use the tab lacks, holding the edit
     def test_bank_local_corrupt_29(self):
         self._bank_run(
             "corrupt_29",
             standing=2,
             rerun=False,
-            errored={plugin.CTR_SRC_SOURCES: 9},
+            errored={plugin.CTR_SRC_SOURCES: 10},
             file_asserts={
-                "__bank_logs.csv": [assert_file_column_distinct("Code", 11)],
+                "__bank_logs.csv": [assert_file_column_distinct("Code", 12)],
             },
         )
 
@@ -4149,10 +4349,18 @@ class WrangleTest(unittest.TestCase):
         counters=None,
         file_asserts=None,
         custom_asserts=None,
+        drive_failed=False,
     ):
         bank_api_offline(test_name)
         if sheet_downloads is not None:
             sheet_download_offline(sheet_downloads, moved_tabs, restyled_tabs)
+        if drive_failed:
+
+            def _drive_synchronise(self, *_args, **_kwargs):
+                self.add_counter(plugin.CTR_SRC_SOURCES, plugin.CTR_ACT_ERRORED)
+                return {}
+
+            mock.patch.object(Plugin, "drive_synchronise", _drive_synchronise).start()
         self.run_plugin(
             "bank",
             plugin.RepoScope.LOCAL,
@@ -4160,7 +4368,7 @@ class WrangleTest(unittest.TestCase):
             log_level="info",
             disable_sheet_downloads=True,
             disable_database_downloads=True,
-            disable_drive_downloads=True,
+            disable_drive_downloads=not drive_failed,
             disable_source_downloads=not source,
             disable_sheet_uploads=True,
             disable_database_uploads=True,

@@ -1,4 +1,5 @@
 import glob
+import hashlib
 import os
 import re
 import time
@@ -215,6 +216,8 @@ ERROR_CODES = {
     "CLASSIFIER_UNBUCKETED": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
     "CLASSIFIER_TIE": (plugin.LOG_KIND_WARNING, True, plugin.CTR_SRC_SOURCES),
     "CLASSIFIER_SHARE": (plugin.LOG_KIND_WARNING, True, plugin.CTR_SRC_SOURCES),
+    "CLASSIFIER_HELD": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
+    "CHANGES_UNLOGGED": (plugin.LOG_KIND_ERROR, False, plugin.CTR_SRC_SOURCES),
     "BALANCE_MANUAL_STALE": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_DATA),
     "TRANSACTION_KEY": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
     "BALANCE_ABSENT": (plugin.LOG_KIND_WARNING, True, plugin.CTR_SRC_DATA),
@@ -246,7 +249,42 @@ ERROR_CODES = {
     "TRANSACTIONS_UNVETTED": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_DATA),
     "TRANSACTIONS_UNVETTED_CURRENT": (plugin.LOG_KIND_WARNING, True, plugin.CTR_SRC_DATA),
     "TRANSACTION_TWO_ACCOUNTS": (plugin.LOG_KIND_WARNING, True, plugin.CTR_SRC_DATA),
+    "TRANSACTIONS_MOVED": (plugin.LOG_KIND_WARNING, False, plugin.CTR_SRC_DATA),
 }
+CLASSIFIER_HOLDING_CODES = {
+    "CLASSIFIER_BANK_CODE",
+    "CLASSIFIER_CATEGORY",
+    "CLASSIFIER_CATEGORY_CASE",
+    "CLASSIFIER_CODE_LIST",
+    "CLASSIFIER_CODE_ROWS",
+    "CLASSIFIER_MERCHANT_CODE",
+    "CLASSIFIER_PATTERN",
+    "CLASSIFIER_PATTERN_CONFLICT",
+    "CLASSIFIER_SHARE",
+    "CLASSIFIER_TIE",
+}
+
+CHANGES_FILE_PREFIX = "bank_reclassified"
+CHANGES_SCHEMA = {
+    "Run": pl.Utf8,
+    "Source": pl.Utf8,
+    "Year File": pl.Utf8,
+    "Transaction ID": pl.Utf8,
+    "Part": pl.Int64,
+    "Date": pl.Date,
+    "Account": pl.Utf8,
+    "Amount": pl.Float64,
+    "Description": pl.Utf8,
+    "Manual Before": pl.Utf8,
+    "Manual After": pl.Utf8,
+    "Derived Before": pl.Utf8,
+    "Derived After": pl.Utf8,
+    "Vetted Before": pl.Utf8,
+    "Vetted After": pl.Utf8,
+    "File MD5": pl.Utf8,
+}
+CHANGES_SOURCE_SHEET = "sheet"
+CHANGES_SOURCE_CLASSIFIER = "classifier"
 
 REPOS_BANK = plugin.Repos(
     preview={
@@ -442,11 +480,13 @@ class Bank(plugin.Plugin):
             self.error(errors, _tab, _key, _code, _detail)
 
         # Download Drive Data
+        drive_errored = self.get_counter(plugin.CTR_SRC_SOURCES, plugin.CTR_ACT_ERRORED)
         if not plugin.config.disable_drive_downloads:
             for file_name, (file_present, file_downloaded) in self.drive_synchronise(self.remote_repos.drive_folder, self.local_cache, download=True).items():
                 file_path = abspath(join(self.local_cache, basename(str(file_name)))).lower()
                 if file_present and re.fullmatch(FILE_NAME_PATTERN, basename(file_path)):
                     bank_files[file_path] = plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED if file_downloaded else plugin.DownloadStatus.CACHED, [file_path])
+        drive_failed = self.get_counter(plugin.CTR_SRC_SOURCES, plugin.CTR_ACT_ERRORED) > drive_errored
 
         # Download Sheet Data
         started_time = time.time()
@@ -457,6 +497,47 @@ class Bank(plugin.Plugin):
         sheet_downloaded = sheet_result.file_status == plugin.DownloadStatus.DOWNLOADED
         self.print_log(f"Sheet tabs [{len(sheet_tabs)}] status [{sheet_result.file_status.name}]", started=started_time)
 
+        # Build Classifier Matchers
+        def _bank_matchers(_rows_df: pl.DataFrame, _report: bool) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame]:
+            _pattern_rows_df = _rows_df.filter(pl.col("Pattern").is_not_null())
+            if _report:
+                for _row in _pattern_rows_df.filter(pl.col("Bank Code").str.contains(",") | pl.col("Merchant Code").str.contains(",")).iter_rows(named=True):
+                    _bank_error("Classifier", f"row {_row['Row']}", "CLASSIFIER_CODE_LIST", "code list on a pattern row")
+                for _row in _pattern_rows_df.filter(pl.col("Pattern").str.len_chars() < CLASSIFIER_PATTERN_MIN).iter_rows(named=True):
+                    _bank_error("Classifier", f"row {_row['Row']}", "CLASSIFIER_PATTERN", f"pattern [{_row['Pattern']}] under [{CLASSIFIER_PATTERN_MIN}] characters")
+            _patterns_df = (
+                _pattern_rows_df.filter(pl.col("Pattern").str.len_chars() >= CLASSIFIER_PATTERN_MIN).select([_bank_name("Pattern").alias("__pattern"), "Category"]).unique(maintain_order=True)
+            )
+            if _report:
+                for _pattern, _categories in _patterns_df.group_by("__pattern", maintain_order=True).agg(pl.col("Category")).filter(pl.col("Category").list.len() > 1).iter_rows():
+                    _bank_error("Classifier", _pattern, "CLASSIFIER_PATTERN_CONFLICT", f"pattern in categories [{', '.join(_categories)}] applied to neither")
+            _codes_df = _rows_df.select(["Category", pl.col("Bank Code").str.split(","), pl.col("Merchant Code").str.split(",")])
+            _codes: dict[str, pl.DataFrame] = {}
+            for _column, _valid, _code_name, _label, _invalid in (
+                ("Bank Code", pl.col("Bank Code").is_in(CLASSIFIER_BANK_CODES), "CLASSIFIER_BANK_CODE", "bank code", "not a CDR code"),
+                (
+                    "Merchant Code",
+                    pl.col("Merchant Code").str.contains(r"^\d{4}$") & (pl.col("Merchant Code") != CLASSIFIER_MERCHANT_CODE_NONE),
+                    "CLASSIFIER_MERCHANT_CODE",
+                    "merchant code",
+                    "not four digits",
+                ),
+            ):
+                _column_df = _codes_df.explode(_column).select([pl.col(_column).str.strip_chars(), "Category"]).filter(pl.col(_column).str.len_chars() > 0).unique(maintain_order=True)
+                if _report:
+                    for _code in _column_df.filter(~_valid)[_column].to_list():
+                        _bank_error("Classifier", _code, _code_name, f"{_label} {_invalid}")
+                _column_df = _column_df.filter(_valid)
+                if _report:
+                    for _code, _categories in _column_df.group_by(_column, maintain_order=True).agg(pl.col("Category")).filter(pl.col("Category").list.len() > 1).iter_rows():
+                        _bank_error("Classifier", _code, _code_name, f"{_label} in categories [{', '.join(_categories)}] applied to neither")
+                _codes[_column] = _column_df.filter(pl.col(_column).is_unique())
+            return (
+                _patterns_df.filter(pl.col("__pattern").is_unique()),
+                _codes["Bank Code"].rename({"Category": "__bank"}),
+                _codes["Merchant Code"].rename({"Category": "__merchant"}),
+            )
+
         # Load Classifier Data
         started_time = time.time()
         classifier_df = pl.DataFrame(schema=CLASSIFIER_SCHEMA)
@@ -466,6 +547,7 @@ class Bank(plugin.Plugin):
         classifier_patterns_df = pl.DataFrame(schema={"__pattern": pl.Utf8, "Category": pl.Utf8})
         classifier_bank_df = pl.DataFrame(schema={"Bank Code": pl.Utf8, "__bank": pl.Utf8})
         classifier_merchant_df = pl.DataFrame(schema={"Merchant Code": pl.Utf8, "__merchant": pl.Utf8})
+        classifier_errors_start = len(errors)
         if classifier_raw_df is not None:
             try:
                 if list(classifier_raw_df.columns[: len(CLASSIFIER_SCHEMA)]) != list(CLASSIFIER_SCHEMA):
@@ -508,43 +590,11 @@ class Bank(plugin.Plugin):
                     .iter_rows()
                 ):
                     _bank_error("Classifier", name, "CLASSIFIER_CATEGORY_CASE", f"categories [{', '.join(categories)}] differ only in case or spacing")
-                pattern_rows_df = classifier_rows_df.filter(pl.col("Pattern").is_not_null())
-                code_rows_df = classifier_rows_df.filter(pl.col("Pattern").is_null())
-                for row in pattern_rows_df.filter(pl.col("Bank Code").str.contains(",") | pl.col("Merchant Code").str.contains(",")).iter_rows(named=True):
-                    _bank_error("Classifier", f"row {row['Row']}", "CLASSIFIER_CODE_LIST", "code list on a pattern row")
-                for category, count in code_rows_df.group_by("Category").len().filter(pl.col("len") > 1).iter_rows():
+                for category, count in classifier_rows_df.filter(pl.col("Pattern").is_null()).group_by("Category").len().filter(pl.col("len") > 1).iter_rows():
                     _bank_error("Classifier", category, "CLASSIFIER_CODE_ROWS", f"code rows [{count}] for one category")
-                for row in pattern_rows_df.filter(pl.col("Pattern").str.len_chars() < CLASSIFIER_PATTERN_MIN).iter_rows(named=True):
-                    _bank_error("Classifier", f"row {row['Row']}", "CLASSIFIER_PATTERN", f"pattern [{row['Pattern']}] under [{CLASSIFIER_PATTERN_MIN}] characters")
                 for row in classifier_raw_df.with_row_index("Row", offset=2).filter(pl.col("Pattern").is_not_null() & (pl.col("Pattern") != pl.col("Pattern").str.strip_chars())).iter_rows(named=True):
                     _bank_error("Classifier", f"row {row['Row']}", "CLASSIFIER_PATTERN", f"pattern [{row['Pattern']}] has edge spaces")
-                patterns_df = (
-                    pattern_rows_df.filter(pl.col("Pattern").str.len_chars() >= CLASSIFIER_PATTERN_MIN).select([_bank_name("Pattern").alias("__pattern"), "Category"]).unique(maintain_order=True)
-                )
-                for pattern, categories in patterns_df.group_by("__pattern", maintain_order=True).agg(pl.col("Category")).filter(pl.col("Category").list.len() > 1).iter_rows():
-                    _bank_error("Classifier", pattern, "CLASSIFIER_PATTERN_CONFLICT", f"pattern in categories [{', '.join(categories)}] applied to neither")
-                classifier_patterns_df = patterns_df.filter(pl.col("__pattern").is_unique())
-                codes_df = classifier_rows_df.select(["Category", pl.col("Bank Code").str.split(","), pl.col("Merchant Code").str.split(",")])
-                classifier_codes: dict[str, pl.DataFrame] = {}
-                for column, valid, code_name, label, invalid in (
-                    ("Bank Code", pl.col("Bank Code").is_in(CLASSIFIER_BANK_CODES), "CLASSIFIER_BANK_CODE", "bank code", "not a CDR code"),
-                    (
-                        "Merchant Code",
-                        pl.col("Merchant Code").str.contains(r"^\d{4}$") & (pl.col("Merchant Code") != CLASSIFIER_MERCHANT_CODE_NONE),
-                        "CLASSIFIER_MERCHANT_CODE",
-                        "merchant code",
-                        "not four digits",
-                    ),
-                ):
-                    column_df = codes_df.explode(column).select([pl.col(column).str.strip_chars(), "Category"]).filter(pl.col(column).str.len_chars() > 0).unique(maintain_order=True)
-                    for code in column_df.filter(~valid)[column].to_list():
-                        _bank_error("Classifier", code, code_name, f"{label} {invalid}")
-                    column_df = column_df.filter(valid)
-                    for code, categories in column_df.group_by(column, maintain_order=True).agg(pl.col("Category")).filter(pl.col("Category").list.len() > 1).iter_rows():
-                        _bank_error("Classifier", code, code_name, f"{label} in categories [{', '.join(categories)}] applied to neither")
-                    classifier_codes[column] = column_df.filter(pl.col(column).is_unique())
-                classifier_bank_df = classifier_codes["Bank Code"].rename({"Category": "__bank"})
-                classifier_merchant_df = classifier_codes["Merchant Code"].rename({"Category": "__merchant"})
+                classifier_patterns_df, classifier_bank_df, classifier_merchant_df = _bank_matchers(classifier_rows_df, True)
                 classifier_df = (
                     classifier_rows_df.drop(["Row", "Bucket", "Budgeted"])
                     .join(category_bucket_df, on="Category", how="left", maintain_order="left")
@@ -555,6 +605,7 @@ class Bank(plugin.Plugin):
                 _bank_error("Classifier", "tab", "TAB_UNUSABLE", f"tab unusable [{exception}]")
         classifier_usable = len(classifier_df) > 0
         classifier_content_changed = classifier_usable and (classifier_snapshot_df is None or not classifier_snapshot_df.equals(classifier_df))
+        classifier_holding = classifier_content_changed and any(error["Code"] in CLASSIFIER_HOLDING_CODES for error in errors[classifier_errors_start:])
         classifier_buckets = ["Category", "Bucket", "Budgeted"]
         classifier_buckets_df = classifier_df.select(classifier_buckets).unique(maintain_order=True)
         classifier_changed = classifier_usable and (classifier_snapshot_df is None or not classifier_snapshot_df.select(classifier_buckets).unique(maintain_order=True).equals(classifier_buckets_df))
@@ -899,6 +950,49 @@ class Bank(plugin.Plugin):
 
         _bank_balances_merged()
 
+        # Capture Categories
+        def _bank_categories() -> pl.DataFrame:
+            return (
+                pl.concat(
+                    [
+                        pl.DataFrame(schema={**TRANSACTIONS_SCHEMA, "Split": pl.Int64, "Year File": pl.Utf8}),
+                        *(
+                            bank_transactions_identified(_data_df).with_columns(bank_flag("Vetted"), pl.lit(basename(_path)).alias("Year File"))
+                            for _path in _bank_paths("redbark_transactions", "manual_transactions")
+                            if (_data_df := _bank_readable(_path, TRANSACTIONS_SCHEMA)) is not None
+                        ),
+                    ],
+                    how="diagonal_relaxed",
+                )
+                .filter(pl.col("Transaction ID").is_not_null())
+                .select(["Transaction ID", "Split", "Year File", "Date", "Account", "Amount", "Description", "Category Manual", "Category Derived", "Vetted"])
+            )
+
+        # Log Category Changes
+        def _bank_categories_logged(_before_df: pl.DataFrame, _after_df: pl.DataFrame, _source: str):
+            _columns = {"Category Manual": "Manual", "Category Derived": "Derived", "Vetted": "Vetted"}
+            _changed_df = _after_df.join(_before_df.select(["Transaction ID", "Split", *_columns]), on=["Transaction ID", "Split"], how="inner", suffix=" Before").filter(
+                pl.any_horizontal([pl.col(_column).ne_missing(pl.col(f"{_column} Before")) for _column in _columns])
+            )
+            if len(_changed_df):
+                changes_frames.append(
+                    _changed_df.select(
+                        pl.lit(now.isoformat(timespec="seconds")).alias("Run"),
+                        pl.lit(_source).alias("Source"),
+                        "Year File",
+                        "Transaction ID",
+                        pl.col("Split").alias("Part"),
+                        "Date",
+                        "Account",
+                        "Amount",
+                        "Description",
+                        *(_expression for _column, _name in _columns.items() for _expression in (pl.col(f"{_column} Before").alias(f"{_name} Before"), pl.col(_column).alias(f"{_name} After"))),
+                    )
+                )
+
+        changes_frames: list[pl.DataFrame] = []
+        categories_start_df = _bank_categories()
+
         # Merge Sheet Transaction Data
         def _bank_parts_valid(_tab, _parts, _key, _whole=True):
             _amounts = {round(_part["__amount"] * 100) for _part in _parts if _part["__amount"] is not None}
@@ -935,8 +1029,18 @@ class Bank(plugin.Plugin):
         def _bank_vetted(_part, _base_part, _present):
             if not _present:
                 return _base_part["Vetted"] if _base_part is not None else None
-            if _base_part is not None and _part["Category Manual"] != _base_part["Category Manual"] and _part["__vetted"] == _base_part["Vetted"]:
-                return None
+            if _base_part is not None:
+                _category_before = _base_part["Category Manual"] or _base_part["Category Derived"]
+                _category_after = _part["Category Manual"] or _base_part["Category Derived"]
+                if _category_after != _category_before and _part["__vetted"] == _base_part["Vetted"]:
+                    return None
+                if (
+                    "Category Derived" in _part
+                    and _part["__vetted"] == FLAG_YES
+                    and _base_part["Vetted"] != FLAG_YES
+                    and ((_part["Category Derived"] or "").strip() or None) != _base_part["Category Derived"]
+                ):
+                    return _base_part["Vetted"]
             return _part["__vetted"]
 
         def _bank_category_checked(_tab, _key, _category):
@@ -1557,46 +1661,48 @@ class Bank(plugin.Plugin):
         _bank_transactions_deduped()
 
         # Classify Transaction Data
-        def _bank_transactions_classified():
+        def _bank_transactions_classified() -> bool:
             _started_time = time.time()
-            _classify_everything = plugin.config.force_reprocessing
-            _classify_all = _classify_everything or classifier_content_changed
+            _classify_all = plugin.config.force_reprocessing or classifier_content_changed
             _classify_paths = (
                 _bank_paths("redbark_transactions", "manual_transactions")
                 if _classify_all
                 else sorted({_path for _path in files_changed if basename(_path).startswith(("redbark_transactions_", "manual_transactions_")) and isfile(_path)})
             )
-            _classify_counts = [0, 0]
-            if classifier_usable and _classify_paths:
-                _classify_frames = {_path: _data_df for _path in _classify_paths if (_data_df := _bank_readable(_path, TRANSACTIONS_SCHEMA)) is not None}
-                _classify_df = pl.concat(
-                    [
-                        pl.DataFrame(schema={"__index": pl.UInt32, **TRANSACTIONS_SCHEMA, "__path": pl.Utf8}),
-                        *(_frame_df.with_row_index("__index").with_columns(pl.lit(_path).alias("__path")) for _path, _frame_df in _classify_frames.items()),
-                    ],
-                    how="vertical_relaxed",
-                ).with_columns(
-                    _bank_name("Description").fill_null("").alias("__description"),
-                    TRANSACTION_PLACEHOLDER.alias("__placeholder"),
-                )
-                _target = ~pl.col("__placeholder") & (pl.lit(True) if _classify_everything else (pl.col("Category Derived").is_null() & pl.col("Category Manual").is_null()))
-                _targets_df = _classify_df.filter(_target)
-                _classify_counts[1] = len(_targets_df)
-                _patterns = classifier_patterns_df["__pattern"].unique().to_list()
+            _classify_frames = {_path: _data_df for _path in _classify_paths if (_data_df := _bank_readable(_path, TRANSACTIONS_SCHEMA)) is not None}
+            _classify_df = pl.concat(
+                [
+                    pl.DataFrame(schema={"__index": pl.UInt32, **TRANSACTIONS_SCHEMA, "__path": pl.Utf8}),
+                    *(_frame_df.with_row_index("__index").with_columns(pl.lit(_path).alias("__path")) for _path, _frame_df in _classify_frames.items()),
+                ],
+                how="vertical_relaxed",
+            ).with_columns(
+                _bank_name("Description").fill_null("").alias("__description"),
+                TRANSACTION_PLACEHOLDER.alias("__placeholder"),
+            )
+            _targets_df = _classify_df.filter(~pl.col("__placeholder"))
+
+            def _bank_derived(_matchers: tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame]) -> tuple[pl.DataFrame, list[tuple[str, str, str, str]]]:
+                _patterns_df, _bank_df, _merchant_df = _matchers
+                _problems: list[tuple[str, str, str, str]] = []
+                _patterns = _patterns_df["__pattern"].unique().to_list()
                 _matched_df = pl.DataFrame(schema={"__description": pl.Utf8, "__pattern_category": pl.Utf8})
-                if _patterns and len(_classify_df):
-                    _descriptions_df = _classify_df.filter(~pl.col("__placeholder")).select("__description").unique() if _classify_all else _targets_df.select("__description").unique()
+                if _patterns and len(_targets_df):
                     _found_df = (
-                        _descriptions_df.with_columns(pl.col("__description").str.extract_many(_patterns, overlapping=True).alias("__pattern"))
+                        _targets_df.select("__description")
+                        .unique()
+                        .with_columns(pl.col("__description").str.extract_many(_patterns, overlapping=True).alias("__pattern"))
                         .explode("__pattern")
                         .drop_nulls("__pattern")
-                        .join(classifier_patterns_df, left_on="__pattern", right_on="__pattern")
+                        .join(_patterns_df, left_on="__pattern", right_on="__pattern")
                         .with_columns(pl.col("__pattern").str.len_chars().alias("__length"))
                         .filter(pl.col("__length") == pl.col("__length").max().over("__description"))
                     )
                     _ties_df = _found_df.group_by("__description").agg(pl.col("Category").unique().sort(), pl.col("__pattern").unique().sort()).filter(pl.col("Category").list.len() > 1)
                     for _, _categories, _ties in _ties_df.iter_rows():
-                        _bank_error("Classifier", ", ".join(_ties), "CLASSIFIER_TIE", f"patterns of equal length in categories [{', '.join(_categories)}] match one description, neither applied")
+                        _problems.append(
+                            ("Classifier", ", ".join(_ties), "CLASSIFIER_TIE", f"patterns of equal length in categories [{', '.join(_categories)}] match one description, neither applied")
+                        )
                     _matched_df = (
                         _found_df.group_by("__description")
                         .agg(pl.col("Category").unique())
@@ -1605,40 +1711,70 @@ class Bank(plugin.Plugin):
                     )
                     if _classify_all:
                         _shares_df = (
-                            _classify_df.filter(~pl.col("__placeholder"))
-                            .select("__description")
+                            _targets_df.select("__description")
                             .join(_found_df.select(["__description", "__pattern"]).unique(), on="__description")
                             .group_by("__pattern")
                             .len()
-                            .filter(pl.col("len") > CLASSIFIER_MATCH_SHARE * max(len(_classify_df.filter(~pl.col("__placeholder"))), 1))
+                            .filter(pl.col("len") > CLASSIFIER_MATCH_SHARE * max(len(_targets_df), 1))
                         )
                         for _pattern, _count in _shares_df.iter_rows():
-                            _bank_error("Classifier", _pattern, "CLASSIFIER_SHARE", f"pattern matches [{_count}] transactions, over the share")
-                _derived_df = (
+                            _problems.append(("Classifier", _pattern, "CLASSIFIER_SHARE", f"pattern matches [{_count}] transactions, over the share"))
+                return (
                     _targets_df.join(_matched_df, on="__description", how="left")
-                    .join(classifier_merchant_df, on="Merchant Code", how="left")
-                    .join(classifier_bank_df, on="Bank Code", how="left")
+                    .join(_merchant_df, on="Merchant Code", how="left")
+                    .join(_bank_df, on="Bank Code", how="left")
                     .with_columns(pl.coalesce("__pattern_category", "__merchant", "__bank").alias("__derived"))
-                    .with_columns((pl.coalesce("__derived", "Category Derived") if _classify_everything else pl.col("__derived")).alias("__derived"))
-                )
-                _classify_counts[0] = len(_derived_df.filter(pl.col("__derived").is_not_null()))
-                _category_moved = pl.col("Category Manual").is_null() & (pl.col("__new") != pl.col("Category Derived")).fill_null(
-                    pl.col("__new").is_not_null() | pl.col("Category Derived").is_not_null()
-                )
-                for _path, _frame_df in _classify_frames.items():
-                    _updates_df = _derived_df.filter(pl.col("__path") == _path).select(["__index", "__derived"])
-                    _classified_df = (
-                        _frame_df.with_row_index("__index")
-                        .join(_updates_df, on="__index", how="left", maintain_order="left")
-                        .with_columns(pl.when(pl.col("__index").is_in(_updates_df["__index"].implode())).then(pl.col("__derived")).otherwise(pl.col("Category Derived")).alias("__new"))
-                        .with_columns(pl.when(_category_moved).then(pl.lit(None, dtype=pl.Utf8)).otherwise(pl.col("Vetted")).alias("Vetted"), pl.col("__new").alias("Category Derived"))
-                        .drop(["__index", "__derived", "__new"])
-                    )
-                    if not _classified_df.equals(_frame_df):
-                        _bank_write(_classified_df, _path, "classified")
-            self.print_log(f"Classified [{_classify_counts[0]}] of [{_classify_counts[1]}] rows", started=_started_time)
+                ), _problems
 
-        _bank_transactions_classified()
+            _held = classifier_holding
+            _derived_df = None
+            if classifier_usable:
+                _derived_df, _problems = _bank_derived((classifier_patterns_df, classifier_bank_df, classifier_merchant_df))
+                for _problem in _problems:
+                    _bank_error(*_problem)
+                _held = _held or (classifier_content_changed and len(_problems) > 0)
+            if _held:
+                _bank_error("Classifier", "tab", "CLASSIFIER_HELD", "edit held until the tab's errors are fixed, classifying with the last applied tab")
+                _derived_df = None
+            if _derived_df is None and classifier_snapshot_df is not None:
+                _derived_df, _ = _bank_derived(_bank_matchers(classifier_snapshot_df, False))
+            if _derived_df is None:
+                self.print_log(f"Classified [0] of [{len(_targets_df)}] rows, no usable classifier", started=_started_time)
+                return _held
+            _effective_before = pl.coalesce("Category Manual", "Category Derived")
+            _effective_after = pl.coalesce("Category Manual", "__new")
+            _moved = _effective_after.ne_missing(_effective_before)
+            _moved_years: dict[int, list[int]] = {}
+            for _path, _frame_df in _classify_frames.items():
+                _updates_df = _derived_df.filter(pl.col("__path") == _path).select(["__index", "__derived"])
+                _classified_df = (
+                    _frame_df.with_row_index("__index")
+                    .join(_updates_df, on="__index", how="left", maintain_order="left")
+                    .with_columns(pl.when(pl.col("__index").is_in(_updates_df["__index"].implode())).then(pl.col("__derived")).otherwise(pl.col("Category Derived")).alias("__new"))
+                    .with_columns(_moved.alias("__moved"), (_moved & (bank_flag("Vetted") == FLAG_YES)).fill_null(False).alias("__cleared"))
+                )
+                _counts = _moved_years.setdefault(_bank_file(_path)[1], [0, 0])
+                _counts[0] += int(_classified_df["__moved"].sum())
+                _counts[1] += int(_classified_df["__cleared"].sum())
+                _classified_df = _classified_df.with_columns(
+                    pl.when(pl.col("__moved")).then(pl.lit(None, dtype=pl.Utf8)).otherwise(pl.col("Vetted")).alias("Vetted"), pl.col("__new").alias("Category Derived")
+                ).drop(["__index", "__derived", "__new", "__moved", "__cleared"])
+                if not _classified_df.equals(_frame_df):
+                    _bank_write(_classified_df, _path, "classified")
+            for _year, (_moved_count, _cleared_count) in sorted(_moved_years.items()):
+                if _moved_count:
+                    _bank_error(f"Transactions_{_year}", str(_year), "TRANSACTIONS_MOVED", f"[{_moved_count}] rows changed category by the classifier, [{_cleared_count}] ticks cleared")
+            self.print_log(
+                f"Classified [{_derived_df['__derived'].is_not_null().sum()}] of [{len(_targets_df)}] rows with the [{'last applied' if _held or not classifier_usable else 'live'}] tab, "
+                f"moved [{sum(_year_counts[0] for _year_counts in _moved_years.values())}] ticks cleared [{sum(_year_counts[1] for _year_counts in _moved_years.values())}]",
+                started=_started_time,
+            )
+            return _held
+
+        categories_classifying_df = _bank_categories()
+        classifier_held = _bank_transactions_classified()
+        _bank_categories_logged(categories_start_df, categories_classifying_df, CHANGES_SOURCE_SHEET)
+        _bank_categories_logged(categories_classifying_df, _bank_categories(), CHANGES_SOURCE_CLASSIFIER)
 
         # Process File List
         started_time = time.time()
@@ -2036,6 +2172,24 @@ class Bank(plugin.Plugin):
                         [f"Transactions_{year}" for year in transactions_tab_years],
                     )
 
+        # Log Changes Data
+        if changes_frames:
+            changes_df = pl.concat(changes_frames, how="vertical_relaxed")
+            if drive_failed:
+                _bank_error("Bank", "changes", "CHANGES_UNLOGGED", f"[{len(changes_df)}] changed rows not logged, the drive sync failed")
+            else:
+                changes_file = abspath(f"{self.local_cache}/{CHANGES_FILE_PREFIX}_{today:%Y_%m}.csv")
+                changes_md5 = {}
+                for year_file in changes_df["Year File"].unique().to_list():
+                    year_path = join(self.local_cache, year_file)
+                    if isfile(year_path):
+                        with open(year_path, "rb") as year_handle:
+                            changes_md5[year_file] = hashlib.md5(year_handle.read()).hexdigest()
+                changes_df = changes_df.with_columns(pl.col("Year File").replace_strict(changes_md5, default=None, return_dtype=pl.Utf8).alias("File MD5")).select(list(CHANGES_SCHEMA))
+                if isfile(changes_file):
+                    changes_df = pl.concat([self.csv_read(changes_file, schema=CHANGES_SCHEMA, print_rows=0).select(list(CHANGES_SCHEMA)), changes_df], how="vertical_relaxed")
+                self.csv_write(changes_df, changes_file, print_verb="appended", print_rows=0)
+
         # Upload Logs Data
         logs_df = self.logs_merged(errors, today)
         if committed:
@@ -2049,7 +2203,7 @@ class Bank(plugin.Plugin):
                 self.csv_write(accounts_df.select(list(ACCOUNTS_SCHEMA)), accounts_snapshot_file, print_rows=0)
             elif isfile(accounts_snapshot_file):
                 os.remove(accounts_snapshot_file)
-            if len(classifier_df):
+            if len(classifier_df) and not classifier_held:
                 self.csv_write(classifier_df.select(list(CLASSIFIER_SCHEMA)), classifier_snapshot_file, print_rows=0)
         if not len(balances_delta_df) and not len(transactions_delta_df):
             self.print_log("No new data found")

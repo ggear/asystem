@@ -64,6 +64,7 @@ dist
 *redbark_*
 *manual_balances_*
 *manual_transactions_*
+*bank_reclassified_*
 src/mad/wrangle/src/test/resources/repos/preview/bank/*/data/*
 src/mad/wrangle/src/test/resources/repos/release/bank/*/data/*
 !src/mad/wrangle/src/test/resources/repos/*/*/*/data/.gitkeep
