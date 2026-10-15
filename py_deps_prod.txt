@@ -6,15 +6,15 @@
 # Build/test
 mock==5.2.0
 fabric==3.2.3
-ruff==$RUFF_VERSION
 pytest==9.1.1
 dotenv==0.9.9
 varsubst==2.0.0
 packaging==26.3
-pyright==$PYRIGHT_VERSION
 requests==2.34.2
 setuptools==84.0.0
 pathlib2==2.3.7.post1
+ruff==$RUFF_VERSION
+pyright==$PYRIGHT_VERSION
 
 # Date/time
 datetime==6.0
@@ -33,26 +33,26 @@ pyyaml==6.0.3
 jinja2==3.1.6
 pandas==3.0.6
 openpyxl==3.1.5
-grafana-foundation-sdk==0.0.20
 polars==2.0.0
 orjson==3.13.0
-# NOTES: HELD, not stale, mlserver requires pyarrow<26, unblocks with MLSERVER_VERSION
-pyarrow==25.0.1
 tabulate==0.10.0
 jproperties==2.1.2
+grafana-foundation-sdk==0.0.20
 python-calamine==0.8.3
+# NOTES: HELD, not stale, mlserver requires pyarrow<26, unblocks with MLSERVER_VERSION
+pyarrow==25.0.1
 
 # Machine learning/visualisation
+anyio==4.15.1
 notebook==7.6.3
 pdftotext==4.0.0
 jupyterlab==4.6.4
 matplotlib==3.11.2
+virtualenv==21.14.7
 matplotlib-inline==0.2.2
-anyio==4.15.1
+mlflow==$MLFLOW_VERSION
 # NOTES: HELD, not stale, mlserver requires fastapi<0.116.0, unblocks with MLSERVER_VERSION
 fastapi==0.115.14
-virtualenv==21.14.7
-mlflow==$MLFLOW_VERSION
 
 # Storage/databases
 dropbox==12.2.3
