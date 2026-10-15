@@ -1,12 +1,11 @@
 #!/bin/bash
 
-. ../../../.env_fab
 . ../../../generate.sh
 
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
-# DEFINED: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
-VERSION=${WEEWX_VERSION}
+# NOTES: https://github.com/weewx/weewx/releases
+VERSION=5.5.2
 pull_repo "${ROOT_DIR}" "${1}" "weewx" "weewx-core" "weewx/weewx" "v${VERSION}" || exit $?
 if command -v poetry >/dev/null 2>&1; then POETRY_DIR="$(dirname "$(command -v poetry)")"; elif [ -x /opt/homebrew/bin/poetry ]; then POETRY_DIR="/opt/homebrew/bin"; elif [ -x /usr/local/bin/poetry ]; then POETRY_DIR="/usr/local/bin"; else echo "No poetry found" >&2 && exit 127; fi
 if ! compgen -G "${ROOT_DIR}/../../../.deps/weewx/weewx-core/dist/weewx*${VERSION}*.whl" >/dev/null; then
