@@ -1,0 +1,12 @@
+Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Bucket,Category Manual,Category Derived,Account ID,Source ID,Transaction ID
+2026-01-02,Cash,-10.0,-10.0,Lunch,,,,,,,6ec277688b3c570982242484009c9cdb,,ead81a54aeb15c9fa1f04748479ff617
+2026-01-01,Cash,0.0,0.0,Null Transaction,,,,,,,6ec277688b3c570982242484009c9cdb,,
+2026-01-03,Cash,lots,,Bad Amount,,,,,,,,,
+2026-01-03,Nobody,-1.0,,Bad Account,,,,,,,,,
+2026-02-03,Cash,-1.0,,Future,,,,,,,,,
+2026-01-03,Cash,-1.005,,Decimals,,,,,,,,,
+2026-01-03,Cash,0.0,,Zero,,,,,,,,,
+2026-01-03,Cash,-1.0,,,,,,,,,,,
+2026-01-02,Cash,-10.0,,Lunch,,,,,,,,,
+2026-01-04,Cash,-2.0,,Treat,,,,,Unknown,,,,
+2025-05-03,Cash,-1.0,,Early,,,,,,,,,

@@ -1,3 +1,6 @@
+# shellcheck shell=bash
+# shellcheck disable=SC2034
+
 REFRESH_LOG_SEP="------------------------------------------------------------"
 REFRESH_LOG_RED=$'\033[31m'
 REFRESH_LOG_GREEN=$'\033[32m'
@@ -46,31 +49,34 @@ refresh_setup() {
   REPO_TEST_DRIVE_DIR="${WRANGLE_DRIVE_DIR}/${REPO_TEST_NAME}/${REPO_TEST_SCOPE}/data"
 }
 
-# Run the plugin derived from REPO_TEST_NAME against a cache dir. Pass "online" as the second arg to enable
+# Run the plugin derived from REPO_TEST_NAME against a cache dir, with the module .env loaded as the unit tests do. Pass "online" as the second arg to enable
 # live source/drive downloads (RELEASE scope, debug logging); omit or pass "offline" for a fully local run
-# (LOCAL scope, warning logging, all downloads disabled). Sheet and database downloads are enabled online
-# only for equity, which needs them for manual prices and portfolio index weights. All uploads always disabled.
+# (LOCAL scope, warning logging, all downloads disabled). Sheet downloads are enabled online for equity and bank, which read
+# manual prices, index weights and the bank input tabs, database downloads for equity only. All uploads always disabled. Pass "force" as the third arg to
+# force every download, so a source with a freshness window answers whatever the cache dir's file times say.
 refresh_run_plugin() {
   local cache_dir="$1"
   local mode="${2:-offline}"
-  refresh_python - "${cache_dir}" "${REPO_TEST_NAME}" "${mode}" << 'PYEOF'
-import sys, importlib
-from wrangle.plugin.config import RepoScope, config
-cache_dir, plugin_name, mode = sys.argv[1], sys.argv[2], sys.argv[3]
+  local force="${3:-}"
+  refresh_python - "${cache_dir}" "${REPO_TEST_NAME}" "${mode}" "${WRANGLE_DIR}/.env" "${force}" << 'PYEOF'
+import os, sys, importlib
+from wrangle.plugin.config import RepoScope, config, load_profile
+cache_dir, plugin_name, mode, env_file, force = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5]
+os.environ.update(load_profile(env_file))
 module = importlib.import_module(f"wrangle.plugin.{plugin_name}.{plugin_name}")
 online = mode == "online"
 config.log_level = "debug"
 config.repo_scope = RepoScope.RELEASE if online else RepoScope.LOCAL
 config.cache_dir = cache_dir
 config.force_reprocessing = True
-config.force_downloads = False
+config.force_downloads = force == "force"
 config.force_uploads = False
 config.disable_drive_uploads = True
 config.disable_sheet_uploads = True
 config.disable_database_uploads = True
 config.disable_drive_downloads = not online
 config.disable_source_downloads = not online
-config.disable_sheet_downloads = not online or plugin_name != "equity"
+config.disable_sheet_downloads = not online or plugin_name not in ("equity", "bank")
 config.disable_database_downloads = not online or plugin_name != "equity"
 getattr(module, plugin_name.capitalize())().run()
 PYEOF

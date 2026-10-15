@@ -19,7 +19,6 @@ DATABASE_ENV_VARS = (
     "WRANGLE_DATABASE_PASSWORD",
 )
 
-
 database_conn: psycopg.Connection | None = None
 DSN: str | None = None
 
@@ -46,13 +45,12 @@ def database_open():
             f"@{os.environ['WRANGLE_DATABASE_HOST']}:{os.environ['WRANGLE_DATABASE_PORT']}"
             f"/{os.environ['WRANGLE_DATABASE_USER']}"
         )
-        database_conn = psycopg.connect(DSN, autocommit=False, connect_timeout=connect_timeout,
-                                        keepalives=1, keepalives_idle=30, keepalives_interval=10, keepalives_count=5,
-                                        options=f"-c statement_timeout={statement_timeout_ms}")
+        database_conn = psycopg.connect(
+            DSN, autocommit=False, connect_timeout=connect_timeout, keepalives=1, keepalives_idle=30, keepalives_interval=10, keepalives_count=5, options=f"-c statement_timeout={statement_timeout_ms}"
+        )
         print_log(
             "Wrangle",
-            f"Database connected to [{os.environ['WRANGLE_DATABASE_HOST']}:"
-            f"{os.environ['WRANGLE_DATABASE_PORT']}/{os.environ['WRANGLE_DATABASE_USER']}]",
+            f"Database connected to [{os.environ['WRANGLE_DATABASE_HOST']}:{os.environ['WRANGLE_DATABASE_PORT']}/{os.environ['WRANGLE_DATABASE_USER']}]",
             level="debug",
         )
     except Exception as exception:
@@ -137,10 +135,9 @@ def database_upsert(long_df, table_name, conn, dsn):
     key = [time_column["column"], *columns["dimensions"]]
     all_columns = [*key, value_column["column"]]
     stage_columns = ",\n                ".join(
-        f"{name} {column_type} NOT NULL" for name, column_type in
-        [(time_column["column"], time_column["type"])]
-        + [(dimension, "TEXT") for dimension in columns["dimensions"]]
-        + [(value_column["column"], value_column["type"])])
+        f"{name} {column_type} NOT NULL"
+        for name, column_type in [(time_column["column"], time_column["type"])] + [(dimension, "TEXT") for dimension in columns["dimensions"]] + [(value_column["column"], value_column["type"])]
+    )
     stage = f"{table_name}_stage"
     with conn.cursor() as cur:
         cur.execute(f"""

@@ -41,7 +41,8 @@ TIME_COLUMNS = {
     "timestamp": ("TIMESTAMPTZ", "INTERVAL '1 month'", "now()", "INTERVAL '1 day'"),
 }
 
-CONNECT = """
+CONNECT = (
+    """
 PSQL=(psql -h "${POSTGRES_SERVICE_PROD}" -p "${POSTGRES_API_PORT}" -U "${DATABASE_USER}" -d "${DATABASE_NAME}")
 export PGPASSWORD="${DATABASE_PASSWORD}"
 export PGTZ="${TZ:-UTC}"
@@ -49,32 +50,30 @@ export PGTZ="${TZ:-UTC}"
 query() {
   "${PSQL[@]}" -q -t -A -v ON_ERROR_STOP=1 -c "SELECT row_to_json(result) FROM ($1) AS result" 2>&1
 }
-""" + RUNNER
+"""
+    + RUNNER
+)
 
 
 def artifacts(document, module_name, options):
     if options.time_column not in TIME_COLUMNS:
-        raise ValueError("Build generate script [{}] unknown time_column [{}] expected one of {}"
-                         .format(module_name, options.time_column, list(TIME_COLUMNS)))
+        raise ValueError("Build generate script [{}] unknown time_column [{}] expected one of {}".format(module_name, options.time_column, list(TIME_COLUMNS)))
     _validate(document, module_name)
     dialect = _dialect(options.time_column, options.timezone, options.archive)
     written = {}
     for table, relations in _tabled(document).items():
         written["model/{}.sql".format(table)] = (leaf(relations, table, options), False)
         written["query/{}.sql".format(table)] = (query_statements(relations, dialect), False)
-    written["describe.sh"] = (describe_runner(module_name, DIALECT, TARGET, connect(module_name),
-                                              describe_statements(document, dialect)), True)
+    written["describe.sh"] = (describe_runner(module_name, DIALECT, TARGET, connect(module_name), describe_statements(document, dialect)), True)
     written["query.sh"] = (query_runner(module_name, DIALECT, TARGET, connect(module_name)), True)
-    written["verify.sh"] = (verify_runner(module_name, DIALECT, TARGET, connect(module_name),
-                                          verify(document, options.rename, options.drop, options.archive)), True)
+    written["verify.sh"] = (verify_runner(module_name, DIALECT, TARGET, connect(module_name), verify(document, options.rename, options.drop, options.archive)), True)
     for table, statements in mutate(document, options.rename).items():
         written["mutate/rename/{}.sql".format(table)] = (statements, False)
     for table, statements in retire(document, options.drop).items():
         written["mutate/drop/{}.sql".format(table)] = (statements, False)
     for table, statements in archived(document, options.archive).items():
         written["mutate/archive/{}.sql".format(table)] = (statements, False)
-    written["mutate.sh"] = (mutate_runner(module_name, DIALECT, TARGET, connect(module_name),
-                                          _mutate_body(module_name)), True)
+    written["mutate.sh"] = (mutate_runner(module_name, DIALECT, TARGET, connect(module_name), _mutate_body(module_name)), True)
     return written
 
 
@@ -94,19 +93,19 @@ def ship(document, module_name, module_root, schemas_dir, options):
         target_path = join(image_dir, "{}.sql".format(table))
         shutil.copyfile(source_path, target_path)
         columns_path = join(image_dir, "{}.json".format(table))
-        with open(columns_path, 'w') as columns_file:
+        with open(columns_path, "w") as columns_file:
             columns_file.write(json.dumps(columns(table, options.time_column), indent=2) + "\n")
-        print("Build generate script [{}] database table [{}] shipped to [{}] and [{}]"
-              .format(module_name, table, target_path, columns_path))
+        print("Build generate script [{}] database table [{}] shipped to [{}] and [{}]".format(module_name, table, target_path, columns_path))
     if not options.applier:
         return
-    with open(applier_path, 'w') as applier_file:
+    with open(applier_path, "w") as applier_file:
         applier_file.write(applier_script(module_name))
     os.chmod(applier_path, 0o750)
     print("Build generate script [{}] database applier persisted to [{}]".format(module_name, applier_path))
 
 
-INSTANCE_CONNECT = """
+INSTANCE_CONNECT = (
+    """
 export PGPASSWORD="${DATABASE_PASSWORD}"
 export PGTZ="${TZ:-UTC}"
 
@@ -114,7 +113,9 @@ query() {
   psql -h "${POSTGRES_SERVICE_PROD}" -p "${POSTGRES_API_PORT}" -U "${DATABASE_USER}" -d "${DATABASE_NAME}" \\
     -q -t -A -v ON_ERROR_STOP=1 -c "SELECT row_to_json(result) FROM ($1) AS result" 2>&1
 }
-""" + RUNNER
+"""
+    + RUNNER
+)
 
 INSTANCE = """
 DATABASES="SELECT d.datname AS database FROM pg_database d
@@ -254,11 +255,17 @@ def instance(module_name, zone=""):
 
 def instance_connect(module_name):
     prefix = module_name.upper()
-    return resolved(module_name, (
-        ("DATABASE_USER", ("{}_DATABASE_USER".format(prefix), "POSTGRES_USER")),
-        ("DATABASE_NAME", ("{}_DATABASE_NAME".format(prefix), "POSTGRES_DATABASE_MAINTENANCE")),
-        ("DATABASE_PASSWORD", ("{}_DATABASE_PASSWORD".format(prefix), "POSTGRES_KEY")),
-    )) + INSTANCE_CONNECT
+    return (
+        resolved(
+            module_name,
+            (
+                ("DATABASE_USER", ("{}_DATABASE_USER".format(prefix), "POSTGRES_USER")),
+                ("DATABASE_NAME", ("{}_DATABASE_NAME".format(prefix), "POSTGRES_DATABASE_MAINTENANCE")),
+                ("DATABASE_PASSWORD", ("{}_DATABASE_PASSWORD".format(prefix), "POSTGRES_KEY")),
+            ),
+        )
+        + INSTANCE_CONNECT
+    )
 
 
 def panel(relation, document, measures, entities=None, transforms=(), labels=None):
@@ -267,30 +274,45 @@ def panel(relation, document, measures, entities=None, transforms=(), labels=Non
     combine = panels.transformed(transforms, document, relation)
     arms = []
     for measure, label in picked:
-        arms.append(select(
-            [("$__timeGroupAlias(time, $__interval)", ""),
-             (panels.entitled("entity", subject(relation), entities, labels), "entity"),
-             ("'{}'".format((labels or {}).get(label, label)), "measure"),
-             (panels.aggregated(panels.valued("value", measure, transforms), transforms), "value")],
-            relation.plugin, predicates(relation, document, measure, entities), group_by=["1", "2"]))
+        arms.append(
+            select(
+                [
+                    ("$__timeGroupAlias(time, $__interval)", ""),
+                    (panels.entitled("entity", subject(relation), entities, labels), "entity"),
+                    ("'{}'".format((labels or {}).get(label, label)), "measure"),
+                    (panels.aggregated(panels.valued("value", measure, transforms), transforms), "value"),
+                ],
+                relation.plugin,
+                predicates(relation, document, measure, entities),
+                group_by=["1", "2"],
+            )
+        )
     return panels.statement(arms, entities, picked, transforms, combine)
 
 
 def summary(sources, document, statistic, span):
     arms = []
     for relation, entities in sources:
-        arms.append(panels.summary_arm(statistic, relation.plugin,
-                                       [_types(relation, negate=False)] + panels.restricted(subject(relation), entities),
-                                       subject(relation), "count(DISTINCT type || '/' || period)",
-                                       "$__timeTo()::timestamptz", "$__timeFrom()::timestamptz",
-                                       "EXTRACT(EPOCH FROM ({})::timestamptz)".format, span))
+        arms.append(
+            panels.summary_arm(
+                statistic,
+                relation.plugin,
+                [_types(relation, negate=False)] + panels.restricted(subject(relation), entities),
+                subject(relation),
+                "count(DISTINCT type || '/' || period)",
+                "$__timeTo()::timestamptz",
+                "$__timeFrom()::timestamptz",
+                "EXTRACT(EPOCH FROM ({})::timestamptz)".format,
+                span,
+            )
+        )
     return panels.combined(arms, statistic)
 
 
 def predicates(relation, document, measure, entities):
-    return (["$__timeFilter(time)", "type = '{}'".format(measure.key),
-             "period = '{}'".format(relation.span(measure) or NULL), "unit = '{}'".format(measure.unit or NULL)]
-            + panels.restricted(subject(relation), entities))
+    return ["$__timeFilter(time)", "type = '{}'".format(measure.key), "period = '{}'".format(relation.span(measure) or NULL), "unit = '{}'".format(measure.unit or NULL)] + panels.restricted(
+        subject(relation), entities
+    )
 
 
 def subject(relation):
@@ -299,11 +321,17 @@ def subject(relation):
 
 def connect(module_name):
     prefix = module_name.upper()
-    return resolved(module_name, (
-        ("DATABASE_USER", ("{}_DATABASE_USER".format(prefix), "POSTGRES_USER_{}".format(prefix))),
-        ("DATABASE_NAME", ("{}_DATABASE_NAME".format(prefix), "POSTGRES_DATABASE_{}".format(prefix))),
-        ("DATABASE_PASSWORD", ("{}_DATABASE_PASSWORD".format(prefix), "POSTGRES_KEY_{}".format(prefix))),
-    )) + CONNECT
+    return (
+        resolved(
+            module_name,
+            (
+                ("DATABASE_USER", ("{}_DATABASE_USER".format(prefix), "POSTGRES_USER_{}".format(prefix))),
+                ("DATABASE_NAME", ("{}_DATABASE_NAME".format(prefix), "POSTGRES_DATABASE_{}".format(prefix))),
+                ("DATABASE_PASSWORD", ("{}_DATABASE_PASSWORD".format(prefix), "POSTGRES_KEY_{}".format(prefix))),
+            ),
+        )
+        + CONNECT
+    )
 
 
 def columns(table, time_column):
@@ -336,8 +364,7 @@ def leaf(relations, table, options):
         "    PRIMARY KEY (time, entity, type, period, unit)",
         ");",
         "",
-        "SELECT create_hypertable('{}', 'time', chunk_time_interval => {}, if_not_exists => TRUE);".format(
-            table, chunk_interval),
+        "SELECT create_hypertable('{}', 'time', chunk_time_interval => {}, if_not_exists => TRUE);".format(table, chunk_interval),
         "",
     ]
     for column in ("entity", "type", "period", "unit"):
@@ -346,8 +373,7 @@ def leaf(relations, table, options):
         "",
         "DO $$",
         "BEGIN",
-        "    IF NOT EXISTS (SELECT 1 FROM timescaledb_information.compression_settings "
-        "WHERE hypertable_name = '{}') THEN".format(table),
+        "    IF NOT EXISTS (SELECT 1 FROM timescaledb_information.compression_settings WHERE hypertable_name = '{}') THEN".format(table),
         "        ALTER TABLE {} SET (".format(table),
         "            timescaledb.compress,",
         "            timescaledb.compress_segmentby = 'entity, type, period, unit',",
@@ -372,29 +398,39 @@ def verify(document, rename=None, drop=None, archive=None):
     for table, relations in _tabled(document).items():
         declared = [(relation.path,) + tuple_ for relation in relations for tuple_ in _vocabulary(relation)]
         values = ",\n".join("    ('{}', '{}', '{}', '{}')".format(*tuple_) for tuple_ in declared)
-        statements.append(select(
-            [("coalesce(d.relation, '{}')".format(table), "relation"), ("coalesce(d.type, o.type)", "measure"),
-             ("coalesce(d.period, o.period)", "period"), ("coalesce(d.unit, o.unit)", "unit"),
-             ("CASE WHEN d.type IS NULL THEN 'undeclared' ELSE 'missing' END", "fault")],
-            "(VALUES\n{}\n) AS d(relation, type, period, unit)\n"
-            "FULL OUTER JOIN (SELECT DISTINCT type, period, unit FROM {}{}) AS o\n"
-            "    ON d.type = o.type AND d.period = o.period AND d.unit = o.unit".format(
-                values, table, " WHERE " + " AND ".join(observed) if observed else ""),
-            ["d.type IS NULL OR o.type IS NULL"], order_by=["fault", "measure"]))
+        statements.append(
+            select(
+                [
+                    ("coalesce(d.relation, '{}')".format(table), "relation"),
+                    ("coalesce(d.type, o.type)", "measure"),
+                    ("coalesce(d.period, o.period)", "period"),
+                    ("coalesce(d.unit, o.unit)", "unit"),
+                    ("CASE WHEN d.type IS NULL THEN 'undeclared' ELSE 'missing' END", "fault"),
+                ],
+                "(VALUES\n{}\n) AS d(relation, type, period, unit)\n"
+                "FULL OUTER JOIN (SELECT DISTINCT type, period, unit FROM {}{}) AS o\n"
+                "    ON d.type = o.type AND d.period = o.period AND d.unit = o.unit".format(values, table, " WHERE " + " AND ".join(observed) if observed else ""),
+                ["d.type IS NULL OR o.type IS NULL"],
+                order_by=["fault", "measure"],
+            )
+        )
     if retired:
-        statements.append("-- retired measures still carried, reported as [{}] and warned about rather than failing"
-                          .format(PENDING))
-        for table in sorted(_tabled(document)):
-            statements.append(select(
-                [("'{}'".format(table), "relation"), ("type", "measure"), ("period", "period"), ("unit", "unit"),
-                 ("'{}'".format(PENDING), "fault")],
+        statements.append("-- retired measures still carried, reported as [{}] and warned about rather than failing".format(PENDING))
+        statements.extend(
+            select(
+                [("'{}'".format(table), "relation"), ("type", "measure"), ("period", "period"), ("unit", "unit"), ("'{}'".format(PENDING), "fault")],
                 "(SELECT DISTINCT type, period, unit FROM {}) AS o".format(table),
-                [literals("type", retired, negate=False)], order_by=["measure"]))
+                [literals("type", retired, negate=False)],
+                order_by=["measure"],
+            )
+            for table in sorted(_tabled(document))
+        )
     return render_statements(statements)
 
 
 def applier_script(module_name):
-    return """
+    return (
+        """
 #!/usr/bin/env bash
 {banner}
 
@@ -410,7 +446,9 @@ for SQL_FILE in "${{ROOT_DIR}}"/*.sql; do
   printf -- '\\n-- %s\\n\\n' "$(basename "${{SQL_FILE}}")"
   "${{PSQL[@]}}" -v ON_ERROR_STOP=1 -f "${{SQL_FILE}}"
 done
-""".format(banner=banner(), shipped=SHIPPED, module=module_name).strip() + "\n"
+""".format(banner=banner(), shipped=SHIPPED, module=module_name).strip()
+        + "\n"
+    )
 
 
 def mutate(document, rename):
@@ -423,11 +461,8 @@ def mutate(document, rename):
                 source = sources.get(measure.key)
                 if source is None:
                     continue
-                statements.append(
-                    "-- rewrite the renamed [{}] as [{}], idempotent and touching no rows once run".format(
-                        source, measure.key))
-                statements.append("UPDATE {}\nSET type = '{}'\nWHERE type = '{}'".format(
-                    table, measure.key, source))
+                statements.append("-- rewrite the renamed [{}] as [{}], idempotent and touching no rows once run".format(source, measure.key))
+                statements.append("UPDATE {}\nSET type = '{}'\nWHERE type = '{}'".format(table, measure.key, source))
         if statements:
             written[table] = render_statements(statements)
     return written
@@ -438,9 +473,9 @@ def retire(document, drop):
     if not drop:
         return written
     for table in sorted(_tabled(document)):
-        written[table] = render_statements([
-            "-- delete the dropped measures, idempotent and touching no rows once run",
-            "DELETE FROM {}\nWHERE {}".format(table, literals("type", sorted(drop), negate=False))])
+        written[table] = render_statements(
+            ["-- delete the dropped measures, idempotent and touching no rows once run", "DELETE FROM {}\nWHERE {}".format(table, literals("type", sorted(drop), negate=False))]
+        )
     return written
 
 
@@ -449,14 +484,18 @@ def archived(document, archive):
     if not archive:
         return written
     for table in sorted(_tabled(document)):
-        written[table] = render_statements([
-            "-- an archived measure is retained deliberately with nothing to delete, silenced in verify and describe, "
-            "and this reports the history it still carries",
-            select(
-                [("'{}'".format(table), "relation"), ("type", "measure"), ("count(*)", "carried"),
-                 ("CAST(min(time) AS VARCHAR)", "oldest"), ("CAST(max(time) AS VARCHAR)", "newest")],
-                table, [literals("type", sorted(archive), negate=False)],
-                group_by=["type"], order_by=["measure"])])
+        written[table] = render_statements(
+            [
+                "-- an archived measure is retained deliberately with nothing to delete, silenced in verify and describe, and this reports the history it still carries",
+                select(
+                    [("'{}'".format(table), "relation"), ("type", "measure"), ("count(*)", "carried"), ("CAST(min(time) AS VARCHAR)", "oldest"), ("CAST(max(time) AS VARCHAR)", "newest")],
+                    table,
+                    [literals("type", sorted(archive), negate=False)],
+                    group_by=["type"],
+                    order_by=["measure"],
+                ),
+            ]
+        )
     return written
 
 
@@ -485,10 +524,7 @@ def _dialect(time_column, zone="", archive=None):
         source=lambda relation: relation.plugin,
         predicates=lambda relation: [_types(relation, negate=False)],
         groups=lambda document: list(_tabled(document).items()),
-        measured=lambda relation, measure: [
-            "type = '{}'".format(measure.key),
-            "period = '{}'".format(relation.span(measure) or NULL),
-            "unit = '{}'".format(measure.unit or NULL)],
+        measured=lambda relation, measure: ["type = '{}'".format(measure.key), "period = '{}'".format(relation.span(measure) or NULL), "unit = '{}'".format(measure.unit or NULL)],
         counted=lambda _: "count(*)",
         stamped=lambda function, _: "CAST({}(time) AS VARCHAR)".format(function),
         entity=lambda _: "entity",
@@ -498,20 +534,29 @@ def _dialect(time_column, zone="", archive=None):
         subject=lambda relation: [("entity", relation.subject.key)] if relation.subject else [],
         alias=_named,
         aggregate=lambda relation, measure, function: _aggregate(function, _filtered(relation, measure)),
-        windowed=lambda relation, keys, bucket: [_types(relation, negate=False, keys=keys, width=None)]
-        + recent(relation.plugin, bucket, now),
+        windowed=lambda relation, keys, bucket: [_types(relation, negate=False, keys=keys, width=None)] + recent(relation.plugin, bucket, now),
         observed="count(DISTINCT time)",
         kinds=KINDS,
-        floor=BUCKET if time_column == "date" else "")
+        floor=BUCKET if time_column == "date" else "",
+    )
 
 
 def _describe_undeclared(table, declared, archive=None):
     return select(
-        [("'{}'".format(NULL), "relation"), ("type", "measure"), ("'{}'".format(NULL), "kind"),
-         ("unit", "unit"), ("period", "period"), ("count(*)", "rows"),
-         ("CAST(min(time) AS VARCHAR)", "oldest"), ("CAST(max(time) AS VARCHAR)", "newest")],
-        table, [literals("type", sorted(set(declared) | set(archive or ())))],
-        group_by=["type", "unit", "period"])
+        [
+            ("'{}'".format(NULL), "relation"),
+            ("type", "measure"),
+            ("'{}'".format(NULL), "kind"),
+            ("unit", "unit"),
+            ("period", "period"),
+            ("count(*)", "rows"),
+            ("CAST(min(time) AS VARCHAR)", "oldest"),
+            ("CAST(max(time) AS VARCHAR)", "newest"),
+        ],
+        table,
+        [literals("type", sorted(set(declared) | set(archive or ())))],
+        group_by=["type", "unit", "period"],
+    )
 
 
 def _tabled(document):
@@ -530,8 +575,8 @@ def _validate(document, module_name):
                 if measure.key in keys and keys[measure.key] != relation.path:
                     raise ValueError(
                         "Build generate script [{}] relations [{}] and [{}] share the table [{}] and the measure "
-                        "[{}] so neither can be told apart by type, rename one measure or fold them together"
-                        .format(module_name, keys[measure.key], relation.path, table, measure.key))
+                        "[{}] so neither can be told apart by type, rename one measure or fold them together".format(module_name, keys[measure.key], relation.path, table, measure.key)
+                    )
                 keys[measure.key] = relation.path
 
 
@@ -588,5 +633,4 @@ def _binned(bucket, zone):
 
 
 def _rounded(expression):
-    return "round({}::numeric, 1)".format(
-        expression if expression.isidentifier() else "({})".format(expression))
+    return "round({}::numeric, 1)".format(expression if expression.isidentifier() else "({})".format(expression))

@@ -17,8 +17,6 @@ func BackupPrepared(request BackupRequest) (BackupRequest, error) {
 	return probe.BackupPrepared(request)
 }
 
-func BackupStageLog(request BackupRequest) string { return probe.BackupStageLog(request) }
-
 func RunBackup(request BackupRequest) error {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)

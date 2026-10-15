@@ -46,6 +46,47 @@ func TestProbeUtilBackupStagePrimary_NewestBackupDirAgainstAnEmptyOrMissingRoot(
 	}
 }
 
+func TestProbeUtilBackupStagePrimary_StrandedBackups(t *testing.T) {
+	tests := []struct {
+		name     string
+		dirs     []string
+		files    []string
+		enrolled []string
+		expected []string
+	}{
+		{name: "enrolled_service_is_not_stranded", dirs: []string{"postgres/backup"}, enrolled: []string{"postgres"}},
+		{name: "unenrolled_service_with_backups_is_stranded", dirs: []string{"influxdb3/backup", "letsencrypt/backup"},
+			enrolled: []string{"letsencrypt"}, expected: []string{"influxdb3"}},
+		{name: "supervisor_own_tree_is_never_stranded", dirs: []string{"supervisor/backup"}},
+		{name: "service_without_a_backup_directory_is_ignored", dirs: []string{"grafana/latest"}},
+		{name: "backup_file_rather_than_directory_is_ignored", dirs: []string{"plex"}, files: []string{"plex/backup"}},
+		{name: "stranded_services_sort_by_name", dirs: []string{"zigbee2mqtt/backup", "mariadb/backup"},
+			expected: []string{"mariadb", "zigbee2mqtt"}},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			home := t.TempDir()
+			for _, dir := range testCase.dirs {
+				if err := os.MkdirAll(filepath.Join(home, dir), 0o755); err != nil {
+					t.Fatalf("mkdir [%s]: %v", dir, err)
+				}
+			}
+			for _, file := range testCase.files {
+				if err := os.WriteFile(filepath.Join(home, file), nil, 0o644); err != nil {
+					t.Fatalf("write [%s]: %v", file, err)
+				}
+			}
+			got := strandedBackups(home, testCase.enrolled)
+			if fmt.Sprint(got) != fmt.Sprint(testCase.expected) {
+				t.Errorf("strandedBackups() = %v, want %v", got, testCase.expected)
+			}
+		})
+	}
+	if got := strandedBackups(filepath.Join(t.TempDir(), "missing"), nil); got != nil {
+		t.Errorf("strandedBackups() = %v, want nil against a missing home", got)
+	}
+}
+
 func TestProbeUtilBackupStagePrimary_ParseBackupArtefact(t *testing.T) {
 	tests := []struct {
 		name            string

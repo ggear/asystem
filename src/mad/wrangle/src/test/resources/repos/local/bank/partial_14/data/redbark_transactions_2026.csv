@@ -1,0 +1,5 @@
+Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Category Manual,Category Derived,Account ID,Source ID,Transaction ID,Vetted
+2026-01-10,One,-20.0,-20.0,COFFEE SHOP,,,,,,540a8918175f5ca38559395087eb552c,,,
+2026-01-12,One,-50.0,-50.0,GROCER,,,,,,540a8918175f5ca38559395087eb552c,,,
+2026-01-11,Card,-15.0,-15.0,FEE,,,,,,36bbf924e6895afabff3763234a79275,,,
+2026-01-05,One,-42.0,-42.0,LATE POST,,,,,,540a8918175f5ca38559395087eb552c,,,

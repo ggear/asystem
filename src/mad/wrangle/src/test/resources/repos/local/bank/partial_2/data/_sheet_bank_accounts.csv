@@ -1,0 +1,5 @@
+From,Institution,Number,Name,Type,Status,Redbark Account ID,Redbark Connection ID,Notes
+,Bank A, xxxx0001 ,One,,Linked,a ,c1,extra
+2026-06-01,Bank A,xxxx0002,Two,,Linked,a2,c1,
+,Bank A,xxxx0003,,,Linked,a3,c1,
+,Bank A,xxxx0009,Spare,,Linked,a9,c1,

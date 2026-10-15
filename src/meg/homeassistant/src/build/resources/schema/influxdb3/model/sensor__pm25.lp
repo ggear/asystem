@@ -10,6 +10,9 @@
 #     lounge_air_purifier_pm25,
 #     parents_air_purifier_pm25,
 #     template_dining_air_purifier_pm25,
+#     template_kitchen_air_purifier_pm25,
+#     template_lounge_air_purifier_pm25,
+#     template_parents_air_purifier_pm25,
 #     template_sensor_36]
 #   tag unit_of_measurement [Home Assistant unit_of_measurement:
 #     µg/m³,

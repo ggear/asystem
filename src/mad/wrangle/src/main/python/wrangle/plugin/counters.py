@@ -62,62 +62,56 @@ CTR_ACT_TOTAL_MILLIS = "Total Millis"
 
 AGG_SUM, AGG_MIN, AGG_MAX, AGG_MEAN = "sum", "min", "max", "mean"
 
-CTR_LBL_PAD = '.'
+CTR_LBL_PAD = "."
 CTR_LBL_WIDTH = 26
 CTR_TZ = datetime.timezone(datetime.timedelta(hours=8))
 
 __all__ = [
-    # Primary classes
-    "View",
-    "Snapshot",
-    "RunHistory",
-    "Counter",
-    "CountersMixin",
-    "COUNTERS",
-    "aggregate_summary",
-    # Counter sources
-    "CTR_SRC_SOURCES",
-    "CTR_SRC_FILES",
-    "CTR_SRC_DATA",
-    "CTR_SRC_EGRESS",
-    "CTR_SRC_TIMING",
-    # Counter actions
-    "CTR_ACT_ERRORED",
-    "CTR_ACT_PROCESSED",
-    "CTR_ACT_SKIPPED",
-    "CTR_ACT_DOWNLOADED",
-    "CTR_ACT_CACHED",
-    "CTR_ACT_PERSISTED",
-    "CTR_ACT_UPLOADED",
-    "CTR_ACT_PREVIOUS_ROWS",
-    "CTR_ACT_PREVIOUS_COLUMNS",
-    "CTR_ACT_CURRENT_ROWS",
-    "CTR_ACT_CURRENT_COLUMNS",
-    "CTR_ACT_UPDATE_ROWS",
-    "CTR_ACT_UPDATE_COLUMNS",
-    "CTR_ACT_DELTA_ROWS",
-    "CTR_ACT_DELTA_COLUMNS",
-    "CTR_ACT_SHEET_ROWS",
-    "CTR_ACT_SHEET_COLUMNS",
-    "CTR_ACT_DATABASE_ROWS",
-    "CTR_ACT_DATABASE_COLUMNS",
-    "CTR_ACT_MARSHALL_MILLIS",
-    "CTR_ACT_PROCESS_MILLIS",
-    "CTR_ACT_EGRESS_MILLIS",
-    "CTR_ACT_TOTAL_MILLIS",
-    # Aggregation modes
-    "AGG_SUM",
-    "AGG_MIN",
     "AGG_MAX",
     "AGG_MEAN",
-    # History constants
-    "HISTORY_RAW_RUN_LENGTH",
-    "HISTORY_AGG_DAY_LENGTH",
-    "HISTORY_RAW_LABELS",
-    # Label formatting
-    "CTR_TZ",
+    "AGG_MIN",
+    "AGG_SUM",
+    "COUNTERS",
+    "CTR_ACT_CACHED",
+    "CTR_ACT_CURRENT_COLUMNS",
+    "CTR_ACT_CURRENT_ROWS",
+    "CTR_ACT_DATABASE_COLUMNS",
+    "CTR_ACT_DATABASE_ROWS",
+    "CTR_ACT_DELTA_COLUMNS",
+    "CTR_ACT_DELTA_ROWS",
+    "CTR_ACT_DOWNLOADED",
+    "CTR_ACT_EGRESS_MILLIS",
+    "CTR_ACT_ERRORED",
+    "CTR_ACT_MARSHALL_MILLIS",
+    "CTR_ACT_PERSISTED",
+    "CTR_ACT_PREVIOUS_COLUMNS",
+    "CTR_ACT_PREVIOUS_ROWS",
+    "CTR_ACT_PROCESSED",
+    "CTR_ACT_PROCESS_MILLIS",
+    "CTR_ACT_SHEET_COLUMNS",
+    "CTR_ACT_SHEET_ROWS",
+    "CTR_ACT_SKIPPED",
+    "CTR_ACT_TOTAL_MILLIS",
+    "CTR_ACT_UPDATE_COLUMNS",
+    "CTR_ACT_UPDATE_ROWS",
+    "CTR_ACT_UPLOADED",
     "CTR_LBL_PAD",
     "CTR_LBL_WIDTH",
+    "CTR_SRC_DATA",
+    "CTR_SRC_EGRESS",
+    "CTR_SRC_FILES",
+    "CTR_SRC_SOURCES",
+    "CTR_SRC_TIMING",
+    "CTR_TZ",
+    "HISTORY_AGG_DAY_LENGTH",
+    "HISTORY_RAW_LABELS",
+    "HISTORY_RAW_RUN_LENGTH",
+    "Counter",
+    "CountersMixin",
+    "RunHistory",
+    "Snapshot",
+    "View",
+    "aggregate_summary",
 ]
 
 
@@ -131,72 +125,82 @@ class Counter:
     error: bool = False
 
 
-COUNTERS: dict[tuple[str, str], Counter] = {(c.source, c.action): c for c in [
-    Counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED, "Sources Downloaded", AGG_SUM, "count"),
-    Counter(CTR_SRC_SOURCES, CTR_ACT_CACHED, "Sources Cached", AGG_SUM, "count"),
-    Counter(CTR_SRC_SOURCES, CTR_ACT_SKIPPED, "Sources Skipped", AGG_SUM, "count"),
-    Counter(CTR_SRC_SOURCES, CTR_ACT_UPLOADED, "Sources Uploaded", AGG_SUM, "count"),
-    Counter(CTR_SRC_SOURCES, CTR_ACT_PERSISTED, "Sources Persisted", AGG_SUM, "count"),
-    Counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED, "Sources Errored", AGG_SUM, "count", error=True),
-    Counter(CTR_SRC_FILES, CTR_ACT_PROCESSED, "Files Processed", AGG_SUM, "count"),
-    Counter(CTR_SRC_FILES, CTR_ACT_SKIPPED, "Files Skipped", AGG_SUM, "count"),
-    Counter(CTR_SRC_FILES, CTR_ACT_ERRORED, "Files Errored", AGG_SUM, "count", error=True),
-    Counter(CTR_SRC_DATA, CTR_ACT_PREVIOUS_COLUMNS, "Data Previous Columns", AGG_MAX, "count"),
-    Counter(CTR_SRC_DATA, CTR_ACT_PREVIOUS_ROWS, "Data Previous Rows", AGG_MAX, "count"),
-    Counter(CTR_SRC_DATA, CTR_ACT_CURRENT_COLUMNS, "Data Current Columns", AGG_MAX, "count"),
-    Counter(CTR_SRC_DATA, CTR_ACT_CURRENT_ROWS, "Data Current Rows", AGG_MAX, "count"),
-    Counter(CTR_SRC_DATA, CTR_ACT_UPDATE_COLUMNS, "Data Update Columns", AGG_MAX, "count"),
-    Counter(CTR_SRC_DATA, CTR_ACT_UPDATE_ROWS, "Data Update Rows", AGG_SUM, "count"),
-    Counter(CTR_SRC_DATA, CTR_ACT_DELTA_COLUMNS, "Data Delta Columns", AGG_MAX, "count"),
-    Counter(CTR_SRC_DATA, CTR_ACT_DELTA_ROWS, "Data Delta Rows", AGG_SUM, "count"),
-    Counter(CTR_SRC_DATA, CTR_ACT_ERRORED, "Data Errored", AGG_SUM, "count", error=True),
-    Counter(CTR_SRC_EGRESS, CTR_ACT_SHEET_COLUMNS, "Egress Sheet Columns", AGG_MAX, "count"),
-    Counter(CTR_SRC_EGRESS, CTR_ACT_SHEET_ROWS, "Egress Sheet Rows", AGG_SUM, "count"),
-    Counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_COLUMNS, "Egress Database Columns", AGG_MAX, "count"),
-    Counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_ROWS, "Egress Database Rows", AGG_SUM, "count"),
-    Counter(CTR_SRC_EGRESS, CTR_ACT_ERRORED, "Egress Errored", AGG_SUM, "count", error=True),
-    Counter(CTR_SRC_TIMING, CTR_ACT_MARSHALL_MILLIS, "Marshall Millis", AGG_MAX, "duration_ms"),
-    Counter(CTR_SRC_TIMING, CTR_ACT_PROCESS_MILLIS, "Process Millis", AGG_MAX, "duration_ms"),
-    Counter(CTR_SRC_TIMING, CTR_ACT_EGRESS_MILLIS, "Egress Millis", AGG_MAX, "duration_ms"),
-    Counter(CTR_SRC_TIMING, CTR_ACT_TOTAL_MILLIS, "Total Millis", AGG_MAX, "duration_ms"),
-]}
+COUNTERS: dict[tuple[str, str], Counter] = {
+    (c.source, c.action): c
+    for c in [
+        Counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED, "Sources Downloaded", AGG_SUM, "count"),
+        Counter(CTR_SRC_SOURCES, CTR_ACT_CACHED, "Sources Cached", AGG_SUM, "count"),
+        Counter(CTR_SRC_SOURCES, CTR_ACT_SKIPPED, "Sources Skipped", AGG_SUM, "count"),
+        Counter(CTR_SRC_SOURCES, CTR_ACT_UPLOADED, "Sources Uploaded", AGG_SUM, "count"),
+        Counter(CTR_SRC_SOURCES, CTR_ACT_PERSISTED, "Sources Persisted", AGG_SUM, "count"),
+        Counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED, "Sources Errored", AGG_SUM, "count", error=True),
+        Counter(CTR_SRC_FILES, CTR_ACT_PROCESSED, "Files Processed", AGG_SUM, "count"),
+        Counter(CTR_SRC_FILES, CTR_ACT_SKIPPED, "Files Skipped", AGG_SUM, "count"),
+        Counter(CTR_SRC_FILES, CTR_ACT_ERRORED, "Files Errored", AGG_SUM, "count", error=True),
+        Counter(CTR_SRC_DATA, CTR_ACT_PREVIOUS_COLUMNS, "Data Previous Columns", AGG_MAX, "count"),
+        Counter(CTR_SRC_DATA, CTR_ACT_PREVIOUS_ROWS, "Data Previous Rows", AGG_MAX, "count"),
+        Counter(CTR_SRC_DATA, CTR_ACT_CURRENT_COLUMNS, "Data Current Columns", AGG_MAX, "count"),
+        Counter(CTR_SRC_DATA, CTR_ACT_CURRENT_ROWS, "Data Current Rows", AGG_MAX, "count"),
+        Counter(CTR_SRC_DATA, CTR_ACT_UPDATE_COLUMNS, "Data Update Columns", AGG_MAX, "count"),
+        Counter(CTR_SRC_DATA, CTR_ACT_UPDATE_ROWS, "Data Update Rows", AGG_SUM, "count"),
+        Counter(CTR_SRC_DATA, CTR_ACT_DELTA_COLUMNS, "Data Delta Columns", AGG_MAX, "count"),
+        Counter(CTR_SRC_DATA, CTR_ACT_DELTA_ROWS, "Data Delta Rows", AGG_SUM, "count"),
+        Counter(CTR_SRC_DATA, CTR_ACT_ERRORED, "Data Errored", AGG_SUM, "count", error=True),
+        Counter(CTR_SRC_EGRESS, CTR_ACT_SHEET_COLUMNS, "Egress Sheet Columns", AGG_MAX, "count"),
+        Counter(CTR_SRC_EGRESS, CTR_ACT_SHEET_ROWS, "Egress Sheet Rows", AGG_SUM, "count"),
+        Counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_COLUMNS, "Egress Database Columns", AGG_MAX, "count"),
+        Counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_ROWS, "Egress Database Rows", AGG_SUM, "count"),
+        Counter(CTR_SRC_EGRESS, CTR_ACT_ERRORED, "Egress Errored", AGG_SUM, "count", error=True),
+        Counter(CTR_SRC_TIMING, CTR_ACT_MARSHALL_MILLIS, "Marshall Millis", AGG_MAX, "duration_ms"),
+        Counter(CTR_SRC_TIMING, CTR_ACT_PROCESS_MILLIS, "Process Millis", AGG_MAX, "duration_ms"),
+        Counter(CTR_SRC_TIMING, CTR_ACT_EGRESS_MILLIS, "Egress Millis", AGG_MAX, "duration_ms"),
+        Counter(CTR_SRC_TIMING, CTR_ACT_TOTAL_MILLIS, "Total Millis", AGG_MAX, "duration_ms"),
+    ]
+}
 
 _EXPECTED_COUNTER_ACTIONS = {
     CTR_SRC_SOURCES: [
-        CTR_ACT_DOWNLOADED, CTR_ACT_CACHED, CTR_ACT_SKIPPED,
-        CTR_ACT_UPLOADED, CTR_ACT_PERSISTED, CTR_ACT_ERRORED,
+        CTR_ACT_DOWNLOADED,
+        CTR_ACT_CACHED,
+        CTR_ACT_SKIPPED,
+        CTR_ACT_UPLOADED,
+        CTR_ACT_PERSISTED,
+        CTR_ACT_ERRORED,
     ],
     CTR_SRC_FILES: [
-        CTR_ACT_PROCESSED, CTR_ACT_SKIPPED, CTR_ACT_ERRORED,
+        CTR_ACT_PROCESSED,
+        CTR_ACT_SKIPPED,
+        CTR_ACT_ERRORED,
     ],
     CTR_SRC_DATA: [
-        CTR_ACT_PREVIOUS_COLUMNS, CTR_ACT_PREVIOUS_ROWS,
-        CTR_ACT_CURRENT_COLUMNS, CTR_ACT_CURRENT_ROWS,
-        CTR_ACT_UPDATE_COLUMNS, CTR_ACT_UPDATE_ROWS,
-        CTR_ACT_DELTA_COLUMNS, CTR_ACT_DELTA_ROWS,
+        CTR_ACT_PREVIOUS_COLUMNS,
+        CTR_ACT_PREVIOUS_ROWS,
+        CTR_ACT_CURRENT_COLUMNS,
+        CTR_ACT_CURRENT_ROWS,
+        CTR_ACT_UPDATE_COLUMNS,
+        CTR_ACT_UPDATE_ROWS,
+        CTR_ACT_DELTA_COLUMNS,
+        CTR_ACT_DELTA_ROWS,
         CTR_ACT_ERRORED,
     ],
     CTR_SRC_EGRESS: [
-        CTR_ACT_SHEET_COLUMNS, CTR_ACT_SHEET_ROWS,
-        CTR_ACT_DATABASE_COLUMNS, CTR_ACT_DATABASE_ROWS,
+        CTR_ACT_SHEET_COLUMNS,
+        CTR_ACT_SHEET_ROWS,
+        CTR_ACT_DATABASE_COLUMNS,
+        CTR_ACT_DATABASE_ROWS,
         CTR_ACT_ERRORED,
     ],
     CTR_SRC_TIMING: [
-        CTR_ACT_MARSHALL_MILLIS, CTR_ACT_PROCESS_MILLIS,
-        CTR_ACT_EGRESS_MILLIS, CTR_ACT_TOTAL_MILLIS,
+        CTR_ACT_MARSHALL_MILLIS,
+        CTR_ACT_PROCESS_MILLIS,
+        CTR_ACT_EGRESS_MILLIS,
+        CTR_ACT_TOTAL_MILLIS,
     ],
 }
 
-_EXPECTED_COUNTER_KEYS = {
-    (source, action)
-    for source, actions in _EXPECTED_COUNTER_ACTIONS.items()
-    for action in actions
-}
+_EXPECTED_COUNTER_KEYS = {(source, action) for source, actions in _EXPECTED_COUNTER_ACTIONS.items() for action in actions}
 
-assert set(COUNTERS) == _EXPECTED_COUNTER_KEYS, (
-    f"COUNTERS missing: {_EXPECTED_COUNTER_KEYS - set(COUNTERS)}; "
-    f"extras: {set(COUNTERS) - _EXPECTED_COUNTER_KEYS}"
-)
+assert set(COUNTERS) == _EXPECTED_COUNTER_KEYS, f"COUNTERS missing: {_EXPECTED_COUNTER_KEYS - set(COUNTERS)}; extras: {set(COUNTERS) - _EXPECTED_COUNTER_KEYS}"
 
 
 class CountersMixin:
@@ -204,7 +208,7 @@ class CountersMixin:
 
     def reset_counters(self):
         self._counters = {}
-        for (source, action) in COUNTERS:
+        for source, action in COUNTERS:
             if source not in self._counters:
                 self._counters[source] = {}
             self._counters[source][action] = 0
@@ -227,8 +231,7 @@ class CountersMixin:
         for source in self._counters:
             for action in self._counters[source]:
                 self.print_log(  # type: ignore[attr-defined]
-                    f"     {' '.join((source, action)).ljust(CTR_LBL_WIDTH, CTR_LBL_PAD)} "
-                    f"{self._counters[source][action]:8}"
+                    f"     {' '.join((source, action)).ljust(CTR_LBL_WIDTH, CTR_LBL_PAD)} {self._counters[source][action]:8}"
                 )
 
 
@@ -401,7 +404,7 @@ def aggregate_summary(plugins_data: dict) -> dict:
 
 def _empty_counter_series(bins: int) -> dict:
     result = {}
-    for (source, action) in COUNTERS:
+    for source, action in COUNTERS:
         if source not in result:
             result[source] = {}
         result[source][action] = [None] * bins
@@ -503,7 +506,7 @@ class RunHistory:
             if found_day_entry is None:
                 day_entry: dict[str, Any] = {
                     "date": date_str,
-                    "errored_runs": {name: 0 for name in self._all_plugins},
+                    "errored_runs": dict.fromkeys(self._all_plugins, 0),
                     "buckets": {},
                 }
                 self._day.append(day_entry)
@@ -647,15 +650,17 @@ class RunHistory:
 
     def snapshot(self) -> Snapshot:
         with self._lock:
-            counters_dict = {f"{source}|{action}": {
-                "source": c.source,
-                "action": c.action,
-                "label": c.label,
-                "aggregator": c.aggregator,
-                "format": c.format,
-                "error": c.error,
-            } for (source, action), c
-                             in COUNTERS.items()}
+            counters_dict = {
+                f"{source}|{action}": {
+                    "source": c.source,
+                    "action": c.action,
+                    "label": c.label,
+                    "aggregator": c.aggregator,
+                    "format": c.format,
+                    "error": c.error,
+                }
+                for (source, action), c in COUNTERS.items()
+            }
             views = [
                 self._build_raw_view(),
                 self._build_day_view(),
@@ -681,7 +686,7 @@ class RunHistory:
         entry_errored: dict[str, bool] = entry.get("errored") or {}
         for plugin_name in self._all_plugins:
             plugin_counters = entry_plugins.get(plugin_name) or {}
-            for (source, action) in COUNTERS:
+            for source, action in COUNTERS:
                 source_counters = plugin_counters.get(source) or {}
                 series[plugin_name][source][action][slot_index] = source_counters.get(action)
             errored[plugin_name][slot_index] = entry_errored.get(plugin_name, False)
@@ -793,7 +798,7 @@ class RunHistory:
                     if plugin_name not in accumulated_cells:
                         accumulated_cells[plugin_name] = {}
                     plugin_accumulated_cells = accumulated_cells[plugin_name]
-                    for (source, action) in COUNTERS:
+                    for source, action in COUNTERS:
                         key = f"{source}|{action}"
                         source_bucket: dict[str, dict] = plugin_bucket.get(source) or {}
                         cell = source_bucket.get(action)
@@ -826,8 +831,7 @@ class RunHistory:
         Path(raw_tmp).write_bytes(raw_body)
         os.rename(raw_tmp, self._raw_path)
         raw_elapsed_ms = int((time.perf_counter() - started) * 1000)
-        print_log("Wrangle", f"File [{_RAW_FILENAME}] {'created' if raw_is_new else 'stored'}, [{len(raw_body):,}] bytes, [{len(self._raw)}] raw records, in [{raw_elapsed_ms}ms]",
-                  level="info")
+        print_log("Wrangle", f"File [{_RAW_FILENAME}] {'created' if raw_is_new else 'stored'}, [{len(raw_body):,}] bytes, [{len(self._raw)}] raw records, in [{raw_elapsed_ms}ms]", level="info")
         started = time.perf_counter()
         daily_body = orjson.dumps({**header, "day": [_encode_day_entry(e) for e in self._day]})
         daily_is_new = not os.path.isfile(self._daily_path)
@@ -835,16 +839,16 @@ class RunHistory:
         Path(daily_tmp).write_bytes(daily_body)
         os.rename(daily_tmp, self._daily_path)
         daily_elapsed_ms = int((time.perf_counter() - started) * 1000)
-        print_log("Wrangle", f"File [{_DAILY_FILENAME}] {'created' if daily_is_new else 'stored'}, [{len(daily_body):,}] bytes, [{len(self._day)}] day records, in [{daily_elapsed_ms}ms]",
-                  level="info")
+        print_log(
+            "Wrangle", f"File [{_DAILY_FILENAME}] {'created' if daily_is_new else 'stored'}, [{len(daily_body):,}] bytes, [{len(self._day)}] day records, in [{daily_elapsed_ms}ms]", level="info"
+        )
+        self._store_adhoc()
 
     def _store_adhoc(self) -> None:
-        if self._adhoc is None:
-            return
         os.makedirs(os.path.dirname(self._adhoc_path), exist_ok=True)
         header = {"schema": _SCHEMA_FINGERPRINT, "plugins": self._plugins}
         started = time.perf_counter()
-        body = orjson.dumps({**header, "adhoc": _encode_raw_entry(self._adhoc)})
+        body = orjson.dumps({**header, "adhoc": None if self._adhoc is None else _encode_raw_entry(self._adhoc)})
         is_new = not os.path.isfile(self._adhoc_path)
         tmp = self._adhoc_path + ".tmp"
         Path(tmp).write_bytes(body)

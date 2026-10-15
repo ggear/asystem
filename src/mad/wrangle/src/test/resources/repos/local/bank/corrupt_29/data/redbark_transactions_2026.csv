@@ -1,0 +1,5 @@
+Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Category Manual,Category Derived,Account ID,Source ID,Transaction ID,Vetted
+2026-01-01,One,-1.0,-1.0,the shop,,,,,,540a8918175f5ca38559395087eb552c,c1,,
+2026-01-02,One,-2.0,-2.0,Other,,,,Hobbies,,540a8918175f5ca38559395087eb552c,c2,,Yes
+2026-01-03,One,-1.0,-1.0,Filler 1,,,,,,540a8918175f5ca38559395087eb552c,f1,,
+2026-01-03,One,-2.0,-2.0,Filler 2,,,,,,540a8918175f5ca38559395087eb552c,f2,,

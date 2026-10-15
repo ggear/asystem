@@ -3,9 +3,14 @@
 # Installed into development environment with no transitive dependencies.
 ###############################################################################
 
+# AppDaemon
+appdaemon==4.5.13
+
 # Home Assistant
-hassapi==0.3.0
 homeassistant==$HOMEASSISTANT_VERSION
 
 # ML Server
 mlserver==$MLSERVER_VERSION
+
+# Type checking
+pandas-stubs==3.0.5.260914

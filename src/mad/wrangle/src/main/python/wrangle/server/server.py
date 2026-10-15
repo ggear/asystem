@@ -44,10 +44,7 @@ CHART_SPEC = [
     ],
 ]
 
-assert all(
-    (cell["source"], cell["action"]) in COUNTERS
-    for row in CHART_SPEC for cell in row
-), "CHART_SPEC references counters not in the registry"
+assert all((cell["source"], cell["action"]) in COUNTERS for row in CHART_SPEC for cell in row), "CHART_SPEC references counters not in the registry"
 
 _ENV = Environment(
     loader=FileSystemLoader(WEB_ROOT_DIR),
@@ -66,20 +63,16 @@ class _Handler(BaseHTTPRequestHandler):
         self._response_started = False
         super().__init__(*args, **kwargs)
 
-    # noinspection PyPep8Naming
-    def do_GET(self):  # noqa: N802
+    def do_GET(self):
         self._dispatch("GET")
 
-    # noinspection PyPep8Naming
-    def do_HEAD(self):  # noqa: N802
+    def do_HEAD(self):
         self._dispatch("HEAD")
 
-    # noinspection PyPep8Naming
-    def do_POST(self):  # noqa: N802
+    def do_POST(self):
         self._dispatch("POST")
 
     def _dispatch(self, method: str):
-        # noinspection PyBroadException
         try:
             parsed = urlparse(self.path)
             path = parsed.path.rstrip("/") or "/"
@@ -120,31 +113,33 @@ class _Handler(BaseHTTPRequestHandler):
         if path == f"{API_ROOT}/snapshot/views":
             return {"GET": lambda: self._serve_views_filtered(params)}
         if path.startswith(f"{API_ROOT}/snapshot/views/"):
-            view_name = path[len(f"{API_ROOT}/snapshot/views/"):]
+            view_name = path[len(f"{API_ROOT}/snapshot/views/") :]
             return {"GET": lambda: self._serve_single_view(view_name, params)}
         if path == f"{API_ROOT}/run":
             return {"POST": self._serve_run}
         if path.startswith(f"{API_ROOT}/{FEED_ROOT}/"):
-            feed_path = unquote(path[len(f"{API_ROOT}/{FEED_ROOT}/"):])
+            feed_path = unquote(path[len(f"{API_ROOT}/{FEED_ROOT}/") :])
             return {"GET": lambda: self._serve_feed(feed_path, params)}
         if path.startswith("/static/"):
-            relative_path = path[len("/static/"):]
+            relative_path = path[len("/static/") :]
             return {"GET": lambda: self._serve_static(relative_path)}
         return None
 
     def _serve_index(self):
-        self._send_json({
-            "version": API_VERSION,
-            "resources": {
-                "plugins": f"{API_ROOT}/plugins",
-                "counters": f"{API_ROOT}/counters",
-                "snapshot": f"{API_ROOT}/snapshot",
-                "views": f"{API_ROOT}/snapshot/views",
-                "view": f"{API_ROOT}/snapshot/views/{{name}}",
-                "run": f"{API_ROOT}/run",
-                **{name: f"{API_ROOT}/{resource_path}" for name, resource_path in paths().items()},
-            },
-        })
+        self._send_json(
+            {
+                "version": API_VERSION,
+                "resources": {
+                    "plugins": f"{API_ROOT}/plugins",
+                    "counters": f"{API_ROOT}/counters",
+                    "snapshot": f"{API_ROOT}/snapshot",
+                    "views": f"{API_ROOT}/snapshot/views",
+                    "view": f"{API_ROOT}/snapshot/views/{{name}}",
+                    "run": f"{API_ROOT}/run",
+                    **{name: f"{API_ROOT}/{resource_path}" for name, resource_path in paths().items()},
+                },
+            }
+        )
 
     def _serve_feed(self, feed_path: str, params):
         try:
@@ -251,17 +246,9 @@ class _Handler(BaseHTTPRequestHandler):
 
     def _serve_dashboard(self):
         snapshot = self._history.snapshot()
-        plugin_sections = [{
-            "id": "summary",
-            "title": "Summary",
-            "theme": "ghost-gray",
-        }] + [
-            {
-                "id": name,
-                "title": name.capitalize(),
-                "theme": THEMES[index % len(THEMES)],
-            }
-            for index, name in enumerate(p for p in snapshot.plugins if p != "summary")
+        plugin_sections = [
+            {"id": "summary", "title": "Summary", "theme": "ghost-gray"},
+            *({"id": name, "title": name.capitalize(), "theme": THEMES[index % len(THEMES)]} for index, name in enumerate(p for p in snapshot.plugins if p != "summary")),
         ]
         snapshot_json = json.dumps(dataclasses.asdict(snapshot))
         latest_run = self._history.latest_run_entry()
@@ -408,12 +395,10 @@ class _Handler(BaseHTTPRequestHandler):
                 return False
         return False
 
-    # noinspection PyShadowingBuiltins
-    def log_message(self, format, *args):  # noqa: A002
+    def log_message(self, format, *args):
         pass
 
-    # noinspection PyShadowingBuiltins
-    def log_error(self, format, *args):  # noqa: A002
+    def log_error(self, format, *args):
         pass
 
 

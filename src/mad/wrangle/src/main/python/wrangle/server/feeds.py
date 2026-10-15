@@ -67,7 +67,6 @@ def equity_prices(argument: str | None, params: dict) -> dict:
         return result
 
 
-
 FEEDS: dict[str, dict[str, Callable[[str | None, dict], dict]]] = {
     "equity": {
         "prices": equity_prices,
@@ -85,7 +84,6 @@ def _validated(symbol) -> str:
     if not _SYMBOL.match(symbol):
         raise FeedError("invalid_symbol", f"invalid symbol [{symbol}]")
     return symbol
-
 
 
 def _lock_for(symbol: str) -> threading.Lock:

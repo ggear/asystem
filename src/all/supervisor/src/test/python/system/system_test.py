@@ -6,11 +6,12 @@ import subprocess
 import sys
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from os.path import abspath, dirname, join, realpath
 
 import paho.mqtt.client as mqtt
 import pytest
+from paho.mqtt.enums import CallbackAPIVersion
 
 BROKER = "127.0.0.1"
 TIMEOUT = 30
@@ -33,23 +34,23 @@ def _env(name):
     with open(join(DIR_ROOT, ".env")) as env_file:
         value = ""
         for line in env_file:
-            if line.startswith("{}=".format(name)):
+            if line.startswith(f"{name}="):
                 value = line.split("=", 1)[1].strip()
-    assert value, "no [{}] in the generated .env".format(name)
+    assert value, f"no [{name}] in the generated .env"
     return value
 
 
 HOST = _env("SUPERVISOR_HOST")
 PORT = int(_env("BROKER_PORT"))
-TOPIC_STATUS = "supervisor/{}/status".format(HOST)
-TOPIC_PROCESSOR = "supervisor/{}/data/host/used_processor".format(HOST)
-TOPIC_MEMORY = "supervisor/{}/data/host/used_memory".format(HOST)
-TOPIC_SELF = "supervisor/{}/data/service/supervisor/name".format(HOST)
-TOPIC_ORPHAN = "supervisor/{}/data/service/{}/name".format(HOST, ORPHAN)
-TOPIC_TEMPERATURE = "supervisor/{}/data/host/temperature".format(HOST)
-TOPIC_FAN = "supervisor/{}/data/host/spin_fan_speed".format(HOST)
-TOPIC_LOGS = "supervisor/{}/data/host/failed_log_messages".format(HOST)
-TOPIC_SHARES = "supervisor/{}/data/host/failed_shares".format(HOST)
+TOPIC_STATUS = f"supervisor/{HOST}/status"
+TOPIC_PROCESSOR = f"supervisor/{HOST}/data/host/used_processor"
+TOPIC_MEMORY = f"supervisor/{HOST}/data/host/used_memory"
+TOPIC_SELF = f"supervisor/{HOST}/data/service/supervisor/name"
+TOPIC_ORPHAN = f"supervisor/{HOST}/data/service/{ORPHAN}/name"
+TOPIC_TEMPERATURE = f"supervisor/{HOST}/data/host/temperature"
+TOPIC_FAN = f"supervisor/{HOST}/data/host/spin_fan_speed"
+TOPIC_LOGS = f"supervisor/{HOST}/data/host/failed_log_messages"
+TOPIC_SHARES = f"supervisor/{HOST}/data/host/failed_shares"
 TOPIC_CLUSTER = "supervisor/all/data/cluster"
 TOPIC_CLUSTER_STATUS = "supervisor/all/status"
 TOPIC_LEASE = "supervisor/all/leader/lease"
@@ -58,11 +59,11 @@ TIMEOUT_ELECTION = 90
 
 
 def _candidate(host):
-    return "supervisor/all/leader/candidate/{}".format(host)
+    return f"supervisor/all/leader/candidate/{host}"
 
 
 def _stamp():
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
 def _configured():
@@ -71,13 +72,11 @@ def _configured():
     for entry in schema:
         if entry["host"] == HOST:
             return entry["services"]
-    raise AssertionError("host [{}] is in no config.json schema entry".format(HOST))
+    raise AssertionError(f"host [{HOST}] is in no config.json schema entry")
 
 
 def _client():
-    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,
-                         client_id="".join(random.choice(string.ascii_lowercase) for _ in range(10)),
-                         clean_session=True)
+    client = mqtt.Client(CallbackAPIVersion.VERSION2, client_id="".join(random.choice(string.ascii_lowercase) for _ in range(10)), clean_session=True)
     client.connect(BROKER, PORT)
     return client
 
@@ -88,14 +87,14 @@ def _collect(topics, timeout):
     def on_connect(client, _user_data, _flags, reason_code, _properties):
         for topic in topics:
             client.subscribe(topic, 1)
-        print("Connected [code={}]".format(reason_code))
+        print(f"Connected [code={reason_code}]")
 
     def on_message(_client, _user_data, message):
         if message.payload:
             received[message.topic] = message.payload
         elif message.topic in received:
             del received[message.topic]
-        print("Message [{}] {}".format(message.topic, message.payload[:120]))
+        print(f"Message [{message.topic}] {message.payload[:120]}")
 
     client = _client()
     client.on_connect = on_connect
@@ -114,12 +113,12 @@ def _await(topics, predicate, timeout, on_ready):
     def on_connect(client, _user_data, _flags, reason_code, _properties):
         for topic in topics:
             client.subscribe(topic, 1)
-        print("Connected [code={}]".format(reason_code))
+        print(f"Connected [code={reason_code}]")
         on_ready(client)
 
     def on_message(_client, _user_data, message):
         received.setdefault(message.topic, []).append(message.payload)
-        print("Message [{}] {}".format(message.topic, message.payload[:120]))
+        print(f"Message [{message.topic}] {message.payload[:120]}")
         if predicate(received):
             matched[0] = True
 
@@ -135,11 +134,13 @@ def _await(topics, predicate, timeout, on_ready):
 
 def _name_payload(name):
     detail = {"ok": True, "value": name}
-    return json.dumps({
-        "timestamp": int(time.time()),
-        "pulse": detail,
-        "trend": detail,
-    })
+    return json.dumps(
+        {
+            "timestamp": int(time.time()),
+            "pulse": detail,
+            "trend": detail,
+        }
+    )
 
 
 def _docker(*args):
@@ -157,14 +158,14 @@ def _retry(assertion, timeout=TIMEOUT_WARMUP):
             failure = exception
             print(exception)
             time.sleep(1)
-    raise AssertionError("timed out after [{}] s with [{}]".format(int(time.time() - time_start), failure))
+    raise AssertionError(f"timed out after [{int(time.time() - time_start)}] s with [{failure}]")
 
 
 def test_publishes_vitals():
     def assertion():
         received = _collect([TOPIC_STATUS, TOPIC_PROCESSOR, TOPIC_MEMORY, TOPIC_SELF], SETTLE)
         missing = {TOPIC_STATUS, TOPIC_PROCESSOR, TOPIC_MEMORY, TOPIC_SELF} - received.keys()
-        assert not missing, "topics not published [{}]".format(sorted(missing))
+        assert not missing, f"topics not published [{sorted(missing)}]"
         assert received[TOPIC_STATUS] == b"online"
         for topic in (TOPIC_PROCESSOR, TOPIC_MEMORY):
             body = json.loads(received[topic])
@@ -180,13 +181,13 @@ def test_reports_an_unmeasurable_metric_as_failed_and_an_absent_one_as_inert():
     def assertion():
         received = _collect([TOPIC_TEMPERATURE, TOPIC_FAN, TOPIC_LOGS], SETTLE)
         missing = {TOPIC_TEMPERATURE, TOPIC_FAN, TOPIC_LOGS} - received.keys()
-        assert not missing, "topics not published [{}]".format(sorted(missing))
+        assert not missing, f"topics not published [{sorted(missing)}]"
         temperature = json.loads(received[TOPIC_TEMPERATURE])
         assert temperature.get("failed") is True, "an unreadable sensor must carry failed, not a confident zero"
         for topic in (TOPIC_FAN, TOPIC_LOGS):
             body = json.loads(received[topic])
-            assert not body.get("failed"), "[{}] has nothing to measure here, so it must not read failed".format(topic)
-            assert body["pulse"]["ok"] is True, "[{}] must be inert and ok, not judged by a rule".format(topic)
+            assert not body.get("failed"), f"[{topic}] has nothing to measure here, so it must not read failed"
+            assert body["pulse"]["ok"] is True, f"[{topic}] must be inert and ok, not judged by a rule"
             assert body["pulse"].get("value", 0) == 0
 
     _retry(assertion, TIMEOUT)
@@ -199,8 +200,7 @@ def test_logs_an_environment_fault_at_warn_and_a_host_fact_at_info():
         noted = [line for line in lines if " INFO " in line and "probe[sensors]" in line]
         assert warned, "an absent sensor is the environment, so it must log at WARN"
         assert noted, "the sensor tier is a permanent host fact, so it must log at INFO"
-        assert not [line for line in lines if " ERROR " in line and "host/temperature" in line], \
-            "an absent sensor is not a code fault, so it must not log at ERROR"
+        assert not [line for line in lines if " ERROR " in line and "host/temperature" in line], "an absent sensor is not a code fault, so it must not log at ERROR"
 
     _retry(assertion, TIMEOUT)
 
@@ -210,9 +210,9 @@ def test_reports_a_ghost_and_an_unconfigured_service():
     ghosts = sorted(set(_configured()) - running)
     assert ghosts, "no configured service is absent, so there is no ghost to assert"
     ghost = ghosts[0]
-    topic_ghost = "supervisor/{}/data/service/{}/health_status".format(HOST, ghost)
-    topic_ghost_name = "supervisor/{}/data/service/{}/name".format(HOST, ghost)
-    topic_unconfigured = "supervisor/{}/data/service/vernemq/configured_status".format(HOST)
+    topic_ghost = f"supervisor/{HOST}/data/service/{ghost}/health_status"
+    topic_ghost_name = f"supervisor/{HOST}/data/service/{ghost}/name"
+    topic_unconfigured = f"supervisor/{HOST}/data/service/vernemq/configured_status"
 
     def assertion():
         received = _collect([topic_ghost, topic_ghost_name, topic_unconfigured], SETTLE)
@@ -264,12 +264,19 @@ def test_defers_to_an_incumbent_and_reclaims_when_it_leaves():
         while rival_standing.is_set():
             renewed = _stamp()
             client.publish(_candidate(RIVAL), json.dumps({"host": RIVAL, "renewed_ts": renewed}), 1, True).wait_for_publish()
-            client.publish(TOPIC_LEASE, json.dumps({
-                "host": RIVAL,
-                "epoch": 1,
-                "claimed_ts": claimed,
-                "renewed_ts": renewed,
-            }), 1, True).wait_for_publish()
+            client.publish(
+                TOPIC_LEASE,
+                json.dumps(
+                    {
+                        "host": RIVAL,
+                        "epoch": 1,
+                        "claimed_ts": claimed,
+                        "renewed_ts": renewed,
+                    }
+                ),
+                1,
+                True,
+            ).wait_for_publish()
             time.sleep(1)
         client.publish(_candidate(RIVAL), b"", 1, True).wait_for_publish()
         client.publish(TOPIC_LEASE, b"", 1, True).wait_for_publish()
@@ -288,11 +295,9 @@ def test_defers_to_an_incumbent_and_reclaims_when_it_leaves():
         received, _, _ = _await([TOPIC_LEASE, TOPIC_CLUSTER], lambda _seen: False, 15, lambda _client: None)
         leases = [json.loads(payload)["host"] for payload in received.get(TOPIC_LEASE, []) if payload]
         assert leases, "the rival lease must be observed while it stands"
-        assert _collect([TOPIC_CLUSTER_STATUS], SETTLE).get(TOPIC_CLUSTER_STATUS) == b"offline", \
-            "a host that yields the cluster must mark the cluster offline, the rival publishes no presence"
-        assert HOST not in leases, "the host must not write the lease while an incumbent holds it, saw [{}]".format(leases)
-        assert not [payload for payload in received.get(TOPIC_CLUSTER, []) if payload], \
-            "a host that does not lead the cluster must not publish its status"
+        assert _collect([TOPIC_CLUSTER_STATUS], SETTLE).get(TOPIC_CLUSTER_STATUS) == b"offline", "a host that yields the cluster must mark the cluster offline, the rival publishes no presence"
+        assert HOST not in leases, f"the host must not write the lease while an incumbent holds it, saw [{leases}]"
+        assert not [payload for payload in received.get(TOPIC_CLUSTER, []) if payload], "a host that does not lead the cluster must not publish its status"
     finally:
         rival_standing.clear()
         standing.join(TIMEOUT)
@@ -311,10 +316,9 @@ def test_defers_to_an_incumbent_and_reclaims_when_it_leaves():
 
 def test_declares_every_published_topic():
     model_dir = join(DIR_SCHEMA, "model")
-    declared = {os.path.relpath(directory, model_dir)
-                for directory, _, files in os.walk(model_dir) if SCHEMA_LEAF in files}
-    assert declared, "no declared topics under [{}]".format(DIR_SCHEMA)
-    published = _collect(["supervisor/{}/#".format(HOST)], SETTLE * 4).keys()
+    declared = {os.path.relpath(directory, model_dir) for directory, _, files in os.walk(model_dir) if SCHEMA_LEAF in files}
+    assert declared, f"no declared topics under [{DIR_SCHEMA}]"
+    published = _collect([f"supervisor/{HOST}/#"], SETTLE * 4).keys()
     assert published, "nothing published to assert against"
     configured = set(_configured())
     undeclared = []
@@ -324,20 +328,18 @@ def test_declares_every_published_topic():
             continue
         if topic not in declared:
             undeclared.append(topic)
-    assert not undeclared, "published but not declared, run fab generate [{}]".format(sorted(undeclared))
+    assert not undeclared, f"published but not declared, run fab generate [{sorted(undeclared)}]"
     for topic in (TOPIC_STATUS, TOPIC_PROCESSOR, TOPIC_MEMORY, TOPIC_SELF):
-        assert topic in declared, "published topic [{}] is not declared".format(topic)
+        assert topic in declared, f"published topic [{topic}] is not declared"
 
 
 def test_the_packaged_image_carries_the_backup_command_and_no_shell_runner():
     listed = _docker("exec", CONTAINER, "/asystem/bin/supervisor", "backup", "list")
-    assert listed.returncode == 0, "backup list exited [{}] [{}] [{}]".format(
-        listed.returncode, listed.stdout.strip(), listed.stderr.strip())
+    assert listed.returncode == 0, f"backup list exited [{listed.returncode}] [{listed.stdout.strip()}] [{listed.stderr.strip()}]"
     printed = listed.stdout + listed.stderr
-    assert "backup runs under" in printed or "STARTED (RUN-ID)" in printed, "backup list reported [{}] [{}]".format(
-        listed.stdout.strip(), listed.stderr.strip())
+    assert "backup runs under" in printed or "STARTED (RUN-ID)" in printed, f"backup list reported [{listed.stdout.strip()}] [{listed.stderr.strip()}]"
     refused = _docker("exec", CONTAINER, "/asystem/bin/supervisor", "backup", "start", "--stage", "quaternary")
-    assert refused.returncode != 0, "an unknown stage was accepted [{}]".format(refused.stdout.strip())
+    assert refused.returncode != 0, f"an unknown stage was accepted [{refused.stdout.strip()}]"
     retired = _docker("exec", CONTAINER, "test", "-e", "/asystem/etc/backup.sh")
     assert retired.returncode != 0, "the image still ships the retired shell runner at /asystem/etc/backup.sh"
 
@@ -345,8 +347,7 @@ def test_the_packaged_image_carries_the_backup_command_and_no_shell_runner():
 def test_passes_its_own_health_check():
     def assertion():
         result = _docker("exec", CONTAINER, "/asystem/etc/checkexecuting.sh")
-        assert result.returncode == 0, "checkexecuting exited [{}] [{}] [{}]".format(
-            result.returncode, result.stdout.strip(), result.stderr.strip())
+        assert result.returncode == 0, f"checkexecuting exited [{result.returncode}] [{result.stdout.strip()}] [{result.stderr.strip()}]"
 
     _retry(assertion, TIMEOUT)
 
@@ -354,7 +355,7 @@ def test_passes_its_own_health_check():
 def test_never_panics_and_stays_healthy():
     def assertion():
         result = _docker("inspect", "--format", "{{.State.Health.Status}}", CONTAINER)
-        assert result.stdout.strip() == "healthy", "container health [{}]".format(result.stdout.strip())
+        assert result.stdout.strip() == "healthy", f"container health [{result.stdout.strip()}]"
         logs = _docker("logs", CONTAINER)
         for stream in (logs.stdout, logs.stderr):
             assert "panic:" not in stream, "the service panicked"
@@ -376,23 +377,15 @@ def test_reports_a_declared_share_that_never_mounts_as_failed():
 
 
 def test_registers_a_service_that_appears_and_removes_one_that_goes():
-    topic = "supervisor/{}/data/service/{}/name".format(HOST, SERVICE)
+    topic = f"supervisor/{HOST}/data/service/{SERVICE}/name"
     image = "supervisor:{}".format(_env("SERVICE_VERSION_ABSOLUTE"))
     _docker("rm", "-f", SERVICE)
     assert _collect([topic], SETTLE) == {}, "the service topic is not clear before the test"
-    _, appeared, elapsed = _await(
-        [topic],
-        lambda seen: seen[topic][-1] != b"",
-        TIMEOUT,
-        lambda _client: _docker("run", "-d", "--name", SERVICE, image, "sleep", "600"))
-    assert appeared, "a container that appears must be published within [{}] s".format(int(elapsed))
-    received, departed, _ = _await(
-        [topic],
-        lambda seen: len(seen[topic]) >= 3 and seen[topic][-1] == b"",
-        TIMEOUT,
-        lambda _client: _docker("rm", "-f", SERVICE))
+    _, appeared, elapsed = _await([topic], lambda seen: seen[topic][-1] != b"", TIMEOUT, lambda _client: _docker("run", "-d", "--name", SERVICE, image, "sleep", "600"))
+    assert appeared, f"a container that appears must be published within [{int(elapsed)}] s"
+    received, departed, _ = _await([topic], lambda seen: len(seen[topic]) >= 3 and seen[topic][-1] == b"", TIMEOUT, lambda _client: _docker("rm", "-f", SERVICE))
     payloads = received.get(topic, [])
-    assert departed, "a container that goes must be tombstoned, saw [{}]".format(payloads)
+    assert departed, f"a container that goes must be tombstoned, saw [{payloads}]"
     assert json.loads(payloads[-2]).get("pulse") is None, "the form before the empty payload carries no pulse"
     assert _collect([topic], SETTLE) == {}, "the retained service topic must end cleared"
 
@@ -420,12 +413,10 @@ def test_resumes_publishing_after_the_broker_restarts():
 def test_removes_a_service_that_departs():
     assert _collect([TOPIC_ORPHAN], SETTLE) == {}, "the orphan topic is not clear before the test"
     received, matched, elapsed = _await(
-        [TOPIC_ORPHAN],
-        lambda seen: len(seen[TOPIC_ORPHAN]) >= 3 and seen[TOPIC_ORPHAN][-1] == b"",
-        TIMEOUT,
-        lambda client: client.publish(TOPIC_ORPHAN, _name_payload(ORPHAN), 1, True))
+        [TOPIC_ORPHAN], lambda seen: len(seen[TOPIC_ORPHAN]) >= 3 and seen[TOPIC_ORPHAN][-1] == b"", TIMEOUT, lambda client: client.publish(TOPIC_ORPHAN, _name_payload(ORPHAN), 1, True)
+    )
     payloads = received.get(TOPIC_ORPHAN, [])
-    assert matched, "orphan not tombstoned within [{}] s, saw [{}]".format(int(elapsed), payloads)
+    assert matched, f"orphan not tombstoned within [{int(elapsed)}] s, saw [{payloads}]"
     assert payloads[-1] == b"", "the last form must be the empty payload"
     departing = json.loads(payloads[-2])
     assert departing.get("pulse") is None, "the form before it must carry no pulse"
@@ -440,9 +431,9 @@ def test_retains_its_records_across_a_graceful_stop():
     received = _collect([TOPIC_STATUS, TOPIC_PROCESSOR, TOPIC_MEMORY, TOPIC_SELF] + elections, SETTLE)
     assert received.get(TOPIC_STATUS) == b"offline", "the offline status must be published"
     for topic in (TOPIC_PROCESSOR, TOPIC_MEMORY, TOPIC_SELF):
-        assert topic in received, "retained [{}] must survive a graceful stop".format(topic)
+        assert topic in received, f"retained [{topic}] must survive a graceful stop"
     for topic in elections:
-        assert topic not in received, "a graceful stop must resign, but [{}] is still retained".format(topic)
+        assert topic not in received, f"a graceful stop must resign, but [{topic}] is still retained"
     assert _collect([TOPIC_CLUSTER_STATUS], SETTLE).get(TOPIC_CLUSTER_STATUS) == b"offline", "a resigning holder must mark the cluster offline"
 
 
@@ -460,13 +451,9 @@ def test_rediscovers_and_clears_an_orphan_on_restart():
             started[0] = True
             assert _docker("start", CONTAINER).returncode == 0
 
-    received, matched, elapsed = _await(
-        [TOPIC_ORPHAN, TOPIC_PROCESSOR],
-        lambda seen: seen.get(TOPIC_ORPHAN, [b"x"])[-1] == b"",
-        TIMEOUT_RESTART,
-        start_container)
-    assert matched, "the orphan must be tombstoned after a restart, saw [{}]".format(received)
-    print("Cleared the orphan [{}] s after the restart".format(round(elapsed, 1)))
+    received, matched, elapsed = _await([TOPIC_ORPHAN, TOPIC_PROCESSOR], lambda seen: seen.get(TOPIC_ORPHAN, [b"x"])[-1] == b"", TIMEOUT_RESTART, start_container)
+    assert matched, f"the orphan must be tombstoned after a restart, saw [{received}]"
+    print(f"Cleared the orphan [{round(elapsed, 1)}] s after the restart")
     assert _collect([TOPIC_ORPHAN], SETTLE) == {}, "the retained orphan topic must end cleared"
 
 
@@ -478,9 +465,9 @@ def test_publishes_its_will_and_keeps_its_records_when_killed():
         received = _collect([TOPIC_STATUS, TOPIC_PROCESSOR, TOPIC_SELF] + candidacies, SETTLE)
         assert received.get(TOPIC_STATUS) == b"offline", "the last will must mark a killed host offline"
         for topic in (TOPIC_PROCESSOR, TOPIC_SELF):
-            assert topic in received, "a kill publishes nothing, so retained [{}] must survive".format(topic)
+            assert topic in received, f"a kill publishes nothing, so retained [{topic}] must survive"
         for topic in candidacies:
-            assert topic not in received, "the election will must clear [{}] when the host is killed".format(topic)
+            assert topic not in received, f"the election will must clear [{topic}] when the host is killed"
         assert _collect([TOPIC_CLUSTER_STATUS], SETTLE).get(TOPIC_CLUSTER_STATUS) == b"offline", "the presence will must mark the cluster offline"
 
     _retry(assertion, TIMEOUT_RESTART)
@@ -489,15 +476,16 @@ def test_publishes_its_will_and_keeps_its_records_when_killed():
 
 def test_retained_delivery_precedes_a_barrier_published_after_the_subscribe():
     prefix = "zztest/barrier"
-    data = "{}/data".format(prefix)
-    nonce_topic = "{}/nonce".format(prefix)
+    data = f"{prefix}/data"
+    nonce_topic = f"{prefix}/nonce"
     seeder = _client()
     seeder.loop_start()
     for index in range(BARRIER_TOPICS):
-        seeder.publish("{}/{}".format(data, index), str(index), 0, True)
-    seeder.publish("{}/{}".format(data, BARRIER_TOPICS - 1), str(BARRIER_TOPICS - 1), 1, True).wait_for_publish()
+        seeder.publish(f"{data}/{index}", str(index), 0, True)
+    seeder.publish(f"{data}/{BARRIER_TOPICS - 1}", str(BARRIER_TOPICS - 1), 1, True).wait_for_publish()
     seeder.loop_stop()
     seeder.disconnect()
+
     def barrier_round():
         order = []
 
@@ -520,20 +508,29 @@ def test_retained_delivery_precedes_a_barrier_published_after_the_subscribe():
     try:
         for round_index in range(BARRIER_ROUNDS):
             order = barrier_round()
-            assert nonce_topic in order, "the barrier never returned in round [{}]".format(round_index)
+            assert nonce_topic in order, f"the barrier never returned in round [{round_index}]"
             before = order.index(nonce_topic)
-            assert before == BARRIER_TOPICS, \
-                "round [{}] saw [{}] of [{}] retained topics before the barrier, so ordering does not hold".format(
-                    round_index, before, BARRIER_TOPICS)
+            assert before == BARRIER_TOPICS, f"round [{round_index}] saw [{before}] of [{BARRIER_TOPICS}] retained topics before the barrier, so ordering does not hold"
     finally:
         cleaner = _client()
         cleaner.loop_start()
         for index in range(BARRIER_TOPICS):
-            cleaner.publish("{}/{}".format(data, index), None, 0, True)
-        cleaner.publish("{}/{}".format(data, BARRIER_TOPICS - 1), None, 1, True).wait_for_publish()
+            cleaner.publish(f"{data}/{index}", None, 0, True)
+        cleaner.publish(f"{data}/{BARRIER_TOPICS - 1}", None, 1, True).wait_for_publish()
         cleaner.loop_stop()
         cleaner.disconnect()
 
 
-if __name__ == '__main__':
-    sys.exit(pytest.main(["-s", "-v", "--durations=50", "-o", "cache_dir=../../../../target/.pytest_cache", __file__, ]))
+if __name__ == "__main__":
+    sys.exit(
+        pytest.main(
+            [
+                "-s",
+                "-v",
+                "--durations=50",
+                "-o",
+                "cache_dir=../../../../target/.pytest_cache",
+                __file__,
+            ]
+        )
+    )

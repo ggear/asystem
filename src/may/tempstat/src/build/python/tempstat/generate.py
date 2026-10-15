@@ -9,16 +9,13 @@ if __name__ == "__main__":
 
     # Build broker schema
     metadata_tempstat_df = metadata_df[
-        (metadata_df["index"] > 0) &
-        (metadata_df["entity_status"] == "Enabled") &
-        (metadata_df["device_via_device"] == "TempStat") &
-        (metadata_df["unique_id"].str.len() > 0) &
-        (metadata_df["name"].str.len() > 0) &
-        (metadata_df["discovery_topic"].str.len() > 0) &
-        (metadata_df["state_topic"].str.len() > 0)
-        ].copy()
+        (metadata_df["index"] > 0)
+        & (metadata_df["entity_status"] == "Enabled")
+        & (metadata_df["device_via_device"] == "TempStat")
+        & (metadata_df["unique_id"].str.len() > 0)
+        & (metadata_df["name"].str.len() > 0)
+        & (metadata_df["discovery_topic"].str.len() > 0)
+        & (metadata_df["state_topic"].str.len() > 0)
+    ].copy()
     document = load_schema_document(config="src/main/resources/image/sensors.json")
-    write_schema_broker(metadata_tempstat_df,
-                        broker_topic_glob_discovery="homeassistant/+/tempstat/+/config",
-                        broker_topic_glob_data="tempstat/#",
-                        broker_document=document)
+    write_schema_broker(metadata_tempstat_df, broker_topic_glob_discovery="homeassistant/+/tempstat/+/config", broker_topic_glob_data="tempstat/#", broker_document=document)

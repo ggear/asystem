@@ -21,7 +21,6 @@ SECONDS = {
 }
 
 if __name__ == "__main__":
-    # noinspection HttpUrlsUsage
     server = sys.argv[1] if len(sys.argv) > 1 else f"http://{os.environ['GRAFANA_SERVICE_PROD']}:{os.environ['GRAFANA_HTTP_PORT']}"
     dashboards = sys.argv[2] if len(sys.argv) > 2 else DIR_DASHBOARDS
     credentials = (os.environ["GRAFANA_USER"], os.environ["GRAFANA_TOKEN"])
@@ -30,8 +29,7 @@ if __name__ == "__main__":
         resource = yaml.safe_load(Path(path).read_text())
         if resource.get("kind") == "Dashboard":
             resources[basename(path)[:-5]] = resource
-    counts = {name: sum(len(element["spec"]["data"]["spec"]["queries"]) for element in resource["spec"]["elements"].values())
-              for name, resource in resources.items()}
+    counts = {name: sum(len(element["spec"]["data"]["spec"]["queries"]) for element in resource["spec"]["elements"].values()) for name, resource in resources.items()}
     resources = {name: resource for name, resource in resources.items() if counts[name]}
     name_width = max(map(len, resources), default=0)
     faults, probed = [], 0
@@ -45,29 +43,34 @@ if __name__ == "__main__":
                 spec = query["spec"]["query"]
                 probed += 1
                 floor = group.get("queryOptions", {}).get("interval") or "1s"
-                interval = max(int(floor[:-1]) * SECONDS[floor[-1]],
-                               int(start[4:-1]) * SECONDS[start[-1]] // POINTS) * 1000
+                interval = max(int(floor[:-1]) * SECONDS[floor[-1]], int(start[4:-1]) * SECONDS[start[-1]] // POINTS) * 1000
                 result: dict[str, Any]
                 try:
-                    response = requests.post(f"{server}/api/ds/query", auth=credentials, timeout=TIMEOUT, json={
-                        "from": start,
-                        "to": "now",
-                        "queries": [{
-                            "refId": "A",
-                            "datasource": {
-                                "uid": spec["datasource"]["name"],
-                            },
-                            "intervalMs": interval,
-                            "maxDataPoints": POINTS,
-                            **spec["spec"],
-                        }],
-                    })
+                    response = requests.post(
+                        f"{server}/api/ds/query",
+                        auth=credentials,
+                        timeout=TIMEOUT,
+                        json={
+                            "from": start,
+                            "to": "now",
+                            "queries": [
+                                {
+                                    "refId": "A",
+                                    "datasource": {
+                                        "uid": spec["datasource"]["name"],
+                                    },
+                                    "intervalMs": interval,
+                                    "maxDataPoints": POINTS,
+                                    **spec["spec"],
+                                }
+                            ],
+                        },
+                    )
                     answer = response.json()
                     result = answer.get("results", {}).get("A") or {"error": answer.get("message") or f"status [{response.status_code}]"}
                 except (requests.RequestException, ValueError) as error:
                     result = {"error": str(error)}
-                frames = [frame for frame in result.get("frames", [])
-                          if (frame.get("data", {}).get("values") or [[]])[0]]
+                frames = [frame for frame in result.get("frames", []) if (frame.get("data", {}).get("values") or [[]])[0]]
                 failed = bool(result.get("error") or not frames)
                 if failed:
                     faults.append((name, element["spec"]["title"], result.get("error") or "empty"))

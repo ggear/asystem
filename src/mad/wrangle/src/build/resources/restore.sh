@@ -17,12 +17,12 @@
 # RESTORE_SERVICE_STATE   the state the service must be in, stopped or running
 RESTORE_SERVICE_STATE="stopped"
 
-WRANGLE_RESTORE_HISTORY="data/history_adhoc.json:data/history_daily.json:data/history_raw.json"
+WRANGLE_RESTORE_PATHS="data/bank:data/history_adhoc.json:data/history_daily.json:data/history_raw.json"
 
 restore_planned() {
-  restore_report "would stop [${RESTORE_MODULE_NAME}], extract [${WRANGLE_RESTORE_HISTORY}] into [${RESTORE_SOURCE_PATH}] and start it again"
+  restore_report "would stop [${RESTORE_MODULE_NAME}], extract [${WRANGLE_RESTORE_PATHS}] into [${RESTORE_SOURCE_PATH}] and start it again"
 }
 
 restore_applied() {
-  restore_files "${WRANGLE_RESTORE_HISTORY}"
+  restore_files "${WRANGLE_RESTORE_PATHS}"
 }

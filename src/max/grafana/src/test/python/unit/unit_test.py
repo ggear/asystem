@@ -16,16 +16,9 @@ import pandas as pd
 import yaml
 from grafana_foundation_sdk.builders import stat as stats
 
-DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
-DIR_REPOSITORY = abspath(join(DIR_ROOT, "../../.."))
-DIR_DASHBOARDS = join(DIR_ROOT, "src/main/resources/data/dashboards")
-GENERATE = join(DIR_ROOT, "src/build/python/grafana/generate.py")
-
-sys.path.insert(0, join(DIR_REPOSITORY, "src/all/_/src/build/python"))
-sys.argv = [GENERATE]
+sys.path.insert(0, abspath(join(dirname(realpath(__file__)), "../../../../../../../src/all/_/src/build/python")))
 
 from asystem.schema.dialects import influxdb3, postgres
-from asystem.schema.panel import judged
 from asystem.schema.document import (
     SchemaDatabaseDimension,
     SchemaDatabaseMeasure,
@@ -37,55 +30,82 @@ from asystem.schema.document import (
     render_schema_artifact,
     schema_source,
 )
+from asystem.schema.panel import judged
+
+DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
+DIR_REPOSITORY = abspath(join(DIR_ROOT, "../../.."))
+DIR_DASHBOARDS = join(DIR_ROOT, "src/main/resources/data/dashboards")
+GENERATE = join(DIR_ROOT, "src/build/python/grafana/generate.py")
+
+sys.argv = [GENERATE]
 
 specification = importlib.util.spec_from_file_location("generate", GENERATE)
+assert specification is not None and specification.loader is not None
 generate = importlib.util.module_from_spec(specification)
 specification.loader.exec_module(generate)
 
 ARTIFACTS = sorted(glob.glob(join(DIR_REPOSITORY, "src/*/*/src/build/resources/schema/*/document.json")))
 
 HOSTS = SchemaDatabaseRelation(
-    path="supervisor/host", cadence="6s", entities=["alpha", "beta"],
+    path="supervisor/host",
+    cadence="6s",
+    entities=["alpha", "beta"],
     dimensions=[SchemaDatabaseDimension(key="host", subject=True)],
-    measures=[SchemaDatabaseMeasure(key="status", kind="bool"),
-              SchemaDatabaseMeasure(key="used_processor", kind="int", unit="%"),
-              SchemaDatabaseMeasure(key="restart_count", kind="float")])
+    measures=[SchemaDatabaseMeasure(key="status", kind="bool"), SchemaDatabaseMeasure(key="used_processor", kind="int", unit="%"), SchemaDatabaseMeasure(key="restart_count", kind="float")],
+)
 SERVICES = SchemaDatabaseRelation(
-    path="supervisor/service", cadence="6s", entities=["grafana"],
+    path="supervisor/service",
+    cadence="6s",
+    entities=["grafana"],
     dimensions=[SchemaDatabaseDimension(key="host"), SchemaDatabaseDimension(key="service", subject=True)],
-    measures=[SchemaDatabaseMeasure(key="status", kind="bool")])
+    measures=[SchemaDatabaseMeasure(key="status", kind="bool")],
+)
 SUPERVISOR = SchemaDocument(module="supervisor", relations=[HOSTS, SERVICES])
 RATES = SchemaDatabaseRelation(
-    path="currency/rate", cadence="1d", entities=["AUD/GBP", "AUD/USD"],
+    path="currency/rate",
+    cadence="1d",
+    entities=["AUD/GBP", "AUD/USD"],
     dimensions=[SchemaDatabaseDimension(key="entity", subject=True)],
-    measures=[SchemaDatabaseMeasure(key="snapshot", kind="float", unit="$", period="1d"),
-              SchemaDatabaseMeasure(key="delta", kind="float", unit="%", period="1d"),
-              SchemaDatabaseMeasure(key="delta", kind="float", unit="%", period="7d")])
+    measures=[
+        SchemaDatabaseMeasure(key="snapshot", kind="float", unit="$", period="1d"),
+        SchemaDatabaseMeasure(key="delta", kind="float", unit="%", period="1d"),
+        SchemaDatabaseMeasure(key="delta", kind="float", unit="%", period="7d"),
+    ],
+)
 WRANGLE = SchemaDocument(module="wrangle", relations=[RATES])
-COLUMNS = ["index", "entity_status", "device_via_device", "entity_namespace", "unique_id", "friendly_name",
-           "entity_domain", "entity_group", "grafana_display_type", "unit_of_measurement", "grafana_kpi", "grafana_group"]
+COLUMNS = [
+    "index",
+    "entity_status",
+    "device_via_device",
+    "entity_namespace",
+    "unique_id",
+    "friendly_name",
+    "entity_domain",
+    "entity_group",
+    "grafana_display_type",
+    "unit_of_measurement",
+    "grafana_kpi",
+    "grafana_group",
+]
 RACK_TOP = "compensation_sensor_rack_top_temperature"
 RACK_BOTTOM = "compensation_sensor_rack_bottom_temperature"
 LOUNGE_HUMIDITY = "office_lounge_humidity"
 
 
 class SchemaArtifactTest(unittest.TestCase):
-
     def test_every_artifact_parses_and_round_trips(self):
-        self.assertGreaterEqual(len(ARTIFACTS), 4, "artifacts: got {} want at least 4".format(len(ARTIFACTS)))
+        self.assertGreaterEqual(len(ARTIFACTS), 4, f"artifacts: got {len(ARTIFACTS)} want at least 4")
         for path in ARTIFACTS:
             module = basename(dirname(dirname(dirname(dirname(dirname(dirname(path)))))))
             document = load_schema_artifact(module, basename(dirname(path)), DIR_REPOSITORY)
             again = parse_schema_document(render_schema_artifact(document), module)
-            self.assertEqual(again, document, "{}: round trip got a different document".format(path))
+            self.assertEqual(again, document, f"{path}: round trip got a different document")
 
     def test_a_reflector_that_omits_a_database_key_is_refused(self):
         complete = {"key": "value", "kind": "float", "unit": "", "description": "", "persist": True, "period": "", "levels": None}
         omitted = {key: value for key, value in complete.items() if key != "period"}
         for measure, refused in [(complete, False), (omitted, True)]:
-            text = json.dumps({"module": "probe", "database": {"relations": [{
-                "path": "probe/reading", "description": "", "cadence": "", "entities": [],
-                "dimensions": [], "measures": [measure]}]}})
+            text = json.dumps({"module": "probe", "database": {"relations": [{"path": "probe/reading", "description": "", "cadence": "", "entities": [], "dimensions": [], "measures": [measure]}]}})
             parse_schema_document(text, "probe")
             if refused:
                 with self.assertRaises(ValueError):
@@ -111,27 +131,48 @@ class SchemaArtifactTest(unittest.TestCase):
                 warnings = io.StringIO()
                 with contextlib.redirect_stderr(warnings):
                     load_schema_artifact("probe", "influxdb3", repository)
-                self.assertEqual("older than its source" in warnings.getvalue(), warns,
-                                 "{}: warning got wrong".format(hashed))
+                self.assertEqual("older than its source" in warnings.getvalue(), warns, f"{hashed}: warning got wrong")
         finally:
             shutil.rmtree(repository)
 
 
 class LevelsTest(unittest.TestCase):
-
     def test_levels_parse_and_refuse_what_cannot_colour(self):
         def parsed(kind, levels):
-            return parse_schema_document(json.dumps({"module": "probe", "database": {"relations": [{
-                "path": "probe/reading", "description": "", "cadence": "", "entities": ["a", "b"],
-                "dimensions": [{"key": "reading", "description": "", "subject": True, "entities": []}],
-                "measures": [{"key": "value", "kind": kind, "unit": "%", "description": "", "persist": True, "period": "", "levels": levels}]}]}}), "probe", True)
+            return parse_schema_document(
+                json.dumps(
+                    {
+                        "module": "probe",
+                        "database": {
+                            "relations": [
+                                {
+                                    "path": "probe/reading",
+                                    "description": "",
+                                    "cadence": "",
+                                    "entities": ["a", "b"],
+                                    "dimensions": [{"key": "reading", "description": "", "subject": True, "entities": []}],
+                                    "measures": [{"key": "value", "kind": kind, "unit": "%", "description": "", "persist": True, "period": "", "levels": levels}],
+                                }
+                            ]
+                        },
+                    }
+                ),
+                "probe",
+                True,
+            )
+
         good = {"better": "higher", "amber": 85, "red": 50, "inclusive": True, "entities": {"a": {"amber": 35, "red": None}}}
         levels = parsed("float", good).relations[0].measures[0].levels
         self.assertEqual((levels.better, levels.amber, levels.red, levels.entities["a"].amber), ("higher", 85, 50, 35))
-        for kind, refused in [("float", {**good, "better": "sideways"}), ("float", {**good, "red": 90}), ("bool", good),
-                              ("float", {**good, "amber": "85"}), ("float", {**good, "entities": {"z": {"amber": 1, "red": None}}}),
-                              ("float", {key: value for key, value in good.items() if key != "inclusive"}),
-                              ("float", {"better": "higher", "amber": None, "red": None, "inclusive": True, "entities": {}})]:
+        for kind, refused in [
+            ("float", {**good, "better": "sideways"}),
+            ("float", {**good, "red": 90}),
+            ("bool", good),
+            ("float", {**good, "amber": "85"}),
+            ("float", {**good, "entities": {"z": {"amber": 1, "red": None}}}),
+            ("float", {key: value for key, value in good.items() if key != "inclusive"}),
+            ("float", {"better": "higher", "amber": None, "red": None, "inclusive": True, "entities": {}}),
+        ]:
             with self.assertRaises(ValueError, msg=str(refused)):
                 parsed(kind, refused)
 
@@ -151,8 +192,7 @@ class LevelsTest(unittest.TestCase):
         switches = generate.Relation("network", "ethernet/switch")
         declared = declared_levels(switches, "experience_pct")
         defaults = generate.stat("Wired", switches.query(["experience_pct"], None, ("min",))).build(1).build().spec.viz_config.spec.field_config.defaults
-        self.assertEqual([(step.value, step.color) for step in defaults.thresholds.steps],
-                         generate.levelled(generate.Levels(declared.better, declared.amber, declared.red, declared.inclusive)))
+        self.assertEqual([(step.value, step.color) for step in defaults.thresholds.steps], generate.levelled(generate.Levels(declared.better, declared.amber, declared.red, declared.inclusive)))
 
     def test_per_entity_levels_resolve_only_when_the_picked_entities_agree(self):
         experience = generate.Relation("network", "zigbee/experience")
@@ -164,8 +204,7 @@ class LevelsTest(unittest.TestCase):
 
     def test_only_an_operation_that_shows_the_worst_side_keeps_levels(self):
         experience, latency = generate.Relation("network", "ethernet/switch"), generate.Relation("network", "internet/target")
-        for relation, measure, kept, dropped in [(experience, "experience_pct", [("min",), ("trough",)], [("max",), ("peak",)]),
-                                                 (latency, "rtt_ms", [("max",), ("peak",)], [("min",), ("trough",)])]:
+        for relation, measure, kept, dropped in [(experience, "experience_pct", [("min",), ("trough",)], [("max",), ("peak",)]), (latency, "rtt_ms", [("max",), ("peak",)], [("min",), ("trough",)])]:
             for transforms in kept:
                 self.assertIsNotNone(relation.query([measure], None, transforms).levels, f"{measure} {transforms}")
             for transforms in dropped:
@@ -176,11 +215,10 @@ class LevelsTest(unittest.TestCase):
 
     def test_the_levels_vocabulary_is_declared_alike_by_its_owner_and_every_go_emitter(self):
         owner = Path(DIR_REPOSITORY, "src/all/_/src/build/python/asystem/schema/document.py").read_text()
-        declared = {"document.py": {(name, value) for name, value in re.findall(r'^BETTER_([A-Z]+) = "(\w+)"$', owner, re.M)}}
-        for emitter in ("src/mad/network/src/main/go/network/internal/schema/schema.go",
-                        "src/all/supervisor/src/main/go/supervisor/internal/schema/schema.go"):
+        declared = {"document.py": {(name, value) for name, value in re.findall(r'^BETTER_([A-Z]+) = "(\w+)"$', owner, re.MULTILINE)}}
+        for emitter in ("src/mad/network/src/main/go/network/internal/schema/schema.go", "src/all/supervisor/src/main/go/supervisor/internal/schema/schema.go"):
             source = Path(DIR_REPOSITORY, emitter).read_text()
-            declared[emitter] = {(name.upper(), value) for name, value in re.findall(r'^\s*Better([A-Z][a-z]+)\s+Better = "(\w+)"$', source, re.M)}
+            declared[emitter] = {(name.upper(), value) for name, value in re.findall(r'^\s*Better([A-Z][a-z]+)\s+Better = "(\w+)"$', source, re.MULTILINE)}
         for origin, vocabulary in declared.items():
             self.assertTrue(vocabulary, f"{origin}: parsed no levels vocabulary, the pattern no longer matches the source")
         self.assertEqual(len({frozenset(vocabulary) for vocabulary in declared.values()}), 1, f"levels vocabulary disagrees {declared}")
@@ -194,8 +232,7 @@ class LevelsTest(unittest.TestCase):
         declared = declared_levels(switches, "experience_pct")
         mean = generate.stat("Mean", switches.query(["experience_pct"]), "mean").build(1).build().spec.viz_config.spec.field_config.defaults
         best = generate.stat("Best", switches.query(["experience_pct"]), "max").build(1).build().spec.viz_config.spec.field_config.defaults
-        self.assertEqual([(step.value, step.color) for step in mean.thresholds.steps],
-                         generate.levelled(generate.Levels(declared.better, declared.amber, declared.red, declared.inclusive)))
+        self.assertEqual([(step.value, step.color) for step in mean.thresholds.steps], generate.levelled(generate.Levels(declared.better, declared.amber, declared.red, declared.inclusive)))
         self.assertEqual([(step.value, step.color) for step in best.thresholds.steps], generate.NEUTRAL_LADDER)
 
     def test_hand_written_thresholds_on_a_levelled_stat_are_refused_unless_deliberate(self):
@@ -208,10 +245,10 @@ class LevelsTest(unittest.TestCase):
         def drawn(panel):
             defaults = panel.build(1).build().spec.viz_config.spec.field_config.defaults
             return getattr(defaults.custom.thresholds_style, "mode", None), [(step.value, step.color) for step in (defaults.thresholds.steps if defaults.thresholds else [])]
+
         loss = generate.Relation("network", "internet/target")
         declared = declared_levels(loss, "loss_pct")
-        self.assertEqual(drawn(generate.series("Loss", loss.query(["loss_pct"]))),
-                         ("dashed", generate.levelled(generate.Levels(declared.better, declared.amber, declared.red, declared.inclusive))))
+        self.assertEqual(drawn(generate.series("Loss", loss.query(["loss_pct"]))), ("dashed", generate.levelled(generate.Levels(declared.better, declared.amber, declared.red, declared.inclusive))))
         self.assertEqual(drawn(generate.series("Clients", generate.Relation("network", "wireless/accesspoint").query(["clients"])))[0], None)
         experience = generate.Relation("network", "zigbee/experience")
         self.assertEqual(drawn(generate.series("Zigbee", experience.query(["experience_pct"])))[0], None)
@@ -225,9 +262,8 @@ class LevelsTest(unittest.TestCase):
 
 
 class PanelSqlTest(unittest.TestCase):
-
     def test_a_level_follows_every_transform_that_keeps_its_meaning(self):
-        for transforms, unit, levels, wanted in [
+        for transforms, unit, (better, amber, red, inclusive), wanted in [
             ((), "", ("higher", 1, None, True), ("higher", 1, None, True)),
             (("percent", "avg"), "", ("higher", None, 1, True), ("higher", None, 100, True)),
             (("percent",), "%", ("higher", 85, None, True), None),
@@ -247,32 +283,34 @@ class PanelSqlTest(unittest.TestCase):
             (("baseline",), "$", ("lower", 0.5, None, True), None),
             (("compass",), "°", ("lower", 1, None, True), None),
         ]:
-            self.assertEqual(judged(*levels, unit, transforms), wanted, "{}: levels got wrong".format(transforms))
+            self.assertEqual(judged(better, amber, red, inclusive, unit, transforms), wanted, f"{transforms}: levels got wrong")
 
     def test_transforms_render_into_the_series_statement(self):
         for dialect, relation, document, measures, transforms, wanted in [
-            (influxdb3, HOSTS, SUPERVISOR, ["status"], ("percent", "min"),
-             ["avg(status * 100)", "min(value) AS value", "GROUP BY time, measure", "measure AS metric"]),
+            (influxdb3, HOSTS, SUPERVISOR, ["status"], ("percent", "min"), ["avg(status * 100)", "min(value) AS value", "GROUP BY time, measure", "measure AS metric"]),
             (influxdb3, HOSTS, SUPERVISOR, ["status"], ("complement", "sum"), ["avg(1 - status)", "sum(value)"]),
             (influxdb3, HOSTS, SUPERVISOR, ["restart_count"], ("counter",), ["max(restart_count)", "entity AS metric"]),
             (influxdb3, HOSTS, SUPERVISOR, ["used_processor"], ("peak",), ["max(used_processor)"]),
             (influxdb3, HOSTS, SUPERVISOR, ["used_processor"], ("trough",), ["min(used_processor)"]),
             (influxdb3, HOSTS, SUPERVISOR, ["used_processor"], ("bearing",), ["atan2(avg(sin(radians(used_processor))), avg(cos(radians(used_processor))))"]),
             (influxdb3, HOSTS, SUPERVISOR, ["used_processor"], ("compass",), ["atan2(avg(sin(radians(used_processor)))", "/ 22.5"]),
-            (influxdb3, HOSTS, SUPERVISOR, ["status", "used_processor"], (),
-             ["entity || ' ' || measure AS metric", "UNION ALL", "status IS NOT NULL", "service IS NULL"]),
+            (influxdb3, HOSTS, SUPERVISOR, ["status", "used_processor"], (), ["entity || ' ' || measure AS metric", "UNION ALL", "status IS NOT NULL", "service IS NULL"]),
             (influxdb3, SERVICES, SUPERVISOR, ["status"], (), ["concat(host, '/', service)", "service IS NOT NULL"]),
-            (postgres, RATES, WRANGLE, ["snapshot"], ("invert", "baseline"),
-             ["avg(1.0 / value)", "first_value(value) OVER (PARTITION BY metric ORDER BY time)",
-              "$__timeGroupAlias(time, $__interval)"]),
-            (postgres, RATES, WRANGLE, ["delta@7d"], ("invert",),
-             ["avg(10000.0 / (100 + value) - 100)", "period = '7d'", "'delta' "]),
+            (
+                postgres,
+                RATES,
+                WRANGLE,
+                ["snapshot"],
+                ("invert", "baseline"),
+                ["avg(1.0 / value)", "first_value(value) OVER (PARTITION BY metric ORDER BY time)", "$__timeGroupAlias(time, $__interval)"],
+            ),
+            (postgres, RATES, WRANGLE, ["delta@7d"], ("invert",), ["avg(10000.0 / (100 + value) - 100)", "period = '7d'", "'delta' "]),
             (postgres, RATES, WRANGLE, ["delta"], (), ["'delta 1d' AS measure", "'delta 7d' AS measure"]),
         ]:
             sql = dialect.panel(relation, document, measures, None, transforms)
             for fragment in wanted:
-                self.assertIn(fragment, sql, "{} {}: got no [{}]".format(measures, transforms, fragment))
-            self.assertTrue(sql.endswith("ORDER BY time"), "{}: got unordered want ORDER BY time".format(measures))
+                self.assertIn(fragment, sql, f"{measures} {transforms}: got no [{fragment}]")
+            self.assertTrue(sql.endswith("ORDER BY time"), f"{measures}: got unordered want ORDER BY time")
 
     def test_entities_and_labels_render_as_a_filter_and_a_case(self):
         sql = postgres.panel(RATES, WRANGLE, ["snapshot"], ["AUD/GBP"], (), {"AUD/GBP": "GBP/AUD"})
@@ -282,14 +320,13 @@ class PanelSqlTest(unittest.TestCase):
 
     def test_labels_match_the_subject_when_the_entity_spans_several_dimensions(self):
         reading = SchemaDatabaseRelation(
-            path="sensor__temperature", cadence="<on-change>",
-            dimensions=[SchemaDatabaseDimension(key="entity_id", subject=True),
-                        SchemaDatabaseDimension(key="unit_of_measurement")],
-            measures=[SchemaDatabaseMeasure(key="value", kind="float")])
-        sql = influxdb3.panel(reading, SchemaDocument(module="homeassistant", relations=[reading], discovered=True),
-                              ["value"], ["roof"], (), {"roof": "Roof"})
-        self.assertIn("CASE entity_id WHEN 'roof' THEN 'Roof' ELSE concat(entity_id, '/', unit_of_measurement) END",
-                      sql)
+            path="sensor__temperature",
+            cadence="<on-change>",
+            dimensions=[SchemaDatabaseDimension(key="entity_id", subject=True), SchemaDatabaseDimension(key="unit_of_measurement")],
+            measures=[SchemaDatabaseMeasure(key="value", kind="float")],
+        )
+        sql = influxdb3.panel(reading, SchemaDocument(module="homeassistant", relations=[reading], discovered=True), ["value"], ["roof"], (), {"roof": "Roof"})
+        self.assertIn("CASE entity_id WHEN 'roof' THEN 'Roof' ELSE concat(entity_id, '/', unit_of_measurement) END", sql)
         self.assertIn("entity_id IN ('roof')", sql)
 
     def test_invalid_selections_are_refused(self):
@@ -300,36 +337,36 @@ class PanelSqlTest(unittest.TestCase):
             (["snapshot"], None, ("unknown",)),
             (["snapshot"], None, ("sum", "max")),
         ]:
-            with self.assertRaises(ValueError, msg="{} {} {}: got accepted want refused".format(
-                    measures, chosen, transforms)):
+            with self.assertRaises(ValueError, msg=f"{measures} {chosen} {transforms}: got accepted want refused"):
                 postgres.panel(RATES, WRANGLE, measures, chosen, transforms)
 
     def test_summaries_measure_freshness_coverage_and_volume(self):
         for statistic, wanted in [
             ("newest", ["to_unixtime($__timeTo()) - to_unixtime(max(time)) AS value", "host IN ('alpha')"]),
-            ("oldest", ["to_unixtime($__timeTo()) - to_unixtime(min(latest)) AS value", "GROUP BY 1",
-                        "time > $__timeTo() - INTERVAL '2592000 seconds'"]),
+            ("oldest", ["to_unixtime($__timeTo()) - to_unixtime(min(latest)) AS value", "GROUP BY 1", "time > $__timeTo() - INTERVAL '2592000 seconds'"]),
             ("entities", ["count(DISTINCT host)", "INTERVAL '600 seconds'", "100.0 * sum(reported)"]),
             ("metrics", ["CASE WHEN count(status) > 0 THEN 1 ELSE 0 END", "AS expected"]),
-            ("volume", ["to_unixtime(time) > (3 * to_unixtime($__timeTo()) + to_unixtime($__timeFrom())) / 4",
-                        "/ 4.0"]),
+            ("volume", ["to_unixtime(time) > (3 * to_unixtime($__timeTo()) + to_unixtime($__timeFrom())) / 4", "/ 4.0"]),
         ]:
             sql = influxdb3.summary([(HOSTS, ["alpha"])], SUPERVISOR, statistic, 300)
             for fragment in wanted:
-                self.assertIn(fragment, sql, "{}: got no [{}]".format(statistic, fragment))
+                self.assertIn(fragment, sql, f"{statistic}: got no [{fragment}]")
 
     def test_held_weights_each_row_by_the_time_until_the_next(self):
         sql = influxdb3.held(SERVICES, SUPERVISOR, "status", ["grafana"])
-        for fragment in ["lead(time) OVER (PARTITION BY concat(host, '/', service) ORDER BY time)",
-                         "coalesce(", "$__timeTo()", "100.0 * sum(value * held) / NULLIF(sum(held), 0)",
-                         "service IN ('grafana')", "status IS NOT NULL"]:
-            self.assertIn(fragment, sql, "held: got no [{}]".format(fragment))
+        for fragment in [
+            "lead(time) OVER (PARTITION BY concat(host, '/', service) ORDER BY time)",
+            "coalesce(",
+            "$__timeTo()",
+            "100.0 * sum(value * held) / NULLIF(sum(held), 0)",
+            "service IN ('grafana')",
+            "status IS NOT NULL",
+        ]:
+            self.assertIn(fragment, sql, f"held: got no [{fragment}]")
 
     def test_summaries_combine_sources_and_scale_the_lookback_with_the_span(self):
-        self.assertIn("min(value) AS value",
-                      influxdb3.summary([(HOSTS, None), (HOSTS, ["beta"])], SUPERVISOR, "newest", 300))
-        self.assertIn("max(value) AS value",
-                      influxdb3.summary([(HOSTS, None), (HOSTS, ["beta"])], SUPERVISOR, "oldest", 300))
+        self.assertIn("min(value) AS value", influxdb3.summary([(HOSTS, None), (HOSTS, ["beta"])], SUPERVISOR, "newest", 300))
+        self.assertIn("max(value) AS value", influxdb3.summary([(HOSTS, None), (HOSTS, ["beta"])], SUPERVISOR, "oldest", 300))
         monthly = postgres.summary([(RATES, None)], WRANGLE, "entities", 45 * 86400)
         self.assertIn("INTERVAL '15552000 seconds'", monthly)
         self.assertIn("count(DISTINCT entity)", monthly)
@@ -338,7 +375,6 @@ class PanelSqlTest(unittest.TestCase):
 
 
 class SeriesTest(unittest.TestCase):
-
     def test_a_query_takes_its_unit_and_descriptions_from_the_measures_it_picks(self):
         rate = generate.Relation("wrangle", "currency/rate")
         weekly = rate.query(["delta@7d"])
@@ -347,8 +383,7 @@ class SeriesTest(unittest.TestCase):
         self.assertEqual(rate.query(["snapshot"], None, ("baseline",)).unit, "%")
         self.assertEqual(rate.query(["snapshot"], None, (), None, "").unit, "")
         self.assertEqual(rate.query(["snapshot"]).interval, "1d")
-        self.assertEqual(generate.series("Weekly", weekly).build(1).build().spec.description,
-                         "Generated: change in the rate across [1 Week Delta]")
+        self.assertEqual(generate.series("Weekly", weekly).build(1).build().spec.description, "Generated: change in the rate across [1 Week Delta]")
 
     def test_mixed_units_are_refused_unless_one_is_given(self):
         rate = generate.Relation("wrangle", "currency/rate")
@@ -356,15 +391,13 @@ class SeriesTest(unittest.TestCase):
             rate.query(["snapshot", "delta@1d"])
         with self.assertRaises(ValueError):
             generate.series("Mixed", [rate.query(["snapshot"]), rate.query(["delta@1d"])])
-        self.assertEqual(generate.series("Given", [rate.query(["snapshot"]), rate.query(["delta@1d"])], "%")
-                         .build(1).build().spec.viz_config.spec.field_config.defaults.unit, "percent")
+        self.assertEqual(generate.series("Given", [rate.query(["snapshot"]), rate.query(["delta@1d"])], "%").build(1).build().spec.viz_config.spec.field_config.defaults.unit, "percent")
 
     def test_every_series_shows_the_legend_table_even_for_one_line(self):
         rate = generate.Relation("wrangle", "currency/rate")
         for queries in [rate.query(["snapshot"], ["AUD/GBP"]), rate.query(["snapshot"])]:
             legend = generate.series("Legend", queries).build(1).build().spec.viz_config.spec.options.legend
-            self.assertEqual((legend.show_legend, legend.display_mode, legend.placement, legend.calcs),
-                             (True, "table", "right", ["min", "max", "mean"]))
+            self.assertEqual((legend.show_legend, legend.display_mode, legend.placement, legend.calcs), (True, "table", "right", ["min", "max", "mean"]))
 
     def test_decimals_follow_the_unit(self):
         rate = generate.Relation("wrangle", "currency/rate")
@@ -373,82 +406,88 @@ class SeriesTest(unittest.TestCase):
             self.assertEqual(defaults.decimals, decimals)
 
     def test_a_state_timeline_draws_its_labelled_states_inside_the_time_series_margins(self):
-        visualization = generate.state("Up", generate.Relation("network", "ethernet/switch").query(["up"]), ("Down", "Up")).build(1).build().spec.viz_config
+        visualization = generate.state("Up", generate.Relation("network", "ethernet/switch").query(["up"]), ("Down", "Up"), 1).build(1).build().spec.viz_config
         layout = json.loads(visualization.spec.options["getOption"].split("\n", 1)[0].removeprefix("const layout = ").removesuffix(";"))
-        self.assertEqual((visualization.group, layout), (generate.ECHARTS_PANEL, {
-            "axis": generate.AXIS_WIDTH,
-            "legend": generate.LEGEND_WIDTH,
-            "states": [{"from": None, "colour": "red", "text": "Down"}, {"from": 1, "colour": "green", "text": "Up"}],
-        }))
+        self.assertEqual(
+            (visualization.group, layout),
+            (
+                generate.ECHARTS_PANEL,
+                {
+                    "axis": generate.AXIS_WIDTH,
+                    "legend": generate.LEGEND_WIDTH,
+                    "top": generate.TIMELINE_TOP,
+                    "bottom": generate.TIMELINE_BOTTOM,
+                    "bar": generate.TIMELINE_BAR,
+                    "states": [{"from": None, "colour": "red", "text": "Down"}, {"from": 1, "colour": "green", "text": "Up"}],
+                },
+            ),
+        )
         query = generate.Series(influxdb3, generate.INFLUXDB3, "SELECT 1", "", "", "", "time_series")
-        widths = {build.__name__: build("Plot", query).build(1).build().spec.viz_config.spec.field_config.defaults.custom.axis_width
-                  for build in (generate.series, generate.steps, generate.points, generate.bars)}
+        widths = {
+            build.__name__: build("Plot", query).build(1).build().spec.viz_config.spec.field_config.defaults.custom.axis_width
+            for build in (generate.series, generate.steps, generate.points, generate.bars)
+        }
         self.assertEqual(widths, dict.fromkeys(widths, generate.AXIS_WIDTH))
 
     def test_a_unit_maps_to_its_grafana_unit_or_falls_back_to_a_suffix(self):
         for unit, wanted in [("km/h", ("velocitykmh", 1)), ("furlong", ("suffix: furlong", 2)), ("", ("none", 2))]:
             defaults = generate.stat("Unit", generate.Series(influxdb3, generate.INFLUXDB3, "SELECT 1", unit, "", "", "table")).build(1).build().spec.viz_config.spec.field_config.defaults
-            self.assertEqual((defaults.unit, defaults.decimals), wanted, "{}: unit got wrong".format(unit))
+            self.assertEqual((defaults.unit, defaults.decimals), wanted, f"{unit}: unit got wrong")
 
     def test_a_header_over_an_on_change_relation_needs_a_ceiling(self):
         relation = generate.Relation("homeassistant", "sensor__temperature")
         with self.assertRaises(ValueError):
             generate.header([(relation, [RACK_TOP])], "homeassistant")
         panels = generate.header([(relation, [RACK_TOP])], "homeassistant", 3600)
-        self.assertEqual([panel.title for panel in panels],
-                         ["Newest", "Oldest", "Availability", "Entities", "Metrics", "Volume"])
+        self.assertEqual([panel.title for panel in panels], ["Newest", "Oldest", "Availability", "Entities", "Metrics", "Volume"])
         steps = panels[5].build(1).build().spec.viz_config.spec.field_config.defaults.thresholds.steps
         self.assertEqual([(step.value, step.color) for step in steps], generate.VOLUME_LADDER)
 
     def test_a_template_takes_its_table_entity_and_scope_from_the_relation(self):
         ticker = generate.Relation("wrangle", "equity/ticker")
-        series = ticker.sql("""
+        series = ticker.sql(
+            """
 SELECT $entity, value
 FROM $table
 WHERE
     $scope
-""", "%", "why it is hand-written", scope=ticker.scope("price-close-spot", ["AXJO"]))
-        self.assertEqual(series.sql, "SELECT entity, value\nFROM equity\nWHERE\n    $__timeFilter(time)\n"
-                                     "    AND type = 'price-close-spot'\n    AND period = '1d'\n    AND unit = '$'\n"
-                                     "    AND entity IN ('AXJO')")
-        self.assertEqual((series.dialect, series.datasource, series.unit, series.interval, series.description),
-                         (postgres, generate.POSTGRES, "%", "1d", "why it is hand-written"))
+""",
+            "%",
+            "why it is hand-written",
+            scope=ticker.scope("price-close-spot", ["AXJO"]),
+        )
+        self.assertEqual(
+            series.sql, "SELECT entity, value\nFROM equity\nWHERE\n    $__timeFilter(time)\n    AND type = 'price-close-spot'\n    AND period = '1d'\n    AND unit = '$'\n    AND entity IN ('AXJO')"
+        )
+        self.assertEqual((series.dialect, series.datasource, series.unit, series.interval, series.description), (postgres, generate.POSTGRES, "%", "1d", "why it is hand-written"))
         built = generate.series("Sql", series).build(1).build()
         self.assertEqual(built.spec.description, "Hand-written: why it is hand-written")
-        self.assertEqual(generate.series("Mixed", [series, ticker.query(["price-close-spot"], ["AXJO"])], "%")
-                         .build(1).build().spec.description,
-                         "Hand-written: daily price close spot reading; why it is hand-written")
+        self.assertEqual(
+            generate.series("Mixed", [series, ticker.query(["price-close-spot"], ["AXJO"])], "%").build(1).build().spec.description,
+            "Hand-written: daily price close spot reading; why it is hand-written",
+        )
         self.assertEqual(built.spec.data.spec.queries[0].spec.query.group, postgres.GRAFANA)
         self.assertEqual(built.spec.data.spec.query_options.interval, "1d")
 
     def test_placeholders_and_values_must_pair_and_grafana_macros_are_left_alone(self):
         ticker = generate.Relation("wrangle", "equity/ticker")
-        for statement, values in [("SELECT $entity FROM $table WHERE $missing", {}),
-                                  ("SELECT $entity FROM $table", {"unused": "1"})]:
+        for statement, values in [("SELECT $entity FROM $table WHERE $missing", {}), ("SELECT $entity FROM $table", {"unused": "1"})]:
             with self.assertRaises(ValueError, msg=statement):
                 ticker.sql(statement, "%", "", **values)
-        self.assertEqual(ticker.sql("SELECT $__timeGroupAlias(time, $__interval) FROM $table", "%", "").sql,
-                         "SELECT $__timeGroupAlias(time, $__interval) FROM equity")
+        self.assertEqual(ticker.sql("SELECT $__timeGroupAlias(time, $__interval) FROM $table", "%", "").sql, "SELECT $__timeGroupAlias(time, $__interval) FROM equity")
 
     def test_a_scope_refuses_what_the_schema_does_not_declare_or_cannot_tell_apart(self):
-        for path, measure, chosen in [("equity/ticker", "price-close-spot", ["NOPE"]),
-                                      ("equity/ticker", "nope", ["AXJO"]),
-                                      ("currency/rate", "delta", ["AUD/GBP"])]:
-            with self.assertRaises(ValueError, msg="{} {} {}".format(path, measure, chosen)):
+        for path, measure, chosen in [("equity/ticker", "price-close-spot", ["NOPE"]), ("equity/ticker", "nope", ["AXJO"]), ("currency/rate", "delta", ["AUD/GBP"])]:
+            with self.assertRaises(ValueError, msg=f"{path} {measure} {chosen}"):
                 generate.Relation("wrangle", path).scope(measure, chosen)
 
 
 class LayoutTest(unittest.TestCase):
-
     def test_rows_wrap_under_their_tallest_panel(self):
         with declared("layout"):
-            resource = generate.dashboard("layout", generate.WEEK_WINDOW, [panel(24, 3)],
-                                          [[panel(5, 3), panel(5, 3), panel(5, 3), panel(9, 8),
-                                            panel(5, 5), panel(5, 5)], [panel(24, 12)]])
-        self.assertEqual(laid(resource), [(0, 0, 24, 3), (0, 3, 5, 3), (5, 3, 5, 3), (10, 3, 5, 3), (15, 3, 9, 8),
-                                          (0, 6, 5, 5), (5, 6, 5, 5), (0, 11, 24, 12)])
-        self.assertEqual([element["spec"]["id"] for element in resource["spec"]["elements"].values()],
-                         list(range(1, 9)))
+            resource = generate.dashboard("layout", generate.WEEK_WINDOW, [panel(24, 3)], [[panel(5, 3), panel(5, 3), panel(5, 3), panel(9, 8), panel(5, 5), panel(5, 5)], [panel(24, 12)]])
+        self.assertEqual(laid(resource), [(0, 0, 24, 3), (0, 3, 5, 3), (5, 3, 5, 3), (10, 3, 5, 3), (15, 3, 9, 8), (0, 6, 5, 5), (5, 6, 5, 5), (0, 11, 24, 12)])
+        self.assertEqual([element["spec"]["id"] for element in resource["spec"]["elements"].values()], list(range(1, 9)))
 
     def test_a_panel_wider_than_the_grid_is_refused(self):
         with declared("layout"), self.assertRaisesRegex(ValueError, "wider"):
@@ -463,7 +502,6 @@ class LayoutTest(unittest.TestCase):
 
 
 class WriterTest(unittest.TestCase):
-
     def test_a_pulled_export_keeps_only_its_name_and_folder(self):
         pulled = {
             "apiVersion": "dashboard.grafana.app/v2",
@@ -484,26 +522,31 @@ class WriterTest(unittest.TestCase):
                 "title": "Pulled",
             },
         }
-        self.assertEqual(generate.normalised(pulled, "custom"), {
-            "apiVersion": "dashboard.grafana.app/v2",
-            "kind": "Dashboard",
-            "spec": {
-                "title": "Pulled",
-            },
-            "metadata": {
-                "name": "custom",
-                "annotations": {
-                    generate.FOLDER: "home",
+        self.assertEqual(
+            generate.normalised(pulled, "custom"),
+            {
+                "apiVersion": "dashboard.grafana.app/v2",
+                "kind": "Dashboard",
+                "spec": {
+                    "title": "Pulled",
+                },
+                "metadata": {
+                    "name": "custom",
+                    "annotations": {
+                        generate.FOLDER: "home",
+                    },
                 },
             },
-        })
+        )
 
     def test_sql_is_a_block_and_integral_floats_are_ints(self):
-        dumped = generate.dumped({
-            "b": 1.0,
-            "a": "SELECT\n    1",
-            "c": 0.5,
-        })
+        dumped = generate.dumped(
+            {
+                "b": 1.0,
+                "a": "SELECT\n    1",
+                "c": 0.5,
+            }
+        )
         self.assertEqual(dumped, "a: |-\n  SELECT\n      1\nb: 1\nc: 0.5\n")
 
     def test_every_generated_dashboard_opens_with_one_navigation_bar_marking_itself(self):
@@ -512,13 +555,13 @@ class WriterTest(unittest.TestCase):
         for path in paths:
             resource = yaml.safe_load(Path(path).read_text())
             first = resource["spec"]["layout"]["spec"]["items"][0]["spec"]
-            self.assertEqual((first["element"]["name"], first["y"], first["width"]), (generate.NAVIGATION_ELEMENT, 0, 24), "{}: navigation got missing".format(path))
+            self.assertEqual((first["element"]["name"], first["y"], first["width"]), (generate.NAVIGATION_ELEMENT, 0, 24), f"{path}: navigation got missing")
             content = resource["spec"]["elements"][generate.NAVIGATION_ELEMENT]["spec"]["vizConfig"]["spec"]["options"]["content"]
             self.assertLess(content.index("HOME"), content.index("FINANCE"), path)
             self.assertLess(content.index("FINANCE"), content.index("SYSTEMS"), path)
-            self.assertEqual(content.count('<span style="color:{}">'.format(generate.SECTION_COLOUR)), 3, "{}: sections got wrong".format(path))
-            self.assertIn(" **{}**".format(resource["spec"]["title"]), content, "{}: current got unmarked".format(path))
-            self.assertNotIn("(/d/{}?".format(basename(path)[:-5]), content, "{}: current got linked".format(path))
+            self.assertEqual(content.count(f'<span style="color:{generate.SECTION_COLOUR}">'), 3, f"{path}: sections got wrong")
+            self.assertIn(" **{}**".format(resource["spec"]["title"]), content, f"{path}: current got unmarked")
+            self.assertNotIn(f"(/d/{basename(path)[:-5]}?", content, f"{path}: current got linked")
 
     def test_every_resource_is_pinned_and_rewrites_unchanged(self):
         versions = set()
@@ -526,38 +569,38 @@ class WriterTest(unittest.TestCase):
             body = Path(path).read_text().split(generate.BANNER + "\n", 1)[-1]
             resource = yaml.safe_load(body)
             versions.add(resource["apiVersion"])
-            self.assertEqual(generate.dumped(generate.normalised(resource, resource["metadata"]["name"])), body, "{}: rewrite got a different file".format(path))
+            self.assertEqual(generate.dumped(generate.normalised(resource, resource["metadata"]["name"])), body, f"{path}: rewrite got a different file")
         self.assertEqual(versions, generate.API_VERSIONS)
 
 
 class MetadataTest(unittest.TestCase):
-
     def test_a_graph_break_splits_a_domain_into_panels(self):
-        resource = metadata(entities(
-            entity(RACK_TOP), entity("graph_break", device="_"), entity(RACK_BOTTOM)))
+        resource = metadata(entities(entity(RACK_TOP), entity("graph_break", device="_"), entity(RACK_BOTTOM)))
         panels = [element["spec"] for element in resource["spec"]["elements"].values() if element["spec"]["vizConfig"]["group"] == "timeseries"]
         self.assertEqual([panel["title"] for panel in panels], ["Rack", "Rack"])
         self.assertEqual({panel["vizConfig"]["spec"]["fieldConfig"]["defaults"]["unit"] for panel in panels}, {"celsius"})
         self.assertEqual({panel["description"] for panel in panels}, {"Generated: Home Assistant Group Rack"})
 
     def test_the_kpi_row_takes_marked_rows_then_each_panel_head_then_the_rest(self):
-        marked = entities(entity(RACK_TOP), entity(RACK_BOTTOM, kpi="max"), entity("graph_break", device="_"),
-                          entity(LOUNGE_HUMIDITY, domain="Lounge"))
+        marked = entities(entity(RACK_TOP), entity(RACK_BOTTOM, kpi="max"), entity("graph_break", device="_"), entity(LOUNGE_HUMIDITY, domain="Lounge"))
         resource = metadata(marked)
-        self.assertEqual(strip(resource), [
-            (RACK_BOTTOM.title() + " Max", 8, ["max"]),
-            (RACK_TOP.title(), 8, ["lastNotNull"]),
-            (LOUNGE_HUMIDITY.title(), 8, ["lastNotNull"]),
-        ])
-        peaked = [element["spec"] for element in resource["spec"]["elements"].values() if element["spec"]["title"] == RACK_BOTTOM.title() + " Max"][0]
-        self.assertEqual(peaked["description"], "Generated: Home Assistant entity {}, maximum across the window".format(RACK_BOTTOM))
+        self.assertEqual(
+            strip(resource),
+            [
+                (RACK_BOTTOM.title() + " Max", 8, ["max"]),
+                (RACK_TOP.title(), 8, ["lastNotNull"]),
+                (LOUNGE_HUMIDITY.title(), 8, ["lastNotNull"]),
+            ],
+        )
+        peaked = next(element["spec"] for element in resource["spec"]["elements"].values() if element["spec"]["title"] == RACK_BOTTOM.title() + " Max")
+        self.assertEqual(peaked["description"], f"Generated: Home Assistant entity {RACK_BOTTOM}, maximum across the window")
         self.assertIn("max(value)", peaked["data"]["spec"]["queries"][0]["spec"]["query"]["spec"]["rawSql"])
 
     def test_kpi_titles_name_the_measurement_only_when_the_row_spans_several(self):
-        mixed = entities(entity(RACK_TOP, kpi="max", domain="Climate", name="Rack"), entity(LOUNGE_HUMIDITY, domain="Climate", name="Lounge"),
-                         entity(RACK_BOTTOM, domain="Climate", name="Rack Bottom Temperature"))
-        self.assertEqual([title for title, _, _ in strip(metadata(mixed))],
-                         ["Rack Temperature Max", "Lounge Humidity", "Rack Bottom Temperature"])
+        mixed = entities(
+            entity(RACK_TOP, kpi="max", domain="Climate", name="Rack"), entity(LOUNGE_HUMIDITY, domain="Climate", name="Lounge"), entity(RACK_BOTTOM, domain="Climate", name="Rack Bottom Temperature")
+        )
+        self.assertEqual([title for title, _, _ in strip(metadata(mixed))], ["Rack Temperature Max", "Lounge Humidity", "Rack Bottom Temperature"])
         alike = entities(entity(RACK_TOP, domain="Temperature", name="Top"), entity(RACK_BOTTOM, domain="Temperature", name="Bottom"))
         self.assertEqual([title for title, _, _ in strip(metadata(alike))], ["Top", "Bottom"])
 
@@ -568,8 +611,7 @@ class MetadataTest(unittest.TestCase):
             kpis = strip(metadata(entities(*[entity(unique_id, kpi="mean") for unique_id in temperatures])))
         self.assertEqual(kpis, [(unique_id.title() + " Mean", 4, ["mean"]) for unique_id in temperatures[:6]])
         with contextlib.redirect_stderr(io.StringIO()):
-            kpis = strip(metadata(entities(
-                entity(RACK_TOP), entity(RACK_TOP), entity(RACK_BOTTOM, name=RACK_TOP.title()), entity(LOUNGE_HUMIDITY, kpi="median", domain="Humidity"))))
+            kpis = strip(metadata(entities(entity(RACK_TOP), entity(RACK_TOP), entity(RACK_BOTTOM, name=RACK_TOP.title()), entity(LOUNGE_HUMIDITY, kpi="median", domain="Humidity"))))
         self.assertEqual(kpis, [(LOUNGE_HUMIDITY.title(), 12, ["lastNotNull"]), (RACK_TOP.title(), 12, ["lastNotNull"])])
 
     def test_bad_rows_degrade_the_panel_rather_than_fail_the_build(self):
@@ -580,12 +622,10 @@ class MetadataTest(unittest.TestCase):
         ]:
             with contextlib.redirect_stderr(io.StringIO()):
                 resource = metadata(entities(*rows))
-            panels = [element["spec"] for element in resource["spec"]["elements"].values()
-                      if element["spec"]["vizConfig"]["group"] == "timeseries"]
-            self.assertEqual([panel["title"] for panel in panels], titles, "{}: titles got wrong".format(rows))
+            panels = [element["spec"] for element in resource["spec"]["elements"].values() if element["spec"]["vizConfig"]["group"] == "timeseries"]
+            self.assertEqual([panel["title"] for panel in panels], titles, f"{rows}: titles got wrong")
             defaults = panels[0]["vizConfig"]["spec"]["fieldConfig"]["defaults"]
-            self.assertEqual((defaults["unit"], defaults["custom"]["lineInterpolation"]), (unit, interpolation),
-                             "{}: unit or interpolation got wrong".format(rows))
+            self.assertEqual((defaults["unit"], defaults["custom"]["lineInterpolation"]), (unit, interpolation), f"{rows}: unit or interpolation got wrong")
 
     def test_a_change_of_unit_or_display_type_starts_a_new_panel(self):
         rows = entities(entity(RACK_TOP), entity(RACK_BOTTOM), entity(LOUNGE_HUMIDITY), entity(RACK_TOP + "_copy", display="Bars"))
@@ -593,8 +633,13 @@ class MetadataTest(unittest.TestCase):
         with contextlib.redirect_stderr(io.StringIO()):
             resource = metadata(rows)
         panels = [element["spec"] for element in resource["spec"]["elements"].values() if element["spec"]["vizConfig"]["group"] == "timeseries"]
-        self.assertEqual([(panel["title"], panel["vizConfig"]["spec"]["fieldConfig"]["defaults"]["unit"], panel["vizConfig"]["spec"]["fieldConfig"]["defaults"]["custom"].get("drawStyle", "line"))
-                          for panel in panels], [("Rack", "celsius", "line"), ("Rack", "percent", "line"), ("Rack", "celsius", "bars")])
+        self.assertEqual(
+            [
+                (panel["title"], panel["vizConfig"]["spec"]["fieldConfig"]["defaults"]["unit"], panel["vizConfig"]["spec"]["fieldConfig"]["defaults"]["custom"].get("drawStyle", "line"))
+                for panel in panels
+            ],
+            [("Rack", "celsius", "line"), ("Rack", "percent", "line"), ("Rack", "celsius", "bars")],
+        )
         self.assertIn("max(value)", panels[2]["data"]["spec"]["queries"][0]["spec"]["query"]["spec"]["rawSql"])
 
     def test_labels_come_from_the_friendly_name_or_fall_back_to_the_id(self):
@@ -607,9 +652,13 @@ class MetadataTest(unittest.TestCase):
         for group, wanted in [("Diagnostics", [RACK_TOP, LOUNGE_HUMIDITY]), ("Weather", [RACK_BOTTOM, LOUNGE_HUMIDITY])]:
             with contextlib.redirect_stderr(io.StringIO()):
                 resource = metadata(rows, group.lower())
-            sql = " ".join(query["spec"]["query"]["spec"]["rawSql"] for element in resource["spec"]["elements"].values()
-                           if element["spec"]["vizConfig"]["group"] == "timeseries" for query in element["spec"]["data"]["spec"]["queries"])
-            self.assertEqual([unique_id for unique_id in (RACK_TOP, RACK_BOTTOM, LOUNGE_HUMIDITY) if "'{}'".format(unique_id) in sql], wanted, "{}: entities got wrong".format(group))
+            sql = " ".join(
+                query["spec"]["query"]["spec"]["rawSql"]
+                for element in resource["spec"]["elements"].values()
+                if element["spec"]["vizConfig"]["group"] == "timeseries"
+                for query in element["spec"]["data"]["spec"]["queries"]
+            )
+            self.assertEqual([unique_id for unique_id in (RACK_TOP, RACK_BOTTOM, LOUNGE_HUMIDITY) if f"'{unique_id}'" in sql], wanted, f"{group}: entities got wrong")
 
     def test_points_draw_dots_and_an_angle_averages_as_a_bearing_on_a_16_point_compass(self):
         for unit, display, wanted in [("°", "Points", ("points", 0, 16, True)), ("°C", "Points", ("points", None, None, False)), ("°", "Lines", ("line", 0, 16, True))]:
@@ -617,13 +666,13 @@ class MetadataTest(unittest.TestCase):
             row[9] = unit
             with contextlib.redirect_stderr(io.StringIO()):
                 resource = metadata(entities(row))
-            panel = [element["spec"] for element in resource["spec"]["elements"].values() if element["spec"]["title"] == "Rack"][0]
+            panel = next(element["spec"] for element in resource["spec"]["elements"].values() if element["spec"]["title"] == "Rack")
             defaults = panel["vizConfig"]["spec"]["fieldConfig"]["defaults"]
             got = (defaults["custom"].get("drawStyle", "line"), defaults.get("min"), defaults.get("max"), "atan2(" in panel["data"]["spec"]["queries"][0]["spec"]["query"]["spec"]["rawSql"])
-            self.assertEqual(got, wanted, "{} {}: got wrong".format(unit, display))
+            self.assertEqual(got, wanted, f"{unit} {display}: got wrong")
             compass = [(mapping["options"]["from"], mapping["options"]["result"]["text"]) for mapping in defaults.get("mappings", [])]
             wanted_compass = ([(0, "N"), (0.5, "NNE"), (1.5, "NE")], (15.5, "N")) if unit == "°" else None
-            self.assertEqual((compass[:3], compass[-1]) if compass else None, wanted_compass, "{} {}: compass got wrong".format(unit, display))
+            self.assertEqual((compass[:3], compass[-1]) if compass else None, wanted_compass, f"{unit} {display}: compass got wrong")
 
     def test_grafana_index_orders_and_splits_panels_and_accepts_decimals(self):
         rows = entities(entity(RACK_TOP, domain="First"), entity(RACK_BOTTOM, domain="First"), entity(LOUNGE_HUMIDITY, domain="Second"), entity(RACK_TOP + "_x", domain="Third"))
@@ -633,9 +682,9 @@ class MetadataTest(unittest.TestCase):
         with contextlib.redirect_stderr(io.StringIO()):
             resource = metadata(rows)
         items = {item["spec"]["element"]["name"]: item["spec"]["y"] for item in resource["spec"]["layout"]["spec"]["items"]}
-        panels = [resource["spec"]["elements"][name]["spec"] for name in sorted(items, key=items.get) if items[name] >= 7]
+        panels = [resource["spec"]["elements"][name]["spec"] for name in sorted(items, key=lambda name: items[name]) if items[name] >= 7]
         self.assertEqual([panel["title"] for panel in panels], ["First", "Second", "Third", "First"])
-        self.assertEqual(["'{}'".format(RACK_BOTTOM) in panel["data"]["spec"]["queries"][0]["spec"]["query"]["spec"]["rawSql"] for panel in (panels[0], panels[3])], [False, True])
+        self.assertEqual([f"'{RACK_BOTTOM}'" in panel["data"]["spec"]["queries"][0]["spec"]["query"]["spec"]["rawSql"] for panel in (panels[0], panels[3])], [False, True])
 
     def test_a_placed_panel_takes_its_position_from_its_order_among_the_metadata_panels(self):
         rows = entities(entity(RACK_TOP), entity(RACK_BOTTOM, domain="Other"))
@@ -643,7 +692,7 @@ class MetadataTest(unittest.TestCase):
         with contextlib.redirect_stderr(io.StringIO()):
             resource = metadata(rows, placed={"First": (5, [[panel(24, 2)]]), "Middle": (15.5, [[panel(24, 3)]])})
         items = {item["spec"]["element"]["name"]: (item["spec"]["y"], item["spec"]["height"]) for item in resource["spec"]["layout"]["spec"]["items"]}
-        laid_out = [(resource["spec"]["elements"][name]["spec"]["title"], items[name][1]) for name in sorted(items, key=items.get) if items[name][0] >= 7]
+        laid_out = [(resource["spec"]["elements"][name]["spec"]["title"], items[name][1]) for name in sorted(items, key=lambda name: items[name]) if items[name][0] >= 7]
         self.assertEqual(laid_out, [("Panel", 2), ("Rack", 10), ("Panel", 3), ("Other", 10)])
 
     def test_an_unmeasured_entity_keeps_its_panel_and_draws_no_data(self):
@@ -685,8 +734,7 @@ def strip(resource):
     for item in resource["spec"]["layout"]["spec"]["items"]:
         if item["spec"]["y"] == 3:
             element = resource["spec"]["elements"][item["spec"]["element"]["name"]]["spec"]
-            kpis.append((element["title"], item["spec"]["width"],
-                         element["vizConfig"]["spec"]["options"]["reduceOptions"]["calcs"]))
+            kpis.append((element["title"], item["spec"]["width"], element["vizConfig"]["spec"]["options"]["reduceOptions"]["calcs"]))
     return kpis
 
 
@@ -696,8 +744,7 @@ def panel(width, height):
 
 
 def laid(resource):
-    return [(item["spec"]["x"], item["spec"]["y"], item["spec"]["width"], item["spec"]["height"])
-            for item in resource["spec"]["layout"]["spec"]["items"]]
+    return [(item["spec"]["x"], item["spec"]["y"], item["spec"]["width"], item["spec"]["height"]) for item in resource["spec"]["layout"]["spec"]["items"]]
 
 
 def declared_levels(relation, measure):

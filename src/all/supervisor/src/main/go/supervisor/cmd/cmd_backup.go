@@ -25,7 +25,7 @@ func newBackupCmd() *cobra.Command {
 	}
 	cmd.PersistentFlags().StringVarP(&opts.stage, "stage", "G", "", "execute one stage only [primary, secondary, tertiary]")
 	cmd.PersistentFlags().BoolVarP(&opts.scrub, "scrub", "S", false, "scrub the backup disk, whatever the monthly window says")
-	cmd.PersistentFlags().BoolVarP(&opts.quiet, "quiet", "Q", false, "drop the stdout copy of the stage log, keeping the file")
+	cmd.PersistentFlags().BoolVarP(&opts.quiet, "quiet", "Q", false, "drop the stdout copy of the log, keeping the run log and the log file")
 	cmd.PersistentFlags().DurationVarP(&opts.timeout, "timeout-period", "T", 0, "deadline for the whole run, defaulting to the configured timeout, uses unit suffixes [s, m, h]")
 	addLogFlags(cmd, &opts.logOptions, "info")
 	cmd.PersistentFlags().SortFlags = false
@@ -73,12 +73,10 @@ func executeBackup(request engine.BackupRequest, opts *backupOptions) error {
 	}
 	switch {
 	case request.Stage != "":
-		closer, enableErr := scribe.EnableBackupAndFile(level, backupCommandName, config.ResolvedVersion(request.Config),
-			engine.BackupStageLog(request), opts.quiet, logFileSizeMB, logFileBackups, logFileAgeDays)
-		if enableErr != nil {
+		if enableErr := scribe.EnableBackupAndFile(level, backupCommandName, config.ResolvedVersion(request.Config),
+			opts.quiet, logFileSizeMB, logFileBackups, logFileAgeDays); enableErr != nil {
 			return fmt.Errorf("backup logging could not be enabled [%w]", enableErr)
 		}
-		defer func() { _ = closer.Close() }()
 	case request.Command == engine.BackupCommandStart:
 		if enableErr := scribe.EnableStdoutAndFile(level, backupCommandName, config.ResolvedVersion(request.Config),
 			logFileSizeMB, logFileBackups, logFileAgeDays); enableErr != nil {

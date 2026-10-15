@@ -35,8 +35,10 @@ if __name__ == "__main__":
     write_container_certificates(working_dir=join(DIR_ROOT, "src/main/resources/data"))
 
     conf_path = abspath(join(DIR_ROOT, "src/main/resources/data/nginx.conf"))
-    with open(conf_path, 'w') as conf_file:
-        conf_file.write(("""
+    with open(conf_path, "w") as conf_file:
+        conf_file.write(
+            (
+                """
 #######################################################################################
 # WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
@@ -132,8 +134,11 @@ http {
     ssl_prefer_server_ciphers on;
     ssl_session_cache shared:SSL:10m;
     ssl_session_timeout 10m;
-    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-CHACHA20-POLY1305;
-    return 444;
+"""
+                "    ssl_ciphers "
+                "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:"
+                "ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-CHACHA20-POLY1305;\n"
+                """    return 444;
   }
 
   # Remote domain redirect
@@ -147,7 +152,11 @@ http {
   server {
     listen ${NGINX_PORT_INTERNAL_HTTPS};
     server_name nginx.proxy.janeandgraham.com nginx.local.janeandgraham.com;
-""" + ACCESS_PRIVATE + "\n" + HEADERS_SECURITY + """
+"""
+                + ACCESS_PRIVATE
+                + "\n"
+                + HEADERS_SECURITY
+                + """
     location = /health {
       root /usr/share/nginx/html;
       try_files /health.txt =404;
@@ -158,7 +167,7 @@ http {
       root /usr/share/nginx/html;
       autoindex on;
     }
-    location ~ /\.(git|env|ht) {
+    location ~ /\\.(git|env|ht) {
       deny all;
       access_log off;
       log_not_found off;
@@ -166,18 +175,20 @@ http {
   }
 
 
-      """).strip() + "\n\n")
+      """
+            ).strip()
+            + "\n\n"
+        )
         for name in modules:
-            ip_key = "{}_IP".format(name.upper())
-            port_key = "{}_HTTP_PORT".format(name.upper())
-            port_value = modules[name][1][port_key] if port_key in modules[name][1] else ""
-            host_public_key = "{}_HOST_PUBLIC".format(name.upper())
-            ws_context_key = "{}_HTTP_WS_CONTEXT".format(name.upper())
-            scheme_key = "{}_HTTP_SCHEME".format(name.upper())
-            scheme_value = modules[name][1][scheme_key] if scheme_key in modules[name][1] else "http://"
-            console_context_key = "{}_HTTP_CONSOLE_CONTEXT".format(name.upper())
-            console_context_value = modules[name][1][console_context_key] if console_context_key in modules[name][
-                1] else ""
+            ip_key = f"{name.upper()}_IP"
+            port_key = f"{name.upper()}_HTTP_PORT"
+            port_value = modules[name][1].get(port_key, "")
+            host_public_key = f"{name.upper()}_HOST_PUBLIC"
+            ws_context_key = f"{name.upper()}_HTTP_WS_CONTEXT"
+            scheme_key = f"{name.upper()}_HTTP_SCHEME"
+            scheme_value = modules[name][1].get(scheme_key, "http://")
+            console_context_key = f"{name.upper()}_HTTP_CONSOLE_CONTEXT"
+            console_context_value = modules[name][1].get(console_context_key, "")
             nginx_port_key = "NGINX_PORT_INTERNAL_HTTPS"
             nginx_port_value = modules["nginx"][1][nginx_port_key]
             if port_key in modules[name][1] and name != "nginx":
@@ -185,9 +196,10 @@ http {
                 if host_public_key in modules[name][1]:
                     server_names.append(modules[name][1][host_public_key])
                 for server_name in server_names:
-                    host_name = "{}.{}".format(server_name, DOMAIN) if name != server_name \
-                        else "{}.{}.{}".format(server_name, DOMAIN_PROXY, DOMAIN)
-                    conf_file.write("  " + """
+                    host_name = f"{server_name}.{DOMAIN}" if name != server_name else f"{server_name}.{DOMAIN_PROXY}.{DOMAIN}"
+                    conf_file.write(
+                        "  "
+                        + """
   # {} server for [{}] and domain [{}]
   map $host ${}_url {{ default {}${}:{}; }}
   server {{
@@ -204,61 +216,68 @@ http {
       proxy_pass ${}_url{};
     }}
               """.format(
-                        "Remote" if name != server_name else "Local",
-                        name,
-                        host_name,
-                        name,
-                        scheme_value,
-                        ip_key,
-                        port_value,
-                        nginx_port_value,
-                        host_name,
-                        "    allow all;" if name != server_name else ACCESS_PRIVATE,
-                        HEADERS_SECURITY,
-                        host_name,
-                        name,
-                        console_context_value,
-                    ).strip() + "\n")
+                            "Remote" if name != server_name else "Local",
+                            name,
+                            host_name,
+                            name,
+                            scheme_value,
+                            ip_key,
+                            port_value,
+                            nginx_port_value,
+                            host_name,
+                            "    allow all;" if name != server_name else ACCESS_PRIVATE,
+                            HEADERS_SECURITY,
+                            host_name,
+                            name,
+                            console_context_value,
+                        ).strip()
+                        + "\n"
+                    )
                     if ws_context_key in modules[name][1]:
-                        conf_file.write("    " + """
-    location {} {{
-      proxy_pass ${}_url{};
+                        conf_file.write(
+                            "    "
+                            + f"""
+    location {modules[name][1][ws_context_key]} {{
+      proxy_pass ${name}_url{modules[name][1][ws_context_key]};
       proxy_set_header Upgrade $http_upgrade;
       proxy_set_header Connection "upgrade";
     }}
-                """.format(
-                            modules[name][1][ws_context_key],
-                            name,
-                            modules[name][1][ws_context_key],
-                        ).strip() + "\n")
-                    conf_file.write("  " + """
+                """.strip()
+                            + "\n"
+                        )
+                    conf_file.write(
+                        "  "
+                        + """
   }
-              """.strip() + "\n\n")
+              """.strip()
+                        + "\n\n"
+                    )
         apis = {}
         for name in modules:
             for key in modules[name][1]:
-                if key.startswith("{}_HTTP_API_".format(name.upper())) and key.endswith("_CONTEXT"):
-                    resource = key[len("{}_HTTP_API_".format(name.upper())):-len("_CONTEXT")].lower()
+                if key.startswith(f"{name.upper()}_HTTP_API_") and key.endswith("_CONTEXT"):
+                    resource = key[len(f"{name.upper()}_HTTP_API_") : -len("_CONTEXT")].lower()
                     context = modules[name][1][key]
                     if not context.startswith("/"):
-                        raise ValueError("api resource [{}] of module [{}] declares context [{}] not starting with [/]".format(resource, name, context))
-                    if "{}_HTTP_PORT".format(name.upper()) not in modules[name][1]:
-                        raise ValueError("api resource [{}] of module [{}] declares no http port".format(resource, name))
+                        raise ValueError(f"api resource [{resource}] of module [{name}] declares context [{context}] not starting with [/]")
+                    if f"{name.upper()}_HTTP_PORT" not in modules[name][1]:
+                        raise ValueError(f"api resource [{resource}] of module [{name}] declares no http port")
                     if resource in apis:
-                        raise ValueError("api resource [{}] of module [{}] collides with module [{}]".format(resource, name, apis[resource][0]))
+                        raise ValueError(f"api resource [{resource}] of module [{name}] collides with module [{apis[resource][0]}]")
                     apis[resource] = (name, context)
         for resource in sorted(apis):
             name, context = apis[resource]
-            public_key = "{}_HTTP_API_{}_PUBLIC".format(name.upper(), resource.upper())
-            public_value = modules[name][1][public_key] if public_key in modules[name][1] else ""
-            host_names = ["{}.{}".format(resource, DOMAIN_API)]
+            public_key = f"{name.upper()}_HTTP_API_{resource.upper()}_PUBLIC"
+            public_value = modules[name][1].get(public_key, "")
+            host_names = [f"{resource}.{DOMAIN_API}"]
             if public_value:
                 host_names.append(public_value)
             for host_name in host_names:
-                domain_name = "{}.{}".format(host_name, DOMAIN)
-                server_name_value = domain_name if host_name == public_value \
-                    else "{} {}.{}".format(domain_name, resource, DOMAIN)
-                conf_file.write("  " + """
+                domain_name = f"{host_name}.{DOMAIN}"
+                server_name_value = domain_name if host_name == public_value else f"{domain_name} {resource}.{DOMAIN}"
+                conf_file.write(
+                    "  "
+                    + """
   # Api server for [{}] resource [{}] and domain [{}]
   server {{
     listen {};
@@ -274,18 +293,23 @@ http {
     }}
   }}
               """.format(
-                    name,
-                    resource,
-                    domain_name,
-                    modules["nginx"][1]["NGINX_PORT_INTERNAL_HTTPS"],
-                    server_name_value,
-                    "    allow all;" if host_name == public_value else ACCESS_PRIVATE,
-                    HEADERS_SECURITY,
-                    domain_name,
-                    name,
-                    context,
-                ).strip() + "\n\n")
-        conf_file.write("""
+                        name,
+                        resource,
+                        domain_name,
+                        modules["nginx"][1]["NGINX_PORT_INTERNAL_HTTPS"],
+                        server_name_value,
+                        "    allow all;" if host_name == public_value else ACCESS_PRIVATE,
+                        HEADERS_SECURITY,
+                        domain_name,
+                        name,
+                        context,
+                    ).strip()
+                    + "\n\n"
+                )
+        conf_file.write(
+            """
 }
-      """.strip() + "\n")
-        print("Build generate script [nginx] entity metadata persisted to [{}]".format(conf_path))
+      """.strip()
+            + "\n"
+        )
+        print(f"Build generate script [nginx] entity metadata persisted to [{conf_path}]")

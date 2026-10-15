@@ -9,26 +9,16 @@ if __name__ == "__main__":
 
     # Build broker schema
     metadata_network_df = metadata_df[
-        (metadata_df["index"] > 0) &
-        (metadata_df["entity_status"] == "Enabled") &
-        (metadata_df["device_via_device"] == "Network") &
-        (metadata_df["unique_id"].str.len() > 0) &
-        (metadata_df["name"].str.len() > 0) &
-        (metadata_df["discovery_topic"].str.len() > 0) &
-        (metadata_df["state_topic"].str.len() > 0)
-        ].copy()
+        (metadata_df["index"] > 0)
+        & (metadata_df["entity_status"] == "Enabled")
+        & (metadata_df["device_via_device"] == "Network")
+        & (metadata_df["unique_id"].str.len() > 0)
+        & (metadata_df["name"].str.len() > 0)
+        & (metadata_df["discovery_topic"].str.len() > 0)
+        & (metadata_df["state_topic"].str.len() > 0)
+    ].copy()
     document = load_schema_document()
-    write_schema_broker(metadata_network_df,
-                        broker_topic_glob_discovery="homeassistant/+/network/+/config",
-                        broker_topic_glob_data="network/#",
-                        broker_document=document)
+    write_schema_broker(metadata_network_df, broker_topic_glob_discovery="homeassistant/+/network/+/config", broker_topic_glob_data="network/#", broker_document=document)
 
     # Build database schema
-    write_schema_database(document, database_dialect="influxdb3", database_archive_measures=[
-        "port",
-        "speed_mbps",
-        "full_duplex",
-        "degraded",
-        "errors",
-        "coordinator"
-    ])
+    write_schema_database(document, database_dialect="influxdb3", database_archive_measures=["port", "speed_mbps", "full_duplex", "degraded", "errors", "coordinator"])

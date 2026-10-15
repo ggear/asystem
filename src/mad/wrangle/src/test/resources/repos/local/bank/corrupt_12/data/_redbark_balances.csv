@@ -1,0 +1,6 @@
+accountId,currentBalance,availableBalance,currency,observedAt,freshness
+a1,10.0,10.0,AUD,2026-01-15T03:30:00Z,fresh
+a2,20.0,20.0,AUD,2026-01-15T03:30:00Z,fresh
+a2,21.0,21.0,AUD,2026-01-15T03:30:00Z,fresh
+a3,lots,lots,AUD,2026-01-15T03:30:00Z,fresh
+a9,90.0,90.0,AUD,2026-01-15T03:30:00Z,fresh

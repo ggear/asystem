@@ -1,0 +1,4 @@
+From,Institution,Number,Name,Type,Status,Redbark Account ID,Redbark Connection ID
+0001-01-01,Bank A,xxxx0001,One,Asset,Linked,a1,c1
+0001-01-01,Bank A,xxxx0002,Two,Asset,Linked,a2,c1
+0001-01-01,Bank A,xxxx0003,Three,Asset,Linked,a3,c1

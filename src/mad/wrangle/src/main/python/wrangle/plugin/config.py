@@ -1,8 +1,12 @@
 import socket
+from collections.abc import Sequence
 from dataclasses import dataclass
-from enum import Enum, auto
+from datetime import datetime
+from enum import Enum, StrEnum, auto
 from os.path import abspath, basename, dirname, isfile, join, realpath
 from typing import NamedTuple
+
+import polars as pl
 
 PL_PRINT_ROWS = 20
 
@@ -11,8 +15,32 @@ TIMEOUT_RUN_SECONDS = 10 * 60
 
 STACK_DUMP_FILE = "/tmp/wrangle-stack.log"
 
+REDBARK_URL = "https://api.redbark.com"
+REDBARK_PAGE_LIMIT = 200
+REDBARK_PAGES_MAX = 1000
+
 FEED_CACHE_SECONDS = 60
 FEED_SYMBOL_PATTERN = r"^[A-Za-z0-9.^=-]{1,20}$"
+
+SHEET_MANUAL_COLOUR = {"red": 0x4A / 255, "green": 0x86 / 255, "blue": 0xE8 / 255}
+SHEET_DATE_FORMATS = ["%Y-%m-%d", "%d/%m/%Y", "%d/%m/%y", "%d-%b-%Y", "%d %b %Y", "%Y/%m/%d"]
+
+LOG_KIND_ERROR = "Error"
+LOG_KIND_WARNING = "Warning"
+LOG_KIND_INFO = "Info"
+LOG_RECORD_DAYS = 30
+LOG_RAW_COLUMNS = ["Time", "Kind", "Counter", "Tab", "Key", "Code", "Detail"]
+
+LOG_SCHEMA = {
+    "Date": pl.Date,
+    "Time": pl.Utf8,
+    "Kind": pl.Utf8,
+    "Counter": pl.Utf8,
+    "Tab": pl.Utf8,
+    "Key": pl.Utf8,
+    "Code": pl.Utf8,
+    "Detail": pl.Utf8,
+}
 
 DATABASE_SCHEMA_DIRS = (
     "/asystem/etc/database",
@@ -22,7 +50,7 @@ DATABASE_SCHEMA_DIRS = (
 socket.setdefaulttimeout(TIMEOUT_NETWORK_SECONDS)
 
 
-class RepoScope(str, Enum):
+class RepoScope(StrEnum):
     LOCAL = "local"
     PREVIEW = "preview"
     RELEASE = "release"
@@ -37,9 +65,7 @@ class Repos:
         for name in scopes:
             if name not in valid:
                 raise ValueError(f"unknown scope '{name}'; valid: {sorted(valid)}")
-        required: set[str] = {
-            scope.name.lower() for scope in RepoScope if scope != RepoScope.LOCAL
-        }
+        required: set[str] = {scope.name.lower() for scope in RepoScope if scope != RepoScope.LOCAL}
         missing_scopes = required - set(scopes)
         if missing_scopes:
             raise ValueError(f"missing required scopes: {sorted(missing_scopes)}")
@@ -79,6 +105,7 @@ class Config:
     disable_sheet_downloads: bool = False
     disable_database_downloads: bool = False
     disable_source_downloads: bool = False
+    clock: datetime | None = None
 
 
 config = Config()
@@ -91,9 +118,18 @@ class DownloadStatus(Enum):
     FAILED = auto()
 
 
+class UploadStatus(Enum):
+    UPLOADED = auto()
+    UNCHANGED = auto()
+    MOVED = auto()
+    FAILED = auto()
+
+
 class DownloadResult(NamedTuple):
-    status: DownloadStatus
-    file_path: str | None
+    file_status: DownloadStatus
+    file_paths: list[str]
+    data_frame: pl.DataFrame | None = None
+    errors: Sequence[dict] = ()
 
 
 def get_file(file_name):

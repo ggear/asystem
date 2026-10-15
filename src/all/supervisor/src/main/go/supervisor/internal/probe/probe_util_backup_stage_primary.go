@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -32,6 +33,10 @@ func runPrimaryStage(ctx context.Context, request stageRequest, counters *stageC
 	sort.Strings(enrolled)
 	scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStagePrimary), scribe.ActionStart).Infof("enrolled", time.Now(),
 		"[%d] configured services, of which [%d] ship a backup.sh", len(configured), len(enrolled))
+	for _, service := range strandedBackups(backupHomeRoot(), enrolled) {
+		scribe.Log(scribe.SourceBackup, scribe.SubjectService(service), scribe.ActionCensus).Warnf("faulting", time.Now(),
+			"[%s] holds backups at [%s] but ships no backup.sh on this host, so nothing prunes them, remove them by hand", service, serviceHomeDir(service))
+	}
 
 	failed := 0
 	for index, service := range enrolled {
@@ -178,6 +183,23 @@ func newestBackupDir(root string) string {
 	}
 	sort.Strings(names)
 	return filepath.Join(root, names[len(names)-1])
+}
+
+func strandedBackups(home string, enrolled []string) []string {
+	entries, err := os.ReadDir(home)
+	if err != nil {
+		return nil
+	}
+	var stranded []string
+	for _, entry := range entries {
+		if !entry.IsDir() || entry.Name() == treeModule || slices.Contains(enrolled, entry.Name()) {
+			continue
+		}
+		if info, statErr := os.Stat(filepath.Join(home, entry.Name(), treeBackupDirectory)); statErr == nil && info.IsDir() {
+			stranded = append(stranded, entry.Name())
+		}
+	}
+	return stranded
 }
 
 func parseBackupArtefact(service, dir string) (kind, version string) {

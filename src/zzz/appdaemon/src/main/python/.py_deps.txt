@@ -1,1 +1,1 @@
-hassapi==0.3.0
+appdaemon==4.5.13

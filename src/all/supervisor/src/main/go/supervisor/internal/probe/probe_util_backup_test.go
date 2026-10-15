@@ -233,15 +233,6 @@ func TestProbeUtilBackup_PreparedResolvesTheArgumentIntoTheRunIdOnce(t *testing.
 	}
 }
 
-func TestProbeUtilBackup_StageLogSitsUnderTheRunItNames(t *testing.T) {
-	t.Setenv(config.BackupHomeEnvVar, "/tmp/home")
-	request := BackupRequest{Command: BackupCommandStart, Trigger: metric.BackupTriggerManual, RunID: "2026-09-22_01-00-35", Stage: metric.BackupStageTertiary}
-	expected := filepath.Join("/tmp/home", treeModule, treeBackupDirectory, "2026-09-22_01-00-35", treeStageDirectory, "tertiary", treeLogLeaf)
-	if got := BackupStageLog(request); got != expected {
-		t.Errorf("BackupStageLog() = %q, want %q", got, expected)
-	}
-}
-
 func TestProbeUtilBackup_DispatchesEachVerbAgainstAnEmptyRoot(t *testing.T) {
 	tests := []struct {
 		name          string

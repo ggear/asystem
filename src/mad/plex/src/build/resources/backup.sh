@@ -1,14 +1,15 @@
 # The wrapper owns the run, this snippet owns the backup. The wrapper checks the throttle, calls
-# backup_written, renames the temporary file on success, prunes and sets the exit code. Define
-# backup_written below, naming the backup with backup_target (or letting backup_files do both) and
-# writing "${BACKUP_TARGET_PATH}.tmp". A snippet leaving the estate changed while it works, such as
-# one stopping its own container, also defines backup_interrupted, called on INT, TERM or HUP but
-# never on a backup that merely fails, and backup_completed, called once the archive has been named
-# and kept whatever the outcome, whose non-zero return fails the run without discarding the archive.
-# Declare BACKUP_EXCLUDED as the paths this module deliberately does not back up, so backup_files
-# reports only what neither it nor the declaration covers. Never assign another wrapper variable,
-# prefix this snippet's own state with the module name, and expand a value read from .env as
-# "${VAR:?}", so a missing key fails by name rather than corrupting the backup.
+# backup_written, checks the archive's integrity, renames the temporary file on success, prunes and
+# sets the exit code. Define backup_written below, naming the backup with backup_target (or letting
+# backup_files do both) and writing "${BACKUP_TARGET_PATH}.tmp". A snippet copying files passes
+# backup_files a root under BACKUP_SOURCE_PATH and the names of its include and exclude arrays, an
+# absent include fails the backup and whatever under the root neither array covers is reported. A
+# snippet leaving the estate changed while it works, such as one stopping its own container, also
+# defines backup_interrupted, called on INT, TERM or HUP but never on a backup that merely fails, and
+# backup_completed, called once the archive has been named and kept whatever the outcome, whose
+# non-zero return fails the run without discarding the archive. Never assign another wrapper
+# variable, prefix this snippet's own state with the module name, and expand a value read from .env
+# as "${VAR:?}", so a missing key fails by name rather than corrupting the backup.
 #
 # BACKUP_MODULE_NAME      this module's name
 # BACKUP_SOURCE_PATH      this module's source data path
@@ -20,17 +21,31 @@
 # BACKUP_RETAIN_DAYS      the window by which daily backups are retained before entering the pruning window
 # BACKUP_SKIP_HOURS       skip the run when the newest backup is younger than this, zero to never skip
 # BACKUP_SERVICE_RESTART  start the service again after the copy, false when the caller starts it itself
-# BACKUP_EXCLUDED         the paths deliberately not backed up, declared by this snippet
 
 PLEX_BACKUP_CONFIG="config"
 PLEX_BACKUP_CONTAINER="${SERVICE_NAME:?}"
+PLEX_BACKUP_SERVER="Library/Application Support/Plex Media Server"
 PLEX_BACKUP_INCLUDES=(
-  "Library/Application Support/Plex Media Server/Plug-in Support"
-  "Library/Application Support/Plex Media Server/Preferences.xml"
+  "${PLEX_BACKUP_SERVER}/Plug-in Support"
+  "${PLEX_BACKUP_SERVER}/Preferences.xml"
 )
 PLEX_BACKUP_EXCLUDES=(
   "*.db-[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"
   "Caches"
+  "${PLEX_BACKUP_SERVER}/.LocalAdminToken"
+  "${PLEX_BACKUP_SERVER}/Cache"
+  "${PLEX_BACKUP_SERVER}/Codecs"
+  "${PLEX_BACKUP_SERVER}/Crash Reports"
+  "${PLEX_BACKUP_SERVER}/Diagnostics"
+  "${PLEX_BACKUP_SERVER}/Drivers"
+  "${PLEX_BACKUP_SERVER}/Logs"
+  "${PLEX_BACKUP_SERVER}/Media"
+  "${PLEX_BACKUP_SERVER}/Metadata"
+  "${PLEX_BACKUP_SERVER}/Plug-ins"
+  "${PLEX_BACKUP_SERVER}/Scanners"
+  "${PLEX_BACKUP_SERVER}/Setup Plex.html"
+  "${PLEX_BACKUP_SERVER}/Updates"
+  "${PLEX_BACKUP_SERVER}/plexmediaserver.pid"
 )
 
 PLEX_BACKUP_FAULT=0
@@ -73,20 +88,9 @@ backup_completed() {
 }
 
 backup_written() {
-  local status=0 include exclude excludes=()
-  for include in "${PLEX_BACKUP_INCLUDES[@]}"; do
-    if [ ! -e "${BACKUP_SOURCE_PATH}/${PLEX_BACKUP_CONFIG}/${include}" ]; then
-      echo "Declared path [${include}] is absent from [${BACKUP_SOURCE_PATH}/${PLEX_BACKUP_CONFIG}]" >&2
-      return 1
-    fi
-  done
-  for exclude in "${PLEX_BACKUP_EXCLUDES[@]}"; do
-    excludes+=("--exclude=${exclude}")
-  done
-  backup_target "${BACKUP_FULL_SUFFIX}" "tar.gz" || return 1
+  local status=0
   plex_backup_stopped
-  tar --create --directory "${BACKUP_SOURCE_PATH}/${PLEX_BACKUP_CONFIG}" --numeric-owner --preserve-permissions \
-    "${excludes[@]}" --file - -- "${PLEX_BACKUP_INCLUDES[@]}" 2>/dev/null | gzip >"${BACKUP_TARGET_PATH}.tmp" || status=1
+  backup_files "${PLEX_BACKUP_CONFIG}" PLEX_BACKUP_INCLUDES PLEX_BACKUP_EXCLUDES || status=1
   plex_backup_started || true
   return "${status}"
 }

@@ -47,7 +47,10 @@ def table(clip=TEXT):
     return TABLE.replace("SCHEMA_TEXT_WIDTH", str(clip))
 
 
-RUNNER = REPORT + table() + r"""
+RUNNER = (
+    REPORT
+    + table()
+    + r"""
 SCHEMA_ECHO=${SCHEMA_ECHO:-true}
 SCHEMA_LABEL=${SCHEMA_LABEL:-}
 
@@ -108,6 +111,7 @@ query_sql() {
   [ "${faults}" = 0 ]
 }
 """
+)
 
 
 def resolved(module_name, variables):
@@ -121,8 +125,7 @@ def resolved(module_name, variables):
         "",
         "for VARIABLE in {}; do".format(" ".join(variable for variable, _ in variables)),
         '  if [ -z "${!VARIABLE}" ]; then',
-        '    echo "Schema script [{}] could not resolve [${{VARIABLE}}] from it or any fallback, '
-        'declare it in the module env files" >&2'.format(module_name),
+        '    echo "Schema script [{}] could not resolve [${{VARIABLE}}] from it or any fallback, declare it in the module env files" >&2'.format(module_name),
         "    exit 1",
         "  fi",
         "done",
@@ -132,7 +135,8 @@ def resolved(module_name, variables):
 
 
 def script(module_name, dialect, name, summary, connect, body, env_required=True):
-    env = """
+    env = (
+        """
 if [ ! -f "${{MODULE_DIR}}/.env" ]; then
   echo "Schema script [{}] could not find env file [.env] searching up from [${{ROOT_DIR}}]" >&2
   exit 1
@@ -141,7 +145,9 @@ set -a
 # shellcheck disable=SC1091
 . "${{MODULE_DIR}}/.env"
 set +a
-""".format(module_name).strip() if env_required else """
+""".format(module_name).strip()
+        if env_required
+        else """
 if [ -f "${MODULE_DIR}/.env" ]; then
   set -a
   # shellcheck disable=SC1091
@@ -149,7 +155,9 @@ if [ -f "${MODULE_DIR}/.env" ]; then
   set +a
 fi
 """.strip()
-    return """
+    )
+    return (
+        """
 #!/usr/bin/env bash
 {}
 
@@ -188,7 +196,9 @@ fi
 {}
 
 {}
-    """.format(banner(), dialect, name, summary, env, connect.strip(), body.strip()).strip() + "\n"
+    """.format(banner(), dialect, name, summary, env, connect.strip(), body.strip()).strip()
+        + "\n"
+    )
 
 
 INSTANCE = r"""
@@ -203,15 +213,29 @@ slurp() {
 
 
 def instance_runner(module_name, dialect, target, connect, body):
-    return script(module_name, dialect, "describe", "print what the instance actually holds", connect, INSTANCE + """
+    return script(
+        module_name,
+        dialect,
+        "describe",
+        "print what the instance actually holds",
+        connect,
+        INSTANCE
+        + """
 printf '\\nSchema describe [%s] against [%s]\\n' "{module}" "${{{target}}}"
 
 {body}
-""".format(target=target, module=module_name, body=body.strip()))
+""".format(target=target, module=module_name, body=body.strip()),
+    )
 
 
 def describe_runner(module_name, dialect, target, connect, sql):
-    return script(module_name, dialect, "describe", "print what production actually carries", connect, """
+    return script(
+        module_name,
+        dialect,
+        "describe",
+        "print what production actually carries",
+        connect,
+        """
 describe_sql() {{
   cat <<'SCHEMA_SQL'
 {sql}
@@ -220,11 +244,18 @@ SCHEMA_SQL
 
 printf '\\nSchema describe [%s] against [%s]\\n' "{module}" "${{{target}}}"
 describe_sql | SCHEMA_ECHO=false query_sql
-""".format(target=target, module=module_name, sql=sql.strip()))
+""".format(target=target, module=module_name, sql=sql.strip()),
+    )
 
 
 def query_runner(module_name, dialect, target, connect):
-    return script(module_name, dialect, "query", "run the generated query for every declared relation", connect, """
+    return script(
+        module_name,
+        dialect,
+        "query",
+        "run the generated query for every declared relation",
+        connect,
+        """
 printf '\\nSchema query [%s] against [%s]\\n' "{module}" "${{{target}}}"
 FAULTS=0
 for SQL_FILE in "${{ROOT_DIR}}"/query/*.sql; do
@@ -232,11 +263,18 @@ for SQL_FILE in "${{ROOT_DIR}}"/query/*.sql; do
   query_sql < "${{SQL_FILE}}" || FAULTS=$((FAULTS + 1))
 done
 [ "${{FAULTS}}" = 0 ]
-""".format(target=target, module=module_name))
+""".format(target=target, module=module_name),
+    )
 
 
 def verify_runner(module_name, dialect, target, connect, sql):
-    return script(module_name, dialect, "verify", "assert production matches the declaration", connect, """
+    return script(
+        module_name,
+        dialect,
+        "verify",
+        "assert production matches the declaration",
+        connect,
+        """
 verify_sql() {{
   cat <<'SCHEMA_SQL'
 {sql}
@@ -277,9 +315,9 @@ if [ "${{FAULTS}}" != "0" ]; then
   exit 1
 fi
 printf '\\nSchema verify [%s] found no drift\\n' "{module}"
-""".format(target=target, module=module_name, sql=sql.strip(), pending=PENDING))
+""".format(target=target, module=module_name, sql=sql.strip(), pending=PENDING),
+    )
 
 
 def mutate_runner(module_name, dialect, target, connect, body):
-    return script(module_name, dialect, "mutate", "rewrite renamed and delete dropped measures, run by hand and never by fab",
-                  connect, body)
+    return script(module_name, dialect, "mutate", "rewrite renamed and delete dropped measures, run by hand and never by fab", connect, body)

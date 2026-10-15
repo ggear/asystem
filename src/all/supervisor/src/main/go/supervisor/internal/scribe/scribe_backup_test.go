@@ -3,8 +3,6 @@ package scribe
 import (
 	"bytes"
 	"log/slog"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 )
@@ -62,18 +60,11 @@ func TestScribeBackup_SubjectStageIsNamespacedAndStrippedForTheColumn(t *testing
 	}
 }
 
-func TestScribeBackup_EnableBackupAndFileWritesTheStageLogAndStdout(t *testing.T) {
-	stageLog, stdout, stderr := enableBackupFixture(t, false)
+func TestScribeBackup_EnableBackupAndFileCopiesToStdoutAndStderr(t *testing.T) {
+	stdout, stderr := enableBackupFixture(t, false)
 	Log(SourceBackup, SubjectStage("primary"), ActionStart).Infof("started", time.Now(), "run [%s]", "2026-09-22_01-00-00")
 	Log(SourceBackup, SubjectStage("primary"), ActionStop).Errorf("faulting", time.Now(), "run [%s] failed", "2026-09-22_01-00-00")
 
-	data, err := os.ReadFile(stageLog)
-	if err != nil {
-		t.Fatalf("stage log not written: %v", err)
-	}
-	if !bytes.Contains(data, []byte("run [2026-09-22_01-00-00]")) {
-		t.Errorf("stage log = %q, want it to carry the logged detail", data)
-	}
 	if stdout.Len() == 0 {
 		t.Errorf("stdout is empty, want the info line copied to it")
 	}
@@ -82,18 +73,11 @@ func TestScribeBackup_EnableBackupAndFileWritesTheStageLogAndStdout(t *testing.T
 	}
 }
 
-func TestScribeBackup_QuietDropsStdoutAndStderrNotTheFile(t *testing.T) {
-	stageLog, stdout, stderr := enableBackupFixture(t, true)
+func TestScribeBackup_QuietDropsStdoutAndStderr(t *testing.T) {
+	stdout, stderr := enableBackupFixture(t, true)
 	Log(SourceBackup, SubjectStage("primary"), ActionStart).Infof("started", time.Now(), "quiet run")
 	Log(SourceBackup, SubjectStage("primary"), ActionStop).Errorf("faulting", time.Now(), "quiet fault")
 
-	data, err := os.ReadFile(stageLog)
-	if err != nil {
-		t.Fatalf("stage log not written: %v", err)
-	}
-	if !bytes.Contains(data, []byte("quiet run")) || !bytes.Contains(data, []byte("quiet fault")) {
-		t.Errorf("stage log = %q, want both lines under --quiet", data)
-	}
 	if stdout.Len() != 0 {
 		t.Errorf("stdout = %q, want nothing under --quiet", stdout.String())
 	}
@@ -102,17 +86,13 @@ func TestScribeBackup_QuietDropsStdoutAndStderrNotTheFile(t *testing.T) {
 	}
 }
 
-func enableBackupFixture(t *testing.T, quiet bool) (stageLog string, stdout, stderr *bytes.Buffer) {
+func enableBackupFixture(t *testing.T, quiet bool) (stdout, stderr *bytes.Buffer) {
 	t.Helper()
 	t.Cleanup(func() { Disable() })
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
-	stageLog = filepath.Join(dir, "stage", "output.log")
-	closer, err := EnableBackupAndFile(slog.LevelInfo, "backup", "1.0.0", stageLog, quiet, 1, 1, 1)
-	if err != nil {
+	t.Setenv("HOME", t.TempDir())
+	if err := EnableBackupAndFile(slog.LevelInfo, "backup", "1.0.0", quiet, 1, 1, 1); err != nil {
 		t.Fatalf("EnableBackupAndFile() error = %v", err)
 	}
-	t.Cleanup(func() { _ = closer.Close() })
 	stdout, stderr = &bytes.Buffer{}, &bytes.Buffer{}
 	scribeLoggerMu.Lock()
 	defer scribeLoggerMu.Unlock()
@@ -126,13 +106,13 @@ func enableBackupFixture(t *testing.T, quiet bool) (stageLog string, stdout, std
 	}
 	retargeted := 0
 	for _, handler := range multi.handlers {
-		if backup, isBackup := handler.(*backupHandler); isBackup && backup.writer == nil {
+		if backup, isBackup := handler.(*backupHandler); isBackup {
 			backup.stdout, backup.stderr = stdout, stderr
 			retargeted++
 		}
 	}
-	if retargeted != 1 && !quiet {
-		t.Fatalf("retargeted %d stdout sinks, want 1", retargeted)
+	if expected := map[bool]int{false: 1, true: 0}[quiet]; retargeted != expected {
+		t.Fatalf("retargeted %d stdout sinks, want %d", retargeted, expected)
 	}
-	return stageLog, stdout, stderr
+	return stdout, stderr
 }

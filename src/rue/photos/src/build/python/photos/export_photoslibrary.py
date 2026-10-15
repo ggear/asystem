@@ -3,14 +3,13 @@ import shutil
 import string
 import subprocess
 import sys
-from datetime import datetime
-from os.path import *
+from datetime import UTC, datetime
+from os.path import abspath, dirname, expanduser, isdir, join, realpath
 
 import osxphotos
 import pandas as pd
 import urllib3
-from osxphotos import ExportOptions
-from osxphotos import PhotoExporter
+from osxphotos import ExportOptions, PhotoExporter
 from pathvalidate import sanitize_filepath
 
 from asystem import load_bootstrap_env
@@ -36,41 +35,36 @@ if __name__ == "__main__":
                 export_date = None
                 for photo in album.photos:
                     if not photo.ismissing:
-                        album_name = sanitize_filepath(album.title, platform="auto") \
-                            .translate(str.maketrans('', '', string.punctuation)).replace(" ", "_") \
-                            .encode('ascii', 'ignore').decode('UTF-8')
+                        album_name = sanitize_filepath(album.title, platform="auto").translate(str.maketrans("", "", string.punctuation)).replace(" ", "_").encode("ascii", "ignore").decode("UTF-8")
                         export_path = abspath(join(export_root_path, album_name))
                         if not isdir(export_path):
                             os.makedirs(export_path)
                         photo_type = photo.filename.split(".")[-1]
-                        photo_name = "{}_{:03d}.jpg".format(album_name, index)
-                        export_info = PhotoExporter(photo).export(export_path, photo_name, ExportOptions(
-                            update=True,
-                            location=True,
-                            persons=True,
-                            jpeg_quality=0.0,
-                            convert_to_jpeg=True,
-                            edited=photo.hasadjustments
-                        ))
+                        photo_name = f"{album_name}_{index:03d}.jpg"
+                        export_info = PhotoExporter(photo).export(
+                            export_path, photo_name, ExportOptions(update=True, location=True, persons=True, jpeg_quality=0.0, convert_to_jpeg=True, edited=photo.hasadjustments)
+                        )
                         if export_date is None:
                             try:
                                 export_date = datetime.strptime(
-                                    subprocess.run(["exiftool", "-T", "-DateTimeOriginal", export_info.exported[0]],
-                                                   capture_output=True)
-                                    .stdout.decode("utf-8").strip().split(" ")[0], "%Y:%m:%d")
+                                    subprocess.run(["exiftool", "-T", "-DateTimeOriginal", export_info.exported[0]], capture_output=True).stdout.decode("utf-8").strip().split(" ")[0], "%Y:%m:%d"
+                                ).replace(tzinfo=UTC)
                             except Exception as exception:
-                                raise Exception("Could not parse original date time on file [{}] from album [{}]"
-                                                .format(photo.original_filename, album.title)) from exception
+                                raise Exception(f"Could not parse original date time on file [{photo.original_filename}] from album [{album.title}]") from exception
                         subprocess.run(
-                            ["exiftool", "-q", "-wm", "w", "-m", "-overwrite_original", "-AllDates={} {:02d}:{:02d}:{:02d}".format(
-                                export_date.strftime("%Y:%m:%d"),
-                                12 + int(index / 60),
-                                index % 60,
-                                0
-                            ), export_info.exported[0]])
+                            [
+                                "exiftool",
+                                "-q",
+                                "-wm",
+                                "w",
+                                "-m",
+                                "-overwrite_original",
+                                "-AllDates={} {:02d}:{:02d}:{:02d}".format(export_date.strftime("%Y:%m:%d"), 12 + int(index / 60), index % 60, 0),
+                                export_info.exported[0],
+                            ]
+                        )
                         index += 1
-                        print("Build generate script [photos] image [{}] from album [{}] exported to {}"
-                              .format(photo.original_filename, album.title, export_info.exported))
+                        print(f"Build generate script [photos] image [{photo.original_filename}] from album [{album.title}] exported to {export_info.exported}")
                         sys.stdout.flush()
 
                         # TODO: Add document manual process -
@@ -81,6 +75,5 @@ if __name__ == "__main__":
                         #  if DSLR or Janes Phone delete photos on device
 
                     else:
-                        print("Build generate script [photos] image [{}] from album [{}] has unsupported type [{}]"
-                              .format(photo.original_filename, album.title, photo_type), file=sys.stderr)
+                        print(f"Build generate script [photos] image [{photo.original_filename}] from album [{album.title}] has unsupported type [{photo.filename.split('.')[-1]}]", file=sys.stderr)
     subprocess.run(["open", export_root_path])

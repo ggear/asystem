@@ -9,16 +9,18 @@ import polars.selectors as cs
 from wrangle import plugin
 from wrangle.plugin.logger import dataframe_print
 
-TYPICAL_RATES = {'AUD/USD': 0.7143, 'AUD/GBP': 0.5263, 'AUD/SGD': 0.9091}
+TYPICAL_RATES = {"AUD/USD": 0.7143, "AUD/GBP": 0.5263, "AUD/SGD": 0.9091}
 PAIRS = list(TYPICAL_RATES)
 TYPICAL_SPREAD = 0.1
 
-PERIODS = OrderedDict([
-    ('1 Day Delta', 1),
-    ('1 Week Delta', 7),
-    ('1 Month Delta', 30),
-    ('1 Year Delta', 365),
-])
+PERIODS = OrderedDict(
+    [
+        ("1 Day Delta", 1),
+        ("1 Week Delta", 7),
+        ("1 Month Delta", 30),
+        ("1 Year Delta", 365),
+    ]
+)
 COLUMNS = [f"{pair} {period}".strip() for pair in PAIRS for period in ([""] + list(PERIODS.keys()))]
 
 RBA_YEARS = [
@@ -51,16 +53,16 @@ REPOS_CURRENCY = plugin.Repos(
 
 
 class Currency(plugin.Plugin):
-
     def _run(self):
-        rba_df = self.dataframe_new(schema={
-            "Date": pl.Date,
-            **{pair: pl.Float64 for pair in PAIRS},
-            "Source": pl.Utf8,
-        })
+        rba_df = self.dataframe_new(
+            schema={
+                "Date": pl.Date,
+                **dict.fromkeys(PAIRS, pl.Float64),
+                "Source": pl.Utf8,
+            }
+        )
         rba_delta_df = self.dataframe_new()
         if not plugin.config.disable_source_downloads or plugin.config.force_reprocessing:
-
             # Download Rate Data
             new_data = False
             started_time = time.time()
@@ -68,18 +70,18 @@ class Currency(plugin.Plugin):
             rba_files_cached_count = 0
             for years in RBA_YEARS:
                 years_file = join(self.local_cache, f"rba_fx_{years}.xls")
-                file_status = self.http_download(f"https://www.rba.gov.au/statistics/tables/xls-hist/{years}.xls", years_file, check='current' in years)
-                if file_status.status in (plugin.DownloadStatus.CACHED, plugin.DownloadStatus.DOWNLOADED):
-                    if file_status.status == plugin.DownloadStatus.DOWNLOADED:
+                file_status = self.http_download(f"https://www.rba.gov.au/statistics/tables/xls-hist/{years}.xls", years_file, check="current" in years)
+                if file_status.file_status in (plugin.DownloadStatus.CACHED, plugin.DownloadStatus.DOWNLOADED):
+                    if file_status.file_status == plugin.DownloadStatus.DOWNLOADED:
                         rba_files_downloaded_count += 1
                     else:
                         rba_files_cached_count += 1
-                    if plugin.config.force_reprocessing or file_status.status == plugin.DownloadStatus.DOWNLOADED:
+                    if plugin.config.force_reprocessing or file_status.file_status == plugin.DownloadStatus.DOWNLOADED:
                         new_data = True
                         try:
                             rba_itr_df = self.excel_read(years_file, schema={"Series ID": pl.Date}, skip_rows=10, na_values=["CLOSED", "Closed", " --"])
                             rba_itr_df = rba_itr_df.select(["Series ID", "FXRUSD", "FXRUKPS", "FXRSD"])
-                            rba_itr_df.columns = ['Date'] + PAIRS
+                            rba_itr_df.columns = ["Date"] + PAIRS
                             rba_itr_df = rba_itr_df.with_columns(pl.lit("RBA").alias("Source"))
                             rba_df = pl.concat([rba_df, rba_itr_df])
                             dataframe_print(self.name, rba_df, print_label="RBA_FX", print_verb="concatenated")
@@ -89,11 +91,11 @@ class Currency(plugin.Plugin):
                             self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED)
                     else:
                         self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
-                elif file_status.status == plugin.DownloadStatus.SKIPPED:
+                elif file_status.file_status == plugin.DownloadStatus.SKIPPED:
                     self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
                 else:
                     self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED)
-            if datetime.datetime.now().year > RBA_YEARS_CURRENT_EXPIRY:
+            if self.now().year > RBA_YEARS_CURRENT_EXPIRY:
                 error_message = "RBA_YEARS needs to be incremented for a new current file"
                 self.print_log(error_message)
                 self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED, 1)
@@ -106,12 +108,12 @@ class Currency(plugin.Plugin):
             try:
                 if new_data:
                     started_time_inner = time.time()
-                    rba_df = rba_df.unique(subset=['Date'], keep="first")
-                    rba_df = rba_df.drop_nulls().sort('Date').set_sorted('Date')
+                    rba_df = rba_df.unique(subset=["Date"], keep="first")
+                    rba_df = rba_df.drop_nulls().sort("Date").set_sorted("Date")
                     dataframe_print(self.name, rba_df, print_label="Currency", print_verb="post unique", started=started_time_inner)
                     started_time_inner = time.time()
                     rba_trading_dates = rba_df.select("Date")
-                    rba_df = rba_df.upsample(time_column='Date', every="1d").fill_nan(pl.lit(None)).sort('Date')
+                    rba_df = rba_df.upsample(time_column="Date", every="1d").fill_nan(pl.lit(None)).sort("Date")
                     rba_df = rba_df.with_columns(pl.all().forward_fill()).drop_nulls()
                     rba_df = rba_df.join(rba_trading_dates, on="Date", how="inner")
                     rba_df = rba_df.with_columns(cs.float().round(4))
@@ -120,22 +122,23 @@ class Currency(plugin.Plugin):
                 self.print_log("Unexpected error processing currency dataframe", exception=exception)
 
         try:
+
             def _aggregate_function(_data_df):
-                _columns = ['Date']
+                _columns = ["Date"]
                 _prior_df = _data_df.select(["Date"] + PAIRS).sort("Date")
                 for _pair in PAIRS:
                     _columns.append(_pair)
                     for _period, _days in PERIODS.items():
-                        _column = f'{_pair} {_period}'
+                        _column = f"{_pair} {_period}"
                         _columns.append(_column)
-                        _data_df = _data_df.with_columns(
-                            (pl.col("Date") - pl.duration(days=_days)).alias("__lookup_date")
-                        ).sort("__lookup_date").join_asof(
-                            _prior_df.select(["Date", _pair]).rename({_pair: "__prior"}),
-                            left_on="__lookup_date", right_on="Date", strategy="backward"
-                        ).with_columns(
-                            ((pl.col(_pair) - pl.col("__prior")) / pl.col("__prior") * 100).alias(_column)
-                        ).drop("__lookup_date", "__prior", "Date_right").sort("Date")
+                        _data_df = (
+                            _data_df.with_columns((pl.col("Date") - pl.duration(days=_days)).alias("__lookup_date"))
+                            .sort("__lookup_date")
+                            .join_asof(_prior_df.select(["Date", _pair]).rename({_pair: "__prior"}), left_on="__lookup_date", right_on="Date", strategy="backward")
+                            .with_columns(((pl.col(_pair) - pl.col("__prior")) / pl.col("__prior") * 100).alias(_column))
+                            .drop("__lookup_date", "__prior", "Date_right")
+                            .sort("Date")
+                        )
 
                 return _data_df.select(_columns).with_columns(cs.float().round(4)).fill_nan(0).fill_null(0)
 
@@ -145,7 +148,7 @@ class Currency(plugin.Plugin):
             else:
                 if "Source" in rba_df.columns:
                     rba_df = rba_df.drop("Source")
-                rba_df = rba_df.upsample(time_column='Date', every="1d").with_columns(pl.all().forward_fill()).drop_nulls()
+                rba_df = rba_df.upsample(time_column="Date", every="1d").with_columns(pl.all().forward_fill()).drop_nulls()
 
             # Commit Rate Data: source-complete daily rates → committed state with derived period-change percentages (delta for egress)
             rba_delta_df, rba_current_df, _ = self.state_cache(rba_df, _aggregate_function)
@@ -153,17 +156,13 @@ class Currency(plugin.Plugin):
             # Upload Data
             started_time = time.time()
             if len(rba_current_df) and (len(rba_delta_df) or plugin.config.force_reprocessing):
-                rba_sheet_df = rba_current_df.select(['Date'] + PAIRS).filter(pl.col('Date') > pl.lit(datetime.datetime(2006, 1, 1))).sort("Date", descending=True)
-                self.sheet_upload(rba_sheet_df, self.remote_repos.sheet_key, workbook_name="Rates", sheet_name='Currency', add_filter=True)
-                self.database_upload(rba_delta_df.select(['Date'] + PAIRS),
-                                     metric_type="snapshot", period="1d", unit="$",
-                                     print_label="Currency_1_Day_Snapshot")
+                rba_sheet_df = rba_current_df.select(["Date"] + PAIRS).filter(pl.col("Date") > pl.lit(datetime.date(2006, 1, 1))).sort("Date", descending=True)
+                self.sheet_upload(rba_sheet_df, self.remote_repos.sheet_key, workbook_name="Rates", sheet_name="Currency", add_filter=True)
+                self.database_upload(rba_delta_df.select(["Date"] + PAIRS), metric_type="snapshot", period="1d", unit="$", print_label="Currency_1_Day_Snapshot")
                 for fx_period in PERIODS:
-                    rba_pctchange_df = rba_delta_df.select(['Date'] + [f"{fx_pair} {fx_period}".strip() for fx_pair in PAIRS])
-                    rba_pctchange_df.columns = ['Date'] + PAIRS
-                    self.database_upload(rba_pctchange_df,
-                                         metric_type="delta", period=f"{PERIODS[fx_period]:0.0f}d", unit="%",
-                                         print_label=f"Currency_{fx_period}".replace(" ", "_"))
+                    rba_pctchange_df = rba_delta_df.select(["Date"] + [f"{fx_pair} {fx_period}".strip() for fx_pair in PAIRS])
+                    rba_pctchange_df.columns = ["Date"] + PAIRS
+                    self.database_upload(rba_pctchange_df, metric_type="delta", period=f"{PERIODS[fx_period]:0.0f}d", unit="%", print_label=f"Currency_{fx_period}".replace(" ", "_"))
             self.print_log("Upload complete", started=started_time)
 
         except Exception as exception:

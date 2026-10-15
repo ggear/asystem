@@ -8,6 +8,7 @@ from os.path import abspath, dirname, join, realpath
 
 import paho.mqtt.client as mqtt
 import pytest
+from paho.mqtt.enums import CallbackAPIVersion
 
 HOST = "127.0.0.1"
 PORT = 32404
@@ -25,9 +26,7 @@ SCHEMA_LEAF = "payload"
 
 
 def _client():
-    return mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,
-                       client_id="".join(random.choice(string.ascii_lowercase) for _ in range(10)),
-                       clean_session=True)
+    return mqtt.Client(CallbackAPIVersion.VERSION2, client_id="".join(random.choice(string.ascii_lowercase) for _ in range(10)), clean_session=True)
 
 
 def _assert_vitals(payload):
@@ -45,19 +44,18 @@ def test_publishes_vitals_and_accepts_switch_command():
         def on_connect(client, _user_data, _flags, reason_code, _properties):
             client.subscribe(STATUS_TOPIC, 1)
             client.subscribe(DATA_TOPIC, 1)
-            print("Connected [code={}]".format(reason_code))
+            print(f"Connected [code={reason_code}]")
 
         def on_message(_client, _user_data, message):
             received[message.topic] = message.payload
-            print("Message [{}] {}".format(message.topic, message.payload))
+            print(f"Message [{message.topic}] {message.payload}")
 
         client = _client()
         client.on_connect = on_connect
         client.on_message = on_message
         client.connect(HOST, PORT)
         time_start = time.time()
-        while ({STATUS_TOPIC, DATA_TOPIC} - received.keys()) and \
-                (time.time() - time_start) < TIMEOUT and client.loop(1) == 0:
+        while ({STATUS_TOPIC, DATA_TOPIC} - received.keys()) and (time.time() - time_start) < TIMEOUT and client.loop(1) == 0:
             pass
         assert received.get(STATUS_TOPIC) == b"online"
         _assert_vitals(received[DATA_TOPIC])
@@ -84,9 +82,9 @@ def test_publishes_vitals_and_accepts_switch_command():
 
 def test_declares_every_published_topic():
     declared = set(_schema_topics())
-    assert declared, "no declared topics under [{}]".format(DIR_SCHEMA)
+    assert declared, f"no declared topics under [{DIR_SCHEMA}]"
     for topic in (STATUS_TOPIC, DATA_TOPIC, COMMAND_TOPIC):
-        assert topic in declared, "published topic [{}] is not declared".format(topic)
+        assert topic in declared, f"published topic [{topic}] is not declared"
 
 
 def _schema_topics():
@@ -96,5 +94,16 @@ def _schema_topics():
             yield os.path.relpath(directory, topics_dir)
 
 
-if __name__ == '__main__':
-    sys.exit(pytest.main(["-s", "-v", "--durations=50", "-o", "cache_dir=../../../../target/.pytest_cache", __file__, ]))
+if __name__ == "__main__":
+    sys.exit(
+        pytest.main(
+            [
+                "-s",
+                "-v",
+                "--durations=50",
+                "-o",
+                "cache_dir=../../../../target/.pytest_cache",
+                __file__,
+            ]
+        )
+    )

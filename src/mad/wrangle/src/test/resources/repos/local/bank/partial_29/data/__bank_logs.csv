@@ -1,0 +1,3 @@
+Date,Time,Kind,Counter,Tab,Key,Code,Detail
+2025-12-01,10:00:00,Error,Data,Balances,row 3,DATE_FUTURE,old
+2026-01-10,10:00:00,Error,Data,Balances,row 4,VALUE_UNPARSED,recent

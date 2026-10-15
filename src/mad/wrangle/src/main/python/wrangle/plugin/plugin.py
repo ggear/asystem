@@ -4,16 +4,16 @@ from abc import ABCMeta, abstractmethod
 from os.path import isdir, join
 
 from ._dataframes import DataFramesMixin
+from ._logs import LogsMixin
 from ._sources import SourcesMixin
 from ._state import StateMixin
 from .config import *
 from .config import DownloadResult, DownloadStatus
-from .counters import *  # noqa: F401,F403
+from .counters import *
 from .logger import log_enabled, print_log
 
 
-class Plugin(CountersMixin, SourcesMixin, DataFramesMixin, StateMixin, metaclass=ABCMeta):
-
+class Plugin(CountersMixin, SourcesMixin, DataFramesMixin, StateMixin, LogsMixin, metaclass=ABCMeta):
     @abstractmethod
     def _run(self):
         pass
@@ -26,8 +26,7 @@ class Plugin(CountersMixin, SourcesMixin, DataFramesMixin, StateMixin, metaclass
         for csv_path, csv_df in self._db_cache_dfs.items():
             self.csv_write(csv_df, csv_path)
         if not config.disable_drive_uploads:
-            drive_folder = self.remote_repos.drive_folder if self.remote_repos is not None else None
-            self.drive_synchronise(drive_folder, self.local_cache, check=True, download=False, upload=True)
+            self.drive_synchronise(self.remote_repos.drive_folder, self.local_cache, check=True, download=False, upload=True)
         total_elapsed_ms = int((time.perf_counter() - total_start) * 1000)
         marshall_ms = self.get_counter(CTR_SRC_TIMING, CTR_ACT_MARSHALL_MILLIS)
         egress_ms = self.get_counter(CTR_SRC_TIMING, CTR_ACT_EGRESS_MILLIS)
@@ -58,20 +57,27 @@ class Plugin(CountersMixin, SourcesMixin, DataFramesMixin, StateMixin, metaclass
         for file_name in sorted(os.listdir(file_dir)):
             if file_name.startswith(file_prefix):
                 file_path = join(file_dir, file_name)
-                files[file_path] = DownloadResult(DownloadStatus.CACHED, file_path)
+                files[file_path] = DownloadResult(DownloadStatus.CACHED, [file_path])
                 if not quiet:
                     self.print_log(f"File [{file_name}] found at [{file_path}]")
         return files
 
-    def __init__(self, name, order=999, repos: "Repos | None" = None, disabled=False, database=False):
+    def now(self) -> datetime:
+        return config.clock or datetime.now()
+
+    def __init__(self, name, repos: "Repos", order=999, disabled=False, database=False, error_codes=None):
         self._counters = {}
         self._db_cache_dfs = {}
+        self._sheet_credentials = None
+        self._sheet_spreadsheets = {}
+        self._sheet_worksheets = {}
         self.reset_counters()
         self.name = name
         self.order = order
         self.disabled = disabled
         self.database = database
-        self.remote_repos = repos  # type: ignore[assignment]
+        self.error_codes = error_codes or {}
+        self.remote_repos = repos
         self.local_cache = abspath(f"{config.cache_dir}/{name.lower()}")
         if not isdir(self.local_cache):
             os.makedirs(self.local_cache)

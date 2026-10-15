@@ -1,7 +1,5 @@
-import json
-from os.path import *
+from os.path import abspath, dirname, join, realpath
 
-from fabfile import _get_modules_by_hosts
 from asystem import load_bootstrap_entities
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))

@@ -11,10 +11,3 @@ wrangle = "wrangle.main:main"
 
 [tool.setuptools.package-data]
 "wrangle.server" = ["*.html", "static/*"]
-
-[tool.ruff]
-line-length = 200
-
-[tool.ruff.lint]
-select = ["E", "F", "B", "SIM", "UP", "I"]
-ignore = ["F403", "F405"]

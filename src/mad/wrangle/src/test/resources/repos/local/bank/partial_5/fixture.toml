@@ -1,0 +1,9 @@
+files_processed = 0
+rows_delta = 0
+end_date = ""
+expected_errors = 0
+cols_data = -1
+
+[mtimes]
+"*" = "2026-01-14T12:00:00"
+"redbark_balances_2026.csv" = "2026-01-15T11:00:00"

@@ -65,9 +65,7 @@ def vocabulary(relation, prefix="#", tags=(), entities=None):
     for dimension in list(tags) + list(relation.dimensions):
         lines += _tagged(relation, dimension, prefix, entities)
     for measure in relation.measures:
-        lines.append("{}   field {} {} {} [{}]{}".format(
-            prefix, measure.key, measure.unit or NULL, relation.span(measure) or NULL,
-            measure.description, "" if measure.persist else " (not persisted)"))
+        lines.append("{}   field {} {} {} [{}]{}".format(prefix, measure.key, measure.unit or NULL, relation.span(measure) or NULL, measure.description, "" if measure.persist else " (not persisted)"))
     return lines
 
 
@@ -78,8 +76,7 @@ def expanded(relation, dimension, entities=None):
     return list(values)
 
 
-def select(selectors, source, predicates=(),
-           group_by=(), having=(), order_by=()):
+def select(selectors, source, predicates=(), group_by=(), having=(), order_by=()):
     width = max([len(expression) for expression, alias in selectors if alias and "\n" not in expression] or [0])
     rendered = []
     for expression, alias in selectors:
@@ -112,24 +109,18 @@ def unioned(arms, order_by=()):
 
 
 def describe_statements(document, dialect):
-    relations = sorted((relation for relation in document.relations if relation.carried(dialect.kinds)),
-                       key=lambda relation: (dialect.source(relation), relation.path))
-    return render_statements([
-        "-- dimensions", _describe_relations(relations, dialect),
-        "-- measures", _describe_measures(document, dialect),
-        "-- entities", _describe_entities(relations, dialect)])
+    relations = sorted((relation for relation in document.relations if relation.carried(dialect.kinds)), key=lambda relation: (dialect.source(relation), relation.path))
+    return render_statements(["-- dimensions", _describe_relations(relations, dialect), "-- measures", _describe_measures(document, dialect), "-- entities", _describe_entities(relations, dialect)])
 
 
 def query_statements(relations, dialect):
     statements = []
     for relation in relations:
         if not relation.carried(dialect.kinds):
-            statements.append("-- {} [{}] declares no persisted measure, so nothing is written for it"
-                              .format(relation.path, relation.description))
+            statements.append("-- {} [{}] declares no persisted measure, so nothing is written for it".format(relation.path, relation.description))
             continue
         bucket = bucketed(relation.cadence, dialect.floor or None)
-        heading = "-- {} [{}] every {}, bucketed [{}] across the newest two buckets".format(
-            relation.path, relation.description, relation.cadence, bucket)
+        heading = "-- {} [{}] every {}, bucketed [{}] across the newest two buckets".format(relation.path, relation.description, relation.cadence, bucket)
         grouped, selectors, keyed, sized = [], [], {}, {}
         for measure in relation.carried(dialect.kinds):
             group = []
@@ -144,9 +135,8 @@ def query_statements(relations, dialect):
         if not selectors:
             continue
         subjects = dialect.subject(relation)
-        label = labels(["bucket"] + list(COUNTED) + [key for _, key in subjects]
-                       + [alias for _, alias in selectors])
-        reserved = ((STAMPED + 3) + len(subjects) * (KEYED + 3) + (CELL + 3) + 2 * (STAMPED + 3))
+        label = labels(["bucket"] + list(COUNTED) + [key for _, key in subjects] + [alias for _, alias in selectors])
+        reserved = (STAMPED + 3) + len(subjects) * (KEYED + 3) + (CELL + 3) + 2 * (STAMPED + 3)
         parts = parted(grouped, reserved, {alias: label[alias].strip('"') for _, alias in selectors}, sized)
         for index, part in enumerate(parts):
             statements.append(heading)
@@ -154,14 +144,10 @@ def query_statements(relations, dialect):
             rendered = [(dialect.bucket(bucket), label["bucket"])]
             rendered += [(expression, label[key]) for expression, key in subjects]
             stamp = dialect.localised or (lambda expression: expression)
-            rendered += [(dialect.observed, label[COUNTED[0]]),
-                         (stamp("min(time)"), label[COUNTED[1]]),
-                         (stamp("max(time)"), label[COUNTED[2]])]
+            rendered += [(dialect.observed, label[COUNTED[0]]), (stamp("min(time)"), label[COUNTED[1]]), (stamp("max(time)"), label[COUNTED[2]])]
             rendered += [(expression, label[alias]) for expression, alias in part]
             grouping = [label["bucket"]] + [expression for expression, _ in subjects]
-            statements.append(select(rendered, dialect.source(relation),
-                                     dialect.windowed(relation, {keyed[alias] for _, alias in part}, bucket),
-                                     group_by=grouping, order_by=grouping))
+            statements.append(select(rendered, dialect.source(relation), dialect.windowed(relation, {keyed[alias] for _, alias in part}, bucket), group_by=grouping, order_by=grouping))
     return render_statements(statements)
 
 
@@ -193,8 +179,7 @@ def parted(grouped, reserved, headers=None, sized=None, width=WIDTH):
     room = max(width - reserved - 1, CELL + 3)
     parts, current, used = [], [], 0
     for group in grouped:
-        cost = sum(max(len(str((headers or {}).get(alias, alias))), (sized or {}).get(alias, CELL)) + 3
-                   for _, alias in group)
+        cost = sum(max(len(str((headers or {}).get(alias, alias))), (sized or {}).get(alias, CELL)) + 3 for _, alias in group)
         if current and used + cost > room:
             parts.append(current)
             current, used = [], 0
@@ -258,15 +243,14 @@ def declared_measure(relation, measure, unit, period):
         ("'{}'".format(measure.key), "measure"),
         ("'{}'".format(measure.kind), "kind"),
         ("'{}'".format(unit), "unit"),
-        ("'{}'".format(period), "period")
+        ("'{}'".format(period), "period"),
     ]
 
 
 def declared_entity(relation, column=None):
     if relation.subject is None or not relation.entities:
         return "'{}'".format(NULL)
-    return "CASE WHEN {} THEN '{}' ELSE '{}' END".format(
-        literals(column or relation.subject.key, relation.entities, negate=False), YES, NO)
+    return "CASE WHEN {} THEN '{}' ELSE '{}' END".format(literals(column or relation.subject.key, relation.entities, negate=False), YES, NO)
 
 
 def dimension_label(relation):
@@ -294,25 +278,34 @@ def _sampled(measure, cadence):
 
 def _tagged(relation, dimension, prefix, entities=None):
     values = expanded(relation, dimension, entities)
-    heading = "{}   tag {}{} [{}".format(
-        prefix, dimension.key, SUBJECT if dimension.subject else "", dimension.description)
+    heading = "{}   tag {}{} [{}".format(prefix, dimension.key, SUBJECT if dimension.subject else "", dimension.description)
     if not values and not dimension.subject:
         return [heading + "]"]
     if not values:
         values = [UNDECLARED]
-    return ([heading + ":"] +
-            ["{}     {},".format(prefix, value) for value in values[:-1]] +
-            ["{}     {}]".format(prefix, values[-1])])
+    return [heading + ":"] + ["{}     {},".format(prefix, value) for value in values[:-1]] + ["{}     {}]".format(prefix, values[-1])]
 
 
 def _describe_relations(relations, dialect):
-    return unioned([
-        select([("'{}'".format(relation.path), "relation"), ("'{}'".format(dimension_label(relation)), "dimension"),
-                ("{}".format(len(relation.measures)), "measures"),
-                ("'{}'".format(relation.cadence), "cadence"),
-                ("count(*)", "rows"), (stamped("min", "time"), "oldest"), (stamped("max", "time"), "newest")],
-               dialect.source(relation), dialect.predicates(relation))
-        for relation in relations], order_by=["rows DESC"])
+    return unioned(
+        [
+            select(
+                [
+                    ("'{}'".format(relation.path), "relation"),
+                    ("'{}'".format(dimension_label(relation)), "dimension"),
+                    ("{}".format(len(relation.measures)), "measures"),
+                    ("'{}'".format(relation.cadence), "cadence"),
+                    ("count(*)", "rows"),
+                    (stamped("min", "time"), "oldest"),
+                    (stamped("max", "time"), "newest"),
+                ],
+                dialect.source(relation),
+                dialect.predicates(relation),
+            )
+            for relation in relations
+        ],
+        order_by=["rows DESC"],
+    )
 
 
 def _describe_measures(document, dialect):
@@ -326,23 +319,37 @@ def _describe_measures(document, dialect):
                 if measure.key not in persisted:
                     continue
                 declared.add(measure.key)
-                arms.append(select(
-                    declared_measure(relation, measure, measure.unit or NULL, relation.span(measure) or NULL) + [
-                        (dialect.counted(measure), "rows"),
-                        (dialect.stamped("min", measure), "oldest"),
-                        (dialect.stamped("max", measure), "newest")],
-                    dialect.source(relation), dialect.measured(relation, measure)))
+                arms.append(
+                    select(
+                        declared_measure(relation, measure, measure.unit or NULL, relation.span(measure) or NULL)
+                        + [(dialect.counted(measure), "rows"), (dialect.stamped("min", measure), "oldest"), (dialect.stamped("max", measure), "newest")],
+                        dialect.source(relation),
+                        dialect.measured(relation, measure),
+                    )
+                )
         arms.append(dialect.undeclared(group, relations, sorted(declared), sorted(keyed)))
     return unioned(arms, order_by=["rows DESC NULLS LAST"])
 
 
 def _describe_entities(relations, dialect):
     arms = [relation for relation in relations if relation.dimensions]
-    return unioned([
-        select([("'{}'".format(relation.path), "relation"),
-                ("'{}'".format(dimension_label(relation)), "dimension"), (dialect.entity(relation), "entity"),
-                (dialect.declared(relation), "declared"), ("count(*)", "rows"),
-                (stamped("min", "time"), "oldest"), (stamped("max", "time"), "newest")],
-               dialect.source(relation), dialect.predicates(relation),
-               group_by=grouping_keys(dialect.entity(relation), dialect.declared(relation)))
-        for relation in arms], order_by=["rows DESC"])
+    return unioned(
+        [
+            select(
+                [
+                    ("'{}'".format(relation.path), "relation"),
+                    ("'{}'".format(dimension_label(relation)), "dimension"),
+                    (dialect.entity(relation), "entity"),
+                    (dialect.declared(relation), "declared"),
+                    ("count(*)", "rows"),
+                    (stamped("min", "time"), "oldest"),
+                    (stamped("max", "time"), "newest"),
+                ],
+                dialect.source(relation),
+                dialect.predicates(relation),
+                group_by=grouping_keys(dialect.entity(relation), dialect.declared(relation)),
+            )
+            for relation in arms
+        ],
+        order_by=["rows DESC"],
+    )

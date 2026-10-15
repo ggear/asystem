@@ -1,0 +1,14 @@
+files_processed = 15
+rows_delta = 6260
+end_date = "2026-10-14"
+expected_errors = 0
+cols_data = -1
+transactions_rows_delta = 11574
+transactions_end_date = "2026-10-13"
+transactions_ids = 11574
+today = "2026-10-14T12:51:14"
+
+[mtimes]
+"*" = "2026-10-14T12:51:14"
+"redbark_balances_2026.csv" = "2000-01-01T00:00:00"
+"_redbark_transactions.csv" = "2000-01-01T00:00:00"

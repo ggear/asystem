@@ -37,23 +37,21 @@ def _release_memory():
 def configure(argv=None):
     parser = argparse.ArgumentParser(
         prog="wrangle",
-        description=(
-            "Wrangle external data required by ASystem"
-        ),
+        description=("Wrangle external data required by ASystem"),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
     # Common switches
     parser.add_argument(
-        "-p", "--filter-plugins",
+        "-p",
+        "--filter-plugins",
         default=None,
         metavar="CSV",
-        help=(
-            "run only plugins listed in CSV (example: balances,equity)"
-        ),
+        help=("run only plugins listed in CSV (example: bank,equity)"),
     )
     parser.add_argument(
-        "-u", "--enable-uploads",
+        "-u",
+        "--enable-uploads",
         action="store_true",
         help="enable all upload targets",
     )
@@ -121,10 +119,7 @@ def configure(argv=None):
         type=int,
         default=0,
         metavar="MINUTES",
-        help=(
-            "run continuously on a fixed cadence; 0 runs once and exits with debug logging (default: 0); "
-            f"if greater than 0 must be one of {sorted(HISTORY_RAW_LABELS)}"
-        ),
+        help=(f"run continuously on a fixed cadence; 0 runs once and exits with debug logging (default: 0); if greater than 0 must be one of {sorted(HISTORY_RAW_LABELS)}"),
     )
     parser.add_argument(
         "--cache-dir",
@@ -151,6 +146,7 @@ def configure(argv=None):
     )
 
     args = parser.parse_args(argv)
+    plugin.config.cache_dir = args.cache_dir
     if args.poll_period != 0 and args.poll_period not in HISTORY_RAW_LABELS:
         parser.error(f"argument --poll-period: MINUTES must be 0 or one of {sorted(HISTORY_RAW_LABELS)}")
     filter_plugins = None
@@ -181,7 +177,6 @@ def configure(argv=None):
     plugin.config.log_level = args.log_level
     plugin.config.poll_period = args.poll_period
     plugin.config.repo_scope = plugin.RepoScope(args.repo_scope)
-    plugin.config.cache_dir = args.cache_dir
     # The user-facing flag is the opt-out --disable-reprocessing (default off), so a bare CLI run
     # reprocesses; the internal config field stays force_reprocessing, set as its inverse here.
     plugin.config.force_reprocessing = not args.disable_reprocessing
@@ -204,19 +199,15 @@ def main(argv=None):
     args = configure(argv)
     init_start = time.perf_counter()
     print_log("Wrangle", "Starting ...")
-    wrangle_env_lines = [
-        f"  {name}={'***' if any(name.endswith(suffix) for suffix in _SECRET_ENV_SUFFIXES) else value}"
-        for name, value in sorted(os.environ.items())
-        if name.startswith("WRANGLE_")
-    ]
+    wrangle_env_lines = [f"  {name}={'***' if any(name.endswith(suffix) for suffix in _SECRET_ENV_SUFFIXES) else value}" for name, value in sorted(os.environ.items()) if name.startswith("WRANGLE_")]
     if wrangle_env_lines:
         print_log("Wrangle", ["Environment:"] + wrangle_env_lines)
-    stack_dump_file = None
     stack_dump_file = open(STACK_DUMP_FILE, "a", buffering=1)  # noqa: SIM115
     faulthandler.enable(file=stack_dump_file, all_threads=True)
     faulthandler.register(signal.SIGINT, file=stack_dump_file, all_threads=True, chain=True)
     faulthandler.register(signal.SIGUSR1, file=stack_dump_file, all_threads=True, chain=False)
-    active_plugins = args.filter_plugins or _get_plugins()
+    plugin_names = _get_plugins()
+    active_plugins = args.filter_plugins or plugin_names
     history = None
     if args.poll_period or args.disable_loop:
         http_port_str = os.environ.get("WRANGLE_HTTP_PORT")
@@ -235,6 +226,7 @@ def main(argv=None):
                     raw_label=HISTORY_RAW_LABELS[poll_period_minutes],
                 )
                 history.load()
+                history.store()
                 bound_history = history
 
                 def run_callback(force_reprocessing=False):
@@ -245,7 +237,11 @@ def main(argv=None):
                         _, callback_results, callback_plugin_count, callback_errored_count = _run_plugins(filter_plugins=args.filter_plugins)
                         plugin.config.force_reprocessing = False
                         callback_counters, _ = _record_plugin_run(
-                            callback_results, callback_plugin_count, callback_errored_count, callback_start, "adhoc",
+                            callback_results,
+                            callback_plugin_count,
+                            callback_errored_count,
+                            callback_start,
+                            "adhoc",
                             lambda counters, overhead: bound_history.add_adhoc_run(ts=datetime.datetime.now(tz=CTR_TZ), plugin_counters=counters, overhead_ms=overhead),
                         )
                         return {"ts": datetime.datetime.now(tz=CTR_TZ).isoformat(), "counters": callback_counters}
@@ -256,7 +252,11 @@ def main(argv=None):
                         print_log("wrangle", "Timed out acquiring run lock, recording errored run", exception=exception, level="error")
                         failed_results = _failed_run_results(active_plugins)
                         callback_counters, _ = _record_plugin_run(
-                            failed_results, len(failed_results), len(failed_results), time.perf_counter(), "adhoc",
+                            failed_results,
+                            len(failed_results),
+                            len(failed_results),
+                            time.perf_counter(),
+                            "adhoc",
                             lambda counters, overhead: bound_history.add_adhoc_run(ts=datetime.datetime.now(tz=CTR_TZ), plugin_counters=counters, overhead_ms=overhead),
                         )
                         return {"ts": datetime.datetime.now(tz=CTR_TZ).isoformat(), "counters": callback_counters}
@@ -270,8 +270,7 @@ def main(argv=None):
             poll_period_minutes=0,
             raw_label="",
         )
-    print_log("Wrangle", f"Finished init in [{int(time.perf_counter() - init_start)}s], "
-                         f"{"listening for API plugin run calls" if args.disable_loop else "starting plugin run loop"}")
+    print_log("Wrangle", f"Finished init in [{int(time.perf_counter() - init_start)}s], {'listening for API plugin run calls' if args.disable_loop else 'starting plugin run loop'}")
     try:
         plugin.database_open()
         if args.disable_loop:
@@ -289,7 +288,11 @@ def main(argv=None):
                     plugin.config.force_reprocessing = False
                     if history is not None and args.poll_period > 0:
                         _, prev_add_run_ms = _record_plugin_run(
-                            plugin_results, plugin_count, plugin_errored_count, cycle_start, "loop",
+                            plugin_results,
+                            plugin_count,
+                            plugin_errored_count,
+                            cycle_start,
+                            "loop",
                             lambda counters, overhead, h=history, s=cycle_start_dt: h.add_run(ts=datetime.datetime.now(tz=CTR_TZ), plugin_counters=counters, loop_overhead_ms=overhead, start_ts=s),
                             extra_overhead_ms=prev_add_run_ms,
                         )
@@ -299,7 +302,11 @@ def main(argv=None):
                 success, plugin_results, plugin_count, plugin_errored_count = False, _failed_run_results(active_plugins), len(active_plugins), len(active_plugins)
                 if history is not None and args.poll_period > 0:
                     _, prev_add_run_ms = _record_plugin_run(
-                        plugin_results, plugin_count, plugin_errored_count, cycle_start, "loop",
+                        plugin_results,
+                        plugin_count,
+                        plugin_errored_count,
+                        cycle_start,
+                        "loop",
                         lambda counters, overhead, h=history, s=cycle_start_dt: h.add_run(ts=datetime.datetime.now(tz=CTR_TZ), plugin_counters=counters, loop_overhead_ms=overhead, start_ts=s),
                         extra_overhead_ms=prev_add_run_ms,
                     )
@@ -309,14 +316,22 @@ def main(argv=None):
                 if history is not None and args.poll_period > 0:
                     with contextlib.suppress(Exception):
                         _, prev_add_run_ms = _record_plugin_run(
-                            plugin_results, plugin_count, plugin_errored_count, cycle_start, "loop",
+                            plugin_results,
+                            plugin_count,
+                            plugin_errored_count,
+                            cycle_start,
+                            "loop",
                             lambda counters, overhead, h=history, s=cycle_start_dt: h.add_run(ts=datetime.datetime.now(tz=CTR_TZ), plugin_counters=counters, loop_overhead_ms=overhead, start_ts=s),
                             extra_overhead_ms=prev_add_run_ms,
                         )
             if not args.poll_period:
                 if history is not None:
                     _record_plugin_run(
-                        plugin_results, plugin_count, plugin_errored_count, cycle_start, "adhoc",
+                        plugin_results,
+                        plugin_count,
+                        plugin_errored_count,
+                        cycle_start,
+                        "adhoc",
                         lambda counters, overhead, h=history: h.add_adhoc_run(ts=datetime.datetime.now(tz=CTR_TZ), plugin_counters=counters, overhead_ms=overhead),
                     )
                 sys.exit(0 if success else 1)
@@ -333,11 +348,10 @@ def main(argv=None):
         sys.exit(0)
     finally:
         plugin.database_close()
-        if stack_dump_file is not None:
-            faulthandler.unregister(signal.SIGINT)
-            faulthandler.unregister(signal.SIGUSR1)
-            faulthandler.disable()
-            stack_dump_file.close()
+        faulthandler.unregister(signal.SIGINT)
+        faulthandler.unregister(signal.SIGUSR1)
+        faulthandler.disable()
+        stack_dump_file.close()
 
 
 def _run_plugins(filter_plugins=None):
@@ -405,7 +419,7 @@ def _failed_run_results(plugin_names):
     plugin_results = {}
     for plugin_name in plugin_names:
         counters = {}
-        for (source, action) in COUNTERS:
+        for source, action in COUNTERS:
             counters.setdefault(source, {})[action] = 0
         counters[CTR_SRC_SOURCES][CTR_ACT_ERRORED] = 1
         plugin_results[plugin_name] = {

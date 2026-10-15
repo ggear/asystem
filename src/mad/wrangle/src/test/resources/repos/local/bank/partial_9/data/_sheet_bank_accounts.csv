@@ -1,0 +1,5 @@
+From,Institution,Number,Name,Type,Status,Redbark Account ID,Redbark Connection ID
+,Bank A,xxxx0001,Bravo,,Linked,a1,c1
+,Bank A,xxxx0002,Alpha,,Linked,a2,c1
+,Bank A,xxxx0003,Gone,,Closed,,
+,Bank A,xxxx0004,Charlie,,Linked,a4,c1

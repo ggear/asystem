@@ -1,0 +1,4 @@
+From,Institution,Number,Name,Type,Status,Redbark Account ID,Redbark Connection ID
+,Bank A,xxxx0001,One,,Linked,a1,c1
+2025-06-01,Bank A,xxxx0007,Cash,,Manual,,
+,Bank A,xxxx0008,Card,Liability,Manual,,

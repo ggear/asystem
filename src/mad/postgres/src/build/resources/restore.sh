@@ -19,6 +19,8 @@ RESTORE_SERVICE_STATE="running"
 
 restore_planned() {
   restore_report "would load the cluster dump into a running [${RESTORE_MODULE_NAME}], restoring roles and every database it names"
+  restore_report "the wrangle database is not in the dump and is rebuilt by wrangle, and the Home Assistant recorder's"
+  restore_report "states, events and short term statistics come back empty, only their schema is dumped"
   restore_report "the dump carries TimescaleDB catalog data with circular foreign keys, so a database that already exists"
   restore_report "should be dropped first, or restored with [SELECT timescaledb_pre_restore()] and [timescaledb_post_restore()]"
 }

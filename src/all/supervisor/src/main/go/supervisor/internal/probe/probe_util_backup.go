@@ -71,10 +71,6 @@ func BackupPrepared(request BackupRequest) (BackupRequest, error) {
 	return request, nil
 }
 
-func BackupStageLog(request BackupRequest) string {
-	return stageLogPath(backupRunPath(backupRunRoot(), request.RunID), request.Stage)
-}
-
 func Backup(ctx context.Context, request BackupRequest) error {
 	request, err := BackupPrepared(request)
 	if err != nil {

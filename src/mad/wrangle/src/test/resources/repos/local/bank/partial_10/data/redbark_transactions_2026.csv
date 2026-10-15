@@ -1,0 +1,4 @@
+Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Category Manual,Category Derived,Account ID,Source ID,Transaction ID,Vetted
+2026-01-03,Raw One,-4.5,-4.5,Coffee,,,,,Food,540a8918175f5ca38559395087eb552c,,,Yes
+2026-01-03,Raw One,-4.5,-4.5,Coffee,,,,,Food,540a8918175f5ca38559395087eb552c,,,Yes
+2026-01-03,Raw One,-9.0,-9.0,Coffee,,,,,Food,540a8918175f5ca38559395087eb552c,,,Yes

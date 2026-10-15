@@ -10,11 +10,11 @@ import time
 import urllib.request
 from os.path import abspath, dirname, join, realpath
 
-import psycopg  # type: ignore[import-untyped]
+import psycopg
 import pytest
-from psycopg import sql as psycopg_sql  # type: ignore[import-untyped]
+from psycopg import sql as psycopg_sql
 
-sys.path.append('../../../main/python')
+sys.path.append("../../../main/python")
 
 from wrangle import plugin
 from wrangle.plugin import database
@@ -40,7 +40,6 @@ def test_warmup():
     while not warmup_succeeded and (time.time() - warmup_started_time) < TIMEOUT_SECONDS:
         try:
             with connect() as database_connection, database_connection.cursor() as database_cursor:
-                # noinspection PyUnresolvedReferences
                 database_cursor.execute("SELECT 1")
                 query_row: tuple = database_cursor.fetchone() or (None,)
                 warmup_succeeded = query_row[0] == 1
@@ -65,16 +64,12 @@ def test_schema_ddl_applies_and_is_idempotent():
                 except Exception as exception:
                     pytest.fail(f"generated DDL for [{table_name}] failed on the {attempt} apply: {exception}")
         with connect() as database_connection, database_connection.cursor() as database_cursor:
-            database_cursor.execute(
-                "SELECT count(*) FROM timescaledb_information.hypertables WHERE hypertable_name = %s", (table_name,))
+            database_cursor.execute("SELECT count(*) FROM timescaledb_information.hypertables WHERE hypertable_name = %s", (table_name,))
             row: tuple = database_cursor.fetchone() or (0,)
             assert row[0] == 1, f"[{table_name}] is not a hypertable after applying the generated DDL"
-            database_cursor.execute(
-                "SELECT count(*) FROM pg_indexes WHERE tablename = %s AND indexname LIKE %s",
-                (table_name, f"{table_name}\\_%\\_time"))
+            database_cursor.execute("SELECT count(*) FROM pg_indexes WHERE tablename = %s AND indexname LIKE %s", (table_name, f"{table_name}\\_%\\_time"))
             row = database_cursor.fetchone() or (0,)
-            assert row[0] == len(database.database_schema_columns(table_name)["dimensions"]), \
-                f"[{table_name}] is missing generated dimension indexes"
+            assert row[0] == len(database.database_schema_columns(table_name)["dimensions"]), f"[{table_name}] is missing generated dimension indexes"
 
 
 def test_schema_statements_execute():
@@ -144,7 +139,7 @@ def test_reprocess():
 _DOCKER_LOG_SKIP = (": Starting ...", ": Environment:", "]:   WRANGLE_")
 
 
-def _stream_docker_logs(log_process: subprocess.Popen) -> None:  # type: ignore[type-arg]
+def _stream_docker_logs(log_process: subprocess.Popen) -> None:
     for line in log_process.stdout:  # type: ignore[union-attr]
         if not any(skip in line for skip in _DOCKER_LOG_SKIP):
             sys.stdout.write(line)
@@ -205,16 +200,20 @@ def connect():
     missing = [name for name in database.DATABASE_ENV_VARS if not os.environ.get(name)]
     if missing:
         pytest.fail(f"missing required database environment variable(s): {', '.join(missing)}")
-    return psycopg.connect((
-        f"postgresql://{os.environ['WRANGLE_DATABASE_USER']}:{os.environ['WRANGLE_DATABASE_PASSWORD']}"
-        f"@{os.environ['WRANGLE_DATABASE_HOST']}:{os.environ['WRANGLE_DATABASE_PORT']}"
-        f"/{os.environ['WRANGLE_DATABASE_USER']}"
-    ), connect_timeout=TIMEOUT_SECONDS, autocommit=True, options=f"-c statement_timeout={TIMEOUT_QUERY_SECONDS * 1000}")
+    return psycopg.connect(
+        (
+            f"postgresql://{os.environ['WRANGLE_DATABASE_USER']}:{os.environ['WRANGLE_DATABASE_PASSWORD']}"
+            f"@{os.environ['WRANGLE_DATABASE_HOST']}:{os.environ['WRANGLE_DATABASE_PORT']}"
+            f"/{os.environ['WRANGLE_DATABASE_USER']}"
+        ),
+        connect_timeout=TIMEOUT_SECONDS,
+        autocommit=True,
+        options=f"-c statement_timeout={TIMEOUT_QUERY_SECONDS * 1000}",
+    )
 
 
 def query_table_count(table_name: str) -> int:
     with connect() as database_connection, database_connection.cursor() as database_cursor:
-        # noinspection SqlNoDataSourceInspection, SqlDialectInspection
         database_cursor.execute(psycopg_sql.SQL("SELECT COUNT(*) FROM {}").format(psycopg_sql.Identifier(table_name)))
         row: tuple = database_cursor.fetchone() or (0,)
         return row[0]
@@ -223,8 +222,19 @@ def query_table_count(table_name: str) -> int:
 @functools.lru_cache
 def _database_plugin_tables() -> list[str]:
     model_dir = join(DIR_ROOT, "src/build/resources/schema/postgres/model")
-    return sorted(os.path.basename(model_path)[:-len(".sql")] for model_path in glob.glob(join(model_dir, "*.sql")))
+    return sorted(os.path.basename(model_path)[: -len(".sql")] for model_path in glob.glob(join(model_dir, "*.sql")))
 
 
-if __name__ == '__main__':
-    sys.exit(pytest.main(["-s", "-v", "--durations=50", "-o", "cache_dir=../../../../target/.pytest_cache", __file__, ]))
+if __name__ == "__main__":
+    sys.exit(
+        pytest.main(
+            [
+                "-s",
+                "-v",
+                "--durations=50",
+                "-o",
+                "cache_dir=../../../../target/.pytest_cache",
+                __file__,
+            ]
+        )
+    )

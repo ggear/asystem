@@ -62,6 +62,12 @@ dist
 58861*
 07849*
 *redbark_*
+*manual_balances_*
+*manual_transactions_*
+src/mad/wrangle/src/test/resources/repos/preview/bank/*/data/*
+src/mad/wrangle/src/test/resources/repos/release/bank/*/data/*
+!src/mad/wrangle/src/test/resources/repos/*/*/*/data/.gitkeep
+!src/mad/wrangle/src/test/resources/repos/local/bank/*/data/*
 **/monary/**
 *.mbox
 

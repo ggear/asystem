@@ -1,6 +1,6 @@
 import time
 from collections import OrderedDict
-from datetime import datetime
+from datetime import date
 from os.path import join
 
 import polars as pl
@@ -9,14 +9,16 @@ import polars.selectors as cs
 from wrangle import plugin
 from wrangle.plugin.logger import dataframe_print
 
-LABELS = ['Bank', 'Inflation', 'Net']
-PERIODS = OrderedDict([
-    ('1 Year Mean', 12),
-    ('5 Year Mean', 5 * 12),
-    ('10 Year Mean', 10 * 12),
-    ('20 Year Mean', 20 * 12),
-    ('40 Year Mean', 40 * 12),
-])
+LABELS = ["Bank", "Inflation", "Net"]
+PERIODS = OrderedDict(
+    [
+        ("1 Year Mean", 12),
+        ("5 Year Mean", 5 * 12),
+        ("10 Year Mean", 10 * 12),
+        ("20 Year Mean", 20 * 12),
+        ("40 Year Mean", 40 * 12),
+    ]
+)
 COLUMNS = [f"{label} {period}".strip() for label in LABELS for period in ([""] + list(PERIODS.keys()))]
 
 RETAIL_URL = "https://www.rba.gov.au/statistics/tables/xls/f04hist.xlsx"
@@ -34,14 +36,11 @@ REPOS_INTEREST = plugin.Repos(
 )
 
 
-
 class Interest(plugin.Plugin):
-
     def _run(self):
         interest_df = self.dataframe_new(schema={"Date": pl.Date})
         interest_delta_df = self.dataframe_new()
         if not plugin.config.disable_source_downloads or plugin.config.force_reprocessing:
-
             # Download Rate Data
             new_data = False
             started_time = time.time()
@@ -50,14 +49,14 @@ class Interest(plugin.Plugin):
             retail_df = self.dataframe_new(schema={"Date": pl.Date, "Bank": pl.Float64})
             retail_file = join(self.local_cache, "retail.xlsx")
             file_status = self.http_download(RETAIL_URL, retail_file)
-            if file_status.status in (plugin.DownloadStatus.CACHED, plugin.DownloadStatus.DOWNLOADED):
+            if file_status.file_status in (plugin.DownloadStatus.CACHED, plugin.DownloadStatus.DOWNLOADED):
                 retail_should_read = True
-                if plugin.config.force_reprocessing or file_status.status == plugin.DownloadStatus.DOWNLOADED:
+                if plugin.config.force_reprocessing or file_status.file_status == plugin.DownloadStatus.DOWNLOADED:
                     new_data = True
                     self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED)
                 else:
                     self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
-            elif file_status.status == plugin.DownloadStatus.SKIPPED:
+            elif file_status.file_status == plugin.DownloadStatus.SKIPPED:
                 self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
             else:
                 self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED)
@@ -67,14 +66,14 @@ class Interest(plugin.Plugin):
             inflation_df = self.dataframe_new(schema={"Date": pl.Date, "Inflation": pl.Float64})
             inflation_file = join(self.local_cache, "inflation.xlsx")
             file_status = self.http_download(INFLATION_URL, inflation_file)
-            if file_status.status in (plugin.DownloadStatus.CACHED, plugin.DownloadStatus.DOWNLOADED):
+            if file_status.file_status in (plugin.DownloadStatus.CACHED, plugin.DownloadStatus.DOWNLOADED):
                 inflation_should_read = True
-                if plugin.config.force_reprocessing or file_status.status == plugin.DownloadStatus.DOWNLOADED:
+                if plugin.config.force_reprocessing or file_status.file_status == plugin.DownloadStatus.DOWNLOADED:
                     new_data = True
                     self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED)
                 else:
                     self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
-            elif file_status.status == plugin.DownloadStatus.SKIPPED:
+            elif file_status.file_status == plugin.DownloadStatus.SKIPPED:
                 self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
             else:
                 self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED)
@@ -83,7 +82,6 @@ class Interest(plugin.Plugin):
             self.print_log(f"Files downloaded [{interest_downloaded}] and cached [{interest_cached}]", started=started_time)
             if new_data:
                 try:
-
                     # Collect Rate Data
                     if retail_should_read:
                         retail_df = self.excel_read(retail_file, schema={"Series ID": pl.Date}, skip_rows=10, print_rows=12)
@@ -91,14 +89,14 @@ class Interest(plugin.Plugin):
                         # NOTE: Select Term Deposit >$10k deposit, 3-year term
                         retail_df = retail_df.select([pl.col("Series ID").alias("Date"), pl.col("FRDIRBTD10K3Y").alias("Bank")])
 
-                        retail_df = retail_df.with_columns((pl.col("Date").dt.strftime('%Y-%m-01').str.to_date()).alias("Date"))
+                        retail_df = retail_df.with_columns((pl.col("Date").dt.strftime("%Y-%m-01").str.to_date()).alias("Date"))
                     if inflation_should_read:
                         inflation_df = self.excel_read(inflation_file, schema={"Series ID": pl.Date}, skip_rows=10, print_rows=12)
 
                         # NOTE: Select Annual Consumer Price Index
                         inflation_df = inflation_df.select([pl.col("Series ID").alias("Date"), pl.col("GCPIAGYP").alias("Inflation")])
 
-                        inflation_df = inflation_df.with_columns((pl.col("Date").dt.strftime('%Y-%m-01').str.to_date()).alias("Date"))
+                        inflation_df = inflation_df.with_columns((pl.col("Date").dt.strftime("%Y-%m-01").str.to_date()).alias("Date"))
                 except Exception as exception:
                     self.print_log("Unexpected error processing interest source files", exception=exception)
                     self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED)
@@ -128,15 +126,15 @@ class Interest(plugin.Plugin):
                 self.counters_set_all_errored(plugin.CTR_SRC_FILES)
 
         try:
+
             def _aggregate_function(_data_df):
                 _columns = ["Date"]
                 for rate in LABELS:
                     _columns.append(rate)
                     for _period in PERIODS:
-                        _column = f'{rate} {_period}'
+                        _column = f"{rate} {_period}"
                         _columns.append(_column)
-                        _data_df = _data_df.with_columns(
-                            (pl.col(rate).rolling_mean(window_size=PERIODS[_period])).alias(_column))
+                        _data_df = _data_df.with_columns((pl.col(rate).rolling_mean(window_size=PERIODS[_period])).alias(_column))
                 return _data_df.select(_columns).with_columns(cs.float().round(2))
 
             # Commit Rate Data: source-complete monthly Bank/Inflation/Net rates → committed state with derived rolling means (delta for egress)
@@ -145,17 +143,13 @@ class Interest(plugin.Plugin):
             # Upload Data
             started_time = time.time()
             if len(interest_current_df) and (len(interest_delta_df) or plugin.config.force_reprocessing):
-                interest_sheet_df = interest_current_df.filter(pl.col("Date") > pl.lit(datetime(2015, 1, 1))).sort("Date", descending=True)
-                self.sheet_upload(interest_sheet_df, self.remote_repos.sheet_key, workbook_name="Rates", sheet_name='Interest', add_filter=True)
-                self.database_upload(interest_delta_df.select(["Date"] + LABELS),
-                                     metric_type="mean", period="1mo", unit="%",
-                                     print_label="Interest_1_Month_Mean")
+                interest_sheet_df = interest_current_df.filter(pl.col("Date") > pl.lit(date(2015, 1, 1))).sort("Date", descending=True)
+                self.sheet_upload(interest_sheet_df, self.remote_repos.sheet_key, workbook_name="Rates", sheet_name="Interest", add_filter=True)
+                self.database_upload(interest_delta_df.select(["Date"] + LABELS), metric_type="mean", period="1mo", unit="%", print_label="Interest_1_Month_Mean")
                 for int_period in PERIODS:
                     interest_periodly_df = interest_delta_df.select(["Date"] + [f"{int_rate} {int_period}".strip() for int_rate in LABELS])
                     interest_periodly_df.columns = ["Date"] + LABELS
-                    self.database_upload(interest_periodly_df,
-                                         metric_type="mean", period=f"{PERIODS[int_period] / 12:0.0f}y", unit="%",
-                                         print_label=f"Interest_{int_period}".replace(" ", "_"))
+                    self.database_upload(interest_periodly_df, metric_type="mean", period=f"{PERIODS[int_period] / 12:0.0f}y", unit="%", print_label=f"Interest_{int_period}".replace(" ", "_"))
             self.print_log("Upload complete", started=started_time)
 
         except Exception as exception:

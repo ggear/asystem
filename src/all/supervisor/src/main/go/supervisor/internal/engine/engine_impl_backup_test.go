@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"path/filepath"
 	"testing"
 
 	"supervisor/internal/config"
@@ -89,22 +88,6 @@ func TestEngineImplBackup_PreparedRefusesAtTheBoundaryRatherThanInTheRun(t *test
 				t.Errorf("BackupPrepared() = %+v, want what probe prepares", prepared)
 			}
 		})
-	}
-}
-
-func TestEngineImplBackup_StageLogNamesThePathTheRunWillWrite(t *testing.T) {
-	root := t.TempDir()
-	t.Setenv(config.BackupHomeEnvVar, root)
-	request, err := BackupPrepared(BackupRequest{
-		Command: BackupCommandStart, Trigger: metric.BackupTriggerManual,
-		Argument: "2026-09-22_01-00-35", Stage: metric.BackupStageSecondary,
-	})
-	if err != nil {
-		t.Fatalf("BackupPrepared() error = %v", err)
-	}
-	expected := filepath.Join(root, "supervisor", "backup", "2026-09-22_01-00-35", "stage", "secondary", "output.log")
-	if got := BackupStageLog(request); got != expected {
-		t.Errorf("BackupStageLog() = %q, want %q", got, expected)
 	}
 }
 

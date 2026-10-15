@@ -10,41 +10,42 @@ if __name__ == "__main__":
     write_container_healthchecks()
 
     metadata_weewx_df = metadata_df[
-        (metadata_df["index"] > 0) &
-        (metadata_df["entity_status"] == "Enabled") &
-        (metadata_df["device_via_device"] == "WeeWX") &
-        (metadata_df["unique_id"].str.len() > 0) &
-        (metadata_df["unique_id_device"].str.len() > 0)
-        ]
+        (metadata_df["index"] > 0)
+        & (metadata_df["entity_status"] == "Enabled")
+        & (metadata_df["device_via_device"] == "WeeWX")
+        & (metadata_df["unique_id"].str.len() > 0)
+        & (metadata_df["unique_id_device"].str.len() > 0)
+    ]
     metadata_weewx_dicts = [row.dropna().to_dict() for index, row in metadata_weewx_df.iterrows()]
     metadata_weewx_str = "[[[inputs]]]\n"
     for metadata_weewx_dict in metadata_weewx_dicts:
-        metadata_weewx_str += ("            " + """
+        metadata_weewx_str += (
+            "            "
+            + """
             [[[[{}]]]]
                 name = {}        
-              """.format(
-            metadata_weewx_dict["unique_id_device"],
-            metadata_weewx_dict["unique_id"]
-        ).strip() + "\n")
+              """.format(metadata_weewx_dict["unique_id_device"], metadata_weewx_dict["unique_id"]).strip()
+            + "\n"
+        )
     weewx_conf_path = join(DIR_ROOT, "src/main/resources/image/config/weewx.conf")
-    with open(weewx_conf_path + ".template", "rt") as weewx_conf_template_file:
-        with open(weewx_conf_path, "wt") as weewx_conf_file:
-            for line in weewx_conf_template_file:
-                weewx_conf_file.write(line.replace('$INPUTS_METADATA', metadata_weewx_str))
-    print("Build generate script [weewx] entity metadata persisted to [{}]".format(weewx_conf_path))
+    with open(weewx_conf_path + ".template") as weewx_conf_template_file, open(weewx_conf_path, "w") as weewx_conf_file:
+        weewx_conf_file.writelines(line.replace("$INPUTS_METADATA", metadata_weewx_str) for line in weewx_conf_template_file)
+    print(f"Build generate script [weewx] entity metadata persisted to [{weewx_conf_path}]")
 
     # Build broker schema
     metadata_publish_df = metadata_df[
-        (metadata_df["index"] > 0) &
-        (metadata_df["entity_status"] == "Enabled") &
-        (metadata_df["device_via_device"] == "WeeWX") &
-        (metadata_df["unique_id"].str.len() > 0) &
-        (metadata_df["name"].str.len() > 0) &
-        (metadata_df["discovery_topic"].str.len() > 0)
-        ]
-    write_schema_broker(metadata_publish_df,
-                        broker_topic_glob_discovery="homeassistant/+/weewx/#",
-                        broker_topic_glob_data="weewx/#",
-                        broker_state="""
+        (metadata_df["index"] > 0)
+        & (metadata_df["entity_status"] == "Enabled")
+        & (metadata_df["device_via_device"] == "WeeWX")
+        & (metadata_df["unique_id"].str.len() > 0)
+        & (metadata_df["name"].str.len() > 0)
+        & (metadata_df["discovery_topic"].str.len() > 0)
+    ]
+    write_schema_broker(
+        metadata_publish_df,
+        broker_topic_glob_discovery="homeassistant/+/weewx/#",
+        broker_topic_glob_data="weewx/#",
+        broker_state="""
 <number>
-                          """)
+                          """,
+    )

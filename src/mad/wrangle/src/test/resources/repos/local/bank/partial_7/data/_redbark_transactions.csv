@@ -1,0 +1,4 @@
+id,accountId,status,date,postDate,amount,direction,description,category,merchantCategoryCode
+t1,a1,posted,2026-01-10,2026-01-10,-7.25,debit,Lunch,FOOD_AND_DRINK,5812
+t0,a1,posted,2020-03-01,2020-03-01,-3.00,debit,Old,FOOD_AND_DRINK,
+tx,a1,posted,2018-01-01,2018-01-01,-9.00,debit,Ancient,FOOD_AND_DRINK,

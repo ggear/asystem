@@ -1,0 +1,358 @@
+{
+  "venvPath": "/Users/graham/.pyenv/versions",
+  "venv": "asystem",
+  "pythonVersion": "3.12",
+  "pythonPlatform": "Linux",
+  "include": [
+    "src/all/_/src/build/python",
+    "src/all/media/src/build/python",
+    "src/all/media/src/main/python",
+    "src/all/media/src/test/python",
+    "src/all/storage/src/build/python",
+    "src/all/supervisor/src/build/python",
+    "src/all/supervisor/src/test/python",
+    "src/dar/udmutilities/src/build/python",
+    "src/jen/_debian_jen/src/build/python",
+    "src/jen/weewx/src/build/python",
+    "src/jen/zigbee2mqtt/src/build/python",
+    "src/jil/_debian_jil/src/build/python",
+    "src/mad/_fedora_mad/src/build/python",
+    "src/mad/network/src/build/python",
+    "src/mad/network/src/test/python",
+    "src/mad/plex/src/build/python",
+    "src/mad/postgres/src/build/python",
+    "src/mad/sabnzbd/src/build/python",
+    "src/mad/wrangle/src/build/python",
+    "src/mad/wrangle/src/main/python",
+    "src/mad/wrangle/src/test/python",
+    "src/max/_fedora_max/src/build/python",
+    "src/max/cloudflare/src/build/python",
+    "src/max/grafana/src/build/python",
+    "src/max/grafana/src/test/python",
+    "src/max/letsencrypt/src/build/python",
+    "src/max/openra/src/build/python",
+    "src/may/_debian_may/src/build/python",
+    "src/may/influxdb3/src/build/python",
+    "src/may/mlflow/src/build/python",
+    "src/may/mlserver/src/build/python",
+    "src/may/mlserver/src/main/python",
+    "src/may/mlserver/src/test/python",
+    "src/may/sonarr/src/build/python",
+    "src/may/tempstat/src/build/python",
+    "src/may/tempstat/src/test/python",
+    "src/meg/_debian_meg/src/build/python",
+    "src/meg/homeassistant/src/build/python",
+    "src/meg/mariadb/src/build/python",
+    "src/meg/nginx/src/build/python",
+    "src/meg/tasmota/src/build/python",
+    "src/meg/vernemq/src/build/python",
+    "src/meg/vernemq/src/test/python",
+    "src/rue/kasa/src/build/python",
+    "src/rue/photos/src/build/python",
+    "src/zzz/appdaemon/src/build/python",
+    "src/zzz/appdaemon/src/main/python",
+    "src/zzz/backup/src/build/python",
+    "src/zzz/backup/src/main/python",
+    "src/zzz/monitor/src/build/python",
+    "src/zzz/rhasspy/src/build/python",
+    "src/zzz/unpoller/src/build/python",
+    "fabfile.py",
+    "src/max/grafana/src/main/resources/image/probe.py"
+  ],
+  "exclude": [
+    "**/__pycache__"
+  ],
+  "deprecateTypingAliases": true,
+  "reportDeprecated": "error",
+  "reportUnnecessaryCast": "error",
+  "reportUnnecessaryComparison": "error",
+  "reportUnnecessaryContains": "error",
+  "reportUnnecessaryIsInstance": "error",
+  "reportUnnecessaryTypeIgnoreComment": "error",
+  "executionEnvironments": [
+    {
+      "root": "src/all/_/src",
+      "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/all/media/src",
+      "extraPaths": [
+        "src/all/media/src/main/python",
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/all/storage/src",
+      "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/all/supervisor/src",
+      "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/dar/udmutilities/src",
+      "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/jen/_debian_jen/src",
+      "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/jen/weewx/src",
+      "extraPaths": [
+        "src/jen/weewx/src/main/python",
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/jen/zigbee2mqtt/src",
+      "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/jil/_debian_jil/src",
+      "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/mad/_fedora_mad/src",
+      "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/mad/network/src",
+      "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/mad/plex/src",
+      "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/mad/postgres/src",
+      "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/mad/sabnzbd/src",
+      "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/mad/wrangle/src",
+      "extraPaths": [
+        "src/mad/wrangle/src/main/python",
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/max/_fedora_max/src",
+      "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/max/cloudflare/src",
+      "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/max/grafana/src",
+      "extraPaths": [
+        "src/max/grafana/src/main/python",
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/max/letsencrypt/src",
+      "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/max/openra/src",
+      "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/may/_debian_may/src",
+      "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/may/influxdb3/src",
+      "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/may/mlflow/src",
+      "extraPaths": [
+        "src/may/mlflow/src/main/python",
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/may/mlserver/src",
+      "extraPaths": [
+        "src/may/mlserver/src/main/python",
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/may/sonarr/src",
+      "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/may/tempstat/src",
+      "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/meg/_debian_meg/src",
+      "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/meg/homeassistant/src",
+      "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/meg/mariadb/src",
+      "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/meg/nginx/src",
+      "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/meg/tasmota/src",
+      "extraPaths": [
+        "src/meg/tasmota/src/main/python",
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/meg/vernemq/src",
+      "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/rue/kasa/src",
+      "extraPaths": [
+        "src/rue/kasa/src/main/python",
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/rue/photos/src",
+      "extraPaths": [
+        "src/rue/photos/src/main/python",
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/zzz/appdaemon/src",
+      "extraPaths": [
+        "src/zzz/appdaemon/src/main/python",
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/zzz/backup/src",
+      "extraPaths": [
+        "src/zzz/backup/src/main/python",
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/zzz/monitor/src",
+      "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/zzz/rhasspy/src",
+      "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/zzz/unpoller/src",
+      "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    }
+  ]
+}

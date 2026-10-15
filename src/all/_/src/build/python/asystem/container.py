@@ -272,16 +272,17 @@ echo "✅ Restore applied from [${RESTORE_RUN_TIMESTAMP}], changed [${RESTORE_CH
 """
 
 BACKUP_CONTRACT = """# The wrapper owns the run, this snippet owns the backup. The wrapper checks the throttle, calls
-# backup_written, renames the temporary file on success, prunes and sets the exit code. Define
-# backup_written below, naming the backup with backup_target (or letting backup_files do both) and
-# writing "${BACKUP_TARGET_PATH}.tmp". A snippet leaving the estate changed while it works, such as
-# one stopping its own container, also defines backup_interrupted, called on INT, TERM or HUP but
-# never on a backup that merely fails, and backup_completed, called once the archive has been named
-# and kept whatever the outcome, whose non-zero return fails the run without discarding the archive.
-# Declare BACKUP_EXCLUDED as the paths this module deliberately does not back up, so backup_files
-# reports only what neither it nor the declaration covers. Never assign another wrapper variable,
-# prefix this snippet's own state with the module name, and expand a value read from .env as
-# "${VAR:?}", so a missing key fails by name rather than corrupting the backup.
+# backup_written, checks the archive's integrity, renames the temporary file on success, prunes and
+# sets the exit code. Define backup_written below, naming the backup with backup_target (or letting
+# backup_files do both) and writing "${BACKUP_TARGET_PATH}.tmp". A snippet copying files passes
+# backup_files a root under BACKUP_SOURCE_PATH and the names of its include and exclude arrays, an
+# absent include fails the backup and whatever under the root neither array covers is reported. A
+# snippet leaving the estate changed while it works, such as one stopping its own container, also
+# defines backup_interrupted, called on INT, TERM or HUP but never on a backup that merely fails, and
+# backup_completed, called once the archive has been named and kept whatever the outcome, whose
+# non-zero return fails the run without discarding the archive. Never assign another wrapper
+# variable, prefix this snippet's own state with the module name, and expand a value read from .env
+# as "${VAR:?}", so a missing key fails by name rather than corrupting the backup.
 #
 # BACKUP_MODULE_NAME      this module's name
 # BACKUP_SOURCE_PATH      this module's source data path
@@ -292,8 +293,7 @@ BACKUP_CONTRACT = """# The wrapper owns the run, this snippet owns the backup. T
 # BACKUP_DELTA_SUFFIX     the file suffix marking a delta backup, requiring a full backup proceeding it
 # BACKUP_RETAIN_DAYS      the window by which daily backups are retained before entering the pruning window
 # BACKUP_SKIP_HOURS       skip the run when the newest backup is younger than this, zero to never skip
-# BACKUP_SERVICE_RESTART  start the service again after the copy, false when the caller starts it itself
-# BACKUP_EXCLUDED         the paths deliberately not backed up, declared by this snippet"""
+# BACKUP_SERVICE_RESTART  start the service again after the copy, false when the caller starts it itself"""
 
 
 def write_container_bootstrap(module_name=None, working_dir=None):
@@ -309,8 +309,9 @@ def write_container_bootstrap(module_name=None, working_dir=None):
     script_bootstrap = Path(path_bootstrap).read_text().strip()
     os.makedirs(working_dir, exist_ok=True)
     script_path = abspath(join(working_dir, "bootstrap.sh"))
-    with open(script_path, 'w') as script_file:
-        script_file.write("""
+    with open(script_path, "w") as script_file:
+        script_file.write(
+            """
 #!/usr/bin/env bash
 ################################################################################
 # WARNING: This file is written by the build process, any manual edits will be lost!
@@ -360,11 +361,11 @@ echo "--------------------------------------------------------------------------
 wait_service "checkexecuting.sh" "start executing" 1 "${{SERVICE_WAIT_EXECUTING_SECONDS}}"
 echo "----------" && echo "✅ Service has started"
         """.format(
-            script_bootstrap.strip(),
-        ).strip())
+                script_bootstrap.strip(),
+            ).strip()
+        )
     os.chmod(script_path, os.stat(script_path).st_mode | stat.S_IEXEC)
-    print("Build generate script [{}] script persisted to [{}]"
-          .format(module_name, script_path))
+    print("Build generate script [{}] script persisted to [{}]".format(module_name, script_path))
 
 
 def write_container_healthchecks(module_name=None, working_dir=None):
@@ -376,8 +377,8 @@ def write_container_healthchecks(module_name=None, working_dir=None):
     os.makedirs(working_dir, exist_ok=True)
     for script, source in {
         "alive": "true",
-        "executing": "/asystem/etc/checkalive.sh \"${POSITIONAL_ARGS[@]}\" && \n  true",
-        "healthy": "/asystem/etc/checkexecuting.sh \"${POSITIONAL_ARGS[@]}\" && \n  true",
+        "executing": '/asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && \n  true',
+        "healthy": '/asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" && \n  true',
     }.items():
         script_source_path = join(root_dir, "src/build/resources/check{}.sh".format(script))
         if not isfile(script_source_path):
@@ -385,8 +386,9 @@ def write_container_healthchecks(module_name=None, working_dir=None):
             Path(script_source_path).write_text(source + "\n# TODO: Provide implementation\n")
         script_source = " ".join([line.strip() for line in Path(script_source_path).read_text().strip().split("\n")])
         script_path = abspath(join(working_dir, "check{}.sh".format(script)))
-        with open(script_path, 'w') as script_file:
-            script_file.write("""
+        with open(script_path, "w") as script_file:
+            script_file.write(
+                """
 #!/usr/bin/env bash
 ################################################################################
 # WARNING: This file is written by the build process, any manual edits will be lost!
@@ -445,15 +447,16 @@ else
   exit 1
 fi
             """.format(
-                script_source,
-                module_name,
-                script,
-                module_name,
-                script,
-            ).strip() + "\n")
+                    script_source,
+                    module_name,
+                    script,
+                    module_name,
+                    script,
+                ).strip()
+                + "\n"
+            )
         os.chmod(script_path, os.stat(script_path).st_mode | stat.S_IEXEC)
-        print("Build generate script [{}] script persisted to [{}]"
-              .format(module_name, script_path))
+        print("Build generate script [{}] script persisted to [{}]".format(module_name, script_path))
 
 
 def write_container_certificates(module_name=None, working_dir=None):
@@ -464,8 +467,9 @@ def write_container_certificates(module_name=None, working_dir=None):
         working_dir = join(root_dir, "src/main/resources/image")
     os.makedirs(working_dir, exist_ok=True)
     script_path = abspath(join(working_dir, "certificates.sh"))
-    with open(script_path, 'w') as script_file:
-        script_file.write("""
+    with open(script_path, "w") as script_file:
+        script_file.write(
+            """
 #!/usr/bin/env bash
 ################################################################################
 # WARNING: This file is written by the build process, any manual edits will be lost!
@@ -496,13 +500,13 @@ elif [ "$1" = "push" ]; then
 fi
 exit 0
         """.format(
-            module_name,
-            module_name,
-            module_name,
-        ).strip())
+                module_name,
+                module_name,
+                module_name,
+            ).strip()
+        )
     os.chmod(script_path, os.stat(script_path).st_mode | stat.S_IEXEC)
-    print("Build generate script [{}] script persisted to [{}]"
-          .format(module_name, script_path))
+    print("Build generate script [{}] script persisted to [{}]".format(module_name, script_path))
 
 
 def write_container_volumes(module_name=None, working_dir=None):
@@ -515,8 +519,9 @@ def write_container_volumes(module_name=None, working_dir=None):
     if not isdir(dirname(script_path)):
         os.makedirs(dirname(script_path), exist_ok=True)
     _verify_container_partlabels(root_dir, module_name)
-    with open(script_path, 'w') as script_file:
-        script_file.write(r"""
+    with open(script_path, "w") as script_file:
+        script_file.write(
+            r"""
 #!/usr/bin/env bash
 ################################################################################
 # WARNING: This file is written by the build process, any manual edits will be lost!
@@ -1191,10 +1196,10 @@ if [ "${VOLUMES_FAULTS}" -ne 0 ]; then
   exit 1
 fi
 echo "✅ Volumes ${VOLUMES_ACTION} converged, changed [${VOLUMES_CHANGED}]" && echo
-        """.strip())
+        """.strip()
+        )
     os.chmod(script_path, os.stat(script_path).st_mode | stat.S_IEXEC)
-    print("Build generate script [{}] script persisted to [{}]"
-          .format(module_name, script_path))
+    print("Build generate script [{}] script persisted to [{}]".format(module_name, script_path))
 
 
 def _verify_container_partlabels(root_dir, module_name):
@@ -1205,12 +1210,10 @@ def _verify_container_partlabels(root_dir, module_name):
             fields = line.split()
             if len(fields) < 2 or line.lstrip().startswith("#") or not fields[0].startswith("PARTLABEL="):
                 continue
-            declared.setdefault(fields[0][len("PARTLABEL="):], []).append("{} {}".format(host, fields[1]))
+            declared.setdefault(fields[0][len("PARTLABEL=") :], []).append("{} {}".format(host, fields[1]))
     for label, claims in sorted(declared.items()):
         if len(claims) > 1:
-            print("Build generate script [{}] partlabel [{}] is claimed by [{}], "
-                  "a disk moved between hosts would mount against the wrong declaration"
-                  .format(module_name, label, ", ".join(claims)))
+            print("Build generate script [{}] partlabel [{}] is claimed by [{}], a disk moved between hosts would mount against the wrong declaration".format(module_name, label, ", ".join(claims)))
 
 
 def write_container_backup(module_name=None, working_dir=None):
@@ -1221,14 +1224,24 @@ def write_container_backup(module_name=None, working_dir=None):
         working_dir = join(root_dir, "src/main/resources")
     os.makedirs(working_dir, exist_ok=True)
     script_source_path = join(root_dir, "src/build/resources/backup.sh")
+    prefix = "".join(character if character.isalnum() else "_" for character in module_name.upper())
     if not isfile(script_source_path):
         os.makedirs(os.path.dirname(script_source_path), exist_ok=True)
-        Path(script_source_path).write_text(BACKUP_CONTRACT + """
+        Path(script_source_path).write_text(
+            BACKUP_CONTRACT
+            + """
 
 # TODO: Provide implementation
 
+PREFIX_BACKUP_INCLUDES=(
+  "relative/path"
+)
+PREFIX_BACKUP_EXCLUDES=(
+  "relative/path/deliberately/not/backed/up"
+)
+
 backup_written() {
-  backup_files "relative/path:another/path"
+  backup_files "." PREFIX_BACKUP_INCLUDES PREFIX_BACKUP_EXCLUDES
 }
 
 # A module with its own backup mechanism names its backup, then writes it:
@@ -1237,14 +1250,15 @@ backup_written() {
 #   backup_target "${BACKUP_FULL_SUFFIX}" "sql.gz" || return 1
 #   docker exec --user root "${BACKUP_MODULE_NAME}" bash -c 'dump | gzip' >"${BACKUP_TARGET_PATH}.tmp"
 # }
-""")
+""".replace("PREFIX", prefix)
+        )
     script_source = Path(script_source_path).read_text().strip()
     if not script_source.startswith(BACKUP_CONTRACT):
-        raise ValueError("Snippet contract violated in [{}], its leading comment block must match "
-                         "BACKUP_CONTRACT verbatim".format(script_source_path))
+        raise ValueError("Snippet contract violated in [{}], its leading comment block must match BACKUP_CONTRACT verbatim".format(script_source_path))
     script_path = abspath(join(working_dir, "backup.sh"))
-    with open(script_path, 'w') as script_file:
-        script_file.write("""
+    with open(script_path, "w") as script_file:
+        script_file.write(
+            """
 #!/usr/bin/env bash
 ################################################################################
 # WARNING: This file is written by the build process, any manual edits will be lost!
@@ -1268,13 +1282,12 @@ set -o pipefail
 #
 # BACKUP_SOURCE_PATH      the data path backed up, defaulting to this module's own
 # BACKUP_RETAIN_DAYS      the window by which daily backups are retained before entering the pruning window
-# BACKUP_KEEP_DAILY       the daily backups kept by --prune-gfs
-# BACKUP_KEEP_WEEKLY      the weekly backups kept by --prune-gfs
-# BACKUP_KEEP_MONTHLY     the monthly backups kept by --prune-gfs
+# BACKUP_KEEP_DAILY       the daily backups kept by --prune-gfs, the module's .env overriding it as {prefix}_BACKUP_KEEP_DAILY
+# BACKUP_KEEP_WEEKLY      the weekly backups kept by --prune-gfs, the module's .env overriding it as {prefix}_BACKUP_KEEP_WEEKLY
+# BACKUP_KEEP_MONTHLY     the monthly backups kept by --prune-gfs, the module's .env overriding it as {prefix}_BACKUP_KEEP_MONTHLY
 # BACKUP_SKIP_HOURS       skip the run when the newest backup is younger than this, zero to never skip
 # BACKUP_SERVICE_RESTART  start the service again after the copy, false when the caller starts it itself
 # BACKUP_TIMEOUT_HOURS    the budget a backup waiting on its service allows before abandoning the run
-# BACKUP_EXCLUDED         the paths deliberately not backed up, declared by the module snippet
 
 BACKUP_INTERNAL_ENV="$(cd "$(dirname "${{BASH_SOURCE[0]}}")" && pwd)/.env"
 [ -f "${{BACKUP_INTERNAL_ENV}}" ] && . "${{BACKUP_INTERNAL_ENV}}"
@@ -1288,11 +1301,10 @@ BACKUP_RUN_TIMESTAMP="$(date +"%Y-%m-%d_%H-%M-%S")"
 BACKUP_FULL_SUFFIX="_full"
 BACKUP_DELTA_SUFFIX="_delta"
 BACKUP_RETAIN_DAYS="${{BACKUP_RETAIN_DAYS:-7}}"
-BACKUP_KEEP_DAILY="${{BACKUP_KEEP_DAILY:-{keep_daily}}}"
-BACKUP_KEEP_WEEKLY="${{BACKUP_KEEP_WEEKLY:-{keep_weekly}}}"
-BACKUP_KEEP_MONTHLY="${{BACKUP_KEEP_MONTHLY:-{keep_monthly}}}"
+BACKUP_KEEP_DAILY="${{BACKUP_KEEP_DAILY:-${{{prefix}_BACKUP_KEEP_DAILY:-{keep_daily}}}}}"
+BACKUP_KEEP_WEEKLY="${{BACKUP_KEEP_WEEKLY:-${{{prefix}_BACKUP_KEEP_WEEKLY:-{keep_weekly}}}}}"
+BACKUP_KEEP_MONTHLY="${{BACKUP_KEEP_MONTHLY:-${{{prefix}_BACKUP_KEEP_MONTHLY:-{keep_monthly}}}}}"
 BACKUP_SKIP_HOURS="${{BACKUP_SKIP_HOURS:-1}}"
-BACKUP_EXCLUDED="${{BACKUP_EXCLUDED:-}}"
 BACKUP_SERVICE_RESTART="${{BACKUP_SERVICE_RESTART:-true}}"
 BACKUP_TIMEOUT_HOURS="${{BACKUP_TIMEOUT_HOURS:-{timeout}}}"
 BACKUP_TARGET_PATH=""
@@ -1302,6 +1314,7 @@ BACKUP_INTERNAL_NEWEST_VERSION=""
 BACKUP_INTERNAL_SIZE=0
 BACKUP_INTERNAL_STARTED=0
 BACKUP_INTERNAL_STATUS=0
+BACKUP_INTERNAL_WRITTEN="false"
 
 backup_target() {{
   local suffix="${{1:-}}" extension="${{2:-}}"
@@ -1427,74 +1440,60 @@ backup_pruned_gfs() {{
   done
 }}
 
-backup_split() {{
-  local path
-  while IFS= read -r -d ':' path || [ -n "${{path}}" ]; do
-    [ -n "${{path}}" ] || continue
-    printf '%s\n' "${{path}}"
-  done < <(printf '%s:' "${{1}}")
-}}
-
-backup_included() {{
-  local path
-  while IFS= read -r path; do
-    if [ -e "${{BACKUP_SOURCE_PATH}}/${{path}}" ]; then
-      printf '%s\n' "${{path}}"
-    else
-      echo "Declared path [${{path}}] is absent from [${{BACKUP_SOURCE_PATH}}]" >&2
-    fi
-  done < <(backup_split "${{1}}")
-}}
-
-backup_deepest() {{
-  local path depth deepest=1
-  while IFS= read -r path; do
+backup_files() {{
+  local root="${{1:-}}" dir path entry depth deepest=1 covered paths=() excludes=() excluded=() missing=() unmatched=()
+  if [ -z "${{root}}" ] || [ -z "${{2:-}}" ]; then
+    echo "Nothing to back up, pass the root and the name of the include array to backup_files" >&2
+    return 1
+  fi
+  local -n backup_files_includes="${{2}}"
+  paths=("${{backup_files_includes[@]}}")
+  if [ -n "${{3:-}}" ]; then
+    local -n backup_files_excludes="${{3}}"
+    excludes=("${{backup_files_excludes[@]}}")
+  fi
+  if [ "${{#paths[@]}}" -eq 0 ]; then
+    echo "Nothing to back up, the include array [${{2}}] is empty" >&2
+    return 1
+  fi
+  dir="${{BACKUP_INTERNAL_SOURCE_DIR}}/${{root}}"
+  for path in "${{paths[@]}}"; do
+    [ -e "${{dir}}/${{path}}" ] || missing+=("${{path}}")
+  done
+  if [ "${{#missing[@]}}" -gt 0 ]; then
+    echo "Declared paths [${{missing[*]}}] are absent from [${{dir}}]" >&2
+    return 1
+  fi
+  for path in "${{paths[@]}}" "${{excludes[@]}}"; do
     depth="$(printf '%s' "${{path}}" | tr -cd '/' | wc -c)"
     depth=$((depth + 1))
     [ "${{depth}}" -gt "${{deepest}}" ] && deepest="${{depth}}"
-  done < <(backup_split "${{1}}")
-  printf '%s\n' "${{deepest}}"
-}}
-
-backup_unmatched() {{
-  local entry path state deepest declared reported=() covers=()
-  declared="${{1}}:${{BACKUP_EXCLUDED}}"
-  deepest="$(backup_deepest "${{declared}}")"
-  mapfile -t covers < <(backup_split "${{declared}}")
+  done
   while IFS= read -r entry; do
     [ "${{entry}}" = "backup" ] && continue
-    state="unrelated"
-    for path in "${{reported[@]}}"; do
-      case "${{entry}}" in "${{path}}/"*) state="beneath" ;; esac
+    covered="false"
+    for path in "${{unmatched[@]}}"; do
+      case "${{entry}}" in "${{path}}/"*) covered="true" ;; esac
     done
-    [ "${{state}}" = "beneath" ] && continue
-    for path in "${{covers[@]}}"; do
-      case "${{entry}}" in "${{path}}" | "${{path}}/"*) state="covered" ;; esac
-      [ "${{state}}" = "covered" ] && break
-      case "${{path}}" in "${{entry}}/"*) state="ancestor" ;; esac
+    for path in "${{paths[@]}}"; do
+      case "${{entry}}" in "${{path}}" | "${{path}}/"*) covered="true" ;; esac
+      case "${{path}}" in "${{entry}}/"*) covered="true" ;; esac
     done
-    [ "${{state}}" = "unrelated" ] || continue
-    printf '%s\n' "${{entry}}"
-    reported+=("${{entry}}")
-  done < <(find "${{BACKUP_INTERNAL_SOURCE_DIR}}" -mindepth 1 -maxdepth "${{deepest}}" -printf '%P\n' 2>/dev/null | sort)
-}}
-
-backup_files() {{
-  local declared="${{1:-}}" paths unmatched
-  if [ -z "${{declared}}" ]; then
-    echo "Nothing to back up, pass the paths to copy to backup_files" >&2
-    return 1
-  fi
-  mapfile -t paths < <(backup_included "${{declared}}")
-  if [ "${{#paths[@]}}" -eq 0 ]; then
-    echo "No declared path exists under [${{BACKUP_SOURCE_PATH}}]" >&2
-    return 1
-  fi
-  backup_target "${{BACKUP_FULL_SUFFIX}}" "${{2:-tar.gz}}" || return 1
-  mapfile -t unmatched < <(backup_unmatched "${{declared}}")
+    for path in "${{excludes[@]}}"; do
+      # shellcheck disable=SC2254
+      case "${{entry}}" in ${{path}} | */${{path}} | ${{path}}/* | */${{path}}/*) covered="true" ;; esac
+      case "${{path}}" in "${{entry}}/"*) covered="true" ;; esac
+    done
+    [ "${{covered}}" = "true" ] || unmatched+=("${{entry}}")
+  done < <(find "${{dir}}" -mindepth 1 -maxdepth "${{deepest}}" -printf '%P\n' 2>/dev/null | sort)
+  backup_target "${{BACKUP_FULL_SUFFIX}}" "tar.gz" || return 1
   [ "${{#unmatched[@]}}" -gt 0 ] && echo "Not backed up and not excluded [${{unmatched[*]}}]"
-  tar --create --directory "${{BACKUP_SOURCE_PATH}}" --numeric-owner --preserve-permissions \
-    --exclude=backup --file - -- "${{paths[@]}}" 2>/dev/null | gzip >"${{BACKUP_TARGET_PATH}}.tmp"
+  excluded=(--exclude=backup)
+  for path in "${{excludes[@]}}"; do
+    excluded+=("--exclude=${{path}}")
+  done
+  tar --create --directory "${{dir}}" --numeric-owner --preserve-permissions \
+    "${{excluded[@]}}" --file - -- "${{paths[@]}}" 2>/dev/null | gzip >"${{BACKUP_TARGET_PATH}}.tmp"
 }}
 
 backup_written() {{
@@ -1544,26 +1543,45 @@ trap 'backup_interrupted; exit 130' INT
 trap 'backup_interrupted; exit 143' TERM
 trap 'backup_interrupted; exit 129' HUP
 BACKUP_INTERNAL_STARTED=${{SECONDS}}
-if backup_written && [ -n "${{BACKUP_TARGET_PATH}}" ] && [ -s "${{BACKUP_TARGET_PATH}}.tmp" ]; then
+if backup_written; then
+  if [ -z "${{BACKUP_TARGET_PATH}}" ]; then
+    echo "Nothing named the backup, call backup_target in backup_written" >&2
+  elif [ ! -s "${{BACKUP_TARGET_PATH}}.tmp" ]; then
+    echo "Backup [${{BACKUP_TARGET_PATH}}] was written empty, discarding it" >&2
+  else
+    BACKUP_INTERNAL_WRITTEN="true"
+    case "${{BACKUP_TARGET_PATH}}" in
+    *.gz) gzip -t "${{BACKUP_TARGET_PATH}}.tmp" 2>/dev/null || BACKUP_INTERNAL_WRITTEN="false" ;;
+    *.zip) unzip -t "${{BACKUP_TARGET_PATH}}.tmp" >/dev/null 2>&1 || BACKUP_INTERNAL_WRITTEN="false" ;;
+    esac
+    [ "${{BACKUP_INTERNAL_WRITTEN}}" = "true" ] || echo "Backup [${{BACKUP_TARGET_PATH}}] failed its integrity check, discarding it" >&2
+  fi
+fi
+if [ "${{BACKUP_INTERNAL_WRITTEN}}" = "true" ]; then
   mv "${{BACKUP_TARGET_PATH}}.tmp" "${{BACKUP_TARGET_PATH}}"
   BACKUP_INTERNAL_SIZE="$(du -m "${{BACKUP_TARGET_PATH}}" | cut -f1)"
   echo "Finished backup [${{BACKUP_INTERNAL_SIZE}}] MB in [$((SECONDS - BACKUP_INTERNAL_STARTED))] seconds to [${{BACKUP_TARGET_PATH}}]"
   backup_pruned
 else
-  [ -n "${{BACKUP_TARGET_PATH}}" ] || echo "Nothing named the backup, call backup_target in backup_written" >&2
   echo "Failed backup in [$((SECONDS - BACKUP_INTERNAL_STARTED))] seconds" >&2
   BACKUP_INTERNAL_STATUS=1
 fi
 backup_completed || BACKUP_INTERNAL_STATUS=1
 
-find "${{BACKUP_INTERNAL_ROOT_DIR}}" -depth -empty -delete -type d
+find "${{BACKUP_INTERNAL_ROOT_DIR}}" -depth -empty -delete -type d 2>/dev/null
 exit "${{BACKUP_INTERNAL_STATUS}}"
-""".format(module=module_name, source=script_source, timeout=BACKUP_TIMEOUT_HOURS_DEFAULT,
-           keep_daily=BACKUP_KEEP_DAILY_DEFAULT, keep_weekly=BACKUP_KEEP_WEEKLY_DEFAULT,
-           keep_monthly=BACKUP_KEEP_MONTHLY_DEFAULT).strip())
+""".format(
+                module=module_name,
+                prefix=prefix,
+                source=script_source,
+                timeout=BACKUP_TIMEOUT_HOURS_DEFAULT,
+                keep_daily=BACKUP_KEEP_DAILY_DEFAULT,
+                keep_weekly=BACKUP_KEEP_WEEKLY_DEFAULT,
+                keep_monthly=BACKUP_KEEP_MONTHLY_DEFAULT,
+            ).strip()
+        )
     os.chmod(script_path, os.stat(script_path).st_mode | stat.S_IEXEC)
-    print("Build generate script [{}] script persisted to [{}]"
-          .format(basename(root_dir), script_path))
+    print("Build generate script [{}] script persisted to [{}]".format(basename(root_dir), script_path))
 
 
 def write_container_restore(module_name=None, working_dir=None):
@@ -1576,23 +1594,22 @@ def write_container_restore(module_name=None, working_dir=None):
     script_source_path = join(root_dir, "src/build/resources/restore.sh")
     if not isfile(script_source_path):
         os.makedirs(os.path.dirname(script_source_path), exist_ok=True)
-        Path(script_source_path).write_text(RESTORE_CONTRACT + """
+        Path(script_source_path).write_text(
+            RESTORE_CONTRACT
+            + """
 
 # TODO: Provide implementation
 
 restore_applied() {
   restore_files "relative/path:another/path"
 }
-""")
+"""
+        )
     script_source = Path(script_source_path).read_text().strip()
     if not script_source.startswith(RESTORE_CONTRACT):
-        raise ValueError("Snippet contract violated in [{}], its leading comment block must match "
-                         "RESTORE_CONTRACT verbatim".format(script_source_path))
+        raise ValueError("Snippet contract violated in [{}], its leading comment block must match RESTORE_CONTRACT verbatim".format(script_source_path))
     script_path = abspath(join(working_dir, "restore.sh"))
-    with open(script_path, 'w') as script_file:
-        script_file.write(RESTORE_WRAPPER
-                          .replace("MODULE_NAME_TOKEN", module_name)
-                          .replace("SNIPPET_TOKEN", script_source).strip())
+    with open(script_path, "w") as script_file:
+        script_file.write(RESTORE_WRAPPER.replace("MODULE_NAME_TOKEN", module_name).replace("SNIPPET_TOKEN", script_source).strip())
     os.chmod(script_path, os.stat(script_path).st_mode | stat.S_IEXEC)
-    print("Build generate script [{}] script persisted to [{}]"
-          .format(basename(root_dir), script_path))
+    print("Build generate script [{}] script persisted to [{}]".format(basename(root_dir), script_path))

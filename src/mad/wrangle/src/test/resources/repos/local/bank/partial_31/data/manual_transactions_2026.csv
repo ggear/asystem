@@ -1,0 +1,5 @@
+Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Category Manual,Category Derived,Account ID,Source ID,Transaction ID,Vetted
+2026-01-03,Cash,-10.0,-10.0,Lunch,,,,,,6ec277688b3c570982242484009c9cdb,,,
+2026-01-04,Cash,-20.0,-20.0,Fuel,,,,,,6ec277688b3c570982242484009c9cdb,,,
+2026-01-01,Cash,0.0,0.0,Null Transaction,,,,,,6ec277688b3c570982242484009c9cdb,,,
+2026-01-01,Wallet,0.0,0.0,Null Transaction,,,,,,67492eae986555e59c03598aface6456,,,

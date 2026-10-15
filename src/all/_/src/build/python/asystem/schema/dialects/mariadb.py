@@ -3,7 +3,8 @@ from asystem.schema.runner import RUNNER, instance_runner, resolved
 DIALECT = "mariadb"
 TARGET = "MARIADB_SERVICE_PROD"
 
-CONNECT = """
+CONNECT = (
+    """
 MARIADB=(mariadb -h "${MARIADB_SERVICE_PROD}" -P "${MARIADB_API_PORT}"
   -u "${DATABASE_USER}" "--password=${DATABASE_PASSWORD}" --batch --raw)
 
@@ -26,7 +27,9 @@ query() {
   rm -f "${diagnostics}"
   printf '%s' "${output}" | tabulated
 }
-""" + RUNNER
+"""
+    + RUNNER
+)
 
 INSTANCE = """
 if ! command -v mariadb >/dev/null 2>&1; then
@@ -111,13 +114,18 @@ done
 
 
 def instance(module_name, zone=""):
-    return instance_runner(module_name, DIALECT, TARGET, connect(module_name),
-                           INSTANCE.replace("SCHEMA_MODULE", module_name))
+    return instance_runner(module_name, DIALECT, TARGET, connect(module_name), INSTANCE.replace("SCHEMA_MODULE", module_name))
 
 
 def connect(module_name):
     prefix = module_name.upper()
-    return resolved(module_name, (
-        ("DATABASE_USER", ("{}_DATABASE_USER".format(prefix), "MARIADB_USER")),
-        ("DATABASE_PASSWORD", ("{}_DATABASE_PASSWORD".format(prefix), "MARIADB_KEY")),
-    )) + CONNECT
+    return (
+        resolved(
+            module_name,
+            (
+                ("DATABASE_USER", ("{}_DATABASE_USER".format(prefix), "MARIADB_USER")),
+                ("DATABASE_PASSWORD", ("{}_DATABASE_PASSWORD".format(prefix), "MARIADB_KEY")),
+            ),
+        )
+        + CONNECT
+    )

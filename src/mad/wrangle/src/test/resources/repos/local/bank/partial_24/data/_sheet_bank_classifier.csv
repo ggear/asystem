@@ -1,0 +1,6 @@
+Category,Bucket,Budgeted,Bank Code,Merchant Code,Pattern
+Restaurants,Discretionary,Yes,FOOD_AND_DRINK,,coffee
+Groceries,Living,Yes,,,coffee rock enterprises
+Groceries,Living,Yes,,"5411, 5422",
+Shopping,Discretionary,Yes,,,apple.com
+Fuel,Living,Yes,TRANSPORTATION,,

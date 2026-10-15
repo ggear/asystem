@@ -1,41 +1,39 @@
 import sys
 
-sys.path.append('../../../main/python')
+sys.path.append("../../../main/python")
 
 import os
 import re
-from pathlib import Path
 import shutil
-import unittest
-import pytest
-from media import analyse
-from media.analyse import get_file_actions_dict as actions
-from media import stage
-from media import refresh
-from os.path import *
-from jproperties import Properties
 import subprocess
 import time
+import unittest
+from os.path import abspath, dirname, exists, join, realpath, splitext
+from pathlib import Path
+
+import pytest
+from jproperties import Properties
+
+from media import analyse, refresh, stage
+from media.analyse import MEDIA_FILE_EXTENSIONS, MEDIA_FILE_SCRIPTS
+from media.analyse import get_file_actions_dict as actions
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
-from media.analyse import MEDIA_FILE_SCRIPTS, MEDIA_FILE_EXTENSIONS
-
 
 class StaticTest(unittest.TestCase):
-
     def test_media_actions_matches_file_action_scripts(self):
         with open(join(DIR_ROOT, "src/main/resources/bin/media.sh")) as bin_file:
             bin_source = bin_file.read()
-        match = re.search(r'^MEDIA_ACTIONS=\(([^)]*)\)', bin_source, re.MULTILINE)
-        self.assertIsNotNone(match, "found no MEDIA_ACTIONS array in media.sh, the parse has rotted")
+        match = re.search(r"^MEDIA_ACTIONS=\(([^)]*)\)", bin_source, re.MULTILINE)
+        assert match is not None, "found no MEDIA_ACTIONS array in media.sh, the parse has rotted"
         media_actions = match.group(1).split()
         self.assertTrue(len(media_actions) > 0, "parsed no actions out of media.sh, the parse has rotted")
         self.assertEqual(media_actions, MEDIA_FILE_SCRIPTS)
 
-        help_match = re.search(r'^declare -A MEDIA_ACTION_HELP=\(([^)]*)\)', bin_source, re.MULTILINE)
-        self.assertIsNotNone(help_match, "found no MEDIA_ACTION_HELP array in media.sh, the parse has rotted")
-        help_actions = re.findall(r'^\s*\[([a-z]+)\]=', help_match.group(1), re.MULTILINE)
+        help_match = re.search(r"^declare -A MEDIA_ACTION_HELP=\(([^)]*)\)", bin_source, re.MULTILINE)
+        assert help_match is not None, "found no MEDIA_ACTION_HELP array in media.sh, the parse has rotted"
+        help_actions = re.findall(r"^\s*\[([a-z]+)\]=", help_match.group(1), re.MULTILINE)
         self.assertTrue(len(help_actions) > 0, "parsed no help entries out of media.sh, the parse has rotted")
         self.assertEqual(sorted(help_actions), sorted(MEDIA_FILE_SCRIPTS))
 
@@ -43,53 +41,46 @@ class StaticTest(unittest.TestCase):
         with open(join(DIR_ROOT, "install.sh")) as install_file:
             install_source = install_file.read()
         install_match = re.search(r'^SERVICE_INSTALL_LATEST="([^"]*)"', install_source, re.MULTILINE)
-        self.assertIsNotNone(install_match,
-                             "found no SERVICE_INSTALL_LATEST in install.sh, the parse has rotted")
+        assert install_match is not None, "found no SERVICE_INSTALL_LATEST in install.sh, the parse has rotted"
         service_install_latest = install_match.group(1).replace("${SERVICE_NAME}", "media")
 
         with open(join(DIR_ROOT, "src/main/python/media/analyse.py")) as analyse_file:
             analyse_source = analyse_file.read()
         analyse_match = re.search(r'MEDIA_BIN_INSTALL="([^"]*)"', analyse_source)
-        self.assertIsNotNone(analyse_match,
-                             "found no MEDIA_BIN_INSTALL in analyse.py, the parse has rotted")
+        assert analyse_match is not None, "found no MEDIA_BIN_INSTALL in analyse.py, the parse has rotted"
         media_bin_install = analyse_match.group(1)
 
         with open(join(DIR_ROOT, "src/main/resources/bin/media.sh")) as bin_file:
             bin_source = bin_file.read()
         bin_match = re.search(r'^MEDIA_BIN_INSTALL="([^"]*)"', bin_source, re.MULTILINE)
-        self.assertIsNotNone(bin_match,
-                             "found no MEDIA_BIN_INSTALL in media.sh, the parse has rotted")
+        assert bin_match is not None, "found no MEDIA_BIN_INSTALL in media.sh, the parse has rotted"
 
-        self.assertEqual("{}/bin".format(service_install_latest), media_bin_install)
-        self.assertEqual("{}/bin".format(service_install_latest), bin_match.group(1))
+        self.assertEqual(f"{service_install_latest}/bin", media_bin_install)
+        self.assertEqual(f"{service_install_latest}/bin", bin_match.group(1))
 
     def test_media_sh_has_no_media_home_or_wrapper_calls(self):
         with open(join(DIR_ROOT, "src/main/resources/bin/media.sh")) as bin_file:
             bin_source = bin_file.read()
         self.assertNotIn("media-home", bin_source)
-        retired_verbs = "analyse|check|clean|downscale|find|force|home|ingress|merge|metadata|" \
-                        "mount|move|normalise|process|reformat|refresh|rename|space|transcode|" \
-                        "truncate|upscale"
-        self.assertIsNone(re.search(r'\bmedia-(?:{})\b'.format(retired_verbs), bin_source),
-                          "media.sh calls a retired media-* wrapper by name")
+        retired_verbs = "analyse|check|clean|downscale|find|force|home|ingress|merge|metadata|mount|move|normalise|process|reformat|refresh|rename|space|transcode|truncate|upscale"
+        self.assertIsNone(re.search(rf"\bmedia-(?:{retired_verbs})\b", bin_source), "media.sh calls a retired media-* wrapper by name")
 
     def test_media_commands_matches_main_dispatch(self):
         with open(join(DIR_ROOT, "src/main/resources/bin/media.sh")) as bin_file:
             bin_source = bin_file.read()
-        commands_match = re.search(r'^MEDIA_COMMANDS=\(([^)]*)\)', bin_source, re.MULTILINE)
-        self.assertIsNotNone(commands_match, "found no MEDIA_COMMANDS array in media.sh, the parse has rotted")
-        main_match = re.search(r'^main\(\) \{\n(.*?)^\}', bin_source, re.MULTILINE | re.DOTALL)
-        self.assertIsNotNone(main_match, "found no main function in media.sh, the parse has rotted")
+        commands_match = re.search(r"^MEDIA_COMMANDS=\(([^)]*)\)", bin_source, re.MULTILINE)
+        assert commands_match is not None, "found no MEDIA_COMMANDS array in media.sh, the parse has rotted"
+        main_match = re.search(r"^main\(\) \{\n(.*?)^\}", bin_source, re.MULTILINE | re.DOTALL)
+        assert main_match is not None, "found no main function in media.sh, the parse has rotted"
         dispatched = set()
-        for labels in re.findall(r'^  ([a-z][a-z |]*)\)', main_match.group(1), re.MULTILINE):
+        for labels in re.findall(r"^  ([a-z][a-z |]*)\)", main_match.group(1), re.MULTILINE):
             dispatched.update(label.strip() for label in labels.split("|"))
         self.assertTrue(len(dispatched) > 0, "parsed no commands out of main in media.sh, the parse has rotted")
         self.assertEqual(set(commands_match.group(1).split()), dispatched | {"completion"})
 
     def test_media_complete_candidates(self):
         def complete(*words):
-            result = subprocess.run([join(DIR_ROOT, "src/main/resources/bin/media.sh"), "complete",
-                                     str(len(words)), "amedia", *words], capture_output=True, text=True)
+            result = subprocess.run([join(DIR_ROOT, "src/main/resources/bin/media.sh"), "complete", str(len(words)), "amedia", *words], capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
             return result.stdout.split()
 
@@ -97,10 +88,8 @@ class StaticTest(unittest.TestCase):
         self.assertIn("completion", complete(""))
         self.assertNotIn("complete", complete(""))
         self.assertEqual(complete("tr"), ["truncate", "transcode"])
-        self.assertEqual(complete("analyse", "--"),
-                         ["--share", "--force", "--merge", "--transcode", "--quiet", "--verbose"])
-        self.assertEqual(complete("analyse", "--merge", "--"),
-                         ["--share", "--force", "--transcode", "--quiet", "--verbose"])
+        self.assertEqual(complete("analyse", "--"), ["--share", "--force", "--merge", "--transcode", "--quiet", "--verbose"])
+        self.assertEqual(complete("analyse", "--merge", "--"), ["--share", "--force", "--transcode", "--quiet", "--verbose"])
         self.assertEqual(complete("process", ""), ["kids", "parents", "docos", "comedy"])
         self.assertEqual(complete("process", "kids", ""), ["--share", "--persistent", "--quiet", "--verbose"])
         self.assertEqual(complete("move", "--dryrun", "2"), ["20", "21"])
@@ -109,38 +98,27 @@ class StaticTest(unittest.TestCase):
 
     def test_media_completion_drives_bash(self):
         bin_path = join(DIR_ROOT, "src/main/resources/bin/media.sh")
-        script = 'amedia() { "%s" "$@"; }; eval "$(amedia completion)"; ' \
-                 'COMP_WORDS=(amedia move ""); COMP_CWORD=2; _amedia; printf "%%s\\n" "${COMPREPLY[@]}"' % bin_path
+        script = f'amedia() {{ "{bin_path}" "$@"; }}; eval "$(amedia completion)"; COMP_WORDS=(amedia move ""); COMP_CWORD=2; _amedia; printf "%s\\n" "${{COMPREPLY[@]}}"'
         result = subprocess.run(["/bin/bash", "-c", script], capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("40", result.stdout.split())
 
 
 class InternetTest(unittest.TestCase):
-
     def test_analyse_simple(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
-        self._test_analyse_assert(join(dir_test, "10/media/parents/movies/Kingdom Of Heaven (2005)"),
-                                  files_action_expected=actions(
-                                      reformat=1
-                                  ), scripts={})
+        self._test_analyse_assert(join(dir_test, "10/media/parents/movies/Kingdom Of Heaven (2005)"), files_action_expected=actions(reformat=1), scripts={})
 
     def test_analyse_subtitles(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
-        self._test_analyse_assert(join(dir_test, "22/media"),
-                                  files_action_expected=actions(
-                                      check=1
-                                  ), scripts={})
+        self._test_analyse_assert(join(dir_test, "22/media"), files_action_expected=actions(check=1), scripts={})
 
     def test_analyse_aggregate_script_resolves_bin_dir(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
         share_dir = join(dir_test, "22")
-        self._test_analyse_assert(join(share_dir, "media"),
-                                  files_action_expected=actions(
-                                      check=1
-                                  ), scripts={})
+        self._test_analyse_assert(join(share_dir, "media"), files_action_expected=actions(check=1), scripts={})
         script = join(share_dir, "tmp/scripts/media/.lib/clean.sh")
-        self.assertTrue(exists(script), "expected generated aggregate script [{}]".format(script))
+        self.assertTrue(exists(script), f"expected generated aggregate script [{script}]")
 
         env_ok = dict(os.environ)
         env_ok["MEDIA_BIN_DIR"] = join(DIR_ROOT, "src/main/resources/bin")
@@ -155,255 +133,119 @@ class InternetTest(unittest.TestCase):
 
     def test_analyse_containers(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
-        self._test_analyse_assert(join(dir_test, "43/media"),
-                                  files_action_expected=actions(
-                                      check=2
-                                  ), scripts={})
+        self._test_analyse_assert(join(dir_test, "43/media"), files_action_expected=actions(check=2), scripts={})
 
     def test_analyse_corrupt(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
-        self._test_analyse_assert(join(dir_test, "32/media"),
-                                  files_action_expected=actions(
-                                      rename=2,
-                                      check=6,
-                                      reformat=5,
-                                      merge=2
-                                  ), scripts={})
+        self._test_analyse_assert(join(dir_test, "32/media"), files_action_expected=actions(rename=2, check=6, reformat=5, merge=2), scripts={})
 
     def test_analyse_duplicate(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
-        self._test_analyse_assert(join(dir_test, "38/media"),
-                                  files_action_expected=actions(
-                                      rename=1,
-                                      check=14,
-                                      reformat=2,
-                                      merge=2,
-                                      nothing=3
-                                  ), scripts={})
+        self._test_analyse_assert(join(dir_test, "38/media"), files_action_expected=actions(rename=1, check=14, reformat=2, merge=2, nothing=3), scripts={})
 
     def test_analyse_crazy_chars(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
-        self._test_analyse_assert(join(dir_test, "31/media"),
-                                  files_action_expected=actions(
-                                      rename=12,
-                                      nothing=8
-                                  ), scripts={"rename"})
-        self._test_analyse_assert(join(dir_test, "31/media"),
-                                  files_action_expected=actions(
-                                      rename=2,
-                                      nothing=18
-                                  ), scripts={"rename"})
+        self._test_analyse_assert(join(dir_test, "31/media"), files_action_expected=actions(rename=12, nothing=8), scripts={"rename"})
+        self._test_analyse_assert(join(dir_test, "31/media"), files_action_expected=actions(rename=2, nothing=18), scripts={"rename"})
 
     def test_analyse_ignore(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
-        self._test_analyse_assert(join(dir_test, "54/media"),
-                                  files_action_expected=actions(
-                                      check=1,
-                                      downscale=1,
-                                      nothing=4
-                                  ), scripts={})
+        self._test_analyse_assert(join(dir_test, "54/media"), files_action_expected=actions(check=1, downscale=1, nothing=4), scripts={})
 
     def test_analyse_rename(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
-        self._test_analyse_assert(join(dir_test, "37/media"),
-                                  files_action_expected=actions(
-                                      rename=47,
-                                      check=2,
-                                      merge=3,
-                                      upscale=7,
-                                      nothing=4
-                                  ), scripts={"rename"})
-        self._test_analyse_assert(join(dir_test, "37/media"),
-                                  files_action_expected=actions(
-                                      rename=19,
-                                      check=10,
-                                      merge=3,
-                                      upscale=19,
-                                      reformat=10,
-                                      nothing=2
-                                  ), scripts={"rename"})
+        self._test_analyse_assert(join(dir_test, "37/media"), files_action_expected=actions(rename=47, check=2, merge=3, upscale=7, nothing=4), scripts={"rename"})
+        self._test_analyse_assert(join(dir_test, "37/media"), files_action_expected=actions(rename=19, check=10, merge=3, upscale=19, reformat=10, nothing=2), scripts={"rename"})
 
     def test_analyse_check(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
-        self._test_analyse_assert(join(dir_test, "48/media"),
-                                  files_action_expected=actions(
-                                      check=3,
-                                      upscale=1,
-                                      reformat=1,
-                                      downscale=2
-                                  ))
-        self._test_analyse_assert(join(dir_test, "48/media"), files_expected_scripts=10,
-                                  files_action_expected=actions(
-                                      check=4,
-                                      merge=2,
-                                      reformat=1,
-                                      upscale=1,
-                                      downscale=2
-                                  ))
-        self._test_analyse_assert(join(dir_test, "48/media"), files_expected_scripts=10,
-                                  files_action_expected=actions(
-                                      merge=1,
-                                      upscale=1,
-                                      transcode=4,
-                                      downscale=2
-                                  ), transcode=True)
-        self._test_analyse_assert(join(dir_test, "48/media"), files_expected_scripts=12,
-                                  files_action_expected=actions(
-                                      check=6,
-                                      merge=2,
-                                      upscale=2,
-                                      downscale=2
-                                  ))
+        self._test_analyse_assert(join(dir_test, "48/media"), files_action_expected=actions(check=3, upscale=1, reformat=1, downscale=2))
+        self._test_analyse_assert(join(dir_test, "48/media"), files_expected_scripts=10, files_action_expected=actions(check=4, merge=2, reformat=1, upscale=1, downscale=2))
+        self._test_analyse_assert(join(dir_test, "48/media"), files_expected_scripts=10, files_action_expected=actions(merge=1, upscale=1, transcode=4, downscale=2), transcode=True)
+        self._test_analyse_assert(join(dir_test, "48/media"), files_expected_scripts=12, files_action_expected=actions(check=6, merge=2, upscale=2, downscale=2))
 
     def test_analyse_merge(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
-        self._test_analyse_assert(join(dir_test, "41/media"),
-                                  files_action_expected=actions(
-                                      check=12,
-                                      reformat=9,
-                                      downscale=1
-                                  ))
-        self._test_analyse_assert(join(dir_test, "41/media"), files_expected_scripts=24,
-                                  files_action_expected=actions(
-                                      merge=14,
-                                      reformat=9,
-                                      downscale=1,
-                                  ), scripts={"merge"}, merge=True)
-        self._test_analyse_assert(join(dir_test, "41/media"),
-                                  files_action_expected=actions(
-                                      check=8,
-                                      upscale=4,
-                                      reformat=4,
-                                      downscale=1,
-                                      nothing=1
-                                  ), scripts={"merge"})
+        self._test_analyse_assert(join(dir_test, "41/media"), files_action_expected=actions(check=12, reformat=9, downscale=1))
+        self._test_analyse_assert(
+            join(dir_test, "41/media"),
+            files_expected_scripts=24,
+            files_action_expected=actions(
+                merge=14,
+                reformat=9,
+                downscale=1,
+            ),
+            scripts={"merge"},
+            merge=True,
+        )
+        self._test_analyse_assert(join(dir_test, "41/media"), files_action_expected=actions(check=8, upscale=4, reformat=4, downscale=1, nothing=1), scripts={"merge"})
 
     def test_analyse_upscale(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
-        self._test_analyse_assert(join(dir_test, "53/media"),
-                                  files_action_expected=actions(
-                                      check=2,
-                                      upscale=1,
-                                      nothing=1,
-                                  ), scripts={"upscale"})
-        self._test_analyse_assert(join(dir_test, "53/media"),
-                                  files_action_expected=actions(
-                                      check=2,
-                                      upscale=1,
-                                      nothing=1,
-                                  ), scripts={"upscale"})
+        self._test_analyse_assert(
+            join(dir_test, "53/media"),
+            files_action_expected=actions(
+                check=2,
+                upscale=1,
+                nothing=1,
+            ),
+            scripts={"upscale"},
+        )
+        self._test_analyse_assert(
+            join(dir_test, "53/media"),
+            files_action_expected=actions(
+                check=2,
+                upscale=1,
+                nothing=1,
+            ),
+            scripts={"upscale"},
+        )
 
     def test_analyse_transcode(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
-        self._test_analyse_assert(join(dir_test, "45/media"),
-                                  files_action_expected=actions(
-                                      transcode=15
-                                  ), scripts={"transcode"})
-        self._test_analyse_assert(join(dir_test, "45/media"),
-                                  files_action_expected=actions(
-                                      check=5,
-                                      merge=10,
-                                      transcode=15
-                                  ), scripts={"transcode"})
+        self._test_analyse_assert(join(dir_test, "45/media"), files_action_expected=actions(transcode=15), scripts={"transcode"})
+        self._test_analyse_assert(join(dir_test, "45/media"), files_action_expected=actions(check=5, merge=10, transcode=15), scripts={"transcode"})
 
     def test_analyse_downscale(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
-        self._test_analyse_assert(join(dir_test, "46/media"),
-                                  files_action_expected=actions(
-                                      downscale=1
-                                  ), scripts={"downscale"})
-        self._test_analyse_assert(join(dir_test, "46/media"),
-                                  files_action_expected=actions(
-                                      merge=1,
-                                      downscale=1
-                                  ), scripts={"downscale"})
+        self._test_analyse_assert(join(dir_test, "46/media"), files_action_expected=actions(downscale=1), scripts={"downscale"})
+        self._test_analyse_assert(join(dir_test, "46/media"), files_action_expected=actions(merge=1, downscale=1), scripts={"downscale"})
 
     def test_analyse_reformat(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
-        self._test_analyse_assert(join(dir_test, "47/media"),
-                                  files_action_expected=actions(
-                                      reformat=3
-                                  ), scripts={"reformat"})
-        self._test_analyse_assert(join(dir_test, "47/media"),
-                                  files_action_expected=actions(
-                                      check=2,
-                                      merge=1,
-                                      reformat=3
-                                  ), scripts={"reformat"})
+        self._test_analyse_assert(join(dir_test, "47/media"), files_action_expected=actions(reformat=3), scripts={"reformat"})
+        self._test_analyse_assert(join(dir_test, "47/media"), files_action_expected=actions(check=2, merge=1, reformat=3), scripts={"reformat"})
 
     def test_analyse_missing_profile(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
-        self._test_analyse_assert(join(dir_test, "57/media"),
-                                  files_action_expected=actions(
-                                      check=2,
-                                      nothing=1
-                                  ), scripts={})
+        self._test_analyse_assert(join(dir_test, "57/media"), files_action_expected=actions(check=2, nothing=1), scripts={})
 
     def test_analyse_profiles(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
-        self._test_analyse_assert(join(dir_test, "56/media"),
-                                  files_action_expected=actions(
-                                      merge=5,
-                                      upscale=1,
-                                      transcode=9,
-                                      reformat=1,
-                                      downscale=2,
-                                      nothing=3
-                                  ), scripts={"transcode", "reformat", "downscale"})
-        self._test_analyse_assert(join(dir_test, "56/media"),
-                                  files_action_expected=actions(
-                                      merge=16,
-                                      upscale=1,
-                                      transcode=9,
-                                      reformat=1,
-                                      downscale=2,
-                                      nothing=3
-                                  ), scripts={})
-        self._test_analyse_assert(join(dir_test, "56/media"), files_expected_scripts=35,
-                                  files_action_expected=actions(
-                                      merge=16,
-                                      upscale=1,
-                                      transcode=9,
-                                      reformat=1,
-                                      downscale=2,
-                                      nothing=3
-                                  ), scripts={"merge"})
-        self._test_analyse_assert(join(dir_test, "56/media"),
-                                  files_action_expected=actions(
-                                      merge=8,
-                                      upscale=1,
-                                      transcode=4,
-                                      nothing=11
-                                  ), scripts={})
+        self._test_analyse_assert(
+            join(dir_test, "56/media"), files_action_expected=actions(merge=5, upscale=1, transcode=9, reformat=1, downscale=2, nothing=3), scripts={"transcode", "reformat", "downscale"}
+        )
+        self._test_analyse_assert(join(dir_test, "56/media"), files_action_expected=actions(merge=16, upscale=1, transcode=9, reformat=1, downscale=2, nothing=3), scripts={})
+        self._test_analyse_assert(
+            join(dir_test, "56/media"), files_expected_scripts=35, files_action_expected=actions(merge=16, upscale=1, transcode=9, reformat=1, downscale=2, nothing=3), scripts={"merge"}
+        )
+        self._test_analyse_assert(join(dir_test, "56/media"), files_action_expected=actions(merge=8, upscale=1, transcode=4, nothing=11), scripts={})
 
     def test_analyse_empty(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
-        self._test_analyse_assert(join(dir_test, "39"),
-                                  files_action_expected=actions(
-                                  ), scripts={}, clean=True)
-        self._test_analyse_assert(join(dir_test, "33"),
-                                  files_action_expected=actions(
-                                      nothing=1
-                                  ), scripts={})
-        self._test_analyse_assert(join(dir_test, "39"),
-                                  files_action_expected=actions(
-                                  ), scripts={})
+        self._test_analyse_assert(join(dir_test, "39"), files_action_expected=actions(), scripts={}, clean=True)
+        self._test_analyse_assert(join(dir_test, "33"), files_action_expected=actions(nothing=1), scripts={})
+        self._test_analyse_assert(join(dir_test, "39"), files_action_expected=actions(), scripts={})
 
     def test_analyse_sheet(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
-        self._test_analyse_assert(join(dir_test, "34"),
-                                  files_action_expected=actions(
-                                      rename=2,
-                                      check=1,
-                                      transcode=1
-                                  ), clean=True, scripts={})
+        self._test_analyse_assert(join(dir_test, "34"), files_action_expected=actions(rename=2, check=1, transcode=1), clean=True, scripts={})
         self._test_analyse_assert(join(dir_test, "34/media"), scripts={})
         self._test_analyse_assert(join(dir_test, "34"), scripts={})
 
     def test_analyse_failures(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
-        self._test_analyse_assert(join(dir_test, "some/non-existent/path"), files_expected=-1,
-                                  files_action_expected=actions())
+        self._test_analyse_assert(join(dir_test, "some/non-existent/path"), files_expected=-1, files_action_expected=actions())
         self._test_analyse_assert("/tmp", files_expected=-2, files_action_expected=actions())
         self._test_analyse_assert(abspath(join(dir_test, "19/tmp")), files_expected=-3, files_action_expected=actions())
         self._test_analyse_assert(join(dir_test, "10/tmp"), files_expected=-4, files_action_expected=actions())
@@ -411,23 +253,30 @@ class InternetTest(unittest.TestCase):
     def test_analyse_comprehensive(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
         self._test_analyse_assert(join(dir_test, "10"), asserts=False, clean=True)
-        for INDEX in sorted([
-            _dir.name for _dir in Path(join(DIR_ROOT, "target/runtime-unit/share_media_example_1/share")).iterdir() if
-            _dir.is_dir()
-        ]):
+        for INDEX in sorted([_dir.name for _dir in Path(join(DIR_ROOT, "target/runtime-unit/share_media_example_1/share")).iterdir() if _dir.is_dir()]):
             self._test_analyse_assert(join(dir_test, INDEX), asserts=False)
-            self._test_analyse_assert(join(dir_test, "{}/media".format(INDEX)), asserts=False, merge=True, transcode=True)
+            self._test_analyse_assert(join(dir_test, f"{INDEX}/media"), asserts=False, merge=True, transcode=True)
             self._test_analyse_assert(join(dir_test, INDEX), asserts=False, files_expected_scripts={})
         self._test_analyse_assert(dir_test, asserts=False)
 
-    def _test_analyse_assert(self, dir_test, files_expected=None, files_expected_scripts=None,
-                             files_action_expected=None, asserts=True,
-                             scripts=MEDIA_FILE_SCRIPTS, extensions=MEDIA_FILE_EXTENSIONS, clean=False, merge=False,
-                             transcode=False, defaults=False):
+    def _test_analyse_assert(
+        self,
+        dir_test,
+        files_expected=None,
+        files_expected_scripts=None,
+        files_action_expected=None,
+        asserts=True,
+        scripts=MEDIA_FILE_SCRIPTS,
+        extensions=MEDIA_FILE_EXTENSIONS,
+        clean=False,
+        merge=False,
+        transcode=False,
+        defaults=False,
+    ):
 
         def _file_count():
             file_count = 0
-            for file_root_dir, file_dirs, file_names in os.walk(dir_test):
+            for _, _, file_names in os.walk(dir_test):
                 for file_name in file_names:
                     if splitext(file_name)[1].replace(".", "") in extensions:
                         file_count += 1
@@ -436,38 +285,30 @@ class InternetTest(unittest.TestCase):
         sheet_guid = os.getenv("MEDIA_GOOGLE_SHEET_GUID")
         if clean:
             self.assertEqual(0, analyse._analyse("/share", sheet_guid, clean=True, verbose=True)[0])
-        files_actual, files_action_actual = analyse._analyse(dir_test, sheet_guid, verbose=True, merge=merge,
-                                                             transcode=transcode,
-                                                             defaults=defaults)
+        files_actual, files_action_actual = analyse._analyse(dir_test, sheet_guid, verbose=True, merge=merge, transcode=transcode, defaults=defaults)
         if asserts:
             self.assertEqual(_file_count() if files_expected is None else files_expected, files_actual)
             if files_expected is not None:
-                self.assertEqual(0 if files_expected < 0 else files_expected, sum(files_action_actual.values()))
+                self.assertEqual(max(files_expected, 0), sum(files_action_actual.values()))
             if files_action_expected is not None:
                 self.assertDictEqual(files_action_expected, files_action_actual)
         if files_actual > 0:
             for script in scripts:
                 file_count = _file_count()
-                for file_root_dir, file_dirs, file_names in os.walk(dir_test):
+                for file_root_dir, _, file_names in os.walk(dir_test):
                     for file_name in file_names:
-                        if file_name == "{}.sh".format(script) and \
-                                not str(Path(file_root_dir).absolute()).endswith("/tmp/scripts/media"):
-                            script_path = "\"{}\"".format( \
-                                join(file_root_dir, file_name) \
-                                    .replace("$", "\\$") \
-                                    .replace("`", "\\`") \
-                                    .replace("\"", "\\\""))
-                            print("Running {} ...\n\n".format(script_path), flush=True)
+                        if file_name == f"{script}.sh" and not str(Path(file_root_dir).absolute()).endswith("/tmp/scripts/media"):
+                            script_path = '"{}"'.format(join(file_root_dir, file_name).replace("$", "\\$").replace("`", "\\`").replace('"', '\\"'))
+                            print(f"Running {script_path} ...\n\n", flush=True)
                             time.sleep(0.1)
                             script_return = subprocess.run([script_path], shell=True).returncode
                             sys.stdout.flush()
                             sys.stderr.flush()
                             if asserts:
                                 self.assertEqual(0, script_return)
-                            print("\n\nRan {} with return code [{}]".format(script_path, script_return), flush=True)
+                            print(f"\n\nRan {script_path} with return code [{script_return}]", flush=True)
                 if asserts:
-                    self.assertGreaterEqual(_file_count() if files_expected_scripts is None else files_expected_scripts,
-                                            file_count)
+                    self.assertGreaterEqual(_file_count() if files_expected_scripts is None else files_expected_scripts, file_count)
 
     def test_stage_comprehensive_1(self):
         dir_test = self._test_prepare_dir("share_tmp_example", 1)
@@ -500,47 +341,69 @@ class InternetTest(unittest.TestCase):
     def test_refresh_happy(self):
         dir_test = self._test_prepare_dir("share_media_example", 2)
         print(dir_test)
-        self._test_refresh(dir_test, {
-            "Docos Movies": [
-                "/share/10/media/docos/movies",
-                "/share/20/media/docos/movies",
-                "/share/30/media/docos/movies",
-            ]
-        }, locations_expected={
-            "Docos Movies": [
-                "/share/10/media/docos/movies",
-                "/share/20/media/docos/movies",
-                "/share/30/media/docos/movies",
-            ]
-        })
-        self._test_refresh(dir_test, {
-            "Docos Movies": [
-                "/share/20/media/docos/movies",
-            ]
-        }, locations_expected={
-            "Docos Movies": [
-                "/share/10/media/docos/movies",
-                "/share/20/media/docos/movies",
-            ]
-        })
+        self._test_refresh(
+            dir_test,
+            {
+                "Docos Movies": [
+                    "/share/10/media/docos/movies",
+                    "/share/20/media/docos/movies",
+                    "/share/30/media/docos/movies",
+                ]
+            },
+            locations_expected={
+                "Docos Movies": [
+                    "/share/10/media/docos/movies",
+                    "/share/20/media/docos/movies",
+                    "/share/30/media/docos/movies",
+                ]
+            },
+        )
+        self._test_refresh(
+            dir_test,
+            {
+                "Docos Movies": [
+                    "/share/20/media/docos/movies",
+                ]
+            },
+            locations_expected={
+                "Docos Movies": [
+                    "/share/10/media/docos/movies",
+                    "/share/20/media/docos/movies",
+                ]
+            },
+        )
 
     def test_refresh_sad(self):
         dir_test = self._test_prepare_dir("share_media_example", 2)
         self._test_refresh("/invalid/shares", return_value=refresh.Exit.FAIL_FILESYSTEM)
         self._test_refresh("/invalid/shares", {}, return_value=refresh.Exit.FAIL_FILESYSTEM)
-        self._test_refresh("/invalid/shares", {
-            "My Shows": ["/invalid/shares/1/media/my/shows", "/invalid/shares/2/media"],
-            "My Movies": ["/invalid/shares/1/media/my/movies", "/invalid/shares/2/media"],
-        }, return_value=refresh.Exit.FAIL_FILESYSTEM)
+        self._test_refresh(
+            "/invalid/shares",
+            {
+                "My Shows": ["/invalid/shares/1/media/my/shows", "/invalid/shares/2/media"],
+                "My Movies": ["/invalid/shares/1/media/my/movies", "/invalid/shares/2/media"],
+            },
+            return_value=refresh.Exit.FAIL_FILESYSTEM,
+        )
         self._test_refresh("/tmp", return_value=refresh.Exit.FAIL_FILESYSTEM)
         self._test_refresh("/tmp", {}, return_value=refresh.Exit.FAIL_FILESYSTEM)
-        self._test_refresh("/tmp", {
-            "My Shows": ["/invalid/shares/1/media/my/shows", "/invalid/shares/2/media"],
-            "My Movies": ["/invalid/shares/1/media/my/movies", "/invalid/shares/2/media"],
-        }, return_value=refresh.Exit.FAIL_FILESYSTEM)
-        self._test_refresh(dir_test, {
-            "Kids Movies": ["/share/10/media/kids/movies", ]
-        }, return_value=refresh.Exit.FAIL_PLEX_LIBRARY)
+        self._test_refresh(
+            "/tmp",
+            {
+                "My Shows": ["/invalid/shares/1/media/my/shows", "/invalid/shares/2/media"],
+                "My Movies": ["/invalid/shares/1/media/my/movies", "/invalid/shares/2/media"],
+            },
+            return_value=refresh.Exit.FAIL_FILESYSTEM,
+        )
+        self._test_refresh(
+            dir_test,
+            {
+                "Kids Movies": [
+                    "/share/10/media/kids/movies",
+                ]
+            },
+            return_value=refresh.Exit.FAIL_PLEX_LIBRARY,
+        )
 
     def test_refresh_sabnzbd(self):
         dir_test = self._test_prepare_dir("share_media_example", 2)
@@ -572,41 +435,44 @@ class InternetTest(unittest.TestCase):
 
         sabnzbd = self._test_refresh(dir_test, library_paths, history_slots=[])
         self.assertEqual([], archives(sabnzbd))
-        self.assertEqual({
-            "mode": "history",
-            "limit": 1,
-            "status": "Completed",
-        }, sabnzbd.calls[0])
+        self.assertEqual(
+            {
+                "mode": "history",
+                "limit": 1,
+                "status": "Completed",
+            },
+            sabnzbd.calls[0],
+        )
 
         sabnzbd = self._test_refresh(dir_test, library_paths, history_slots=[completed_slot])
-        self.assertEqual([{
-            "mode": "history",
-            "name": "delete",
-            "value": "completed",
-            "archive": 1,
-        }], archives(sabnzbd))
+        self.assertEqual(
+            [
+                {
+                    "mode": "history",
+                    "name": "delete",
+                    "value": "completed",
+                    "archive": 1,
+                }
+            ],
+            archives(sabnzbd),
+        )
 
         sabnzbd = self._test_refresh(dir_test, library_paths, history_slots=[running_slot])
         self.assertEqual([], archives(sabnzbd))
 
-        sabnzbd = self._test_refresh(dir_test, library_paths, history_slots=[failed_slot],
-                                     return_value=refresh.Exit.FAIL_SABNZBD_DOWNLOAD)
+        sabnzbd = self._test_refresh(dir_test, library_paths, history_slots=[failed_slot], return_value=refresh.Exit.FAIL_SABNZBD_DOWNLOAD)
         self.assertEqual([], archives(sabnzbd))
 
-        sabnzbd = self._test_refresh(dir_test, library_paths, history_slots=[completed_slot, failed_slot],
-                                     return_value=refresh.Exit.FAIL_SABNZBD_DOWNLOAD)
+        sabnzbd = self._test_refresh(dir_test, library_paths, history_slots=[completed_slot, failed_slot], return_value=refresh.Exit.FAIL_SABNZBD_DOWNLOAD)
         self.assertEqual(["completed"], [call["value"] for call in archives(sabnzbd)])
 
-        sabnzbd = self._test_refresh(dir_test, library_paths, history_slots=[failed_slot] * 250,
-                                     return_value=refresh.Exit.FAIL_SABNZBD_DOWNLOAD)
+        sabnzbd = self._test_refresh(dir_test, library_paths, history_slots=[failed_slot] * 250, return_value=refresh.Exit.FAIL_SABNZBD_DOWNLOAD)
         self.assertEqual([], archives(sabnzbd))
         self.assertEqual([0, 100, 200], [call["start"] for call in sabnzbd.calls if "start" in call])
 
-        self._test_refresh(dir_test, library_paths, connect_error=True,
-                           return_value=refresh.Exit.FAIL_SABNZBD_CONNECT)
+        self._test_refresh(dir_test, library_paths, connect_error=True, return_value=refresh.Exit.FAIL_SABNZBD_CONNECT)
 
-        self._test_refresh(dir_test, library_paths, history_slots=[completed_slot], archive_error=True,
-                           return_value=refresh.Exit.FAIL_SABNZBD_ARCHIVE)
+        self._test_refresh(dir_test, library_paths, history_slots=[completed_slot], archive_error=True, return_value=refresh.Exit.FAIL_SABNZBD_ARCHIVE)
 
     def test_refresh_sonarr(self):
         dir_test = self._test_prepare_dir("share_media_example", 2)
@@ -617,40 +483,46 @@ class InternetTest(unittest.TestCase):
                 "/share/30/media/docos/movies",
             ]
         }
+
         def resources(monitored=True):
-            return {"series": [{
-                "id": 7,
-                "title": "Ted Lasso",
-                "monitored": monitored,
-            }]}
+            return {
+                "series": [
+                    {
+                        "id": 7,
+                        "title": "Ted Lasso",
+                        "monitored": monitored,
+                    }
+                ]
+            }
 
         sonarr = self._test_refresh(dir_test, library_paths, sonarr_resources=resources())
         self.assertEqual([], sonarr.puts)
-        self.assertEqual([
-            ("command", {"name": "RefreshMonitoredDownloads"}),
-            ("command", {"name": "RescanSeries", "seriesId": 7}),
-            ("command", {"name": "RefreshSeries", "seriesId": 7}),
-        ], sonarr.posts)
+        self.assertEqual(
+            [
+                ("command", {"name": "RefreshMonitoredDownloads"}),
+                ("command", {"name": "RescanSeries", "seriesId": 7}),
+                ("command", {"name": "RefreshSeries", "seriesId": 7}),
+            ],
+            sonarr.posts,
+        )
 
         sonarr = self._test_refresh(dir_test, library_paths, sonarr_resources={"series": []})
         self.assertEqual([], sonarr.puts)
-        self.assertEqual([
-            ("command", {"name": "RefreshMonitoredDownloads"}),
-        ], sonarr.posts)
+        self.assertEqual(
+            [
+                ("command", {"name": "RefreshMonitoredDownloads"}),
+            ],
+            sonarr.posts,
+        )
 
         sonarr = self._test_refresh(dir_test, library_paths, sonarr_resources=resources(False))
         self.assertEqual(["series/7"], [resource for resource, _ in sonarr.puts])
         self.assertEqual(True, sonarr.puts[0][1]["monitored"])
 
-        self._test_refresh(dir_test, library_paths, sonarr_resources=resources(), sonarr_error="series",
-                           return_value=refresh.Exit.FAIL_SONARR_CONNECT)
-        self._test_refresh(dir_test, library_paths, sonarr_resources=resources(False), sonarr_error="series/7",
-                           return_value=refresh.Exit.FAIL_SONARR_CONFIGURE)
-        self._test_refresh(dir_test, library_paths, sonarr_resources=resources(),
-                           sonarr_error="RefreshMonitoredDownloads",
-                           return_value=refresh.Exit.FAIL_SONARR_ACTIVITY)
-        self._test_refresh(dir_test, library_paths, sonarr_resources=resources(), sonarr_error="RescanSeries",
-                           return_value=refresh.Exit.FAIL_SONARR_REFRESH)
+        self._test_refresh(dir_test, library_paths, sonarr_resources=resources(), sonarr_error="series", return_value=refresh.Exit.FAIL_SONARR_CONNECT)
+        self._test_refresh(dir_test, library_paths, sonarr_resources=resources(False), sonarr_error="series/7", return_value=refresh.Exit.FAIL_SONARR_CONFIGURE)
+        self._test_refresh(dir_test, library_paths, sonarr_resources=resources(), sonarr_error="RefreshMonitoredDownloads", return_value=refresh.Exit.FAIL_SONARR_ACTIVITY)
+        self._test_refresh(dir_test, library_paths, sonarr_resources=resources(), sonarr_error="RescanSeries", return_value=refresh.Exit.FAIL_SONARR_REFRESH)
 
     def test_refresh_sonarr_series_state(self):
         dir_test = self._test_prepare_dir("share_media_example", 2)
@@ -675,26 +547,18 @@ class InternetTest(unittest.TestCase):
                 },
             }
 
-        self._test_refresh(dir_test, library_paths,
-                           sonarr_resources={"series": [series(False, 10, 10)], "queue": []})
+        self._test_refresh(dir_test, library_paths, sonarr_resources={"series": [series(False, 10, 10)], "queue": []})
 
-        self._test_refresh(dir_test, library_paths,
-                           sonarr_resources={"series": [series(True, 10, 10)], "queue": []})
+        self._test_refresh(dir_test, library_paths, sonarr_resources={"series": [series(True, 10, 10)], "queue": []})
 
-        self._test_refresh(dir_test, library_paths,
-                           sonarr_resources={"series": [series(False, 10, 8)], "queue": []},
-                           return_value=refresh.Exit.FAIL_SONARR_MISSING)
+        self._test_refresh(dir_test, library_paths, sonarr_resources={"series": [series(False, 10, 8)], "queue": []}, return_value=refresh.Exit.FAIL_SONARR_MISSING)
 
-        self._test_refresh(dir_test, library_paths,
-                           sonarr_resources={"series": [series(False, 10, 8)], "queue": [{"seriesId": 7}]})
+        self._test_refresh(dir_test, library_paths, sonarr_resources={"series": [series(False, 10, 8)], "queue": [{"seriesId": 7}]})
 
-        sonarr = self._test_refresh(dir_test, library_paths, sonarr_command_status="queued",
-                                    sonarr_resources={"series": [series(False, 10, 10)], "queue": []})
+        sonarr = self._test_refresh(dir_test, library_paths, sonarr_command_status="queued", sonarr_resources={"series": [series(False, 10, 10)], "queue": []})
         self.assertEqual(3, len([resource for resource, _ in sonarr.posts if resource == "command"]))
 
-        self._test_refresh(dir_test, library_paths, sonarr_command_status="failed",
-                           sonarr_resources={"series": [series(False, 10, 10)], "queue": []},
-                           return_value=refresh.Exit.FAIL_SONARR_ACTIVITY)
+        self._test_refresh(dir_test, library_paths, sonarr_command_status="failed", sonarr_resources={"series": [series(False, 10, 10)], "queue": []}, return_value=refresh.Exit.FAIL_SONARR_ACTIVITY)
 
     def test_refresh_sonarr_defaults(self):
         dir_test = self._test_prepare_dir("share_media_example", 2)
@@ -708,29 +572,27 @@ class InternetTest(unittest.TestCase):
 
         def resources(_seasons, _profile_id=4):
             return {
-                "series": [{
-                    "id": 7,
-                    "title": "Ted Lasso",
-                    "monitored": True,
-                    "qualityProfileId": _profile_id,
-                    "seasons": _seasons,
-                }],
+                "series": [
+                    {
+                        "id": 7,
+                        "title": "Ted Lasso",
+                        "monitored": True,
+                        "qualityProfileId": _profile_id,
+                        "seasons": _seasons,
+                    }
+                ],
                 "qualityProfile": [{"id": 4, "name": "HD-1080p"}, {"id": 1, "name": "Any"}],
                 "queue": [],
             }
 
-        sonarr = self._test_refresh(dir_test, library_paths, sonarr_resources=resources(
-            [{"seasonNumber": 0, "monitored": False}, {"seasonNumber": 1, "monitored": True}]))
+        sonarr = self._test_refresh(dir_test, library_paths, sonarr_resources=resources([{"seasonNumber": 0, "monitored": False}, {"seasonNumber": 1, "monitored": True}]))
         self.assertEqual([], sonarr.puts)
 
-        sonarr = self._test_refresh(dir_test, library_paths, sonarr_resources=resources(
-            [{"seasonNumber": 0, "monitored": False}, {"seasonNumber": 1, "monitored": False}]))
+        sonarr = self._test_refresh(dir_test, library_paths, sonarr_resources=resources([{"seasonNumber": 0, "monitored": False}, {"seasonNumber": 1, "monitored": False}]))
         self.assertEqual(["series/7"], [resource for resource, _ in sonarr.puts])
-        self.assertEqual([{"seasonNumber": 0, "monitored": False}, {"seasonNumber": 1, "monitored": True}],
-                         sonarr.puts[0][1]["seasons"])
+        self.assertEqual([{"seasonNumber": 0, "monitored": False}, {"seasonNumber": 1, "monitored": True}], sonarr.puts[0][1]["seasons"])
 
-        sonarr = self._test_refresh(dir_test, library_paths, sonarr_resources=resources(
-            [{"seasonNumber": 1, "monitored": True}], _profile_id=1))
+        sonarr = self._test_refresh(dir_test, library_paths, sonarr_resources=resources([{"seasonNumber": 1, "monitored": True}], _profile_id=1))
         self.assertEqual(["series/7"], [resource for resource, _ in sonarr.puts])
         self.assertEqual(4, sonarr.puts[0][1]["qualityProfileId"])
 
@@ -755,20 +617,35 @@ class InternetTest(unittest.TestCase):
                 "/share/30/media/docos/movies",
             ]
         }
-        sabnzbd = self._test_refresh(dir_test, library_paths, queue_slots=[
-            {
-                "filename": "Rose.of.Nevada.2025",
-                "status": "Downloading",
-                "percentage": "35",
-                "timeleft": "0:46:09",
-            },
-        ])
+        sabnzbd = self._test_refresh(
+            dir_test,
+            library_paths,
+            queue_slots=[
+                {
+                    "filename": "Rose.of.Nevada.2025",
+                    "status": "Downloading",
+                    "percentage": "35",
+                    "timeleft": "0:46:09",
+                },
+            ],
+        )
         self.assertEqual({"mode": "queue"}, sabnzbd.calls[-1])
 
-    def _test_refresh(self, dir_test, library_paths=None, return_value=0, locations_expected=None,
-                      history_slots=None, queue_slots=None, connect_error=False, archive_error=False,
-                      sonarr_resources=None, sonarr_error=None, sonarr_command_status="completed",
-                      plex_items=None):
+    def _test_refresh(
+        self,
+        dir_test,
+        library_paths=None,
+        return_value=0,
+        locations_expected=None,
+        history_slots=None,
+        queue_slots=None,
+        connect_error=False,
+        archive_error=False,
+        sonarr_resources=None,
+        sonarr_error=None,
+        sonarr_command_status="completed",
+        plex_items=None,
+    ):
         library_paths = {} if library_paths is None else library_paths
 
         class MockSabnzbdResponse:
@@ -796,21 +673,24 @@ class InternetTest(unittest.TestCase):
                 if sonarr_error is not None and sonarr_error in (resource, (_payload or {}).get("name")):
                     raise Exception(f"mocked sonarr [{sonarr_error}] failure")
                 if _payload is not None:
-                    return MockSabnzbdResponse({
-                        "id": 1,
-                        "status": sonarr_command_status,
-                        "result": "successful",
-                    })
+                    return MockSabnzbdResponse(
+                        {
+                            "id": 1,
+                            "status": sonarr_command_status,
+                            "result": "successful",
+                        }
+                    )
                 if resource.startswith("command/"):
-                    return MockSabnzbdResponse({
-                        "id": 1,
-                        "status": "completed",
-                        "result": "successful",
-                    })
+                    return MockSabnzbdResponse(
+                        {
+                            "id": 1,
+                            "status": "completed",
+                            "result": "successful",
+                        }
+                    )
                 if resource.startswith("series/"):
                     series_id = int(resource.split("/", 1)[1])
-                    return MockSabnzbdResponse(
-                        next(item for item in self.resources.get("series", []) if item["id"] == series_id))
+                    return MockSabnzbdResponse(next(item for item in self.resources.get("series", []) if item["id"] == series_id))
                 if resource == "queue":
                     records = self.resources.get("queue", [])
                     return MockSabnzbdResponse({"records": records, "totalRecords": len(records)})
@@ -827,7 +707,7 @@ class InternetTest(unittest.TestCase):
             def get(self, _url, timeout=None, params=None, headers=None):
                 if "/api/v3/" in _url:
                     return self._sonarr(_url)
-                parameters = {key: value for key, value in params.items() if key not in ("output", "apikey")}
+                parameters = {key: value for key, value in (params or {}).items() if key not in ("output", "apikey")}
                 self.calls.append(parameters)
                 if parameters.get("name") == "delete":
                     if archive_error:
@@ -844,7 +724,7 @@ class InternetTest(unittest.TestCase):
                     slots = [slot for slot in slots if slot["status"] == parameters["status"]]
                 start = parameters.get("start", 0)
                 limit = parameters.get("limit", len(slots))
-                return MockSabnzbdResponse({"history": {"noofslots": len(slots), "slots": slots[start:start + limit]}})
+                return MockSabnzbdResponse({"history": {"noofslots": len(slots), "slots": slots[start : start + limit]}})
 
         class MockPlexItem:
             def __init__(self, title, guid):
@@ -871,10 +751,7 @@ class InternetTest(unittest.TestCase):
 
         class MockPlexLibrary:
             def __init__(self, library_paths):
-                self.sections_list = [
-                    MockPlexLibrarySection(title, locations)
-                    for title, locations in library_paths.items()
-                ]
+                self.sections_list = [MockPlexLibrarySection(title, locations) for title, locations in library_paths.items()]
 
             def sections(self):
                 return self.sections_list
@@ -897,28 +774,37 @@ class InternetTest(unittest.TestCase):
             refresh.PlexServer = plex_server_class
             refresh.requests = requests_module
         if locations_expected is not None:
-            self.assertEqual(locations_expected, {
-                section.title: sorted(section.locations) for section in plex_server.library.sections()})
+            self.assertEqual(locations_expected, {section.title: sorted(section.locations) for section in plex_server.library.sections()})
         return sabnzbd
 
     def _test_prepare_dir(self, label, index):
-        dir_test = join(DIR_ROOT, "target/runtime-unit/{}_{}/share".format(label, index))
-        dir_test_src = join(DIR_ROOT, "src/test/resources/{}_{}/share".format(label, index))
-        print("")
+        dir_test = join(DIR_ROOT, f"target/runtime-unit/{label}_{index}/share")
+        dir_test_src = join(DIR_ROOT, f"src/test/resources/{label}_{index}/share")
+        print()
         sys.stdout.flush()
         shutil.rmtree(dir_test, ignore_errors=True)
         os.makedirs(abspath(join(dir_test, "..")), exist_ok=True)
         shutil.copytree(dir_test_src, dir_test)
         return dir_test
 
-    @classmethod
-    def setUp(_class):
+    def setUp(self):
         configs = Properties()
-        with open(join(DIR_ROOT, ".env"), 'rb') as config_file:
+        with open(join(DIR_ROOT, ".env"), "rb") as config_file:
             configs.load(config_file)
-            for key in configs.keys():
-                os.environ[key] = configs.get(key).data
+            for key in configs:
+                os.environ[key] = configs[key].data
 
 
-if __name__ == '__main__':
-    sys.exit(pytest.main(["-s", "-v", "--durations=50", "-o", "cache_dir=../../../../target/.pytest_cache", __file__, ]))
+if __name__ == "__main__":
+    sys.exit(
+        pytest.main(
+            [
+                "-s",
+                "-v",
+                "--durations=50",
+                "-o",
+                "cache_dir=../../../../target/.pytest_cache",
+                __file__,
+            ]
+        )
+    )

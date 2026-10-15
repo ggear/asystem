@@ -1,0 +1,3 @@
+id,connectionId,provider,name,type,institutionName,accountNumber,currency
+a1,c1,cdr,Raw One,transaction,Bank A,xxxx0001,AUD
+a6,c1,cdr,Raw Card,transaction,Bank A,xxxx0006,AUD

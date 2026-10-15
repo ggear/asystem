@@ -4,7 +4,7 @@ import re
 import subprocess
 import sys
 import time
-from datetime import datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from os.path import abspath, basename, dirname, isfile, join
 from typing import cast
 
@@ -21,9 +21,7 @@ STATUS_SUCCESS = "success"
 
 CURRENCIES = ["GBP", "USD", "SGD"]
 
-DIMENSIONS_CHANGE_PERIODS = [
-    1, 30, 90, 365
-]
+DIMENSIONS_CHANGE_PERIODS = [1, 30, 90, 365]
 DIMENSIONS_PRICE_TYPES = [
     "Base",
     "Spot",
@@ -54,55 +52,167 @@ DIMENSIONS_AUX_TYPES = [
     "Currency Rate Spot",
 ]
 DIMENSIONS_PRICE_AUX = DIMENSIONS_PRICE + DIMENSIONS_AUX
-DIMENSIONS_PRICE_AUX_TYPES = (
-        [f"{price} {price_type}".strip() for price in DIMENSIONS_PRICE for price_type in [""]
-         + DIMENSIONS_PRICE_TYPES] + DIMENSIONS_AUX + DIMENSIONS_AUX_TYPES)
+DIMENSIONS_PRICE_AUX_TYPES = [f"{price} {price_type}".strip() for price in DIMENSIONS_PRICE for price_type in [""] + DIMENSIONS_PRICE_TYPES] + DIMENSIONS_AUX + DIMENSIONS_AUX_TYPES
 DIMENSIONS_ALL = (
-        [f"{price} {price_type}".strip() for price in DIMENSIONS_PRICE if price != "Price Close" for price_type in [""] + DIMENSIONS_PRICE_TYPES]
-        + sorted(["Price Close", "Price Close Base", "Price Close Spot"] + DIMENSIONS_CHANGE)
-        + DIMENSIONS_VOLUME + DIMENSIONS_AUX + DIMENSIONS_AUX_TYPES)
-
-DIMENSIONS_STATE = (
-        ["Market Volume Spot", "Price Close", "Price Close Base", "Price Close Spot", "Currency Rate Base"]
-        + [f"Price Close {pt}{period}d-Change Percentage" for period in DIMENSIONS_CHANGE_PERIODS for pt in ["", "Base ", "Spot "]]
+    [f"{price} {price_type}".strip() for price in DIMENSIONS_PRICE if price != "Price Close" for price_type in [""] + DIMENSIONS_PRICE_TYPES]
+    + sorted(["Price Close", "Price Close Base", "Price Close Spot"] + DIMENSIONS_CHANGE)
+    + DIMENSIONS_VOLUME
+    + DIMENSIONS_AUX
+    + DIMENSIONS_AUX_TYPES
 )
+
+DIMENSIONS_STATE = ["Market Volume Spot", "Price Close", "Price Close Base", "Price Close Spot", "Currency Rate Base"] + [
+    f"Price Close {pt}{period}d-Change Percentage" for period in DIMENSIONS_CHANGE_PERIODS for pt in ["", "Base ", "Spot "]
+]
 
 STATEMENT_ATTRIBUTES = ("Date", "Type", "Owner", "Currency", "Rate", "Units", "Value")
 
 PORTFOLIO_TICKER_MAP = {
-    ('Jane', 'USD'): 'MCK',
-    ('Joint', 'USD'): 'MUS',
-    ('Joint', 'GBP'): 'MUK',
-    ('Joint', 'SGD'): 'MSG',
+    ("Jane", "USD"): "MCK",
+    ("Joint", "USD"): "MUS",
+    ("Joint", "GBP"): "MUK",
+    ("Joint", "SGD"): "MSG",
 }
-PORTFOLIO_TICKERS_MANUAL = {'MCK', 'BANK'}
-PORTFOLIO_TICKERS_NODATA = {'MSG'}
+PORTFOLIO_TICKERS_MANUAL = {"MCK", "BANK"}
+PORTFOLIO_TICKERS_NODATA = {"MSG"}
 PORTFOLIO_TICKERS_ACTIVE = {ticker for ticker in PORTFOLIO_TICKER_MAP.values() if ticker not in PORTFOLIO_TICKERS_MANUAL}
 
 STOCK = {
-    'AORD': {"start": "1985-01", "end of day": "16:00", "prefix": "^", "exchange": "  ", },
-    'AXJO': {"start": "1992-01", "end of day": "16:00", "prefix": "^", "exchange": "  ", },
-    'SIG ': {"start": "2006-01", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
-    'WDS ': {"start": "2009-01", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
-    'GOLD': {"start": "2008-01", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
-    'VAS ': {"start": "2010-01", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
-    'VHY ': {"start": "2011-01", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
-    'ATOI': {"start": "2013-02", "end of day": "16:00", "prefix": "^", "exchange": "  ", },
-    'MVW ': {"start": "2014-06", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
-    'VGS ': {"start": "2014-12", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
-    'VGE ': {"start": "2014-01", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
-    'NDQ ': {"start": "2015-06", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
-    'VAE ': {"start": "2016-01", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
-    'VDHG': {"start": "2018-01", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
-    'IAF ': {"start": "2012-04", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
-    'EMKT': {"start": "2018-03", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
-    'ACDC': {"start": "2018-09", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
-    'CLNE': {"start": "2021-04", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
-    'ERTH': {"start": "2021-04", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
-    'QSML': {"start": "2021-05", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
-    'GAME': {"start": "2022-05", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
-    'URNM': {"start": "2022-07", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
+    "AORD": {
+        "start": "1985-01",
+        "end of day": "16:00",
+        "prefix": "^",
+        "exchange": "  ",
+    },
+    "AXJO": {
+        "start": "1992-01",
+        "end of day": "16:00",
+        "prefix": "^",
+        "exchange": "  ",
+    },
+    "SIG ": {
+        "start": "2006-01",
+        "end of day": "16:00",
+        "prefix": " ",
+        "exchange": "AX",
+    },
+    "WDS ": {
+        "start": "2009-01",
+        "end of day": "16:00",
+        "prefix": " ",
+        "exchange": "AX",
+    },
+    "GOLD": {
+        "start": "2008-01",
+        "end of day": "16:00",
+        "prefix": " ",
+        "exchange": "AX",
+    },
+    "VAS ": {
+        "start": "2010-01",
+        "end of day": "16:00",
+        "prefix": " ",
+        "exchange": "AX",
+    },
+    "VHY ": {
+        "start": "2011-01",
+        "end of day": "16:00",
+        "prefix": " ",
+        "exchange": "AX",
+    },
+    "ATOI": {
+        "start": "2013-02",
+        "end of day": "16:00",
+        "prefix": "^",
+        "exchange": "  ",
+    },
+    "MVW ": {
+        "start": "2014-06",
+        "end of day": "16:00",
+        "prefix": " ",
+        "exchange": "AX",
+    },
+    "VGS ": {
+        "start": "2014-12",
+        "end of day": "16:00",
+        "prefix": " ",
+        "exchange": "AX",
+    },
+    "VGE ": {
+        "start": "2014-01",
+        "end of day": "16:00",
+        "prefix": " ",
+        "exchange": "AX",
+    },
+    "NDQ ": {
+        "start": "2015-06",
+        "end of day": "16:00",
+        "prefix": " ",
+        "exchange": "AX",
+    },
+    "VAE ": {
+        "start": "2016-01",
+        "end of day": "16:00",
+        "prefix": " ",
+        "exchange": "AX",
+    },
+    "VDHG": {
+        "start": "2018-01",
+        "end of day": "16:00",
+        "prefix": " ",
+        "exchange": "AX",
+    },
+    "IAF ": {
+        "start": "2012-04",
+        "end of day": "16:00",
+        "prefix": " ",
+        "exchange": "AX",
+    },
+    "EMKT": {
+        "start": "2018-03",
+        "end of day": "16:00",
+        "prefix": " ",
+        "exchange": "AX",
+    },
+    "ACDC": {
+        "start": "2018-09",
+        "end of day": "16:00",
+        "prefix": " ",
+        "exchange": "AX",
+    },
+    "CLNE": {
+        "start": "2021-04",
+        "end of day": "16:00",
+        "prefix": " ",
+        "exchange": "AX",
+    },
+    "ERTH": {
+        "start": "2021-04",
+        "end of day": "16:00",
+        "prefix": " ",
+        "exchange": "AX",
+    },
+    "QSML": {
+        "start": "2021-05",
+        "end of day": "16:00",
+        "prefix": " ",
+        "exchange": "AX",
+    },
+    "GAME": {
+        "start": "2022-05",
+        "end of day": "16:00",
+        "prefix": " ",
+        "exchange": "AX",
+    },
+    "URNM": {
+        "start": "2022-07",
+        "end of day": "16:00",
+        "prefix": " ",
+        "exchange": "AX",
+    },
 }
+
+PDF_PARSE_SCRIPT = join(dirname(abspath(__file__)), "pdf_parse.py")
 
 REPOS_EQUITY = plugin.Repos(
     preview={
@@ -118,23 +228,7 @@ REPOS_EQUITY = plugin.Repos(
 )
 
 
-PDF_PARSE_SCRIPT = join(dirname(abspath(__file__)), "pdf_parse.py")
-
-
-def _safe_pdf_parse(pdf_path, timeout=60):
-    try:
-        parse_process = subprocess.run([sys.executable, PDF_PARSE_SCRIPT, pdf_path], capture_output=True, timeout=timeout)
-    except subprocess.TimeoutExpired:
-        raise Exception(f"PDF parse timed out after [{timeout}s]") from None
-    if parse_process.returncode != 0:
-        parse_errors = parse_process.stderr.decode(errors="replace").strip().splitlines()
-        raise Exception(f"PDF parse failed with exit code [{parse_process.returncode}] and error [{parse_errors[-1] if parse_errors else ''}]")
-    return cast(list[str], json.loads(parse_process.stdout))
-
-
 class Equity(plugin.Plugin):
-
-    # noinspection PyTypeChecker,PyUnresolvedReferences
     def _run(self):
         new_data = False
         started_time = time.time()
@@ -154,10 +248,7 @@ class Equity(plugin.Plugin):
         # Clean Data
         def _equity_clean(_equity_df):
             _tickers = _equity_tickers(_equity_df)
-            _mask_exprs = [
-                pl.when(pl.col(f"{_ticker} Price Close").is_null()).then(None).otherwise(pl.col(_equity_columns(_equity_df, _ticker))).name.keep()
-                for _ticker in _tickers
-            ]
+            _mask_exprs = [pl.when(pl.col(f"{_ticker} Price Close").is_null()).then(None).otherwise(pl.col(_equity_columns(_equity_df, _ticker))).name.keep() for _ticker in _tickers]
             if _mask_exprs:
                 _equity_df = _equity_df.with_columns(_mask_exprs)
             _equity_df = _equity_df.filter(pl.col("Date").is_not_null()).filter(~pl.all_horizontal(pl.all().exclude("Date").is_null())).sort("Date").set_sorted("Date")
@@ -168,12 +259,9 @@ class Equity(plugin.Plugin):
             _equity_df = _equity_df.filter(pl.col("Date").is_not_null())
             if len(_equity_df) == 0:
                 return _equity_df
-            _equity_df = _equity_df \
-                .unique(subset=["Date"], keep="first").sort("Date").set_sorted("Date") \
-                .upsample(time_column="Date", every="1d").fill_nan(pl.lit(None))
+            _equity_df = _equity_df.unique(subset=["Date"], keep="first").sort("Date").set_sorted("Date").upsample(time_column="Date", every="1d").fill_nan(pl.lit(None))
             _equity_df = _equity_df.with_columns(cs.numeric().forward_fill()) if numeric_fill == "forward_fill" else _equity_df.with_columns(cs.numeric().interpolate())
-            return _equity_df \
-                .with_columns(cs.string().forward_fill())
+            return _equity_df.with_columns(cs.string().forward_fill())
 
         # Print Data
         def _equity_print(_equity_df, _dimensions=None, print_label=None, print_verb=None, print_rows=PL_PRINT_ROWS, started=None):
@@ -182,12 +270,17 @@ class Equity(plugin.Plugin):
             dataframe_print(self.name, _equity_df, print_label=print_label, print_verb=print_verb, print_suffix="(data to follow)", print_rows=0, started=started)
             if len(_equity_df):
                 for _ticker in _equity_tickers(_equity_df):
-                    dataframe_print(self.name, (_equity_df.select(["Date", *(
-                        f"{_ticker} {dimension}"
-                        for dimension in _dimensions
-                        if f"{_ticker} {dimension}" in _equity_df.columns
-                    )]).fill_nan(None).filter(~pl.all_horizontal(pl.exclude("Date").is_null()))),
-                                    print_label=f"{print_label}_{_ticker.upper()}", print_verb=print_verb, print_rows=print_rows)
+                    dataframe_print(
+                        self.name,
+                        (
+                            _equity_df.select(["Date", *(f"{_ticker} {dimension}" for dimension in _dimensions if f"{_ticker} {dimension}" in _equity_df.columns)])
+                            .fill_nan(None)
+                            .filter(~pl.all_horizontal(pl.exclude("Date").is_null()))
+                        ),
+                        print_label=f"{print_label}_{_ticker.upper()}",
+                        print_verb=print_verb,
+                        print_rows=print_rows,
+                    )
 
         # Fill Data
         def _equity_forward_fill(_equity_df, _dimensions, _tickers=None):
@@ -200,9 +293,7 @@ class Equity(plugin.Plugin):
                     for _dimension in _dimensions:
                         _column = f"{_ticker} {_dimension}"
                         if _column in _equity_df.columns:
-                            _fill_exprs.append(
-                                pl.when(_has_history).then(pl.col(_column).forward_fill()).otherwise(None).alias(_column)
-                            )
+                            _fill_exprs.append(pl.when(_has_history).then(pl.col(_column).forward_fill()).otherwise(None).alias(_column))
             if _fill_exprs:
                 _equity_df = _equity_df.with_columns(_fill_exprs)
             return _equity_df
@@ -220,7 +311,7 @@ class Equity(plugin.Plugin):
                 _eligible_files.setdefault(_prefix, []).append((_period, _cache_file))
             _predecessor_files = {}
             for _file_name in _stock_files:
-                if _stock_files[_file_name].status != plugin.DownloadStatus.DOWNLOADED:
+                if _stock_files[_file_name].file_status != plugin.DownloadStatus.DOWNLOADED:
                     continue
                 _prefix, _, _period = basename(_file_name).removesuffix(".csv").rpartition("_")
                 _periods = sorted(_eligible_files.get(_prefix, []))
@@ -228,18 +319,17 @@ class Equity(plugin.Plugin):
                 if _index > 0:
                     _predecessor_file = _periods[_index - 1][1]
                     _existing_result = _stock_files.get(_predecessor_file)
-                    if _existing_result is None or _existing_result.status != plugin.DownloadStatus.DOWNLOADED:
-                        _predecessor_files[_predecessor_file] = plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED, _predecessor_file)
+                    if _existing_result is None or _existing_result.file_status != plugin.DownloadStatus.DOWNLOADED:
+                        _predecessor_files[_predecessor_file] = plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED, [_predecessor_file])
             return _predecessor_files
 
         stock_downloaded_count = 0
         if not plugin.config.disable_source_downloads:
-
             # Download Stock Data
             for stock in STOCK:
                 ticker = stock.strip()
-                today = datetime.today()
-                stock_start = datetime.strptime(STOCK[stock]["start"], '%Y-%m')
+                today = self.now()
+                stock_start = datetime.strptime(STOCK[stock]["start"], "%Y-%m").replace(tzinfo=UTC)
                 for year in range(stock_start.year, today.year + 1):
                     if year == today.year:
                         for month in range(1, today.month + 1):
@@ -250,9 +340,11 @@ class Equity(plugin.Plugin):
                                     f"{STOCK[stock]['prefix'].strip()}{ticker}{'.' if STOCK[stock]['exchange'].strip() != '' else ''}{STOCK[stock]['exchange'].strip()}",
                                     f"{year}-{month:02}-01",
                                     f"{year}-{month:02}-{calendar.monthrange(year, month)[1]:02}",
-                                    STOCK[stock]["end of day"], check=year == today.year and month == today.month)
+                                    STOCK[stock]["end of day"],
+                                    check=year == today.year and month == today.month,
+                                )
                                 stock_files[file_name] = result
-                                if result.status == plugin.DownloadStatus.DOWNLOADED:
+                                if result.file_status == plugin.DownloadStatus.DOWNLOADED:
                                     stock_downloaded_count += 1
                     else:
                         start_month = stock_start.month if year == stock_start.year else 1
@@ -262,9 +354,11 @@ class Equity(plugin.Plugin):
                             f"{STOCK[stock]['prefix'].strip()}{ticker}{'.' if STOCK[stock]['exchange'].strip() != '' else ''}{STOCK[stock]['exchange'].strip()}",
                             f"{year}-{start_month:02}-01",
                             f"{year}-12-31",
-                            STOCK[stock]["end of day"], check=False)
+                            STOCK[stock]["end of day"],
+                            check=False,
+                        )
                         stock_files[file_name] = result
-                        if result.status == plugin.DownloadStatus.DOWNLOADED:
+                        if result.file_status == plugin.DownloadStatus.DOWNLOADED:
                             stock_downloaded_count += 1
 
         # Download Stock and Fund Data
@@ -275,31 +369,33 @@ class Equity(plugin.Plugin):
                     statement_files[file_name] = files[file_name]
                 elif basename(file_name).startswith("yahoo"):
                     file_base = basename(file_name)
-                    name_parts = file_base.removesuffix('.csv').split('_')
-                    if len(name_parts) >= 3 and '-' in name_parts[-1] and int(name_parts[-1].split('-')[0]) < datetime.today().year:
-                        year = name_parts[-1].split('-')[0]
-                        yearly_base = '_'.join(name_parts[:-1]) + f'_{year}.csv'
+                    name_parts = file_base.removesuffix(".csv").split("_")
+                    if len(name_parts) >= 3 and "-" in name_parts[-1] and int(name_parts[-1].split("-")[0]) < self.now().year:
+                        year = name_parts[-1].split("-")[0]
+                        yearly_base = "_".join(name_parts[:-1]) + f"_{year}.csv"
                         if any(basename(f) == yearly_base for f in files):
                             continue
                     if files[file_name][0] and (plugin.config.force_reprocessing or files[file_name][1]):
-                        stock_files[file_name] = plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED if files[file_name][1] else plugin.DownloadStatus.CACHED, file_name)
+                        stock_files[file_name] = plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED if files[file_name][1] else plugin.DownloadStatus.CACHED, [file_name])
 
         if not plugin.config.disable_source_downloads or not plugin.config.disable_drive_downloads:
-            new_data = plugin.config.force_reprocessing or \
-                       (all([s.status != plugin.DownloadStatus.FAILED for s in stock_files.values()]) and any([s.status == plugin.DownloadStatus.DOWNLOADED for s in stock_files.values()])) or \
-                       (all([s[0] for s in statement_files.values()]) and any([s[1] for s in statement_files.values()]))
+            new_data = (
+                plugin.config.force_reprocessing
+                or (all(s.file_status != plugin.DownloadStatus.FAILED for s in stock_files.values()) and any(s.file_status == plugin.DownloadStatus.DOWNLOADED for s in stock_files.values()))
+                or (all(s[0] for s in statement_files.values()) and any(s[1] for s in statement_files.values()))
+            )
 
         # Process Stock and Fund File List
         if plugin.config.force_reprocessing:
-            stock_files = {f: plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED, f) for f in self.file_list(self.local_cache, "yahoo")}
+            stock_files = {f: plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED, [f]) for f in self.file_list(self.local_cache, "yahoo")}
             stock_file_bases = {basename(f) for f in stock_files}
             stale_files = []
             for file_name in stock_files:
                 file_base = basename(file_name)
-                name_parts = file_base.removesuffix('.csv').split('_')
-                if len(name_parts) >= 3 and '-' in name_parts[-1] and int(name_parts[-1].split('-')[0]) < datetime.today().year:
-                    year = name_parts[-1].split('-')[0]
-                    yearly_base = '_'.join(name_parts[:-1]) + f'_{year}.csv'
+                name_parts = file_base.removesuffix(".csv").split("_")
+                if len(name_parts) >= 3 and "-" in name_parts[-1] and int(name_parts[-1].split("-")[0]) < self.now().year:
+                    year = name_parts[-1].split("-")[0]
+                    yearly_base = "_".join(name_parts[:-1]) + f"_{year}.csv"
                     if yearly_base in stock_file_bases:
                         self.print_log(f"Stale monthly file [{file_base}] found in repo, benign issue, but can delete", level="warn")
                         stale_files.append(file_name)
@@ -313,7 +409,7 @@ class Equity(plugin.Plugin):
             for stock_predecessor_file in stock_predecessor_files:
                 self.print_log(f"File [{basename(stock_predecessor_file).split('.')[0]}] queued for reprocessing as predecessor of a newly downloaded file", level="debug")
             stock_files.update(stock_predecessor_files)
-        stock_processable_count = sum(1 for s in stock_files.values() if s.status != plugin.DownloadStatus.FAILED)
+        stock_processable_count = sum(1 for s in stock_files.values() if s.file_status != plugin.DownloadStatus.FAILED)
         statement_processable_count = sum(1 for s in statement_files.values() if s[0])
         self.print_log(f"Files downloaded [{stock_downloaded_count}] and cached [{stock_processable_count + statement_processable_count - stock_downloaded_count}]", started=started_time)
 
@@ -322,29 +418,31 @@ class Equity(plugin.Plugin):
         stocks_df = {}
         stocks_files_count = 0
         for stock_file_name in stock_files:
-            if stock_files[stock_file_name].status != plugin.DownloadStatus.FAILED:
-                if plugin.config.force_reprocessing or stock_files[stock_file_name].status == plugin.DownloadStatus.DOWNLOADED:
+            if stock_files[stock_file_name].file_status != plugin.DownloadStatus.FAILED:
+                if plugin.config.force_reprocessing or stock_files[stock_file_name].file_status == plugin.DownloadStatus.DOWNLOADED:
                     try:
                         stocks_files_count += 1
-                        stock_ticker = basename(stock_file_name).split('_')[1].upper()
+                        stock_ticker = basename(stock_file_name).split("_")[1].upper()
                         required_columns = {"Date", "Open", "High", "Low", "Close", "Volume", "Dividends", "Stock Splits"}
-                        stock_df = self.csv_read(stock_file_name, schema={
-                            "Date": pl.Date,
-                            "Open": pl.Float64,
-                            "High": pl.Float64,
-                            "Low": pl.Float64,
-                            "Close": pl.Float64,
-                            "Volume": pl.Int64,
-                            "Dividends": pl.Float64,
-                            "Stock Splits": pl.Float64,
-                        })
+                        stock_df = self.csv_read(
+                            stock_file_name,
+                            schema={
+                                "Date": pl.Date,
+                                "Open": pl.Float64,
+                                "High": pl.Float64,
+                                "Low": pl.Float64,
+                                "Close": pl.Float64,
+                                "Volume": pl.Int64,
+                                "Dividends": pl.Float64,
+                                "Stock Splits": pl.Float64,
+                            },
+                        )
                         missing = required_columns - set(stock_df.columns)
                         if missing:
                             raise Exception(f"File [{stock_file_name}] missing required columns {sorted(missing)}")
                         stock_period = basename(stock_file_name).removesuffix(".csv").rpartition("_")[2]
-                        stock_period_start = datetime.strptime(stock_period, "%Y-%m" if "-" in stock_period else "%Y").date()
-                        stock_period_end = stock_period_start.replace(year=stock_period_start.year + 1) if "-" not in stock_period else \
-                            (stock_period_start + timedelta(days=32)).replace(day=1)
+                        stock_period_start = datetime.strptime(stock_period, "%Y-%m" if "-" in stock_period else "%Y").replace(tzinfo=UTC).date()
+                        stock_period_end = stock_period_start.replace(year=stock_period_start.year + 1) if "-" not in stock_period else (stock_period_start + timedelta(days=32)).replace(day=1)
                         stock_dates = stock_df.get_column("Date").drop_nulls()
                         stock_dates_outside = stock_dates.filter(~stock_dates.is_between(stock_period_start, stock_period_end, closed="left"))
                         if len(stock_dates_outside):
@@ -373,6 +471,17 @@ class Equity(plugin.Plugin):
         # Collect Fund Data
         started_time = time.time()
         statement_data = {}
+
+        def _equity_pdf_parsed(_pdf_path, _timeout=60):
+            try:
+                _parse_process = subprocess.run([sys.executable, PDF_PARSE_SCRIPT, _pdf_path], capture_output=True, timeout=_timeout)
+            except subprocess.TimeoutExpired:
+                raise Exception(f"PDF parse timed out after [{_timeout}s]") from None
+            if _parse_process.returncode != 0:
+                _parse_errors = _parse_process.stderr.decode(errors="replace").strip().splitlines()
+                raise Exception(f"PDF parse failed with exit code [{_parse_process.returncode}] and error [{_parse_errors[-1] if _parse_errors else ''}]")
+            return cast(list[str], json.loads(_parse_process.stdout))
+
         for statement_file_name in statement_files:
             if statement_files[statement_file_name][0]:
                 if plugin.config.force_reprocessing or statement_files[statement_file_name][1]:
@@ -382,24 +491,21 @@ class Equity(plugin.Plugin):
                         statement_type = None
                         statement_owner = None
                         statement_rates = {}
-                        statement_data[statement_file_name]['Status'] = STATUS_FAILURE
+                        statement_data[statement_file_name]["Status"] = STATUS_FAILURE
                         statement_data[statement_file_name]["Errors"] = []
                         statement_data[statement_file_name]["Positions"] = {}
-                        statement_data[statement_file_name]['Parse'] = []
-                        parse_lines = statement_data[statement_file_name]['Parse']
-                        statement_pages = _safe_pdf_parse(statement_file_name)
+                        statement_data[statement_file_name]["Parse"] = []
+                        parse_lines = statement_data[statement_file_name]["Parse"]
+                        statement_pages = _equity_pdf_parsed(statement_file_name)
                         page_index = 0
                         while page_index < len(statement_pages):
                             line_index = 0
                             statement_lines = statement_pages[page_index].split("\n")
                             if page_index == 0:
-                                if len(statement_lines) > 1 and (
-                                        statement_lines[0].strip().startswith("Consolidated Statement") or
-                                        statement_lines[0].strip().startswith("Statement of")
-                                ):
-                                    statement_data[statement_file_name]['Status'] = STATUS_SUCCESS
+                                if len(statement_lines) > 1 and (statement_lines[0].strip().startswith("Consolidated Statement") or statement_lines[0].strip().startswith("Statement of")):
+                                    statement_data[statement_file_name]["Status"] = STATUS_SUCCESS
                                 elif len(statement_lines) > 1 and "Administration Services" in statement_lines[0]:
-                                    statement_data[statement_file_name]['Status'] = STATUS_SKIPPED
+                                    statement_data[statement_file_name]["Status"] = STATUS_SKIPPED
                                 else:
                                     statement_data[statement_file_name]["Errors"].append("File missing required heading")
                             while line_index < len(statement_lines):
@@ -408,7 +514,7 @@ class Equity(plugin.Plugin):
                                 parse_line = f"File [{basename(statement_file_name)}]: Page [{page_index:02d}]: Line [{line_index:02d}]:  "
                                 parse_line += " ".join(f"{i:02d}:{t}" for i, t in enumerate(statement_tokens))
                                 parse_lines.append(parse_line)
-                                if statement_data[statement_file_name]['Status'] == STATUS_SUCCESS:
+                                if statement_data[statement_file_name]["Status"] == STATUS_SUCCESS:
                                     if page_index == 0:
                                         if statement_line.strip().startswith("Account name"):
                                             if "Jane" in statement_line and "Gear" in statement_line:
@@ -418,20 +524,20 @@ class Equity(plugin.Plugin):
                                                 statement_type = "Equity "
                                                 statement_owner = "Jane"
                                             else:
-                                                statement_data[statement_file_name]['Status'] = STATUS_FAILURE
+                                                statement_data[statement_file_name]["Status"] = STATUS_FAILURE
                                                 statement_data[statement_file_name]["Errors"].append(f"Could not determine statement type or owner from line [{statement_line}]")
                                         if statement_line.startswith("Statement date"):
                                             statement_date_str = statement_tokens[2]
                                             if len(statement_date_str) == 9:
-                                                statement_date = datetime.strptime(statement_tokens[2], '%d-%b-%y')
+                                                statement_date = datetime.strptime(statement_tokens[2], "%d-%b-%y").replace(tzinfo=UTC)
                                             elif len(statement_date_str) == 11:
-                                                statement_date = datetime.strptime(statement_tokens[2], '%d-%b-%Y')
+                                                statement_date = datetime.strptime(statement_tokens[2], "%d-%b-%Y").replace(tzinfo=UTC)
                                             else:
                                                 raise Exception(f"Could not parse date [{statement_date_str}]")
                                         if statement_type:
                                             for currency in CURRENCIES:
                                                 if statement_line.startswith(currency):
-                                                    statement_rates[currency] = float(statement_tokens[4].replace(',', ''))
+                                                    statement_rates[currency] = float(statement_tokens[4].replace(",", ""))
                                     if statement_type:
                                         for index_spec in [
                                             (2, "Situations", CURRENCIES, 5, 10, 2, 6),
@@ -453,39 +559,39 @@ class Equity(plugin.Plugin):
                                                                 else:
                                                                     parsed_currency = statement_tokens[index_spec[6]]
                                                             statement_position = {
-                                                                "Date": statement_date.strftime('%Y-%m-%d'),  # type: ignore[union-attr]
+                                                                "Date": statement_date.strftime("%Y-%m-%d"),  # type: ignore[union-attr]
                                                                 "Type": statement_type.strip(),
                                                                 "Owner": statement_owner,
                                                                 "Currency": parsed_currency,
                                                                 "Rate": statement_rates[parsed_currency],
-                                                                "Units": float(statement_tokens[index_spec[3]].replace(',', '')),
-                                                                "Value": float(statement_tokens[index_spec[4]].replace(',', '')),
+                                                                "Units": float(statement_tokens[index_spec[3]].replace(",", "")),
+                                                                "Value": float(statement_tokens[index_spec[4]].replace(",", "")),
                                                                 "Ticker": PORTFOLIO_TICKER_MAP.get(
                                                                     (statement_owner, parsed_currency),  # type: ignore[arg-type]
-                                                                    'UNKNOWN',
+                                                                    "UNKNOWN",
                                                                 ),
                                                             }
                                                             statement_data[statement_file_name]["Positions"][str(statement_type + parsed_currency)] = statement_position
                                                         except (KeyError, IndexError, ValueError, AttributeError) as parse_exception:
                                                             statement_data[statement_file_name]["Errors"].append(
                                                                 f"Position parse skipped at page [{page_index}] line [{line_index}] for currency [{parsed_currency}]: "
-                                                                f"{type(parse_exception).__name__}: {parse_exception}")
+                                                                f"{type(parse_exception).__name__}: {parse_exception}"
+                                                            )
                                 line_index += 1
                             page_index += 1
                         self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED)
                     except Exception as exception:
-                        statement_data[statement_file_name]['Status'] = STATUS_FAILURE
-                        statement_data[statement_file_name]["Errors"].append(
-                            f"Statement parse failed with exception [{type(exception).__name__}: {exception}]")
+                        statement_data[statement_file_name]["Status"] = STATUS_FAILURE
+                        statement_data[statement_file_name]["Errors"].append(f"Statement parse failed with exception [{type(exception).__name__}: {exception}]")
                         self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED)
-                    if statement_data[statement_file_name]['Status'] == STATUS_SUCCESS:
+                    if statement_data[statement_file_name]["Status"] == STATUS_SUCCESS:
                         statement_positions = statement_data[statement_file_name]["Positions"]
                         if len(statement_positions) == 0:
-                            statement_data[statement_file_name]['Status'] = STATUS_FAILURE
+                            statement_data[statement_file_name]["Status"] = STATUS_FAILURE
                             statement_data[statement_file_name]["Errors"].append(f"Statement parse failed to resolve all keys {STATEMENT_ATTRIBUTES} in {{}}")
                         for statement_position in list(statement_positions.values()):
                             if not all(key in statement_position for key in STATEMENT_ATTRIBUTES):
-                                statement_data[statement_file_name]['Status'] = STATUS_FAILURE
+                                statement_data[statement_file_name]["Status"] = STATUS_FAILURE
                                 statement_data[statement_file_name]["Errors"].append(f"Statement parse failed to resolve all keys {STATEMENT_ATTRIBUTES} in {statement_position}")
                 else:
                     self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
@@ -495,16 +601,15 @@ class Equity(plugin.Plugin):
         statement_tickers = []
         try:
             if new_data:
-
                 # Process Fund Data
                 started_time = time.time()
                 statements_positions = []
                 for file_name in statement_data:
-                    if statement_data[file_name]['Status'] == STATUS_SUCCESS:
+                    if statement_data[file_name]["Status"] == STATUS_SUCCESS:
                         statement_position = statement_data[file_name]["Positions"]
                         statements_positions.extend(list(statement_position.values()))
                         self.print_log(f"File [{basename(file_name)}] processed as [{STATUS_SUCCESS}] with positions {list(statement_position.keys())}", level="debug")
-                    elif statement_data[file_name]['Status'] == STATUS_SKIPPED:
+                    elif statement_data[file_name]["Status"] == STATUS_SKIPPED:
                         self.print_log(f"File [{basename(file_name)}] processed as [{STATUS_SKIPPED}]", level="debug")
                     else:
                         self.print_log(f"File [{basename(file_name)}] processed as [{STATUS_FAILURE}] at parsing point:", level="debug")
@@ -523,11 +628,15 @@ class Equity(plugin.Plugin):
                     started_time = time.time()
                     tickers = [row[0] for row in statement_df.select("Ticker").unique().rows()]
                     statement_tickers = sorted(tickers)
-                    statement_df = statement_df.with_columns(
-                        pl.col("Date").str.strptime(pl.Date),
-                        (pl.col("Value") / pl.col("Units")).alias("Price"),
-                        (1.0 / pl.col("Rate")).alias("Rate"),
-                    ).pivot(values=["Price", "Rate", "Currency"], index="Date", on="Ticker").sort("Date")
+                    statement_df = (
+                        statement_df.with_columns(
+                            pl.col("Date").str.strptime(pl.Date),
+                            (pl.col("Value") / pl.col("Units")).alias("Price"),
+                            (1.0 / pl.col("Rate")).alias("Rate"),
+                        )
+                        .pivot(values=["Price", "Rate", "Currency"], index="Date", on="Ticker")
+                        .sort("Date")
+                    )
                     dataframe_print(self.name, statement_df, print_label="Funds", print_verb="pivoted", started=started_time)
                     started_time = time.time()
                     rename_map = {}
@@ -543,14 +652,16 @@ class Equity(plugin.Plugin):
                     started_time = time.time()
                     statement_exprs = []
                     for ticker in tickers:
-                        statement_exprs.extend([
-                            pl.col(f"{ticker} Price Close").alias(f"{ticker} Price Open"),
-                            pl.col(f"{ticker} Price Close").alias(f"{ticker} Price High"),
-                            pl.col(f"{ticker} Price Close").alias(f"{ticker} Price Low"),
-                            pl.lit(0, pl.Int64).alias(f"{ticker} Market Volume"),
-                            pl.lit(0.0, pl.Float64).alias(f"{ticker} Paid Dividends"),
-                            pl.lit(0.0, pl.Float64).alias(f"{ticker} Stock Splits"),
-                        ])
+                        statement_exprs.extend(
+                            [
+                                pl.col(f"{ticker} Price Close").alias(f"{ticker} Price Open"),
+                                pl.col(f"{ticker} Price Close").alias(f"{ticker} Price High"),
+                                pl.col(f"{ticker} Price Close").alias(f"{ticker} Price Low"),
+                                pl.lit(0, pl.Int64).alias(f"{ticker} Market Volume"),
+                                pl.lit(0.0, pl.Float64).alias(f"{ticker} Paid Dividends"),
+                                pl.lit(0.0, pl.Float64).alias(f"{ticker} Stock Splits"),
+                            ]
+                        )
                     if statement_exprs:
                         statement_df = statement_df.with_columns(statement_exprs)
                     tickers = [t for t in tickers if t not in PORTFOLIO_TICKERS_MANUAL]
@@ -577,8 +688,11 @@ class Equity(plugin.Plugin):
                 # Process Manual Data
                 started_time = time.time()
                 prices_manual_result = self.sheet_download(self.remote_repos.sheet_prices, "Prices", sheet_name="Manual")
-                equity_df_manual = self.csv_read(prices_manual_result.file_path, schema={"Date": pl.Date}) \
-                    if prices_manual_result.status != plugin.DownloadStatus.FAILED else self.dataframe_new(schema={"Date": pl.Date})
+                equity_df_manual = (
+                    self.csv_read(prices_manual_result.file_paths[0], schema={"Date": pl.Date})
+                    if prices_manual_result.file_status != plugin.DownloadStatus.FAILED
+                    else self.dataframe_new(schema={"Date": pl.Date})
+                )
                 bank_query = """
 SELECT time AS "Date", value AS "BANK Price Close"
 FROM interest
@@ -588,23 +702,24 @@ WHERE entity = 'Bank'
 ORDER BY time
                 """
                 bank_query_result = self.database_download("Interest_BANK_Rates", bank_query)
-                if bank_query_result.status != plugin.DownloadStatus.FAILED:
-                    bank_df = self.csv_read(bank_query_result.file_path, schema={"Date": pl.Date, "BANK Price Close": pl.Float64})
-                    bank_df = bank_df.sort("Date").with_columns(
-                        ((1.0 + pl.col("BANK Price Close").shift(1) / 1200.0).fill_null(1.0).cum_prod() * 100.0).alias("BANK Price Close"))
+                if bank_query_result.file_status != plugin.DownloadStatus.FAILED:
+                    bank_df = self.csv_read(bank_query_result.file_paths[0], schema={"Date": pl.Date, "BANK Price Close": pl.Float64})
+                    bank_df = bank_df.sort("Date").with_columns(((1.0 + pl.col("BANK Price Close").shift(1) / 1200.0).fill_null(1.0).cum_prod() * 100.0).alias("BANK Price Close"))
                     equity_df_manual = equity_df_manual.join(bank_df, on="Date", how="full", coalesce=True)
                 manual_exprs = []
                 for ticker in _equity_tickers(equity_df_manual):
-                    manual_exprs.extend([
-                        pl.col(f"{ticker} Price Close").cast(pl.Float64, strict=False),
-                        pl.col(f"{ticker} Price Close").cast(pl.Float64, strict=False).alias(f"{ticker} Price Open"),
-                        pl.col(f"{ticker} Price Close").cast(pl.Float64, strict=False).alias(f"{ticker} Price High"),
-                        pl.col(f"{ticker} Price Close").cast(pl.Float64, strict=False).alias(f"{ticker} Price Low"),
-                        pl.lit(0, pl.Int64).alias(f"{ticker} Market Volume"),
-                        pl.lit(0.0, pl.Float64).alias(f"{ticker} Paid Dividends"),
-                        pl.lit(0.0, pl.Float64).alias(f"{ticker} Stock Splits"),
-                        pl.lit("AUD").alias(f"{ticker} Currency Base"),
-                    ])
+                    manual_exprs.extend(
+                        [
+                            pl.col(f"{ticker} Price Close").cast(pl.Float64, strict=False),
+                            pl.col(f"{ticker} Price Close").cast(pl.Float64, strict=False).alias(f"{ticker} Price Open"),
+                            pl.col(f"{ticker} Price Close").cast(pl.Float64, strict=False).alias(f"{ticker} Price High"),
+                            pl.col(f"{ticker} Price Close").cast(pl.Float64, strict=False).alias(f"{ticker} Price Low"),
+                            pl.lit(0, pl.Int64).alias(f"{ticker} Market Volume"),
+                            pl.lit(0.0, pl.Float64).alias(f"{ticker} Paid Dividends"),
+                            pl.lit(0.0, pl.Float64).alias(f"{ticker} Stock Splits"),
+                            pl.lit("AUD").alias(f"{ticker} Currency Base"),
+                        ]
+                    )
                     if f"{ticker} Currency Rate Base" not in equity_df_manual.columns:
                         manual_exprs.append(pl.lit(1.0, pl.Float64).alias(f"{ticker} Currency Rate Base"))
                 if manual_exprs:
@@ -637,8 +752,7 @@ ORDER BY time
                     equity_df = pl.concat([equity_df] + new_ticker_dfs, how="align")
                 equity_df = _equity_upsample(equity_df)
                 tickers = _equity_tickers(equity_df)
-                equity_df = equity_df.select(
-                    ["Date"] + [f"{ticker} {dimension}" for ticker in tickers for dimension in DIMENSIONS_PRICE_AUX])
+                equity_df = equity_df.select(["Date"] + [f"{ticker} {dimension}" for ticker in tickers for dimension in DIMENSIONS_PRICE_AUX])
                 equity_df = _equity_clean(equity_df)
                 _equity_print(equity_df, print_label="Equity", print_verb="added manual stock prices", started=started_time)
 
@@ -686,8 +800,11 @@ WHERE entity = 'AUD/{fx_pair}'
 ORDER BY time
                         """
                         fx_query_result = self.database_download(fx_cache, fx_query, start=started_fx_date, end=ended_fx_date)
-                        fx_rates[fx_pair] = self.csv_read(fx_query_result.file_path, schema={"Date": pl.Date, "Rate": pl.Float64}) \
-                            if fx_query_result.status != plugin.DownloadStatus.FAILED else self.dataframe_new(schema={"Date": pl.Date, "Rate": pl.Float64})
+                        fx_rates[fx_pair] = (
+                            self.csv_read(fx_query_result.file_paths[0], schema={"Date": pl.Date, "Rate": pl.Float64})
+                            if fx_query_result.file_status != plugin.DownloadStatus.FAILED
+                            else self.dataframe_new(schema={"Date": pl.Date, "Rate": pl.Float64})
+                        )
                         fx_rates[fx_pair] = _equity_upsample(fx_rates[fx_pair]).filter(pl.col("Date") <= ended_fx_date)
                     aud_rate_exprs = []
                     spot_exprs = []
@@ -695,25 +812,20 @@ ORDER BY time
                         base_rows = equity_df.select(f"{ticker} Currency Base").drop_nulls().head(1).rows()
                         base_currency = base_rows[0][0] if base_rows else "AUD"
                         if base_currency == "AUD":
-                            aud_rate_exprs.append(
-                                pl.when(pl.col(f"{ticker} Price Close").is_null()).then(None).otherwise(pl.lit(1.0)).alias(f"{ticker} Currency Rate Spot"))
+                            aud_rate_exprs.append(pl.when(pl.col(f"{ticker} Price Close").is_null()).then(None).otherwise(pl.lit(1.0)).alias(f"{ticker} Currency Rate Spot"))
                         else:
-                            equity_df = equity_df.join(fx_rates[base_currency], on="Date", how="full", coalesce=True) \
-                                .with_columns(pl.col("Rate").alias(f"{ticker} Currency Rate Spot")).drop("Rate")
+                            equity_df = equity_df.join(fx_rates[base_currency], on="Date", how="full", coalesce=True).with_columns(pl.col("Rate").alias(f"{ticker} Currency Rate Spot")).drop("Rate")
                         for column_price in DIMENSIONS_PRICE:
-                            for column_price_type in DIMENSIONS_PRICE_TYPES:
-                                spot_exprs.append(
-                                    (pl.col(f"{ticker} {column_price}") * pl.col(f"{ticker} Currency Rate {column_price_type}")).alias(f"{ticker} {column_price} {column_price_type}")
-                                )
+                            spot_exprs.extend(
+                                (pl.col(f"{ticker} {column_price}") * pl.col(f"{ticker} Currency Rate {column_price_type}")).alias(f"{ticker} {column_price} {column_price_type}")
+                                for column_price_type in DIMENSIONS_PRICE_TYPES
+                            )
                     if aud_rate_exprs:
                         equity_df = equity_df.with_columns(aud_rate_exprs)
                     if spot_exprs:
                         equity_df = equity_df.with_columns(spot_exprs)
                     equity_df = equity_df.select(["Date"] + [f"{ticker} {column}" for ticker in sorted(tickers) for column in DIMENSIONS_PRICE_AUX_TYPES])
-                    rate_mask_exprs = [
-                        pl.when(pl.col(f"{ticker} Price Close").is_null()).then(None).otherwise(pl.col(f"{ticker} Currency Rate Spot")).name.keep()
-                        for ticker in tickers
-                    ]
+                    rate_mask_exprs = [pl.when(pl.col(f"{ticker} Price Close").is_null()).then(None).otherwise(pl.col(f"{ticker} Currency Rate Spot")).name.keep() for ticker in tickers]
                     if rate_mask_exprs:
                         equity_df = equity_df.with_columns(rate_mask_exprs)
                     equity_df = equity_df.sort("Date").set_sorted("Date")
@@ -741,10 +853,7 @@ ORDER BY time
                 if volume_exprs:
                     equity_df = equity_df.with_columns(volume_exprs)
                 equity_df = _equity_forward_fill(equity_df, ["Market Volume Spot"])
-                manual_fill_cols = [
-                    column for column in equity_df.columns
-                    if column != "Date" and " " in column and column.split(" ", 1)[0] in manual_tickers
-                ]
+                manual_fill_cols = [column for column in equity_df.columns if column != "Date" and " " in column and column.split(" ", 1)[0] in manual_tickers]
                 if manual_fill_cols:
                     equity_df = equity_df.with_columns([pl.col(col).forward_fill().alias(col) for col in manual_fill_cols])
                 _equity_print(equity_df, _dimensions=["Price Close Spot", "Market Volume", "Market Volume Spot"], print_label="Equity_Volumes", print_verb="added market volumes", started=started_time)
@@ -754,10 +863,9 @@ ORDER BY time
             self.counters_set_all_errored(plugin.CTR_SRC_FILES)
 
         try:
-
             # Download Index Data
             portfolio_indexes_result = self.sheet_download(self.remote_repos.sheet_portfolio, "Portfolio", sheet_name="Indexes", sheet_start_row=2)
-            index_weights = self.csv_read(portfolio_indexes_result.file_path) if portfolio_indexes_result.status != plugin.DownloadStatus.FAILED else self.dataframe_new()
+            index_weights = self.csv_read(portfolio_indexes_result.file_paths[0]) if portfolio_indexes_result.file_status != plugin.DownloadStatus.FAILED else self.dataframe_new()
             quantity_columns = sorted([column for column in index_weights.columns if column.endswith(" Quantity")])
             indexes = [f"I{column.removesuffix(' Quantity').upper()}" for column in quantity_columns]
             if "Exchange Symbol" in index_weights.columns:
@@ -768,7 +876,7 @@ ORDER BY time
                     index_weights = index_weights.with_columns([pl.col(index).cast(pl.Float64, strict=False) for index in indexes])
             else:
                 self.print_log("Index weights sheet missing required column [Exchange Symbol], using empty index weights")
-                index_weights = self.dataframe_new(schema={"Ticker": pl.Utf8, **{index: pl.Float64 for index in indexes}}, print_rows=-1)
+                index_weights = self.dataframe_new(schema={"Ticker": pl.Utf8, **dict.fromkeys(indexes, pl.Float64)}, print_rows=-1)
             dataframe_print(self.name, index_weights, print_label="Index_Weights_Sheet", print_verb="processed", print_rows=1000)
 
             # Update Data
@@ -780,12 +888,18 @@ ORDER BY time
                             _price_col = f"{_ticker} {'Price Close ' + _price_type}".strip()
                             if _price_col in _df.columns:
                                 _null_guard = pl.col(f"{_ticker} Price Close").is_null()
-                                _create_exprs.extend([
-                                    pl.when(_null_guard).then(None).otherwise(pl.col(_price_col).diff(_change_period).fill_nan(None).fill_null(0.0)).alias(
-                                        f"{_ticker} Price Close {_price_type}{_change_period}d-Change Absolute"),
-                                    pl.when(_null_guard).then(None).otherwise(pl.col(_price_col).pct_change(_change_period).fill_nan(None).fill_null(0.0) * 100).alias(
-                                        f"{_ticker} Price Close {_price_type}{_change_period}d-Change Percentage"),
-                                ])
+                                _create_exprs.extend(
+                                    [
+                                        pl.when(_null_guard)
+                                        .then(None)
+                                        .otherwise(pl.col(_price_col).diff(_change_period).fill_nan(None).fill_null(0.0))
+                                        .alias(f"{_ticker} Price Close {_price_type}{_change_period}d-Change Absolute"),
+                                        pl.when(_null_guard)
+                                        .then(None)
+                                        .otherwise(pl.col(_price_col).pct_change(_change_period).fill_nan(None).fill_null(0.0) * 100)
+                                        .alias(f"{_ticker} Price Close {_price_type}{_change_period}d-Change Percentage"),
+                                    ]
+                                )
                 if _create_exprs:
                     _df = _df.with_columns(_create_exprs)
                 return _df
@@ -822,9 +936,9 @@ ORDER BY time
             if not plugin.config.force_reprocessing and isfile(existing_current_file) and len(equity_df) > 0:
                 existing_schema = pl.read_csv(existing_current_file, n_rows=0).schema
                 _index_prefixes = set(indexes)
-                missing_exprs = [pl.lit(None).cast(existing_schema[col]).alias(col)
-                                 for col in existing_schema if col != "Date" and col not in equity_df.columns
-                                 and col.split(" ", 1)[0] not in _index_prefixes]
+                missing_exprs = [
+                    pl.lit(None).cast(existing_schema[col]).alias(col) for col in existing_schema if col != "Date" and col not in equity_df.columns and col.split(" ", 1)[0] not in _index_prefixes
+                ]
                 if missing_exprs:
                     equity_df = equity_df.with_columns(missing_exprs)
 
@@ -842,10 +956,7 @@ ORDER BY time
                 for _index in _indexes:
                     for _column_price in DIMENSIONS_PRICE:
                         _column = f"{_index} {_column_price}"
-                        _weighted = [
-                            pl.col(f"{_t} {_column_price} Spot") * _weight_lookup.get(_t, {}).get(_index, 0.0)
-                            for _t in _tickers if f"{_t} {_column_price} Spot" in _df.columns
-                        ]
+                        _weighted = [pl.col(f"{_t} {_column_price} Spot") * _weight_lookup.get(_t, {}).get(_index, 0.0) for _t in _tickers if f"{_t} {_column_price} Spot" in _df.columns]
                         if _weighted:
                             _sum_expr = pl.sum_horizontal(_weighted)
                             _df = _df.with_columns(pl.when(_sum_expr == 0).then(None).otherwise(_sum_expr).alias(_column))
@@ -872,9 +983,9 @@ ORDER BY time
                         if _cb_col not in _df.columns:
                             _df = _df.with_columns(pl.lit(None).cast(pl.Utf8).alias(_cb_col))
                         _df = _df.with_columns(
-                            [pl.when(pl.col(_mc).is_null() & pl.col(_column_close).is_not_null()).then(_mv).otherwise(pl.col(_mc)).alias(_mc)
-                             for _mc, _mv in _meta_float] +
-                            [pl.when(pl.col(_cb_col).is_null() & pl.col(_column_close).is_not_null()).then(pl.lit("AUD")).otherwise(pl.col(_cb_col)).alias(_cb_col)])
+                            [pl.when(pl.col(_mc).is_null() & pl.col(_column_close).is_not_null()).then(_mv).otherwise(pl.col(_mc)).alias(_mc) for _mc, _mv in _meta_float]
+                            + [pl.when(pl.col(_cb_col).is_null() & pl.col(_column_close).is_not_null()).then(pl.lit("AUD")).otherwise(pl.col(_cb_col)).alias(_cb_col)]
+                        )
 
                 # Derive Index Data
                 for _index in _indexes:
@@ -896,9 +1007,7 @@ ORDER BY time
             # Verify Data
             if not equity_current_df.is_empty():
                 non_date_cols = [c for c in equity_current_df.columns if c != "Date"]
-                equity_current_df = equity_current_df.filter(
-                    pl.any_horizontal([pl.col(c).is_not_null() for c in non_date_cols])
-                )
+                equity_current_df = equity_current_df.filter(pl.any_horizontal([pl.col(c).is_not_null() for c in non_date_cols]))
                 none_violations = {}
                 for col in non_date_cols:
                     first_non_null = equity_current_df[col].is_not_null().arg_true().first()
@@ -912,9 +1021,7 @@ ORDER BY time
                     for col, count in none_violations.items():
                         self.print_log(f"  {col}: {count}", level="error")
                     self.add_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_ERRORED, none_count)
-                zero_check_cols = [
-                    c for c in cs.expand_selector(equity_current_df, cs.numeric()) if not re.search(r"Market Volume|Change|Paid Dividends|Stock Splits", c)
-                ]
+                zero_check_cols = [c for c in cs.expand_selector(equity_current_df, cs.numeric()) if not re.search(r"Market Volume|Change|Paid Dividends|Stock Splits", c)]
                 if zero_check_cols:
                     zero_violations = {c: int((equity_current_df[c] == 0).sum()) for c in zero_check_cols if (equity_current_df[c] == 0).any()}
                     if zero_violations:
@@ -930,34 +1037,43 @@ ORDER BY time
                 dimensions_sheet = ["Price Close", "Currency Rate Base"]
                 tickers = _equity_tickers(equity_current_df)
                 stock_tickers_stripped = {stock_ticker.strip() for stock_ticker in STOCK}
-                sheet_ticker_order = sorted([ticker for ticker in tickers if ticker in stock_tickers_stripped]) + \
-                    [ticker for ticker in ["MCK", "MUK", "MUS", "BANK", "IBASE", "IWATCH", "IPORT"] if ticker in tickers]
+                sheet_ticker_order = sorted([ticker for ticker in tickers if ticker in stock_tickers_stripped]) + [
+                    ticker for ticker in ["MCK", "MUK", "MUS", "BANK", "IBASE", "IWATCH", "IPORT"] if ticker in tickers
+                ]
                 sheet_columns = [f"{ticker} {dimension}" for ticker in sheet_ticker_order for dimension in dimensions_sheet if f"{ticker} {dimension}" in equity_current_df.columns]
                 equity_sheet_df = equity_current_df.select(["Date"] + sheet_columns)
-                equity_sheet_df = equity_sheet_df.filter(pl.col("Date") >= pl.lit(datetime(2007, 1, 1))).sort("Date", descending=True)
-                self.sheet_upload(equity_sheet_df, self.remote_repos.sheet_prices, workbook_name="Prices", sheet_name='History', add_filter=True)
+                equity_sheet_df = equity_sheet_df.filter(pl.col("Date") >= pl.lit(date(2007, 1, 1))).sort("Date", descending=True)
+                self.sheet_upload(equity_sheet_df, self.remote_repos.sheet_prices, workbook_name="Prices", sheet_name="History", add_filter=True)
                 dimensions = []
-                dimensions_metadata = [(
-                    [
-                        "Market Volume Spot",
-                        "Price Close",
-                        "Price Close Base",
-                        "Price Close Spot",
-                    ], "$", "1d")]
-                for change_period in DIMENSIONS_CHANGE_PERIODS:
-                    dimensions_metadata.append((
+                dimensions_metadata = [
+                    (
+                        [
+                            "Market Volume Spot",
+                            "Price Close",
+                            "Price Close Base",
+                            "Price Close Spot",
+                        ],
+                        "$",
+                        "1d",
+                    )
+                ]
+                dimensions_metadata.extend(
+                    (
                         [
                             f"Price Close {change_period}d-Change Percentage",
                             f"Price Close Base {change_period}d-Change Percentage",
                             f"Price Close Spot {change_period}d-Change Percentage",
-                        ], "%", f"{change_period}d"))
+                        ],
+                        "%",
+                        f"{change_period}d",
+                    )
+                    for change_period in DIMENSIONS_CHANGE_PERIODS
+                )
                 for dimension_metadata in dimensions_metadata:
                     dimensions.extend(dimension_metadata[0])
                 tickers = _equity_tickers(equity_current_df)
                 equity_output_df = _equity_clean(equity_delta_df)
-                equity_output_df = equity_output_df.select(["Date", *[
-                    column for ticker in tickers for dimension in dimensions if (column := f"{ticker} {dimension}") in equity_output_df.columns
-                ]])
+                equity_output_df = equity_output_df.select(["Date", *[column for ticker in tickers for dimension in dimensions if (column := f"{ticker} {dimension}") in equity_output_df.columns]])
                 for dimension_metadata in dimensions_metadata:
                     for column in dimension_metadata[0]:
                         metric_cols = [f"{ticker} {column}" for ticker in tickers if f"{ticker} {column}" in equity_output_df.columns]
@@ -967,7 +1083,8 @@ ORDER BY time
                                 metric_type=column.replace(" ", "-").lower(),
                                 period=dimension_metadata[2],
                                 unit=dimension_metadata[1],
-                                print_label=f"Equity_{column.replace(' ', '_').replace('-', '_')}")
+                                print_label=f"Equity_{column.replace(' ', '_').replace('-', '_')}",
+                            )
             self.print_log("Upload complete", started=started_time)
 
         except Exception as exception:

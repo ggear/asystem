@@ -1,3 +1,6 @@
+from datetime import datetime
+from typing import Any
+
 import polars as pl
 
 from .config import Repos
@@ -8,11 +11,21 @@ class ContractMixin:
     local_cache: str
     remote_repos: Repos
     _db_cache_dfs: dict[str, pl.DataFrame]
+    _sheet_credentials: Any
+    _sheet_spreadsheets: dict[str, Any]
+    _sheet_worksheets: dict[str, list[Any]]
+    error_codes: dict[str, tuple[str, bool, str]]
 
     def print_log(self, *args, **kwargs):
         raise NotImplementedError
 
+    def now(self) -> datetime:
+        raise NotImplementedError
+
     def add_counter(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def error(self, *args, **kwargs):
         raise NotImplementedError
 
     def csv_read(self, *args, **kwargs) -> pl.DataFrame:

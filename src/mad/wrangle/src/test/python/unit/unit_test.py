@@ -4,12 +4,14 @@ from os.path import dirname
 sys.path.insert(0, dirname(__file__))
 
 import copy
+import csv
 import dataclasses
 import datetime
 import filecmp
 import functools
 import glob
 import importlib
+import io
 import json
 import os
 import random
@@ -19,33 +21,57 @@ import subprocess
 import sys
 import tempfile
 import time
+import tomllib
 import unittest
+import urllib.error
+import urllib.parse
+import urllib.response
 from collections.abc import Iterable
 from datetime import date as date_type
-from os.path import abspath, basename, dirname, isdir, isfile, join, realpath
+from email.message import Message
+from os.path import abspath, basename, dirname, getmtime, isdir, isfile, join, realpath
 from pathlib import Path
 from unittest import mock
 
-import csv_diff  # type: ignore
+import csv_diff
 import google.oauth2.service_account
 import pandas as pd
 import polars as pl
 import pytest
-import tomllib
 from googleapiclient.discovery import build
 
-sys.path.append('../../../main/python')
+sys.path.append("../../../main/python")
 
 from wrangle import main as wrangle_main
 from wrangle import plugin
 from wrangle.plugin import DownloadResult, DownloadStatus, Plugin, database
-from wrangle.plugin.balances import REPOS_BALANCES
-from wrangle.plugin.config import get_file
+from wrangle.plugin.bank import BALANCES_KEY_COLUMNS as BANK_BALANCES_KEY_COLUMNS
+from wrangle.plugin.bank import (
+    BALANCES_SCHEMA,
+    REPOS_BANK,
+    TRANSACTIONS_SCHEMA,
+    bank_flag,
+)
+from wrangle.plugin.bank import BALANCES_STATE_SCHEMA as BANK_BALANCES_STATE_SCHEMA
+from wrangle.plugin.bank import (
+    TRANSACTIONS_KEY_COLUMNS as BANK_TRANSACTIONS_KEY_COLUMNS,
+)
+from wrangle.plugin.bank import (
+    TRANSACTIONS_STATE_SCHEMA as BANK_TRANSACTIONS_STATE_SCHEMA,
+)
+from wrangle.plugin.config import LOG_SCHEMA, get_file
 from wrangle.plugin.counters import *
 from wrangle.plugin.counters import CTR_TZ
 from wrangle.plugin.currency import COLUMNS as CURRENCY_COLUMNS
 from wrangle.plugin.currency import REPOS_CURRENCY
-from wrangle.plugin.equity import DIMENSIONS_STATE, PORTFOLIO_TICKERS_ACTIVE, PORTFOLIO_TICKERS_MANUAL, PORTFOLIO_TICKERS_NODATA, REPOS_EQUITY, STOCK
+from wrangle.plugin.equity import (
+    DIMENSIONS_STATE,
+    PORTFOLIO_TICKERS_ACTIVE,
+    PORTFOLIO_TICKERS_MANUAL,
+    PORTFOLIO_TICKERS_NODATA,
+    REPOS_EQUITY,
+    STOCK,
+)
 from wrangle.plugin.interest import COLUMNS as INTEREST_COLUMNS
 from wrangle.plugin.interest import REPOS_INTEREST
 from wrangle.plugin.logger import dataframe_print, print_log
@@ -63,148 +89,1396 @@ pytestmark = pytest.mark.filterwarnings("ignore::DeprecationWarning:multiprocess
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
 
-# noinspection PyMethodMayBeStatic
 class WrangleTest(unittest.TestCase):
-
     ########################################################################################################################
-    # Balances
+    # Bank
     ########################################################################################################################
 
-    # No current data, no new data, no remote source data downloads, no remote data repo downloads or uploads
-    def test_balances_local_blank_1(self):
-        fixture = _load_fixture("local", "balances", "blank_1")
-        self.run_plugin("balances", plugin.RepoScope.LOCAL, "blank_1", log_level="info",
-                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
-                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
-                        enable_rerun=False, force_reprocessing=False, force_downloads=False,
-                        counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_equals": {
-                                plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
-                                },
-                            },
-                        }),
-                        file_asserts={
-                            "__balances_current.csv": [
-                                assert_file_does_not_exist(),
-                            ],
-                        })
+    # No data at all, nothing committed and no error
+    def test_bank_local_blank_1(self):
+        self._bank_run(
+            "blank_1",
+            rerun=False,
+            file_asserts={
+                "__bank_balances_current.csv": [assert_file_does_not_exist()],
+            },
+        )
 
-    # No current data, corrupt data, no remote source data downloads, no remote data repo downloads or uploads
-    @pytest.mark.skip(reason="requires update")
-    def test_balances_local_corrupt_1(self):
-        fixture = _load_fixture("local", "balances", "corrupt_1")
-        self.run_plugin("balances", plugin.RepoScope.LOCAL, "corrupt_1", log_level="fatal",
-                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
-                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
-                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
-                        counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_equals": {
-                                plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
-                                },
-                            },
-                        }),
-                        file_asserts={
-                            "__balances_current.csv": [
-                                assert_file_does_not_exist(),
-                            ],
-                        })
+    # One unreadable balances file on forced reprocessing counts an errored file and commits nothing
+    def test_bank_local_corrupt_1(self):
+        self._bank_run(
+            "corrupt_1",
+            rerun=False,
+            force=True,
+            errored={plugin.CTR_SRC_FILES: 1},
+            file_asserts={
+                "__bank_balances_current.csv": [assert_file_size(min_rows=0, max_rows=0)],
+            },
+        )
 
-    # Lots of current data, a specific amount of new data, no remote source data downloads, downloads and uploads from and to preview data repo
-    @pytest.mark.skip(reason="requires update")
-    def test_balances_preview_replete_1(self):
-        drive_delete(REPOS_BALANCES._scopes["preview"]["drive_folder"], "rba_fx_1987-1990.xls")
-        self.run_plugin("balances", plugin.RepoScope.PREVIEW, "replete_1", log_level="info",
-                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=False, disable_source_downloads=True,
-                        disable_sheet_uploads=False, disable_database_uploads=True, disable_drive_uploads=False,
-                        enable_rerun=True, force_reprocessing=False, force_downloads=False,
-                        counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_equals": {
-                                plugin.CTR_SRC_SOURCES: {
-                                    plugin.CTR_ACT_UPLOADED: 2,
-                                },
-                                plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: len(CURRENCY_COLUMNS),
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: len(CURRENCY_COLUMNS),
-                                    plugin.CTR_ACT_UPDATE_COLUMNS: 0,
-                                    plugin.CTR_ACT_DELTA_COLUMNS: 0,
-                                    plugin.CTR_ACT_DELTA_ROWS: 0,
-                                },
-                            },
-                        }),
-                        custom_asserts=[
-                            assert_custom_rows_delta(equals=14)
+    # A type 2 version renames one account from its from date, the tab with no committed snapshot re-deriving every balance
+    def test_bank_local_replete_1(self):
+        self._bank_run(
+            "replete_1",
+            today="2026-03-01T12:00:00",
+            counters={plugin.CTR_SRC_FILES: {plugin.CTR_ACT_PROCESSED: 1}},
+            file_asserts={
+                "__bank_balances_current.csv": [
+                    assert_file_size(min_rows=6, max_rows=6),
+                    assert_file_column_values("Account", ["Old One", "Two", "Three", "One", "Two", "Three"], sort_by=["Date", "Account Number"]),
+                    assert_file_column_values("Account Type", ["Asset"] * 6),
+                    assert_file_column_distinct("Account ID", 3),
+                ],
+                "__bank_accounts_dimension.csv": [assert_file_size(min_rows=4, max_rows=4)],
+            },
+        )
+
+    # Two numbers share a name in sequence without error, a third account on no accounts row keeps its stored name and is unmapped
+    def test_bank_local_partial_1(self):
+        self._bank_run(
+            "partial_1",
+            today="2026-03-01T12:00:00",
+            rerun=False,
+            errored={plugin.CTR_SRC_SOURCES: 1},
+            file_asserts={
+                "__bank_balances_current.csv": [
+                    assert_file_size(min_rows=4, max_rows=4),
+                    assert_file_column_values("Account", ["Shared", "Raw Three", "Shared", "Raw Three"], sort_by=["Date", "Balance"]),
+                    assert_file_column_distinct("Account ID", 3),
+                ],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["ACCOUNT_UNMAPPED"])],
+            },
+        )
+
+    # A padded key maps and an extra column is ignored, a version not yet valid keeps the stored name, while its from date in the future, a blank name and the same
+    # number at another institution each count a source error
+    def test_bank_local_partial_2(self):
+        self._bank_run(
+            "partial_2",
+            today="2026-03-01T12:00:00",
+            rerun=False,
+            errored={plugin.CTR_SRC_SOURCES: 3},
+            file_asserts={
+                "__bank_balances_current.csv": [
+                    assert_file_size(min_rows=4, max_rows=4),
+                    assert_file_column_values("Account", ["One", "Raw Two", "Raw Three", "Raw Other"], sort_by=["Balance"]),
+                ],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["ACCOUNT_FROM", "ACCOUNT_NAME", "ACCOUNT_UNMAPPED"], sort_by=["Code"])],
+            },
+        )
+
+    # The same reading in a Redbark and a manual file commits once
+    def test_bank_local_partial_3(self):
+        self._bank_run(
+            "partial_3",
+            counters={plugin.CTR_SRC_FILES: {plugin.CTR_ACT_PROCESSED: 2}},
+            file_asserts={
+                "__bank_balances_current.csv": [
+                    assert_file_size(min_rows=2, max_rows=2),
+                    assert_file_column_distinct("Balance ID", 2),
+                ],
+            },
+        )
+
+    # No accounts tab, every reading keeps its stored name without error
+    def test_bank_local_missing_1(self):
+        self._bank_run(
+            "missing_1",
+            rerun=False,
+            force=True,
+            file_asserts={
+                "__bank_balances_current.csv": [
+                    assert_file_size(min_rows=3, max_rows=3),
+                    assert_file_column_values("Account", ["Raw One", "Raw Two", "Raw Three"], sort_by=["Balance"]),
+                ],
+            },
+        )
+
+    # A file with a row lacking its account id errors that file only, the other still commits
+    def test_bank_local_corrupt_2(self):
+        self._bank_run(
+            "corrupt_2",
+            rerun=False,
+            force=True,
+            errored={plugin.CTR_SRC_FILES: 1},
+            file_asserts={
+                "__bank_balances_current.csv": [
+                    assert_file_size(min_rows=3, max_rows=3),
+                    assert_file_dates(start_date="2026-01-15", end_date="2026-01-15"),
+                ],
+            },
+        )
+
+    # An unusable accounts tab maps nothing and counts one source error while the balances still commit under their stored names: two rows for one account on
+    # one date, a header only, rows lacking a natural key, a missing natural key column, or an unparseable from date
+    def test_bank_local_corrupt_3(self):
+        self._bank_unusable("corrupt_3")
+
+    def test_bank_local_corrupt_6(self):
+        self._bank_unusable("corrupt_6")
+
+    def test_bank_local_corrupt_7(self):
+        self._bank_unusable("corrupt_7")
+
+    def test_bank_local_corrupt_8(self):
+        self._bank_unusable("corrupt_8")
+
+    def test_bank_local_corrupt_9(self):
+        self._bank_unusable("corrupt_9")
+
+    # An empty accounts tab is unusable and drops the committed snapshot so the next usable tab re-derives every balance
+    def test_bank_local_corrupt_5(self):
+        self._bank_unusable("corrupt_5", {"__bank_accounts_dimension.csv": [assert_file_does_not_exist()]})
+
+    # Two accounts holding one name on the same date are a source error while both readings commit under their own ids
+    def test_bank_local_corrupt_4(self):
+        self._bank_run(
+            "corrupt_4",
+            rerun=False,
+            force=True,
+            errored={plugin.CTR_SRC_SOURCES: 1},
+            file_asserts={
+                "__bank_balances_current.csv": [
+                    assert_file_column_values("Account", ["Shared", "Shared"]),
+                    assert_file_column_distinct("Account ID", 2),
+                ],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["ACCOUNT_NAME_SHARED"])],
+            },
+        )
+
+    # A first live check with no files: the weekly accounts call appends the Redbark account missing from the tab as linked, the opening snapshot of both is
+    # written with readings timed by their observed time and pinned ids, it sweeps the transactions, which have none, and reruns are fresh
+    def test_bank_local_partial_4(self):
+        self._bank_run(
+            "partial_4",
+            source=True,
+            counters={plugin.CTR_SRC_SOURCES: {plugin.CTR_ACT_DOWNLOADED: 3}, plugin.CTR_SRC_FILES: {plugin.CTR_ACT_PROCESSED: 1}},
+            file_asserts={
+                "_sheet_bank_accounts.csv": [
+                    assert_file_column_values("Name", ["One", "Raw Two"]),
+                    assert_file_column_values("Status", ["Linked", "Linked"]),
+                    assert_file_column_values("Redbark Account ID", ["a1", "a2"]),
+                ],
+                "redbark_balances_2026.csv": [
+                    assert_file_size(min_rows=2, max_rows=2),
+                    assert_file_column_values("Time", ["11:30:00", "11:30:00"]),
+                ],
+                "redbark_transactions_2026.csv": [assert_file_does_not_exist()],
+                "__bank_balances_current.csv": [
+                    assert_file_column_values("Account", ["One", "Raw Two"], sort_by=["Account Number"]),
+                    assert_file_column_values("Account ID", ["540a8918175f5ca38559395087eb552c", "69c576ba31725c77a2ff31acd55cfbca"], sort_by=["Account Number"]),
+                    assert_file_column_values("Balance ID", ["37ed8e10f7d050c6951841974740007e", "a1e3d87b9b5f568bbcd41557cf6c1300"], sort_by=["Account Number"]),
+                ],
+            },
+        )
+
+    # A current balances file stamped an hour ago is fresh: nothing is requested, and the fresh cache commits the file it holds
+    def test_bank_local_partial_5(self):
+        self._bank_run(
+            "partial_5",
+            source=True,
+            rerun=False,
+            counters={plugin.CTR_SRC_SOURCES: {plugin.CTR_ACT_DOWNLOADED: 0}, plugin.CTR_SRC_FILES: {plugin.CTR_ACT_PROCESSED: 1}},
+            file_asserts={
+                "redbark_balances_2026.csv": [assert_file_size(min_rows=2, max_rows=2)],
+                "__bank_balances_current.csv": [assert_file_size(min_rows=2, max_rows=2)],
+            },
+        )
+
+    # A balances file stamped three hours ago is due: unchanged balances store nothing and only stamp it, and today's sweep is done so no transactions are requested
+    def test_bank_local_partial_6(self):
+        self._bank_run(
+            "partial_6",
+            source=True,
+            counters={plugin.CTR_SRC_SOURCES: {plugin.CTR_ACT_DOWNLOADED: 1}, plugin.CTR_SRC_FILES: {plugin.CTR_ACT_PROCESSED: 1}},
+            file_asserts={
+                "redbark_balances_2026.csv": [assert_file_size(min_rows=2, max_rows=2)],
+                "redbark_transactions_2026.csv": [assert_file_does_not_exist()],
+            },
+        )
+
+    # A due check with a moved balance appends one reading timed by its observed time and sweeps the transactions, an account with nothing held and a blank from
+    # date asking for the last seven years: postings land in the year files of their dates, one with its codes, and one older than seven years is not fetched
+    def test_bank_local_partial_7(self):
+        self._bank_run(
+            "partial_7",
+            standing=4,
+            source=True,
+            counters={plugin.CTR_SRC_SOURCES: {plugin.CTR_ACT_DOWNLOADED: 2}, plugin.CTR_SRC_FILES: {plugin.CTR_ACT_PROCESSED: 3}},
+            file_asserts={
+                "redbark_balances_2026.csv": [
+                    assert_file_size(min_rows=3, max_rows=3),
+                    assert_file_column_values("Time", ["11:30:00", "09:00:00", "09:00:00"]),
+                ],
+                "redbark_transactions_2026.csv": [
+                    assert_file_size(min_rows=1, max_rows=1),
+                    assert_file_column_values("Source ID", ["t1"]),
+                    assert_file_column_values("Merchant Code", ["5812"]),
+                    assert_file_column_values("Bank Code", ["FOOD_AND_DRINK"]),
+                ],
+                "redbark_transactions_2020.csv": [assert_file_column_values("Source ID", ["t0"])],
+                "redbark_transactions_2018.csv": [assert_file_does_not_exist()],
+                "__bank_balances_current.csv": [assert_file_size(min_rows=3, max_rows=3)],
+                "__bank_transactions_current.csv": [assert_file_size(min_rows=2, max_rows=2)],
+            },
+        )
+
+    # The first check of a new year writes its opening snapshot of every linked account into a new year file and leaves the previous year's file untouched
+    def test_bank_local_partial_8(self):
+        self._bank_run(
+            "partial_8",
+            source=True,
+            counters={plugin.CTR_SRC_FILES: {plugin.CTR_ACT_PROCESSED: 2}},
+            file_asserts={
+                "redbark_balances_2025.csv": [assert_file_size(min_rows=2, max_rows=2)],
+                "redbark_balances_2026.csv": [assert_file_size(min_rows=2, max_rows=2)],
+                "__bank_balances_current.csv": [assert_file_size(min_rows=3, max_rows=3)],
+            },
+        )
+
+    # The first check of a new year compares each reading to the previous year file's latest: none moved, so the opening snapshot is written and, today's sweep
+    # done, no transactions are requested
+    def test_bank_local_partial_46(self):
+        self._bank_run(
+            "partial_46",
+            source=True,
+            counters={plugin.CTR_SRC_SOURCES: {plugin.CTR_ACT_DOWNLOADED: 1}, plugin.CTR_SRC_FILES: {plugin.CTR_ACT_PROCESSED: 2}},
+            file_asserts={
+                "redbark_balances_2026.csv": [assert_file_size(min_rows=2, max_rows=2)],
+                "redbark_transactions_2026.csv": [assert_file_does_not_exist()],
+                "__bank_balances_current.csv": [assert_file_size(min_rows=4, max_rows=4)],
+            },
+        )
+
+    # The first check of a new month appends its opening snapshot of every linked account to the year file though no balance moved, requesting no transactions,
+    # and the stamped file is fresh on the rerun
+    def test_bank_local_partial_36(self):
+        self._bank_run(
+            "partial_36",
+            today="2026-02-02T12:00:00",
+            source=True,
+            counters={plugin.CTR_SRC_SOURCES: {plugin.CTR_ACT_DOWNLOADED: 1}, plugin.CTR_SRC_FILES: {plugin.CTR_ACT_PROCESSED: 1}},
+            file_asserts={
+                "redbark_balances_2026.csv": [
+                    assert_file_size(min_rows=4, max_rows=4),
+                    assert_file_dates(start_date="2026-01-15", end_date="2026-02-02"),
+                ],
+                "redbark_transactions_2026.csv": [assert_file_does_not_exist()],
+                "__bank_balances_current.csv": [assert_file_size(min_rows=4, max_rows=4)],
+            },
+        )
+
+    # An unreadable current balances file is kept and not queried into, counting an errored file
+    def test_bank_local_corrupt_11(self):
+        self._bank_run(
+            "corrupt_11",
+            source=True,
+            rerun=False,
+            errored={plugin.CTR_SRC_FILES: 1},
+            counters={plugin.CTR_SRC_SOURCES: {plugin.CTR_ACT_DOWNLOADED: 0}},
+            file_asserts={
+                "redbark_balances_2026.csv": [assert_file_does_exist()],
+                "__bank_balances_current.csv": [assert_file_size(min_rows=0, max_rows=0)],
+            },
+        )
+
+    # Live balances duplicated, without a numeric value or for an unknown account count one source error, the valid one is stored
+    def test_bank_local_corrupt_12(self):
+        self._bank_run(
+            "corrupt_12",
+            source=True,
+            rerun=False,
+            errored={plugin.CTR_SRC_SOURCES: 1},
+            file_asserts={
+                "redbark_balances_2026.csv": [assert_file_size(min_rows=1, max_rows=1), assert_file_column_values("Account", ["One"])],
+            },
+        )
+
+    # A balances response with no balances is a source error and the linked account absent from it a data error, writing no file
+    def test_bank_local_corrupt_13(self):
+        self._bank_run(
+            "corrupt_13",
+            source=True,
+            rerun=False,
+            errored={plugin.CTR_SRC_SOURCES: 1, plugin.CTR_SRC_DATA: 1},
+            file_asserts={
+                "redbark_balances_2026.csv": [assert_file_does_not_exist()],
+                "__bank_balances_current.csv": [assert_file_does_not_exist()],
+            },
+        )
+
+    # A failed balances call is a source error, writing no file and requesting no transactions
+    def test_bank_local_corrupt_14(self):
+        self._bank_run(
+            "corrupt_14",
+            source=True,
+            rerun=False,
+            errored={plugin.CTR_SRC_SOURCES: 1},
+            file_asserts={
+                "redbark_balances_2026.csv": [assert_file_does_not_exist()],
+                "redbark_transactions_2026.csv": [assert_file_does_not_exist()],
+            },
+        )
+
+    # A moved balance sweeps the transactions, but an unreadable year file is kept, not merged into, and counts an errored file while the balances commit
+    def test_bank_local_corrupt_16(self):
+        self._bank_run(
+            "corrupt_16",
+            source=True,
+            rerun=False,
+            errored={plugin.CTR_SRC_FILES: 1},
+            file_asserts={
+                "redbark_transactions_2026.csv": [assert_file_does_exist()],
+                "__bank_transactions_current.csv": [assert_file_size(min_rows=0, max_rows=0)],
+                "__bank_balances_current.csv": [assert_file_size(min_rows=3, max_rows=3)],
+            },
+        )
+
+    # A live transactions list missing its status column is one source error writing no transactions, while the balances still commit
+    def test_bank_local_corrupt_17(self):
+        self._bank_run(
+            "corrupt_17",
+            source=True,
+            rerun=False,
+            errored={plugin.CTR_SRC_SOURCES: 1},
+            file_asserts={
+                "redbark_transactions_2026.csv": [assert_file_does_not_exist()],
+                "__bank_balances_current.csv": [assert_file_size(min_rows=2, max_rows=2)],
+            },
+        )
+
+    # A blank status triggers the accounts call, which fails, a source error leaving no linked account to check
+    def test_bank_local_corrupt_18(self):
+        self._bank_run(
+            "corrupt_18",
+            source=True,
+            rerun=False,
+            errored={plugin.CTR_SRC_SOURCES: 1},
+            file_asserts={
+                "redbark_balances_2026.csv": [assert_file_does_not_exist()],
+            },
+        )
+
+    # A moved balance sweeps each account from its newest held date less the leeway: a held transaction is not added again and the new ones land
+    def test_bank_local_partial_11(self):
+        self._bank_run(
+            "partial_11",
+            standing=2,
+            source=True,
+            file_asserts={
+                "redbark_transactions_2026.csv": [
+                    assert_file_size(min_rows=3, max_rows=3),
+                    assert_file_column_values("Source ID", ["t1", "t2", "t6"], sort_by=["Date"]),
+                ],
+                "__bank_transactions_current.csv": [assert_file_column_values("Account", ["One", "One", "Two"], sort_by=["Date"])],
+            },
+        )
+
+    # A posting inside the leeway lands in the previous year's file, writing both years, and one before the window is not fetched
+    def test_bank_local_partial_12(self):
+        self._bank_run(
+            "partial_12",
+            standing=4,
+            source=True,
+            file_asserts={
+                "redbark_transactions_2025.csv": [assert_file_size(min_rows=1, max_rows=1), assert_file_column_values("Source ID", ["t7"])],
+                "redbark_transactions_2026.csv": [assert_file_size(min_rows=2, max_rows=2), assert_file_column_values("Source ID", ["t3", "t9"], sort_by=["Date"])],
+                "__bank_transactions_current.csv": [assert_file_size(min_rows=3, max_rows=3)],
+            },
+        )
+
+    # Blank statuses trigger the accounts call: a match is linked, two Redbark accounts on one key duplicate and none missing, each a source error, a linked
+    # account Redbark no longer lists is marked missing, an unlisted Redbark account is appended linked below a row without a key, which is left untouched, and
+    # every account id cell is filled or corrected to the id its institution and number derive
+    def test_bank_local_partial_13(self):
+        self._bank_run(
+            "partial_13",
+            source=True,
+            rerun=False,
+            errored={plugin.CTR_SRC_SOURCES: 2},
+            file_asserts={
+                "_sheet_bank_accounts.csv": [
+                    assert_file_columns(["From", "Institution", "Number", "Name", "Type", "Status", "Account ID", "Redbark Account ID", "Redbark Connection ID"]),
+                    assert_file_column_values(
+                        "Account ID",
+                        [
+                            "540a8918175f5ca38559395087eb552c",
+                            "69c576ba31725c77a2ff31acd55cfbca",
+                            "2cc28c0d50e15640a4120ad2a73f56c7",
+                            "36bbf924e6895afabff3763234a79275",
+                            None,
+                            "ecc241accba95d2c8ee7cf5da8c0c66b",
                         ],
-                        file_asserts={
-                            "__balances_current.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="1983-12-12", end_date="2024-10-14", contiguous="days"),
-                                assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude=r"Delta"),
-                            ],
-                            "_sheet_rates_balances.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="1983-12-12", end_date="2024-10-14", contiguous="days", descending=True),
-                                assert_file_nones_per_row(),
-                                assert_file_zeroes_per_row(),
-                            ],
-                            "_database_balances.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="1983-12-12", end_date="2024-10-14", contiguous="days"),
-                                assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude=r"type=delta"),
-                            ],
-                        })
+                    ),
+                    assert_file_column_values("Status", ["Linked", "Duplicate", "Missing", "Missing", None, "Linked"]),
+                    assert_file_column_values("Redbark Account ID", ["a1", None, None, None, None, "a4"]),
+                ],
+                "redbark_balances_2026.csv": [assert_file_size(min_rows=2, max_rows=2)],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["ACCOUNT_DUPLICATE", "ACCOUNT_MISSING", "ACCOUNT_MISSING"], sort_by=["Code"])],
+            },
+        )
 
-    # Lots of current data, a lot of live new data, downloads from remote sources, downloads from release data repo, no remote data repo uploads
-    @pytest.mark.skip(reason="requires update")
-    def test_balances_release_replete_1(self):
-        self.run_plugin("balances", plugin.RepoScope.RELEASE, "replete_1", log_level="info",
-                        disable_sheet_downloads=False, disable_database_downloads=False, disable_drive_downloads=False, disable_source_downloads=False,
-                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
-                        enable_rerun=True, force_reprocessing=False, force_downloads=False,
-                        counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_equals": {
-                                plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 18,
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: 18,
-                                    plugin.CTR_ACT_UPDATE_COLUMNS: 18,
-                                    plugin.CTR_ACT_DELTA_COLUMNS: 18,
-                                },
-                            },
-                            "counter_at_least": {
-                                plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_DELTA_ROWS: 14,
-                                },
-                            },
-                        }),
-                        custom_asserts=[
-                            assert_custom_rows_delta(at_least=14)
+    # An id-less held transaction absorbs at most one live transaction of the same amount within three days, the nearest, by name across a replaced card number,
+    # adopting its source id, and a transaction posted six days after it was made is matched on the day it was made, as history dates it, while a second identical
+    # one, one four days away and a new one are kept
+    def test_bank_local_partial_14(self):
+        self._bank_run(
+            "partial_14",
+            standing=2,
+            source=True,
+            file_asserts={
+                "redbark_transactions_2026.csv": [
+                    assert_file_size(min_rows=7, max_rows=7),
+                    assert_file_column_values("Source ID", ["l6", "l3", "l1", "l2", "l4", None, "l5"], sort_by=["Date", "Source ID"]),
+                ],
+                "__bank_transactions_current.csv": [assert_file_column_distinct("Transaction ID", 7)],
+            },
+        )
+
+    # A first run with no files: an account backfills from its from date, a posting before it not fetched, and one with a blank from date takes everything within
+    # seven years
+    def test_bank_local_partial_17(self):
+        self._bank_run(
+            "partial_17",
+            standing=4,
+            source=True,
+            file_asserts={
+                "redbark_balances_2026.csv": [assert_file_size(min_rows=2, max_rows=2)],
+                "redbark_transactions_2025.csv": [assert_file_column_values("Source ID", ["t1", "t2"], sort_by=["Date"])],
+                "redbark_transactions_2026.csv": [assert_file_column_values("Source ID", ["t3"])],
+            },
+        )
+
+    # A current balances file holding only its header has no readings, so every balance is stored
+    def test_bank_local_partial_18(self):
+        self._bank_run(
+            "partial_18",
+            source=True,
+            file_asserts={
+                "redbark_balances_2026.csv": [assert_file_size(min_rows=2, max_rows=2)],
+                "__bank_balances_current.csv": [assert_file_size(min_rows=2, max_rows=2)],
+            },
+        )
+
+    # Accounts, balances and transactions together: a history year file, a live posting held there without a source id, a pending one ignored, Redbark's codes
+    # stored as codes with the placeholder merchant code blank, and every transaction id pinned to its account id, posted date, amount in cents, description and
+    # ordinal
+    def test_bank_local_replete_4(self):
+        self._bank_run(
+            "replete_4",
+            standing=2,
+            source=True,
+            file_asserts={
+                "redbark_transactions_2025.csv": [assert_file_size(min_rows=3, max_rows=3)],
+                "redbark_transactions_2026.csv": [
+                    assert_file_size(min_rows=2, max_rows=2),
+                    assert_file_column_values("Bank Code", ["FOOD_AND_DRINK", "INCOME"], sort_by=["Date"]),
+                    assert_file_column_values("Merchant Code", [None, None], sort_by=["Date"]),
+                ],
+                "__bank_transactions_current.csv": [
+                    assert_file_size(min_rows=5, max_rows=5),
+                    assert_file_column_values("Account", ["One", "Two", "One", "One", "Two"], sort_by=["Date"]),
+                    assert_file_column_values(
+                        "Transaction ID",
+                        [
+                            "d4352f89b42357ffb06e69a9695667c9",
+                            "79c5ee12276f525c84b5abfb49908ed8",
+                            "d2ffeef11422516c894c30eb44339739",
+                            "61bee1da79965981a8a42ea991258df9",
+                            "91ae10de62c15064b77e3b46e137bacc",
                         ],
-                        file_asserts={
-                            "__balances_current*.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="1983-12-12", contiguous="days"),
-                                assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude=r"Delta"),
-                                assert_file_equal(),
-                            ],
-                            "_sheet_rates_balances*.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="1983-12-12", contiguous="days", descending=True),
-                                assert_file_nones_per_row(),
-                                assert_file_zeroes_per_row(),
-                                assert_file_equal(),
-                            ],
-                            "_database_balances*.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="1983-12-12", contiguous="days"),
-                                assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude=r"type=delta"),
-                                assert_file_equal(),
-                            ],
-                        })
+                        sort_by=["Date"],
+                    ),
+                    assert_file_column_values("Split", ["0", "0", "0", "0", "0"]),
+                ],
+            },
+        )
+
+    # A dead Redbark id answers 404: the accounts are fetched again, the row's id replaced, and the retried query lands
+    def test_bank_local_partial_19(self):
+        self._bank_run(
+            "partial_19",
+            standing=2,
+            source=True,
+            file_asserts={
+                "_sheet_bank_accounts.csv": [assert_file_column_values("Redbark Account ID", ["a1n"]), assert_file_column_values("Redbark Connection ID", ["c2"])],
+                "redbark_transactions_2026.csv": [assert_file_column_values("Source ID", ["t1"])],
+            },
+        )
+
+    # A rate limited transactions call is a source error merging nothing for that account, while the other account merges
+    def test_bank_local_corrupt_19(self):
+        self._bank_run(
+            "corrupt_19",
+            standing=2,
+            source=True,
+            rerun=False,
+            errored={plugin.CTR_SRC_SOURCES: 1},
+            file_asserts={
+                "redbark_transactions_2026.csv": [assert_file_column_values("Source ID", ["t1"])],
+            },
+        )
+
+    # The first due check of a day sweeps the transactions though no balance moved
+    def test_bank_local_partial_20(self):
+        self._bank_run(
+            "partial_20",
+            standing=2,
+            source=True,
+            file_asserts={
+                "redbark_balances_2026.csv": [assert_file_size(min_rows=2, max_rows=2)],
+                "redbark_transactions_2026.csv": [assert_file_column_values("Source ID", ["t1"])],
+            },
+        )
+
+    # A changed accounts tab against the committed snapshot and state re-derives every balance and transaction in place, after which reruns are no-ops
+    def test_bank_local_replete_2(self):
+        self._bank_run(
+            "replete_2",
+            counters={plugin.CTR_SRC_FILES: {plugin.CTR_ACT_PROCESSED: 2}, plugin.CTR_SRC_DATA: {plugin.CTR_ACT_DELTA_ROWS: 2}},
+            file_asserts={
+                "__bank_balances_current.csv": [assert_file_size(min_rows=1, max_rows=1), assert_file_column_values("Account", ["Uno"])],
+                "__bank_transactions_current.csv": [assert_file_size(min_rows=1, max_rows=1), assert_file_column_values("Account", ["Uno"])],
+            },
+        )
+
+    # A usable accounts tab with no committed snapshot, as after an unusable one, re-derives every balance and commits its snapshot
+    def test_bank_local_replete_3(self):
+        self._bank_run(
+            "replete_3",
+            counters={plugin.CTR_SRC_FILES: {plugin.CTR_ACT_PROCESSED: 1}},
+            file_asserts={
+                "__bank_balances_current.csv": [assert_file_column_values("Account", ["One"]), assert_file_column_values("Account Institution", ["Bank A"])],
+                "__bank_accounts_dimension.csv": [assert_file_does_exist()],
+            },
+        )
+
+    # The balances tab holds every reading of the current and previous months and each active account's latest older one, sorted by account name then newest
+    # first, a closed account dropping off, while the state keeps every reading
+    def test_bank_local_partial_9(self):
+        self._bank_run(
+            "partial_9",
+            file_asserts={
+                "__bank_balances_current.csv": [assert_file_size(min_rows=8, max_rows=8)],
+                "_sheet_bank_balances.csv": [
+                    assert_file_columns(list(BALANCES_SCHEMA)),
+                    assert_file_column_values("Account", ["Alpha", "Alpha", "Alpha", "Bravo", "Bravo", "Charlie"]),
+                    assert_file_column_values("Date", ["2025-12-28", "2025-12-20", "2025-11-25", "2026-01-10", "2026-01-02", "2025-11-20"]),
+                    assert_file_column_values("Time", ["09:00:00", "09:00:00", "09:00:00", "15:00:00", "09:00:00", "09:00:00"]),
+                ],
+            },
+        )
+
+    # Review per year tab: unclassified or unvetted rows in a closed month are an error, only in the current month a warning, a vetted classified
+    # year clean, and a stored vetted value read whatever its case and spacing
+    def test_bank_local_partial_37(self):
+        self._bank_run(
+            "partial_37",
+            standing=5,
+            file_asserts={
+                "__bank_logs.csv": [
+                    assert_file_column_values("Tab", ["Transactions_2023", "Transactions_2025", "Transactions_2025", "Transactions_2026", "Transactions_2026"], sort_by=["Tab", "Code"]),
+                    assert_file_column_values(
+                        "Code",
+                        ["TRANSACTIONS_UNVETTED", "TRANSACTIONS_UNCLASSIFIED", "TRANSACTIONS_UNVETTED", "TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED_CURRENT"],
+                        sort_by=["Tab", "Code"],
+                    ),
+                ],
+                "__bank_transactions_current.csv": [
+                    assert_file_column_values("Category", ["Health", "Health", "Food", "Food", None, None, None, "Food", None], sort_by=["Date"]),
+                    assert_file_column_values("Vetted", ["No", "Yes", "Yes", "Yes", None, None, None, "Yes", None], sort_by=["Date"]),
+                ],
+            },
+        )
+
+    # A year with rows both before and in the open month raises a closed months error and an open month warning
+    def test_bank_local_partial_37_split(self):
+        self._bank_run(
+            "partial_37",
+            today="2026-02-15T12:00:00",
+            standing=7,
+            file_asserts={
+                "__bank_logs.csv": [
+                    assert_file_column_values("Tab", ["Transactions_2023"] + ["Transactions_2025"] * 2 + ["Transactions_2026"] * 4, sort_by=["Tab", "Code"]),
+                    assert_file_column_values(
+                        "Code",
+                        [
+                            "TRANSACTIONS_UNVETTED",
+                            "TRANSACTIONS_UNCLASSIFIED",
+                            "TRANSACTIONS_UNVETTED",
+                            "TRANSACTIONS_UNCLASSIFIED",
+                            "TRANSACTIONS_UNCLASSIFIED_CURRENT",
+                            "TRANSACTIONS_UNVETTED",
+                            "TRANSACTIONS_UNVETTED_CURRENT",
+                        ],
+                        sort_by=["Tab", "Code"],
+                    ),
+                ],
+                "__bank_transactions_current.csv": [
+                    assert_file_column_values("Category", ["Health", "Health", "Food", "Food", None, None, None, "Food", None], sort_by=["Date"]),
+                    assert_file_column_values("Vetted", ["No", "Yes", "Yes", "Yes", None, None, None, "Yes", None], sort_by=["Date"]),
+                ],
+            },
+        )
+
+    # Vetted typed on a linked account's rows: a tick is saved, a category change clears a tick left as it was but keeps one set with it, an unknown value is one
+    # rejected record reverted by the rewrite, and a value is saved title cased whatever its case and spacing
+    def test_bank_local_partial_40(self):
+        self._bank_run(
+            "partial_40",
+            standing=1,
+            sheet_downloads=1,
+            errored={plugin.CTR_SRC_DATA: 1},
+            file_asserts={
+                "redbark_transactions_2025.csv": [
+                    assert_file_column_values("Vetted", ["Yes", None, "Yes", None, "No"], sort_by=["Description"]),
+                    assert_file_column_values("Category Manual", [None, "Clothing", "Clothing", None, None], sort_by=["Description"]),
+                ],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["TRANSACTIONS_UNVETTED", "TRANSACTION_VETTED"], sort_by=["Code"])],
+            },
+        )
+
+    # A reclassified transaction loses its tick on a forced reprocess, while one whose manual category holds and one whose category stands keep theirs
+    def test_bank_local_partial_41(self):
+        self._bank_run(
+            "partial_41",
+            standing=1,
+            rerun=False,
+            force=True,
+            file_asserts={
+                "redbark_transactions_2025.csv": [
+                    assert_file_column_values("Category Derived", ["Food"] * 9 + ["Groceries", "Groceries"], sort_by=["Description"]),
+                    assert_file_column_values("Vetted", ["Yes"] * 9 + [None, "Yes"], sort_by=["Description"]),
+                ],
+            },
+        )
+
+    # A replaced card shares its name with the closed card it replaced, both holding transactions on one date without error
+    def test_bank_local_partial_38(self):
+        self._bank_run(
+            "partial_38",
+            file_asserts={
+                "__bank_transactions_current.csv": [assert_file_size(min_rows=2, max_rows=2), assert_file_column_distinct("Account ID", 2)],
+                "__bank_logs.csv": [assert_file_size(min_rows=0, max_rows=0)],
+            },
+        )
+
+    # Two open cards sharing a name both holding transactions on one date are a source error
+    def test_bank_local_corrupt_31(self):
+        self._bank_run(
+            "corrupt_31",
+            rerun=False,
+            errored={plugin.CTR_SRC_SOURCES: 1},
+            file_asserts={
+                "__bank_logs.csv": [assert_file_column_values("Code", ["ACCOUNT_NAME_SHARED"])],
+            },
+        )
+
+    # A transaction held on both a closed card and the card replacing it under one name, matched on date, cents and description whatever its case and spacing,
+    # is one standing warning, while the same purchase on another day is not
+    def test_bank_local_partial_39(self):
+        self._bank_run(
+            "partial_39",
+            standing=1,
+            file_asserts={
+                "__bank_transactions_current.csv": [assert_file_size(min_rows=3, max_rows=3)],
+                "__bank_logs.csv": [
+                    assert_file_column_values("Code", ["TRANSACTION_TWO_ACCOUNTS"]),
+                    assert_file_column_values("Tab", ["Transactions_2026"]),
+                ],
+            },
+        )
+
+    # An accounts tab holding only its header is filled from Redbark: every account appended linked with its ids, a credit card as a liability, and its balances
+    # stored on the same run
+    def test_bank_local_partial_42(self):
+        self._bank_run(
+            "partial_42",
+            source=True,
+            rerun=False,
+            file_asserts={
+                "_sheet_bank_accounts.csv": [
+                    assert_file_column_values("Name", ["Raw One", "Raw Two"]),
+                    assert_file_column_values("Status", ["Linked", "Linked"]),
+                    assert_file_column_values("Type", ["Asset", "Liability"]),
+                    assert_file_column_values("Redbark Account ID", ["a1", "a2"]),
+                ],
+                "__bank_balances_current.csv": [assert_file_size(min_rows=2, max_rows=2)],
+            },
+        )
+
+    # Two otherwise identical linked transactions, the first given a category manual: the rewrite keeps each at its place in the file, so the edited one keeps its
+    # own id
+    def test_bank_local_partial_43(self):
+        self._bank_run(
+            "partial_43",
+            sheet_downloads=1,
+            file_asserts={
+                "redbark_transactions_2025.csv": [
+                    assert_file_column_values("Category Manual", ["Clothing", None], sort_by=["Source ID"]),
+                    assert_file_column_values("Transaction ID", ["a8c61ffc86d3546db806c31b4a8cece7", "92dbf60c4d6f5860873b6c28342ca850"], sort_by=["Source ID"]),
+                ],
+            },
+        )
+
+    # A swept transactions response: a merchant code short of four digits is padded, and two transactions sharing a Redbark id are both rejected
+    def test_bank_local_partial_44(self):
+        self._bank_run(
+            "partial_44",
+            standing=2,
+            source=True,
+            rerun=False,
+            errored={plugin.CTR_SRC_SOURCES: 1},
+            file_asserts={
+                "redbark_transactions_2026.csv": [assert_file_column_values("Source ID", ["t1"]), assert_file_column_values("Merchant Code", ["0812"], raw=True)],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED_CURRENT", "TRANSACTION_RESPONSE"], sort_by=["Code"])],
+            },
+        )
+
+    # Two identical history transactions stay two transactions told apart by their ordinal, each with its own pinned id
+    def test_bank_local_partial_10(self):
+        self._bank_run(
+            "partial_10",
+            rerun=False,
+            force=True,
+            counters={plugin.CTR_SRC_FILES: {plugin.CTR_ACT_PROCESSED: 1}},
+            file_asserts={
+                "__bank_transactions_current.csv": [
+                    assert_file_size(min_rows=3, max_rows=3),
+                    assert_file_column_values(
+                        "Transaction ID", ["0c44da25a5f9513cb483b7cd368d8921", "2ba8c1c0858c5d51abe091996e496dc8", "4e78230a0c5e57a697d68c42c10b59be"], sort_by=["Transaction ID"]
+                    ),
+                ],
+            },
+        )
+
+    # Split parts are derived on read: -1000, -500, -500 is one whole transaction and one split in two parts sharing an id
+    def test_bank_local_partial_15(self):
+        self._bank_run(
+            "partial_15",
+            standing=2,
+            rerun=False,
+            force=True,
+            file_asserts={
+                "__bank_transactions_current.csv": [
+                    assert_file_size(min_rows=3, max_rows=3),
+                    assert_file_column_values("Split", ["0", "1", "2"], sort_by=["Split"]),
+                    assert_file_column_values("Category", [None, "Car", "Groceries"], sort_by=["Split"]),
+                    assert_file_column_distinct("Transaction ID", 2),
+                ],
+            },
+        )
+
+    # An unreadable year file is kept and counts an errored file, its year left as committed while another year commits
+    def test_bank_local_corrupt_15(self):
+        self._bank_run(
+            "corrupt_15",
+            standing=2,
+            rerun=False,
+            errored={plugin.CTR_SRC_FILES: 1},
+            file_asserts={
+                "redbark_transactions_2026.csv": [assert_file_does_exist()],
+                "__bank_transactions_current.csv": [assert_file_size(min_rows=1, max_rows=1), assert_file_dates(start_date="2025-12-03", end_date="2025-12-03")],
+            },
+        )
+
+    # Manual balances typed on the balances tab: a value set on a carried reading makes it real, a changed one is saved, a cleared one deleted (a year left with none
+    # emptied rather than removed, so the empty file reaches Drive), and a new row with a blank date and time lands at the end of today, the carried readings
+    # following and a real reading winning at the same moment
+    def test_bank_local_partial_21(self):
+        self._bank_run(
+            "partial_21",
+            sheet_downloads=1,
+            file_asserts={
+                "manual_balances_2026.csv": [
+                    assert_file_column_values("Balance Manual", ["101.0", "105.0", "110.0"], sort_by=["Date"]),
+                    assert_file_column_values("Time", ["23:59:59", "09:00:00", "23:59:59"], sort_by=["Date"]),
+                ],
+                "manual_balances_2025.csv": [assert_file_size(min_rows=0, max_rows=0), assert_file_columns(list(BALANCES_SCHEMA))],
+                "__bank_balances_current.csv": [
+                    assert_file_size(min_rows=6, max_rows=6),
+                    assert_file_column_values("Balance", ["101.0", "101.0", "10.0", "105.0", "12.0", "110.0"], sort_by=["Date", "Time", "Account"]),
+                ],
+            },
+        )
+
+    # Rejected balance edits each count a data error and are reverted by the rewrite: a value on a linked row, an unknown account, a future date and an unparsed value
+    def test_bank_local_corrupt_20(self):
+        self._bank_run(
+            "corrupt_20",
+            sheet_downloads=1,
+            rerun=False,
+            errored={plugin.CTR_SRC_DATA: 4},
+            file_asserts={
+                "manual_balances_2026.csv": [assert_file_size(min_rows=1, max_rows=1)],
+                "_sheet_bank_balances.csv": [
+                    assert_file_column_values("Account", ["Cash", "Cash", "One"]),
+                    assert_file_column_values("Balance Manual", ["100.0", "100.0", None]),
+                ],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["ACCOUNT_LINKED", "ACCOUNT_NOT_MANUAL", "DATE_FUTURE", "VALUE_UNPARSED"], sort_by=["Code"])],
+            },
+        )
+
+    # Manual transactions typed on the year tabs: an edit moving its amount split, a deletion, a new row, a date moved across years and an edited placeholder each
+    # land in the right manual file, and the placeholders roll to exactly one per manual account this month, the stale one gone
+    def test_bank_local_partial_22(self):
+        self._bank_run(
+            "partial_22",
+            standing=2,
+            sheet_downloads=1,
+            file_asserts={
+                "manual_transactions_2026.csv": [
+                    assert_file_size(min_rows=6, max_rows=6),
+                    assert_file_column_values("Description", ["Tip", "Null Transaction", "Null Transaction", "Snack", "Lunch", "Dinner"], sort_by=["Date", "Amount", "Account"]),
+                    assert_file_column_values("Amount Split", ["-3.0", "0.0", "0.0", "-5.0", "-12.0", "-30.0"], sort_by=["Date", "Amount", "Account"]),
+                ],
+                "manual_transactions_2025.csv": [assert_file_size(min_rows=0, max_rows=0), assert_file_columns(list(TRANSACTIONS_SCHEMA))],
+                "__bank_transactions_current.csv": [
+                    assert_file_size(min_rows=5, max_rows=5),
+                    assert_file_column_values("Description", ["Tip", "Snack", "Lunch", "Coffee", "Dinner"], sort_by=["Date"]),
+                ],
+                "_sheet_bank_transactions_2026.csv": [assert_file_size(min_rows=7, max_rows=7)],
+            },
+        )
+
+    # Rejected transaction edits each count a data error and are reverted by the rewrite: a linked row's description, a new row for a linked account and a split not
+    # summing to its amount
+    def test_bank_local_corrupt_21(self):
+        self._bank_run(
+            "corrupt_21",
+            standing=2,
+            sheet_downloads=1,
+            rerun=False,
+            errored={plugin.CTR_SRC_DATA: 3},
+            file_asserts={
+                "redbark_transactions_2026.csv": [assert_file_column_values("Description", ["Coffee", "Fee"], sort_by=["Date"])],
+                "_sheet_bank_transactions_2026.csv": [assert_file_size(min_rows=2, max_rows=2)],
+                "__bank_logs.csv": [
+                    assert_file_column_values("Code", ["ACCOUNT_LINKED", "ACCOUNT_LINKED", "SPLIT_INVALID", "TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED_CURRENT"], sort_by=["Code"])
+                ],
+            },
+        )
+
+    # A manual transaction moved into a year whose manual file is unreadable, and a new row dated in that year, are each rejected as a data error, the moved one kept
+    # where it was and the unreadable file counting an errored file
+    def test_bank_local_corrupt_32(self):
+        self._bank_run(
+            "corrupt_32",
+            standing=2,
+            sheet_downloads=1,
+            rerun=False,
+            errored={plugin.CTR_SRC_DATA: 2, plugin.CTR_SRC_FILES: 1},
+            file_asserts={
+                "manual_transactions_2026.csv": [assert_file_column_values("Description", ["Null Transaction", "Lunch"], sort_by=["Date"])],
+                "manual_transactions_2025.csv": [assert_file_does_exist()],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["FILE_UNREADABLE", "FILE_UNREADABLE", "TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED_CURRENT"], sort_by=["Code"])],
+            },
+        )
+
+    # On linked rows a category manual and a valid split are kept, the split saved as contiguous parts sharing one id, the bucket following the resolved category
+    def test_bank_local_partial_23(self):
+        self._bank_run(
+            "partial_23",
+            standing=1,
+            sheet_downloads=1,
+            file_asserts={
+                "redbark_transactions_2026.csv": [
+                    assert_file_size(min_rows=3, max_rows=3),
+                    assert_file_column_values("Category Manual", ["Groceries", "Car", "Groceries"], sort_by=["Amount Split"]),
+                ],
+                "__bank_transactions_current.csv": [
+                    assert_file_column_values("Split", ["2", "1", "0"], sort_by=["Amount Split"]),
+                    assert_file_column_values("Bucket", ["Living", "Maintenance", "Living"], sort_by=["Amount Split"]),
+                    assert_file_column_distinct("Transaction ID", 2),
+                ],
+            },
+        )
+
+    # Classification by the longest literal pattern, then merchant code, then bank code: nested patterns across categories, padded whitespace, a metacharacter
+    # matched literally, a merchant code over a bank code and an unmapped income code left blank; the changed tab fills every blank row, and forced reprocessing
+    # reclassifies every row, the history's own category included, while a category manual still wins
+    def test_bank_local_partial_24(self):
+        self._bank_run(
+            "partial_24",
+            standing=2,
+            file_asserts={
+                "redbark_transactions_2026.csv": [
+                    assert_file_column_values(
+                        "Category Derived",
+                        ["Groceries", "Restaurants", "Groceries", "Restaurants", None, "Shopping", None, "Groceries", "Restaurants", None, None, None, None, None, None],
+                        sort_by=["Date", "Amount"],
+                    ),
+                ],
+                "__bank_transactions_current.csv": [
+                    assert_file_column_values(
+                        "Category",
+                        ["Groceries", "Restaurants", "Groceries", "Restaurants", None, "Shopping", None, "Groceries", "Groceries", None, None, None, None, None, None],
+                        sort_by=["Date", "Amount"],
+                    ),
+                ],
+            },
+        )
+
+    # Classifier standing errors, one source error each: a bank code not a CDR code, a merchant code not four digits, two code rows for one category, and two patterns
+    # of equal length from different categories matching one description, which takes neither
+    def test_bank_local_corrupt_22(self):
+        self._bank_run(
+            "corrupt_22",
+            standing=2,
+            rerun=False,
+            errored={plugin.CTR_SRC_SOURCES: 4},
+            file_asserts={
+                "redbark_transactions_2026.csv": [assert_file_column_values("Category Derived", [None] * 7)],
+                "__bank_logs.csv": [
+                    assert_file_column_values(
+                        "Code",
+                        ["CLASSIFIER_BANK_CODE", "CLASSIFIER_CODE_ROWS", "CLASSIFIER_MERCHANT_CODE", "CLASSIFIER_TIE", "TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED_CURRENT"],
+                        sort_by=["Code"],
+                    )
+                ],
+            },
+        )
+
+    # The plugin's own uploads read back as no edit: every run sees the tabs moved and compares them, an id, a description starting with an equals sign or holding a
+    # comma and a merchant code with a leading zero round trip, and the rerun uploads nothing
+    def test_bank_local_partial_25(self):
+        self._bank_run(
+            "partial_25",
+            standing=4,
+            sheet_downloads=99,
+            file_asserts={
+                "_sheet_bank_balances.csv": [assert_file_does_exist()],
+                "_sheet_bank_transactions_2026.csv": [assert_file_size(min_rows=7, max_rows=7)],
+                "_sheet_bank_transactions_2025.csv": [assert_file_size(min_rows=1, max_rows=1)],
+                "_sheet_bank_transactions.csv": [assert_file_column_distinct("End of Month", 1)],
+            },
+        )
+
+    # A tab edited between the read and the upload is not overwritten: its upload and every later one are skipped
+    def test_bank_local_partial_26(self):
+        self._bank_run(
+            "partial_26",
+            standing=2,
+            sheet_downloads=0,
+            moved_tabs=("Balances",),
+            rerun=False,
+            file_asserts={
+                "_sheet_bank_balances.csv": [assert_file_column_values("Balance Linked", ["10.0"])],
+                "_sheet_bank_transactions_2026.csv": [assert_file_does_not_exist()],
+                "__bank_balances_current.csv": [assert_file_size(min_rows=1, max_rows=1)],
+            },
+        )
+
+    # A tab read back with its numbers displayed differently, as the sheet shows 10.0 as 10, is the same tab: the guard compares typed values and the upload goes ahead
+    def test_bank_local_partial_35(self):
+        self._bank_run(
+            "partial_35",
+            standing=2,
+            sheet_downloads=0,
+            restyled_tabs=("Balances",),
+            rerun=False,
+            file_asserts={
+                "_sheet_bank_balances.csv": [assert_file_column_values("Balance Linked", ["12.0"])],
+                "_sheet_bank_transactions_2026.csv": [assert_file_size(min_rows=1, max_rows=1)],
+            },
+        )
+
+    # Forced reprocessing dedupes every transactions file by source id, each removal a data error: one in two files keeps the earlier, while a sourced transaction
+    # beside an id-less one of the same amount within three days, as genuine repeats are, split parts sharing a source id and identical id-less transactions all stay
+    def test_bank_local_partial_27(self):
+        self._bank_run(
+            "partial_27",
+            standing=4,
+            rerun=False,
+            force=True,
+            errored={plugin.CTR_SRC_DATA: 1},
+            file_asserts={
+                "redbark_transactions_2025.csv": [assert_file_size(min_rows=1, max_rows=1)],
+                "redbark_transactions_2026.csv": [
+                    assert_file_size(min_rows=6, max_rows=6),
+                    assert_file_column_values("Description", ["History", "Live", "Split", "Split", "Same", "Same"], sort_by=["Date", "Amount Split"]),
+                ],
+                "__bank_logs.csv": [
+                    assert_file_column_values(
+                        "Code", ["DEDUPE_REMOVED", "TRANSACTIONS_UNCLASSIFIED", "TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED", "TRANSACTIONS_UNVETTED_CURRENT"], sort_by=["Code"]
+                    )
+                ],
+            },
+        )
+
+    # A sweep on a normal run writes a transaction Redbark now dates inside the window whose source id an unchanged older year file holds: the dedupe compares every
+    # file, removing it from the changed one as a data error
+    def test_bank_local_partial_45(self):
+        self._bank_run(
+            "partial_45",
+            standing=4,
+            source=True,
+            rerun=False,
+            errored={plugin.CTR_SRC_DATA: 1},
+            file_asserts={
+                "redbark_transactions_2025.csv": [assert_file_column_values("Source ID", ["t1"])],
+                "redbark_transactions_2026.csv": [assert_file_column_values("Source ID", ["t9"])],
+                "__bank_transactions_current.csv": [assert_file_size(min_rows=2, max_rows=2)],
+                "__bank_logs.csv": [
+                    assert_file_column_values(
+                        "Code",
+                        ["DEDUPE_REMOVED", "TRANSACTIONS_UNCLASSIFIED", "TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED", "TRANSACTIONS_UNVETTED_CURRENT"],
+                        sort_by=["Code"],
+                    )
+                ],
+            },
+        )
+
+    # Month end totals on the Transactions tab, a row per month for each category with transactions: labelled by the next month's first, the current month and quiet months
+    # left out, refunds netting, budgeted rows first then by bucket and category
+    def test_bank_local_partial_28(self):
+        self._bank_run(
+            "partial_28",
+            standing=2,
+            file_asserts={
+                "_sheet_bank_transactions.csv": [
+                    assert_file_columns(["End of Month", "Budgeted", "Bucket", "Category", "Total"]),
+                    assert_file_column_values("End of Month", ["2026-01-01"] * 4 + ["2025-11-01"]),
+                    assert_file_column_values("Budgeted", ["Yes", "Yes", "No", "No", "Yes"]),
+                    assert_file_column_values("Bucket", ["Discretionary", "Living", "Transfers", "Unbucketed", "Living"]),
+                    assert_file_column_values("Category", ["Restaurants", "Groceries", "Transfer", "Uncategorised", "Groceries"]),
+                    assert_file_column_values("Total", ["50.0", "-20.0", "200.0", "1.0", "100.0"]),
+                ],
+            },
+        )
+
+    # The logs tab lists this run's standing problems and the last thirty days of rejected records, dropping older ones
+    def test_bank_local_partial_29(self):
+        self._bank_run(
+            "partial_29",
+            rerun=False,
+            errored={plugin.CTR_SRC_SOURCES: 1},
+            file_asserts={
+                "_sheet_bank_logs.csv": [
+                    assert_file_columns(["Date", "Time", "Kind", "Counter", "Tab", "Key", "Code", "Detail"]),
+                    assert_file_column_values("Code", ["ACCOUNT_UNMAPPED", "VALUE_UNPARSED"]),
+                ],
+            },
+        )
+
+    # An account type outside the two and a status outside the vocabulary each count a source error, the type read as an asset
+    def test_bank_local_corrupt_23(self):
+        self._bank_run(
+            "corrupt_23",
+            rerun=False,
+            errored={plugin.CTR_SRC_SOURCES: 2},
+            file_asserts={
+                "__bank_balances_current.csv": [assert_file_column_values("Account Type", ["Asset"])],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["ACCOUNT_STATUS", "ACCOUNT_TYPE"], sort_by=["Code"])],
+            },
+        )
+
+    # A balance whose freshness is not fresh is a standing source error, the reading still stored
+    def test_bank_local_corrupt_24(self):
+        self._bank_run(
+            "corrupt_24",
+            source=True,
+            rerun=False,
+            errored={plugin.CTR_SRC_SOURCES: 1},
+            file_asserts={
+                "redbark_balances_2026.csv": [assert_file_size(min_rows=2, max_rows=2)],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["BALANCE_STALE"])],
+            },
+        )
+
+    # A dead Redbark id with no replacement on the accounts call is a standing source error, merging nothing for it
+    def test_bank_local_corrupt_25(self):
+        self._bank_run(
+            "corrupt_25",
+            source=True,
+            rerun=False,
+            errored={plugin.CTR_SRC_SOURCES: 1},
+            file_asserts={
+                "redbark_transactions_2026.csv": [assert_file_does_not_exist()],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["REDBARK_GONE"])],
+            },
+        )
+
+    # Manual balance checks: a reading before its account's from date and two entries for one moment are rejected, while a liability above zero and a ten-fold
+    # jump are kept as suspect, one data error per record
+    def test_bank_local_corrupt_26(self):
+        self._bank_run(
+            "corrupt_26",
+            sheet_downloads=1,
+            rerun=False,
+            errored={plugin.CTR_SRC_DATA: 5},
+            file_asserts={
+                "manual_balances_2026.csv": [assert_file_column_values("Balance Manual", ["-50.0", "100.0", "20.0", "5000.0"], sort_by=["Date", "Account"])],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["BALANCE_DUPLICATE", "BALANCE_DUPLICATE", "BALANCE_JUMP", "BALANCE_SIGN", "DATE_BEFORE_FROM"], sort_by=["Code"])],
+            },
+        )
+
+    # Manual transaction checks, each rejected: an unparsed amount, an unknown account, a future date, a date before the account's from date, more than two decimals,
+    # a zero amount and a blank description; while one identical to another and an unknown category manual are kept as suspect
+    def test_bank_local_corrupt_27(self):
+        self._bank_run(
+            "corrupt_27",
+            standing=2,
+            sheet_downloads=1,
+            rerun=False,
+            errored={plugin.CTR_SRC_DATA: 9, plugin.CTR_SRC_SOURCES: 1},
+            file_asserts={
+                "manual_transactions_2026.csv": [assert_file_column_values("Description", ["Null Transaction", "Lunch", "Lunch", "Treat"], sort_by=["Date", "Description"])],
+                "__bank_logs.csv": [
+                    assert_file_column_values(
+                        "Code",
+                        [
+                            "ACCOUNT_NOT_MANUAL",
+                            "CATEGORY_UNKNOWN",
+                            "CLASSIFIER_UNBUCKETED",
+                            "DATE_BEFORE_FROM",
+                            "DATE_FUTURE",
+                            "MANUAL_DUPLICATE",
+                            "TRANSACTIONS_UNCLASSIFIED_CURRENT",
+                            "TRANSACTIONS_UNVETTED_CURRENT",
+                            "TRANSACTION_DECIMALS",
+                            "TRANSACTION_DESCRIPTION",
+                            "TRANSACTION_ZERO",
+                            "VALUE_UNPARSED",
+                        ],
+                        sort_by=["Code"],
+                    )
+                ],
+            },
+        )
+
+    # A held transaction inside the window that Redbark no longer lists is kept and counted as suspect, while one posted inside the window but made before it, so
+    # not listed, is not
+    def test_bank_local_corrupt_28(self):
+        self._bank_run(
+            "corrupt_28",
+            standing=4,
+            source=True,
+            rerun=False,
+            errored={plugin.CTR_SRC_DATA: 1},
+            file_asserts={
+                "redbark_transactions_2026.csv": [assert_file_column_values("Source ID", ["t2", "t1"], sort_by=["Date"])],
+                "redbark_transactions_2025.csv": [assert_file_column_values("Source ID", ["t4"])],
+                "__bank_logs.csv": [
+                    assert_file_column_values(
+                        "Code",
+                        ["TRANSACTIONS_UNCLASSIFIED", "TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED", "TRANSACTIONS_UNVETTED_CURRENT", "TRANSACTION_GONE"],
+                        sort_by=["Code"],
+                    )
+                ],
+            },
+        )
+
+    # Classifier standing errors, one source error per code: a blank category, a category in two buckets, a blank budgeted, categories differing only in case, a
+    # short pattern, a code list on a pattern row, one pattern in two categories, a pattern matching over the share, and a category in use the tab lacks
+    def test_bank_local_corrupt_29(self):
+        self._bank_run(
+            "corrupt_29",
+            standing=2,
+            rerun=False,
+            errored={plugin.CTR_SRC_SOURCES: 9},
+            file_asserts={
+                "__bank_logs.csv": [assert_file_column_distinct("Code", 11)],
+            },
+        )
+
+    # A classifier tab with a misplaced column is unusable, a source error classifying nothing
+    def test_bank_local_corrupt_30(self):
+        self._bank_run(
+            "corrupt_30",
+            standing=2,
+            rerun=False,
+            errored={plugin.CTR_SRC_SOURCES: 1},
+            file_asserts={
+                "redbark_transactions_2026.csv": [assert_file_column_values("Category Derived", [None])],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["TAB_UNUSABLE", "TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED_CURRENT"], sort_by=["Code"])],
+            },
+        )
+
+    # A category manual typed on the tab is merged before the sweep, so the Redbark rewrite of the year file keeps it
+    def test_bank_local_partial_30(self):
+        self._bank_run(
+            "partial_30",
+            standing=2,
+            source=True,
+            sheet_downloads=1,
+            file_asserts={
+                "redbark_transactions_2026.csv": [
+                    assert_file_column_values("Source ID", ["t1", "t2"], sort_by=["Date"]),
+                    assert_file_column_values("Category Manual", ["Restaurants", None], sort_by=["Date"]),
+                ],
+                "__bank_transactions_current.csv": [assert_file_column_values("Bucket", ["Discretionary", None], sort_by=["Date"])],
+            },
+        )
+
+    # A tab sorted by hand is not an edit: rows are matched on their id, never their position, so no file changes and the tab is rewritten in order
+    def test_bank_local_partial_31(self):
+        self._bank_run(
+            "partial_31",
+            standing=2,
+            sheet_downloads=1,
+            file_asserts={
+                "manual_transactions_2026.csv": [assert_file_size(min_rows=4, max_rows=4)],
+                "_sheet_bank_transactions_2026.csv": [assert_file_column_values("Description", ["Coffee", "Fuel", "Lunch", "Null Transaction", "Null Transaction"])],
+            },
+        )
+
+    # An accounts tab edited after the read is not written: the cells the call found are left for the next run, while this run still checks the account
+    def test_bank_local_partial_32(self):
+        self._bank_run(
+            "partial_32",
+            source=True,
+            sheet_downloads=0,
+            moved_tabs=("Accounts",),
+            rerun=False,
+            file_asserts={
+                "_sheet_bank_accounts.csv": [assert_file_column_values("Status", ["Linked", None])],
+                "redbark_balances_2026.csv": [assert_file_size(min_rows=2, max_rows=2)],
+            },
+        )
+
+    # No accounts tab: the accounts are fetched as before and every Redbark account is checked under its own name, without error
+    def test_bank_local_partial_33(self):
+        self._bank_run(
+            "partial_33",
+            standing=2,
+            source=True,
+            file_asserts={
+                "__bank_balances_current.csv": [assert_file_column_values("Account", ["Raw One", "Raw Two"], sort_by=["Balance"])],
+                "redbark_transactions_2026.csv": [assert_file_column_values("Source ID", ["t1"])],
+            },
+        )
+
+    # Unsplitting: one copy deleted and the other's amount split set back to the amount restores one whole transaction
+    def test_bank_local_partial_34(self):
+        self._bank_run(
+            "partial_34",
+            sheet_downloads=1,
+            file_asserts={
+                "redbark_transactions_2026.csv": [assert_file_size(min_rows=1, max_rows=1), assert_file_column_values("Amount Split", ["-1000.0"])],
+                "__bank_transactions_current.csv": [assert_file_column_values("Split", ["0"])],
+            },
+        )
+
+    # Release's balances and transactions year files as the test data, never downloaded so every run starts from them, one deleted from the preview drive and
+    # uploaded back, the release sheet's input tabs cached in place of the preview sheet's, and the live Redbark responses of the refresh replayed offline at its
+    # pinned clock: the due balance check and transaction sweep land the live readings and postings exactly as the refresh's online run did, the changed files
+    # upload to the preview drive, the cached tabs raise no error, and the tabs, an empty logs tab included, upload to the preview sheet
+    @pytest.mark.xfail(strict=True, reason="production data cleanup")
+    def test_bank_preview_replete_1(self):
+        fixture = _load_fixture("preview", "bank", "replete_1")
+        drive_delete(REPOS_BANK._scopes["preview"]["drive_folder"], "redbark_balances_2019.csv")
+        bank_api_offline("replete_1", "preview")
+        self.run_plugin(
+            "bank",
+            plugin.RepoScope.PREVIEW,
+            "replete_1",
+            log_level="info",
+            disable_sheet_downloads=True,
+            disable_database_downloads=True,
+            disable_drive_downloads=True,
+            disable_source_downloads=False,
+            disable_sheet_uploads=False,
+            disable_database_uploads=True,
+            disable_drive_uploads=False,
+            enable_rerun=True,
+            force_reprocessing=False,
+            force_downloads=False,
+            counter_asserts=merge_asserts(
+                ASSERT_RUN,
+                {
+                    "counter_at_least": {
+                        plugin.CTR_SRC_SOURCES: {
+                            plugin.CTR_ACT_UPLOADED: 1,
+                            plugin.CTR_ACT_DOWNLOADED: 2,
+                        },
+                    },
+                    "counter_equals": {
+                        plugin.CTR_SRC_FILES: {
+                            plugin.CTR_ACT_PROCESSED: fixture["files_processed"],
+                        },
+                        plugin.CTR_SRC_DATA: {
+                            plugin.CTR_ACT_CURRENT_COLUMNS: fixture["cols_data"],
+                            plugin.CTR_ACT_UPDATE_COLUMNS: fixture["cols_data"],
+                            plugin.CTR_ACT_DELTA_COLUMNS: fixture["cols_data"],
+                        },
+                    },
+                },
+            ),
+            custom_asserts=[
+                assert_custom_rows_delta(equals=fixture["rows_delta"], state="bank_balances"),
+                assert_custom_rows_delta(equals=fixture["transactions_rows_delta"], state="bank_transactions"),
+            ],
+            file_asserts={
+                "__bank_balances_current.csv": [
+                    assert_file_size(),
+                    assert_file_dates(end_date=fixture["end_date"], descending=False),
+                    assert_file_nones_per_row(exclude=r"Balance Manual|Balance Linked|Account Institution|Account Number|Account Type"),
+                ],
+                "_sheet_bank_balances.csv": [
+                    assert_file_size(),
+                    assert_file_columns(list(BALANCES_SCHEMA)),
+                ],
+                "_sheet_bank_logs.csv": [
+                    assert_file_size(min_rows=0, max_rows=0),
+                    assert_file_columns(list(LOG_SCHEMA)),
+                ],
+                "__bank_transactions_current.csv": [
+                    assert_file_size(min_rows=fixture["transactions_rows_delta"], max_rows=fixture["transactions_rows_delta"]),
+                    assert_file_dates(end_date=fixture["transactions_end_date"], descending=False),
+                    assert_file_column_distinct("Transaction ID", fixture["transactions_ids"]),
+                ],
+            },
+        )
+
+    # Balances and transactions current state from the release data repo, live balances and transactions downloaded from the source and the release sheet read, no
+    # remote data repo uploads: both states gain the live data, the run and the reprocess commit identical states, and the real accounts and classifier tabs raise
+    # no error
+    @pytest.mark.xfail(strict=True, reason="production data cleanup")
+    def test_bank_release_replete_1(self):
+        fixture = _load_fixture("release", "bank", "replete_1")
+        self.run_plugin(
+            "bank",
+            plugin.RepoScope.RELEASE,
+            "replete_1",
+            log_level="info",
+            disable_sheet_downloads=False,
+            disable_database_downloads=False,
+            disable_drive_downloads=False,
+            disable_source_downloads=False,
+            disable_sheet_uploads=True,
+            disable_database_uploads=True,
+            disable_drive_uploads=True,
+            enable_rerun=False,
+            force_reprocessing=False,
+            force_downloads=False,
+            counter_asserts=merge_asserts(
+                ASSERT_RUN,
+                {
+                    "counter_equals": {
+                        plugin.CTR_SRC_DATA: {
+                            plugin.CTR_ACT_CURRENT_COLUMNS: fixture["cols_data"],
+                            plugin.CTR_ACT_UPDATE_COLUMNS: fixture["cols_data"],
+                        },
+                    },
+                    "counter_at_least": {
+                        plugin.CTR_SRC_DATA: {
+                            plugin.CTR_ACT_DELTA_ROWS: fixture["rows_delta"],
+                        },
+                    },
+                },
+            ),
+            file_asserts={
+                "__bank_balances_current.csv": [
+                    assert_file_size(),
+                    assert_file_dates(end_date_at_least=fixture["end_date"] or None, descending=False),
+                ],
+                "__bank_transactions_current.csv": [
+                    assert_file_size(),
+                    assert_file_dates(end_date_at_least=fixture["transactions_end_date"] or None, descending=False),
+                ],
+            },
+        )
 
     ########################################################################################################################
     # Currency
@@ -213,155 +1487,226 @@ class WrangleTest(unittest.TestCase):
     # No current data, no new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_currency_local_blank_1(self):
         fixture = _load_fixture("local", "currency", "blank_1")
-        self.run_plugin("currency", plugin.RepoScope.LOCAL, "blank_1", log_level="info",
-                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
-                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
-                        enable_rerun=False, force_reprocessing=False, force_downloads=False,
-                        counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_equals": {
-                                plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
-                                },
-                            },
-                        }),
-                        file_asserts={
-                            "__currency_current.csv": [
-                                assert_file_does_not_exist(),
-                            ],
-                        })
+        self.run_plugin(
+            "currency",
+            plugin.RepoScope.LOCAL,
+            "blank_1",
+            log_level="info",
+            disable_sheet_downloads=True,
+            disable_database_downloads=True,
+            disable_drive_downloads=True,
+            disable_source_downloads=True,
+            disable_sheet_uploads=True,
+            disable_database_uploads=True,
+            disable_drive_uploads=True,
+            enable_rerun=False,
+            force_reprocessing=False,
+            force_downloads=False,
+            counter_asserts=merge_asserts(
+                ASSERT_RUN,
+                {
+                    "counter_equals": {
+                        plugin.CTR_SRC_FILES: {
+                            plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
+                        },
+                    },
+                },
+            ),
+            file_asserts={
+                "__currency_current.csv": [
+                    assert_file_does_not_exist(),
+                ],
+            },
+        )
 
     # No current data, corrupt data, no remote source data downloads, no remote data repo downloads or uploads
     def test_currency_local_corrupt_1(self):
         fixture = _load_fixture("local", "currency", "corrupt_1")
-        self.run_plugin("currency", plugin.RepoScope.LOCAL, "corrupt_1", log_level="fatal",
-                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
-                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
-                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
-                        counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_equals": {
-                                plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
-                                },
-                            },
-                        }),
-                        file_asserts={
-                            "__currency_current.csv": [
-                                assert_file_does_not_exist(),
-                            ],
-                        })
+        self.run_plugin(
+            "currency",
+            plugin.RepoScope.LOCAL,
+            "corrupt_1",
+            log_level="fatal",
+            disable_sheet_downloads=True,
+            disable_database_downloads=True,
+            disable_drive_downloads=True,
+            disable_source_downloads=True,
+            disable_sheet_uploads=True,
+            disable_database_uploads=True,
+            disable_drive_uploads=True,
+            enable_rerun=False,
+            force_reprocessing=True,
+            force_downloads=False,
+            counter_asserts=merge_asserts(
+                ASSERT_RUN,
+                {
+                    "counter_equals": {
+                        plugin.CTR_SRC_FILES: {
+                            plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
+                        },
+                    },
+                },
+            ),
+            file_asserts={
+                "__currency_current.csv": [
+                    assert_file_does_not_exist(),
+                ],
+            },
+        )
 
     # No current data, corrupt data, no remote source data downloads, no remote data repo downloads or uploads
     def test_currency_local_corrupt_2(self):
         fixture = _load_fixture("local", "currency", "corrupt_2")
-        self.run_plugin("currency", plugin.RepoScope.LOCAL, "corrupt_2", log_level="fatal",
-                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
-                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
-                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
-                        counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_equals": {
-                                plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
-                                },
-                            },
-                        }),
-                        file_asserts={
-                            "__currency_current.csv": [
-                                assert_file_does_not_exist(),
-                            ],
-                        })
+        self.run_plugin(
+            "currency",
+            plugin.RepoScope.LOCAL,
+            "corrupt_2",
+            log_level="fatal",
+            disable_sheet_downloads=True,
+            disable_database_downloads=True,
+            disable_drive_downloads=True,
+            disable_source_downloads=True,
+            disable_sheet_uploads=True,
+            disable_database_uploads=True,
+            disable_drive_uploads=True,
+            enable_rerun=False,
+            force_reprocessing=True,
+            force_downloads=False,
+            counter_asserts=merge_asserts(
+                ASSERT_RUN,
+                {
+                    "counter_equals": {
+                        plugin.CTR_SRC_FILES: {
+                            plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
+                        },
+                    },
+                },
+            ),
+            file_asserts={
+                "__currency_current.csv": [
+                    assert_file_does_not_exist(),
+                ],
+            },
+        )
 
     # Lots of current data, a specific amount of new data, no remote source data downloads, downloads and uploads from and to preview data repo
     def test_currency_preview_replete_1(self):
         fixture = _load_fixture("preview", "currency", "replete_1")
         drive_delete(REPOS_CURRENCY._scopes["preview"]["drive_folder"], "rba_fx_1987-1990.xls")
         drive_delete(REPOS_CURRENCY._scopes["preview"]["drive_folder"], "rba_fx_2023-current.xls")
-        self.run_plugin("currency", plugin.RepoScope.PREVIEW, "replete_1", log_level="info",
-                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=False, disable_source_downloads=True,
-                        disable_sheet_uploads=False, disable_database_uploads=True, disable_drive_uploads=False,
-                        enable_rerun=True, force_reprocessing=False, force_downloads=False,
-                        counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_equals": {
-                                plugin.CTR_SRC_SOURCES: {
-                                    plugin.CTR_ACT_UPLOADED: 2,
-                                },
-                                plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: len(CURRENCY_COLUMNS),
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: len(CURRENCY_COLUMNS),
-                                    plugin.CTR_ACT_UPDATE_COLUMNS: 0,
-                                    plugin.CTR_ACT_DELTA_COLUMNS: 0,
-                                    plugin.CTR_ACT_DELTA_ROWS: 0,
-                                },
-                            },
-                        }),
-                        custom_asserts=[
-                            assert_custom_rows_delta(equals=fixture["rows_delta"])
-                        ],
-                        file_asserts={
-                            "__currency_current.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="1983-12-12", end_date=fixture["end_date"], contiguous="days"),
-                                assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude=r"Delta"),
-                            ],
-                            "_sheet_rates_currency.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="2006-01-02", end_date=fixture["end_date"], contiguous="days", descending=True),
-                                assert_file_nones_per_row(),
-                                assert_file_zeroes_per_row(),
-                            ],
-                            "_database_currency.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="1983-12-12", end_date=fixture["end_date"], contiguous="days"),
-                                assert_file_nones_per_row(),
-                            ],
-                        })
+        self.run_plugin(
+            "currency",
+            plugin.RepoScope.PREVIEW,
+            "replete_1",
+            log_level="info",
+            disable_sheet_downloads=True,
+            disable_database_downloads=True,
+            disable_drive_downloads=False,
+            disable_source_downloads=True,
+            disable_sheet_uploads=False,
+            disable_database_uploads=True,
+            disable_drive_uploads=False,
+            enable_rerun=True,
+            force_reprocessing=False,
+            force_downloads=False,
+            counter_asserts=merge_asserts(
+                ASSERT_RUN,
+                {
+                    "counter_equals": {
+                        plugin.CTR_SRC_SOURCES: {
+                            plugin.CTR_ACT_UPLOADED: 2,
+                        },
+                        plugin.CTR_SRC_DATA: {
+                            plugin.CTR_ACT_PREVIOUS_COLUMNS: len(CURRENCY_COLUMNS),
+                            plugin.CTR_ACT_CURRENT_COLUMNS: len(CURRENCY_COLUMNS),
+                            plugin.CTR_ACT_UPDATE_COLUMNS: 0,
+                            plugin.CTR_ACT_DELTA_COLUMNS: 0,
+                            plugin.CTR_ACT_DELTA_ROWS: 0,
+                        },
+                    },
+                },
+            ),
+            custom_asserts=[assert_custom_rows_delta(equals=fixture["rows_delta"])],
+            file_asserts={
+                "__currency_current.csv": [
+                    assert_file_size(),
+                    assert_file_dates(start_date="1983-12-12", end_date=fixture["end_date"], contiguous="days"),
+                    assert_file_nones_per_row(),
+                    assert_file_zeroes_per_col(exclude=r"Delta"),
+                ],
+                "_sheet_rates_currency.csv": [
+                    assert_file_size(),
+                    assert_file_dates(start_date="2006-01-02", end_date=fixture["end_date"], contiguous="days", descending=True),
+                    assert_file_nones_per_row(),
+                    assert_file_zeroes_per_row(),
+                ],
+                "_database_currency.csv": [
+                    assert_file_size(),
+                    assert_file_dates(start_date="1983-12-12", end_date=fixture["end_date"], contiguous="days"),
+                    assert_file_nones_per_row(),
+                ],
+            },
+        )
 
     # Lots of current data, a lot of live new data, downloads from remote sources, downloads from release data repo, no remote data repo uploads
     def test_currency_release_replete_1(self):
         fixture = _load_fixture("release", "currency", "replete_1")
-        self.run_plugin("currency", plugin.RepoScope.RELEASE, "replete_1", log_level="info",
-                        disable_sheet_downloads=False, disable_database_downloads=False, disable_drive_downloads=False, disable_source_downloads=False,
-                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
-                        enable_rerun=True, force_reprocessing=False, force_downloads=False,
-                        counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_equals": {
-                                plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: len(CURRENCY_COLUMNS),
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: len(CURRENCY_COLUMNS),
-                                    plugin.CTR_ACT_UPDATE_COLUMNS: len(CURRENCY_COLUMNS),
-                                    plugin.CTR_ACT_DELTA_COLUMNS: len(CURRENCY_COLUMNS),
-                                },
-                            },
-                            "counter_at_least": {
-                                plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_DELTA_ROWS: fixture["rows_delta"],
-                                },
-                            },
-                        }),
-                        custom_asserts=[
-                            assert_custom_rows_delta(at_least=fixture["rows_delta"])
-                        ],
-                        file_asserts={
-                            "__currency_current*.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="1983-12-12", end_date_at_least=fixture["end_date"], contiguous="days"),
-                                assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude=r"Delta"),
-                                assert_file_equal(),
-                            ],
-                            "_sheet_rates_currency*.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="2006-01-02", end_date_at_least=fixture["end_date"], contiguous="days", descending=True),
-                                assert_file_nones_per_row(),
-                                assert_file_zeroes_per_row(),
-                                assert_file_equal(),
-                            ],
-                            "_database_currency*.csv": [
-                                assert_file_size(),
-                                assert_file_nones_per_row(),
-                                assert_file_subset(),
-                            ],
-                        })
+        self.run_plugin(
+            "currency",
+            plugin.RepoScope.RELEASE,
+            "replete_1",
+            log_level="info",
+            disable_sheet_downloads=False,
+            disable_database_downloads=False,
+            disable_drive_downloads=False,
+            disable_source_downloads=False,
+            disable_sheet_uploads=True,
+            disable_database_uploads=True,
+            disable_drive_uploads=True,
+            enable_rerun=True,
+            force_reprocessing=False,
+            force_downloads=False,
+            counter_asserts=merge_asserts(
+                ASSERT_RUN,
+                {
+                    "counter_equals": {
+                        plugin.CTR_SRC_DATA: {
+                            plugin.CTR_ACT_PREVIOUS_COLUMNS: len(CURRENCY_COLUMNS),
+                            plugin.CTR_ACT_CURRENT_COLUMNS: len(CURRENCY_COLUMNS),
+                            plugin.CTR_ACT_UPDATE_COLUMNS: len(CURRENCY_COLUMNS),
+                            plugin.CTR_ACT_DELTA_COLUMNS: len(CURRENCY_COLUMNS),
+                        },
+                    },
+                    "counter_at_least": {
+                        plugin.CTR_SRC_DATA: {
+                            plugin.CTR_ACT_DELTA_ROWS: fixture["rows_delta"],
+                        },
+                    },
+                },
+            ),
+            custom_asserts=[assert_custom_rows_delta(at_least=fixture["rows_delta"])],
+            file_asserts={
+                "__currency_current*.csv": [
+                    assert_file_size(),
+                    assert_file_dates(start_date="1983-12-12", end_date_at_least=fixture["end_date"], contiguous="days"),
+                    assert_file_nones_per_row(),
+                    assert_file_zeroes_per_col(exclude=r"Delta"),
+                    assert_file_equal(),
+                ],
+                "_sheet_rates_currency*.csv": [
+                    assert_file_size(),
+                    assert_file_dates(start_date="2006-01-02", end_date_at_least=fixture["end_date"], contiguous="days", descending=True),
+                    assert_file_nones_per_row(),
+                    assert_file_zeroes_per_row(),
+                    assert_file_equal(),
+                ],
+                "_database_currency*.csv": [
+                    assert_file_size(),
+                    assert_file_nones_per_row(),
+                    assert_file_subset(),
+                ],
+            },
+        )
 
     ########################################################################################################################
     # Equity
@@ -370,353 +1715,513 @@ class WrangleTest(unittest.TestCase):
     # No current data, no new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_equity_local_blank_1(self):
         fixture = _load_fixture("local", "equity", "blank_1")
-        self.run_plugin("equity", plugin.RepoScope.LOCAL, "blank_1", log_level="info",
-                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
-                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
-                        enable_rerun=False, force_reprocessing=False, force_downloads=False,
-                        counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_equals": {
-                                plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
-                                },
-                            },
-                        }),
-                        file_asserts={
-                            "__equity_current.csv": [
-                                assert_file_does_not_exist(),
-                            ],
-                        })
+        self.run_plugin(
+            "equity",
+            plugin.RepoScope.LOCAL,
+            "blank_1",
+            log_level="info",
+            disable_sheet_downloads=True,
+            disable_database_downloads=True,
+            disable_drive_downloads=True,
+            disable_source_downloads=True,
+            disable_sheet_uploads=True,
+            disable_database_uploads=True,
+            disable_drive_uploads=True,
+            enable_rerun=False,
+            force_reprocessing=False,
+            force_downloads=False,
+            counter_asserts=merge_asserts(
+                ASSERT_RUN,
+                {
+                    "counter_equals": {
+                        plugin.CTR_SRC_FILES: {
+                            plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
+                        },
+                    },
+                },
+            ),
+            file_asserts={
+                "__equity_current.csv": [
+                    assert_file_does_not_exist(),
+                ],
+            },
+        )
 
     # No current data, corrupt data, no remote source data downloads, no remote data repo downloads or uploads
     def test_equity_local_corrupt_1(self):
         fixture = _load_fixture("local", "equity", "corrupt_1")
-        self.run_plugin("equity", plugin.RepoScope.LOCAL, "corrupt_1", log_level="fatal",
-                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
-                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
-                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
-                        counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_equals": {
-                                plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
-                                },
-                            },
-                        }),
-                        file_asserts={
-                            "__equity_current.csv": [
-                                assert_file_does_not_exist(),
-                            ],
-                        })
+        self.run_plugin(
+            "equity",
+            plugin.RepoScope.LOCAL,
+            "corrupt_1",
+            log_level="fatal",
+            disable_sheet_downloads=True,
+            disable_database_downloads=True,
+            disable_drive_downloads=True,
+            disable_source_downloads=True,
+            disable_sheet_uploads=True,
+            disable_database_uploads=True,
+            disable_drive_uploads=True,
+            enable_rerun=False,
+            force_reprocessing=True,
+            force_downloads=False,
+            counter_asserts=merge_asserts(
+                ASSERT_RUN,
+                {
+                    "counter_equals": {
+                        plugin.CTR_SRC_FILES: {
+                            plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
+                        },
+                    },
+                },
+            ),
+            file_asserts={
+                "__equity_current.csv": [
+                    assert_file_does_not_exist(),
+                ],
+            },
+        )
 
     # No current data, corrupt data, no remote source data downloads, no remote data repo downloads or uploads
     def test_equity_local_corrupt_2(self):
         fixture = _load_fixture("local", "equity", "corrupt_2")
-        self.run_plugin("equity", plugin.RepoScope.LOCAL, "corrupt_2", log_level="debug",
-                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
-                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
-                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
-                        counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_equals": {
-                                plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
-                                },
-                            },
-                        }),
-                        file_asserts={
-                            "__equity_current.csv": [
-                                assert_file_does_not_exist(),
-                            ],
-                        })
+        self.run_plugin(
+            "equity",
+            plugin.RepoScope.LOCAL,
+            "corrupt_2",
+            log_level="debug",
+            disable_sheet_downloads=True,
+            disable_database_downloads=True,
+            disable_drive_downloads=True,
+            disable_source_downloads=True,
+            disable_sheet_uploads=True,
+            disable_database_uploads=True,
+            disable_drive_uploads=True,
+            enable_rerun=False,
+            force_reprocessing=True,
+            force_downloads=False,
+            counter_asserts=merge_asserts(
+                ASSERT_RUN,
+                {
+                    "counter_equals": {
+                        plugin.CTR_SRC_FILES: {
+                            plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
+                        },
+                    },
+                },
+            ),
+            file_asserts={
+                "__equity_current.csv": [
+                    assert_file_does_not_exist(),
+                ],
+            },
+        )
 
     # No current data, month files whose successor repeats their last bar, no remote source data downloads, no remote data repo downloads or uploads
     def test_equity_local_corrupt_3(self):
         fixture = _load_fixture("local", "equity", "corrupt_3")
-        self.run_plugin("equity", plugin.RepoScope.LOCAL, "corrupt_3", log_level="fatal",
-                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
-                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
-                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
-                        counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_equals": {
-                                plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_PROCESSED: fixture["files_processed"],
-                                    plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
-                                },
-                                plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: fixture["cols_data"],
-                                    plugin.CTR_ACT_DELTA_ROWS: fixture["rows_delta"],
-                                },
-                            },
-                        }),
-                        file_asserts={
-                            "__equity_current.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="2025-09-01", end_date=fixture["end_date"], contiguous="days"),
-                            ],
-                        })
+        self.run_plugin(
+            "equity",
+            plugin.RepoScope.LOCAL,
+            "corrupt_3",
+            log_level="fatal",
+            disable_sheet_downloads=True,
+            disable_database_downloads=True,
+            disable_drive_downloads=True,
+            disable_source_downloads=True,
+            disable_sheet_uploads=True,
+            disable_database_uploads=True,
+            disable_drive_uploads=True,
+            enable_rerun=False,
+            force_reprocessing=True,
+            force_downloads=False,
+            counter_asserts=merge_asserts(
+                ASSERT_RUN,
+                {
+                    "counter_equals": {
+                        plugin.CTR_SRC_FILES: {
+                            plugin.CTR_ACT_PROCESSED: fixture["files_processed"],
+                            plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
+                        },
+                        plugin.CTR_SRC_DATA: {
+                            plugin.CTR_ACT_CURRENT_COLUMNS: fixture["cols_data"],
+                            plugin.CTR_ACT_DELTA_ROWS: fixture["rows_delta"],
+                        },
+                    },
+                },
+            ),
+            file_asserts={
+                "__equity_current.csv": [
+                    assert_file_size(),
+                    assert_file_dates(start_date="2025-09-01", end_date=fixture["end_date"], contiguous="days"),
+                ],
+            },
+        )
 
     # Lots of current data, a specific amount of new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_equity_local_partial_1(self):
         fixture = _load_fixture("local", "equity", "partial_1")
-        self.run_plugin("equity", plugin.RepoScope.LOCAL, "partial_1", log_level="info",
-                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
-                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
-                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
-                        counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_equals": {
-                                plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_PROCESSED: fixture["files_processed"],
-                                },
-                            },
-                        }),
-                        )
+        self.run_plugin(
+            "equity",
+            plugin.RepoScope.LOCAL,
+            "partial_1",
+            log_level="info",
+            disable_sheet_downloads=True,
+            disable_database_downloads=True,
+            disable_drive_downloads=True,
+            disable_source_downloads=True,
+            disable_sheet_uploads=True,
+            disable_database_uploads=True,
+            disable_drive_uploads=True,
+            enable_rerun=False,
+            force_reprocessing=True,
+            force_downloads=False,
+            counter_asserts=merge_asserts(
+                ASSERT_RUN,
+                {
+                    "counter_equals": {
+                        plugin.CTR_SRC_FILES: {
+                            plugin.CTR_ACT_PROCESSED: fixture["files_processed"],
+                        },
+                    },
+                },
+            ),
+        )
 
     # Lots of current data, a specific amount of new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_equity_local_partial_2(self):
         fixture = _load_fixture("local", "equity", "partial_2")
-        self.run_plugin("equity", plugin.RepoScope.LOCAL, "partial_2", log_level="info",
-                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
-                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
-                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
-                        counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_equals": {
-                                plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_PROCESSED: fixture["files_processed"],
-                                },
-                                plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: fixture["cols_data"],
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: fixture["cols_data"],
-                                    plugin.CTR_ACT_UPDATE_COLUMNS: fixture["cols_data"],
-                                    plugin.CTR_ACT_DELTA_COLUMNS: fixture["cols_data"],
-                                    plugin.CTR_ACT_DELTA_ROWS: fixture["rows_delta"],
-                                },
-                            },
-                        }),
-                        file_asserts={
-                            "__equity_current.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="2025-01-02", end_date=fixture["end_date"], contiguous="days"),
-                                assert_file_nones_per_col(after_first_rows=True),
-                                assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
-                            ],
-                            "_sheet_prices_history.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="2025-01-02", end_date=fixture["end_date"], contiguous="days", descending=True),
-                                assert_file_nones_per_col(after_last_rows=True),
-                                assert_file_zeroes_per_row(),
-                            ],
-                            "_database_equity.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="2025-01-02", end_date=fixture["end_date"], contiguous="days"),
-                                assert_file_nones_per_col(after_first_rows=True),
-                            ],
-                        })
+        self.run_plugin(
+            "equity",
+            plugin.RepoScope.LOCAL,
+            "partial_2",
+            log_level="info",
+            disable_sheet_downloads=True,
+            disable_database_downloads=True,
+            disable_drive_downloads=True,
+            disable_source_downloads=True,
+            disable_sheet_uploads=True,
+            disable_database_uploads=True,
+            disable_drive_uploads=True,
+            enable_rerun=False,
+            force_reprocessing=True,
+            force_downloads=False,
+            counter_asserts=merge_asserts(
+                ASSERT_RUN,
+                {
+                    "counter_equals": {
+                        plugin.CTR_SRC_FILES: {
+                            plugin.CTR_ACT_PROCESSED: fixture["files_processed"],
+                        },
+                        plugin.CTR_SRC_DATA: {
+                            plugin.CTR_ACT_PREVIOUS_COLUMNS: fixture["cols_data"],
+                            plugin.CTR_ACT_CURRENT_COLUMNS: fixture["cols_data"],
+                            plugin.CTR_ACT_UPDATE_COLUMNS: fixture["cols_data"],
+                            plugin.CTR_ACT_DELTA_COLUMNS: fixture["cols_data"],
+                            plugin.CTR_ACT_DELTA_ROWS: fixture["rows_delta"],
+                        },
+                    },
+                },
+            ),
+            file_asserts={
+                "__equity_current.csv": [
+                    assert_file_size(),
+                    assert_file_dates(start_date="2025-01-02", end_date=fixture["end_date"], contiguous="days"),
+                    assert_file_nones_per_col(after_first_rows=True),
+                    assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
+                ],
+                "_sheet_prices_history.csv": [
+                    assert_file_size(),
+                    assert_file_dates(start_date="2025-01-02", end_date=fixture["end_date"], contiguous="days", descending=True),
+                    assert_file_nones_per_col(after_last_rows=True),
+                    assert_file_zeroes_per_row(),
+                ],
+                "_database_equity.csv": [
+                    assert_file_size(),
+                    assert_file_dates(start_date="2025-01-02", end_date=fixture["end_date"], contiguous="days"),
+                    assert_file_nones_per_col(after_first_rows=True),
+                ],
+            },
+        )
 
     # Current data with year-boundary interpolations anchored on since-revised closes, one new source file served offline from
     # local cache, incremental run must reprocess the predecessor file so the corrected boundary rows match a full re-process
     def test_equity_local_partial_3(self):
         fixture = _load_fixture("local", "equity", "partial_3")
         stock_download_offline({"yahoo_acdc_2024.csv"})
-        self.run_plugin("equity", plugin.RepoScope.LOCAL, "partial_3", log_level="info",
-                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=False,
-                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
-                        enable_rerun=True, force_reprocessing=False, force_downloads=False,
-                        counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_equals": {
-                                plugin.CTR_SRC_SOURCES: {
-                                    plugin.CTR_ACT_DOWNLOADED: 1,
-                                },
-                                plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_PROCESSED: fixture["files_processed"],
-                                },
-                                plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: fixture["cols_data"],
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: fixture["cols_data"],
-                                    plugin.CTR_ACT_UPDATE_COLUMNS: fixture["cols_data"],
-                                    plugin.CTR_ACT_DELTA_COLUMNS: fixture["cols_data"],
-                                    plugin.CTR_ACT_DELTA_ROWS: fixture["rows_delta"],
-                                },
-                            },
-                        }),
-                        file_asserts={
-                            "__equity_current*.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="2023-12-18", end_date=fixture["end_date"], contiguous="days"),
-                                assert_file_nones_per_col(after_first_rows=True),
-                                assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
-                                assert_file_equal(),
-                            ],
-                        })
+        self.run_plugin(
+            "equity",
+            plugin.RepoScope.LOCAL,
+            "partial_3",
+            log_level="info",
+            disable_sheet_downloads=True,
+            disable_database_downloads=True,
+            disable_drive_downloads=True,
+            disable_source_downloads=False,
+            disable_sheet_uploads=True,
+            disable_database_uploads=True,
+            disable_drive_uploads=True,
+            enable_rerun=True,
+            force_reprocessing=False,
+            force_downloads=False,
+            counter_asserts=merge_asserts(
+                ASSERT_RUN,
+                {
+                    "counter_equals": {
+                        plugin.CTR_SRC_SOURCES: {
+                            plugin.CTR_ACT_DOWNLOADED: 1,
+                        },
+                        plugin.CTR_SRC_FILES: {
+                            plugin.CTR_ACT_PROCESSED: fixture["files_processed"],
+                        },
+                        plugin.CTR_SRC_DATA: {
+                            plugin.CTR_ACT_PREVIOUS_COLUMNS: fixture["cols_data"],
+                            plugin.CTR_ACT_CURRENT_COLUMNS: fixture["cols_data"],
+                            plugin.CTR_ACT_UPDATE_COLUMNS: fixture["cols_data"],
+                            plugin.CTR_ACT_DELTA_COLUMNS: fixture["cols_data"],
+                            plugin.CTR_ACT_DELTA_ROWS: fixture["rows_delta"],
+                        },
+                    },
+                },
+            ),
+            file_asserts={
+                "__equity_current*.csv": [
+                    assert_file_size(),
+                    assert_file_dates(start_date="2023-12-18", end_date=fixture["end_date"], contiguous="days"),
+                    assert_file_nones_per_col(after_first_rows=True),
+                    assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
+                    assert_file_equal(),
+                ],
+            },
+        )
 
     # Current data a year stale, two new source files served offline from local cache, incremental run must reprocess the
     # predecessor file behind the earliest new file and chain across the consecutive new files
     def test_equity_local_partial_4(self):
         fixture = _load_fixture("local", "equity", "partial_4")
         stock_download_offline({"yahoo_acdc_2023.csv", "yahoo_acdc_2024.csv"})
-        self.run_plugin("equity", plugin.RepoScope.LOCAL, "partial_4", log_level="info",
-                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=False,
-                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
-                        enable_rerun=True, force_reprocessing=False, force_downloads=False,
-                        counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_equals": {
-                                plugin.CTR_SRC_SOURCES: {
-                                    plugin.CTR_ACT_DOWNLOADED: 2,
-                                },
-                                plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_PROCESSED: fixture["files_processed"],
-                                },
-                                plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: fixture["cols_data"],
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: fixture["cols_data"],
-                                    plugin.CTR_ACT_UPDATE_COLUMNS: fixture["cols_data"],
-                                    plugin.CTR_ACT_DELTA_COLUMNS: fixture["cols_data"],
-                                    plugin.CTR_ACT_DELTA_ROWS: fixture["rows_delta"],
-                                },
-                            },
-                        }),
-                        file_asserts={
-                            "__equity_current*.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="2022-12-19", end_date=fixture["end_date"], contiguous="days"),
-                                assert_file_nones_per_col(after_first_rows=True),
-                                assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
-                                assert_file_equal(),
-                            ],
-                        })
+        self.run_plugin(
+            "equity",
+            plugin.RepoScope.LOCAL,
+            "partial_4",
+            log_level="info",
+            disable_sheet_downloads=True,
+            disable_database_downloads=True,
+            disable_drive_downloads=True,
+            disable_source_downloads=False,
+            disable_sheet_uploads=True,
+            disable_database_uploads=True,
+            disable_drive_uploads=True,
+            enable_rerun=True,
+            force_reprocessing=False,
+            force_downloads=False,
+            counter_asserts=merge_asserts(
+                ASSERT_RUN,
+                {
+                    "counter_equals": {
+                        plugin.CTR_SRC_SOURCES: {
+                            plugin.CTR_ACT_DOWNLOADED: 2,
+                        },
+                        plugin.CTR_SRC_FILES: {
+                            plugin.CTR_ACT_PROCESSED: fixture["files_processed"],
+                        },
+                        plugin.CTR_SRC_DATA: {
+                            plugin.CTR_ACT_PREVIOUS_COLUMNS: fixture["cols_data"],
+                            plugin.CTR_ACT_CURRENT_COLUMNS: fixture["cols_data"],
+                            plugin.CTR_ACT_UPDATE_COLUMNS: fixture["cols_data"],
+                            plugin.CTR_ACT_DELTA_COLUMNS: fixture["cols_data"],
+                            plugin.CTR_ACT_DELTA_ROWS: fixture["rows_delta"],
+                        },
+                    },
+                },
+            ),
+            file_asserts={
+                "__equity_current*.csv": [
+                    assert_file_size(),
+                    assert_file_dates(start_date="2022-12-19", end_date=fixture["end_date"], contiguous="days"),
+                    assert_file_nones_per_col(after_first_rows=True),
+                    assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
+                    assert_file_equal(),
+                ],
+            },
+        )
 
     # Lots of current data, a specific amount of new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_equity_local_replete_1(self):
         fixture = _load_fixture("local", "equity", "replete_1")
-        self.run_plugin("equity", plugin.RepoScope.LOCAL, "replete_1", log_level="info",
-                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
-                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
-                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
-                        counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_equals": {
-                                plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_PROCESSED: fixture["files_processed"],
-                                },
-                                plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: fixture["cols_data"],
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: fixture["cols_data"],
-                                    plugin.CTR_ACT_UPDATE_COLUMNS: fixture["cols_data"],
-                                    plugin.CTR_ACT_DELTA_COLUMNS: fixture["cols_data"],
-                                    plugin.CTR_ACT_DELTA_ROWS: fixture["rows_delta"],
-                                },
-                            },
-                        }),
-                        file_asserts={
-                            "__equity_current.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="1982-04-01", end_date=fixture["end_date"], contiguous="days"),
-                                assert_file_nones_per_col(after_first_rows=True),
-                                assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
-                            ],
-                            "_sheet_prices_history.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="2007-01-01", end_date=fixture["end_date"], contiguous="days", descending=True),
-                                assert_file_nones_per_col(after_last_rows=True),
-                                assert_file_zeroes_per_row(),
-                            ],
-                            "_database_equity.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="1982-04-01", end_date=fixture["end_date"], contiguous="days"),
-                                assert_file_nones_per_col(after_first_rows=True),
-                            ],
-                        })
+        self.run_plugin(
+            "equity",
+            plugin.RepoScope.LOCAL,
+            "replete_1",
+            log_level="info",
+            disable_sheet_downloads=True,
+            disable_database_downloads=True,
+            disable_drive_downloads=True,
+            disable_source_downloads=True,
+            disable_sheet_uploads=True,
+            disable_database_uploads=True,
+            disable_drive_uploads=True,
+            enable_rerun=False,
+            force_reprocessing=True,
+            force_downloads=False,
+            counter_asserts=merge_asserts(
+                ASSERT_RUN,
+                {
+                    "counter_equals": {
+                        plugin.CTR_SRC_FILES: {
+                            plugin.CTR_ACT_PROCESSED: fixture["files_processed"],
+                        },
+                        plugin.CTR_SRC_DATA: {
+                            plugin.CTR_ACT_PREVIOUS_COLUMNS: fixture["cols_data"],
+                            plugin.CTR_ACT_CURRENT_COLUMNS: fixture["cols_data"],
+                            plugin.CTR_ACT_UPDATE_COLUMNS: fixture["cols_data"],
+                            plugin.CTR_ACT_DELTA_COLUMNS: fixture["cols_data"],
+                            plugin.CTR_ACT_DELTA_ROWS: fixture["rows_delta"],
+                        },
+                    },
+                },
+            ),
+            file_asserts={
+                "__equity_current.csv": [
+                    assert_file_size(),
+                    assert_file_dates(start_date="1982-04-01", end_date=fixture["end_date"], contiguous="days"),
+                    assert_file_nones_per_col(after_first_rows=True),
+                    assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
+                ],
+                "_sheet_prices_history.csv": [
+                    assert_file_size(),
+                    assert_file_dates(start_date="2007-01-01", end_date=fixture["end_date"], contiguous="days", descending=True),
+                    assert_file_nones_per_col(after_last_rows=True),
+                    assert_file_zeroes_per_row(),
+                ],
+                "_database_equity.csv": [
+                    assert_file_size(),
+                    assert_file_dates(start_date="1982-04-01", end_date=fixture["end_date"], contiguous="days"),
+                    assert_file_nones_per_col(after_first_rows=True),
+                ],
+            },
+        )
 
     # Lots of current data, a specific amount of new data, no remote source data downloads, downloads and uploads from and to preview data repo
     def test_equity_preview_replete_1(self):
         fixture = _load_fixture("preview", "equity", "replete_1")
         drive_delete(REPOS_EQUITY._scopes["preview"]["drive_folder"], "yahoo_acdc_2018.csv")
-        self.run_plugin("equity", plugin.RepoScope.PREVIEW, "replete_1", log_level="info",
-                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=False, disable_source_downloads=True,
-                        disable_sheet_uploads=False, disable_database_uploads=True, disable_drive_uploads=False,
-                        enable_rerun=True, force_reprocessing=False, force_downloads=False,
-                        counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_equals": {
-                                plugin.CTR_SRC_SOURCES: {
-                                    plugin.CTR_ACT_UPLOADED: 1,
-                                },
-                                plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: fixture["cols_data"],
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: fixture["cols_data"],
-                                    plugin.CTR_ACT_UPDATE_COLUMNS: 0,
-                                    plugin.CTR_ACT_DELTA_COLUMNS: 0,
-                                    plugin.CTR_ACT_DELTA_ROWS: 0,
-                                },
-                            },
-                        }),
-                        custom_asserts=[
-                            assert_custom_rows_delta(equals=fixture["rows_delta"])
-                        ],
-                        file_asserts={
-                            "__equity_current.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="1982-04-01", end_date=fixture["end_date"], contiguous="days"),
-                                assert_file_nones_per_col(after_first_rows=True),
-                                assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
-                            ],
-                            "_sheet_prices_history.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="2007-01-01", end_date=fixture["end_date"], contiguous="days", descending=True),
-                                assert_file_nones_per_col(after_last_rows=True),
-                                assert_file_zeroes_per_row(),
-                            ],
-                            "_database_equity.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="1982-04-01", end_date=fixture["end_date"], contiguous="days"),
-                                assert_file_nones_per_col(after_first_rows=True),
-                            ],
-                        })
+        self.run_plugin(
+            "equity",
+            plugin.RepoScope.PREVIEW,
+            "replete_1",
+            log_level="info",
+            disable_sheet_downloads=True,
+            disable_database_downloads=True,
+            disable_drive_downloads=False,
+            disable_source_downloads=True,
+            disable_sheet_uploads=False,
+            disable_database_uploads=True,
+            disable_drive_uploads=False,
+            enable_rerun=True,
+            force_reprocessing=False,
+            force_downloads=False,
+            counter_asserts=merge_asserts(
+                ASSERT_RUN,
+                {
+                    "counter_equals": {
+                        plugin.CTR_SRC_SOURCES: {
+                            plugin.CTR_ACT_UPLOADED: 1,
+                        },
+                        plugin.CTR_SRC_DATA: {
+                            plugin.CTR_ACT_PREVIOUS_COLUMNS: fixture["cols_data"],
+                            plugin.CTR_ACT_CURRENT_COLUMNS: fixture["cols_data"],
+                            plugin.CTR_ACT_UPDATE_COLUMNS: 0,
+                            plugin.CTR_ACT_DELTA_COLUMNS: 0,
+                            plugin.CTR_ACT_DELTA_ROWS: 0,
+                        },
+                    },
+                },
+            ),
+            custom_asserts=[assert_custom_rows_delta(equals=fixture["rows_delta"])],
+            file_asserts={
+                "__equity_current.csv": [
+                    assert_file_size(),
+                    assert_file_dates(start_date="1982-04-01", end_date=fixture["end_date"], contiguous="days"),
+                    assert_file_nones_per_col(after_first_rows=True),
+                    assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
+                ],
+                "_sheet_prices_history.csv": [
+                    assert_file_size(),
+                    assert_file_dates(start_date="2007-01-01", end_date=fixture["end_date"], contiguous="days", descending=True),
+                    assert_file_nones_per_col(after_last_rows=True),
+                    assert_file_zeroes_per_row(),
+                ],
+                "_database_equity.csv": [
+                    assert_file_size(),
+                    assert_file_dates(start_date="1982-04-01", end_date=fixture["end_date"], contiguous="days"),
+                    assert_file_nones_per_col(after_first_rows=True),
+                ],
+            },
+        )
 
     # Lots of current data, a lot of live new data, downloads from remote sources, downloads from release data repo, no remote data repo uploads
     def test_equity_release_replete_1(self):
         fixture = _load_fixture("release", "equity", "replete_1")
-        self.run_plugin("equity", plugin.RepoScope.RELEASE, "replete_1", log_level="info",
-                        disable_sheet_downloads=False, disable_database_downloads=False, disable_drive_downloads=False, disable_source_downloads=False,
-                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
-                        enable_rerun=True, force_reprocessing=False, force_downloads=False,
-                        counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_equals": {
-                                plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: fixture["cols_data"],
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: fixture["cols_data"],
-                                    plugin.CTR_ACT_UPDATE_COLUMNS: fixture["cols_data"],
-                                    plugin.CTR_ACT_DELTA_COLUMNS: fixture["cols_data"],
-                                },
-                            },
-                            "counter_at_least": {
-                                plugin.CTR_SRC_SOURCES: {
-                                    plugin.CTR_ACT_DOWNLOADED: len(STOCK),
-                                },
-                                plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_DELTA_ROWS: fixture["rows_delta"],
-                                },
-                            },
-                        }),
-                        custom_asserts=[
-                            assert_custom_rows_delta(at_least=fixture["rows_delta"])
-                        ],
-                        file_asserts={
-                            "__equity_current*.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="1982-04-01", end_date_at_least=fixture["end_date"], contiguous="days"),
-                                assert_file_nones_per_col(after_first_rows=True),
-                                assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
-                                assert_file_equal(),
-                            ],
-                            "_sheet_prices_history*.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="2007-01-01", end_date_at_least=fixture["end_date"], contiguous="days", descending=True),
-                                assert_file_nones_per_col(after_last_rows=True),
-                                assert_file_zeroes_per_row(),
-                                assert_file_equal(),
-                            ],
-                            "_database_equity*.csv": [
-                                assert_file_size(),
-                                assert_file_nones_per_col(after_first_rows=True),
-                                assert_file_subset(),
-                            ],
-                        })
+        self.run_plugin(
+            "equity",
+            plugin.RepoScope.RELEASE,
+            "replete_1",
+            log_level="info",
+            disable_sheet_downloads=False,
+            disable_database_downloads=False,
+            disable_drive_downloads=False,
+            disable_source_downloads=False,
+            disable_sheet_uploads=True,
+            disable_database_uploads=True,
+            disable_drive_uploads=True,
+            enable_rerun=True,
+            force_reprocessing=False,
+            force_downloads=False,
+            counter_asserts=merge_asserts(
+                ASSERT_RUN,
+                {
+                    "counter_equals": {
+                        plugin.CTR_SRC_DATA: {
+                            plugin.CTR_ACT_PREVIOUS_COLUMNS: fixture["cols_data"],
+                            plugin.CTR_ACT_CURRENT_COLUMNS: fixture["cols_data"],
+                            plugin.CTR_ACT_UPDATE_COLUMNS: fixture["cols_data"],
+                            plugin.CTR_ACT_DELTA_COLUMNS: fixture["cols_data"],
+                        },
+                    },
+                    "counter_at_least": {
+                        plugin.CTR_SRC_SOURCES: {
+                            plugin.CTR_ACT_DOWNLOADED: len(STOCK),
+                        },
+                        plugin.CTR_SRC_DATA: {
+                            plugin.CTR_ACT_DELTA_ROWS: fixture["rows_delta"],
+                        },
+                    },
+                },
+            ),
+            custom_asserts=[assert_custom_rows_delta(at_least=fixture["rows_delta"])],
+            file_asserts={
+                "__equity_current*.csv": [
+                    assert_file_size(),
+                    assert_file_dates(start_date="1982-04-01", end_date_at_least=fixture["end_date"], contiguous="days"),
+                    assert_file_nones_per_col(after_first_rows=True),
+                    assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
+                    assert_file_equal(),
+                ],
+                "_sheet_prices_history*.csv": [
+                    assert_file_size(),
+                    assert_file_dates(start_date="2007-01-01", end_date_at_least=fixture["end_date"], contiguous="days", descending=True),
+                    assert_file_nones_per_col(after_last_rows=True),
+                    assert_file_zeroes_per_row(),
+                    assert_file_equal(),
+                ],
+                "_database_equity*.csv": [
+                    assert_file_size(),
+                    assert_file_nones_per_col(after_first_rows=True),
+                    assert_file_subset(),
+                ],
+            },
+        )
 
     ########################################################################################################################
     # Interest
@@ -725,150 +2230,221 @@ class WrangleTest(unittest.TestCase):
     # No current data, no new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_interest_local_blank_1(self):
         fixture = _load_fixture("local", "interest", "blank_1")
-        self.run_plugin("interest", plugin.RepoScope.LOCAL, "blank_1", log_level="info",
-                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
-                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
-                        enable_rerun=False, force_reprocessing=False, force_downloads=False,
-                        counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_equals": {
-                                plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
-                                },
-                            },
-                        }),
-                        file_asserts={
-                            "__interest_current.csv": [
-                                assert_file_does_not_exist(),
-                            ],
-                        })
+        self.run_plugin(
+            "interest",
+            plugin.RepoScope.LOCAL,
+            "blank_1",
+            log_level="info",
+            disable_sheet_downloads=True,
+            disable_database_downloads=True,
+            disable_drive_downloads=True,
+            disable_source_downloads=True,
+            disable_sheet_uploads=True,
+            disable_database_uploads=True,
+            disable_drive_uploads=True,
+            enable_rerun=False,
+            force_reprocessing=False,
+            force_downloads=False,
+            counter_asserts=merge_asserts(
+                ASSERT_RUN,
+                {
+                    "counter_equals": {
+                        plugin.CTR_SRC_FILES: {
+                            plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
+                        },
+                    },
+                },
+            ),
+            file_asserts={
+                "__interest_current.csv": [
+                    assert_file_does_not_exist(),
+                ],
+            },
+        )
 
     # No current data, corrupt data, no remote source data downloads, no remote data repo downloads or uploads
     def test_interest_local_corrupt_1(self):
         fixture = _load_fixture("local", "interest", "corrupt_1")
-        self.run_plugin("interest", plugin.RepoScope.LOCAL, "corrupt_1", log_level="fatal",
-                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
-                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
-                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
-                        counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_equals": {
-                                plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
-                                },
-                            },
-                        }),
-                        file_asserts={
-                            "__interest_current.csv": [
-                                assert_file_does_not_exist(),
-                            ],
-                        })
+        self.run_plugin(
+            "interest",
+            plugin.RepoScope.LOCAL,
+            "corrupt_1",
+            log_level="fatal",
+            disable_sheet_downloads=True,
+            disable_database_downloads=True,
+            disable_drive_downloads=True,
+            disable_source_downloads=True,
+            disable_sheet_uploads=True,
+            disable_database_uploads=True,
+            disable_drive_uploads=True,
+            enable_rerun=False,
+            force_reprocessing=True,
+            force_downloads=False,
+            counter_asserts=merge_asserts(
+                ASSERT_RUN,
+                {
+                    "counter_equals": {
+                        plugin.CTR_SRC_FILES: {
+                            plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
+                        },
+                    },
+                },
+            ),
+            file_asserts={
+                "__interest_current.csv": [
+                    assert_file_does_not_exist(),
+                ],
+            },
+        )
 
     # No current data, corrupt data, no remote source data downloads, no remote data repo downloads or uploads
     def test_interest_local_corrupt_2(self):
         fixture = _load_fixture("local", "interest", "corrupt_2")
-        self.run_plugin("interest", plugin.RepoScope.LOCAL, "corrupt_2", log_level="fatal",
-                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
-                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
-                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
-                        counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_equals": {
-                                plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
-                                },
-                            },
-                        }),
-                        file_asserts={
-                            "__interest_current.csv": [
-                                assert_file_does_not_exist(),
-                            ],
-                        })
+        self.run_plugin(
+            "interest",
+            plugin.RepoScope.LOCAL,
+            "corrupt_2",
+            log_level="fatal",
+            disable_sheet_downloads=True,
+            disable_database_downloads=True,
+            disable_drive_downloads=True,
+            disable_source_downloads=True,
+            disable_sheet_uploads=True,
+            disable_database_uploads=True,
+            disable_drive_uploads=True,
+            enable_rerun=False,
+            force_reprocessing=True,
+            force_downloads=False,
+            counter_asserts=merge_asserts(
+                ASSERT_RUN,
+                {
+                    "counter_equals": {
+                        plugin.CTR_SRC_FILES: {
+                            plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
+                        },
+                    },
+                },
+            ),
+            file_asserts={
+                "__interest_current.csv": [
+                    assert_file_does_not_exist(),
+                ],
+            },
+        )
 
     # Lots of current data, a specific amount of new data, no remote source data downloads, downloads and uploads from and to preview data repo
     def test_interest_preview_replete_1(self):
         fixture = _load_fixture("preview", "interest", "replete_1")
         drive_delete(REPOS_INTEREST._scopes["preview"]["drive_folder"], "inflation.xlsx")
-        self.run_plugin("interest", plugin.RepoScope.PREVIEW, "replete_1", log_level="info",
-                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=False, disable_source_downloads=True,
-                        disable_sheet_uploads=False, disable_database_uploads=True, disable_drive_uploads=False,
-                        enable_rerun=True, force_reprocessing=False, force_downloads=False,
-                        counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_equals": {
-                                plugin.CTR_SRC_SOURCES: {
-                                    plugin.CTR_ACT_UPLOADED: 1,
-                                },
-                                plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: len(INTEREST_COLUMNS),
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: len(INTEREST_COLUMNS),
-                                    plugin.CTR_ACT_UPDATE_COLUMNS: 0,
-                                    plugin.CTR_ACT_DELTA_COLUMNS: 0,
-                                    plugin.CTR_ACT_DELTA_ROWS: 0,
-                                },
-                            },
-                        }),
-                        custom_asserts=[
-                            assert_custom_rows_delta(equals=fixture["rows_delta"])
-                        ],
-                        file_asserts={
-                            "__interest_current.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="1982-04-01", end_date=fixture["end_date"], contiguous="months"),
-                                assert_file_nones_per_row(exclude=r"Mean"),
-                            ],
-                            "_sheet_rates_interest.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="2015-02-01", end_date=fixture["end_date"], contiguous="months", descending=True),
-                                assert_file_nones_per_row(exclude=r"Mean"),
-                            ],
-                            "_database_interest.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="1982-04-01", end_date=fixture["end_date"], contiguous="months"),
-                                assert_file_nones_per_row(exclude=r"type=mean"),
-                            ],
-                        })
+        self.run_plugin(
+            "interest",
+            plugin.RepoScope.PREVIEW,
+            "replete_1",
+            log_level="info",
+            disable_sheet_downloads=True,
+            disable_database_downloads=True,
+            disable_drive_downloads=False,
+            disable_source_downloads=True,
+            disable_sheet_uploads=False,
+            disable_database_uploads=True,
+            disable_drive_uploads=False,
+            enable_rerun=True,
+            force_reprocessing=False,
+            force_downloads=False,
+            counter_asserts=merge_asserts(
+                ASSERT_RUN,
+                {
+                    "counter_equals": {
+                        plugin.CTR_SRC_SOURCES: {
+                            plugin.CTR_ACT_UPLOADED: 1,
+                        },
+                        plugin.CTR_SRC_DATA: {
+                            plugin.CTR_ACT_PREVIOUS_COLUMNS: len(INTEREST_COLUMNS),
+                            plugin.CTR_ACT_CURRENT_COLUMNS: len(INTEREST_COLUMNS),
+                            plugin.CTR_ACT_UPDATE_COLUMNS: 0,
+                            plugin.CTR_ACT_DELTA_COLUMNS: 0,
+                            plugin.CTR_ACT_DELTA_ROWS: 0,
+                        },
+                    },
+                },
+            ),
+            custom_asserts=[assert_custom_rows_delta(equals=fixture["rows_delta"])],
+            file_asserts={
+                "__interest_current.csv": [
+                    assert_file_size(),
+                    assert_file_dates(start_date="1982-04-01", end_date=fixture["end_date"], contiguous="months"),
+                    assert_file_nones_per_row(exclude=r"Mean"),
+                ],
+                "_sheet_rates_interest.csv": [
+                    assert_file_size(),
+                    assert_file_dates(start_date="2015-02-01", end_date=fixture["end_date"], contiguous="months", descending=True),
+                    assert_file_nones_per_row(exclude=r"Mean"),
+                ],
+                "_database_interest.csv": [
+                    assert_file_size(),
+                    assert_file_dates(start_date="1982-04-01", end_date=fixture["end_date"], contiguous="months"),
+                    assert_file_nones_per_row(exclude=r"type=mean"),
+                ],
+            },
+        )
 
     # Lots of current data, a lot of live new data, downloads from remote sources, downloads from release data repo, no remote data repo uploads
     def test_interest_release_replete_1(self):
         fixture = _load_fixture("release", "interest", "replete_1")
-        self.run_plugin("interest", plugin.RepoScope.RELEASE, "replete_1", log_level="info",
-                        disable_sheet_downloads=False, disable_database_downloads=False, disable_drive_downloads=False, disable_source_downloads=False,
-                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
-                        enable_rerun=True, force_reprocessing=False, force_downloads=False,
-                        counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_equals": {
-                                plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: len(INTEREST_COLUMNS),
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: len(INTEREST_COLUMNS),
-                                    plugin.CTR_ACT_UPDATE_COLUMNS: len(INTEREST_COLUMNS),
-                                    plugin.CTR_ACT_DELTA_COLUMNS: len(INTEREST_COLUMNS),
-                                },
-                            },
-                            "counter_at_least": {
-                                plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_DELTA_ROWS: fixture["rows_delta"],
-                                },
-                            },
-                        }),
-                        custom_asserts=[
-                            assert_custom_rows_delta(at_least=fixture["rows_delta"])
-                        ],
-                        file_asserts={
-                            "__interest_current*.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="1982-04-01", end_date_at_least=fixture["end_date"], contiguous="months"),
-                                assert_file_nones_per_row(exclude=r"Mean"),
-                                assert_file_equal(),
-                            ],
-                            "_sheet_rates_interest*.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="2015-02-01", end_date_at_least=fixture["end_date"], contiguous="months", descending=True),
-                                assert_file_nones_per_row(exclude=r"Mean"),
-                                assert_file_equal(),
-                            ],
-                            "_database_interest*.csv": [
-                                assert_file_size(),
-                                assert_file_nones_per_row(exclude=r"type=mean"),
-                                assert_file_subset(),
-                            ],
-                        })
+        self.run_plugin(
+            "interest",
+            plugin.RepoScope.RELEASE,
+            "replete_1",
+            log_level="info",
+            disable_sheet_downloads=False,
+            disable_database_downloads=False,
+            disable_drive_downloads=False,
+            disable_source_downloads=False,
+            disable_sheet_uploads=True,
+            disable_database_uploads=True,
+            disable_drive_uploads=True,
+            enable_rerun=True,
+            force_reprocessing=False,
+            force_downloads=False,
+            counter_asserts=merge_asserts(
+                ASSERT_RUN,
+                {
+                    "counter_equals": {
+                        plugin.CTR_SRC_DATA: {
+                            plugin.CTR_ACT_PREVIOUS_COLUMNS: len(INTEREST_COLUMNS),
+                            plugin.CTR_ACT_CURRENT_COLUMNS: len(INTEREST_COLUMNS),
+                            plugin.CTR_ACT_UPDATE_COLUMNS: len(INTEREST_COLUMNS),
+                            plugin.CTR_ACT_DELTA_COLUMNS: len(INTEREST_COLUMNS),
+                        },
+                    },
+                    "counter_at_least": {
+                        plugin.CTR_SRC_DATA: {
+                            plugin.CTR_ACT_DELTA_ROWS: fixture["rows_delta"],
+                        },
+                    },
+                },
+            ),
+            custom_asserts=[assert_custom_rows_delta(at_least=fixture["rows_delta"])],
+            file_asserts={
+                "__interest_current*.csv": [
+                    assert_file_size(),
+                    assert_file_dates(start_date="1982-04-01", end_date_at_least=fixture["end_date"], contiguous="months"),
+                    assert_file_nones_per_row(exclude=r"Mean"),
+                    assert_file_equal(),
+                ],
+                "_sheet_rates_interest*.csv": [
+                    assert_file_size(),
+                    assert_file_dates(start_date="2015-02-01", end_date_at_least=fixture["end_date"], contiguous="months", descending=True),
+                    assert_file_nones_per_row(exclude=r"Mean"),
+                    assert_file_equal(),
+                ],
+                "_database_interest*.csv": [
+                    assert_file_size(),
+                    assert_file_nones_per_row(exclude=r"type=mean"),
+                    assert_file_subset(),
+                ],
+            },
+        )
 
     ########################################################################################################################
     # Dashboard
@@ -924,7 +2500,7 @@ class WrangleTest(unittest.TestCase):
                 "buckets": buckets,
             }
 
-        plugins = ["balances", "currency", "equity", "interest"]
+        plugins = ["bank", "currency", "equity", "interest"]
         all_plugin_names = ["summary"] + sorted(plugins)
         output_dir = abspath(join(DIR_ROOT, "target", "runtime-dashboard"))
         os.makedirs(output_dir, exist_ok=True)
@@ -951,17 +2527,9 @@ class WrangleTest(unittest.TestCase):
                 ts = now - datetime.timedelta(minutes=30 * runs_ago)
                 history._raw.append(_synthetic_raw_entry(ts, all_plugin_names, rng))
             snapshot = history.snapshot()
-            plugin_sections = [{
-                "id": "summary",
-                "title": "Summary",
-                "theme": "ghost-gray",
-            }] + [
-                {
-                    "id": plugin_name,
-                    "title": plugin_name.capitalize(),
-                    "theme": THEMES[index % len(THEMES)],
-                }
-                for index, plugin_name in enumerate(p for p in snapshot.plugins if p != "summary")
+            plugin_sections = [
+                {"id": "summary", "title": "Summary", "theme": "ghost-gray"},
+                *({"id": plugin_name, "title": plugin_name.capitalize(), "theme": THEMES[index % len(THEMES)]} for index, plugin_name in enumerate(p for p in snapshot.plugins if p != "summary")),
             ]
             snapshot_json = json.dumps(dataclasses.asdict(snapshot))
             adhoc_ts = now + datetime.timedelta(minutes=1)
@@ -974,11 +2542,13 @@ class WrangleTest(unittest.TestCase):
                     pcs[src][act] = _synthetic_counter_value(act, ctr, rng)
                 adhoc_plugins[plugin_name] = pcs
             adhoc_errored = {name: any(adhoc_plugins[name].get(src, {}).get(act, 0) > 0 for (src, act), c in COUNTERS.items() if c.error) for name in all_plugin_names}
-            latest_run_json = json.dumps({
-                "ts": adhoc_ts.isoformat(),
-                "plugins": adhoc_plugins,
-                "errored": adhoc_errored,
-            })
+            latest_run_json = json.dumps(
+                {
+                    "ts": adhoc_ts.isoformat(),
+                    "plugins": adhoc_plugins,
+                    "errored": adhoc_errored,
+                }
+            )
             html = TEMPLATE.render(
                 snapshot_json=snapshot_json,
                 latest_run_json=latest_run_json,
@@ -1005,8 +2575,8 @@ class WrangleTest(unittest.TestCase):
             },
         }
         with tempfile.TemporaryDirectory() as tmp:
-            history = RunHistory(plugins=["balances"], cache_dir=tmp, poll_period_minutes=30, raw_label="1d")
-            history.add_run(datetime.datetime.now(tz=CTR_TZ), {"balances": counters})
+            history = RunHistory(plugins=["bank"], cache_dir=tmp, poll_period_minutes=30, raw_label="1d")
+            history.add_run(datetime.datetime.now(tz=CTR_TZ), {"bank": counters})
 
             filtered_history = RunHistory(plugins=["currency"], cache_dir=tmp, poll_period_minutes=30, raw_label="1d")
             filtered_history.load()
@@ -1026,17 +2596,17 @@ class WrangleTest(unittest.TestCase):
             },
         }
         with tempfile.TemporaryDirectory() as tmp:
-            history = RunHistory(plugins=["balances"], cache_dir=tmp, poll_period_minutes=30, raw_label="1d")
-            history.add_run(datetime.datetime.now(tz=CTR_TZ), {"balances": counters})
+            history = RunHistory(plugins=["bank"], cache_dir=tmp, poll_period_minutes=30, raw_label="1d")
+            history.add_run(datetime.datetime.now(tz=CTR_TZ), {"bank": counters})
 
-            grown_history = RunHistory(plugins=["balances", "currency"], cache_dir=tmp, poll_period_minutes=30, raw_label="1d")
+            grown_history = RunHistory(plugins=["bank", "currency"], cache_dir=tmp, poll_period_minutes=30, raw_label="1d")
             grown_history.load()
 
             self.assertEqual(1, len(grown_history._raw))
             self.assertEqual(1, len(grown_history._day))
 
             raw_view = grown_history.snapshot().views[0]
-            self.assertEqual(1, raw_view.series["balances"][plugin.CTR_SRC_FILES][plugin.CTR_ACT_PROCESSED][0])
+            self.assertEqual(1, raw_view.series["bank"][plugin.CTR_SRC_FILES][plugin.CTR_ACT_PROCESSED][0])
             self.assertIsNone(raw_view.series["currency"][plugin.CTR_SRC_FILES][plugin.CTR_ACT_PROCESSED][0])
             self.assertFalse(raw_view.errored["currency"][0])
 
@@ -1048,8 +2618,8 @@ class WrangleTest(unittest.TestCase):
             },
         }
         with tempfile.TemporaryDirectory() as tmp:
-            history = RunHistory(plugins=["balances"], cache_dir=tmp, poll_period_minutes=30, raw_label="1d")
-            history.add_run(datetime.datetime.now(tz=CTR_TZ), {"balances": counters})
+            history = RunHistory(plugins=["bank"], cache_dir=tmp, poll_period_minutes=30, raw_label="1d")
+            history.add_run(datetime.datetime.now(tz=CTR_TZ), {"bank": counters})
 
             raw_path = join(tmp, "history_raw.json")
             daily_path = join(tmp, "history_daily.json")
@@ -1064,7 +2634,7 @@ class WrangleTest(unittest.TestCase):
             with open(daily_path, "w", encoding="utf-8") as handle:
                 json.dump(daily_state, handle)
 
-            loaded = RunHistory(plugins=["balances"], cache_dir=tmp, poll_period_minutes=30, raw_label="1d")
+            loaded = RunHistory(plugins=["bank"], cache_dir=tmp, poll_period_minutes=30, raw_label="1d")
             loaded.load()
 
             self.assertEqual(0, len(loaded._raw))
@@ -1121,7 +2691,7 @@ class WrangleTest(unittest.TestCase):
 
     def test_feeds_routing(self):
         self.assertEqual({"equity.prices": "feed/equity/prices"}, feeds.paths())
-        resource, argument = feeds.resolve("equity/prices/BHP.AX")
+        _resource, argument = feeds.resolve("equity/prices/BHP.AX")
         self.assertEqual("BHP.AX", argument)
         with mock.patch.dict(feeds.FEEDS, {"equity": {"prices": lambda captured, params: {"argument": captured, "params": params}}}):
             bound, _ = feeds.resolve("equity/prices/VAS.AX")
@@ -1129,8 +2699,7 @@ class WrangleTest(unittest.TestCase):
             bound, argument = feeds.resolve("equity/prices")
             self.assertIsNone(argument)
             self.assertEqual({"argument": None, "params": {}}, bound({}))
-        for path, code in [("equity", "not_found"), ("", "not_found"), ("equity/prices/A/B", "not_found"),
-                           ("crypto/prices", "unknown_feed"), ("equity/nope", "unknown_resource")]:
+        for path, code in [("equity", "not_found"), ("", "not_found"), ("equity/prices/A/B", "not_found"), ("crypto/prices", "unknown_feed"), ("equity/nope", "unknown_resource")]:
             with self.assertRaises(feeds.FeedError) as raised:
                 feeds.resolve(path)
             self.assertEqual(code, raised.exception.code)
@@ -1155,21 +2724,21 @@ class WrangleTest(unittest.TestCase):
         def _sheet_read(_result, schema=None):
             if schema is None:
                 schema = {}
-            if _result.status == DownloadStatus.FAILED:
+            if _result.file_status == DownloadStatus.FAILED:
                 return test.dataframe_new()
-            return test.csv_read(_result.file_path, schema=schema)
+            return test.csv_read(_result.file_paths[0], schema=schema)
 
         plugin.config.log_level = "fatal"
         missing = test.sheet_download("!", "missing", sheet_load_secs=0, sheet_retry_max=1)
-        self.assertEqual(DownloadStatus.FAILED, missing.status)
+        self.assertEqual(DownloadStatus.FAILED, missing.file_status)
         self.assertEqual(0, len(_sheet_read(missing)))
         loading = test.sheet_download("1bUpZCIOM-olcxLQ7_fdgi4Nu7GOQC30sK_LALZ2B0bs", "loading", sheet_load_secs=0, sheet_retry_max=1)
-        self.assertEqual(DownloadStatus.FAILED, loading.status)
+        self.assertEqual(DownloadStatus.FAILED, loading.file_status)
         self.assertEqual(0, len(_sheet_read(loading)))
 
         plugin.config.log_level = "info"
         empty = test.sheet_download("1nPtCOciS81Y-FWJZ8pi5-9Fd6RZ6_EqyfweBekFH6s4", "empty")
-        self.assertEqual(DownloadStatus.DOWNLOADED, empty.status)
+        self.assertEqual(DownloadStatus.DOWNLOADED, empty.file_status)
         self.assertEqual("[]", test.dataframe_to_str(_sheet_read(empty)))
         self.assertEqual("[]", test.dataframe_to_str(_sheet_read(empty, schema={"My Column": pl.Utf8})))
 
@@ -1184,7 +2753,7 @@ class WrangleTest(unittest.TestCase):
         test_type_utf = dict.fromkeys(test_type_number, pl.Utf8)
         test_str = "[Integer({}), Integer with NULL({}), Float({}), Float with NULL({}), String({}), String with NULL({})]"
         typed = test.sheet_download("18MBAIWaQNVQBMESAISHIqLD11sRBz003x5OTH_Vt4SY", "test", sheet_start_row=3)
-        self.assertEqual(DownloadStatus.DOWNLOADED, typed.status)
+        self.assertEqual(DownloadStatus.DOWNLOADED, typed.file_status)
         typed_number = _sheet_read(typed, schema=test_type_number)
         self.assertEqual(test_str.format(*[test.dataframe_type_to_str(dtype) for dtype in test_type_number.values()]), test.dataframe_to_str(typed_number))
         self.assertEqual(4, len(typed_number))
@@ -1195,14 +2764,14 @@ class WrangleTest(unittest.TestCase):
         data_key = "1Kf9-Gk7aD4aBdq2JCfz5zVUMWAtvJo2ZfqmSQyo8Bjk"
         data_str = "[Exchange Symbol(String), Port Quantity({}), Unit Price(Float64), Watch Value(Float64), Watch Quantity(Int64), Base Quantity(Int64)]"
         download = test.sheet_download(data_key, "Index_weights", "Indexes", 2, check=True)
-        self.assertEqual(DownloadStatus.DOWNLOADED, download.status)
+        self.assertEqual(DownloadStatus.DOWNLOADED, download.file_status)
         validated = test.sheet_download(data_key, "Index_weights", "Indexes", 2, check=True)
-        self.assertEqual(DownloadResult(DownloadStatus.CACHED, download.file_path), validated)
+        self.assertEqual(DownloadResult(DownloadStatus.CACHED, download.file_paths), validated)
         blind = test.sheet_download(data_key, "Index_weights", "Indexes", 2, check=False)
-        self.assertEqual(DownloadResult(DownloadStatus.CACHED, download.file_path), blind)
+        self.assertEqual(DownloadResult(DownloadStatus.CACHED, download.file_paths), blind)
         plugin.config.force_downloads = True
         forced = test.sheet_download(data_key, "Index_weights", "Indexes", 2, check=False)
-        self.assertEqual(DownloadResult(DownloadStatus.DOWNLOADED, download.file_path), forced)
+        self.assertEqual(DownloadResult(DownloadStatus.DOWNLOADED, download.file_paths), forced)
         plugin.config.force_downloads = False
         data_df = _sheet_read(download)
         self.assertEqual(data_str.format("Float64"), test.dataframe_to_str(data_df))
@@ -1210,6 +2779,186 @@ class WrangleTest(unittest.TestCase):
         data_df = _sheet_read(download, schema={"Port Quantity": pl.Utf8})
         self.assertEqual(data_str.format(test.dataframe_type_to_str(pl.Utf8)), test.dataframe_to_str(data_df))
         self.assertEqual(24, len(data_df))
+
+        plugin.config.force_downloads = True
+        batch = test.sheet_download(data_key, "Index_weights", ["Indexes", "Absent"], 2, schema={"Exchange Symbol": pl.Utf8, "Unit Price": pl.Float64})
+        plugin.config.force_downloads = False
+        self.assertEqual(DownloadStatus.DOWNLOADED, batch.file_status)
+        self.assertEqual(2, len(batch.file_paths))
+        self.assertEqual(24, len(test.csv_read(batch.file_paths[0])))
+        self.assertEqual(0, len(test.csv_read(batch.file_paths[1])))
+        self.assertEqual(DownloadStatus.CACHED, test.sheet_download(data_key, "Index_weights", ["Indexes", "Absent"], 2).file_status)
+
+    def test_bank_flag(self):
+        values = ["Yes", " yes ", "YES", "No", "no\t", " NO", "y", "", None, "true", "Yes No"]
+        self.assertEqual(
+            ["Yes", "Yes", "Yes", "No", "No", "No", None, None, None, None, None], pl.DataFrame({"Value": values}, schema={"Value": pl.Utf8}).select(bank_flag("Value"))["Value"].to_list()
+        )
+
+    def test_library_sheet_ensure(self):
+        test = PluginStub("Test", "SOME_NON_EXISTANT_GUID")
+
+        class _Worksheet:
+            def __init__(self, title):
+                self.title = title
+                self.values = None
+
+            def update(self, values, range_name):
+                self.values = (range_name, values)
+
+        class _Spreadsheet:
+            def __init__(self, titles):
+                self.sheets = [_Worksheet(title) for title in titles]
+
+            def worksheets(self):
+                return list(self.sheets)
+
+            def add_worksheet(self, title, rows, cols, index=None):
+                worksheet = _Worksheet(title)
+                self.sheets.insert(len(self.sheets) if index is None else index, worksheet)
+                return worksheet
+
+        tabs = {"Summary": [], "Logs": ["Date", "Kind"], "Classifier": ["Category"], "Accounts": ["From", "Name"], "Balances": ["Date"], "Transactions": ["End of Month"]}
+        for titles, expected_titles, expected_created in [
+            ([], list(tabs), list(tabs)),
+            (
+                ["Accounts", "Transactions_2026", "Transactions_2025", "Custom"],
+                ["Summary", "Logs", "Classifier", "Accounts", "Balances", "Transactions", "Transactions_2026", "Transactions_2025", "Custom"],
+                ["Summary", "Logs", "Classifier", "Balances", "Transactions"],
+            ),
+            (list(tabs), list(tabs), []),
+        ]:
+            spreadsheet = _Spreadsheet(titles)
+            test._sheet_worksheets = {}
+            mock.patch.object(Plugin, "_sheet_opened", lambda _self, _key, _spreadsheet=spreadsheet: (_spreadsheet, None)).start()
+            plugin.config.disable_sheet_uploads = False
+            self.assertEqual(expected_created, test.sheet_ensure("key", "Test", tabs))
+            self.assertEqual(expected_titles, [worksheet.title for worksheet in spreadsheet.sheets])
+            created = {worksheet.title: worksheet.values for worksheet in spreadsheet.sheets if worksheet.title in expected_created}
+            self.assertEqual({name: None if not tabs[name] else ("A1", [tabs[name]]) for name in expected_created}, created)
+            mock.patch.stopall()
+        plugin.config.disable_sheet_uploads = True
+        self.assertEqual([], test.sheet_ensure("key", "Test", tabs))
+
+    def test_library_redbark_download(self):
+        test = PluginStub("Test", "SOME_NON_EXISTANT_GUID")
+        local_path = join(DIR_ROOT, "target", "data", "_redbark_things.csv")
+        columns = ["id", "amount", "absent"]
+        rows = [{"id": "r1", "amount": 7, "extra": "x"}, {"id": "r2", "amount": -1.5}, {"id": "r3", "amount": None}]
+        requested = []
+
+        def _urlopen(request, *_args, **_kwargs):
+            requested.append(request.full_url)
+            url = urllib.parse.urlparse(request.full_url)
+            query = {key: values[0] for key, values in urllib.parse.parse_qs(url.query).items()}
+            if url.path in ("/v1/fail", "/v1/gone"):
+                raise urllib.error.HTTPError(request.full_url, 500 if url.path == "/v1/fail" else 404, "offline fixture error", Message(), None)
+            offset, limit = int(query.get("offset", 0)), int(query.get("limit", len(rows)))
+            page = {"/v1/things": rows[offset : offset + limit], "/v1/empty": [], "/v1/endless": rows[:1]}[url.path]
+            has_more = url.path != "/v1/things" or offset + limit < len(rows)
+            return urllib.response.addinfourl(io.BytesIO(json.dumps({"data": page, "pagination": {"hasMore": has_more}}).encode()), Message(), request.full_url, 200)
+
+        def _counters():
+            return [test.get_counter(plugin.CTR_SRC_SOURCES, action) for action in (plugin.CTR_ACT_DOWNLOADED, plugin.CTR_ACT_CACHED, plugin.CTR_ACT_ERRORED, plugin.CTR_ACT_SKIPPED)]
+
+        mock.patch("wrangle.plugin._sources.urllib.request.urlopen", _urlopen).start()
+        mock.patch("wrangle.plugin._sources.REDBARK_PAGE_LIMIT", 1).start()
+        mock.patch("wrangle.plugin._sources.REDBARK_PAGES_MAX", 5).start()
+        plugin.config.disable_source_downloads = False
+        plugin.config.force_downloads = False
+        plugin.config.force_reprocessing = False
+        expected = [("r1", "7", None), ("r2", "-1.5", None), ("r3", None, None)]
+
+        result = test.redbark_download(["/v1/things"], local_path, columns)
+        self.assertEqual((DownloadStatus.DOWNLOADED, [local_path], ()), (result.file_status, result.file_paths, result.errors))
+        assert result.data_frame is not None
+        self.assertEqual(expected, result.data_frame.rows())
+        self.assertEqual(expected, pl.read_csv(local_path, infer_schema=False).select(columns).rows())
+        self.assertEqual(3, len(requested))
+        self.assertEqual([1, 0, 0, 0], _counters())
+
+        requested.clear()
+        result = test.redbark_download(["/v1/things?from=2026-01-01"], local_path, columns, paged=False)
+        assert result.data_frame is not None
+        self.assertEqual((DownloadStatus.DOWNLOADED, 3), (result.file_status, len(result.data_frame)))
+        self.assertEqual(["https://api.redbark.com/v1/things?from=2026-01-01"], requested)
+
+        pl.DataFrame({"id": ["cached"], "amount": ["1"]}).write_csv(local_path)
+        os.utime(local_path, (0, 0))
+        result = test.redbark_download(["/v1/things", "/v1/gone"], local_path, columns, ignore=True)
+        self.assertEqual((DownloadStatus.FAILED, []), (result.file_status, result.file_paths))
+        assert result.data_frame is not None
+        self.assertEqual(expected, result.data_frame.rows())
+        self.assertEqual([("/v1/gone", 404)], [(error["Path"], error["Status"]) for error in result.errors])
+        self.assertEqual((0, [("cached", "1")]), (int(getmtime(local_path)), pl.read_csv(local_path, infer_schema=False).rows()))
+        self.assertEqual([2, 0, 0, 0], _counters())
+
+        result = test.redbark_download(["/v1/fail", "/v1/empty", "/v1/endless"], local_path, columns)
+        self.assertEqual((DownloadStatus.FAILED, None), (result.file_status, result.data_frame))
+        self.assertEqual([("/v1/fail", 500), ("/v1/empty", None), ("/v1/endless", None)], [(error["Path"], error["Status"]) for error in result.errors])
+        self.assertEqual([2, 0, 1, 0], _counters())
+
+        requested.clear()
+        result = test.redbark_download(["/v1/things"], local_path, columns, check=False)
+        assert result.data_frame is not None
+        self.assertEqual((DownloadStatus.CACHED, [local_path], [("cached", "1", None)]), (result.file_status, result.file_paths, result.data_frame.rows()))
+        self.assertEqual([], requested)
+        plugin.config.force_downloads = True
+        self.assertEqual(DownloadStatus.DOWNLOADED, test.redbark_download(["/v1/things"], local_path, columns, check=False).file_status)
+        plugin.config.force_downloads = False
+
+        plugin.config.disable_source_downloads = True
+        self.assertEqual(DownloadStatus.CACHED, test.redbark_download(["/v1/things"], local_path, columns).file_status)
+        os.remove(local_path)
+        self.assertEqual(DownloadStatus.FAILED, test.redbark_download(["/v1/things"], local_path, columns).file_status)
+        plugin.config.force_reprocessing = True
+        self.assertEqual(DownloadStatus.SKIPPED, test.redbark_download(["/v1/things"], local_path, columns).file_status)
+        self.assertEqual([3, 2, 1, 1], _counters())
+
+    def test_library_sheet_insert_index(self):
+        titles = ["Summary", "Logs", "Transactions", "Transactions_2026", "Transactions_2024", "Accounts"]
+        for before, after, expected in [
+            (None, None, None),
+            (["Missing"], ["Absent"], None),
+            (["Transactions_2026", "Transactions_2024"], None, 3),
+            (["Transactions_2024", "Transactions_2026"], None, 3),
+            (["Transactions_2024"], ["Transactions", "Transactions_2026"], 4),
+            (["Transactions_2026", "Transactions_2024"], ["Transactions"], 3),
+            (["Transactions_2024"], ["Missing"], 4),
+            (None, ["Accounts"], 6),
+        ]:
+            self.assertEqual(expected, Plugin._sheet_insert_index(titles, before, after), f"before {before} after {after}")
+
+    def test_library_sheet_format(self):
+        test = PluginStub("Test", "SOME_NON_EXISTANT_GUID")
+        data_df = pl.DataFrame({"Amount": [1.0, 2.0], "Amount Manual": [None, 3.0], "Amount Linked": [1.0, None], "Note": ["=a", "1,000"]})
+        test.sheet_upload(
+            data_df,
+            None,
+            "Format",
+            sheet_name="Tab",
+            raw_columns=["Note", "Amount"],
+            formula_columns={"Amount": '=IF({Amount Manual}<>"",{Amount Manual},{Amount Linked})'},
+            dropdown_columns={"Note": "Options!A2:A"},
+            highlight_cells=["B", "A2:D2"],
+        )
+        with open(join(test.local_cache, "_sheet_format_tab_format.json")) as format_file:
+            self.assertEqual(
+                {"raw": ["Note"], "formulas": {"Amount": '=IF({Amount Manual}<>"",{Amount Manual},{Amount Linked})'}, "dropdowns": {"Note": "Options!A2:A"}, "highlights": ["B", "A2:D2"]},
+                json.load(format_file),
+            )
+        self.assertEqual(0, test.get_counter(plugin.CTR_SRC_EGRESS, plugin.CTR_ACT_ERRORED))
+        test.sheet_upload(
+            data_df, None, "Format", sheet_name="Tab", raw_columns=["Missing"], formula_columns={"Amount": "={Missing}"}, dropdown_columns={"Missing": "Options!A2:A"}, highlight_cells=["Z9", "bad"]
+        )
+        with open(join(test.local_cache, "_sheet_format_tab_format.json")) as format_file:
+            self.assertEqual({"raw": [], "formulas": {}, "dropdowns": {}, "highlights": []}, json.load(format_file))
+        self.assertEqual(5, test.get_counter(plugin.CTR_SRC_EGRESS, plugin.CTR_ACT_ERRORED))
+        self.assertTrue(isfile(join(test.local_cache, "_sheet_format_tab.csv")))
+        test.sheet_upload(data_df, None, "Format", sheet_name="Tab", dropdown_columns={"Note": ["Yes", "No"], "Amount": [], "Amount Manual": ["Yes", ""]})
+        with open(join(test.local_cache, "_sheet_format_tab_format.json")) as format_file:
+            self.assertEqual({"raw": [], "formulas": {}, "dropdowns": {"Note": ["Yes", "No"]}, "highlights": []}, json.load(format_file))
+        self.assertEqual(7, test.get_counter(plugin.CTR_SRC_EGRESS, plugin.CTR_ACT_ERRORED))
 
     def test_library_database(self):
         test = PluginStub("Test", "SOME_NON_EXISTANT_GUID")
@@ -1222,16 +2971,16 @@ class WrangleTest(unittest.TestCase):
             test.database_download(invalid_cache, "SELECT 1"),
             test.database_download(invalid_cache, "SELECT 1", check=False),
         ]:
-            self.assertEqual(DownloadResult(DownloadStatus.FAILED, None), result)
+            self.assertEqual(DownloadResult(DownloadStatus.FAILED, []), result)
         self.assertFalse(isfile(invalid_path))
 
         cache_cache = "Cache"
         cache_path = abspath(f"{test.local_cache}/_database_{cache_cache.lower()}.csv")
         with open(cache_path, "w") as fh:
             fh.write("time,entity,type,period,unit,value\n2020-01-01,AUD/USD,snapshot,1d,$,0.65\n")
-        self.assertEqual(DownloadResult(DownloadStatus.CACHED, cache_path), test.database_download(cache_cache, "SELECT 1"))
+        self.assertEqual(DownloadResult(DownloadStatus.CACHED, [cache_path]), test.database_download(cache_cache, "SELECT 1"))
         plugin.config.disable_source_downloads = True
-        self.assertEqual(DownloadResult(DownloadStatus.CACHED, cache_path), test.database_download(cache_cache, "SELECT 1"))
+        self.assertEqual(DownloadResult(DownloadStatus.CACHED, [cache_path]), test.database_download(cache_cache, "SELECT 1"))
         reset_config()
 
         test.reset_counters()
@@ -1242,10 +2991,12 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(0, test.get_counter(plugin.CTR_SRC_EGRESS, plugin.CTR_ACT_DATABASE_COLUMNS))
 
         test.reset_counters()
-        equity_df = pl.DataFrame({
-            "Date": pl.Series([date_type(2024, 1, 1), date_type(2024, 1, 2), date_type(2024, 1, 3)], dtype=pl.Date),
-            "AORD Price Close": [729.0, 726.5, 721.4],
-        })
+        equity_df = pl.DataFrame(
+            {
+                "Date": pl.Series([date_type(2024, 1, 1), date_type(2024, 1, 2), date_type(2024, 1, 3)], dtype=pl.Date),
+                "AORD Price Close": [729.0, 726.5, 721.4],
+            }
+        )
         test.database_upload(equity_df, metric_type="price-close", period="1d", unit="$")
         long_df = test._db_cache_dfs[csv_path]
         self.assertEqual(["time", "entity", "type", "period", "unit", "value"], long_df.columns)
@@ -1260,12 +3011,14 @@ class WrangleTest(unittest.TestCase):
 
         test.reset_counters()
         test._db_cache_dfs.clear()
-        currency_df = pl.DataFrame({
-            "Date": pl.Series([date_type(2024, 1, 1), date_type(2024, 1, 2)], dtype=pl.Date),
-            "AUD/USD": [0.65, 0.66],
-            "AUD/GBP": [0.50, 0.51],
-            "AUD/SGD": [0.90, 0.91],
-        })
+        currency_df = pl.DataFrame(
+            {
+                "Date": pl.Series([date_type(2024, 1, 1), date_type(2024, 1, 2)], dtype=pl.Date),
+                "AUD/USD": [0.65, 0.66],
+                "AUD/GBP": [0.50, 0.51],
+                "AUD/SGD": [0.90, 0.91],
+            }
+        )
         test.database_upload(currency_df, metric_type="snapshot", period="1d", unit="$")
         long_df = test._db_cache_dfs[csv_path]
         self.assertEqual(6, len(long_df))
@@ -1276,10 +3029,12 @@ class WrangleTest(unittest.TestCase):
 
         test.reset_counters()
         test._db_cache_dfs.clear()
-        sparse_df = pl.DataFrame({
-            "Date": pl.Series([date_type(2024, 2, 1), date_type(2024, 2, 2), date_type(2024, 2, 3)], dtype=pl.Date),
-            "AXJO Price Close": [5000.0, None, 5100.0],
-        })
+        sparse_df = pl.DataFrame(
+            {
+                "Date": pl.Series([date_type(2024, 2, 1), date_type(2024, 2, 2), date_type(2024, 2, 3)], dtype=pl.Date),
+                "AXJO Price Close": [5000.0, None, 5100.0],
+            }
+        )
         test.database_upload(sparse_df, metric_type="price-close", period="1d", unit="$")
         long_df = test._db_cache_dfs[csv_path]
         self.assertEqual(2, len(long_df))
@@ -1288,14 +3043,18 @@ class WrangleTest(unittest.TestCase):
 
         test.reset_counters()
         test._db_cache_dfs.clear()
-        call1 = pl.DataFrame({
-            "Date": pl.Series([date_type(2024, 3, 1), date_type(2024, 3, 2)], dtype=pl.Date),
-            "AUD/USD": [0.65, 0.66],
-        })
-        call2 = pl.DataFrame({
-            "Date": pl.Series([date_type(2024, 3, 2), date_type(2024, 3, 3)], dtype=pl.Date),
-            "AUD/USD": [0.67, 0.68],
-        })
+        call1 = pl.DataFrame(
+            {
+                "Date": pl.Series([date_type(2024, 3, 1), date_type(2024, 3, 2)], dtype=pl.Date),
+                "AUD/USD": [0.65, 0.66],
+            }
+        )
+        call2 = pl.DataFrame(
+            {
+                "Date": pl.Series([date_type(2024, 3, 2), date_type(2024, 3, 3)], dtype=pl.Date),
+                "AUD/USD": [0.67, 0.68],
+            }
+        )
         test.database_upload(call1, metric_type="snapshot", period="1d", unit="$")
         test.database_upload(call2, metric_type="snapshot", period="1d", unit="$")
         long_df = test._db_cache_dfs[csv_path]
@@ -1306,14 +3065,18 @@ class WrangleTest(unittest.TestCase):
 
         test.reset_counters()
         test._db_cache_dfs.clear()
-        snapshot_df = pl.DataFrame({
-            "Date": pl.Series([date_type(2024, 4, 1)], dtype=pl.Date),
-            "AUD/USD": [0.65],
-        })
-        delta_df = pl.DataFrame({
-            "Date": pl.Series([date_type(2024, 4, 1)], dtype=pl.Date),
-            "AUD/USD": [-1.53],
-        })
+        snapshot_df = pl.DataFrame(
+            {
+                "Date": pl.Series([date_type(2024, 4, 1)], dtype=pl.Date),
+                "AUD/USD": [0.65],
+            }
+        )
+        delta_df = pl.DataFrame(
+            {
+                "Date": pl.Series([date_type(2024, 4, 1)], dtype=pl.Date),
+                "AUD/USD": [-1.53],
+            }
+        )
         test.database_upload(snapshot_df, metric_type="snapshot", period="1d", unit="$")
         test.database_upload(delta_df, metric_type="delta", period="1d", unit="%")
         long_df = test._db_cache_dfs[csv_path]
@@ -1367,7 +3130,7 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(df_data_str.format("Int64", "Float64", "String"), test.dataframe_to_str(test.dataframe_new(df_data)))
         self.assertEqual(df_data_str.format("Int64", "Float64", "String"), test.dataframe_to_str(test.dataframe_new(df_data, {})))
         self.assertEqual(df_data_str.format("Int64", "String", "String"), test.dataframe_to_str(test.dataframe_new(df_data, df_data_type)))
-        self.assertEqual(3, len(test.dataframe_new(df_data, schema={column: pl.Utf8 for column in df_data[0]})))
+        self.assertEqual(3, len(test.dataframe_new(df_data, schema=dict.fromkeys(df_data[0], pl.Utf8))))
 
         df_lots_cols = 50
         df_lots_rows = 100
@@ -1382,8 +3145,8 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(0 + 7, len(test.dataframe_to_str(test.dataframe_new(df_lots, print_label="lots"), False, 0)))
         self.assertEqual(df_lots_rows, len(test.dataframe_new(df_lots)))
         self.assertEqual(df_lots_rows, len(test.dataframe_new(df_lots, schema={"SOME UNKNOWN COLUMN": pl.Utf8})))
-        self.assertEqual(df_lots_rows, len(test.dataframe_new(df_lots, schema={column: pl.Utf8 for column in df_data[0]})))
-        self.assertEqual(df_lots_rows, len(test.dataframe_new(df_lots, schema={column: pl.Utf8 for column in df_lots[0]})))
+        self.assertEqual(df_lots_rows, len(test.dataframe_new(df_lots, schema=dict.fromkeys(df_data[0], pl.Utf8))))
+        self.assertEqual(df_lots_rows, len(test.dataframe_new(df_lots, schema=dict.fromkeys(df_lots[0], pl.Utf8))))
 
     def test_library_stock(self):
         test = PluginStub("Test", "SOME_NON_EXISTANT_GUID")
@@ -1392,25 +3155,28 @@ class WrangleTest(unittest.TestCase):
 
         def _history(dates):
             index = pd.DatetimeIndex([pd.Timestamp(stock_date) for stock_date in dates]).tz_localize("Australia/Sydney")
-            return pd.DataFrame({
-                "Open": 1.0,
-                "High": 1.0,
-                "Low": 1.0,
-                "Close": 1.0,
-                "Volume": 1,
-                "Dividends": 0.0,
-                "Stock Splits": 0.0,
-            }, index=index)
+            return pd.DataFrame(
+                {
+                    "Open": 1.0,
+                    "High": 1.0,
+                    "Low": 1.0,
+                    "Close": 1.0,
+                    "Volume": 1,
+                    "Dividends": 0.0,
+                    "Stock Splits": 0.0,
+                },
+                index=index,
+            )
 
         with tempfile.TemporaryDirectory() as cache_dir, mock.patch("wrangle.plugin._sources.yf.Ticker") as ticker:
             ticker.return_value.history.return_value = _history(["2025-09-30"])
             result = test.stock_download(join(cache_dir, "yahoo_aord_2025-10.csv"), "^AORD", "2025-10-01", "2025-10-31", check=False)
-            self.assertEqual(DownloadStatus.SKIPPED, result.status)
+            self.assertEqual(DownloadStatus.SKIPPED, result.file_status)
             self.assertFalse(isfile(join(cache_dir, "yahoo_aord_2025-10.csv")))
 
             ticker.return_value.history.return_value = _history(["2025-08-29", "2025-09-01", "2025-09-30", "2025-10-01"])
             result = test.stock_download(join(cache_dir, "yahoo_aord_2025-09.csv"), "^AORD", "2025-09-01", "2025-09-30", check=False)
-            self.assertEqual(DownloadStatus.DOWNLOADED, result.status)
+            self.assertEqual(DownloadStatus.DOWNLOADED, result.file_status)
             self.assertEqual(["2025-09-01", "2025-09-30"], pl.read_csv(join(cache_dir, "yahoo_aord_2025-09.csv")).get_column("Date").to_list())
 
     ########################################################################################################################
@@ -1438,17 +3204,19 @@ class WrangleTest(unittest.TestCase):
     def test_state_cache_changed_values(self):
         t = self._setup_state_test("test-3")
         update = self._df([("2020-01-01", 1.0), ("2020-02-01", 2.5)])
-        delta, current, previous = t.state_cache(update)
+        delta, _current, _previous = t.state_cache(update)
         self.assertEqual(1, len(delta))
         self.assertEqual(2.5, delta["Value"][0])
 
     def test_state_cache_new_column(self):
         t = self._setup_state_test("test-4")
-        update = pl.DataFrame({
-            "Date": ["2020-01-01", "2020-02-01"],
-            "Value": [1.0, 2.0],
-            "Extra": [10.0, 20.0],
-        }).with_columns(pl.col("Date").str.to_date())
+        update = pl.DataFrame(
+            {
+                "Date": ["2020-01-01", "2020-02-01"],
+                "Value": [1.0, 2.0],
+                "Extra": [10.0, 20.0],
+            }
+        ).with_columns(pl.col("Date").str.to_date())
         delta, current, previous = t.state_cache(update)
         self.assertIn("Extra", current.columns)
         self.assertIn("Extra", previous.columns)
@@ -1478,10 +3246,7 @@ class WrangleTest(unittest.TestCase):
     def test_state_cache_with_aggregate(self):
         t = self._setup_state_test("test-1")
         update = self._df([("2020-01-01", 10.0), ("2020-02-01", 20.0), ("2020-03-01", 30.0)])
-        delta, current, _ = t.state_cache(
-            update,
-            lambda df: df.with_columns((pl.col("Value") * 2).alias("Double"))
-        )
+        delta, current, _ = t.state_cache(update, lambda df: df.with_columns((pl.col("Value") * 2).alias("Double")))
         self.assertIn("Double", current.columns)
         self.assertEqual([20.0, 40.0, 60.0], current.sort("Date")["Double"].to_list())
         self.assertEqual(3, len(delta))
@@ -1541,10 +3306,12 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_duplicate_dates_in_update(self):
         t = self._setup_state_test("test-1")
-        update = pl.DataFrame({
-            "Date": ["2020-01-01", "2020-01-01", "2020-02-01"],
-            "Value": [1.0, 9.9, 2.0],
-        }).with_columns(pl.col("Date").str.to_date())
+        update = pl.DataFrame(
+            {
+                "Date": ["2020-01-01", "2020-01-01", "2020-02-01"],
+                "Value": [1.0, 9.9, 2.0],
+            }
+        ).with_columns(pl.col("Date").str.to_date())
         delta, current, _ = t.state_cache(update)
         self.assertEqual(2, len(current))
         self.assertEqual(9.9, current.sort("Date")["Value"][0])
@@ -1556,10 +3323,7 @@ class WrangleTest(unittest.TestCase):
         delta, current, _ = t.state_cache(update)
         self.assertEqual(2, len(delta))
         self.assertEqual(4, len(current))
-        self.assertEqual(
-            ["2020-01-01", "2020-02-01", "2020-03-01", "2020-04-01"],
-            [str(d) for d in current.sort("Date")["Date"].to_list()]
-        )
+        self.assertEqual(["2020-01-01", "2020-02-01", "2020-03-01", "2020-04-01"], [str(d) for d in current.sort("Date")["Date"].to_list()])
 
     def test_state_cache_mixed_delta(self):
         t = self._setup_state_test("test-5")
@@ -1573,12 +3337,14 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_multiple_columns_changed(self):
         t = self._setup_state_test("test-6")
-        update = pl.DataFrame({
-            "Date": ["2020-01-01", "2020-02-01"],
-            "Value": [9.0, 9.0],
-            "Extra": [90.0, 90.0],
-        }).with_columns(pl.col("Date").str.to_date())
-        delta, current, _ = t.state_cache(update)
+        update = pl.DataFrame(
+            {
+                "Date": ["2020-01-01", "2020-02-01"],
+                "Value": [9.0, 9.0],
+                "Extra": [90.0, 90.0],
+            }
+        ).with_columns(pl.col("Date").str.to_date())
+        delta, _current, _ = t.state_cache(update)
         self.assertEqual(2, len(delta))
         self.assertEqual(9.0, delta.sort("Date")["Value"][0])
         self.assertEqual(90.0, delta.sort("Date")["Extra"][0])
@@ -1600,11 +3366,13 @@ class WrangleTest(unittest.TestCase):
         t = self._setup_state_test("test-1")
         t.state_cache(self._df([("2020-01-01", 1.0), ("2020-02-01", 2.0)]))
         t.reset_counters()
-        run2 = pl.DataFrame({
-            "Date": ["2020-01-01", "2020-02-01"],
-            "Value": [1.0, 2.0],
-            "Extra": [10.0, 20.0],
-        }).with_columns(pl.col("Date").str.to_date())
+        run2 = pl.DataFrame(
+            {
+                "Date": ["2020-01-01", "2020-02-01"],
+                "Value": [1.0, 2.0],
+                "Extra": [10.0, 20.0],
+            }
+        ).with_columns(pl.col("Date").str.to_date())
         delta, current, previous = t.state_cache(run2)
         self.assertIn("Extra", current.columns)
         self.assertEqual([10.0, 20.0], current.sort("Date")["Extra"].to_list())
@@ -1632,10 +3400,12 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_null_date_in_update(self):
         t = self._setup_state_test("test-1")
-        update = pl.DataFrame({
-            "Date": [None, "2020-01-01", "2020-02-01"],
-            "Value": [99.0, 1.0, 2.0],
-        }).with_columns(pl.col("Date").str.to_date(strict=False))
+        update = pl.DataFrame(
+            {
+                "Date": [None, "2020-01-01", "2020-02-01"],
+                "Value": [99.0, 1.0, 2.0],
+            }
+        ).with_columns(pl.col("Date").str.to_date(strict=False))
         delta, current, _ = t.state_cache(update)
         dates = [str(d) for d in current.sort("Date")["Date"].to_list()]
         self.assertNotIn("None", dates)
@@ -1648,20 +3418,24 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_previous_columns_reflects_union_schema(self):
         t = self._setup_state_test("test-4")
-        update = pl.DataFrame({
-            "Date": ["2020-01-01", "2020-02-01"],
-            "Value": [1.0, 2.0],
-            "Extra": [10.0, 20.0],
-            "Third": [100.0, 200.0],
-        }).with_columns(pl.col("Date").str.to_date())
+        update = pl.DataFrame(
+            {
+                "Date": ["2020-01-01", "2020-02-01"],
+                "Value": [1.0, 2.0],
+                "Extra": [10.0, 20.0],
+                "Third": [100.0, 200.0],
+            }
+        ).with_columns(pl.col("Date").str.to_date())
         t.state_cache(update)
         self.assertEqual(3, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_PREVIOUS_COLUMNS))
 
     def _price_df(self, date_price_pairs, ticker="AAPL"):
-        return pl.DataFrame({
-            "Date": [p[0] for p in date_price_pairs],
-            f"{ticker} Price Close": [float(p[1]) for p in date_price_pairs],
-        }).with_columns(pl.col("Date").str.to_date())
+        return pl.DataFrame(
+            {
+                "Date": [p[0] for p in date_price_pairs],
+                f"{ticker} Price Close": [float(p[1]) for p in date_price_pairs],
+            }
+        ).with_columns(pl.col("Date").str.to_date())
 
     def _price_change_agg(self, ticker="AAPL"):
         price_col = f"{ticker} Price Close"
@@ -1672,15 +3446,8 @@ class WrangleTest(unittest.TestCase):
             if str_cols:
                 df = df.with_columns([pl.col(c).cast(pl.Float64, strict=False) for c in str_cols])
             if price_col in df.columns:
-                df = df.with_columns(
-                    pl.when(pl.col(price_col).is_null()).then(None)
-                    .otherwise(pl.col(price_col).pct_change(1).fill_nan(None) * 100)
-                    .alias(change_col)
-                )
-                df = df.with_columns(
-                    pl.when(pl.col(price_col).is_not_null() & pl.col(change_col).is_null())
-                    .then(pl.lit(0.0)).otherwise(pl.col(change_col)).alias(change_col)
-                )
+                df = df.with_columns(pl.when(pl.col(price_col).is_null()).then(None).otherwise(pl.col(price_col).pct_change(1).fill_nan(None) * 100).alias(change_col))
+                df = df.with_columns(pl.when(pl.col(price_col).is_not_null() & pl.col(change_col).is_null()).then(pl.lit(0.0)).otherwise(pl.col(change_col)).alias(change_col))
             out_cols = [c for c in ["Date", price_col, change_col] if c in df.columns]
             out = df.select(out_cols)
             return out.with_columns(pl.col(change_col).round(4)) if change_col in out.columns else out
@@ -1689,9 +3456,13 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_aggregate_derived_columns(self):
         t = self._setup_state_test("agg-1")
-        data = self._price_df([
-            ("2020-01-01", 100.0), ("2020-02-01", 200.0), ("2020-03-01", 300.0),
-        ])
+        data = self._price_df(
+            [
+                ("2020-01-01", 100.0),
+                ("2020-02-01", 200.0),
+                ("2020-03-01", 300.0),
+            ]
+        )
         delta, current, previous = t.state_cache(data, self._price_change_agg())
         self.assertEqual(3, len(delta))
         self.assertEqual(3, len(current))
@@ -1705,9 +3476,13 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_aggregate_idempotent(self):
         t = self._setup_state_test("agg-2")
-        data = self._price_df([
-            ("2020-01-01", 100.0), ("2020-02-01", 200.0), ("2020-03-01", 300.0),
-        ])
+        data = self._price_df(
+            [
+                ("2020-01-01", 100.0),
+                ("2020-02-01", 200.0),
+                ("2020-03-01", 300.0),
+            ]
+        )
         t.state_cache(data, self._price_change_agg())
         t.reset_counters()
         delta, current, _ = t.state_cache(data, self._price_change_agg())
@@ -1718,14 +3493,29 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_aggregate_cross_boundary(self):
         t = self._setup_state_test("agg-3")
-        t.state_cache(self._price_df([
-            ("2020-01-01", 100.0), ("2020-02-01", 200.0), ("2020-03-01", 300.0),
-        ]), self._price_change_agg())
+        t.state_cache(
+            self._price_df(
+                [
+                    ("2020-01-01", 100.0),
+                    ("2020-02-01", 200.0),
+                    ("2020-03-01", 300.0),
+                ]
+            ),
+            self._price_change_agg(),
+        )
         t.reset_counters()
-        delta, current, _ = t.state_cache(self._price_df([
-            ("2020-01-01", 100.0), ("2020-02-01", 200.0), ("2020-03-01", 300.0),
-            ("2020-04-01", 400.0), ("2020-05-01", 600.0),
-        ]), self._price_change_agg())
+        delta, current, _ = t.state_cache(
+            self._price_df(
+                [
+                    ("2020-01-01", 100.0),
+                    ("2020-02-01", 200.0),
+                    ("2020-03-01", 300.0),
+                    ("2020-04-01", 400.0),
+                    ("2020-05-01", 600.0),
+                ]
+            ),
+            self._price_change_agg(),
+        )
         self.assertEqual(2, len(delta))
         self.assertEqual(5, len(current))
         delta_sorted = delta.sort("Date")
@@ -1734,12 +3524,14 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_aggregate_narrows_columns(self):
         t = self._setup_state_test("agg-4")
-        data = pl.DataFrame({
-            "Date": ["2020-01-01", "2020-02-01"],
-            "AAPL Price Close": [100.0, 200.0],
-            "AAPL Market Volume": [1000.0, 2000.0],
-            "AAPL Currency Base": ["AUD", "AUD"],
-        }).with_columns(pl.col("Date").str.to_date())
+        data = pl.DataFrame(
+            {
+                "Date": ["2020-01-01", "2020-02-01"],
+                "AAPL Price Close": [100.0, 200.0],
+                "AAPL Market Volume": [1000.0, 2000.0],
+                "AAPL Currency Base": ["AUD", "AUD"],
+            }
+        ).with_columns(pl.col("Date").str.to_date())
         delta, current, _ = t.state_cache(data, self._price_change_agg())
         self.assertNotIn("AAPL Market Volume", current.columns)
         self.assertNotIn("AAPL Currency Base", current.columns)
@@ -1756,10 +3548,12 @@ class WrangleTest(unittest.TestCase):
                 df = df.with_columns([pl.col(c).cast(pl.Float64, strict=False) for c in str_cols])
             return df.with_columns(pl.lit(None).cast(pl.Float64).alias("AAPL Baseline Price Close"))
 
-        data = pl.DataFrame({
-            "Date": ["2020-01-01", "2020-02-01"],
-            "AAPL Price Close": [100.0, 200.0],
-        }).with_columns(pl.col("Date").str.to_date())
+        data = pl.DataFrame(
+            {
+                "Date": ["2020-01-01", "2020-02-01"],
+                "AAPL Price Close": [100.0, 200.0],
+            }
+        ).with_columns(pl.col("Date").str.to_date())
 
         _, current1, _ = t.state_cache(data, agg_with_null_col)
         self.assertEqual(pl.Float64, current1["AAPL Baseline Price Close"].dtype)
@@ -1770,18 +3564,31 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_csv_files_written(self):
         t = self._setup_state_test("agg-6")
-        t.state_cache(self._price_df([
-            ("2020-01-01", 100.0), ("2020-02-01", 200.0),
-        ]), self._price_change_agg())
+        t.state_cache(
+            self._price_df(
+                [
+                    ("2020-01-01", 100.0),
+                    ("2020-02-01", 200.0),
+                ]
+            ),
+            self._price_change_agg(),
+        )
         self.assertTrue(isfile(join(t.local_cache, "__test_current.csv")))
         self.assertTrue(isfile(join(t.local_cache, "__test_update.csv")))
         self.assertTrue(isfile(join(t.local_cache, "__test_delta.csv")))
         self.assertFalse(isfile(join(t.local_cache, "__test_previous.csv")))
         t.reset_counters()
-        t.state_cache(self._price_df([
-            ("2020-01-01", 100.0), ("2020-02-01", 200.0),
-            ("2020-03-01", 300.0), ("2020-04-01", 400.0),
-        ]), self._price_change_agg())
+        t.state_cache(
+            self._price_df(
+                [
+                    ("2020-01-01", 100.0),
+                    ("2020-02-01", 200.0),
+                    ("2020-03-01", 300.0),
+                    ("2020-04-01", 400.0),
+                ]
+            ),
+            self._price_change_agg(),
+        )
         self.assertTrue(isfile(join(t.local_cache, "__test_previous.csv")))
         self.assertEqual(4, len(t.csv_read(join(t.local_cache, "__test_current.csv"))))
         self.assertEqual(2, len(t.csv_read(join(t.local_cache, "__test_previous.csv"))))
@@ -1790,19 +3597,33 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_row_and_column_counters(self):
         t = self._setup_state_test("agg-7")
-        t.state_cache(self._price_df([
-            ("2020-01-01", 100.0), ("2020-02-01", 200.0), ("2020-03-01", 300.0),
-        ]), self._price_change_agg())
+        t.state_cache(
+            self._price_df(
+                [
+                    ("2020-01-01", 100.0),
+                    ("2020-02-01", 200.0),
+                    ("2020-03-01", 300.0),
+                ]
+            ),
+            self._price_change_agg(),
+        )
         self.assertEqual(3, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_CURRENT_ROWS))
         self.assertEqual(3, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_UPDATE_ROWS))
         self.assertEqual(3, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_DELTA_ROWS))
         self.assertEqual(0, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_PREVIOUS_ROWS))
         self.assertEqual(2, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_CURRENT_COLUMNS))
         t.reset_counters()
-        t.state_cache(self._price_df([
-            ("2020-01-01", 100.0), ("2020-02-01", 200.0), ("2020-03-01", 300.0),
-            ("2020-04-01", 400.0),
-        ]), self._price_change_agg())
+        t.state_cache(
+            self._price_df(
+                [
+                    ("2020-01-01", 100.0),
+                    ("2020-02-01", 200.0),
+                    ("2020-03-01", 300.0),
+                    ("2020-04-01", 400.0),
+                ]
+            ),
+            self._price_change_agg(),
+        )
         self.assertEqual(4, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_CURRENT_ROWS))
         self.assertEqual(4, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_UPDATE_ROWS))
         self.assertEqual(1, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_DELTA_ROWS))
@@ -1816,17 +3637,12 @@ class WrangleTest(unittest.TestCase):
             if "AAPL Price Close" in df.columns:
                 if "AAPL Derived" not in df.columns:
                     df = df.with_columns(pl.lit(None).cast(pl.Float64).alias("AAPL Derived"))
-                df = df.with_columns(
-                    pl.when(pl.col("AAPL Derived").is_null())
-                    .then(pl.col("AAPL Price Close") * 10.0)
-                    .otherwise(pl.col("AAPL Derived"))
-                    .alias("AAPL Derived"))
+                df = df.with_columns(pl.when(pl.col("AAPL Derived").is_null()).then(pl.col("AAPL Price Close") * 10.0).otherwise(pl.col("AAPL Derived")).alias("AAPL Derived"))
             out_cols = [c for c in ["Date", "AAPL Price Close", "AAPL Derived"] if c in df.columns]
             return df.select(out_cols)
 
         t = self._setup_state_test("agg-8")
-        _, current1, _ = t.state_cache(
-            self._price_df([("2020-01-01", 1.0), ("2020-02-01", 2.0)]), null_fill_agg)
+        _, current1, _ = t.state_cache(self._price_df([("2020-01-01", 1.0), ("2020-02-01", 2.0)]), null_fill_agg)
         self.assertEqual([10.0, 20.0], current1.sort("Date")["AAPL Derived"].to_list())
         t.reset_counters()
         delta, current2, _ = t.state_cache(
@@ -1847,11 +3663,7 @@ class WrangleTest(unittest.TestCase):
             if "AAPL Price Close" in df.columns:
                 if "AAPL Derived" not in df.columns:
                     df = df.with_columns(pl.lit(None).cast(pl.Float64).alias("AAPL Derived"))
-                df = df.with_columns(
-                    pl.when(pl.col("AAPL Derived").is_null())
-                    .then(pl.col("AAPL Price Close") * 10.0)
-                    .otherwise(pl.col("AAPL Derived"))
-                    .alias("AAPL Derived"))
+                df = df.with_columns(pl.when(pl.col("AAPL Derived").is_null()).then(pl.col("AAPL Price Close") * 10.0).otherwise(pl.col("AAPL Derived")).alias("AAPL Derived"))
             out_cols = [c for c in ["Date", "AAPL Price Close", "AAPL Derived"] if c in df.columns]
             return df.select(out_cols)
 
@@ -1874,17 +3686,17 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(3, len(delta))
 
     def _multi_key_dataframe(self, rows):
-        return pl.DataFrame({
-            "Date": [r[0] for r in rows],
-            "Account ID": [r[1] for r in rows],
-            "Balance": [float(r[2]) for r in rows],
-        }).with_columns(pl.col("Date").str.to_date())
+        return pl.DataFrame(
+            {
+                "Date": [r[0] for r in rows],
+                "Account ID": [r[1] for r in rows],
+                "Balance": [float(r[2]) for r in rows],
+            }
+        ).with_columns(pl.col("Date").str.to_date())
 
     def test_state_cache_multi_key_first_run(self):
         t = self._setup_state_test("mk-1")
-        delta, current, previous = t.state_cache(
-            self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
-            key_columns=["Date", "Account ID"])
+        delta, current, previous = t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]), key_columns=["Date", "Account ID"])
         self.assertEqual(2, len(delta))
         self.assertEqual(2, len(current))
         self.assertEqual(0, len(previous))
@@ -1900,52 +3712,53 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_multi_key_value_change(self):
         t = self._setup_state_test("mk-3")
-        t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
-                      key_columns=["Date", "Account ID"])
+        t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]), key_columns=["Date", "Account ID"])
         t.reset_counters()
-        delta, current, _ = t.state_cache(
-            self._multi_key_dataframe([("2026-01-01", "acc-1", 150.0), ("2026-01-01", "acc-2", 200.0)]),
-            key_columns=["Date", "Account ID"])
+        delta, current, _ = t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 150.0), ("2026-01-01", "acc-2", 200.0)]), key_columns=["Date", "Account ID"])
         self.assertEqual(1, len(delta))
         self.assertEqual(150.0, delta.filter(pl.col("Account ID") == "acc-1")["Balance"][0])
         self.assertEqual(2, len(current))
 
     def test_state_cache_multi_key_new_account(self):
         t = self._setup_state_test("mk-4")
-        t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0)]),
-                      key_columns=["Date", "Account ID"])
+        t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0)]), key_columns=["Date", "Account ID"])
         t.reset_counters()
-        delta, current, _ = t.state_cache(
-            self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
-            key_columns=["Date", "Account ID"])
+        delta, current, _ = t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]), key_columns=["Date", "Account ID"])
         self.assertEqual(1, len(delta))
         self.assertEqual("acc-2", delta["Account ID"][0])
         self.assertEqual(2, len(current))
 
     def test_state_cache_multi_key_new_date(self):
         t = self._setup_state_test("mk-5")
-        t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
-                      key_columns=["Date", "Account ID"])
+        t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]), key_columns=["Date", "Account ID"])
         t.reset_counters()
-        delta, current, _ = t.state_cache(
-            self._multi_key_dataframe([("2026-01-02", "acc-1", 110.0), ("2026-01-02", "acc-2", 210.0)]),
-            key_columns=["Date", "Account ID"])
+        delta, current, _ = t.state_cache(self._multi_key_dataframe([("2026-01-02", "acc-1", 110.0), ("2026-01-02", "acc-2", 210.0)]), key_columns=["Date", "Account ID"])
         self.assertEqual(2, len(delta))
         self.assertEqual(4, len(current))
         self.assertTrue(all(str(d) == "2026-01-02" for d in delta["Date"].to_list()))
 
     def test_state_cache_multi_key_partial_update(self):
         t = self._setup_state_test("mk-6")
-        t.state_cache(self._multi_key_dataframe([
-            ("2026-01-01", "acc-1", 100.0),
-            ("2026-01-01", "acc-2", 200.0),
-        ]), key_columns=["Date", "Account ID"])
+        t.state_cache(
+            self._multi_key_dataframe(
+                [
+                    ("2026-01-01", "acc-1", 100.0),
+                    ("2026-01-01", "acc-2", 200.0),
+                ]
+            ),
+            key_columns=["Date", "Account ID"],
+        )
         t.reset_counters()
-        delta, current, _ = t.state_cache(self._multi_key_dataframe([
-            ("2026-01-01", "acc-1", 150.0),
-            ("2026-01-01", "acc-2", 200.0),
-            ("2026-01-02", "acc-1", 155.0),
-        ]), key_columns=["Date", "Account ID"])
+        delta, _current, _ = t.state_cache(
+            self._multi_key_dataframe(
+                [
+                    ("2026-01-01", "acc-1", 150.0),
+                    ("2026-01-01", "acc-2", 200.0),
+                    ("2026-01-02", "acc-1", 155.0),
+                ]
+            ),
+            key_columns=["Date", "Account ID"],
+        )
         self.assertEqual(2, len(delta))
         delta_sorted = delta.sort(["Date", "Account ID"])
         self.assertEqual("2026-01-01", str(delta_sorted["Date"][0]))
@@ -1954,43 +3767,41 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_multi_key_duplicate_keys_in_update(self):
         t = self._setup_state_test("mk-7")
-        delta, current, _ = t.state_cache(self._multi_key_dataframe([
-            ("2026-01-01", "acc-1", 100.0),
-            ("2026-01-01", "acc-1", 999.0),
-        ]), key_columns=["Date", "Account ID"])
+        delta, current, _ = t.state_cache(
+            self._multi_key_dataframe(
+                [
+                    ("2026-01-01", "acc-1", 100.0),
+                    ("2026-01-01", "acc-1", 999.0),
+                ]
+            ),
+            key_columns=["Date", "Account ID"],
+        )
         self.assertEqual(1, len(current))
         self.assertEqual(999.0, current["Balance"][0])
         self.assertEqual(1, len(delta))
 
     def test_state_cache_multi_key_update_supersedes_current(self):
         t = self._setup_state_test("mk-8")
-        t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0)]),
-                      key_columns=["Date", "Account ID"])
+        t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0)]), key_columns=["Date", "Account ID"])
         t.reset_counters()
-        delta, current, previous = t.state_cache(
-            self._multi_key_dataframe([("2026-01-01", "acc-1", 999.0)]),
-            key_columns=["Date", "Account ID"])
+        delta, current, previous = t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 999.0)]), key_columns=["Date", "Account ID"])
         self.assertEqual(1, len(delta))
         self.assertEqual(999.0, current["Balance"][0])
         self.assertEqual(100.0, previous["Balance"][0])
 
     def test_state_cache_multi_key_counters(self):
         t = self._setup_state_test("mk-9")
-        t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0)]),
-                      key_columns=["Date", "Account ID"])
+        t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0)]), key_columns=["Date", "Account ID"])
         self.assertEqual(1, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_UPDATE_COLUMNS))
         self.assertEqual(1, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_CURRENT_COLUMNS))
         self.assertEqual(1, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_DELTA_COLUMNS))
 
     def test_state_cache_multi_key_clean(self):
         t = self._setup_state_test("mk-10")
-        t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
-                      key_columns=["Date", "Account ID"])
+        t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]), key_columns=["Date", "Account ID"])
         t.reset_counters()
         plugin.config.force_reprocessing = True
-        delta, current, previous = t.state_cache(
-            self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
-            key_columns=["Date", "Account ID"])
+        delta, current, previous = t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]), key_columns=["Date", "Account ID"])
         self.assertEqual(2, len(delta))
         self.assertEqual(2, len(current))
         self.assertEqual(0, len(previous))
@@ -2003,23 +3814,67 @@ class WrangleTest(unittest.TestCase):
                 df = df.with_columns((pl.col("Balance") * 2).alias("Balance Double"))
             return df
 
-        delta, current, _ = t.state_cache(
-            self._multi_key_dataframe([("2026-01-01", "acc-1", 50.0), ("2026-01-01", "acc-2", 100.0)]),
-            aggregate_func=_agg, key_columns=["Date", "Account ID"])
+        _delta, current, _ = t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 50.0), ("2026-01-01", "acc-2", 100.0)]), aggregate_func=_agg, key_columns=["Date", "Account ID"])
         self.assertIn("Balance Double", current.columns)
         doubles = current.sort(["Date", "Account ID"])["Balance Double"].to_list()
         self.assertEqual([100.0, 200.0], doubles)
 
     def test_state_cache_multi_key_null_date_dropped(self):
         t = self._setup_state_test("mk-13")
-        data = pl.DataFrame({
-            "Date": [None, "2026-01-01"],
-            "Account ID": ["acc-x", "acc-1"],
-            "Balance": [999.0, 100.0],
-        }).with_columns(pl.col("Date").str.to_date(strict=False))
-        delta, current, _ = t.state_cache(data, key_columns=["Date", "Account ID"])
+        data = pl.DataFrame(
+            {
+                "Date": [None, "2026-01-01"],
+                "Account ID": ["acc-x", "acc-1"],
+                "Balance": [999.0, 100.0],
+            }
+        ).with_columns(pl.col("Date").str.to_date(strict=False))
+        _delta, current, _ = t.state_cache(data, key_columns=["Date", "Account ID"])
         self.assertEqual(1, len(current))
         self.assertEqual("acc-1", current["Account ID"][0])
+
+    def test_state_cache_replace_partition(self):
+        t = self._setup_state_test("mk-14")
+        t.state_cache(
+            self._multi_key_dataframe(
+                [
+                    ("2025-12-31", "acc-1", 10.0),
+                    ("2026-01-01", "acc-1", 100.0),
+                    ("2026-01-02", "acc-2", 200.0),
+                    ("2026-01-03", "acc-3", 300.0),
+                ]
+            ),
+            key_columns=["Date", "Account ID"],
+        )
+        t.reset_counters()
+        delta, current, previous = t.state_cache(
+            self._multi_key_dataframe(
+                [
+                    ("2026-01-01", "acc-1", 150.0),
+                    ("2026-01-02", "acc-2", 200.0),
+                    ("2026-01-04", "acc-4", 400.0),
+                ]
+            ),
+            key_columns=["Date", "Account ID"],
+            replace=pl.col("Date").dt.year() == 2026,
+        )
+        self.assertEqual(["acc-1", "acc-1", "acc-2", "acc-4"], current.sort("Date")["Account ID"].to_list())
+        self.assertEqual([10.0, 150.0, 200.0, 400.0], current.sort("Date")["Balance"].to_list())
+        self.assertEqual(["acc-1", "acc-4"], delta.sort("Date")["Account ID"].to_list())
+        self.assertEqual(4, len(previous))
+        deleted = pl.read_csv(join(t.local_cache, "__test_deleted.csv"))
+        self.assertEqual(["acc-3"], deleted["Account ID"].to_list())
+
+    def test_state_cache_replace_clears_values(self):
+        t = self._setup_state_test("mk-15")
+        t.state_cache(pl.DataFrame({"Date": ["2026-01-01"], "Account ID": ["acc-1"], "Category": ["Food"]}).with_columns(pl.col("Date").str.to_date()), key_columns=["Date", "Account ID"])
+        t.reset_counters()
+        delta, current, _ = t.state_cache(
+            pl.DataFrame({"Date": ["2026-01-01"], "Account ID": ["acc-1"], "Category": [None]}, schema_overrides={"Category": pl.Utf8}).with_columns(pl.col("Date").str.to_date()),
+            key_columns=["Date", "Account ID"],
+            replace=pl.col("Date").dt.year() == 2026,
+        )
+        self.assertEqual([None], current["Category"].to_list())
+        self.assertEqual(1, len(delta))
 
     def test_state_cache_removed_column_counter(self):
         t = self._setup_state_test("test-6")
@@ -2030,12 +3885,14 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_multiple_new_columns(self):
         t = self._setup_state_test("test-2")
-        update = pl.DataFrame({
-            "Date": ["2020-01-01", "2020-02-01"],
-            "Value": [1.0, 2.0],
-            "ColA": [10.0, 20.0],
-            "ColB": [100.0, 200.0],
-        }).with_columns(pl.col("Date").str.to_date())
+        update = pl.DataFrame(
+            {
+                "Date": ["2020-01-01", "2020-02-01"],
+                "Value": [1.0, 2.0],
+                "ColA": [10.0, 20.0],
+                "ColB": [100.0, 200.0],
+            }
+        ).with_columns(pl.col("Date").str.to_date())
         delta, current, previous = t.state_cache(update)
         self.assertIn("ColA", current.columns)
         self.assertIn("ColB", current.columns)
@@ -2060,15 +3917,16 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_multi_key_new_column(self):
         t = self._setup_state_test("mk-14")
-        t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
-                      key_columns=["Date", "Account ID"])
+        t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]), key_columns=["Date", "Account ID"])
         t.reset_counters()
-        update = pl.DataFrame({
-            "Date": ["2026-01-01", "2026-01-01"],
-            "Account ID": ["acc-1", "acc-2"],
-            "Balance": [100.0, 200.0],
-            "Notes": ["note-a", "note-b"],
-        }).with_columns(pl.col("Date").str.to_date())
+        update = pl.DataFrame(
+            {
+                "Date": ["2026-01-01", "2026-01-01"],
+                "Account ID": ["acc-1", "acc-2"],
+                "Balance": [100.0, 200.0],
+                "Notes": ["note-a", "note-b"],
+            }
+        ).with_columns(pl.col("Date").str.to_date())
         delta, current, previous = t.state_cache(update, key_columns=["Date", "Account ID"])
         self.assertIn("Notes", current.columns)
         self.assertIn("Notes", previous.columns)
@@ -2078,17 +3936,17 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_multi_key_removed_column(self):
         t = self._setup_state_test("mk-15")
-        initial = pl.DataFrame({
-            "Date": ["2026-01-01", "2026-01-01"],
-            "Account ID": ["acc-1", "acc-2"],
-            "Balance": [100.0, 200.0],
-            "Notes": ["note-a", "note-b"],
-        }).with_columns(pl.col("Date").str.to_date())
+        initial = pl.DataFrame(
+            {
+                "Date": ["2026-01-01", "2026-01-01"],
+                "Account ID": ["acc-1", "acc-2"],
+                "Balance": [100.0, 200.0],
+                "Notes": ["note-a", "note-b"],
+            }
+        ).with_columns(pl.col("Date").str.to_date())
         t.state_cache(initial, key_columns=["Date", "Account ID"])
         t.reset_counters()
-        delta, current, previous = t.state_cache(
-            self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
-            key_columns=["Date", "Account ID"])
+        delta, current, previous = t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]), key_columns=["Date", "Account ID"])
         self.assertIn("Notes", current.columns)
         self.assertIsNone(current.sort(["Date", "Account ID"])["Notes"][0])
         self.assertEqual("note-a", previous.sort(["Date", "Account ID"])["Notes"][0])
@@ -2097,18 +3955,22 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_coalesce_preserves_current_when_update_null(self):
         t = self._setup_state_test("sc-1")
-        first = pl.DataFrame({
-            "Date": ["2024-01-01", "2024-01-02"],
-            "Value": [1.0, 2.0],
-            "Extra": [10.0, 20.0],
-        }).with_columns(pl.col("Date").str.to_date())
+        first = pl.DataFrame(
+            {
+                "Date": ["2024-01-01", "2024-01-02"],
+                "Value": [1.0, 2.0],
+                "Extra": [10.0, 20.0],
+            }
+        ).with_columns(pl.col("Date").str.to_date())
         t.state_cache(first)
         t.reset_counters()
-        update = pl.DataFrame({
-            "Date": ["2024-01-02", "2024-01-03"],
-            "Value": [None, 3.0],
-            "Extra": [None, 30.0],
-        }).with_columns(pl.col("Date").str.to_date())
+        update = pl.DataFrame(
+            {
+                "Date": ["2024-01-02", "2024-01-03"],
+                "Value": [None, 3.0],
+                "Extra": [None, 30.0],
+            }
+        ).with_columns(pl.col("Date").str.to_date())
         _, current, _ = t.state_cache(update)
         by_date = {row[0].isoformat(): (row[1], row[2]) for row in current.select(["Date", "Value", "Extra"]).rows()}
         self.assertEqual((1.0, 10.0), by_date["2024-01-01"])
@@ -2129,16 +3991,36 @@ class WrangleTest(unittest.TestCase):
         return t
 
     def _df(self, date_value_pairs):
-        return pl.DataFrame({
-            "Date": [p[0] for p in date_value_pairs],
-            "Value": [float(p[1]) for p in date_value_pairs],
-        }).with_columns(pl.col("Date").str.to_date())
+        return pl.DataFrame(
+            {
+                "Date": [p[0] for p in date_value_pairs],
+                "Value": [float(p[1]) for p in date_value_pairs],
+            }
+        ).with_columns(pl.col("Date").str.to_date())
 
-    def run_plugin(self, plugin_name, repo_scope=plugin.RepoScope.LOCAL, test_name="replete_1", prepare_only=False, log_level="info",
-                   disable_sheet_downloads=False, disable_database_downloads=False, disable_drive_downloads=False, disable_source_downloads=False,
-                   disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
-                   enable_rerun=True, force_reprocessing=False, force_downloads=False,
-                   counter_asserts=None, custom_asserts=None, file_asserts=None):
+    def run_plugin(
+        self,
+        plugin_name,
+        repo_scope=plugin.RepoScope.LOCAL,
+        test_name="replete_1",
+        prepare_only=False,
+        log_level="info",
+        disable_sheet_downloads=False,
+        disable_database_downloads=False,
+        disable_drive_downloads=False,
+        disable_source_downloads=False,
+        disable_sheet_uploads=True,
+        disable_database_uploads=True,
+        disable_drive_uploads=True,
+        enable_rerun=True,
+        force_reprocessing=False,
+        force_downloads=False,
+        today=None,
+        counter_asserts=None,
+        custom_asserts=None,
+        file_asserts=None,
+        rerun_errored=None,
+    ):
         global _ASSERT_PASS_COL
         if file_asserts is None:
             file_asserts = {}
@@ -2161,14 +4043,19 @@ class WrangleTest(unittest.TestCase):
         plugin.config.disable_drive_uploads = disable_drive_uploads
         plugin.config.disable_sheet_uploads = disable_sheet_uploads
         plugin.config.disable_database_uploads = disable_database_uploads
+        fixture_file = join(DIR_ROOT, "src/test/resources/repos", repo_scope, plugin_name, test_name, "fixture.toml")
+        if today is None and isfile(fixture_file):
+            with open(fixture_file, "rb") as toml_file:
+                today = tomllib.load(toml_file).get("today")
+        plugin.config.clock = None if today is None else datetime.datetime.fromisoformat(today)
         plugin.database_close()
-        os.environ['WRANGLE_DATABASE_HOST'] = os.environ['POSTGRES_IP_PROD']
+        os.environ["WRANGLE_DATABASE_HOST"] = os.environ["POSTGRES_IP_PROD"]
         plugin.database_open()
         dir_target = join(DIR_ROOT, "target")
         if not isdir(dir_target):
             os.makedirs(dir_target)
         plugin_module = getattr(importlib.import_module(f"wrangle.plugin.{plugin_name}"), plugin_name.title())()
-        print("", flush=True)
+        print(flush=True)
         self._load_caches(plugin_module, join(DIR_ROOT, "src/test/resources/repos", repo_scope, plugin_name, test_name, "data"))
         label = f"{{:<22}} {f'[{plugin_name.title()}]':<15}   {f'[{repo_scope.name}]':<10}   {f'[{test_name}]'}"
 
@@ -2205,7 +4092,7 @@ class WrangleTest(unittest.TestCase):
                 _print("STARTING (assert)")
                 assert_started = time.time()
                 print_log("Assert", "Starting ...")
-                self._assert_counters(noop_counters, ASSERT_NOOP)
+                self._assert_counters(noop_counters, merge_asserts(ASSERT_NOOP, {"counter_equals": {source: {plugin.CTR_ACT_ERRORED: count} for source, count in (rerun_errored or {}).items()}}))
                 print_log("Assert", f"Finished in [{time.time() - assert_started:.3f}] sec")
                 _print("FINISHED (assert)")
                 second_counters = copy.deepcopy(noop_counters)
@@ -2224,7 +4111,7 @@ class WrangleTest(unittest.TestCase):
                 _print("STARTING (assert)")
                 assert_started = time.time()
                 print_log("Assert", "Starting ...")
-                self._assert_counters(reload_counters, ASSERT_RELOAD)
+                self._assert_counters(reload_counters, merge_asserts(ASSERT_RELOAD, {"counter_equals": {source: {plugin.CTR_ACT_ERRORED: count} for source, count in (rerun_errored or {}).items()}}))
                 print_log("Assert", f"Finished in [{time.time() - assert_started:.3f}] sec")
                 _print("FINISHED (assert)")
                 _print("STARTING (assert)")
@@ -2236,9 +4123,74 @@ class WrangleTest(unittest.TestCase):
                 _print("STARTING (assert)")
                 assert_started = time.time()
                 print_log("Assert", "Starting ...")
-                self._assert_customs(custom_asserts, first_counters, second_counters, reload_counters)
+                self._assert_customs(custom_asserts, first_counters, second_counters, reload_counters, plugin_module.local_cache)
                 print_log("Assert", f"Finished in [{time.time() - assert_started:.3f}] sec")
                 _print("FINISHED (assert)")
+
+    def _bank_run(
+        self,
+        test_name,
+        today="2026-01-15T12:00:00",
+        source=False,
+        sheet_downloads=None,
+        moved_tabs=(),
+        restyled_tabs=(),
+        rerun=True,
+        force=False,
+        errored=None,
+        standing=0,
+        counters=None,
+        file_asserts=None,
+        custom_asserts=None,
+    ):
+        bank_api_offline(test_name)
+        if sheet_downloads is not None:
+            sheet_download_offline(sheet_downloads, moved_tabs, restyled_tabs)
+        self.run_plugin(
+            "bank",
+            plugin.RepoScope.LOCAL,
+            test_name,
+            log_level="info",
+            disable_sheet_downloads=True,
+            disable_database_downloads=True,
+            disable_drive_downloads=True,
+            disable_source_downloads=not source,
+            disable_sheet_uploads=True,
+            disable_database_uploads=True,
+            disable_drive_uploads=True,
+            enable_rerun=rerun,
+            force_reprocessing=force,
+            force_downloads=False,
+            today=today,
+            rerun_errored={plugin.CTR_SRC_DATA: standing} if standing else None,
+            counter_asserts=merge_asserts(
+                merge_asserts(
+                    ASSERT_RUN,
+                    {
+                        "counter_equals": {
+                            counter: {plugin.CTR_ACT_ERRORED: (errored or {}).get(counter, 0) + (standing if counter == plugin.CTR_SRC_DATA else 0)}
+                            for counter in (plugin.CTR_SRC_SOURCES, plugin.CTR_SRC_FILES, plugin.CTR_SRC_DATA, plugin.CTR_SRC_EGRESS)
+                        }
+                    },
+                ),
+                {"counter_equals": counters or {}},
+            ),
+            custom_asserts=custom_asserts,
+            file_asserts=file_asserts,
+        )
+
+    def _bank_unusable(self, test_name, file_asserts=None):
+        self._bank_run(
+            test_name,
+            rerun=False,
+            force=True,
+            errored={plugin.CTR_SRC_SOURCES: 1},
+            file_asserts={
+                "__bank_balances_current.csv": [assert_file_size(min_rows=1, max_rows=1), assert_file_column_values("Account", ["Raw One"])],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["TAB_UNUSABLE"])],
+                **(file_asserts or {}),
+            },
+        )
 
     def _save_pass_snapshot(self, plugin_module, pass_number):
         suffix_map = {
@@ -2257,6 +4209,15 @@ class WrangleTest(unittest.TestCase):
             raise FileNotFoundError(f"Test data directory [{source}] does not exist")
         shutil.rmtree(plugin_module.local_cache, ignore_errors=True)
         shutil.copytree(source, plugin_module.local_cache, ignore=shutil.ignore_patterns(".git*", "~$*"))
+        fixture_path = join(dirname(source), "fixture.toml")
+        if isfile(fixture_path):
+            with open(fixture_path, "rb") as fixture_file:
+                mtimes = tomllib.load(fixture_file).get("mtimes", {})
+            for file_name in sorted(os.listdir(plugin_module.local_cache), key=lambda name: name in mtimes):
+                stamp = mtimes.get(file_name, mtimes.get("*"))
+                if stamp is not None:
+                    stamp_seconds = datetime.datetime.fromisoformat(stamp).timestamp()
+                    os.utime(join(plugin_module.local_cache, file_name), (stamp_seconds, stamp_seconds))
         plugin_module.print_log(f"Files written from [{source}] to [{plugin_module.local_cache}]")
 
     def _assert_outputs(self, plugin_module, verifications, enable_rerun=False):
@@ -2309,8 +4270,7 @@ class WrangleTest(unittest.TestCase):
                 for counter_action, expected in actions.items():
                     started = time.time()
                     actual_value = actual.get(counter_source, {}).get(counter_action, 0)
-                    assert_fn(actual_value, expected,
-                              f"Counter [{counter_source} {counter_action}] {label} assertion failed [{actual_value}] {op} [{expected}]")
+                    assert_fn(actual_value, expected, f"Counter [{counter_source} {counter_action}] {label} assertion failed [{actual_value}] {op} [{expected}]")
                     verb = _COUNTER_COMPARATOR_VERBS.get(comparator_key, comparator_key)
                     source_slug = counter_source.lower().replace(" ", "_")
                     action_slug = counter_action.lower().replace(" ", "_")
@@ -2329,10 +4289,10 @@ class WrangleTest(unittest.TestCase):
             action_slug = plugin.CTR_ACT_ERRORED.lower().replace(" ", "_")
             _print_assert_pass(f"assert_counter_{source_slug}_{action_slug}_equals_0 ({_format_assert_elapsed(time.time() - started)})", f"actual={actual_value}")
 
-    def _assert_customs(self, assertions, first, second, third):
+    def _assert_customs(self, assertions, first, second, third, local_cache):
         for custom_assert in assertions:
             started = time.time()
-            result = custom_assert(first, second, third)
+            result = custom_assert(first, second, third, local_cache=local_cache)
             elapsed = time.time() - started
             if result is not None:
                 self.fail(f"Custom assert [{custom_assert.__name__}] failed. {result}")
@@ -2344,7 +4304,7 @@ class WrangleTest(unittest.TestCase):
             _print_assert_pass(f"{custom_assert.__name__} ({_format_assert_elapsed(elapsed)})", *actuals)
 
     def setUp(self):
-        print("", flush=True)
+        print(flush=True)
         _load_csv.cache_clear()
         shutil.rmtree(join(DIR_ROOT, "target", "data"), ignore_errors=True)
         os.makedirs(join(DIR_ROOT, "target", "data"))
@@ -2375,7 +4335,7 @@ _STR_DTYPES = (pl.String, pl.Utf8, pl.Null)
 
 
 def _is_string_col(name, dtype):
-    return name != 'Date' and dtype in _STR_DTYPES
+    return name != "Date" and dtype in _STR_DTYPES
 
 
 def _first_true_index(mask_series: pl.Series | bool):
@@ -2388,9 +4348,7 @@ def _first_true_index(mask_series: pl.Series | bool):
 def _count_leading_zero_rows(csv_df, numeric_cols):
     if not numeric_cols:
         return 0
-    mask = csv_df.select(
-        pl.any_horizontal((pl.col(c) == 0) & pl.col(c).is_not_null() for c in numeric_cols).alias("z")
-    )["z"]
+    mask = csv_df.select(pl.any_horizontal((pl.col(c) == 0) & pl.col(c).is_not_null() for c in numeric_cols).alias("z"))["z"]
     first_false = _first_true_index(~mask)
     return len(mask) if first_false is None else int(first_false)
 
@@ -2398,9 +4356,7 @@ def _count_leading_zero_rows(csv_df, numeric_cols):
 def _count_trailing_zero_rows(csv_df, numeric_cols):
     if not numeric_cols:
         return 0
-    mask = csv_df.select(
-        pl.any_horizontal((pl.col(c) == 0) & pl.col(c).is_not_null() for c in numeric_cols).alias("z")
-    )["z"]
+    mask = csv_df.select(pl.any_horizontal((pl.col(c) == 0) & pl.col(c).is_not_null() for c in numeric_cols).alias("z"))["z"]
     first_false_from_end = _first_true_index(~mask.reverse())
     return len(mask) if first_false_from_end is None else int(first_false_from_end)
 
@@ -2408,9 +4364,7 @@ def _count_trailing_zero_rows(csv_df, numeric_cols):
 def _count_leading_none_rows(csv_df, cols):
     if not cols:
         return 0
-    mask = csv_df.select(
-        pl.any_horizontal(pl.col(c).is_null() for c in cols).alias("n")
-    )["n"]
+    mask = csv_df.select(pl.any_horizontal(pl.col(c).is_null() for c in cols).alias("n"))["n"]
     first_false = _first_true_index(~mask)
     return len(mask) if first_false is None else int(first_false)
 
@@ -2418,9 +4372,7 @@ def _count_leading_none_rows(csv_df, cols):
 def _count_trailing_none_rows(csv_df, cols):
     if not cols:
         return 0
-    mask = csv_df.select(
-        pl.any_horizontal(pl.col(c).is_null() for c in cols).alias("n")
-    )["n"]
+    mask = csv_df.select(pl.any_horizontal(pl.col(c).is_null() for c in cols).alias("n"))["n"]
     first_false_from_end = _first_true_index(~mask.reverse())
     return len(mask) if first_false_from_end is None else int(first_false_from_end)
 
@@ -2519,15 +4471,9 @@ def assert_file_nones_per_col(max_nones=0, after_first_rows=False, after_last_ro
         if not cols:
             return None
         if after_first_rows:
-            violations = csv_df.select([
-                (pl.col(c).is_null() & pl.col(c).is_not_null().cast(pl.UInt32).cum_sum().gt(0)).sum().alias(c)
-                for c in cols
-            ])
+            violations = csv_df.select([(pl.col(c).is_null() & pl.col(c).is_not_null().cast(pl.UInt32).cum_sum().gt(0)).sum().alias(c) for c in cols])
         elif after_last_rows:
-            violations = csv_df.select([
-                (pl.col(c).is_null() & pl.col(c).is_not_null().reverse().cast(pl.UInt32).cum_sum().reverse().gt(0)).sum().alias(c)
-                for c in cols
-            ])
+            violations = csv_df.select([(pl.col(c).is_null() & pl.col(c).is_not_null().reverse().cast(pl.UInt32).cum_sum().reverse().gt(0)).sum().alias(c) for c in cols])
         else:
             violations = csv_df.select([pl.col(c).null_count().alias(c) for c in cols])
         failed = [c for c in cols if violations[c][0] > max_nones]
@@ -2544,7 +4490,7 @@ def assert_file_nones_per_col(max_nones=0, after_first_rows=False, after_last_ro
 def assert_file_zeroes_per_row(max_zeroes=0, after_first_rows=False, after_last_rows=False, include=None, exclude=None):
     def _assert(file_path, *_):
         csv_df = _load_csv(file_path)
-        numeric_cols = [col for col in _filter_cols(csv_df, include, exclude) if csv_df.schema[col] in _NUMERIC_DTYPES]
+        numeric_cols = [col for col in _filter_cols(csv_df, include, exclude) if type(csv_df.schema[col]) in _NUMERIC_DTYPES]
         if not numeric_cols:
             return None
         if after_first_rows:
@@ -2568,21 +4514,15 @@ def assert_file_zeroes_per_row(max_zeroes=0, after_first_rows=False, after_last_
 def assert_file_zeroes_per_col(max_zeroes=0, after_first_rows=False, after_last_rows=False, include=None, exclude=None):
     def _assert(file_path, *_):
         csv_df = _load_csv(file_path)
-        numeric_cols = [col for col in _filter_cols(csv_df, include, exclude) if csv_df.schema[col] in _NUMERIC_DTYPES]
+        numeric_cols = [col for col in _filter_cols(csv_df, include, exclude) if type(csv_df.schema[col]) in _NUMERIC_DTYPES]
         if not numeric_cols:
             return None
         if after_first_rows:
-            violations = csv_df.select([
-                ((pl.col(c).eq(0) & pl.col(c).is_not_null()) &
-                 (pl.col(c).ne(0) | pl.col(c).is_null()).cast(pl.UInt32).cum_sum().gt(0)).sum().alias(c)
-                for c in numeric_cols
-            ])
+            violations = csv_df.select([((pl.col(c).eq(0) & pl.col(c).is_not_null()) & (pl.col(c).ne(0) | pl.col(c).is_null()).cast(pl.UInt32).cum_sum().gt(0)).sum().alias(c) for c in numeric_cols])
         elif after_last_rows:
-            violations = csv_df.select([
-                ((pl.col(c).eq(0) & pl.col(c).is_not_null()) &
-                 (pl.col(c).ne(0) | pl.col(c).is_null()).reverse().cast(pl.UInt32).cum_sum().reverse().gt(0)).sum().alias(c)
-                for c in numeric_cols
-            ])
+            violations = csv_df.select(
+                [((pl.col(c).eq(0) & pl.col(c).is_not_null()) & (pl.col(c).ne(0) | pl.col(c).is_null()).reverse().cast(pl.UInt32).cum_sum().reverse().gt(0)).sum().alias(c) for c in numeric_cols]
+            )
         else:
             violations = csv_df.select([(pl.col(c).eq(0) & pl.col(c).is_not_null()).sum().alias(c) for c in numeric_cols])
         failed = [c for c in numeric_cols if violations[c][0] > max_zeroes]
@@ -2670,6 +4610,61 @@ def assert_file_dates(start_date=None, end_date=None, end_date_at_least=None, ma
     return _assert
 
 
+def assert_file_column_values(column, values, sort_by=None, raw=False):
+    def _assert(file_path, *_):
+        csv_df = pl.read_csv(file_path, infer_schema=False) if raw else _load_csv(file_path)
+        actual = (csv_df.sort(sort_by) if sort_by is not None else csv_df)[column].cast(pl.Utf8).to_list()
+        if actual != values:
+            msg = f"assert_file_column_values: [{basename(file_path)}] column [{column}] expected {values}, got {actual}"
+            dataframe_print("Assert", csv_df, msg, level="error")
+            return msg
+        return None
+
+    _assert.__name__ = f"assert_file_column_values_{column.lower().replace(' ', '_')}"
+    return _assert
+
+
+def assert_file_column_distinct(column, count):
+    def _assert(file_path, *_):
+        csv_df = _load_csv(file_path)
+        actual = csv_df[column].n_unique()
+        if actual != count:
+            msg = f"assert_file_column_distinct: [{basename(file_path)}] column [{column}] expected {count} distinct, got {actual}"
+            dataframe_print("Assert", csv_df, msg, level="error")
+            return msg
+        return None
+
+    _assert.__name__ = f"assert_file_column_distinct_{column.lower().replace(' ', '_')}_{count}"
+    return _assert
+
+
+def assert_file_columns(columns):
+    def _assert(file_path, *_):
+        actual = _load_csv(file_path).columns
+        if actual != columns:
+            msg = f"assert_file_columns: [{basename(file_path)}] expected columns {columns}, got {actual}"
+            dataframe_print("Assert", pl.DataFrame(), msg, level="error")
+            return msg
+        return None
+
+    _assert.__name__ = "assert_file_columns"
+    return _assert
+
+
+def assert_file_max_rows_per_value(column, max_rows):
+    def _assert(file_path, *_):
+        csv_df = _load_csv(file_path)
+        over_df = csv_df.group_by(column).len().filter(pl.col("len") > max_rows)
+        if len(over_df):
+            msg = f"assert_file_max_rows_per_value: [{basename(file_path)}] column [{column}] values with >{max_rows} rows"
+            dataframe_print("Assert", over_df, msg, level="error")
+            return msg
+        return None
+
+    _assert.__name__ = f"assert_file_max_{max_rows}_rows_per_{column.lower().replace(' ', '_')}"
+    return _assert
+
+
 def assert_file_equal(exclude=None):
     def _assert(file_path, key_filename="", *_):
         global _ASSERT_FILE_EQUAL_SEEN
@@ -2738,15 +4733,24 @@ def assert_file_subset(keys=None, value="value"):
     return _assert
 
 
-def assert_custom_rows_delta(equals=None, at_least=None, at_most=None):
+def assert_custom_rows_delta(equals=None, at_least=None, at_most=None, state=None):
     if equals is None and at_least is None and at_most is None:
         raise ValueError("assert_custom_rows_delta requires one of equals, at_least, or at_most")
 
-    def _assert(first, _, third):
-        current_rows = third.get(plugin.CTR_SRC_DATA, {}).get(plugin.CTR_ACT_CURRENT_ROWS, 0)
-        previous_rows = first.get(plugin.CTR_SRC_DATA, {}).get(plugin.CTR_ACT_PREVIOUS_ROWS, 0)
+    def _assert(first, _, third, local_cache=""):
+        if state is None:
+            current_rows = third.get(plugin.CTR_SRC_DATA, {}).get(plugin.CTR_ACT_CURRENT_ROWS, 0)
+            previous_rows = first.get(plugin.CTR_SRC_DATA, {}).get(plugin.CTR_ACT_PREVIOUS_ROWS, 0)
+        else:
+
+            def state_rows(kind, suffix):
+                state_file = join(local_cache, f"__{state}_{kind}{suffix}.csv")
+                return len(_load_csv(state_file)) if isfile(state_file) else 0
+
+            current_rows = state_rows("current", "_3_reprocess")
+            previous_rows = state_rows("previous", "_1_run")
         delta = current_rows - previous_rows
-        _assert._last_delta = delta  # type: ignore
+        _assert.last_delta = delta  # pyright: ignore[reportFunctionMemberAccess]
         if equals is not None and delta != equals:
             return f"assert_rows_delta: expected delta == {equals}, got {delta} (current_rows={current_rows}, previous_rows={previous_rows})"
         if at_least is not None and delta < at_least:
@@ -2755,13 +4759,11 @@ def assert_custom_rows_delta(equals=None, at_least=None, at_most=None):
             return f"assert_rows_delta: expected delta < {at_most}, got {delta} (current_rows={current_rows}, previous_rows={previous_rows})"
         return None
 
-    parts = [f"is_{equals}" if equals is not None else None,
-             f"at_least_{at_least}" if at_least is not None else None,
-             f"at_most_{at_most}" if at_most is not None else None]
+    parts = [f"is_{equals}" if equals is not None else None, f"at_least_{at_least}" if at_least is not None else None, f"at_most_{at_most}" if at_most is not None else None]
     suffix = "_".join(p for p in parts if p is not None)
-    _assert.last_delta = None  # type: ignore
-    _assert._pass_values = lambda: [f"actual={_assert.last_delta}"]  # type: ignore
-    _assert.__name__ = f"assert_custom_rows_delta_{suffix}" if suffix else "assert_custom_rows_delta"
+    _assert.last_delta = None  # pyright: ignore[reportFunctionMemberAccess]
+    _assert._pass_values = lambda: [f"actual={_assert.last_delta}"]  # pyright: ignore[reportFunctionMemberAccess]
+    _assert.__name__ = f"assert_custom_rows_delta{'' if state is None else f'_{state}'}_{suffix}"
     return _assert
 
 
@@ -2868,32 +4870,89 @@ def reset_config(log="warning"):
     plugin.config.disable_source_downloads = False
     plugin.config.disable_sheet_downloads = False
     plugin.config.disable_database_downloads = False
+    plugin.config.clock = None
     plugin.database_close()
 
 
 def drive_delete(drive_dir, file_name):
     if drive_dir is None or file_name is None:
         return
-    credentials = google.oauth2.service_account.Credentials.from_service_account_file(
-        get_file(".google_service_account.json"), scopes=['https://www.googleapis.com/auth/drive'])
-    service = build('drive', 'v3', credentials=credentials, cache_discovery=False)
+    credentials = google.oauth2.service_account.Credentials.from_service_account_file(get_file(".google_service_account.json"), scopes=["https://www.googleapis.com/auth/drive"])
+    service = build("drive", "v3", credentials=credentials, cache_discovery=False)
     token = None
     drive_file_id = None
     while True:
-        response = service.files().list(
-            q=f"'{drive_dir}' in parents and name = '{file_name}' and trashed = false",
-            spaces='drive',
-            fields='nextPageToken, files(id, name)',
-            pageToken=token
-        ).execute()
-        for drive_file in response.get('files', []):
+        response = service.files().list(q=f"'{drive_dir}' in parents and name = '{file_name}' and trashed = false", spaces="drive", fields="nextPageToken, files(id, name)", pageToken=token).execute()
+        for drive_file in response.get("files", []):
             drive_file_id = drive_file["id"]
             break
-        token = response.get('nextPageToken')
+        token = response.get("nextPageToken")
         if not token or drive_file_id is not None:
             break
     if drive_file_id is not None:
         service.files().delete(fileId=drive_file_id).execute()
+
+
+def bank_api_offline(test_name, scope="local"):
+    fixture_dir = join(DIR_ROOT, "src/test/resources/repos", scope, "bank", test_name, "data")
+
+    def _rows(resource):
+        with open(join(fixture_dir, f"_redbark_{resource}.csv")) as resource_file:
+            return [{key: (value if value != "" else None) for key, value in row.items()} for row in csv.DictReader(resource_file)]
+
+    def _urlopen(request, *_args, **_kwargs):
+        url = urllib.parse.urlparse(request.full_url)
+        query = {key: values[0] for key, values in urllib.parse.parse_qs(url.query).items()}
+        resource = url.path.rsplit("/", 1)[-1]
+        if resource == "transactions" and isfile(join(fixture_dir, "_redbark_errors.csv")):
+            for error in _rows("errors"):
+                if error["accountId"] == query.get("accountId"):
+                    raise urllib.error.HTTPError(request.full_url, int(str(error["code"])), "offline fixture error", Message(), None)
+        if resource == "transactions" and not isfile(join(fixture_dir, "_redbark_transactions.csv")):
+            rows = []
+        elif not isfile(join(fixture_dir, f"_redbark_{resource}.csv")):
+            raise urllib.error.HTTPError(request.full_url, 500, "offline fixture absent", Message(), None)
+        elif resource == "balances":
+            rows = [row for row in _rows(resource) if row.get("accountId") in query["accountIds"].split(",")]
+        elif resource == "transactions":
+            rows = [
+                row
+                for row in _rows(resource)
+                if row.get("accountId") == query["accountId"] and ("from" not in query or (row.get("date") or "") >= query["from"]) and ("to" not in query or (row.get("date") or "") <= query["to"])
+            ]
+        else:
+            rows = _rows(resource)
+        offset, limit = int(query.get("offset", 0)), int(query.get("limit", len(rows) or 1))
+        return urllib.response.addinfourl(
+            io.BytesIO(json.dumps({"data": rows[offset : offset + limit], "pagination": {"hasMore": offset + limit < len(rows)}}).encode()), Message(), request.full_url, 200
+        )
+
+    mock.patch("wrangle.plugin._sources.urllib.request.urlopen", _urlopen).start()
+
+
+def sheet_download_offline(downloads=1, moved_tabs=(), restyled_tabs=()):
+    served = {"lists": 0}
+
+    def _sheet_download(self, drive_key, workbook_name, sheet_name=None, *_args, **_kwargs):
+        sheet_names = sheet_name if isinstance(sheet_name, list) else [sheet_name]
+        file_paths = [self._sheet_cache_path((workbook_name if name is None else f"{workbook_name}_{name}").lower()) or "" for name in sheet_names]
+        if isinstance(sheet_name, list):
+            served["lists"] += 1
+            status = DownloadStatus.DOWNLOADED if served["lists"] <= downloads else DownloadStatus.CACHED
+            return DownloadResult(status if any(file_paths) else DownloadStatus.FAILED, file_paths if any(file_paths) else [])
+        if not file_paths[0]:
+            return DownloadResult(DownloadStatus.FAILED, [])
+        if sheet_name in moved_tabs:
+            moved_path = file_paths[0].removesuffix(".csv") + "_moved.csv"
+            pl.concat([pl.read_csv(file_paths[0], infer_schema=False), pl.read_csv(file_paths[0], infer_schema=False).head(1)]).write_csv(moved_path)
+            return DownloadResult(DownloadStatus.DOWNLOADED, [moved_path])
+        if sheet_name in restyled_tabs:
+            restyled_path = file_paths[0].removesuffix(".csv") + "_restyled.csv"
+            pl.read_csv(file_paths[0], infer_schema=False).with_columns(pl.all().str.replace(r"^(-?\d+)\.0$", "$1")).write_csv(restyled_path)
+            return DownloadResult(DownloadStatus.DOWNLOADED, [restyled_path])
+        return DownloadResult(DownloadStatus.CACHED, file_paths)
+
+    mock.patch.object(Plugin, "sheet_download", _sheet_download).start()
 
 
 def stock_download_offline(new_file_names):
@@ -2906,11 +4965,11 @@ def stock_download_offline(new_file_names):
             if file_name in new_file_names and file_name not in served_files:
                 served_files.add(file_name)
                 self.add_counter(plugin.CTR_SRC_SOURCES, plugin.CTR_ACT_DOWNLOADED)
-                return DownloadResult(DownloadStatus.DOWNLOADED, local_path)
+                return DownloadResult(DownloadStatus.DOWNLOADED, [local_path])
             self.add_counter(plugin.CTR_SRC_SOURCES, plugin.CTR_ACT_CACHED)
-            return DownloadResult(DownloadStatus.CACHED, local_path)
+            return DownloadResult(DownloadStatus.CACHED, [local_path])
         self.add_counter(plugin.CTR_SRC_SOURCES, plugin.CTR_ACT_SKIPPED)
-        return DownloadResult(DownloadStatus.SKIPPED, None)
+        return DownloadResult(DownloadStatus.SKIPPED, [])
 
     mock.patch.object(Plugin, "stock_download", _stock_download).start()
 
@@ -2920,10 +4979,13 @@ class PluginStub(Plugin):
         pass
 
     def __init__(self, name, drive_folder):
-        super().__init__(name, repos=plugin.Repos(
-            preview={"drive_folder": "PLACEHOLDER"},
-            release={"drive_folder": drive_folder},
-        ))
+        super().__init__(
+            name,
+            repos=plugin.Repos(
+                preview={"drive_folder": "PLACEHOLDER"},
+                release={"drive_folder": drive_folder},
+            ),
+        )
 
 
 def _load_fixture(scope: str, plugin_name: str, test_name: str) -> dict:
@@ -2932,7 +4994,7 @@ def _load_fixture(scope: str, plugin_name: str, test_name: str) -> dict:
     with open(path, "rb") as toml_file:
         fixture = tomllib.load(toml_file)
     cols_full = {
-        "balances": len(CURRENCY_COLUMNS),
+        "bank": len(BANK_BALANCES_STATE_SCHEMA) - len(BANK_BALANCES_KEY_COLUMNS) + len(BANK_TRANSACTIONS_STATE_SCHEMA) - len(BANK_TRANSACTIONS_KEY_COLUMNS),
         "currency": len(CURRENCY_COLUMNS),
         "interest": len(INTEREST_COLUMNS),
         "equity": (len(STOCK) + len(PORTFOLIO_TICKERS_ACTIVE) + len(PORTFOLIO_TICKERS_MANUAL) - len(PORTFOLIO_TICKERS_NODATA)) * len(DIMENSIONS_STATE),
@@ -2951,4 +5013,15 @@ _COUNTER_COMPARATOR_VERBS = {
 _ASSERT_PASS_COL = 60
 
 if __name__ == "__main__":
-    sys.exit(pytest.main(["-s", "-v", "--durations=50", "-o", "cache_dir=../../../../target/.pytest_cache", __file__, ]))
+    sys.exit(
+        pytest.main(
+            [
+                "-s",
+                "-v",
+                "--durations=50",
+                "-o",
+                "cache_dir=../../../../target/.pytest_cache",
+                __file__,
+            ]
+        )
+    )

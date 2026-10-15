@@ -1,0 +1,2 @@
+id,accountId,status,date,postDate,amount,direction,description,category,merchantCategoryCode
+t1,a1,posted,2026-01-10,2026-01-10,-7.25,debit,Lunch,FOOD_AND_DRINK,

@@ -83,7 +83,6 @@ type streamHandler struct {
 
 type backupHandler struct {
 	level  slog.Level
-	writer io.Writer
 	stdout io.Writer
 	stderr io.Writer
 	mutex  sync.Mutex
@@ -211,19 +210,10 @@ func EnableBufferAndFile(level slog.Level, cmd, version string, capacity, maxSiz
 	return buf, nil
 }
 
-func EnableBackupAndFile(level slog.Level, cmd, version, stageLogPath string, quiet bool, maxSizeMB, maxBackups, maxAgeDays int) (io.Closer, error) {
+func EnableBackupAndFile(level slog.Level, cmd, version string, quiet bool, maxSizeMB, maxBackups, maxAgeDays int) error {
 	writer, path, err := fileWriter(cmd, version, maxSizeMB, maxBackups, maxAgeDays)
 	if err != nil {
-		return nil, err
-	}
-	if err := os.MkdirAll(filepath.Dir(stageLogPath), 0755); err != nil {
-		_ = writer.Close()
-		return nil, fmt.Errorf("create stage log directory failed [%s] [%w]", filepath.Dir(stageLogPath), err)
-	}
-	stageLog, err := os.OpenFile(stageLogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-	if err != nil {
-		_ = writer.Close()
-		return nil, fmt.Errorf("open stage log failed [%s] [%w]", stageLogPath, err)
+		return err
 	}
 	scribeLoggerMu.Lock()
 	defer scribeLoggerMu.Unlock()
@@ -232,7 +222,6 @@ func EnableBackupAndFile(level slog.Level, cmd, version, stageLogPath string, qu
 	scribeLoggerMode = "backup+file"
 	handlers := []slog.Handler{
 		&streamHandler{level: level, writer: writer, sink: sinkFile()},
-		&backupHandler{level: level, writer: stageLog},
 	}
 	if !quiet {
 		handlers = append(handlers, &backupHandler{level: level, stdout: os.Stdout, stderr: os.Stderr})
@@ -241,7 +230,7 @@ func EnableBackupAndFile(level slog.Level, cmd, version, stageLogPath string, qu
 	scribeLoggerWriter = writer
 	slog.SetDefault(scribeLoggerInstance)
 	purgeLogFiles(path)
-	return stageLog, nil
+	return nil
 }
 
 func BufferLines(rows int) int {
@@ -600,12 +589,9 @@ func (h *backupHandler) Handle(_ context.Context, record slog.Record) error {
 	if !allowed(source, subject, action) {
 		return nil
 	}
-	target := h.writer
-	if target == nil {
-		target = h.stdout
-		if record.Level == slog.LevelWarn || record.Level == slog.LevelError {
-			target = h.stderr
-		}
+	target := h.stdout
+	if record.Level == slog.LevelWarn || record.Level == slog.LevelError {
+		target = h.stderr
 	}
 	h.mutex.Lock()
 	defer h.mutex.Unlock()

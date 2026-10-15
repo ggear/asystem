@@ -1,0 +1,31 @@
+required-version = "==0.17.0"
+line-length = 200
+target-version = "py312"
+include = [
+    "src/*/*/src/build/python/**/*.py",
+    "src/*/*/src/main/python/**/*.py",
+    "src/*/*/src/test/python/**/*.py",
+    "fabfile.py",
+    "src/max/grafana/src/main/resources/image/probe.py",
+]
+extend-exclude = [
+    "src/*/*/src/*/resources/bin",
+    "src/*/*/src/*/resources/data",
+    "src/*/*/src/*/notebook",
+]
+force-exclude = true
+src = ["src/*/*/src/main/python", "src/*/*/src/test/python", "src/*/*/src/build/python"]
+
+[lint]
+select = ["E", "F", "B", "SIM", "UP", "I", "C4", "DTZ", "ERA", "FURB", "G", "ISC", "PERF", "PGH003", "PIE", "RET", "RUF010", "RUF012", "RUF015", "RUF022", "RUF059", "RUF100"]
+ignore = ["F403", "F405"]
+
+[lint.per-file-ignores]
+"src/all/_/src/build/python/**" = ["UP032"]
+"src/all/_/src/build/python/asystem/__init__.py" = ["F401"]
+"src/all/_/src/build/python/asystem/schema/__init__.py" = ["F401"]
+"src/all/_/src/build/python/asystem/schema/dialects/__init__.py" = ["F401"]
+"src/all/_/src/build/python/asystem/container.py" = ["E501"]
+
+[lint.pycodestyle]
+max-line-length = 240

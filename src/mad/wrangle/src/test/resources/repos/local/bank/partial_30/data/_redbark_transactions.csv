@@ -1,0 +1,3 @@
+id,accountId,status,date,postDate,amount,direction,description,category,merchantCategoryCode
+t1,a1,posted,2026-01-05,2026-01-05,-7.25,debit,Coffee,FOOD_AND_DRINK,
+t2,a1,posted,2026-01-10,2026-01-10,-3.00,debit,Bakery,FOOD_AND_DRINK,

@@ -1,0 +1,12 @@
+Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Category Manual,Category Derived,Account ID,Source ID,Transaction ID,Vetted
+2025-11-01,One,-1.0,-1.0,Shop One,,,,,Food,540a8918175f5ca38559395087eb552c,,,Yes
+2025-11-02,One,-2.0,-2.0,Shop Two,,,,Groceries,Food,540a8918175f5ca38559395087eb552c,,,Yes
+2025-11-03,One,-3.0,-3.0,Cafe,,,,,Food,540a8918175f5ca38559395087eb552c,,,Yes
+2025-11-04,One,-4.0,-4.0,Cafe 4,,,,,Food,540a8918175f5ca38559395087eb552c,,,Yes
+2025-11-05,One,-5.0,-5.0,Cafe 5,,,,,Food,540a8918175f5ca38559395087eb552c,,,Yes
+2025-11-06,One,-6.0,-6.0,Cafe 6,,,,,Food,540a8918175f5ca38559395087eb552c,,,Yes
+2025-11-07,One,-7.0,-7.0,Cafe 7,,,,,Food,540a8918175f5ca38559395087eb552c,,,Yes
+2025-11-08,One,-8.0,-8.0,Cafe 8,,,,,Food,540a8918175f5ca38559395087eb552c,,,Yes
+2025-11-09,One,-9.0,-9.0,Cafe 9,,,,,Food,540a8918175f5ca38559395087eb552c,,,Yes
+2025-11-10,One,-10.0,-10.0,Cafe 10,,,,,Food,540a8918175f5ca38559395087eb552c,,,Yes
+2025-11-11,One,-11.0,-11.0,Cafe 11,,,,,Food,540a8918175f5ca38559395087eb552c,,,Yes

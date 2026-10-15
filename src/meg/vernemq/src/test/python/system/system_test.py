@@ -5,6 +5,7 @@ import time
 
 import paho.mqtt.client as mqtt
 import pytest
+from paho.mqtt.enums import CallbackAPIVersion
 
 HOST = "127.0.0.1"
 PORT = 32404
@@ -17,23 +18,23 @@ TOPIC = "{}/dev/test".format("".join(random.choice(string.ascii_lowercase) for i
 def test_pubsub():
     def test():
         messages = []
+        connected = False
 
         def on_connect(client, user_data, flags, reason_code, properties):
-            client.connected = True
-            print("CONNECTION [{}]".format(reason_code))
+            nonlocal connected
+            connected = True
+            print(f"CONNECTION [{reason_code}]")
 
         def on_message(client, user_data, message):
             messages.append(message.payload)
-            print("RECEIVED MESSAGE [{}]".format(message.payload))
+            print(f"RECEIVED MESSAGE [{message.payload}]")
 
         def on_disconnect(client, user_data, flags, reason_code, properties):
-            client.connected = False
-            print("DISCONNECTED [{}]".format(reason_code))
+            nonlocal connected
+            connected = False
+            print(f"DISCONNECTED [{reason_code}]")
 
-        client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,
-                             client_id="".join(random.choice(string.ascii_lowercase) for i in range(10)),
-                             clean_session=True)
-        client.connected = False
+        client = mqtt.Client(CallbackAPIVersion.VERSION2, client_id="".join(random.choice(string.ascii_lowercase) for i in range(10)), clean_session=True)
         client.on_connect = on_connect
         client.on_message = on_message
         client.on_disconnect = on_disconnect
@@ -42,15 +43,15 @@ def test_pubsub():
         subscribed_messages = False
         time_start = time.time()
         while len(messages) < COUNT and (time.time() - time_start) < TIMEOUT and client.loop(1) == 0:
-            if client.connected and not sent_messages:
+            if connected and not sent_messages:
                 for i in range(COUNT):
-                    client.publish("{}/{}".format(TOPIC, i), "Test {}".format(i), 1, True)
+                    client.publish(f"{TOPIC}/{i}", f"Test {i}", 1, True)
                 sent_messages = True
-            elif client.connected and not subscribed_messages:
-                client.subscribe("{}/#".format(TOPIC), 1)
+            elif connected and not subscribed_messages:
+                client.subscribe(f"{TOPIC}/#", 1)
                 subscribed_messages = True
         client.disconnect()
-        print("MESSAGES [{}]".format(len(messages)))
+        print(f"MESSAGES [{len(messages)}]")
         assert len(messages) == COUNT
 
     success = False
@@ -65,5 +66,16 @@ def test_pubsub():
     assert success is True
 
 
-if __name__ == '__main__':
-    sys.exit(pytest.main(["-s", "-v", "--durations=50", "-o", "cache_dir=../../../../target/.pytest_cache", __file__, ]))
+if __name__ == "__main__":
+    sys.exit(
+        pytest.main(
+            [
+                "-s",
+                "-v",
+                "--durations=50",
+                "-o",
+                "cache_dir=../../../../target/.pytest_cache",
+                __file__,
+            ]
+        )
+    )

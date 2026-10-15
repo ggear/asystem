@@ -20,10 +20,6 @@ func backupRunRoot() string {
 
 func backupRunPath(root, runID string) string { return filepath.Join(root, runID) }
 
-func stageLogPath(runPath string, stage metric.BackupStage) string {
-	return filepath.Join(stageDir(runPath, stage), treeLogLeaf)
-}
-
 func backupRuns(root string) []string {
 	entries, err := os.ReadDir(root)
 	if err != nil {

@@ -6,12 +6,12 @@
 # Build/test
 mock==5.2.0
 fabric==3.2.3
-ruff==0.16.10
+ruff==$RUFF_VERSION
 pytest==9.1.1
 dotenv==0.9.9
 varsubst==2.0.0
 packaging==26.3
-pyright==1.1.414
+pyright==$PYRIGHT_VERSION
 requests==2.34.2
 setuptools==84.0.0
 pathlib2==2.3.7.post1
@@ -23,8 +23,7 @@ python-dateutil==2.9.0.post0
 types-python-dateutil==2.9.0.20260807
 
 # Numeric/scientific
-numpy==2.5.3
-aenum==3.1.17
+numpy==2.5.4
 scipy==1.18.1
 scikit-learn==1.9.1
 sortedcontainers==2.4.0
@@ -37,10 +36,11 @@ openpyxl==3.1.5
 grafana-foundation-sdk==0.0.20
 polars==2.0.0
 orjson==3.13.0
+# NOTES: HELD, not stale, mlserver requires pyarrow<26, unblocks with MLSERVER_VERSION
 pyarrow==25.0.1
 tabulate==0.10.0
 jproperties==2.1.2
-python-calamine==0.8.2
+python-calamine==0.8.3
 
 # Machine learning/visualisation
 notebook==7.6.3
@@ -51,7 +51,7 @@ matplotlib-inline==0.2.2
 anyio==4.15.1
 # NOTES: HELD, not stale, mlserver requires fastapi<0.116.0, unblocks with MLSERVER_VERSION
 fastapi==0.115.14
-virtualenv==21.14.6
+virtualenv==21.14.7
 mlflow==$MLFLOW_VERSION
 
 # Storage/databases
@@ -76,7 +76,7 @@ speedtest-cli==2.1.3
 ffmpeg-python==0.2.0
 subtitle-filter==1.5.1
 decode-config==15.6.0.0
-google-auth==2.61.0
+google-auth==2.62.0
 google-auth-httplib2==0.4.4
 google-auth-oauthlib==1.5.0
 google-api-python-client==2.201.0

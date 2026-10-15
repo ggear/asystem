@@ -8,7 +8,7 @@ import os
 import sys
 import time
 import traceback
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import IntEnum
 from pathlib import Path
 
@@ -70,7 +70,7 @@ def _get_env(_name):
     return value
 
 
-def _get_share_paths(_share_root: str, _min_depth=2, _max_depth=2, _excludes=frozenset({'audio'})):
+def _get_share_paths(_share_root: str, _min_depth=2, _max_depth=2, _excludes=frozenset({"audio"})):
     library_locations = {}
     share_root = os.path.abspath(_share_root)
     share_index_root = f"{share_root}/*"
@@ -86,30 +86,25 @@ def _get_share_paths(_share_root: str, _min_depth=2, _max_depth=2, _excludes=fro
         base_path = os.path.abspath(base_path)
         root_depth = base_path.rstrip(os.sep).count(os.sep)
 
-        def walk_paths(current_path: str):
+        def walk_paths(current_path: str, root_depth: int = root_depth):
             try:
                 with os.scandir(current_path) as it:
                     for entry in it:
                         if entry.is_dir(follow_symlinks=False):
                             entry_depth = entry.path.count(os.sep) - root_depth
-                            if _min_depth <= entry_depth <= _max_depth:
-                                if not entry.path.endswith(exclude_paths):
-                                    library_location = "/share" + entry.path.removeprefix(share_root)
-                                    library_name = (
-                                        f"{os.path.basename(os.path.dirname(library_location)).title()} "
-                                        f"{os.path.basename(library_location).title()}")
-                                    if library_name not in library_locations:
-                                        library_locations[library_name] = []
-                                    library_locations[library_name].append(library_location)
+                            if _min_depth <= entry_depth <= _max_depth and not entry.path.endswith(exclude_paths):
+                                library_location = "/share" + entry.path.removeprefix(share_root)
+                                library_name = f"{os.path.basename(os.path.dirname(library_location)).title()} {os.path.basename(library_location).title()}"
+                                if library_name not in library_locations:
+                                    library_locations[library_name] = []
+                                library_locations[library_name].append(library_location)
                             if entry_depth < _max_depth:
                                 walk_paths(entry.path)
             except PermissionError as exception:
                 raise Exception(f"Could not read share directory [{current_path}], check share permissions") from exception
 
         walk_paths(base_path)
-    return {
-        _library_name: sorted(_library_locations) for _library_name, _library_locations in library_locations.items()
-    }
+    return {_library_name: sorted(_library_locations) for _library_name, _library_locations in library_locations.items()}
 
 
 def _refresh_plex(_share_paths):
@@ -129,8 +124,7 @@ def _refresh_plex(_share_paths):
         missing_paths = [path for path in library_paths if path not in existing_paths]
         unmatched_paths = [path for path in existing_paths if path not in library_paths]
         if unmatched_paths:
-            library_messages.append(
-                f"Warning: library [{library_name}] has plex paths absent from disk {unmatched_paths}")
+            library_messages.append(f"Warning: library [{library_name}] has plex paths absent from disk {unmatched_paths}")
         if missing_paths:
             updated_paths[library_name] = sorted(existing_paths + missing_paths)
     _print_messages(library_messages)
@@ -148,12 +142,14 @@ def _refresh_plex(_share_paths):
         _print_error("could not refresh plex libraries", exception)
         return Exit.FAIL_PLEX_REFRESH
     item_messages = []
-    added_within = datetime.now(timezone.utc) - timedelta(days=PLEX_ADDED_WITHIN_DAYS)
+    added_within = datetime.now(UTC) - timedelta(days=PLEX_ADDED_WITHIN_DAYS)
     try:
         for library_name in sorted(plex_sections):
-            for item in plex_sections[library_name].search(filters={"addedAt>>": added_within}):
-                if not str(getattr(item, "guid", "")).startswith("plex://"):
-                    item_messages.append(f"Warning: item [{item.title}] in library [{library_name}] not matched by plex")
+            item_messages.extend(
+                f"Warning: item [{item.title}] in library [{library_name}] not matched by plex"
+                for item in plex_sections[library_name].search(filters={"addedAt>>": added_within})
+                if not str(getattr(item, "guid", "")).startswith("plex://")
+            )
     except Exception as exception:
         item_messages.append(f"Warning: could not check plex matches, {exception}")
     _print_messages(item_messages)
@@ -162,11 +158,15 @@ def _refresh_plex(_share_paths):
 
 def _refresh_sabnzbd(_share_paths):
     def get_sabnzbd(**_parameters):
-        response = requests.get(f"{sabnzbd_url}/api", timeout=API_TIMEOUT_SECONDS, params={
-            "output": "json",
-            "apikey": sabnzbd_api_key,
-            **_parameters,
-        })
+        response = requests.get(
+            f"{sabnzbd_url}/api",
+            timeout=API_TIMEOUT_SECONDS,
+            params={
+                "output": "json",
+                "apikey": sabnzbd_api_key,
+                **_parameters,
+            },
+        )
         response.raise_for_status()
         payload = response.json()
         if isinstance(payload, dict) and payload.get("status") is False:
@@ -198,8 +198,7 @@ def _refresh_sabnzbd(_share_paths):
             return Exit.FAIL_SABNZBD_ARCHIVE
     for slot in queue_slots:
         print(f"Download [sabnzbd] of [{slot['filename']}] at [{slot['percentage']}%] with [{slot['timeleft']}] remaining")
-    _print_messages([f"Error: download [{slot['name']}] failed [{slot['fail_message']}]"
-                     for slot in failed_slots])
+    _print_messages([f"Error: download [{slot['name']}] failed [{slot['fail_message']}]" for slot in failed_slots])
     if failed_slots:
         return Exit.FAIL_SABNZBD_DOWNLOAD
     return Exit.PASS
@@ -252,13 +251,16 @@ def _refresh_sonarr(_share_paths):
     except Exception as exception:
         _print_error("could not connect to sonarr", exception)
         return Exit.FAIL_SONARR_CONNECT
-    quality_profile_id = next(
-        (profile_id for profile_id, name in sonarr_profiles.items() if name == SONARR_QUALITY_PROFILE), None)
+    quality_profile_id = next((profile_id for profile_id, name in sonarr_profiles.items() if name == SONARR_QUALITY_PROFILE), None)
     if quality_profile_id is None:
         _print_messages([f"Warning: quality profile [{SONARR_QUALITY_PROFILE}] not found in sonarr"])
-    unconfigured_series = [series for series in sonarr_series if not series.get("monitored") or any(
-        not season.get("monitored") for season in series.get("seasons", []) if season.get("seasonNumber"))
-        or (quality_profile_id is not None and series.get("qualityProfileId") != quality_profile_id)]
+    unconfigured_series = [
+        series
+        for series in sonarr_series
+        if not series.get("monitored")
+        or any(not season.get("monitored") for season in series.get("seasons", []) if season.get("seasonNumber"))
+        or (quality_profile_id is not None and series.get("qualityProfileId") != quality_profile_id)
+    ]
     if unconfigured_series:
         try:
             for series in unconfigured_series:
@@ -299,8 +301,7 @@ def _refresh_sonarr(_share_paths):
             series_messages.append(f"Warning: series [{series['title']}] is complete and ended")
         if missing_episodes > 0 and series["id"] not in queued_series_ids:
             missing_series.append(series)
-            series_messages.append(
-                f"Error: series [{series['title']}] is missing [{missing_episodes}] episodes with no download queued")
+            series_messages.append(f"Error: series [{series['title']}] is missing [{missing_episodes}] episodes with no download queued")
     _print_messages(series_messages)
     if missing_series:
         return Exit.FAIL_SONARR_MISSING

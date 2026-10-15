@@ -9,51 +9,22 @@ from polars.exceptions import SchemaError
 
 from ._contract import ContractMixin
 from .config import *
-from .counters import *  # noqa: F401,F403
+from .counters import *
 
 
 class StateMixin(ContractMixin):
-
-    def state_cache(self, data_df_update, aggregate_func=None, key_columns=None):
+    def state_cache(self, data_df_update, aggregate_func=None, key_columns=None, rebuild=False, name=None, replace=None):
         """
-        Checkpoint for sources that either accumulate new dated rows over runs (equity: positions grow daily)
-        or revise existing values in place (interest: RBA republishes historical rates). Merges `data_df_update` into the
-        persisted snapshot (deduplicating on key columns, keeping the latest), applies `aggregate_func` to convert raw
-        source data into committed form (forward-fill, change metrics, rounding), and returns (delta, current, previous).
-
-        Parameters:
-            data_df_update:               Incoming rows to merge. The first column must be named "Date" (pl.Date).
-            aggregate_func:               Optional transform applied twice: once to data_df_update before the merge, and
-                                          again to the full merged result. Typically used to forward-fill sparse time-series
-                                          rows, derive change metrics (e.g. N-day price changes), and round values into
-                                          committed form ready for downstream consumers. Because the second application runs
-                                          over the entire merged dataset, derived values for rows already in the snapshot
-                                          can change when new data extends or revises the time-series span — for example,
-                                          non-trading boundary days previously interpolated from one side of a year boundary
-                                          will be re-interpolated using the new data from the other side. Such rows differ
-                                          from the previous snapshot and therefore appear in delta even though their source
-                                          data was not new.
-            key_columns:                  Columns used to identify unique rows; defaults to ["Date"].
-
-        Returns:
-            delta:                        Rows whose values changed between previous and current (new or modified rows).
-            current:                      Full dataset after merging the update into the prior snapshot, persisted to disk.
-            previous:                     Full dataset from the prior run before this update was applied.
-
-        Files:
-            _update:                      Filtered and aggregated form of data_df_update; the rows applied this run.
-            _current:                     Updated current snapshot (becomes _previous on the next run).
-            _previous:                    Current snapshot from the prior run, moved here before _current is rewritten.
-            _delta:                       Rows from _current that differ from _previous.
-
-        Config:
-            config.force_reprocessing:    When True, deletes the existing _current snapshot before merging,
-                                          so the entire dataset is rebuilt from data_df_update with no prior state.
+        Merges `data_df_update` into the persisted `_current` snapshot on `key_columns`, applying
+        `aggregate_func` to the update and again to the merged whole, and returns (delta, current, previous).
+        `rebuild` or forced reprocessing start from no snapshot; `replace` makes the update replace one
+        partition whole, its missing keys deleted and listed in `_deleted`.
         """
 
         started_time = time.time()
         key_columns = key_columns if key_columns is not None else ["Date"]
         try:
+
             def _resolve_key_columns(available_columns):
                 resolved = [column for column in key_columns if column in available_columns]
                 if len(resolved) == 0 and "Date" in available_columns:
@@ -63,64 +34,78 @@ class StateMixin(ContractMixin):
                     self.print_log(f"State cache key columns unavailable and ignored: [{', '.join(missing)}]", level="debug")
                 return resolved
 
-            aggregate_function_wrapped = (lambda _data_df: _data_df) if aggregate_func is None \
-                else (lambda _data_df: aggregate_func(_data_df) if len(_data_df) > 0 else _data_df)
-            file_delta = abspath(f"{self.local_cache}/__{self.name.lower()}_delta.csv")
-            file_update = abspath(f"{self.local_cache}/__{self.name.lower()}_update.csv")
-            file_current = abspath(f"{self.local_cache}/__{self.name.lower()}_current.csv")
-            file_previous = abspath(f"{self.local_cache}/__{self.name.lower()}_previous.csv")
+            aggregate_function_wrapped = (lambda _data_df: _data_df) if aggregate_func is None else (lambda _data_df: aggregate_func(_data_df) if len(_data_df) > 0 else _data_df)
+            state_name = name if name is not None else self.name.lower()
+            file_delta = abspath(f"{self.local_cache}/__{state_name}_delta.csv")
+            file_update = abspath(f"{self.local_cache}/__{state_name}_update.csv")
+            file_current = abspath(f"{self.local_cache}/__{state_name}_current.csv")
+            file_previous = abspath(f"{self.local_cache}/__{state_name}_previous.csv")
+            file_deleted = abspath(f"{self.local_cache}/__{state_name}_deleted.csv")
             if not isdir(self.local_cache):
                 os.makedirs(self.local_cache)
-            if config.force_reprocessing and isfile(file_current):
+            if (config.force_reprocessing or rebuild) and isfile(file_current):
                 os.remove(file_current)
             if len(data_df_update.columns) == 0 or data_df_update.columns[0] != "Date" or data_df_update.dtypes[0] != pl.Date:
                 data_update_col_0 = data_df_update.columns[0] if len(data_df_update.columns) > 0 else None
-                data_update_dtype_0 = self.dataframe_type_to_str(data_df_update.dtypes[0]) \
-                    if len(data_df_update.dtypes) > 0 else None
-                raise SchemaError(f"DataFrame requires first column of parameter [data_df_update] to be named [Date] and of type [date], "
-                                  f"found [{data_update_col_0}] with type found [{data_update_dtype_0}]")
+                data_update_dtype_0 = self.dataframe_type_to_str(data_df_update.dtypes[0]) if len(data_df_update.dtypes) > 0 else None
+                raise SchemaError(
+                    f"DataFrame requires first column of parameter [data_df_update] to be named [Date] and of type [date], found [{data_update_col_0}] with type found [{data_update_dtype_0}]"
+                )
             data_df_update = data_df_update.filter(pl.col("Date").is_not_null())
             if len(data_df_update) == 0 and not isfile(file_current):
                 data_df_update = aggregate_function_wrapped(data_df_update)
-                self.print_log("DataFrame [State_Caches] skipped (no update and no current)", started=started_time)
+                self.print_log(f"DataFrame [State_Caches]{'' if name is None else f' [{name}]'} skipped (no update and no current)", started=started_time)
                 return data_df_update, data_df_update, data_df_update
             data_df_update = aggregate_function_wrapped(data_df_update)
-            data_df_current = self.csv_read(file_current) \
-                if isfile(file_current) else self.dataframe_new(schema=data_df_update.schema, print_label=f"{self.name.title()}_Current")
+            data_df_current = (
+                self.csv_read(file_current, schema=dict(data_df_update.schema))
+                if isfile(file_current)
+                else self.dataframe_new(schema=data_df_update.schema, print_label=f"{self.name.title()}_Current")
+            )
             data_schema_update_column_count = len(data_df_update.columns)
             update_original_columns = set(data_df_update.columns)
             data_schema = OrderedDict()
-            for (data_column, data_type) in zip(data_df_update.columns, data_df_update.dtypes, strict=False):
+            for data_column, data_type in zip(data_df_update.columns, data_df_update.dtypes, strict=False):
                 data_schema[data_column] = data_type
-            for (data_column, data_type) in zip(data_df_current.columns, data_df_current.dtypes, strict=False):
+            for data_column, data_type in zip(data_df_current.columns, data_df_current.dtypes, strict=False):
                 if data_column not in data_schema:
                     data_schema[data_column] = data_type
-                    data_df_update = data_df_update.with_columns(
-                        pl.lit(None).cast(data_schema[data_column]).alias(data_column))
+                    data_df_update = data_df_update.with_columns(pl.lit(None).cast(data_schema[data_column]).alias(data_column))
             state_key_columns = _resolve_key_columns(data_schema.keys())
-            data_df_update = data_df_update.select(data_schema.keys()).with_columns(pl.col("Date").cast(pl.Date)).unique(
-                subset=state_key_columns, keep="last").sort(state_key_columns).with_columns(pl.lit(True).alias("__in_update"))
+            data_df_update = (
+                data_df_update.select(data_schema.keys())
+                .with_columns(pl.col("Date").cast(pl.Date))
+                .unique(subset=state_key_columns, keep="last")
+                .sort(state_key_columns)
+                .with_columns(pl.lit(True).alias("__in_update"))
+            )
             for data_column in data_schema:
                 if data_column not in data_df_current:
-                    data_df_current = data_df_current.with_columns(
-                        pl.lit(None).cast(data_schema[data_column]).alias(data_column))
+                    data_df_current = data_df_current.with_columns(pl.lit(None).cast(data_schema[data_column]).alias(data_column))
                 elif data_df_current.schema[data_column] != data_schema[data_column]:
-                    data_df_current = data_df_current.with_columns(
-                        pl.col(data_column).cast(data_schema[data_column], strict=False))
+                    data_df_current = data_df_current.with_columns(pl.col(data_column).cast(data_schema[data_column], strict=False))
             data_df_current = data_df_current.select(data_schema.keys()).with_columns(pl.col("Date").cast(pl.Date)).sort(state_key_columns)
             self.csv_write(data_df_update.drop("__in_update"), file_update)
             self.add_counter(CTR_SRC_DATA, CTR_ACT_UPDATE_COLUMNS, data_schema_update_column_count - len(state_key_columns))
             self.add_counter(CTR_SRC_DATA, CTR_ACT_UPDATE_ROWS, len(data_df_update))
             data_df_previous = data_df_current
+            data_df_deleted = data_df_current.select(state_key_columns).clear()
+            if replace is not None:
+                data_df_deleted = data_df_current.filter(replace).select(state_key_columns).join(data_df_update.select(state_key_columns), on=state_key_columns, how="anti")
+                data_df_current = data_df_current.filter(~replace)
             data_df_previous_value_columns = [c for c in data_df_previous.columns if c not in state_key_columns]
             self.add_counter(CTR_SRC_DATA, CTR_ACT_PREVIOUS_COLUMNS, len(data_df_previous.columns) - len(state_key_columns))
-            self.add_counter(CTR_SRC_DATA, CTR_ACT_PREVIOUS_ROWS, len(data_df_previous.filter(
-                pl.any_horizontal([pl.col(c).is_not_null() for c in data_df_previous_value_columns])) if data_df_previous_value_columns else data_df_previous))
+            self.add_counter(
+                CTR_SRC_DATA,
+                CTR_ACT_PREVIOUS_ROWS,
+                len(data_df_previous.filter(pl.any_horizontal([pl.col(c).is_not_null() for c in data_df_previous_value_columns])) if data_df_previous_value_columns else data_df_previous),
+            )
             value_columns = [c for c in data_schema if c not in state_key_columns]
             coalesce_cols = [c for c in value_columns if c in update_original_columns]
             overwrite_cols = [c for c in value_columns if c not in update_original_columns]
-            merge_exprs = [pl.coalesce([f"{c}_upd", c]).alias(c) for c in coalesce_cols] + \
-                          [pl.when(pl.col("__in_update").is_not_null()).then(pl.col(f"{c}_upd")).otherwise(pl.col(c)).alias(c) for c in overwrite_cols]
+            merge_exprs = [pl.coalesce([f"{c}_upd", c]).alias(c) for c in coalesce_cols] + [
+                pl.when(pl.col("__in_update").is_not_null()).then(pl.col(f"{c}_upd")).otherwise(pl.col(c)).alias(c) for c in overwrite_cols
+            ]
             data_df_current = (
                 data_df_current.lazy()
                 .join(data_df_update.lazy(), on=state_key_columns, how="full", coalesce=True, suffix="_upd")
@@ -132,12 +117,10 @@ class StateMixin(ContractMixin):
             data_df_current = aggregate_function_wrapped(data_df_current)
             for data_column, data_type in zip(data_df_current.columns, data_df_current.dtypes, strict=False):
                 if data_column in data_df_previous.columns and data_df_previous.schema[data_column] != data_type:
-                    data_df_previous = data_df_previous.with_columns(
-                        pl.col(data_column).cast(data_type, strict=False))
+                    data_df_previous = data_df_previous.with_columns(pl.col(data_column).cast(data_type, strict=False))
             for data_column, data_type in data_schema.items():
                 if data_column not in data_df_current.columns:
-                    data_df_current = data_df_current.with_columns(
-                        pl.lit(None).cast(data_type).alias(data_column))
+                    data_df_current = data_df_current.with_columns(pl.lit(None).cast(data_type).alias(data_column))
             data_df_current = data_df_current.select(data_schema.keys())
             if isfile(file_current):
                 shutil.move(file_current, file_previous)
@@ -146,14 +129,21 @@ class StateMixin(ContractMixin):
             self.csv_write(data_df_current, file_current)
             data_df_current_value_columns = [c for c in data_df_current.columns if c not in state_key_columns]
             self.add_counter(CTR_SRC_DATA, CTR_ACT_CURRENT_COLUMNS, len(data_df_current.columns) - len(state_key_columns))
-            self.add_counter(CTR_SRC_DATA, CTR_ACT_CURRENT_ROWS, len(data_df_current.filter(
-                pl.any_horizontal([pl.col(c).is_not_null() for c in data_df_current_value_columns])) if data_df_current_value_columns else data_df_current))
+            self.add_counter(
+                CTR_SRC_DATA,
+                CTR_ACT_CURRENT_ROWS,
+                len(data_df_current.filter(pl.any_horizontal([pl.col(c).is_not_null() for c in data_df_current_value_columns])) if data_df_current_value_columns else data_df_current),
+            )
             data_df_delta = pl.concat([data_df_previous, data_df_current]).select(data_schema.keys())
-            data_df_delta = data_df_delta.filter(data_df_delta.is_duplicated().not_()).unique(subset=state_key_columns, keep="last").sort(state_key_columns)
+            data_df_delta = (
+                data_df_delta.filter(data_df_delta.is_duplicated().not_()).unique(subset=state_key_columns, keep="last").join(data_df_deleted, on=state_key_columns, how="anti").sort(state_key_columns)
+            )
             self.csv_write(data_df_delta, file_delta)
+            if replace is not None:
+                self.csv_write(data_df_deleted.sort(state_key_columns), file_deleted)
             self.add_counter(CTR_SRC_DATA, CTR_ACT_DELTA_COLUMNS, len(data_schema) - len(state_key_columns) if data_schema_update_column_count > len(state_key_columns) else 0)
             self.add_counter(CTR_SRC_DATA, CTR_ACT_DELTA_ROWS, len(data_df_delta))
-            self.print_log("DataFrame [State_Caches] created", started=started_time)
+            self.print_log(f"DataFrame [State_Caches]{'' if name is None else f' [{name}]'} created", started=started_time)
             return data_df_delta.sort(state_key_columns), data_df_current.sort(state_key_columns), data_df_previous.sort(state_key_columns)
         except Exception:
             self.add_counter(CTR_SRC_DATA, CTR_ACT_ERRORED)

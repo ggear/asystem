@@ -1,0 +1,16 @@
+Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Category Manual,Category Derived,Account ID,Source ID,Transaction ID,Vetted
+2026-01-01,One,-1.0,-1.0,COFFEE   ROCK ENTERPRISES 12,,,,,,540a8918175f5ca38559395087eb552c,c1,,
+2026-01-02,One,-2.0,-2.0,Morning Coffee,FOOD_AND_DRINK,,,,,540a8918175f5ca38559395087eb552c,c2,,
+2026-01-03,One,-3.0,-3.0,Unknown grocer,FOOD_AND_DRINK,5411,,,,540a8918175f5ca38559395087eb552c,c3,,
+2026-01-04,One,-4.0,-4.0,Mystery,FOOD_AND_DRINK,,,,,540a8918175f5ca38559395087eb552c,c4,,
+2026-01-05,One,5.0,5.0,Salary,INCOME,,,,,540a8918175f5ca38559395087eb552c,c5,,
+2026-01-06,One,-6.0,-6.0,APPLE.COM/BILL,,,,,,540a8918175f5ca38559395087eb552c,c6,,
+2026-01-07,One,-7.0,-7.0,Appleacom,,,,,,540a8918175f5ca38559395087eb552c,c7,,
+2026-01-08,One,-8.0,-8.0,coffee rock enterprises,,,,,Restaurants,540a8918175f5ca38559395087eb552c,,,Yes
+2026-01-09,One,-9.0,-9.0,coffee,,,,Groceries,,540a8918175f5ca38559395087eb552c,,,Yes
+2026-01-10,One,-1.0,-1.0,Filler 1,,,,,,540a8918175f5ca38559395087eb552c,f1,,
+2026-01-10,One,-2.0,-2.0,Filler 2,,,,,,540a8918175f5ca38559395087eb552c,f2,,
+2026-01-10,One,-3.0,-3.0,Filler 3,,,,,,540a8918175f5ca38559395087eb552c,f3,,
+2026-01-10,One,-4.0,-4.0,Filler 4,,,,,,540a8918175f5ca38559395087eb552c,f4,,
+2026-01-10,One,-5.0,-5.0,Filler 5,,,,,,540a8918175f5ca38559395087eb552c,f5,,
+2026-01-10,One,-6.0,-6.0,Filler 6,,,,,,540a8918175f5ca38559395087eb552c,f6,,

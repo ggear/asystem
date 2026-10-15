@@ -22,7 +22,6 @@ PERIOD = "@"
 
 
 class Dataquery(cogvariants.Dataquery):
-
     def __init__(self, sql, form):
         self.sql = sql
         self.form = form
@@ -37,11 +36,8 @@ class Dataquery(cogvariants.Dataquery):
 
 
 class Query(cogbuilder.Builder[dashboardv2.DataQueryKind]):
-
     def __init__(self, group, datasource, sql, form):
-        self._internal = dashboardv2.DataQueryKind(
-            group=group, version="v0", datasource=dashboardv2.Dashboardv2DataQueryKindDatasource(name=datasource),
-            spec=Dataquery(sql, form))
+        self._internal = dashboardv2.DataQueryKind(group=group, version="v0", datasource=dashboardv2.Dashboardv2DataQueryKindDatasource(name=datasource), spec=Dataquery(sql, form))
 
     def build(self):
         return self._internal
@@ -51,15 +47,15 @@ def selected(relation, document, measures, kinds):
     picked = []
     for spec in measures:
         key, _, period = spec.partition(PERIOD)
-        matched = [measure for measure in relation.carried(kinds) if measure.key == key
-                   and (not period or relation.span(measure) == period)]
+        matched = [measure for measure in relation.carried(kinds) if measure.key == key and (not period or relation.span(measure) == period)]
         if not matched:
-            raise ValueError("Build generate script [{}] relation [{}] declares no persisted measure [{}] expected "
-                             "one of [{}]".format(document.module, relation.path, spec, ",".join(
-                                 sorted({measure.key for measure in relation.carried(kinds)}))))
+            raise ValueError(
+                "Build generate script [{}] relation [{}] declares no persisted measure [{}] expected one of [{}]".format(
+                    document.module, relation.path, spec, ",".join(sorted({measure.key for measure in relation.carried(kinds)}))
+                )
+            )
         periods = {relation.span(other) for other in relation.measures if other.key == key}
-        picked += [(measure, key if period or len(periods) == 1 else "{} {}".format(key, relation.span(measure)))
-                   for measure in matched]
+        picked += [(measure, key if period or len(periods) == 1 else "{} {}".format(key, relation.span(measure))) for measure in matched]
     return picked
 
 
@@ -68,13 +64,11 @@ def subjected(relation, document, entities):
     if entities is None:
         return None
     if subject is None:
-        raise ValueError("Build generate script [{}] relation [{}] has no subject dimension to select entities [{}]"
-                         .format(document.module, relation.path, ",".join(entities)))
+        raise ValueError("Build generate script [{}] relation [{}] has no subject dimension to select entities [{}]".format(document.module, relation.path, ",".join(entities)))
     declared = expanded(relation, subject)
     unknown = sorted(set(entities) - set(declared)) if declared else []
     if unknown:
-        raise ValueError("Build generate script [{}] relation [{}] declares no entities [{}]"
-                         .format(document.module, relation.path, ",".join(unknown)))
+        raise ValueError("Build generate script [{}] relation [{}] declares no entities [{}]".format(document.module, relation.path, ",".join(unknown)))
     return list(entities)
 
 
@@ -82,9 +76,11 @@ def transformed(transforms, document, relation):
     unknown = sorted(set(transforms) - set(TRANSFORMS) - set(COMBINES))
     combined = [transform for transform in transforms if transform in COMBINES]
     if unknown or len(combined) > 1:
-        raise ValueError("Build generate script [{}] relation [{}] transforms [{}] expected any of [{}] and at most "
-                         "one of [{}]".format(document.module, relation.path, ",".join(transforms),
-                                              ",".join(TRANSFORMS), ",".join(COMBINES)))
+        raise ValueError(
+            "Build generate script [{}] relation [{}] transforms [{}] expected any of [{}] and at most one of [{}]".format(
+                document.module, relation.path, ",".join(transforms), ",".join(TRANSFORMS), ",".join(COMBINES)
+            )
+        )
     return combined[0] if combined else None
 
 
@@ -105,12 +101,13 @@ def judged(better, amber, red, inclusive, unit, transforms):
     if "invert" in transforms and pole in (amber, red):
         return None
     for transform, convert, flips in (
-            ("invert", (lambda bound: 10000.0 / (100 + bound) - 100) if unit == "%" else (lambda bound: 1.0 / bound), True),
-            ("complement", lambda bound: 1 - bound, True),
-            ("percent", lambda bound: bound * 100, False)):
+        ("invert", (lambda bound: 10000.0 / (100 + bound) - 100) if unit == "%" else (lambda bound: 1.0 / bound), True),
+        ("complement", lambda bound: 1 - bound, True),
+        ("percent", lambda bound: bound * 100, False),
+    ):
         if transform in transforms:
             amber, red = (None if amber is None else round(convert(amber), 6)), (None if red is None else round(convert(red), 6))
-            better = ({BETTER_HIGHER: BETTER_LOWER, BETTER_LOWER: BETTER_HIGHER}[better] if flips else better)
+            better = {BETTER_HIGHER: BETTER_LOWER, BETTER_LOWER: BETTER_HIGHER}[better] if flips else better
     if {BETTER_HIGHER: {"peak", "max"}, BETTER_LOWER: {"trough", "min"}}[better] & set(transforms):
         return None
     return better, amber, red, inclusive
@@ -129,8 +126,7 @@ def aggregated(expression, transforms):
 
 
 def entitled(expression, subject, entities, labels):
-    cases = " ".join("WHEN '{}' THEN '{}'".format(entity, label) for entity, label in sorted((labels or {}).items())
-                     if entities is None or entity in entities)
+    cases = " ".join("WHEN '{}' THEN '{}'".format(entity, label) for entity, label in sorted((labels or {}).items()) if entities is None or entity in entities)
     return "CASE {} {} ELSE {} END".format(subject, cases, expression) if cases else expression
 
 
@@ -142,35 +138,27 @@ def statement(arms, entities, picked, transforms, combine):
         many = entities is None or len(entities) > 1
         metric = "entity || ' ' || measure" if many and measured else ("entity" if many or not measured else "measure")
         value, grouped = "value", ""
-    series = "SELECT\n    time,\n    {} AS metric,\n    {} AS value\nFROM (\n{}\n) AS arms{}".format(
-        metric, value, indented("\nUNION ALL\n".join(arms)), grouped)
+    series = "SELECT\n    time,\n    {} AS metric,\n    {} AS value\nFROM (\n{}\n) AS arms{}".format(metric, value, indented("\nUNION ALL\n".join(arms)), grouped)
     if "baseline" in transforms:
-        series = ("SELECT\n    time,\n    metric,\n"
-                  "    (value / first_value(value) OVER (PARTITION BY metric ORDER BY time) - 1) * 100 AS value\n"
-                  "FROM (\n{}\n) AS series".format(indented(series)))
+        series = "SELECT\n    time,\n    metric,\n    (value / first_value(value) OVER (PARTITION BY metric ORDER BY time) - 1) * 100 AS value\nFROM (\n{}\n) AS series".format(indented(series))
     return series + "\nORDER BY time"
 
 
 def summary_arm(statistic, table, predicates, entity, carried, now, start, epoch, span):
     if statistic not in STATISTICS:
-        raise ValueError("Build generate script statistic [{}] expected one of [{}]"
-                         .format(statistic, ",".join(STATISTICS)))
+        raise ValueError("Build generate script statistic [{}] expected one of [{}]".format(statistic, ",".join(STATISTICS)))
     window = ["$__timeFilter(time)"] + predicates
-    lookback = predicates + ["time <= {}".format(now),
-                             "time > {} - INTERVAL '{} seconds'".format(now, max(LOOKBACK, 4 * span))]
+    lookback = predicates + ["time <= {}".format(now), "time > {} - INTERVAL '{} seconds'".format(now, max(LOOKBACK, 4 * span))]
     newest = flat(select([("max(time)", "")], table, window))
     batch = window + ["time > ({}) - INTERVAL '{} seconds'".format(newest, BATCH * span)]
-    recent = window + ["{} > ({} * {} + {}) / {}".format(epoch("time"), QUARTERS - 1, epoch(now), epoch(start),
-                                                          QUARTERS)]
+    recent = window + ["{} > ({} * {} + {}) / {}".format(epoch("time"), QUARTERS - 1, epoch(now), epoch(start), QUARTERS)]
     if statistic == "newest":
         return select([("{} - {}".format(epoch(now), epoch("max(time)")), "value")], table, window)
     if statistic == "oldest":
         latest = select([(entity, "entity"), ("max(time)", "latest")], table, lookback, group_by=["1"])
-        return select([("{} - {}".format(epoch(now), epoch("min(latest)")), "value")],
-                      "(\n{}\n) AS entities".format(indented(latest)))
+        return select([("{} - {}".format(epoch(now), epoch("min(latest)")), "value")], "(\n{}\n) AS entities".format(indented(latest)))
     reported, expected = {
-        "entities": (scalar("count(DISTINCT {})".format(entity), table, batch),
-                     scalar("count(DISTINCT {})".format(entity), table, lookback)),
+        "entities": (scalar("count(DISTINCT {})".format(entity), table, batch), scalar("count(DISTINCT {})".format(entity), table, lookback)),
         "metrics": (scalar(carried, table, batch), scalar(carried, table, window)),
         "volume": (scalar("count(*)", table, recent), "{} / {}.0".format(scalar("count(*)", table, window), QUARTERS)),
     }[statistic]
@@ -179,12 +167,10 @@ def summary_arm(statistic, table, predicates, entity, carried, now, start, epoch
 
 def combined(arms, statistic):
     if STATISTICS[statistic] == "ratio":
-        return "SELECT\n    100.0 * sum(reported) / NULLIF(sum(expected), 0) AS value\nFROM (\n{}\n) AS arms".format(
-            indented("\nUNION ALL\n".join(arms)))
+        return "SELECT\n    100.0 * sum(reported) / NULLIF(sum(expected), 0) AS value\nFROM (\n{}\n) AS arms".format(indented("\nUNION ALL\n".join(arms)))
     if len(arms) == 1:
         return arms[0]
-    return "SELECT\n    {}(value) AS value\nFROM (\n{}\n) AS arms".format(
-        STATISTICS[statistic], indented("\nUNION ALL\n".join(arms)))
+    return "SELECT\n    {}(value) AS value\nFROM (\n{}\n) AS arms".format(STATISTICS[statistic], indented("\nUNION ALL\n".join(arms)))
 
 
 def scalar(expression, table, predicates):
@@ -201,4 +187,3 @@ def indented(statement):
 
 def restricted(column, entities):
     return [literals(column, entities, negate=False)] if entities else []
-

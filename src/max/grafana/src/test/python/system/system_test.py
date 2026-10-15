@@ -19,6 +19,7 @@ GENERATE = join(DIR_ROOT, "src/build/python/grafana/generate.py")
 sys.path.insert(0, abspath(join(DIR_ROOT, "../../all/_/src/build/python")))
 sys.argv = [GENERATE]
 specification = importlib.util.spec_from_file_location("generate", GENERATE)
+assert specification is not None and specification.loader is not None
 generate = importlib.util.module_from_spec(specification)
 specification.loader.exec_module(generate)
 
@@ -27,9 +28,9 @@ def _env(name):
     with open(join(DIR_ROOT, ".env")) as env_file:
         value = ""
         for line in env_file:
-            if line.startswith("{}=".format(name)):
+            if line.startswith(f"{name}="):
                 value = line.split("=", 1)[1].strip()
-    assert value, "no [{}] in the generated .env".format(name)
+    assert value, f"no [{name}] in the generated .env"
     return value
 
 
@@ -60,29 +61,26 @@ def test_both_datasources_are_provisioned():
 
 def test_dashboards_stay_editable_in_the_ui():
     for uid in _declared():
-        dashboard = _get("/apis/dashboard.grafana.app/v2/namespaces/default/dashboards/{}".format(uid))
-        assert dashboard["spec"]["editable"], "{}: editable got false want true".format(uid)
-        assert "grafana.app/managedBy" not in dashboard["metadata"].get("annotations", {}), \
-            "{}: managedBy annotation got present want absent".format(uid)
+        dashboard = _get(f"/apis/dashboard.grafana.app/v2/namespaces/default/dashboards/{uid}")
+        assert dashboard["spec"]["editable"], f"{uid}: editable got false want true"
+        assert "grafana.app/managedBy" not in dashboard["metadata"].get("annotations", {}), f"{uid}: managedBy annotation got present want absent"
 
 
 def test_a_second_push_converges_to_the_same_state():
     before = _served()
-    pushed = subprocess.run(["docker", "exec", CONTAINER, "/asystem/etc/push.sh"],
-                            capture_output=True, text=True, timeout=300, check=False)
-    assert pushed.returncode == 0, "push.sh: got {} want 0 [{}]".format(pushed.returncode, pushed.stderr)
+    pushed = subprocess.run(["docker", "exec", CONTAINER, "/asystem/etc/push.sh"], capture_output=True, text=True, timeout=300, check=False)
+    assert pushed.returncode == 0, f"push.sh: got {pushed.returncode} want 0 [{pushed.stderr}]"
     assert _served() == before
 
 
 def _get(path):
     response = requests.get(SERVER + path, auth=CREDENTIALS, timeout=TIMEOUT)
-    assert response.status_code == 200, "{}: got {} want 200".format(path, response.status_code)
+    assert response.status_code == 200, f"{path}: got {response.status_code} want 200"
     return response.json()
 
 
 def _declared():
-    return {basename(path)[:-5] for directory in ("generated", "custom")
-            for path in glob.glob(join(DIR_DASHBOARDS, directory, "*.yaml"))}
+    return {basename(path)[:-5] for directory in ("generated", "custom") for path in glob.glob(join(DIR_DASHBOARDS, directory, "*.yaml"))}
 
 
 def _served():
@@ -91,11 +89,20 @@ def _served():
 
 @pytest.fixture(scope="module", autouse=True)
 def bootstrapped():
-    waited = subprocess.run(["docker", "wait", BOOTSTRAP], capture_output=True, text=True, timeout=TIMEOUT_WARMUP,
-                            check=False)
-    assert waited.stdout.strip() == "0", "{}: exit got [{}] want 0 [{}]".format(
-        BOOTSTRAP, waited.stdout.strip(), waited.stderr.strip())
+    waited = subprocess.run(["docker", "wait", BOOTSTRAP], capture_output=True, text=True, timeout=TIMEOUT_WARMUP, check=False)
+    assert waited.stdout.strip() == "0", f"{BOOTSTRAP}: exit got [{waited.stdout.strip()}] want 0 [{waited.stderr.strip()}]"
 
 
-if __name__ == '__main__':
-    sys.exit(pytest.main(["-s", "-v", "--durations=50", "-o", "cache_dir=../../../../target/.pytest_cache", __file__, ]))
+if __name__ == "__main__":
+    sys.exit(
+        pytest.main(
+            [
+                "-s",
+                "-v",
+                "--durations=50",
+                "-o",
+                "cache_dir=../../../../target/.pytest_cache",
+                __file__,
+            ]
+        )
+    )

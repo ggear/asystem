@@ -1,0 +1,5 @@
+id,accountId,status,date,postDate,amount,direction,description,category,merchantCategoryCode
+t1,a1,posted,2025-11-05,2025-11-05,-40.00,debit,Fuel,TRANSPORTATION,5541
+t2,a1,posted,2026-01-10,2026-01-10,-7.25,debit,Lunch,FOOD_AND_DRINK,0000
+t3,a1,pending,2026-01-14,2026-01-14,-3.00,debit,Snack,FOOD_AND_DRINK,
+t5,a2,posted,2026-01-11,2026-01-12,55.00,credit,Refund,INCOME,

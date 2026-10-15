@@ -1,0 +1,7 @@
+id,accountId,status,date,postDate,amount,direction,description,category,merchantCategoryCode
+l1,a1,posted,2026-01-11,2026-01-11,-20.00,debit,Coffee Shop 1234,FOOD_AND_DRINK,
+l2,a1,posted,2026-01-11,2026-01-11,-20.00,debit,Coffee Shop 5678,FOOD_AND_DRINK,
+l3,a1,posted,2026-01-08,2026-01-08,-50.00,debit,Grocer 9,FOOD_AND_DRINK,
+l4,a6,posted,2026-01-12,2026-01-12,-15.00,debit,Card Fee,FOOD_AND_DRINK,
+l5,a1,posted,2026-01-13,2026-01-13,-3.00,debit,Bakery,FOOD_AND_DRINK,
+l6,a1,posted,2026-01-05,2026-01-11,-42.00,debit,Late Post 77,FOOD_AND_DRINK,

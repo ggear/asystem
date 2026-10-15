@@ -23,7 +23,7 @@ def print_log(process, messages, exception=None, level="info"):
     effective_level = "error" if exception is not None else level
     if not log_enabled(effective_level):
         return
-    prefix = f"{effective_level.upper().ljust(7)} {f'[{process}]'.ljust(10)} [{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}]: "
+    prefix = f"{effective_level.upper().ljust(7)} {f'[{process}]'.ljust(10)} [{datetime.now().astimezone().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}]: "
     if type(messages) is not list:
         messages = [messages]
     for line in messages:
@@ -35,19 +35,25 @@ def print_log(process, messages, exception=None, level="info"):
         print(f"{prefix}{(chr(10) + prefix).join(''.join(traceback_lines).splitlines())}", flush=True)
 
 
-def dataframe_print(process, data_df, messages=None, compact=False,
-                    print_prefix="DataFrame", print_label=None, print_verb: str | None = "created",
-                    print_suffix=None, print_rows=PL_PRINT_ROWS, started=None, level="debug"):
+def dataframe_print(
+    process,
+    data_df,
+    messages=None,
+    compact=False,
+    print_prefix="DataFrame",
+    print_label=None,
+    print_verb: str | None = "created",
+    print_suffix=None,
+    print_rows=PL_PRINT_ROWS,
+    started=None,
+    level="debug",
+):
     if print_rows < 0:
         return data_df
     if messages is None:
         label = f" [{print_label}]" if print_label else ""
         suffix = f" {print_suffix}" if print_suffix else ""
-        messages = (
-            f"{print_prefix}{label} {print_verb} "
-            f"with [{len(data_df.columns):,}] columns "
-            f"and [{len(data_df):,}] rows{suffix}"
-        )
+        messages = f"{print_prefix}{label} {print_verb} with [{len(data_df.columns):,}] columns and [{len(data_df):,}] rows{suffix}"
     if not isinstance(messages, list):
         messages = [messages]
     if started is not None:
@@ -59,16 +65,16 @@ def dataframe_print(process, data_df, messages=None, compact=False,
             messages.append(data_str)
         else:
             with pl.Config(
-                    tbl_rows=print_rows,
-                    tbl_cols=-1,
-                    fmt_str_lengths=50,
-                    set_tbl_width_chars=30000,
-                    set_fmt_float="full",
-                    set_ascii_tables=True,
-                    tbl_formatting="ASCII_FULL_CONDENSED",
-                    set_tbl_hide_dataframe_shape=True,
+                tbl_rows=print_rows,
+                tbl_cols=-1,
+                fmt_str_lengths=50,
+                set_tbl_width_chars=30000,
+                set_fmt_float="full",
+                set_ascii_tables=True,
+                tbl_formatting="ASCII_FULL_CONDENSED",
+                set_tbl_hide_dataframe_shape=True,
             ):
                 messages[-1] = messages[-1] + ": "
-                messages.extend(str(data_df).split('\n'))
+                messages.extend(str(data_df).split("\n"))
     print_log(process, messages, level=level)
     return data_df

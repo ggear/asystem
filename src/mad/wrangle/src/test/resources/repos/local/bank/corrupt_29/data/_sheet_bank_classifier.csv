@@ -1,0 +1,11 @@
+Category,Bucket,Budgeted,Bank Code,Merchant Code,Pattern
+,Living,Yes,,,orphan
+Groceries,Living,Yes,,,grocer
+Groceries,Essentials,Yes,,,
+Fuel,Car,,,,
+fuel,Car,,,,
+Restaurants,Discretionary,Yes,,,x
+Restaurants,Discretionary,Yes,"FOOD_AND_DRINK, INCOME",,cafe
+Shopping,Discretionary,Yes,,,store
+Restaurants,Discretionary,Yes,,,store
+Travel,Discretionary,Yes,,,the

@@ -60,22 +60,19 @@ def load_bootstrap_env_value(name, default="", filename=".env_prod", module_root
 def load_bootstrap_modules(include_disabled=True, include_infrastructure=True):
     modules = {}
     hosts_path = Path(join(dirname(abspath(join(DIR_ROOT, "../.."))), ".hosts"))
-    host_labels_names = {
-        line.split("=")[0]: line.split("=")[-1].split(",") for line in hosts_path.read_text().strip().split("\n") if line.strip() and not line.strip().startswith("#")
-    }
+    host_labels_names = {line.split("=")[0]: line.split("=")[-1].split(",") for line in hosts_path.read_text().strip().split("\n") if line.strip() and not line.strip().startswith("#")}
     for module in glob.glob(abspath(join(DIR_ROOT, "../../*/*"))):
         group_path = Path(join(module, ".group"))
-        if basename(module) != SHARED_MODULE_NAME and \
-                (include_disabled or (isfile(group_path) and group_path.read_text().strip().isdigit() and int(group_path.read_text().strip()) >= 0)) and \
-                (include_infrastructure or not basename(module).startswith("_")):
+        if (
+            basename(module) != SHARED_MODULE_NAME
+            and (include_disabled or (isfile(group_path) and group_path.read_text().strip().isdigit() and int(group_path.read_text().strip()) >= 0))
+            and (include_infrastructure or not basename(module).startswith("_"))
+        ):
             env = load_bootstrap_env(module)
             name = basename(module)
             host_labels = basename(dirname(module)).split("_")
             if host_labels == ["all"]:
-                host_labels = sorted(
-                    label for label, metadata in host_labels_names.items()
-                    if len(metadata) > 4 and metadata[4] != "ignore"
-                )
+                host_labels = sorted(label for label, metadata in host_labels_names.items() if len(metadata) > 4 and metadata[4] != "ignore")
             unknown_labels = [host_label for host_label in host_labels if host_label not in host_labels_names]
             if unknown_labels:
                 raise KeyError(

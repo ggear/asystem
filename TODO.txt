@@ -138,16 +138,13 @@ Add schema describe to src/build/resources/schemas/vernemq
 # Wrangle
 ###############################################################################################################################################################
 all:
+Implement quality checks for all, like banks perhaps or verify in equity or is it another plugin? make the other verify use error sheet logs?
 Add verifcation sections to all plugins like equity
 Check comments, nicely blocked, consistent accross all plugins
 Check all sheet references added to repo structs, eq equity indexes etc
 Replace release sheets with new ones, eg Banks_ARCHIVE sync with preview/release repos
 Build health wrangle/dashboards, add Streaks
 Optimise indexes, have a single composite index (entity, period, type - no unit) rather than individual, consider compression 10y segment after batch insert and dropping all index entirely - cost is have to decompress on upsert on current 10y segment
-
-Bank:
-Implement balances
-Implement transactions
 
 Equity:
 Added new mio statement, ran normal run through web ui, hung with lots of cpu, on reboot was fine?

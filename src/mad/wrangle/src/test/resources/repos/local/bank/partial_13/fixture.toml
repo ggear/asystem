@@ -1,0 +1,8 @@
+files_processed = 0
+rows_delta = 0
+end_date = ""
+expected_errors = 2
+cols_data = -1
+
+[mtimes]
+"*" = "2026-01-14T12:00:00"

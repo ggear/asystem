@@ -4,14 +4,16 @@
 
 import functools
 import glob
+import json
 import os
 import re
 import signal
 import subprocess
 import sys
 import time
-from os.path import abspath, basename, dirname, exists, isdir, isfile, join
-from typing import Any, Dict, Optional
+import tomllib
+from os.path import abspath, basename, dirname, exists, expanduser, isdir, isfile, join, relpath
+from typing import Any
 
 import packaging.version
 import varsubst
@@ -20,13 +22,13 @@ from invoke.exceptions import Exit
 from pathlib2 import Path
 from varsubst.resolvers import DictResolver
 
-FAB_SKIP_GIT = 'FAB_SKIP_GIT'
-FAB_SKIP_TESTS = 'FAB_SKIP_TESTS'
-FAB_SKIP_DELTA = 'FAB_SKIP_DELTA'
-FAB_SKIP_GROUP_BELOW = 'FAB_SKIP_GROUP_BELOW'
-FAB_SKIP_GROUP_ABOVE = 'FAB_SKIP_GROUP_ABOVE'
-FAB_SKIP_GROUP_ALLBUT = 'FAB_SKIP_GROUP_ALLBUT'
-FAB_SKIP_HOST_ALLBUT = 'FAB_SKIP_HOST_ALLBUT'
+FAB_SKIP_GIT = "FAB_SKIP_GIT"
+FAB_SKIP_TESTS = "FAB_SKIP_TESTS"
+FAB_SKIP_DELTA = "FAB_SKIP_DELTA"
+FAB_SKIP_GROUP_BELOW = "FAB_SKIP_GROUP_BELOW"
+FAB_SKIP_GROUP_ABOVE = "FAB_SKIP_GROUP_ABOVE"
+FAB_SKIP_GROUP_ALLBUT = "FAB_SKIP_GROUP_ALLBUT"
+FAB_SKIP_HOST_ALLBUT = "FAB_SKIP_HOST_ALLBUT"
 
 if FAB_SKIP_GROUP_ALLBUT in os.environ:
     os.environ[FAB_SKIP_GROUP_BELOW] = str(int(os.environ[FAB_SKIP_GROUP_ALLBUT]) + 1)
@@ -156,84 +158,75 @@ def release(context):
 def _setup(context):
     _print_header("asystem", "setup")
     version_absolute, version_numeric, version_compact = _get_versions()
-    _print_line("Versions:\n\tCompact: {}\n\tNumeric: {}\n\tAbsolute: {}\n".format(
-        version_compact,
-        version_numeric,
-        version_absolute)
+    _print_line(f"Versions:\n\tCompact: {version_compact}\n\tNumeric: {version_numeric}\n\tAbsolute: {version_absolute}\n")
+    _run_local(
+        context,
+        'pyenv install -sv "${PYTHON_VERSION}";'
+        'pyenv virtualenv "${PYTHON_VERSION}" asystem 2>/dev/null;'
+        '"${PYENV_ROOT}/versions/asystem/bin/pip" install --upgrade pip >/dev/null;'
+        '"${PYENV_ROOT}/versions/${PYTHON_VERSION}/bin/pip" install --upgrade --quiet'
+        " pip fabric docker varsubst requests pathlib2 packaging;"
+        'pyenv global "${PYTHON_VERSION}";'
+        'echo "Installed python-${PYTHON_VERSION} at [${PYENV_ROOT}/versions/asystem]"',
     )
-    _run_local(context, 'pyenv install -sv "${PYTHON_VERSION}";'
-                        'pyenv virtualenv "${PYTHON_VERSION}" asystem 2>/dev/null;'
-                        '"${PYENV_ROOT}/versions/asystem/bin/pip" install --upgrade pip >/dev/null;'
-                        '"${PYENV_ROOT}/versions/${PYTHON_VERSION}/bin/pip" install --upgrade --quiet'
-                        ' pip fabric docker varsubst requests pathlib2 packaging;'
-                        'pyenv global "${PYTHON_VERSION}";'
-                        'echo "Installed python-${PYTHON_VERSION} at [${PYENV_ROOT}/versions/asystem]"')
-    if _run_local(context,
-                  '[[ "$(python --version)" == "Python ${PYTHON_VERSION}" ]]'
-                  ' && echo true || echo false',
-                  hide='out').stdout.strip() != 'true':
+    if _run_local(context, '[[ "$(python --version)" == "Python ${PYTHON_VERSION}" ]] && echo true || echo false', hide="out").stdout.strip() != "true":
         raise Exception("Could not install python")
-    _run_local(context, 'goenv install -s "${GO_VERSION}" 2>&1 >/dev/null'
-                        ' | grep -v "both GOPATH and GOROOT are the same directory" >&2 || true;'
-                        'goenv use "${GO_VERSION}" --global > /dev/null;'
-                        'go install gotest.tools/gotestsum@latest;'
-                        'go install golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@latest;'
-                        'echo "Installed go-${GO_VERSION} at [${GOROOT}]"')
-    if _run_local(context,
-                  '[[ "$(go version)" == *"go${GO_VERSION}"* ]]'
-                  ' && echo true || echo false',
-                  hide='out').stdout.strip() != 'true':
+    _run_local(
+        context,
+        'goenv install -s "${GO_VERSION}" 2>&1 >/dev/null'
+        ' | grep -v "both GOPATH and GOROOT are the same directory" >&2 || true;'
+        'goenv use "${GO_VERSION}" --global > /dev/null;'
+        "go install gotest.tools/gotestsum@latest;"
+        "go install golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@latest;"
+        'echo "Installed go-${GO_VERSION} at [${GOROOT}]"',
+    )
+    if _run_local(context, '[[ "$(go version)" == *"go${GO_VERSION}"* ]] && echo true || echo false', hide="out").stdout.strip() != "true":
         raise Exception("Could not install go")
-    _run_local(context, 'rustup toolchain install "${RUST_VERSION}" --profile minimal --no-self-update > /dev/null;'
-                        'rustup default "${RUST_VERSION}" > /dev/null;'
-                        'rustup component add rustfmt clippy rust-src --toolchain "${RUST_VERSION}" > /dev/null;'
-                        'mkdir -p "${CARGO_HOME}/bin";'
-                        'for tool in "$(dirname "$(rustup which rustc)")"/*;'
-                        ' do ln -sf "${tool}" "${CARGO_HOME}/bin/$(basename "${tool}")"; done;'
-                        'echo "Installed rust-${RUST_VERSION} at [${CARGO_HOME}]"')
-    if _run_local(context,
-                  '[[ "$(cargo --version)" == *"${RUST_VERSION}"* ]]'
-                  ' && echo true || echo false',
-                  hide='out').stdout.strip() != 'true':
+    _run_local(
+        context,
+        'rustup toolchain install "${RUST_VERSION}" --profile minimal --no-self-update > /dev/null;'
+        'rustup default "${RUST_VERSION}" > /dev/null;'
+        'rustup component add rustfmt clippy rust-src --toolchain "${RUST_VERSION}" > /dev/null;'
+        'mkdir -p "${CARGO_HOME}/bin";'
+        'for tool in "$(dirname "$(rustup which rustc)")"/*;'
+        ' do ln -sf "${tool}" "${CARGO_HOME}/bin/$(basename "${tool}")"; done;'
+        'echo "Installed rust-${RUST_VERSION} at [${CARGO_HOME}]"',
+    )
+    if _run_local(context, '[[ "$(cargo --version)" == *"${RUST_VERSION}"* ]] && echo true || echo false', hide="out").stdout.strip() != "true":
         raise Exception("Could not install rust")
     _print_footer("asystem", "setup")
 
 
 def _purge(context):
     _print_header("asystem", "purge")
-    _run_local(context,
-               "[ $(docker ps -a -q | wc -l) -gt 0 ] && "
-               "docker rm -vf $(docker ps -a -q)", warn=True)
-    _run_local(context,
-               "[ $(docker images -a -q | wc -l) -gt 0 ] && "
-               "docker rmi -f $(docker images -a -q)", warn=True)
+    _run_local(context, "[ $(docker ps -a -q | wc -l) -gt 0 ] && docker rm -vf $(docker ps -a -q)", warn=True)
+    _run_local(context, "[ $(docker images -a -q | wc -l) -gt 0 ] && docker rmi -f $(docker images -a -q)", warn=True)
     _run_local(context, "docker system prune --volumes -f")
-    _run_local(context, 'pyenv virtualenv-delete -f asystem || true')
-    _run_local(context, 'for env in $(pyenv versions --bare); do '
-                        '[[ "$(pyenv version --bare)" != "$env" ]] && pyenv uninstall -f "$env" || true; done')
-    _run_local(context, 'chmod -R u+w "$(goenv root)"/versions/* 2>/dev/null || true;'
-                        'rm -rf "$(goenv root)"/versions/* 2>/dev/null || true')
-    _run_local(context, 'chmod -R u+w "${CARGO_HOME}" "${RUSTUP_HOME}" 2>/dev/null || true;'
-                        'rm -rf "${CARGO_HOME}" "${RUSTUP_HOME}"')
+    _run_local(context, "pyenv virtualenv-delete -f asystem || true")
+    _run_local(context, 'for env in $(pyenv versions --bare); do [[ "$(pyenv version --bare)" != "$env" ]] && pyenv uninstall -f "$env" || true; done')
+    _run_local(context, 'chmod -R u+w "$(goenv root)"/versions/* 2>/dev/null || true;rm -rf "$(goenv root)"/versions/* 2>/dev/null || true')
+    _run_local(context, 'chmod -R u+w "${CARGO_HOME}" "${RUSTUP_HOME}" 2>/dev/null || true;rm -rf "${CARGO_HOME}" "${RUSTUP_HOME}"')
     _print_footer("asystem", "purge")
 
 
 def _backup(context):
     _print_header("asystem", "backup")
-    _run_local(context, "mkdir -p /Users/graham/Backup/asystem && "
-                        "find . "
-                        "-not -path './.git*' "
-                        "-not -path './.go*' "
-                        "-not -path './.deps*' "
-                        "-not -path './.idea*' "
-                        "-not -path './.pyenv*' "
-                        "-not -path '*/target/*' "
-                        "-type f -print0 | "
-                        "git check-ignore --stdin -z | tr '\\0' '\\n' "
-                        "> /Users/graham/Backup/asystem/.gitexternal", ROOT_DIR)
-    _run_local(context, "mkdir -p /Users/graham/Backup/asystem && "
-                        "rsync -vr --files-from=/Users/graham/Backup/asystem/.gitexternal . "
-                        "/Users/graham/Backup/asystem", ROOT_DIR)
+    _run_local(
+        context,
+        "mkdir -p /Users/graham/Backup/asystem && "
+        "find . "
+        "-not -path './.git*' "
+        "-not -path './.go*' "
+        "-not -path './.deps*' "
+        "-not -path './.idea*' "
+        "-not -path './.pyenv*' "
+        "-not -path '*/target/*' "
+        "-type f -print0 | "
+        "git check-ignore --stdin -z | tr '\\0' '\\n' "
+        "> /Users/graham/Backup/asystem/.gitexternal",
+        ROOT_DIR,
+    )
+    _run_local(context, "mkdir -p /Users/graham/Backup/asystem && rsync -vr --files-from=/Users/graham/Backup/asystem/.gitexternal . /Users/graham/Backup/asystem", ROOT_DIR)
     _print_footer("asystem", "backup")
 
 
@@ -245,44 +238,39 @@ def _pull(context):
     py_deps_dict = {}
     py_deps_nodeps = set()
     for py_deps_scope in ["prod", "dev"]:
-        py_deps_name = "py_deps_{}.txt".format(py_deps_scope)
-        _substitute_env(context, GLOBAL_ENV_PATH, join(ROOT_DIR, py_deps_name), join(ROOT_DIR, "." + py_deps_name), """
+        py_deps_name = f"py_deps_{py_deps_scope}.txt"
+        _substitute_env(
+            GLOBAL_ENV_PATH,
+            join(ROOT_DIR, py_deps_name),
+            join(ROOT_DIR, "." + py_deps_name),
+            """
 #######################################################################################
 # WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
-        """.strip() + "\n\n")
+        """.strip()
+            + "\n\n",
+        )
         with open(join(ROOT_DIR, "." + py_deps_name)) as py_all_file:
             for py_all_line in py_all_file:
-                if py_all_line.strip() != "" and not py_all_line.strip().startswith("#"):
-                    if "==" in py_all_line:
-                        if py_deps_scope == "dev":
-                            py_deps_nodeps.add(py_all_line.split("==")[0].strip().lower())
-                        if py_all_line.split("==")[0].strip() in py_deps_dict:
-                            raise Exception("Error parsing line [{}] from python module file [{}], "
-                                            "duplicate python module".format(
-                                py_all_line.strip(), join(ROOT_DIR, py_deps_name)))
-                        else:
-                            py_deps_dict[py_all_line.split("==")[0].strip()] = py_all_line.split("==")[1].strip()
+                if py_all_line.strip() != "" and not py_all_line.strip().startswith("#") and "==" in py_all_line:
+                    if py_deps_scope == "dev":
+                        py_deps_nodeps.add(py_all_line.split("==")[0].strip().lower())
+                    if py_all_line.split("==")[0].strip() in py_deps_dict:
+                        raise Exception(f"Error parsing line [{py_all_line.strip()}] from python module file [{join(ROOT_DIR, py_deps_name)}], duplicate python module")
+                    py_deps_dict[py_all_line.split("==")[0].strip()] = py_all_line.split("==")[1].strip()
     py_deps_path = join(ROOT_DIR, "py_*.txt")
     for py_mod_path in glob.glob(join(ROOT_MODULE_DIR, "*/*/*/main/python/py_deps.txt")):
         py_mod_versioned_path = join(py_mod_path.removesuffix(basename(py_mod_path)), "." + basename(py_mod_path))
-        with open(py_mod_versioned_path, "w") as py_mod_versioned_file:
-            with open(py_mod_path) as py_mod_file:
-                for py_mod_line in py_mod_file:
-                    if py_mod_line.strip() != "" and not py_mod_line.strip().startswith("#"):
-                        if py_mod_line.strip() not in py_deps_dict:
-                            raise Exception("Error parsing line [{}] from python module file [{}], "
-                                            "python module version not found in file [{}]" \
-                                            .format(py_mod_line.strip(), py_mod_path, py_deps_path))
-                        else:
-                            py_mod_versioned_file.write(
-                                "{}=={}\n".format(py_mod_line.strip(), py_deps_dict[py_mod_line.strip()]))
+        with open(py_mod_versioned_path, "w") as py_mod_versioned_file, open(py_mod_path) as py_mod_file:
+            for py_mod_line in py_mod_file:
+                if py_mod_line.strip() != "" and not py_mod_line.strip().startswith("#"):
+                    if py_mod_line.strip() not in py_deps_dict:
+                        raise Exception(f"Error parsing line [{py_mod_line.strip()}] from python module file [{py_mod_path}], python module version not found in file [{py_deps_path}]")
+                    py_mod_versioned_file.write(f"{py_mod_line.strip()}=={py_deps_dict[py_mod_line.strip()]}\n")
     _print_footer("asystem", "pull dependencies")
     _print_header("asystem", "pull dependencies install")
-    _run_pinned(context, "pip install --ignore-requires-python --default-timeout=1000 -r {}"
-                .format(join(ROOT_DIR, ".py_deps_prod.txt")), ".", "python")
-    _run_pinned(context, "pip install --ignore-requires-python --no-deps --default-timeout=1000 -r {}"
-                .format(join(ROOT_DIR, ".py_deps_dev.txt")), ".", "python")
+    _run_pinned(context, "pip install --ignore-requires-python --default-timeout=1000 -r {}".format(join(ROOT_DIR, ".py_deps_prod.txt")), ".", "python")
+    _run_pinned(context, "pip install --ignore-requires-python --no-deps --default-timeout=1000 -r {}".format(join(ROOT_DIR, ".py_deps_dev.txt")), ".", "python")
     go_deps_paths = []
     rust_deps_paths = []
     pull_all_modules = os.getcwd() in [ROOT_DIR, ROOT_MODULE_DIR]
@@ -308,13 +296,12 @@ def _pull(context):
     _print_footer("asystem", "pull dependencies install")
     _generate(context, filter_changes=False, is_pull=True)
     _print_header("asystem", "pull package versions to update")
-    py_deps_names = sorted({re.escape(re.sub(r"\[.*?\]", "", name)) for name in py_deps_dict})
+    py_deps_names = sorted({re.escape(re.sub(r"\[.*?]", "", name)) for name in py_deps_dict})
     _run_local(context, "pip list --outdated | grep -iE '^(Package|{})[[:space:]]'".format("|".join(py_deps_names)))
     for go_deps_path in go_deps_paths:
-        _run_local(context, "go list -m -u -f '{}' all | awk 'NF'".format(GO_OUTDATED_FORMAT), go_deps_path)
+        _run_local(context, f"go list -m -u -f '{GO_OUTDATED_FORMAT}' all | awk 'NF'", go_deps_path)
     for rust_deps_path in rust_deps_paths:
-        _run_local(context, "cargo update --dry-run --verbose 2>&1 | awk '{}'"
-                   .format(RUST_OUTDATED_FORMAT), rust_deps_path)
+        _run_local(context, f"cargo update --dry-run --verbose 2>&1 | awk '{RUST_OUTDATED_FORMAT}'", rust_deps_path)
     _print_footer("asystem", "pull package versions to update")
     _print_header("asystem", "pull package versions to check")
     _check(context, py_deps_nodeps)
@@ -322,7 +309,7 @@ def _pull(context):
 
 
 def _check(context, py_deps_nodeps):
-    reported = _run_local(context, "pip check", hide='out', warn=True).stdout.strip().splitlines()
+    reported = _run_local(context, "pip check", hide="out", warn=True).stdout.strip().splitlines()
     absent = []
     conflicting = []
     unexpected = []
@@ -342,60 +329,49 @@ def _check(context, py_deps_nodeps):
         _print_line("  \u2705 [ 0] issues reported, all requirements satisfied")
         return
     if absent:
-        _print_line("  \u2705 [{:2d}] missing dev transitive deps, noted but not required".format(len(absent)))
+        _print_line(f"  \u2705 [{len(absent):2d}] missing dev transitive deps, noted but not required")
     if conflicting:
-        _print_line("  \u2705 [{:2d}] conflicting dev transitive deps, using a prod pinned version to resolve"
-                    .format(len(conflicting)))
+        _print_line(f"  \u2705 [{len(conflicting):2d}] conflicting dev transitive deps, using a prod pinned version to resolve")
         for issue in conflicting:
-            _print_line("  \u2705      - {}".format(_check_conflict(issue)))
+            _print_line(f"  \u2705      - {_check_conflict(issue)}")
     if not unexpected:
         return
-    _print_line("  \u274c [{:2d}] conflicting prod deps, installed with their dependencies, so a real conflict"
-                .format(len(unexpected)))
+    _print_line(f"  \u274c [{len(unexpected):2d}] conflicting prod deps, installed with their dependencies, so a real conflict")
     for issue in unexpected:
-        _print_line("  \u274c      - {}".format(issue.strip()))
+        _print_line(f"  \u274c      - {issue.strip()}")
     _print_failure("asystem", "pull package versions to check")
-    raise Exception("Found [{}] unexpected python requirement issues, see [pip check] output above"
-                    .format(len(unexpected)))
+    raise Exception(f"Found [{len(unexpected)}] unexpected python requirement issues, see [pip check] output above")
 
 
 def _check_conflict(issue):
     matched = re.match(r"^(\S+) (\S+) has requirement (.+), but you have (\S+) (\S+?)\.?$", issue.strip())
     if matched:
-        return "dev {}=={} requires {}, prod pins {}=={}".format(
-            matched.group(1), matched.group(2), matched.group(3), matched.group(4), matched.group(5))
+        return f"dev {matched.group(1)}=={matched.group(2)} requires {matched.group(3)}, prod pins {matched.group(4)}=={matched.group(5)}"
     matched = re.match(r"^(\S+) (\S+) requires (\S+), which is not installed\.?$", issue.strip())
     if matched:
-        return "dev {}=={} requires {}, which is not installed".format(
-            matched.group(1), matched.group(2), matched.group(3))
+        return f"dev {matched.group(1)}=={matched.group(2)} requires {matched.group(3)}, which is not installed"
     return issue.strip()
 
 
 def _list(context):
     _print_header("asystem", "list modules")
-    group_service_dict: Dict[str, set[str]] = {}
-    host_group_service_dict: Dict[str, Dict[str, Dict[str, str]]] = {}
-    service_depends_dict: Dict[str, set[str]] = {}
-    service_required_dict: Dict[str, set[str]] = {}
+    group_service_dict: dict[str, set[str]] = {}
+    host_group_service_dict: dict[str, dict[str, dict[str, str]]] = {}
+    service_depends_dict: dict[str, set[str]] = {}
+    service_required_dict: dict[str, set[str]] = {}
     modules = _get_modules(context, ".group", filter_changes=False)
     services_ignored = {_get_service(module) for module in modules if _is_ignored(module)}
     for module in [module for module in modules if not _is_ignored(module)]:
         group_path = Path(join(ROOT_MODULE_DIR, module, ".group"))
         group = group_path.read_text().strip()
         service = _get_service(module)
-        if group.lstrip('-').isnumeric() and int(group) >= -1:
+        if group.lstrip("-").isnumeric() and int(group) >= -1:
             for _ in _get_host_labels(module):
                 if group not in group_service_dict:
                     group_service_dict[group] = set()
                 if service != "_":
                     group_service_dict[group].add(service)
-            for host in ["{} [{}-{}, {}, {}]".format(
-                    _host,
-                    _get_host_metadata(_host)[0],
-                    _host,
-                    _get_host_metadata(_host)[1],
-                    _get_host_metadata(_host)[2],
-            ) for _host in _get_host_labels(module)]:
+            for host in [f"{_host} [{_get_host_metadata(_host)[0]}-{_host}, {_get_host_metadata(_host)[1]}, {_get_host_metadata(_host)[2]}]" for _host in _get_host_labels(module)]:
                 if host not in host_group_service_dict:
                     host_group_service_dict[host] = {}
                 if group not in host_group_service_dict[host]:
@@ -404,11 +380,9 @@ def _list(context):
                     host_group_service_dict[host][group][service] = service
                 host_group_service_dict[host] = {k: v for k, v in host_group_service_dict[host].items() if len(v) > 0}
         else:
-            raise Exception(
-                "Error in group file [{}], erroneous group number [{}]".format(group_path, group))
+            raise Exception(f"Error in group file [{group_path}], erroneous group number [{group}]")
         if service != "_":
-            for dependency in [_get_service(dependency) for dependency
-                               in _get_dependencies(context, module)[:-1] if "/" in dependency]:
+            for dependency in [_get_service(dependency) for dependency in _get_dependencies(context, module)[:-1] if "/" in dependency]:
                 if dependency in services_ignored:
                     continue
                 if service not in service_depends_dict:
@@ -417,43 +391,32 @@ def _list(context):
                 if dependency not in service_required_dict:
                     service_required_dict[dependency] = set()
                 service_required_dict[dependency].add(service)
-    _print_table("Services by group", [
-        (group, sorted(group_service_dict[group]))
-        for group in sorted(group_service_dict.keys())
-    ])
+    _print_table("Services by group", [(group, sorted(group_service_dict[group])) for group in sorted(group_service_dict.keys())])
     host_group_rows = []
     for host in sorted(host_group_service_dict.keys()):
         if FAB_SKIP_HOST_ALLBUT not in os.environ or host.startswith(os.environ[FAB_SKIP_HOST_ALLBUT]):
             host_group_rows.append((host, None))
-            for group in sorted(host_group_service_dict[host].keys()):
-                host_group_rows.append((group, sorted(host_group_service_dict[host][group].keys())))
+            host_group_rows.extend((group, sorted(host_group_service_dict[host][group].keys())) for group in sorted(host_group_service_dict[host].keys()))
     _print_table("Services by host and group", host_group_rows)
-    _print_table("Services depending on module", [
-        (service, sorted(service_depends_dict[service]))
-        for service in sorted(service_depends_dict.keys())
-    ])
-    _print_table("Services required by module", [
-        (service, sorted(service_required_dict[service]))
-        for service in sorted(service_required_dict.keys())
-    ])
+    _print_table("Services depending on module", [(service, sorted(service_depends_dict[service])) for service in sorted(service_depends_dict.keys())])
+    _print_table("Services required by module", [(service, sorted(service_required_dict[service])) for service in sorted(service_required_dict.keys())])
     print("############################################################")
     _print_footer("asystem", "list modules")
 
 
 def _print_table(title, rows):
     print("############################################################")
-    print("{}:".format(title))
+    print(f"{title}:")
     print("############################################################")
     width = max([len(label) for label, values in rows if values is not None] + [0])
     for label, values in rows:
         if values is None:
-            print("{}:".format(label))
+            print(f"{label}:")
         else:
             print("  {} {}".format((label + ":").ljust(width + 1), ", ".join(values)))
 
 
-def _generate(context, filter_module=None, filter_changes=True, filter_host=None,
-              is_release=False, is_pull=False, is_test=False):
+def _generate(context, filter_module=None, filter_changes=True, filter_host=None, is_release=False, is_pull=False, is_test=False):
     version_types = [
         "up to date",
         "to update",
@@ -480,24 +443,18 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
 
     def get_docker_image_metadatas(config_path, config_regexs, config_env):
         docker_image_metadata_dicts = []
-        with (open(config_path, 'r') as config_file):
+        with open(config_path) as config_file:
             for config_line in config_file:
                 for config_regex in config_regexs:
                     config_match = re.match(config_regex, config_line.strip())
                     if config_match is not None:
-                        docker_image_metadata_dict = {"namespace": "library", "stage": "", "skipped": False} \
-                                                     | config_match.groupdict()
+                        docker_image_metadata_dict = {"namespace": "library", "stage": "", "skipped": False} | config_match.groupdict()
                         version_current = str(docker_image_metadata_dict.get("version_current", ""))
-                        docker_image_metadata_dict["version_current"] = varsubst.varsubst(
-                            version_current,
-                            resolver=RetainNotDefinedDictResolver(config_env))
+                        docker_image_metadata_dict["version_current"] = varsubst.varsubst(version_current, resolver=RetainNotDefinedDictResolver(config_env))
                         if not bool(docker_image_metadata_dict["skipped"]):
                             version_current = str(docker_image_metadata_dict["version_current"])
-                            docker_image_metadata_version_tokens = \
-                                version_current.split('-', 1)
-                            docker_image_metadata_version_suffix = "$" \
-                                if len(docker_image_metadata_version_tokens) == 1 else \
-                                (".*-" + docker_image_metadata_version_tokens[-1] + "$")
+                            docker_image_metadata_version_tokens = version_current.split("-", 1)
+                            docker_image_metadata_version_suffix = "$" if len(docker_image_metadata_version_tokens) == 1 else (".*-" + docker_image_metadata_version_tokens[-1] + "$")
                             if version_current == "latest":
                                 docker_image_metadata_dict["version_regex"] = "latest"
                             else:
@@ -510,9 +467,10 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
                                     if re.match(config_version_regex, version_current):
                                         docker_image_metadata_dict["version_regex"] = config_version_regex
                                         break
-                        if not any(all(docker_image_metadata_dict.get(key) == docker_image_metadata_dedup.get(key)
-                                       for key in ["namespace", "repository", "version_current"])
-                                   for docker_image_metadata_dedup in docker_image_metadata_dicts):
+                        if not any(
+                            all(docker_image_metadata_dict.get(key) == docker_image_metadata_dedup.get(key) for key in ["namespace", "repository", "version_current"])
+                            for docker_image_metadata_dedup in docker_image_metadata_dicts
+                        ):
                             docker_image_metadata_dicts.append(docker_image_metadata_dict)
                         if not docker_image_metadata_dict["stage"]:
                             return docker_image_metadata_dicts
@@ -529,59 +487,81 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
         return None, None
 
     def get_docker_image_upstream(docker_image_metadata_dicts):
-        return next((docker_image_metadata_dict for docker_image_metadata_dict in docker_image_metadata_dicts
-                     if docker_image_metadata_dict["stage"] in ["", "image_upstream"]), {})
+        return next((docker_image_metadata_dict for docker_image_metadata_dict in docker_image_metadata_dicts if docker_image_metadata_dict["stage"] in ["", "image_upstream"]), {})
 
     version_messages = {_type: [] for _type in version_types}
     module_generate_stdout = {}
     for module in _get_modules(context, filter_module=filter_module, filter_changes=filter_changes):
         _print_header(module, "generate env", host=filter_host)
-        _write_env(context, module, join(ROOT_MODULE_DIR, module, "target/release") \
-            if is_release else join(ROOT_MODULE_DIR, module),
-                   filter_host=filter_host, is_release=is_release, is_test=is_test)
+        _write_env(context, module, join(ROOT_MODULE_DIR, module, "target/release") if is_release else join(ROOT_MODULE_DIR, module), filter_host=filter_host, is_release=is_release, is_test=is_test)
         _print_footer(module, "generate env", host=filter_host)
-    generate_pythonpath = [dirname(abspath(__file__))]
-    for module_python_path in sorted(glob.glob(join(ROOT_MODULE_DIR, "*/*/src/build/python"))):
-        generate_pythonpath.append(module_python_path)
+    generate_pythonpath = [dirname(abspath(__file__)), *sorted(glob.glob(join(ROOT_MODULE_DIR, "*/*/src/build/python")))]
+    shared_python_paths = [relpath(path, ROOT_DIR) for path in sorted(glob.glob(join(ROOT_MODULE_DIR, "*", SHARED_MODULE_NAME, "src/build/python")))]
+    pyright_includes = []
+    pyright_environments = []
+    for module_source_path in sorted(glob.glob(join(ROOT_MODULE_DIR, "*/*/src"))):
+        module_python_paths = [join(module_source_path, kind, "python") for kind in PYTHON_SOURCE_KINDS if glob.glob(join(module_source_path, kind, "python/**/*.py"), recursive=True)]
+        if module_python_paths:
+            module_main_path = join(module_source_path, "main/python")
+            pyright_includes.extend(relpath(path, ROOT_DIR) for path in module_python_paths)
+            pyright_environments.append(
+                {
+                    "root": relpath(module_source_path, ROOT_DIR),
+                    "extraPaths": ([relpath(module_main_path, ROOT_DIR)] if isdir(module_main_path) else []) + shared_python_paths + ["."],
+                }
+            )
+    pyright_includes.extend(_python_files_adopted())
+    with open(join(ROOT_DIR, "pyrightconfig.json"), "w") as pyright_config_file:
+        json.dump(
+            {
+                "venvPath": join(expanduser("~"), ".pyenv/versions"),
+                "venv": "asystem",
+                "pythonVersion": ".".join(GLOBAL_ENV["PYTHON_VERSION"].split(".")[:2]),
+                "pythonPlatform": "Linux",
+                "include": pyright_includes,
+                "exclude": ["**/__pycache__"],
+                "deprecateTypingAliases": True,
+                "reportDeprecated": "error",
+                "reportUnnecessaryCast": "error",
+                "reportUnnecessaryComparison": "error",
+                "reportUnnecessaryContains": "error",
+                "reportUnnecessaryIsInstance": "error",
+                "reportUnnecessaryTypeIgnoreComment": "error",
+                "executionEnvironments": pyright_environments,
+            },
+            pyright_config_file,
+            indent=2,
+        )
+        pyright_config_file.write("\n")
     for module in _get_modules(context, "src/build/python/*/generate.py", filter_changes=False):
         _print_header(module, "generate python script", host=filter_host)
-        _run_local(context, "PYTHONPATH={} python {}/{}/src/build/python/{}/generate.py" \
-                   .format(":".join(generate_pythonpath), ROOT_MODULE_DIR, module, _name(module)), ROOT_DIR)
+        _run_local(context, "PYTHONPATH={} python {}/{}/src/build/python/{}/generate.py".format(":".join(generate_pythonpath), ROOT_MODULE_DIR, module, _name(module)), ROOT_DIR)
 
         _print_footer(module, "generate python script", host=filter_host)
     for module in _get_modules(context, "generate.sh", filter_changes=False):
         _print_header(module, "generate shell script", host=filter_host)
-        module_generate_stdout[module] = \
-            _run_local(context, "{}/{}/generate.sh {}".format(ROOT_MODULE_DIR, module, is_pull),
-                       join(ROOT_MODULE_DIR, module)).stdout
+        module_generate_stdout[module] = _run_local(context, f"{ROOT_MODULE_DIR}/{module}/generate.sh {is_pull}", join(ROOT_MODULE_DIR, module)).stdout
         _print_footer(module, "generate shell script", host=filter_host)
     docker_version_env = {}
     for env_global_key, env_global_value in GLOBAL_ENV.items():
-        if env_global_key.endswith("_VERSION") or env_global_key.endswith("_LABEL"):
+        if env_global_key.endswith(("_VERSION", "_LABEL")):
             docker_version_env["ASYSTEM_" + env_global_key] = env_global_value.removeprefix('"').removesuffix('"')
     for module in _get_modules(context, filter_changes=False):
         docker_config_path, docker_config_regexs = get_docker_image_config(module)
-        docker_image_metadata = get_docker_image_upstream(get_docker_image_metadatas(
-            docker_config_path, docker_config_regexs, docker_version_env)) if docker_config_path else {}
+        docker_image_metadata = get_docker_image_upstream(get_docker_image_metadatas(docker_config_path, docker_config_regexs, docker_version_env)) if docker_config_path else {}
         if "repository" in docker_image_metadata and "version_current" in docker_image_metadata:
             docker_deps_script_path = join(ROOT_MODULE_DIR, module, "docker_deps.sh")
             docker_image = "{}{}:{}".format(
-                (docker_image_metadata["namespace"] + "/") \
-                    if "namespace" in docker_image_metadata and
-                       docker_image_metadata["namespace"] != "library" else "",
+                (docker_image_metadata["namespace"] + "/") if "namespace" in docker_image_metadata and docker_image_metadata["namespace"] != "library" else "",
                 docker_image_metadata["repository"],
-                docker_image_metadata["version_current"]
+                docker_image_metadata["version_current"],
             )
             docker_build_packages = {}
             for docker_build_packages_scope in ["base", "build"]:
-                docker_deps_path = join(ROOT_MODULE_DIR, module, "docker_deps_{}.txt" \
-                                        .format(docker_build_packages_scope))
+                docker_deps_path = join(ROOT_MODULE_DIR, module, f"docker_deps_{docker_build_packages_scope}.txt")
                 if isfile(docker_deps_path):
-                    docker_build_packages[docker_build_packages_scope] = "\n    ".join(
-                        [dep for dep in Path(docker_deps_path).read_text().strip().split("\n") \
-                         if (dep and not dep.startswith("#"))])
-                if docker_build_packages_scope not in docker_build_packages or \
-                        len(docker_build_packages[docker_build_packages_scope]) == 0:
+                    docker_build_packages[docker_build_packages_scope] = "\n    ".join([dep for dep in Path(docker_deps_path).read_text().strip().split("\n") if (dep and not dep.startswith("#"))])
+                if docker_build_packages_scope not in docker_build_packages or len(docker_build_packages[docker_build_packages_scope]) == 0:
                     docker_build_packages[docker_build_packages_scope] = "bash"
             docker_build_copies = []
             docker_build_mounts = []
@@ -591,27 +571,26 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
                 (join(ROOT_MODULE_DIR, module, "src/main/resources/image"), "/asystem/etc"),
             ]:
                 if isdir(docker_build_mount[0]):
-                    docker_build_copies.append("COPY {} {}".format(
-                        docker_build_mount[0] \
-                        .removeprefix(join(ROOT_MODULE_DIR, module) + "/") \
-                        .replace("src/main/resources", "target/package/main/resources") + "/.",
-                        docker_build_mount[1],
-                    ))
-                    docker_build_mounts.append("--mount type=bind,source={},target={},readonly" \
-                                               .format(*docker_build_mount))
+                    docker_build_copies.append(
+                        "COPY {} {}".format(
+                            docker_build_mount[0].removeprefix(join(ROOT_MODULE_DIR, module) + "/").replace("src/main/resources", "target/package/main/resources") + "/.",
+                            docker_build_mount[1],
+                        )
+                    )
+                    docker_build_mounts.append("--mount type=bind,source={},target={},readonly".format(*docker_build_mount))
             if any("src/main/python" in item for item in docker_build_copies):
-                docker_build_copies.append('RUN set -eux; \\\\\\\\')
+                docker_build_copies.append("RUN set -eux; \\\\\\\\")
                 docker_build_copies.append(
-                    '    [ -f /asystem/bin/python/.py_deps.txt ] && pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir -r /asystem/bin/python/.py_deps.txt; \\\\\\\\')
-                docker_build_copies.append('    pip3 cache purge')
+                    "    [ -f /asystem/bin/python/.py_deps.txt ] && pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir -r /asystem/bin/python/.py_deps.txt; \\\\\\\\"
+                )
+                docker_build_copies.append("    pip3 cache purge")
             docker_build_variables = []
             for env_global_key, env_global_value in GLOBAL_ENV.items():
-                if env_global_key.endswith("_VERSION") or env_global_key.endswith("_LABEL"):
-                    docker_build_variables.append("-e ASYSTEM_{}={}" \
-                                                  .format(env_global_key, env_global_value))
+                if env_global_key.endswith(("_VERSION", "_LABEL")):
+                    docker_build_variables.append(f"-e ASYSTEM_{env_global_key}={env_global_value}")
             with open(docker_deps_script_path, "w+") as docker_deps_script_file:
-                # noinspection HttpUrlsUsage
-                docker_deps_script_file.write("""
+                docker_deps_script_file.write(
+                    """
 #!/bin/bash
 #######################################################################################
 # WARNING: This file is written by the build process, any manual edits will be lost!
@@ -712,147 +691,146 @@ docker exec -it {} "$CONTAINER_NAME" bash
 docker kill "$CONTAINER_NAME"
 docker rm -vf "$CONTAINER_NAME"
                                               """.format(
-                    docker_build_packages["base"],
-                    docker_build_packages["build"],
-                    docker_build_packages["base"],
-                    docker_build_packages["build"],
-                    "\n".join([f'echo "{_cp}"' for _cp in docker_build_copies]),
-                    " \\\\\\\\\"\n".join([f'echo "    {_var}' for _var in docker_build_variables]),
-                    docker_image,
-                    _get_host_arch(module, filter_host),
-                    " ".join(docker_build_mounts),
-                    docker_image,
-                    " ".join(docker_build_variables),
-                ).strip())
+                        docker_build_packages["base"],
+                        docker_build_packages["build"],
+                        docker_build_packages["base"],
+                        docker_build_packages["build"],
+                        "\n".join([f'echo "{_cp}"' for _cp in docker_build_copies]),
+                        ' \\\\\\\\"\n'.join([f'echo "    {_var}' for _var in docker_build_variables]),
+                        docker_image,
+                        _get_host_arch(module, filter_host),
+                        " ".join(docker_build_mounts),
+                        docker_image,
+                        " ".join(docker_build_variables),
+                    ).strip()
+                )
             os.chmod(docker_deps_script_path, 0o777)
-            print("Wrote [{}]".format(docker_deps_script_path))
+            print(f"Wrote [{docker_deps_script_path}]")
     if is_pull:
         for module in module_generate_stdout:
             for line in module_generate_stdout[module].splitlines():
-                for version_regex, version_type, version_format in \
-                        zip(version_regexs, version_types, version_formats):
+                for version_regex, version_type, version_format in zip(version_regexs, version_types, version_formats, strict=True):
                     match = re.match(version_regex, line)
                     if match is not None:
-                        version_messages[version_type].append(version_format \
-                                                              .format(*match.groupdict().values()))
+                        version_messages[version_type].append(version_format.format(*match.groupdict().values()))
         for module in _get_modules(context, filter_module=filter_module, filter_changes=filter_changes):
             docker_config_path, docker_config_regexs = get_docker_image_config(module)
-            docker_image_metadatas = get_docker_image_metadatas(
-                docker_config_path, docker_config_regexs, docker_version_env) if docker_config_path else []
+            docker_image_metadatas = get_docker_image_metadatas(docker_config_path, docker_config_regexs, docker_version_env) if docker_config_path else []
             docker_image_version_ignores = ["windows", "alpha", "beta", "rc", "a", "0a", "0b", "b1", "b"]
             if len(docker_image_metadatas) == 0 and docker_config_path:
-                version_messages["errors"].append(version_formats[2].format(
-                    module + ":unknown",
-                    "Could not determine versions from parsed metadata {}".format({})))
+                version_messages["errors"].append(version_formats[2].format(module + ":unknown", f"Could not determine versions from parsed metadata { ({}) }"))
             for docker_image_metadata in docker_image_metadatas:
-                if all(key in docker_image_metadata for key in
-                       ["namespace", "repository", "version_current", "version_regex", "skipped"]) \
-                        and not docker_image_metadata["skipped"]:
-                    docker_image_tags_command = "regctl -v error tag ls {}/{}" \
-                        .format(docker_image_metadata["namespace"], docker_image_metadata["repository"])
-                    docker_image_tags_stdout = _run_local(context, docker_image_tags_command, hide='out').stdout
+                if all(key in docker_image_metadata for key in ["namespace", "repository", "version_current", "version_regex", "skipped"]) and not docker_image_metadata["skipped"]:
+                    docker_image_tags_command = "regctl -v error tag ls {}/{}".format(docker_image_metadata["namespace"], docker_image_metadata["repository"])
+                    docker_image_tags_stdout = _run_local(context, docker_image_tags_command, hide="out").stdout
                     docker_image_tags = str(docker_image_tags_stdout).splitlines() if docker_image_tags_stdout else []
                     if len(docker_image_tags) == 0:
-                        version_messages["errors"].append(version_formats[2].format(
-                            module, "Could not determine versions from Github repository command [{}]" \
-                                .format(docker_image_tags_command)))
+                        version_messages["errors"].append(version_formats[2].format(module, f"Could not determine versions from Github repository command [{docker_image_tags_command}]"))
                     docker_image_metadata["version_upstream"] = docker_image_metadata["version_current"]
                     if docker_image_metadata["version_upstream"] != "latest":
                         version_regex = str(docker_image_metadata["version_regex"])
                         for docker_image_version in docker_image_tags:
-                            if not any(_ignored.lower() in docker_image_version.lower() \
-                                       for _ignored in docker_image_version_ignores):
-                                docker_image_version_match = \
-                                    re.match(version_regex, docker_image_version)
-                                version_upstream_match = re.match(
-                                    version_regex, str(docker_image_metadata["version_upstream"])
-                                )
-                                if docker_image_version_match is not None and \
-                                        version_upstream_match is not None and \
-                                        packaging.version.parse(docker_image_version_match.groups()[0]) >= \
-                                        packaging.version.parse(version_upstream_match.groups()[0]):
+                            if not any(_ignored.lower() in docker_image_version.lower() for _ignored in docker_image_version_ignores):
+                                docker_image_version_match = re.match(version_regex, docker_image_version)
+                                version_upstream_match = re.match(version_regex, str(docker_image_metadata["version_upstream"]))
+                                if (
+                                    docker_image_version_match is not None
+                                    and version_upstream_match is not None
+                                    and packaging.version.parse(docker_image_version_match.groups()[0]) >= packaging.version.parse(version_upstream_match.groups()[0])
+                                ):
                                     docker_image_metadata["version_upstream"] = docker_image_version
                     if "version_upstream" in docker_image_metadata:
-                        version_type = 0 \
-                            if docker_image_metadata["version_current"] == \
-                               docker_image_metadata["version_upstream"] else 1
-                        version_messages[version_types[version_type]].append(version_formats[version_type].format(
-                            module + ":" + str(docker_image_metadata["repository"]),
-                            docker_image_metadata["version_current"],
-                            docker_image_metadata["version_upstream"]
-                        ))
+                        version_type = 0 if docker_image_metadata["version_current"] == docker_image_metadata["version_upstream"] else 1
+                        version_messages[version_types[version_type]].append(
+                            version_formats[version_type].format(
+                                module + ":" + str(docker_image_metadata["repository"]), docker_image_metadata["version_current"], docker_image_metadata["version_upstream"]
+                            )
+                        )
                     else:
-                        version_messages["errors"].append(version_formats[2].format(
-                            module + ":" + str(docker_image_metadata["repository"]),
-                            "Could not get upstream version with current [{}], regex [{}] and upstream versions:\n{}"
-                            .format(
-                                docker_image_metadata["version_current"],
-                                docker_image_metadata["version_regex"],
-                                "\n".join(docker_image_tags))))
+                        version_messages["errors"].append(
+                            version_formats[2].format(
+                                module + ":" + str(docker_image_metadata["repository"]),
+                                "Could not get upstream version with current [{}], regex [{}] and upstream versions:\n{}".format(
+                                    docker_image_metadata["version_current"], docker_image_metadata["version_regex"], "\n".join(docker_image_tags)
+                                ),
+                            )
+                        )
                 elif not docker_image_metadata["skipped"]:
-                    version_messages["errors"].append(version_formats[2].format(
-                        module + ":" + str(docker_image_metadata.get("repository", "unknown")),
-                        "Could not determine versions from parsed metadata {}".format(docker_image_metadata)))
+                    version_messages["errors"].append(
+                        version_formats[2].format(module + ":" + str(docker_image_metadata.get("repository", "unknown")), f"Could not determine versions from parsed metadata {docker_image_metadata}")
+                    )
         for lang, version in {
             "python": r"pyenv install --list | grep -E '^[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+$' | tail -1 | tr -d ' '",
             "go": r"goenv install --list | grep -E '^[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+$' | tail -1 | tr -d ' '",
             "rust": r"""curl -s https://static.rust-lang.org/dist/channel-rust-stable.toml | awk -F'"' '/^\[pkg\.rust\]$/{f=1} f&&/version/{split($2,v," "); print v[1]; exit}'""",
         }.items():
-            lang_version_installed = GLOBAL_ENV["{}_VERSION".format(lang.upper())]
-            lang_version_upstream = _run_local(context, version, hide='out').stdout.strip()
+            lang_version_installed = GLOBAL_ENV[f"{lang.upper()}_VERSION"]
+            lang_version_upstream = _run_local(context, version, hide="out").stdout.strip()
             if lang_version_upstream != lang_version_installed:
-                version_messages["to update"].append(version_formats[1].format(
-                    "*/{}".format(lang), lang_version_installed,
-                    lang_version_upstream))
+                version_messages["to update"].append(version_formats[1].format(f"*/{lang}", lang_version_installed, lang_version_upstream))
             else:
-                version_messages["up to date"].append(version_formats[0].format(
-                    "*/{}".format(lang), lang_version_installed))
+                version_messages["up to date"].append(version_formats[0].format(f"*/{lang}", lang_version_installed))
         version_types.insert(1, "pinned")
         version_messages["pinned"] = []
         for message in version_messages["to update"]:
             for stack in GLOBAL_ENV["PINNED_DEPENDENCIES"].split(","):
-                if "{}]".format(stack) in message:
+                if f"{stack}]" in message:
                     version_messages["pinned"].append(message)
         for message in version_messages["pinned"]:
             version_messages["to update"].remove(message)
         for version_type in version_types:
-            _print_header("asystem", "pull versions {}".format(version_type), host=filter_host)
+            _print_header("asystem", f"pull versions {version_type}", host=filter_host)
             for message in sorted(version_messages[version_type]):
                 print(message)
-            _print_footer("asystem", "pull versions {}".format(version_type), host=filter_host)
+            _print_footer("asystem", f"pull versions {version_type}", host=filter_host)
 
 
 def _clean(context, filter_module=None, filter_host=None):
     for module in _get_modules(context, filter_module=filter_module, filter_changes=False):
         _print_header(module, "clean transients", host=filter_host)
-        find_command = "find '{}/{}' -path '*/src/*/*/src/*' ! -path '*/resources/*' -name" \
-            .format(ROOT_MODULE_DIR, module)
-        _run_local(context, "{} '.DS_Store' -exec rm -rf {{}} \\+".format(find_command))
-        _run_local(context, "{} '*.pyc' -exec rm -rf {{}} \\+".format(find_command))
-        _run_local(context, "{} '__pycache__' -exec rm -rf {{}} \\+".format(find_command))
-        _run_local(context, "{} '.pytest_cache' -exec rm -rf {{}} \\+".format(find_command))
-        _run_local(context, "{} '.coverage' -exec rm -rf {{}} \\+".format(find_command))
+        find_command = f"find '{ROOT_MODULE_DIR}/{module}' -path '*/src/*/*/src/*' ! -path '*/resources/*' -name"
+        _run_local(context, f"{find_command} '.DS_Store' -exec rm -rf {{}} \\+")
+        _run_local(context, f"{find_command} '*.pyc' -exec rm -rf {{}} \\+")
+        _run_local(context, f"{find_command} '__pycache__' -exec rm -rf {{}} \\+")
+        _run_local(context, f"{find_command} '.pytest_cache' -exec rm -rf {{}} \\+")
+        _run_local(context, f"{find_command} '.coverage' -exec rm -rf {{}} \\+")
 
-        # TODO: Disable deleting .env, leave last build in place for running push.py scripts
-        # _run_local(context, "rm -rf {}/{}/.env".format(DIR_ROOT, module))
-
-        _run_local(context, "rm -rf {}/{}/target".format(ROOT_MODULE_DIR, module))
+        _run_local(context, f"rm -rf {ROOT_MODULE_DIR}/{module}/target")
         _print_footer(module, "clean transients", host=filter_host)
 
 
 def _build_shared(context):
-    """Lint and type check the shared build library, which is not a module so no module build reaches it.
-    """
+    """Lint and type check the shared build library, which is not a module so no module build reaches it."""
+    with open(join(ROOT_DIR, "ruff.toml"), "rb") as ruff_config_file:
+        ruff_required_version = tomllib.load(ruff_config_file).get("required-version")
+    if ruff_required_version != "=={}".format(GLOBAL_ENV["RUFF_VERSION"]):
+        raise Exit("ruff.toml required-version [{}] does not pin RUFF_VERSION [{}] from .env_fab".format(ruff_required_version, GLOBAL_ENV["RUFF_VERSION"]))
+    pyright_version = _run_local(context, "pyright --version", hide="both").stdout.strip().split()[-1]
+    if pyright_version != GLOBAL_ENV["PYRIGHT_VERSION"]:
+        raise Exit("pyright version [{}] does not match PYRIGHT_VERSION [{}] from .env_fab".format(pyright_version, GLOBAL_ENV["PYRIGHT_VERSION"]))
     for shared_path in glob.glob(join(ROOT_MODULE_DIR, "*", SHARED_MODULE_NAME, "src/build/python")):
         shared_module = shared_path.replace(ROOT_MODULE_DIR + "/", "")
-        if isfile(join(shared_path, "pyproject.toml")):
-            _print_header(shared_module, "build shared")
-            _print_line("Linting sources ...")
-            _run_local(context, "ruff check --fix --config pyproject.toml asystem/", shared_module)
-            if isfile(join(shared_path, "pyrightconfig.json")):
-                _print_line("Type checking sources ...")
-                _run_local(context, "pyright --project .", shared_module)
-            _print_footer(shared_module, "build shared")
+        _print_header(shared_module, "build shared")
+        _print_line("Linting sources ...")
+        _run_local(context, "ruff check --fix asystem/", shared_module)
+        _run_local(context, "ruff format asystem/", shared_module)
+        _print_line("Type checking sources ...")
+        _run_local(context, f"pyright --project {ROOT_DIR} asystem/", shared_module)
+        _print_footer(shared_module, "build shared")
+    root_python_files = " ".join(path for path in _python_files_adopted() if not path.startswith("src/"))
+    if root_python_files:
+        _print_header("asystem", "build root")
+        _print_line("Linting sources ...")
+        _run_local(context, f"ruff check --fix {root_python_files}", ROOT_DIR)
+        _run_local(context, f"ruff format {root_python_files}", ROOT_DIR)
+        _print_line("Type checking sources ...")
+        _run_local(context, f"pyright --project {ROOT_DIR} {root_python_files}", ROOT_DIR)
+        _print_footer("asystem", "build root")
+
+
+def _python_files_adopted():
+    with open(join(ROOT_DIR, "ruff.toml"), "rb") as ruff_config_file:
+        return [path for path in tomllib.load(ruff_config_file)["include"] if not any(token in path for token in "*?[") and isfile(join(ROOT_DIR, path))]
 
 
 def _build(context, filter_module=None, filter_host=None, is_release=False):
@@ -863,14 +841,16 @@ def _build(context, filter_module=None, filter_host=None, is_release=False):
         _print_footer(module, "build process", host=filter_host)
     for module in _get_modules(context, "src", filter_module=filter_module):
         _print_header(module, "build compile", host=filter_host)
-        module_python_dir = join(ROOT_MODULE_DIR, module, "src/main/python")
-        python_paths = "src/main/python/" + (" src/test/python/" if isdir(join(ROOT_MODULE_DIR, module, "src/test/python")) else "")
-        if isfile(join(module_python_dir, "pyproject.toml")):
+        python_paths = " ".join(
+            [f"src/{kind}/python/" for kind in PYTHON_SOURCE_KINDS if isdir(join(ROOT_MODULE_DIR, module, "src", kind, "python"))]
+            + [relpath(join(ROOT_DIR, path), join(ROOT_MODULE_DIR, module)) for path in _python_files_adopted() if path.startswith(f"src/{module}/")]
+        )
+        if python_paths:
             _print_line("Linting sources ...")
-            _run_local(context, f"ruff check --fix --config src/main/python/pyproject.toml {python_paths}", module)
-        if isfile(join(module_python_dir, "pyrightconfig.json")):
+            _run_local(context, f"ruff check --fix {python_paths}", module)
+            _run_local(context, f"ruff format {python_paths}", module)
             _print_line("Type checking sources ...")
-            _run_local(context, f"pyright --project src/main/python {python_paths}", module)
+            _run_local(context, f"pyright --project {ROOT_DIR} {python_paths}", module)
         if isfile(join(ROOT_MODULE_DIR, module, "src/setup.py")):
             _run_local(context, "python setup.py sdist", join(module, "target/package"))
         module_go_main_path = join(ROOT_MODULE_DIR, module, "src/main/go", _get_service(module))
@@ -882,11 +862,15 @@ def _build(context, filter_module=None, filter_host=None, is_release=False):
             _run_local(context, "gofmt -l -w .", module_go_main_path)
             _run_local(context, "modernize -fix ./...", module_go_main_path)
             _run_local(context, "go vet -printf.funcs=derivedf,derivedInertf ./...", module_go_main_path)
-            _run_local(context, "GOCACHE={} GOBIN={} go build -o {}".format(
-                join(ROOT_MODULE_DIR, module, "target/go/cache"),
-                join(ROOT_MODULE_DIR, module, "target/go/bin"),
-                join(ROOT_MODULE_DIR, module, "target/go/bin/"),
-            ), module_go_main_path)
+            _run_local(
+                context,
+                "GOCACHE={} GOBIN={} go build -o {}".format(
+                    join(ROOT_MODULE_DIR, module, "target/go/cache"),
+                    join(ROOT_MODULE_DIR, module, "target/go/bin"),
+                    join(ROOT_MODULE_DIR, module, "target/go/bin/"),
+                ),
+                module_go_main_path,
+            )
             _run_local(context, "chmod -R 777 $GOPATH", module_go_main_path)
         module_go_test_path = join(ROOT_MODULE_DIR, module, "src/test/go", _get_service(module) + "_test")
         if isdir(module_go_test_path):
@@ -897,12 +881,8 @@ def _build(context, filter_module=None, filter_host=None, is_release=False):
             module_rust_target = join(ROOT_MODULE_DIR, module, "target/rust")
             _print_line("Linting sources ...")
             _run_local(context, "cargo fmt", module_rust_main_path)
-            _run_local(context, "CARGO_TARGET_DIR={} cargo clippy --workspace --all-targets -- -D warnings".format(
-                module_rust_target,
-            ), module_rust_main_path)
-            _run_local(context, "CARGO_TARGET_DIR={} cargo build".format(
-                module_rust_target,
-            ), module_rust_main_path)
+            _run_local(context, f"CARGO_TARGET_DIR={module_rust_target} cargo clippy --workspace --all-targets -- -D warnings", module_rust_main_path)
+            _run_local(context, f"CARGO_TARGET_DIR={module_rust_target} cargo build", module_rust_main_path)
         _print_footer(module, "build compile", host=filter_host)
 
 
@@ -911,7 +891,6 @@ def _test_unit(context, filter_module=None):
         _print_header(module, "unit test")
         _print_line("Running unit tests ...")
         _run_external(
-            context,
             "python -u unit_test.py 2>&1",
             join(module, "src/test/python/unit"),
         )
@@ -920,14 +899,11 @@ def _test_unit(context, filter_module=None):
         _print_header(module, "unit test")
         _print_line("Running unit tests ...")
         _run_external(
-            context,
-            "GOCACHE={} GOBIN={} echo \"\"; "
-            "set -o pipefail && gotestsum --format-hide-empty-pkg --format short-verbose --no-color=false ./... | "
-            "grep -v 'EMPTY' 2>&1 | cat".format(
+            "GOCACHE={} GOBIN={} echo \"\"; set -o pipefail && gotestsum --format-hide-empty-pkg --format short-verbose --no-color=false ./... | grep -v 'EMPTY' 2>&1 | cat".format(
                 join(ROOT_MODULE_DIR, module, "target/go/cache"),
                 join(ROOT_MODULE_DIR, module, "target/go/bin"),
             ),
-            join(module, "src/main/go/{}".format(_get_service(module))),
+            join(module, f"src/main/go/{_get_service(module)}"),
         )
         _print_footer(module, "unit test")
     for module in _get_modules(context, "src/main/rust", filter_module=filter_module):
@@ -937,42 +913,28 @@ def _test_unit(context, filter_module=None):
         _print_header(module, "unit test")
         _print_line("Running unit tests ...")
         _run_external(
-            context,
             "set -o pipefail && cargo test",
-            join(module, "src/main/rust/{}".format(_get_service(module))),
+            join(module, f"src/main/rust/{_get_service(module)}"),
             env_overrides={"CARGO_TARGET_DIR": join(ROOT_MODULE_DIR, module, "target/rust")},
         )
         _print_footer(module, "unit test")
 
 
-# noinspection PyUnusedLocal
 def _package(context, filter_module=None, filter_host=None, is_release=False):
     for module in _get_modules(context, "Dockerfile", filter_module=filter_module):
         _print_header(module, "package", host=filter_host)
-        if filter_host is None and not is_release and \
-                _get_env(join(ROOT_MODULE_DIR, module, ".env")).get("SERVICE_LOCAL_RUNTIME") == "native":
-            host_arch = os.uname().machine
-        else:
-            host_arch = _get_host_arch(module, filter_host)
+        is_native = filter_host is None and not is_release and _get_env(join(ROOT_MODULE_DIR, module, ".env")).get("SERVICE_LOCAL_RUNTIME") == "native"
+        host_arch = os.uname().machine if is_native else _get_host_arch(module, filter_host)
         build_args = ""
         for env_global_key, env_global_value in GLOBAL_ENV.items():
-            if env_global_key.endswith("_VERSION") or env_global_key.endswith("_LABEL"):
-                build_args += "\\\n    --build-arg ASYSTEM_{}={} ".format(
-                    env_global_key, env_global_value.removeprefix('"').removesuffix('"'))
+            if env_global_key.endswith(("_VERSION", "_LABEL")):
+                build_args += "\\\n    --build-arg ASYSTEM_{}={} ".format(env_global_key, env_global_value.removeprefix('"').removesuffix('"'))
         docker_image_build_start_time = time.time()
-        _run_local(context,
-                   "docker buildx build . --progress=plain --platform linux/{} --output type=docker --tag {}:{} {}"
-                   .format(host_arch, _name(module), _get_versions()[0], build_args), module)
+        _run_local(context, f"docker buildx build . --progress=plain --platform linux/{host_arch} --output type=docker --tag {_name(module)}:{_get_versions()[0]} {build_args}", module)
         docker_image_build_time = int((time.time() - docker_image_build_start_time) / 60)
-        docker_image_size = _run_local(context, "docker image ls --format json {}:{} | jq -r .Size".format(
-            _name(module),
-            _get_versions()[0]
-        ), module, hide='out').stdout.strip()
+        docker_image_size = _run_local(context, f"docker image ls --format json {_name(module)}:{_get_versions()[0]} | jq -r .Size", module, hide="out").stdout.strip()
         print("\n############################################################")
-        print("Docker image build complete in [{}m] with size [{}]".format(
-            docker_image_build_time,
-            docker_image_size,
-        ))
+        print(f"Docker image build complete in [{docker_image_build_time}m] with size [{docker_image_size}]")
         print("############################################################\n")
         _print_footer(module, "package", host=filter_host)
 
@@ -983,11 +945,11 @@ def _schema(context, filter_module=None):
         for module in _get_modules(context, join(schema_dir, "describe.sh"), filter_module=filter_module):
             _print_header(module, "schema")
             for script in ("describe", "verify"):
-                if not isfile(join(ROOT_MODULE_DIR, module, schema_dir, "{}.sh".format(script))):
+                if not isfile(join(ROOT_MODULE_DIR, module, schema_dir, f"{script}.sh")):
                     continue
-                _print_line("Running [{}] {} ...".format(dialect, script))
+                _print_line(f"Running [{dialect}] {script} ...")
                 try:
-                    _run_local(context, "./{}.sh".format(script), join(module, schema_dir))
+                    _run_local(context, f"./{script}.sh", join(module, schema_dir))
                 except Exception:
                     _print_failure(module, "schema")
                     raise
@@ -1020,15 +982,15 @@ def _execute(context):
         _up_module(context, module, up_this=False)
         _print_header(module, "execute")
 
-        def _server_stop(_signal, _frame, _module=module):
+        def _server_stop(*_, _module=module):
             _down_module(context, _module)
 
         signal.signal(signal.SIGINT, _server_stop)
         install_local_path = join(ROOT_MODULE_DIR, module, "install_local.sh")
         if isfile(install_local_path):
             _run_local(context, "./install_local.sh", module)
-        _run_local(context, "echo && echo 'Connect to docker container: docker exec -it {} bash' && echo".format(_get_service(module)), module)
-        _run_local(context, "docker compose --ansi never -p {} up --force-recreate --remove-orphans".format(_get_service(module)), module)
+        _run_local(context, f"echo && echo 'Connect to docker container: docker exec -it {_get_service(module)} bash' && echo", module)
+        _run_local(context, f"docker compose --ansi never -p {_get_service(module)} up --force-recreate --remove-orphans", module)
         _print_footer(module, "execute")
         break
 
@@ -1051,101 +1013,83 @@ def _release(context):
     _get_versions_next_release()
     if FAB_SKIP_GIT not in os.environ:
         print("Tagging repository ...")
-        _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git tag -a {} -m 'Release asystem-{}'"
-                   .format(
-            _get_versions()[0],
-            _get_versions()[0],
-            _get_versions()[0]
-        ), env={"HOME": os.environ["HOME"]})
+        _run_local(
+            context, f"git add -A && git commit -m 'Update asystem-{_get_versions()[0]}' && git tag -a {_get_versions()[0]} -m 'Release asystem-{_get_versions()[0]}'", env={"HOME": os.environ["HOME"]}
+        )
     for release_module in modules:
         for host in _get_hosts(release_module):
-            if FAB_SKIP_HOST_ALLBUT not in os.environ or os.environ[FAB_SKIP_HOST_ALLBUT] == _get_host_label(host):
+            if FAB_SKIP_HOST_ALLBUT not in os.environ or os.environ[FAB_SKIP_HOST_ALLBUT] == get_host_label(host):
                 _clean(context, filter_module=release_module, filter_host=host)
                 _generate(context, filter_module=release_module, filter_host=host, is_release=True)
                 _build(context, filter_module=release_module, filter_host=host, is_release=True)
                 _package(context, filter_module=release_module, filter_host=host, is_release=True)
                 _print_header(release_module, "release", host=host)
                 host_up = True
-                ssh_pass: Optional[str] = None
-                # noinspection PyBroadException
+                ssh_pass: str | None = None
                 try:
                     ssh_pass = _ssh_pass(context, host)
                 except Exception:
                     host_up = False
                 group_path = Path(join(ROOT_MODULE_DIR, release_module, ".group"))
-                if group_path.exists() and group_path.read_text().strip().isnumeric() and \
-                        int(group_path.read_text().strip()) >= 0 and host_up and ssh_pass is not None:
+                if group_path.exists() and group_path.read_text().strip().isnumeric() and int(group_path.read_text().strip()) >= 0 and host_up and ssh_pass is not None:
                     _run_local(context, "mkdir -p target/release", release_module)
-                    _run_local(context,
-                               "cp -rvfp docker-compose.yml target/release", release_module, hide='err', warn=True)
+                    _run_local(context, "cp -rvfp docker-compose.yml target/release", release_module, hide="err", warn=True)
                     if isfile(join(ROOT_MODULE_DIR, release_module, "Dockerfile")):
-                        file_image = "{}-{}.tar.gz".format(_name(release_module), _get_versions()[0])
-                        print("docker -> target/release/{}".format(file_image))
-                        _run_local(context, "docker image save {}:{} | pigz -9 > {}"
-                                   .format(
-                            _name(release_module),
-                            _get_versions()[0],
-                            file_image
-                        ), join(release_module, "target/release"))
+                        file_image = f"{_name(release_module)}-{_get_versions()[0]}.tar.gz"
+                        print(f"docker -> target/release/{file_image}")
+                        _run_local(context, f"docker image save {_name(release_module)}:{_get_versions()[0]} | pigz -9 > {file_image}", join(release_module, "target/release"))
                     if glob.glob(join(ROOT_MODULE_DIR, release_module, "target/package/main/resources/*")):
                         _run_local(context, "cp -rvfp target/package/main/resources/. target/release", release_module)
                     _run_local(context, "mkdir -p target/release/data", release_module)
                     _run_local(context, "mkdir -p target/release/image", release_module)
                     module_go_main_path = join(ROOT_MODULE_DIR, release_module, "src/main/go", _get_service(release_module))
                     if isdir(module_go_main_path):
-                        target_arch = _get_host_metadata(_get_host_label(host))[1]
+                        target_arch = _get_host_metadata(get_host_label(host))[1]
                         if target_arch == "x86_64":
                             target_arch = "amd64"
-                        target_os = _get_host_metadata(_get_host_label(host))[3]
+                        target_os = _get_host_metadata(get_host_label(host))[3]
                         module_go_bin = join(ROOT_MODULE_DIR, release_module, "target/release")
-                        _run_local(context, "mkdir -p {}".format(module_go_bin), release_module)
-                        _run_local(context, "GOOS={} GOARCH={} GOCACHE={} GOBIN={} go build -o {}".format(
-                            target_os,
-                            target_arch,
-                            join(ROOT_MODULE_DIR, release_module, "target/go/cache"),
-                            module_go_bin,
-                            module_go_bin,
-                        ), module_go_main_path)
-                    Path(join(ROOT_MODULE_DIR, release_module, "target/release/hosts")) \
-                        .write_text(
-                        "\n".join(["{}-{}".format(_get_host_metadata(host)[0], host) for host in HOSTS]) + "\n")
+                        _run_local(context, f"mkdir -p {module_go_bin}", release_module)
+                        _run_local(
+                            context,
+                            "GOOS={} GOARCH={} GOCACHE={} GOBIN={} go build -o {}".format(
+                                target_os,
+                                target_arch,
+                                join(ROOT_MODULE_DIR, release_module, "target/go/cache"),
+                                module_go_bin,
+                                module_go_bin,
+                            ),
+                            module_go_main_path,
+                        )
+                    Path(join(ROOT_MODULE_DIR, release_module, "target/release/hosts")).write_text("\n".join([f"{_get_host_metadata(host)[0]}-{host}" for host in HOSTS]) + "\n")
                     if glob.glob(join(ROOT_MODULE_DIR, release_module, "target/package/install*")):
                         _run_local(context, "cp -rvfp target/package/install* target/release", release_module)
                     else:
                         _run_local(context, "touch target/release/install.sh", release_module)
-                    install = "{}/{}/{}".format(INSTALL_DIR, _get_service(release_module), _get_versions()[0])
-                    print("Copying release to {} ... ".format(host))
-                    _run_local(context, "{}ssh -q root@{}.local 'rm -rf {} && mkdir -p {}'"
-                               .format(ssh_pass, host, install, install))
-                    _run_local(context, "{}scp -qpr target/release/.  root@{}.local:{}"
-                               .format(ssh_pass, host, install), release_module)
-                    print("Installing release to {} ... ".format(host))
-                    _run_local(context, "{}ssh -q root@{}.local 'chmod +x {}/install.sh && {}/install.sh install 2>&1'"
-                               .format(ssh_pass, host, install, install))
-                    _run_local(context, "{}ssh -q root@{}.local 'rm -f {}/../latest && ln -sfv {} {}/../latest'"
-                               .format(ssh_pass, host, install, install, install))
-                    _run_local(context, "{}ssh -q root@{}.local 'docker system prune --volumes -f'"
-                               .format(ssh_pass, host), hide='err', warn=True)
-                    _run_local(context, "{}ssh -q root@{}.local "
-                                        "'find $(dirname {}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | sort | "
-                                        "head -n $(($(find $(dirname {}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | wc -l) - 2)) | "
-                                        "xargs rm -rf'"
-                               .format(ssh_pass, host, install, install), hide='err', warn=True)
+                    install = f"{INSTALL_DIR}/{_get_service(release_module)}/{_get_versions()[0]}"
+                    print(f"Copying release to {host} ... ")
+                    _run_local(context, f"{ssh_pass}ssh -q root@{host}.local 'rm -rf {install} && mkdir -p {install}'")
+                    _run_local(context, f"{ssh_pass}scp -qpr target/release/.  root@{host}.local:{install}", release_module)
+                    print(f"Installing release to {host} ... ")
+                    _run_local(context, f"{ssh_pass}ssh -q root@{host}.local 'chmod +x {install}/install.sh && {install}/install.sh install 2>&1'")
+                    _run_local(context, f"{ssh_pass}ssh -q root@{host}.local 'rm -f {install}/../latest && ln -sfv {install} {install}/../latest'")
+                    _run_local(context, f"{ssh_pass}ssh -q root@{host}.local 'docker system prune --volumes -f'", hide="err", warn=True)
+                    _run_local(
+                        context,
+                        f"{ssh_pass}ssh -q root@{host}.local "
+                        f"'find $(dirname {install}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | sort | "
+                        f"head -n $(($(find $(dirname {install}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | wc -l) - 2)) | "
+                        "xargs rm -rf'",
+                        hide="err",
+                        warn=True,
+                    )
                 else:
                     print("Module ignored")
                 _print_footer(release_module, "release", host=host)
     _get_versions_next_snapshot()
     if FAB_SKIP_GIT not in os.environ:
         print("Pushing repository ...")
-        _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && "
-                            "git push --all && git push origin --tags"
-                   .format(
-            _get_versions()[0]
-        ), env={"HOME": os.environ["HOME"]})
-
-
-def _group(module):
-    return dirname(module)
+        _run_local(context, f"git add -A && git commit -m 'Update asystem-{_get_versions()[0]}' && git push --all && git push origin --tags", env={"HOME": os.environ["HOME"]})
 
 
 def _name(module):
@@ -1154,23 +1098,23 @@ def _name(module):
 
 def _get_module_paths(context):
     module_paths = {}
-    for module_path in _run_local(context, "find {} -not -path '{}/.*' -type d -mindepth 2 -maxdepth 2"
-            .format(ROOT_MODULE_DIR, ROOT_MODULE_DIR), hide='out').stdout.strip().split("\n"):
+    for module_path in _run_local(context, f"find {ROOT_MODULE_DIR} -not -path '{ROOT_MODULE_DIR}/.*' -type d -mindepth 2 -maxdepth 2", hide="out").stdout.strip().split("\n"):
         module_path_elements = module_path.split("/")
-        module_paths[module_path_elements[-1]] = "{}/{}".format(
-            module_path_elements[-2],
-            module_path_elements[-1])
+        module_paths[module_path_elements[-1]] = f"{module_path_elements[-2]}/{module_path_elements[-1]}"
     return module_paths
 
 
-def _get_modules_by_hosts(filter_path=None, filter_module=None, filter_host_type=None):
+def get_modules_by_hosts(filter_path=None, filter_module=None, filter_host_type=None):
     modules = {}
     for module_path in glob.glob(join(ROOT_MODULE_DIR, "*/*" if filter_module is None else filter_module)):
         group_path = Path(join(module_path, ".group"))
-        if basename(module_path) != SHARED_MODULE_NAME and \
-                isfile(group_path) and group_path.read_text().strip().isdigit() and \
-                int(group_path.read_text().strip()) >= 0 and \
-                (filter_path is None or glob.glob("{}/{}*".format(module_path, filter_path))):
+        if (
+            basename(module_path) != SHARED_MODULE_NAME
+            and isfile(group_path)
+            and group_path.read_text().strip().isdigit()
+            and int(group_path.read_text().strip()) >= 0
+            and (filter_path is None or glob.glob(f"{module_path}/{filter_path}*"))
+        ):
             module = module_path.replace(dirname(dirname(module_path)) + "/", "")
             for host in _get_hosts(module, filter_host_type):
                 if host not in modules:
@@ -1182,44 +1126,40 @@ def _get_modules_by_hosts(filter_path=None, filter_module=None, filter_host_type
 def _get_modules(context, filter_path=None, filter_module=None, filter_changes=True, filter_groups=True):
     working_modules = []
     if filter_module is None:
-        filter_changes = filter_changes if \
-            (FAB_SKIP_DELTA not in os.environ and
-             FAB_SKIP_GROUP_BELOW not in os.environ and
-             FAB_SKIP_GROUP_ABOVE not in os.environ and
-             FAB_SKIP_HOST_ALLBUT not in os.environ) \
+        filter_changes = (
+            filter_changes
+            if (FAB_SKIP_DELTA not in os.environ and FAB_SKIP_GROUP_BELOW not in os.environ and FAB_SKIP_GROUP_ABOVE not in os.environ and FAB_SKIP_HOST_ALLBUT not in os.environ)
             else False
-        working_dirs = _run_local(context, "pwd", hide='out').stdout.strip().split('/')
+        )
+        working_dirs = _run_local(context, "pwd", hide="out").stdout.strip().split("/")
         root_dir_index = working_dirs.index("asystem")
         if "src" not in working_dirs or working_dirs.index("src") == (len(working_dirs) - 1):
-            for filtered_module in [
-                module_tmp for module_tmp in glob.glob("{}*/*".format("src/" if "src" not in working_dirs else ""))
-                if isdir(module_tmp) and (not filter_changes or _run_local(context, "git status --porcelain {}"
-                        .format(module_tmp), ROOT_DIR, hide='out').stdout)
-            ]:
-                working_modules.append(filtered_module.replace("src/", ""))
+            working_modules.extend(
+                module_tmp.replace("src/", "")
+                for module_tmp in glob.glob("{}*/*".format("src/" if "src" not in working_dirs else ""))
+                if isdir(module_tmp) and (not filter_changes or _run_local(context, f"git status --porcelain {module_tmp}", ROOT_DIR, hide="out").stdout)
+            )
         else:
             if (root_dir_index + 3) < len(working_dirs):
                 working_modules.append(working_dirs[root_dir_index + 2] + "/" + working_dirs[root_dir_index + 3])
             else:
-                for nested_modules in [module_tmp for module_tmp in glob.glob('*') if isdir(module_tmp)]:
-                    working_modules.append("{}/{}".format(working_dirs[root_dir_index + 2], nested_modules))
-        working_modules[:] = [module for module in working_modules
-                              if filter_path is None or \
-                              glob.glob("{}/{}/{}*".format(ROOT_MODULE_DIR, module, filter_path))]
+                working_modules.extend(f"{working_dirs[root_dir_index + 2]}/{nested_module}" for nested_module in glob.glob("*") if isdir(nested_module))
+        working_modules[:] = [module for module in working_modules if filter_path is None or glob.glob(f"{ROOT_MODULE_DIR}/{module}/{filter_path}*")]
     else:
-        for module_path in glob.glob("{}/{}".format(ROOT_MODULE_DIR, filter_module)):
-            if isdir(module_path) and (filter_path is None or
-                                       glob.glob("{}/{}".format(module_path, filter_path))):
-                working_modules.append(module_path.replace(ROOT_MODULE_DIR + "/", ""))
+        working_modules.extend(
+            module_path.replace(ROOT_MODULE_DIR + "/", "")
+            for module_path in glob.glob(f"{ROOT_MODULE_DIR}/{filter_module}")
+            if isdir(module_path) and (filter_path is None or glob.glob(f"{module_path}/{filter_path}"))
+        )
     working_modules[:] = [module for module in working_modules if _name(module) != SHARED_MODULE_NAME]
     grouped_modules = {}
     for module in working_modules:
         group_path = Path(join(ROOT_MODULE_DIR, module, ".group"))
         group = int(group_path.read_text().strip()) if group_path.exists() else -1
         if not filter_groups or (
-                (FAB_SKIP_GROUP_BELOW not in os.environ or int(os.environ[FAB_SKIP_GROUP_BELOW]) > group) and
-                (FAB_SKIP_GROUP_ABOVE not in os.environ or int(os.environ[FAB_SKIP_GROUP_ABOVE]) < group) and
-                (FAB_SKIP_HOST_ALLBUT not in os.environ or os.environ[FAB_SKIP_HOST_ALLBUT] in _get_host_labels(module))
+            (FAB_SKIP_GROUP_BELOW not in os.environ or int(os.environ[FAB_SKIP_GROUP_BELOW]) > group)
+            and (FAB_SKIP_GROUP_ABOVE not in os.environ or int(os.environ[FAB_SKIP_GROUP_ABOVE]) < group)
+            and (FAB_SKIP_HOST_ALLBUT not in os.environ or os.environ[FAB_SKIP_HOST_ALLBUT] in _get_host_labels(module))
         ):
             if group not in grouped_modules:
                 grouped_modules[group] = [module]
@@ -1228,29 +1168,21 @@ def _get_modules(context, filter_path=None, filter_module=None, filter_changes=T
     sorted_modules = []
     for group in sorted(grouped_modules):
         sorted_modules.extend(grouped_modules[group])
-    module_name_locale = [
-        "{}:{}".format(_get_service(module), _get_host_metadata(_get_host(module))[2]) for module in sorted_modules]
-    module_name_locale_duplicates = [
-        _module_service for _module_service in set(module_name_locale) if module_name_locale.count(_module_service) > 1]
+    module_name_locale = [f"{_get_service(module)}:{_get_host_metadata(_get_host(module))[2]}" for module in sorted_modules]
+    module_name_locale_duplicates = [_module_service for _module_service in set(module_name_locale) if module_name_locale.count(_module_service) > 1]
     if len(module_name_locale_duplicates) > 0:
-        raise Exception(
-            "Non-unique service name:locale {} detected in module definitions".format(module_name_locale_duplicates))
+        raise Exception(f"Non-unique service name:locale {module_name_locale_duplicates} detected in module definitions")
     return sorted_modules
 
 
 def _ssh_pass(context, host):
-    ssh_prefix = "sshpass -f /Users/graham/.ssh/.password " \
-        if _run_local(context, "ssh -q "
-                               "-o StrictHostKeyChecking=no "
-                               "-o PasswordAuthentication=no "
-                               "-o BatchMode=yes "
-                               "-o ConnectTimeout=1 "
-                               "root@{}.local exit"
-                      .format(host), hide="err", warn=True).exited > 0 else ""
-    if _run_local(context, "{}ssh -q -o ConnectTimeout=1 root@{}.local 'echo Connected to {}'" \
-            .format(ssh_prefix, host, host), hide="err",
-                  warn=True).exited > 0:
-        raise Exception("Error connecting to server via [{}ssh -q root@{}]".format(ssh_prefix, host))
+    ssh_prefix = (
+        "sshpass -f /Users/graham/.ssh/.password "
+        if _run_local(context, f"ssh -q -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o BatchMode=yes -o ConnectTimeout=1 root@{host}.local exit", hide="err", warn=True).exited > 0
+        else ""
+    )
+    if _run_local(context, f"{ssh_prefix}ssh -q -o ConnectTimeout=1 root@{host}.local 'echo Connected to {host}'", hide="err", warn=True).exited > 0:
+        raise Exception(f"Error connecting to server via [{ssh_prefix}ssh -q root@{host}]")
     return ssh_prefix
 
 
@@ -1259,11 +1191,11 @@ def _get_host_metadata(host):
 
 
 def _get_host_arch(module, filter_host=None):
-    host = _get_host(module) if filter_host is None else _get_host_label(filter_host)
+    host = _get_host(module) if filter_host is None else get_host_label(filter_host)
     return _get_host_metadata(host)[1]
 
 
-def _get_host_index(host):
+def get_host_index(host):
     metadata = _get_host_metadata(host)
     return int(metadata[5]) if len(metadata) > 5 and metadata[5].strip().isnumeric() else None
 
@@ -1276,7 +1208,7 @@ def _get_host(module):
     return _get_host_labels(module)[0]
 
 
-def _get_host_label(host):
+def get_host_label(host):
     return host.split("-")[1]
 
 
@@ -1285,10 +1217,7 @@ def _get_host_labels(module):
         return []
     labels = module.split("/")[0].split("_")
     if labels == ["all"]:
-        labels = sorted(
-            label for label, metadata in HOSTS.items()
-            if metadata[4] != "ignore"
-        )
+        labels = sorted(label for label, metadata in HOSTS.items() if metadata[4] != "ignore")
     return labels
 
 
@@ -1312,86 +1241,79 @@ def _get_dependencies(context, module):
     run_deps_path = join(ROOT_MODULE_DIR, module, "run_deps.txt")
     module_paths = _get_module_paths(context)
     if isfile(run_deps_path):
-        with open(run_deps_path, "r") as run_deps_file:
+        with open(run_deps_path) as run_deps_file:
             for run_dep in run_deps_file:
                 run_dep = run_dep.strip()
                 if run_dep != "" and not run_dep.startswith("#"):
-                    run_deps.append(module_paths[run_dep] if run_dep in module_paths else run_dep)
+                    run_deps.append(module_paths.get(run_dep, run_dep))
     return run_deps + [module]
 
 
 def _write_env(context, module, working_path=".", filter_host=None, is_release=False, is_test=False):
     service = _get_service(module)
     version_absolute, version_numeric, version_compact = _get_versions()
-    lines = [
-        "ASYSTEM_{}={}".format(env_global_key, env_global_value)
-        for env_global_key, env_global_value in GLOBAL_ENV.items()
-        if env_global_key.endswith("_VERSION") or env_global_key.endswith("_LABEL")
-    ]
+    lines = [f"ASYSTEM_{env_global_key}={env_global_value}" for env_global_key, env_global_value in GLOBAL_ENV.items() if env_global_key.endswith(("_VERSION", "_LABEL"))]
     lines += [
         "",
-        "SERVICE_NAME={}".format(service),
-        "SERVICE_VERSION_ABSOLUTE={}".format(version_absolute),
+        f"SERVICE_NAME={service}",
+        f"SERVICE_VERSION_ABSOLUTE={version_absolute}",
         "SERVICE_VERSION_PEP440={}".format(version_absolute.replace("-SNAPSHOT", ".dev1")),
         "SERVICE_VERSION_SEMANTIC={}".format(version_absolute.replace("-SNAPSHOT", "-dev.1")),
-        "SERVICE_VERSION_NUMERIC={}".format(version_numeric),
-        "SERVICE_VERSION_COMPACT={}".format(version_compact),
+        f"SERVICE_VERSION_NUMERIC={version_numeric}",
+        f"SERVICE_VERSION_COMPACT={version_compact}",
         "SERVICE_RESTART={}".format("always" if is_release else "no"),
         "SERVICE_LOCAL_RUNTIME=emulated",
-        "SERVICE_DATA_DIR={}".format(
-            "{}/{}/{}".format(HOME_DIR, service, version_absolute) if is_release else
-            "{}/{}/target/runtime-system".format(ROOT_MODULE_DIR, module)),
-        "SERVICE_FORM_FACTOR={}".format(
-            _get_host_metadata(_get_host_label(filter_host))[4]
-            if (is_release and filter_host is not None) else "server"),
+        "SERVICE_DATA_DIR={}".format(f"{HOME_DIR}/{service}/{version_absolute}" if is_release else f"{ROOT_MODULE_DIR}/{module}/target/runtime-system"),
+        "SERVICE_FORM_FACTOR={}".format(_get_host_metadata(get_host_label(filter_host))[4] if (is_release and filter_host is not None) else "server"),
     ]
     content = "\n".join(lines) + "\n"
     _run_local(context, "dscacheutil -flushcache")
-    host_ip_dev = _run_local(context, "[[ $(ipconfig getifaddr en0) != \"\" ]] && " +
-                             "ipconfig getifaddr en0 || ipconfig getifaddr en1", hide='out').stdout.strip()
+    host_ip_dev = _run_local(context, '[[ $(ipconfig getifaddr en0) != "" ]] && ipconfig getifaddr en0 || ipconfig getifaddr en1', hide="out").stdout.strip()
     host_name_dev = "host.docker.internal"
     for dependency in _get_dependencies(context, module):
         host_ips_prod = []
-        host_names_prod = _get_hosts(dependency) if _name(module) != _name(dependency) or \
-                                                    filter_host is None else [filter_host]
+        host_names_prod = _get_hosts(dependency) if _name(module) != _name(dependency) or filter_host is None else [filter_host]
         for host in host_names_prod:
-            host_ip = _run_local(context, "dig +short {}".format(host), hide='out').stdout.strip()
+            host_ip = _run_local(context, f"dig +short {host}", hide="out").stdout.strip()
             if host_ip == "":
                 host_ip = "127.0.1.1"
             elif host_ip == "127.0.1.1":
                 host_ip = "10.0.0.1"
             else:
-                host_ip = "10.0.2." + host_ip.split('.')[3]
+                host_ip = "10.0.2." + host_ip.split(".")[3]
             host_ips_prod.append(host_ip)
         host_ip_prod = ",".join(host_ips_prod)
         host_name_prod = ",".join(host_names_prod)
         dependency_service = _get_service(dependency).upper()
-        dependency_domain = "{}.local.janeandgraham.com".format(dependency_service.lower())
-        content += "\n".join([
-            "",
-            "{}_IP={}".format(dependency_service, host_ip_prod if is_release else host_ip_dev),
-            "{}_HOST={}".format(dependency_service, host_name_prod if is_release else host_name_dev),
-            "{}_SERVICE={}".format(dependency_service, dependency_domain if is_release else host_name_dev),
-            "{}_IP_PROD={}".format(dependency_service, host_ip_prod),
-            "{}_HOST_PROD={}".format(dependency_service, host_name_prod),
-            "{}_SERVICE_PROD={}".format(dependency_service, dependency_domain),
-        ]) + "\n"
-        for dependency_env_file in [".env_all",
-                                    ".env_prod" if is_release else (".env_test" if is_test else ".env_exec"),
-                                    ".env_all_key"]:
-            dependency_env_path = "{}/{}/{}".format(ROOT_MODULE_DIR, dependency, dependency_env_file)
+        dependency_domain = f"{dependency_service.lower()}.local.janeandgraham.com"
+        content += (
+            "\n".join(
+                [
+                    "",
+                    f"{dependency_service}_IP={host_ip_prod if is_release else host_ip_dev}",
+                    f"{dependency_service}_HOST={host_name_prod if is_release else host_name_dev}",
+                    f"{dependency_service}_SERVICE={dependency_domain if is_release else host_name_dev}",
+                    f"{dependency_service}_IP_PROD={host_ip_prod}",
+                    f"{dependency_service}_HOST_PROD={host_name_prod}",
+                    f"{dependency_service}_SERVICE_PROD={dependency_domain}",
+                ]
+            )
+            + "\n"
+        )
+        for dependency_env_file in [".env_all", ".env_prod" if is_release else (".env_test" if is_test else ".env_exec"), ".env_all_key"]:
+            dependency_env_path = f"{ROOT_MODULE_DIR}/{dependency}/{dependency_env_file}"
             if isfile(dependency_env_path):
                 content += Path(dependency_env_path).read_text()
     env_path = join(working_path, ".env")
     os.makedirs(working_path, exist_ok=True)
     Path(env_path).write_text(content)
-    _substitute_env(context, env_path, env_path, env_path)
+    _substitute_env(env_path, env_path, env_path)
 
 
 def _get_env(env_path):
     env = {}
     if isfile(env_path):
-        with open(env_path, 'r') as env_file:
+        with open(env_path) as env_file:
             for env_line in env_file:
                 env_line = env_line.strip().replace("export ", "").rstrip()
                 if "=" in env_line and not env_line.startswith("#"):
@@ -1400,56 +1322,45 @@ def _get_env(env_path):
     return env
 
 
-def _substitute_env(_context, env_path, source_path, destination_path, header=None):
+def _substitute_env(env_path, source_path, destination_path, header=None):
     env = _get_env(env_path)
     env.update(GLOBAL_ENV)
     env.pop("USER", None)
     env.pop("HOME", None)
     env.pop("PATH", None)
-    print(". {} && envsubst {}->{}".format(env_path, source_path, destination_path))
+    print(f". {env_path} && envsubst {source_path}->{destination_path}")
     os.makedirs(dirname(destination_path), exist_ok=True)
-    Path(destination_path).write_text(("" if header is None else header) + \
-                                      varsubst.varsubst(Path(source_path).read_text(),
-                                                        resolver=RetainNotDefinedDictResolver(env)))
+    Path(destination_path).write_text(("" if header is None else header) + varsubst.varsubst(Path(source_path).read_text(), resolver=RetainNotDefinedDictResolver(env)))
 
 
 def _process_target(context, module, is_release=False):
-    _run_local(context, "mkdir -p target/package && cp -rvfp src/* install* target/package",
-               module, hide='err', warn=True)
+    _run_local(context, "mkdir -p target/package && cp -rvfp src/* install* target/package", module, hide="err", warn=True)
     package_resource_path = join(ROOT_MODULE_DIR, module, "src/resources.txt")
     if isfile(package_resource_path):
-        with open(package_resource_path, "r") as package_resource_file:
+        with open(package_resource_path) as package_resource_file:
             for package_resource in package_resource_file:
                 package_resource = package_resource.strip()
                 if package_resource != "" and not package_resource.startswith("#"):
                     package_resource = package_resource.replace("../install", "install")
-                    package_resource_source = ROOT_DIR if package_resource == "install.sh" and \
-                                                          not isfile(join(ROOT_MODULE_DIR, module, package_resource)) \
-                        else join(ROOT_MODULE_DIR, module, "target/package")
-                    _substitute_env(context,
-                                    join(ROOT_MODULE_DIR, module, "target/release/.env" if is_release else ".env"),
-                                    join(package_resource_source, package_resource),
-                                    join(ROOT_MODULE_DIR, module, "target/package", package_resource))
+                    package_resource_source = (
+                        ROOT_DIR if package_resource == "install.sh" and not isfile(join(ROOT_MODULE_DIR, module, package_resource)) else join(ROOT_MODULE_DIR, module, "target/package")
+                    )
+                    _substitute_env(
+                        join(ROOT_MODULE_DIR, module, "target/release/.env" if is_release else ".env"),
+                        join(package_resource_source, package_resource),
+                        join(ROOT_MODULE_DIR, module, "target/package", package_resource),
+                    )
                     if is_release:
-                        if package_resource.endswith(".html") or package_resource.endswith(".css"):
-                            _run_local(context,
-                                       "html-minifier --collapse-whitespace --remove-comments --remove-optional-tags"
-                                       " --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace"
-                                       " --use-short-doctype --minify-css true --minify-js true {} > {}.new && mv {}.new {}"
-                                       .format(
-                                           package_resource,
-                                           package_resource,
-                                           package_resource,
-                                           package_resource
-                                       ), join(module, "target/package"))
+                        if package_resource.endswith((".html", ".css")):
+                            _run_local(
+                                context,
+                                "html-minifier --collapse-whitespace --remove-comments --remove-optional-tags"
+                                " --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace"
+                                f" --use-short-doctype --minify-css true --minify-js true {package_resource} > {package_resource}.new && mv {package_resource}.new {package_resource}",
+                                join(module, "target/package"),
+                            )
                         elif package_resource.endswith(".js"):
-                            _run_local(context, "uglifyjs {} -c -m > {}.new && mv {}.new {}"
-                                       .format(
-                                package_resource,
-                                package_resource,
-                                package_resource,
-                                package_resource
-                            ), join(module, "target/package"))
+                            _run_local(context, f"uglifyjs {package_resource} -c -m > {package_resource}.new && mv {package_resource}.new {package_resource}", join(module, "target/package"))
 
 
 def _up_module(context, module, up_this=True, is_test=False):
@@ -1464,15 +1375,11 @@ def _up_module(context, module, up_this=True, is_test=False):
                 _run_local(context, "mkdir -p target/runtime-system", run_dep)
                 dir_config = join(ROOT_MODULE_DIR, run_dep, "target/package/main/resources/data")
                 if isdir(dir_config) and len(os.listdir(dir_config)) > 0:
-                    _run_local(context, "cp -rvfp $(find {} -mindepth 1 -maxdepth 1) target/runtime-system" \
-                               .format(dir_config), run_dep)
+                    _run_local(context, f"cp -rvfp $(find {dir_config} -mindepth 1 -maxdepth 1) target/runtime-system", run_dep)
                 _print_footer(run_dep, "run prepare")
                 if run_dep != module or up_this:
                     _print_header(run_dep, "run")
-                    _run_local(context, "docker compose "
-                                        "--ansi never up "
-                                        "--force-recreate "
-                                        "--remove-orphans -d", run_dep)
+                    _run_local(context, "docker compose --ansi never up --force-recreate --remove-orphans -d", run_dep)
                     _print_footer(run_dep, "run")
 
 
@@ -1491,14 +1398,13 @@ def _down_module(context, module, down_this=True):
     if isfile(join(ROOT_MODULE_DIR, module, "docker-compose.yml")):
         _print_line("Stopping servers ...")
         for run_dep in reversed(_get_dependencies(context, module)):
-            if isfile(join(ROOT_MODULE_DIR, run_dep, "docker-compose.yml")):
-                if run_dep != module or down_this:
-                    _run_local(context, "docker compose --ansi never down --volumes --rmi all --remove-orphans", run_dep)
+            if isfile(join(ROOT_MODULE_DIR, run_dep, "docker-compose.yml")) and (run_dep != module or down_this):
+                _run_local(context, "docker compose --ansi never down --volumes --rmi all --remove-orphans", run_dep)
 
 
 def _run_local(context, command, working=".", **kwargs):
     with context.cd(join("./" if working == "." else ROOT_MODULE_DIR, working)):
-        return context.run(". {} && {}".format(GLOBAL_ENV_PATH, command), **kwargs)
+        return context.run(f". {GLOBAL_ENV_PATH} && {command}", **kwargs)
 
 
 def _run_pinned(context, command, working, toolchain):
@@ -1516,25 +1422,28 @@ def _run_pinned(context, command, working, toolchain):
             "nothing was generated and no outdated package report was printed\n"
             "To upgrade, take the latest release from [{}], set [{}] in [.env_fab], "
             "run [fab setup] and re-run [fab pull]\n"
-            "The upgrade process is documented under [Upgrading a pinned toolchain] in [CLAUDE.md]"
-            .format(toolchain, command, working, toolchain, GLOBAL_ENV.get(variable, "unknown"),
-                    variable, GLOBAL_ENV.get(variable, "unknown"), releases, variable))
+            "The upgrade process is documented under [Upgrading a pinned toolchain] in [CLAUDE.md]".format(
+                toolchain, command, working, toolchain, GLOBAL_ENV.get(variable, "unknown"), variable, GLOBAL_ENV.get(variable, "unknown"), releases, variable
+            )
+        )
         raise
 
 
-def _run_external(_context, command, working=".", env_overrides=None):
+def _run_external(command, working=".", env_overrides=None):
     cwd = ROOT_DIR if working == "." else join(ROOT_MODULE_DIR, working)
     env = os.environ.copy()
     env.update(GLOBAL_ENV)
-    env.update({
-        "LANG": "C.UTF-8",
-        "LC_ALL": "C.UTF-8",
-        "LC_CTYPE": "C.UTF-8",
-        "PYTHONIOENCODING": "UTF-8",
-    })
+    env.update(
+        {
+            "LANG": "C.UTF-8",
+            "LC_ALL": "C.UTF-8",
+            "LC_CTYPE": "C.UTF-8",
+            "PYTHONIOENCODING": "UTF-8",
+        }
+    )
     if env_overrides:
         env.update(env_overrides)
-    command_args = ["/bin/bash", "-lc", ". {} && {}".format(GLOBAL_ENV_PATH, command)]
+    command_args = ["/bin/bash", "-lc", f". {GLOBAL_ENV_PATH} && {command}"]
     process = subprocess.Popen(
         command_args,
         cwd=cwd,
@@ -1549,11 +1458,7 @@ def _run_external(_context, command, working=".", env_overrides=None):
         sys.stdout.buffer.flush()
     exit_code = process.wait()
     if exit_code != 0:
-        raise Exit("\nExternal command failed with exit [{}]\n".format(exit_code, ), code=exit_code)
-
-
-def _run_remote(context, command, **kwargs):
-    return context.run(command, **kwargs)
+        raise Exit(f"\nExternal command failed with exit [{exit_code}]\n", code=exit_code)
 
 
 @functools.lru_cache(maxsize=1)
@@ -1564,8 +1469,7 @@ def _read_version_file():
 def _get_versions(version_absolute=None):
     if version_absolute is None:
         version_absolute = _read_version_file()
-    version_numeric = int(version_absolute.replace(".", "") \
-                          .replace("-SNAPSHOT", "")) * (-1 if "SNAPSHOT" in version_absolute else 1)
+    version_numeric = int(version_absolute.replace(".", "").replace("-SNAPSHOT", "")) * (-1 if "SNAPSHOT" in version_absolute else 1)
     version_compact = int((abs(version_numeric) - 101001000) * (-1 if "SNAPSHOT" in version_absolute else 1))
     return version_absolute, version_numeric, version_compact
 
@@ -1574,10 +1478,7 @@ def _get_versions_next(versions=None):
     if versions is None:
         versions = _get_versions()
     version_next_numeric = abs(versions[1]) if "SNAPSHOT" in versions[0] else (abs(versions[1]) + 1)
-    version_next_absolute = "{}.{}.{}".format(
-        int(version_next_numeric / 10000000) % 10000,
-        int(version_next_numeric / 10000) % 10000,
-        version_next_numeric % 10000)
+    version_next_absolute = f"{int(version_next_numeric / 10000000) % 10000}.{int(version_next_numeric / 10000) % 10000}.{version_next_numeric % 10000}"
     return _get_versions(version_next_absolute)
 
 
@@ -1589,9 +1490,7 @@ def _get_versions_next_release():
 
 
 def _get_versions_next_snapshot():
-    versions_next_snapshot = _get_versions(_get_versions_next(_get_versions(
-        _get_versions()[0].replace("-SNAPSHOT", "") \
-            if "SNAPSHOT" in _get_versions()[0] else _get_versions()[0]))[0] + "-SNAPSHOT")
+    versions_next_snapshot = _get_versions(_get_versions_next(_get_versions(_get_versions()[0].replace("-SNAPSHOT", "") if "SNAPSHOT" in _get_versions()[0] else _get_versions()[0]))[0] + "-SNAPSHOT")
     Path(join(dirname(abspath(__file__)), ".version")).write_text(versions_next_snapshot[0])
     _read_version_file.cache_clear()
     return versions_next_snapshot
@@ -1603,36 +1502,24 @@ def _print_line(message):
 
 
 def _print_header(module, stage, host=None):
-    if host is None:
-        label = module
-    else:
-        label = module.replace(
-            "all" if module.split("/")[0] == "all" else _get_host_label(host),
-            "[" + _get_host_label(host) + "]"
-        )
-    _print_line(HEADER.format(stage.upper(), label.lower().replace('/', '-'), _get_versions()[0]))
+    label = module
+    if host is not None:
+        label = module.replace("all" if module.split("/")[0] == "all" else get_host_label(host), "[" + get_host_label(host) + "]")
+    _print_line(HEADER.format(stage.upper(), label.lower().replace("/", "-"), _get_versions()[0]))
 
 
 def _print_footer(module, stage, host=None):
-    if host is None:
-        label = module
-    else:
-        label = module.replace(
-            "all" if module.split("/")[0] == "all" else _get_host_label(host),
-            "[" + _get_host_label(host) + "]"
-        )
-    _print_line(FOOTER.format(stage.upper(), label.lower().replace('/', '-'), _get_versions()[0]))
+    label = module
+    if host is not None:
+        label = module.replace("all" if module.split("/")[0] == "all" else get_host_label(host), "[" + get_host_label(host) + "]")
+    _print_line(FOOTER.format(stage.upper(), label.lower().replace("/", "-"), _get_versions()[0]))
 
 
 def _print_failure(module, stage, host=None):
-    if host is None:
-        label = module
-    else:
-        label = module.replace(
-            "all" if module.split("/")[0] == "all" else _get_host_label(host),
-            "[" + _get_host_label(host) + "]"
-        )
-    _print_line(FAILED.format(stage.upper(), label.lower().replace('/', '-'), _get_versions()[0]))
+    label = module
+    if host is not None:
+        label = module.replace("all" if module.split("/")[0] == "all" else get_host_label(host), "[" + get_host_label(host) + "]")
+    _print_line(FAILED.format(stage.upper(), label.lower().replace("/", "-"), _get_versions()[0]))
 
 
 HOME_DIR = "/home/asystem"
@@ -1640,6 +1527,7 @@ INSTALL_DIR = "/var/lib/asystem/install"
 ROOT_DIR = dirname(abspath(__file__))
 ROOT_MODULE_DIR = join(ROOT_DIR, "src")
 SHARED_MODULE_NAME = "_"
+PYTHON_SOURCE_KINDS = ("build", "main", "test")
 
 GLOBAL_ENV_PATH = join(dirname(abspath(__file__)), ".env_fab")
 GLOBAL_ENV = _get_env(GLOBAL_ENV_PATH)
@@ -1650,39 +1538,27 @@ TOOLCHAINS = {
     "rust": ("RUST_VERSION", "https://doc.rust-lang.org/beta/releases.html"),
 }
 
-HOSTS = {line.split("=")[0]: line.split("=")[-1].split(",")
-         for line in Path(join(dirname(abspath(__file__)), ".hosts")).read_text().strip().split("\n")}
+HOSTS = {line.split("=")[0]: line.split("=")[-1].split(",") for line in Path(join(dirname(abspath(__file__)), ".hosts")).read_text().strip().split("\n")}
 
 GO_OUTDATED_FORMAT = "{{if and .Update (not .Indirect)}}{{.Path}} {{.Version}} {{.Update.Version}}{{end}}"
 
 RUST_OUTDATED_COLUMNS = '"%-32s %-8s %-7s %s\\n"'
 
-RUST_OUTDATED_FORMAT = \
-    '($1 == "Unchanged" || $1 == "Updating") && $3 ~ /^v[0-9]/ && $5 ~ /^v[0-9]/ { ' \
-    'if (!listed++) printf ' + RUST_OUTDATED_COLUMNS + ', "Package", "Version", "Latest", "Type"; ' \
-    'held = $3; sub(/^v/, "", held); ' \
-    'available = $5; sub(/^v/, "", available); sub(/\\)$/, "", available); ' \
-    'printf ' + RUST_OUTDATED_COLUMNS + ', $2, held, available, ' \
+RUST_OUTDATED_FORMAT = (
+    '($1 == "Unchanged" || $1 == "Updating") && $3 ~ /^v[0-9]/ && $5 ~ /^v[0-9]/ { '
+    "if (!listed++) printf " + RUST_OUTDATED_COLUMNS + ', "Package", "Version", "Latest", "Type"; '
+    'held = $3; sub(/^v/, "", held); '
+    'available = $5; sub(/^v/, "", available); sub(/\\)$/, "", available); '
+    "printf " + RUST_OUTDATED_COLUMNS + ", $2, held, available, "
     '($1 == "Unchanged" ? "latent" : "pending") }'
+)
 
-HEADER = \
-    "------------------------------------------------------------\n" \
-    "{} STARTING: {}-{}\n" \
-    "------------------------------------------------------------"
-FOOTER = \
-    "------------------------------------------------------------\n" \
-    "\033[32m{} SUCCESSFUL: {}-{}\033[00m\n" \
-    "------------------------------------------------------------"
-HALTED = \
-    "------------------------------------------------------------\n" \
-    "\033[31mPULL HALTED BY {} TOOLCHAIN: asystem-{}\033[00m\n" \
-    "------------------------------------------------------------"
-FAILED = \
-    "------------------------------------------------------------\n" \
-    "\033[31m{} FAILED: {}-{}\033[00m\n" \
-    "------------------------------------------------------------"
+HEADER = "------------------------------------------------------------\n{} STARTING: {}-{}\n------------------------------------------------------------"
+FOOTER = "------------------------------------------------------------\n\033[32m{} SUCCESSFUL: {}-{}\033[00m\n------------------------------------------------------------"
+HALTED = "------------------------------------------------------------\n\033[31mPULL HALTED BY {} TOOLCHAIN: asystem-{}\033[00m\n------------------------------------------------------------"
+FAILED = "------------------------------------------------------------\n\033[31m{} FAILED: {}-{}\033[00m\n------------------------------------------------------------"
 
 
 class RetainNotDefinedDictResolver(DictResolver):
-    def resolve(self, key: str) -> Optional[Any]:
-        return self.dict.get(key, "${}".format(key))
+    def resolve(self, key: str) -> Any | None:
+        return self.dict.get(key, f"${key}")

@@ -1,5 +1,12 @@
+import glob
+import json
+import os
+import re
+import shutil
+import sys
 from collections import namedtuple
 from dataclasses import dataclass, replace
+from os.path import abspath, basename, dirname, join, realpath
 
 import yaml
 from grafana_foundation_sdk.builders import (
@@ -16,7 +23,7 @@ from grafana_foundation_sdk.models import common as kinds
 from grafana_foundation_sdk.models import dashboardv2 as models
 from grafana_foundation_sdk.models import text as textkinds
 
-from asystem import *
+from asystem import banner, dialects, load_bootstrap_entities, load_schema_artifact, write_container_bootstrap, write_container_healthchecks
 from asystem.schema.document import BETTER_HIGHER, BETTER_LOWER
 from asystem.schema.panel import Query, aggregated, entitled, judged, selected, subjected
 from asystem.schema.query import duration, expanded
@@ -29,14 +36,14 @@ def main():
     # Build shared sources
     metadata_df = load_bootstrap_entities()
     graphed_metadata_df = metadata_df[
-        (metadata_df["index"] > 0) &
-        (metadata_df["entity_status"] == "Enabled") &
-        (metadata_df["device_via_device"].str.len() > 0) &
-        (metadata_df["entity_namespace"].str.len() > 0) &
-        (metadata_df["unique_id"].str.len() > 0) &
-        (metadata_df["grafana_display_type"].str.len() > 0) &
-        (metadata_df["entity_group"].str.len() > 0)
-        ]
+        (metadata_df["index"] > 0)
+        & (metadata_df["entity_status"] == "Enabled")
+        & (metadata_df["device_via_device"].str.len() > 0)
+        & (metadata_df["entity_namespace"].str.len() > 0)
+        & (metadata_df["unique_id"].str.len() > 0)
+        & (metadata_df["grafana_display_type"].str.len() > 0)
+        & (metadata_df["entity_group"].str.len() > 0)
+    ]
     home_span = 7 * DAY
     server_hosts = Relation("supervisor", "supervisor/host")
     host_names = server_hosts.entities(("all",))
@@ -47,8 +54,7 @@ def main():
         raise failed(f"relation [{hass_temperatures.relation.path}] declares [unit_of_measurement] [{','.join(temperature_units)}], expected one unit")
     temperature_unit = temperature_units[0]
     rack_group = "Rack"
-    rack_ids = [unique_id for unique_id, grouped in zip(metadata_df["unique_id"], metadata_df["grafana_group"], strict=True)
-                if rack_group in [group.strip() for group in str(grouped).split(",")]]
+    rack_ids = [unique_id for unique_id, grouped in zip(metadata_df["unique_id"], metadata_df["grafana_group"], strict=True) if rack_group in [group.strip() for group in str(grouped).split(",")]]
     if not rack_ids:
         raise failed(f"no entity has [grafana_group] [{rack_group}], tag the rack temperature sensors in the entity metadata")
     rack_temperatures = friendly_names(metadata_df, rack_ids)
@@ -91,7 +97,9 @@ FROM observed JOIN forecast ON observed.day = forecast.day
 ORDER BY time
 """
     forecast_series = hass_temperatures.sql(
-        forecast_sql, temperature_unit, "BOM's next-day forecast against the observed roof temperature per Perth day, with the error as bars",
+        forecast_sql,
+        temperature_unit,
+        "BOM's next-day forecast against the observed roof temperature per Perth day, with the error as bars",
         midnight="TIMESTAMP '1969-12-31T16:00:00'",
         bound=entitled("NULL", hass_temperatures.subject, list(forecast_bounds), forecast_bounds),
         forecast=hass_temperatures.scope("value", list(forecast_bounds)),
@@ -145,19 +153,31 @@ WHERE
 GROUP BY 1
 ORDER BY time
 """
-    gust_direction_panel = compass_scale(points("Wind", hass_sensors.sql(
-        gusts_sql, "", f"Mean gust direction per bucket, from gusts above {calm_gust_kmh} km/h only, each paired with the latest gust speed at or before it, since calm reads as north",
-        speed=f"'{gust_speed}'",
-        direction=f"'{gust_direction}'",
-        gusts=hass_sensors.scope("value", [gust_speed, gust_direction]),
-        bearing=aggregated("direction", ("compass",)),
-        calm=str(calm_gust_kmh),
-    )))
-    metadata_dashboard("weather", home_span, graphed_metadata_df, placed={
-        # Orders interleave with metadata index, above roof temperature (1001) and below wind (1300 to 1306)
-        "Forecast": (1000.5, forecast_rows),
-        "Gust Direction": (1306.5, [[gust_direction_panel]]),
-    })
+    gust_direction_panel = compass_scale(
+        points(
+            "Wind",
+            hass_sensors.sql(
+                gusts_sql,
+                "",
+                f"Mean gust direction per bucket, from gusts above {calm_gust_kmh} km/h only, each paired with the latest gust speed at or before it, since calm reads as north",
+                speed=f"'{gust_speed}'",
+                direction=f"'{gust_direction}'",
+                gusts=hass_sensors.scope("value", [gust_speed, gust_direction]),
+                bearing=aggregated("direction", ("compass",)),
+                calm=str(calm_gust_kmh),
+            ),
+        )
+    )
+    metadata_dashboard(
+        "weather",
+        home_span,
+        graphed_metadata_df,
+        placed={
+            # Orders interleave with metadata index, above roof temperature (1001) and below wind (1300 to 1306)
+            "Forecast": (1000.5, forecast_rows),
+            "Gust Direction": (1306.5, [[gust_direction_panel]]),
+        },
+    )
 
     # Build Home dashboard [conditions]
     metadata_dashboard("conditions", home_span, graphed_metadata_df)
@@ -170,14 +190,19 @@ ORDER BY time
     currency_pairs = currency_rates.entities()
     display_names = {code: "/".join(reversed(code.split("/"))) for code in currency_pairs}
     header_panels = header([(currency_rates, None)], "wrangle", TRADING_SPAN)
-    dashboard("currency", YEAR_WINDOW, header_panels, [
+    dashboard(
+        "currency",
+        YEAR_WINDOW,
+        header_panels,
         [
-            *(stat(display_names[code], currency_rates.query(["snapshot"], [code], ("invert",), display_names)) for code in currency_pairs),
-            *(stat(f"{display_names[code]} Day", currency_rates.query(["delta@1d"], [code], ("invert",), display_names)).thresholds(CHANGE_LADDER) for code in currency_pairs),
+            [
+                *(stat(display_names[code], currency_rates.query(["snapshot"], [code], ("invert",), display_names)) for code in currency_pairs),
+                *(stat(f"{display_names[code]} Day", currency_rates.query(["delta@1d"], [code], ("invert",), display_names)).thresholds(CHANGE_LADDER) for code in currency_pairs),
+            ],
+            [series("CCY/AUD Range Deltas", currency_rates.query(["snapshot"], None, ("invert", "baseline"), display_names))],
+            [series(f"{display_names[code]} End of Days", currency_rates.query(["snapshot"], [code], ("invert",), display_names)) for code in currency_pairs],
         ],
-        [series("CCY/AUD Range Deltas", currency_rates.query(["snapshot"], None, ("invert", "baseline"), display_names))],
-        [series(f"{display_names[code]} End of Days", currency_rates.query(["snapshot"], [code], ("invert",), display_names)) for code in currency_pairs],
-    ])
+    )
 
     # Build Finance dashboard [interest]
     interest_window = TimeRange("now-25y", "15m", LONG_RANGES)
@@ -185,15 +210,20 @@ ORDER BY time
     interest_series = ["Net", "Bank", "Inflation"]
     interest_means = Relation("wrangle", "interest/rate")
     header_panels = header([(interest_means, None)], "wrangle", interest_span)
-    dashboard("interest", interest_window, header_panels, [
+    dashboard(
+        "interest",
+        interest_window,
+        header_panels,
         [
-            *(stat(f"{entity} Month", interest_means.query(["mean@1mo"], [entity])) for entity in interest_series),
-            *(stat(f"{entity} 10 Year", interest_means.query(["mean@10y"], [entity])) for entity in interest_series),
+            [
+                *(stat(f"{entity} Month", interest_means.query(["mean@1mo"], [entity])) for entity in interest_series),
+                *(stat(f"{entity} 10 Year", interest_means.query(["mean@10y"], [entity])) for entity in interest_series),
+            ],
+            [series("Interest Rates Monthly Means", interest_means.query(["mean@1mo"]))],
+            [series("Interest Rates 10 Year Means", interest_means.query(["mean@10y"]))],
+            [series("Net Rate N Year Means", interest_means.query(["mean"], ["Net"]))],
         ],
-        [series("Interest Rates Monthly Means", interest_means.query(["mean@1mo"]))],
-        [series("Interest Rates 10 Year Means", interest_means.query(["mean@10y"]))],
-        [series("Net Rate N Year Means", interest_means.query(["mean"], ["Net"]))],
-    ])
+    )
 
     # Build Finance dashboard [equity]
     portfolio_tickers = ["CLNE", "ERTH", "GOLD", "IAF", "MCK", "MUK", "MUS", "VAE", "VAS", "VDHG", "VHY"]
@@ -228,72 +258,92 @@ ORDER BY time
         for label, tickers in (("Portfolio", portfolio_tickers), ("ASX 200", ["AXJO"]))
     }
     header_panels = header([(equity_quotes, None)], "wrangle", TRADING_SPAN)
-    dashboard("equity", YEAR_WINDOW, header_panels, [
+    dashboard(
+        "equity",
+        YEAR_WINDOW,
+        header_panels,
         [
-            *(stat(label, change).thresholds(CHANGE_LADDER) for label, change in performance_series.items()),
-            *(stat(ticker, equity_quotes.query(["price-close-spot"], [ticker], ("baseline",))).thresholds(CHANGE_LADDER) for ticker in fund_tickers + ["VAS"]),
+            [
+                *(stat(label, change).thresholds(CHANGE_LADDER) for label, change in performance_series.items()),
+                *(stat(ticker, equity_quotes.query(["price-close-spot"], [ticker], ("baseline",))).thresholds(CHANGE_LADDER) for ticker in fund_tickers + ["VAS"]),
+            ],
+            [series("Portfolio Performance", list(performance_series.values()))],
+            [series("Equities Performance", equity_quotes.query(["price-close-spot"], portfolio_tickers, ("baseline",)))],
+            [series("Fund Performance", equity_quotes.query(["price-close-spot", "price-close-base"], fund_tickers, ("baseline",)))],
         ],
-        [series("Portfolio Performance", list(performance_series.values()))],
-        [series("Equities Performance", equity_quotes.query(["price-close-spot"], portfolio_tickers, ("baseline",)))],
-        [series("Fund Performance", equity_quotes.query(["price-close-spot", "price-close-base"], fund_tickers, ("baseline",)))],
-    ])
+    )
 
     # Build Systems dashboard [containers]
     containers_window = TimeRange("now-1h", "10s", SHORT_RANGES)
     service_names = SUPERVISOR_SERVICES.entities()
     header_panels = header([(SUPERVISOR_SERVICES, service_names)], "supervisor", SUPERVISOR_SPAN)
-    dashboard("containers", containers_window, header_panels, [
+    dashboard(
+        "containers",
+        containers_window,
+        header_panels,
         [
-            stat("Running", SUPERVISOR_SERVICES.query(["status"], service_names, ("sum",))),
-            stat("Not Running", SUPERVISOR_SERVICES.query(["status"], service_names, ("complement", "sum"))).thresholds(lower_better(1, 1)),
-            stat("Configured", SUPERVISOR_SERVICES.query(["configured_status"], service_names, ("sum",))),
-            stat("Running Rate", SUPERVISOR_SERVICES.query(["status"], service_names, ("percent", "avg")), "mean"),
-            stat("Healthy Rate", SUPERVISOR_SERVICES.query(["health_status"], service_names, ("percent", "avg")), "mean"),
-            stat("Restarts", SUPERVISOR_SERVICES.query(["restart_count"], service_names, ("counter", "sum")), "delta").thresholds(lower_better(1, 5)),
+            [
+                stat("Running", SUPERVISOR_SERVICES.query(["status"], service_names, ("sum",))),
+                stat("Not Running", SUPERVISOR_SERVICES.query(["status"], service_names, ("complement", "sum"))).thresholds(lower_better(1, 1)),
+                stat("Configured", SUPERVISOR_SERVICES.query(["configured_status"], service_names, ("sum",))),
+                stat("Running Rate", SUPERVISOR_SERVICES.query(["status"], service_names, ("percent", "avg")), "mean"),
+                stat("Healthy Rate", SUPERVISOR_SERVICES.query(["health_status"], service_names, ("percent", "avg")), "mean"),
+                stat("Restarts", SUPERVISOR_SERVICES.query(["restart_count"], service_names, ("counter", "sum")), "delta").thresholds(lower_better(1, 5)),
+            ],
+            [series("Container CPU Usage", SUPERVISOR_SERVICES.query(["used_processor"], service_names))],
+            [series("Container RAM Usage", SUPERVISOR_SERVICES.query(["used_memory"], service_names))],
+            [series("Container Disk Usage", SUPERVISOR_SERVICES.query(["used_disk_rate"], service_names))],
+            [series("Container Network Usage", SUPERVISOR_SERVICES.query(["used_network"], service_names))],
+            [state("Container Running", SUPERVISOR_SERVICES.query(["status"], service_names), ("Down", "Up"), len(service_names))],
+            [state("Container Healthy", SUPERVISOR_SERVICES.query(["health_status"], service_names), ("Unhealthy", "Healthy"), len(service_names))],
+            [state("Container Backed Up", SUPERVISOR_SERVICES.query(["backup_status"], service_names), ("Failed", "Backed Up"), len(service_names))],
         ],
-        [series("Container CPU Usage", SUPERVISOR_SERVICES.query(["used_processor"], service_names))],
-        [series("Container RAM Usage", SUPERVISOR_SERVICES.query(["used_memory"], service_names))],
-        [series("Container Disk Usage", SUPERVISOR_SERVICES.query(["used_disk_rate"], service_names))],
-        [series("Container Network Usage", SUPERVISOR_SERVICES.query(["used_network"], service_names))],
-        [state("Container Running", SUPERVISOR_SERVICES.query(["status"], service_names), ("Down", "Up"), len(service_names))],
-        [state("Container Healthy", SUPERVISOR_SERVICES.query(["health_status"], service_names), ("Unhealthy", "Healthy"), len(service_names))],
-        [state("Container Backed Up", SUPERVISOR_SERVICES.query(["backup_status"], service_names), ("Failed", "Backed Up"), len(service_names))],
-    ])
+    )
 
     # Build Systems dashboard [servers]
     servers_window = TimeRange("now-2d", "10s", SHORT_RANGES)
     header_panels = header([(server_hosts, host_names)], "supervisor", SUPERVISOR_SPAN)
-    dashboard("servers", servers_window, header_panels, [
+    dashboard(
+        "servers",
+        servers_window,
+        header_panels,
         [
-            stat("Availability", server_hosts.query(["status"], host_names, ("percent", "min")), "mean"),
-            stat("CPU Trend Max", server_hosts.query(["used_processor_trend"], host_names, ("max",))),
-            stat("RAM Trend Max", server_hosts.query(["used_memory_trend"], host_names, ("max",))),
-            stat("Temperature Trend Max", server_hosts.query(["temperature_trend"], host_names, ("max",))),
-            stat("Home Volume Max", server_hosts.query(["used_home_space"], host_names, ("max",))),
-            stat("Share Volume Max", server_hosts.query(["used_share_space"], host_names, ("max",))),
+            [
+                stat("Availability", server_hosts.query(["status"], host_names, ("percent", "min")), "mean"),
+                stat("CPU Trend Max", server_hosts.query(["used_processor_trend"], host_names, ("max",))),
+                stat("RAM Trend Max", server_hosts.query(["used_memory_trend"], host_names, ("max",))),
+                stat("Temperature Trend Max", server_hosts.query(["temperature_trend"], host_names, ("max",))),
+                stat("Home Volume Max", server_hosts.query(["used_home_space"], host_names, ("max",))),
+                stat("Share Volume Max", server_hosts.query(["used_share_space"], host_names, ("max",))),
+            ],
+            [series("Server CPU Usage", server_hosts.query(["used_processor"], host_names))],
+            [series("Server RAM Usage", server_hosts.query(["used_memory"], host_names))],
+            [series("Server Swap Usage", server_hosts.query(["used_swap_space"], host_names))],
+            [series("Server Volume Usage", server_hosts.query(["used_home_space", "used_share_space", "used_backup_space"], host_names))],
+            [series("Server Disk Usage", server_hosts.query(["used_disk_time"], host_names))],
+            [series("Server Network Usage", server_hosts.query(["used_network"], host_names))],
+            [
+                series(
+                    "Server Temperature",
+                    [
+                        server_hosts.query(["temperature"], host_names),
+                        hass_temperatures.query(["value"], list(rack_temperatures), (), {unique_id: name.lower().replace(" ", "-") for unique_id, name in rack_temperatures.items()}, temperature_unit),
+                    ],
+                )
+            ],
+            [series("Server Temperature Warning", server_hosts.query(["warn_temperature"], host_names))],
+            [series("Server Fan Speed", server_hosts.query(["spin_fan_speed"], host_names))],
+            [series("Server Memory Allocated", server_hosts.query(["allocated_memory"], host_names))],
+            [series("Server Drive Life Used", server_hosts.query(["used_drive_life"], host_names))],
+            [series("Server Drive Failures", server_hosts.query(["failed_drives"], host_names))],
+            [series("Server Share Failures", server_hosts.query(["failed_shares"], host_names))],
+            [series("Server Log Errors", server_hosts.query(["failed_log_messages"], host_names))],
+            [series("Server Backup Stage Failures", server_hosts.query(["failed_backup_stages"], host_names))],
+            [series("Server Backup Stage Halts", server_hosts.query(["halted_backup_stages"], host_names))],
+            [state("Server Healthy", server_hosts.query(["status"], host_names), ("Unhealthy", "Healthy"), len(host_names))],
+            [state("Cluster Health", server_hosts.query(["cluster"], ["all"]), ("Unhealthy", "Healthy"), 1)],
         ],
-        [series("Server CPU Usage", server_hosts.query(["used_processor"], host_names))],
-        [series("Server RAM Usage", server_hosts.query(["used_memory"], host_names))],
-        [series("Server Swap Usage", server_hosts.query(["used_swap_space"], host_names))],
-        [series("Server Volume Usage", server_hosts.query(["used_home_space", "used_share_space", "used_backup_space"], host_names))],
-        [series("Server Disk Usage", server_hosts.query(["used_disk_time"], host_names))],
-        [series("Server Network Usage", server_hosts.query(["used_network"], host_names))],
-        [series("Server Temperature", [
-            server_hosts.query(["temperature"], host_names),
-            hass_temperatures.query(["value"], list(rack_temperatures), (), {unique_id: name.lower().replace(" ", "-") for unique_id, name in rack_temperatures.items()}, temperature_unit),
-        ])],
-        [series("Server Temperature Warning", server_hosts.query(["warn_temperature"], host_names))],
-        [series("Server Fan Speed", server_hosts.query(["spin_fan_speed"], host_names))],
-        [series("Server Memory Allocated", server_hosts.query(["allocated_memory"], host_names))],
-        [series("Server Drive Life Used", server_hosts.query(["used_drive_life"], host_names))],
-        [series("Server Drive Failures", server_hosts.query(["failed_drives"], host_names))],
-        [series("Server Share Failures", server_hosts.query(["failed_shares"], host_names))],
-        [series("Server Log Errors", server_hosts.query(["failed_log_messages"], host_names))],
-        [series("Server Backup Stage Failures", server_hosts.query(["failed_backup_stages"], host_names))],
-        [series("Server Backup Stage Halts", server_hosts.query(["halted_backup_stages"], host_names))],
-        [state("Server Healthy", server_hosts.query(["status"], host_names), ("Unhealthy", "Healthy"), len(host_names))],
-        [state("Cluster Health", server_hosts.query(["cluster"], ["all"]), ("Unhealthy", "Healthy"), 1)],
-    ])
+    )
 
     # Build Systems dashboard [network]
     access_points = Relation("network", "wireless/accesspoint")
@@ -306,62 +356,84 @@ ORDER BY time
     weewx_consoles = Relation("network", "weewx/console")
     network_devices = len(wired_switches.entities()) + len(access_points.entities())
     header_panels = header([(access_points, None)], "network")
-    dashboard("network", HOURS_WINDOW, header_panels, [
+    dashboard(
+        "network",
+        HOURS_WINDOW,
+        header_panels,
         [
-            stat("Gateway", internet_targets.query(["reachable"], ["gateway"], ("percent",)), "mean"),
-            stat("Wireless Clients", access_points.query(["clients"], None, ("sum",))),
-            stat("Wireless Experience", access_points.query(["experience_pct"], None, ("min",))),
-            stat("Wired Experience", wired_switches.query(["experience_pct"], None, ("min",))),
-            stat("Zigbee Experience", zigbee_experience.query(["experience_pct"], ["router"])),
-            stat("PoE Budget", wired_switches.query(["poe_pct"], None, ("max",))),
+            [
+                stat("Gateway", internet_targets.query(["reachable"], ["gateway"], ("percent",)), "mean"),
+                stat("Wireless Clients", access_points.query(["clients"], None, ("sum",))),
+                stat("Wireless Experience", access_points.query(["experience_pct"], None, ("min",))),
+                stat("Wired Experience", wired_switches.query(["experience_pct"], None, ("min",))),
+                stat("Zigbee Experience", zigbee_experience.query(["experience_pct"], ["router"])),
+                stat("PoE Budget", wired_switches.query(["poe_pct"], None, ("max",))),
+            ],
+            [series("Network Utilisation", server_hosts.query(["used_network"], host_names))],
+            [series("Network Device Experience", [wired_switches.query(["experience_pct"]), access_points.query(["experience_pct"])])],
+            [series("Network Device Throughput", [wired_switches.query(["throughput_mbps"]), access_points.query(["throughput_mbps"])])],
+            [series("Network Device Link Utilisation", [wired_switches.query(["network_pct"]), access_points.query(["network_pct"])])],
+            [series("Network Device Processor", [wired_switches.query(["cpu_pct"]), access_points.query(["cpu_pct"])])],
+            [series("Network Device Memory", [wired_switches.query(["memory_pct"]), access_points.query(["memory_pct"])])],
+            [series("Network Device Power", [wired_switches.query(["poe_w"]), powered_devices.query(["power_w"])])],
+            [series("Access Point Clients", access_points.query(["clients"]))],
+            [series("Network Diagnosis", network_diagnosis.query(["score"]))],
+            [series("Zigbee Experience", zigbee_experience.query(["experience_pct"]))],
+            [series("Zigbee Router Link Quality", zigbee_routers.query(["lqi"])).decimals(0)],
+            [series("Weather Console Signal", weewx_consoles.query(["quality_pct"]))],
+            [series("Network Device Temperature", [hass_temperatures.query(["value"], list(rack_temperatures), (), rack_temperatures, temperature_unit), wired_switches.query(["temperature"])])],
+            [state("Network Devices Up", [wired_switches.query(["up"]), access_points.query(["up"])], ("Down", "Up"), network_devices)],
+            [
+                state(
+                    "Network Devices Overheating",
+                    [wired_switches.query(["overheating"], None, ("complement",)), access_points.query(["overheating"], None, ("complement",))],
+                    ("Overheating", "Normal"),
+                    network_devices,
+                )
+            ],
+            [
+                state(
+                    "Network Devices Restarted",
+                    [wired_switches.query(["restarted"], None, ("complement",)), access_points.query(["restarted"], None, ("complement",))],
+                    ("Restarted", "Steady"),
+                    network_devices,
+                )
+            ],
+            [state("Zigbee Routers Available", zigbee_routers.query(["available"]), ("Unavailable", "Available"), len(zigbee_routers.entities()))],
+            [state("Zigbee Devices Weak", zigbee_devices.query(["weak"], None, ("complement",)), ("Weak", "Strong"), 53)],
+            [state("Weather Console Fresh", weewx_consoles.query(["fresh"]), ("Stale", "Fresh"), len(weewx_consoles.entities()))],
+            [state("Network Plugins Alive", network_diagnosis.query(["ok"]), ("Dead", "Alive"), len(network_diagnosis.entities()))],
         ],
-        [series("Network Utilisation", server_hosts.query(["used_network"], host_names))],
-        [series("Network Device Experience", [wired_switches.query(["experience_pct"]), access_points.query(["experience_pct"])])],
-        [series("Network Device Throughput", [wired_switches.query(["throughput_mbps"]), access_points.query(["throughput_mbps"])])],
-        [series("Network Device Link Utilisation", [wired_switches.query(["network_pct"]), access_points.query(["network_pct"])])],
-        [series("Network Device Processor", [wired_switches.query(["cpu_pct"]), access_points.query(["cpu_pct"])])],
-        [series("Network Device Memory", [wired_switches.query(["memory_pct"]), access_points.query(["memory_pct"])])],
-        [series("Network Device Power", [wired_switches.query(["poe_w"]), powered_devices.query(["power_w"])])],
-        [series("Access Point Clients", access_points.query(["clients"]))],
-        [series("Network Diagnosis", network_diagnosis.query(["score"]))],
-        [series("Zigbee Experience", zigbee_experience.query(["experience_pct"]))],
-        [series("Zigbee Router Link Quality", zigbee_routers.query(["lqi"])).decimals(0)],
-        [series("Weather Console Signal", weewx_consoles.query(["quality_pct"]))],
-        [series("Network Device Temperature", [hass_temperatures.query(["value"], list(rack_temperatures), (), rack_temperatures, temperature_unit), wired_switches.query(["temperature"])])],
-        [state("Network Devices Up", [wired_switches.query(["up"]), access_points.query(["up"])], ("Down", "Up"), network_devices)],
-        [state("Network Devices Overheating", [wired_switches.query(["overheating"], None, ("complement",)), access_points.query(["overheating"], None, ("complement",))],
-               ("Overheating", "Normal"), network_devices)],
-        [state("Network Devices Restarted", [wired_switches.query(["restarted"], None, ("complement",)), access_points.query(["restarted"], None, ("complement",))],
-               ("Restarted", "Steady"), network_devices)],
-        [state("Zigbee Routers Available", zigbee_routers.query(["available"]), ("Unavailable", "Available"), len(zigbee_routers.entities()))],
-        [state("Zigbee Devices Weak", zigbee_devices.query(["weak"], None, ("complement",)), ("Weak", "Strong"), 53)],
-        [state("Weather Console Fresh", weewx_consoles.query(["fresh"]), ("Stale", "Fresh"), len(weewx_consoles.entities()))],
-        [state("Network Plugins Alive", network_diagnosis.query(["ok"]), ("Dead", "Alive"), len(network_diagnosis.entities()))],
-    ])
+    )
 
     # Build Systems dashboard [internet]
     public_targets = internet_targets.entities(("gateway",))
     dns_resolvers = Relation("network", "domain/resolver")
     certificate_endpoints = Relation("network", "certificate/endpoint")
     header_panels = header([(internet_targets, None)], "network")
-    dashboard("internet", HOURS_WINDOW, header_panels, [
+    dashboard(
+        "internet",
+        HOURS_WINDOW,
+        header_panels,
         [
-            stat("Reachability", internet_targets.query(["reachable"], public_targets, ("percent", "avg")), "mean"),
-            stat("Resolution", dns_resolvers.query(["ok"], None, ("percent", "avg")), "mean"),
-            stat("Certificate", certificate_endpoints.query(["expiry_days"], None, ("min",))),
-            stat("Latency Mean", internet_targets.query(["rtt_ms"], public_targets, ("avg",)), "mean"),
-            stat("Latency Max", internet_targets.query(["rtt_ms"], public_targets, ("peak", "max")), "max"),
-            stat("Loss Max", internet_targets.query(["loss_pct"], public_targets, ("peak", "max")), "max"),
+            [
+                stat("Reachability", internet_targets.query(["reachable"], public_targets, ("percent", "avg")), "mean"),
+                stat("Resolution", dns_resolvers.query(["ok"], None, ("percent", "avg")), "mean"),
+                stat("Certificate", certificate_endpoints.query(["expiry_days"], None, ("min",))),
+                stat("Latency Mean", internet_targets.query(["rtt_ms"], public_targets, ("avg",)), "mean"),
+                stat("Latency Max", internet_targets.query(["rtt_ms"], public_targets, ("peak", "max")), "max"),
+                stat("Loss Max", internet_targets.query(["loss_pct"], public_targets, ("peak", "max")), "max"),
+            ],
+            [series("Internet Latency", internet_targets.query(["rtt_ms"]))],
+            [series("Internet Jitter", internet_targets.query(["jitter_ms"]))],
+            [series("Internet Loss", internet_targets.query(["loss_pct"]))],
+            [series("Domain Resolution", dns_resolvers.query(["latency_ms"]))],
+            [series("Certificate Validity", certificate_endpoints.query(["validity_pct"]))],
+            [state("Internet Reachable", internet_targets.query(["reachable"]), ("Unreachable", "Reachable"), len(internet_targets.entities()))],
+            [state("Domain Resolution Agreed", dns_resolvers.query(["ok"]), ("Disagreed", "Agreed"), len(dns_resolvers.entities()))],
+            [state("Certificate Verified", certificate_endpoints.query(["verified"]), ("Unverified", "Verified"), len(certificate_endpoints.entities()))],
         ],
-        [series("Internet Latency", internet_targets.query(["rtt_ms"]))],
-        [series("Internet Jitter", internet_targets.query(["jitter_ms"]))],
-        [series("Internet Loss", internet_targets.query(["loss_pct"]))],
-        [series("Domain Resolution", dns_resolvers.query(["latency_ms"]))],
-        [series("Certificate Validity", certificate_endpoints.query(["validity_pct"]))],
-        [state("Internet Reachable", internet_targets.query(["reachable"]), ("Unreachable", "Reachable"), len(internet_targets.entities()))],
-        [state("Domain Resolution Agreed", dns_resolvers.query(["ok"]), ("Disagreed", "Agreed"), len(dns_resolvers.entities()))],
-        [state("Certificate Verified", certificate_endpoints.query(["verified"]), ("Unverified", "Verified"), len(certificate_endpoints.entities()))],
-    ])
+    )
 
     # Write generated dashboards
     for generated_path in glob.glob(join(DIR_GENERATED, "*.yaml")):
@@ -375,8 +447,7 @@ ORDER BY time
         sections = []
         for folder, declared in FOLDERS.items():
             label = f'<span style="color:{SECTION_COLOUR}">**{declared.title.upper()}**</span>'
-            links = [f"**{TITLES[uid]}**" if uid == current else f"[{TITLES[uid]}](/d/{uid})"
-                     for uid in ordered if folder_of[uid] == folder]
+            links = [f"**{TITLES[uid]}**" if uid == current else f"[{TITLES[uid]}](/d/{uid})" for uid in ordered if folder_of[uid] == folder]
             sections.append(" · ".join([label] + links))
         return " &nbsp;&nbsp;|&nbsp;&nbsp; ".join(sections)
 
@@ -387,8 +458,15 @@ ORDER BY time
         dashboard_resource["spec"]["tags"] = [folder_of[dashboard_uid], DASHBOARD_TAG]
         elements = dashboard_resource["spec"]["elements"]
         identifier = max(element["spec"]["id"] for element in elements.values()) + 1
-        elements[NAVIGATION_ELEMENT] = encoded(dashboardv2.Panel().id(identifier).title("").transparent(True).data(dashboardv2.QueryGroup())
-                                               .visualization(texts.VisualizationV2().mode(textkinds.TextMode.MARKDOWN).content(navigation(dashboard_uid))).build())
+        elements[NAVIGATION_ELEMENT] = encoded(
+            dashboardv2.Panel()
+            .id(identifier)
+            .title("")
+            .transparent(True)
+            .data(dashboardv2.QueryGroup())
+            .visualization(texts.VisualizationV2().mode(textkinds.TextMode.MARKDOWN).content(navigation(dashboard_uid)))
+            .build()
+        )
         items = dashboard_resource["spec"]["layout"]["spec"]["items"]
         for item in items:
             item["spec"]["y"] += NAVIGATION_HEIGHT
@@ -414,49 +492,51 @@ ORDER BY time
     write(join(DIR_CONFIG, "preferences.yaml"), preferences)
 
     # Build datasources
-    # noinspection HttpUrlsUsage
-    write(join(DIR_PROVISIONING, "datasources/datasources.yaml"), {
-        "apiVersion": 1,
-        "datasources": [
-            {
-                "name": "InfluxDB3 Home",
-                "uid": INFLUXDB3,
-                "type": dialects.influxdb3.GRAFANA,
-                "access": "proxy",
-                "url": "http://${INFLUXDB3_SERVICE}:${INFLUXDB3_API_PORT}",
-                "isDefault": True,
-                "editable": False,
-                "jsonData": {
-                    "version": "SQL",
-                    "dbName": "${INFLUXDB3_DATABASE_HOME}",
-                    "httpMode": "POST",
-                    "insecureGrpc": True,
-                    "timeout": 60,
+    write(
+        join(DIR_PROVISIONING, "datasources/datasources.yaml"),
+        {
+            "apiVersion": 1,
+            "datasources": [
+                {
+                    "name": "InfluxDB3 Home",
+                    "uid": INFLUXDB3,
+                    "type": dialects.influxdb3.GRAFANA,
+                    "access": "proxy",
+                    "url": "http://${INFLUXDB3_SERVICE}:${INFLUXDB3_API_PORT}",
+                    "isDefault": True,
+                    "editable": False,
+                    "jsonData": {
+                        "version": "SQL",
+                        "dbName": "${INFLUXDB3_DATABASE_HOME}",
+                        "httpMode": "POST",
+                        "insecureGrpc": True,
+                        "timeout": 60,
+                    },
+                    "secureJsonData": {
+                        "token": "${INFLUXDB3_TOKEN_HOME}",
+                    },
                 },
-                "secureJsonData": {
-                    "token": "${INFLUXDB3_TOKEN_HOME}",
+                {
+                    "name": "Postgres Wrangle",
+                    "uid": POSTGRES,
+                    "type": dialects.postgres.GRAFANA,
+                    "access": "proxy",
+                    "url": "${POSTGRES_SERVICE}:${POSTGRES_API_PORT}",
+                    "user": "${POSTGRES_USER_WRANGLE}",
+                    "editable": False,
+                    "jsonData": {
+                        "database": "${POSTGRES_DATABASE_WRANGLE}",
+                        "sslmode": "disable",
+                        "timescaledb": True,
+                        "postgresVersion": 1600,
+                    },
+                    "secureJsonData": {
+                        "password": "${POSTGRES_KEY_WRANGLE}",
+                    },
                 },
-            },
-            {
-                "name": "Postgres Wrangle",
-                "uid": POSTGRES,
-                "type": dialects.postgres.GRAFANA,
-                "access": "proxy",
-                "url": "${POSTGRES_SERVICE}:${POSTGRES_API_PORT}",
-                "user": "${POSTGRES_USER_WRANGLE}",
-                "editable": False,
-                "jsonData": {
-                    "database": "${POSTGRES_DATABASE_WRANGLE}",
-                    "sslmode": "disable",
-                    "timescaledb": True,
-                    "postgresVersion": 1600,
-                },
-                "secureJsonData": {
-                    "password": "${POSTGRES_KEY_WRANGLE}",
-                },
-            },
-        ],
-    })
+            ],
+        },
+    )
 
 
 def artifact(module):
@@ -477,7 +557,6 @@ def unified(units, noun, owner, unit=None):
 
 
 class Relation:
-
     def __init__(self, module, path):
         dialect, self.document = artifact(module)
         self.dialect, self.datasource = DATASOURCES[dialect]
@@ -495,8 +574,10 @@ class Relation:
         levels = None
         if len(picked) == 1 and picked[0].levels is not None:
             declared = picked[0].levels
-            bounds = {(declared.entities[entity].amber, declared.entities[entity].red) if entity in declared.entities else (declared.amber, declared.red)
-                      for entity in (entities or self.relation.entities or [None])}
+            bounds = {
+                (declared.entities[entity].amber, declared.entities[entity].red) if entity in declared.entities else (declared.amber, declared.red)
+                for entity in (entities or self.relation.entities or [None])
+            }
             if len(bounds) == 1 and bounds != {(None, None)}:
                 shown = judged(declared.better, *bounds.pop(), declared.inclusive, picked[0].unit, transforms)
                 levels = Levels(*shown) if shown else None
@@ -520,8 +601,8 @@ class Relation:
             raise failed(f"relation [{self.relation.path}] sql placeholders [{','.join(unknown)}] have no value and values [{','.join(unused)}] have no placeholder")
 
         def indented(match):
-            line = match.string[match.string.rfind("\n", 0, match.start()) + 1:]
-            return str(values[match.group(1)]).replace("\n", "\n" + line[:len(line) - len(line.lstrip())])
+            line = match.string[match.string.rfind("\n", 0, match.start()) + 1 :]
+            return str(values[match.group(1)]).replace("\n", "\n" + line[: len(line) - len(line.lstrip())])
 
         return Series(
             self.dialect,
@@ -586,7 +667,6 @@ def levelled(levels):
 
 
 class Panel:
-
     def __init__(self, title, queries, width, height, visualization, unit=None):
         self.queries = queries if isinstance(queries, list) else [queries]
         self.title, self.width, self.height = title, width, height
@@ -617,44 +697,37 @@ class Panel:
 
     def thresholds(self, ladder, override=False):
         if self.levels is not None and not override:
-            raise failed(f"panel [{self.title}] takes its thresholds from its measure's levels, "
-                         f"declare them in the owning schema or pass override=True to replace them deliberately")
+            raise failed(f"panel [{self.title}] takes its thresholds from its measure's levels, declare them in the owning schema or pass override=True to replace them deliberately")
         self.explicit = True
         return self.coloured(ladder)
 
     def coloured(self, ladder):
-        self.visualization.thresholds(dashboardv2.ThresholdsConfig().mode(models.ThresholdsMode.ABSOLUTE).steps([
-            models.Threshold(value=value, color=color) for value, color in ladder
-        ]))
+        self.visualization.thresholds(dashboardv2.ThresholdsConfig().mode(models.ThresholdsMode.ABSOLUTE).steps([models.Threshold(value=value, color=color) for value, color in ladder]))
         return self
 
     def build(self, identifier):
         if self.disagreeing and not self.explicit:
             raise failed(f"panel [{self.title}] combines queries whose measure levels disagree, give it explicit thresholds")
-        group = dashboardv2.QueryGroup().targets([
-            dashboardv2.Target().ref_id(chr(ord("A") + index)).query(Query(query.dialect.GRAFANA, query.datasource, query.sql, query.form))
-            for index, query in enumerate(self.queries)
-        ])
+        group = dashboardv2.QueryGroup().targets(
+            [dashboardv2.Target().ref_id(chr(ord("A") + index)).query(Query(query.dialect.GRAFANA, query.datasource, query.sql, query.form)) for index, query in enumerate(self.queries)]
+        )
         intervals = sorted({query.interval for query in self.queries if query.interval}, key=lambda interval: duration(interval) or 0)
         if intervals:
             group.query_options(dashboardv2.QueryOptionsSpec().interval(intervals[-1]))
         origin = ORIGIN_WRITTEN if any(query.origin == ORIGIN_WRITTEN for query in self.queries) else ORIGIN_GENERATED
         described = "; ".join(sorted({query.description for query in self.queries if query.description}))
-        return (dashboardv2.Panel()
-                .id(identifier)
-                .title(self.title)
-                .description(f"{origin}: {described}" if described else origin)
-                .data(group)
-                .visualization(self.visualization))
+        return dashboardv2.Panel().id(identifier).title(self.title).description(f"{origin}: {described}" if described else origin).data(group).visualization(self.visualization)
 
 
 def stat(title, queries, reducer="lastNotNull", unit=None, height=4):
-    visualization = (stats.VisualizationV2()
-                     .graph_mode(kinds.BigValueGraphMode.AREA)
-                     .color_mode(kinds.BigValueColorMode.VALUE)
-                     .text_mode(kinds.BigValueTextMode.VALUE)
-                     .justify_mode(kinds.BigValueJustifyMode.CENTER)
-                     .reduce_options(common.ReduceDataOptions().calcs([reducer])))
+    visualization = (
+        stats.VisualizationV2()
+        .graph_mode(kinds.BigValueGraphMode.AREA)
+        .color_mode(kinds.BigValueColorMode.VALUE)
+        .text_mode(kinds.BigValueTextMode.VALUE)
+        .justify_mode(kinds.BigValueJustifyMode.CENTER)
+        .reduce_options(common.ReduceDataOptions().calcs([reducer]))
+    )
     panel = Panel(title, queries, 4, height, visualization, unit)
     levels = panel.levels
     if levels is not None and reducer not in LEVELLED_REDUCERS[levels.better]:
@@ -663,20 +736,17 @@ def stat(title, queries, reducer="lastNotNull", unit=None, height=4):
 
 
 def series(title, queries, unit=None, interpolation=kinds.LineInterpolation.LINEAR):
-    visualization = (timeseries.VisualizationV2()
-                     .line_interpolation(interpolation)
-                     .fill_opacity(0)
-                     .line_width(1)
-                     .show_points(kinds.VisibilityMode.NEVER)
-                     .span_nulls(True)
-                     .axis_width(AXIS_WIDTH)
-                     .tooltip(common.VizTooltipOptions().mode(kinds.TooltipDisplayMode.MULTI).sort(kinds.SortOrder.DESCENDING))
-                     .legend(common.VizLegendOptions()
-                             .show_legend(True)
-                             .display_mode(kinds.LegendDisplayMode.TABLE)
-                             .placement(kinds.LegendPlacement.RIGHT)
-                             .width(LEGEND_WIDTH)
-                             .calcs(["min", "max", "mean"])))
+    visualization = (
+        timeseries.VisualizationV2()
+        .line_interpolation(interpolation)
+        .fill_opacity(0)
+        .line_width(1)
+        .show_points(kinds.VisibilityMode.NEVER)
+        .span_nulls(True)
+        .axis_width(AXIS_WIDTH)
+        .tooltip(common.VizTooltipOptions().mode(kinds.TooltipDisplayMode.MULTI).sort(kinds.SortOrder.DESCENDING))
+        .legend(common.VizLegendOptions().show_legend(True).display_mode(kinds.LegendDisplayMode.TABLE).placement(kinds.LegendPlacement.RIGHT).width(LEGEND_WIDTH).calcs(["min", "max", "mean"]))
+    )
     panel = Panel(title, queries, GRID_WIDTH, 10, visualization, unit)
     panel.disagreeing = False
     levels = panel.levels
@@ -703,11 +773,17 @@ def state(title, queries, labels, rows):
     layout = json.dumps({"axis": AXIS_WIDTH, "legend": LEGEND_WIDTH, "top": TIMELINE_TOP, "bottom": TIMELINE_BOTTOM, "bar": TIMELINE_BAR, "states": states})
     pixels = rows * TIMELINE_ROW + TIMELINE_TOP + TIMELINE_BOTTOM + PANEL_CHROME + GRID_GAP
     height = -(-pixels // (GRID_CELL + GRID_GAP))
-    visualization = dashboardv2.VizConfigKind().group(ECHARTS_PANEL).options({
-        "renderer": "canvas",
-        "editorMode": "code",
-        "getOption": f"const layout = {layout};\n{TIMELINE_SCRIPT.strip()}\n",
-    })
+    visualization = (
+        dashboardv2.VizConfigKind()
+        .group(ECHARTS_PANEL)
+        .options(
+            {
+                "renderer": "canvas",
+                "editorMode": "code",
+                "getOption": f"const layout = {layout};\n{TIMELINE_SCRIPT.strip()}\n",
+            }
+        )
+    )
     panel = Panel(title, queries, GRID_WIDTH, height, visualization)
     panel.levels, panel.disagreeing = None, False
     return panel
@@ -739,10 +815,7 @@ def header(sources, service, ceiling=None):
         ("Metrics", summary(sources, "metrics", span, "%", "Share of measures written in the window that reported in the latest batch"), higher_better(80, 100)),
         ("Volume", summary(sources, "volume", span, "%", "Rows in the last quarter of the window as a share of the average quarter"), VOLUME_LADDER),
     ]
-    return [
-        stat(title, query, height=3).color_mode(kinds.BigValueColorMode.BACKGROUND).graph_mode(kinds.BigValueGraphMode.NONE).decimals(0).thresholds(ladder)
-        for title, query, ladder in slots
-    ]
+    return [stat(title, query, height=3).color_mode(kinds.BigValueColorMode.BACKGROUND).graph_mode(kinds.BigValueGraphMode.NONE).decimals(0).thresholds(ladder) for title, query, ladder in slots]
 
 
 def dashboard(uid, window, header_panels, rows):
@@ -758,28 +831,28 @@ def dashboard(uid, window, header_panels, rows):
                 raise failed(f"dashboard [{uid}] panel [{panel.title}] is wider than [{GRID_WIDTH}]")
             if cursor + panel.width > GRID_WIDTH:
                 cursor = 0
-            y = max([top] + skyline[cursor:cursor + panel.width])
+            y = max([top] + skyline[cursor : cursor + panel.width])
             name = f"panel-{len(elements) + 1}"
             elements[name] = panel.build(len(elements) + 1)
             items.append(dashboardv2.grid_item(name).x(cursor).y(y).width(panel.width).height(panel.height))
-            skyline[cursor:cursor + panel.width] = [y + panel.height] * panel.width
+            skyline[cursor : cursor + panel.width] = [y + panel.height] * panel.width
             cursor += panel.width
-    ranges = [
-        dashboardv2.TimeRangeOption().display(f"Last {option}").from_val(f"now-{option}").to("now")
-        for option in window.options
-    ]
-    builder = (dashboardv2.Dashboard(TITLES[uid])
-               .editable(True)
-               .cursor_sync(models.DashboardCursorSync.CROSSHAIR)
-               .elements(elements)
-               .layout(dashboardv2.Grid().items(items))
-               .time_settings(dashboardv2.TimeSettings()
-                              .timezone("browser")
-                              .from_val(window.start)
-                              .to("now")
-                              .auto_refresh("")
-                              .auto_refresh_intervals([window.refresh])
-                              .quick_ranges(ranges)))
+    builder = (
+        dashboardv2.Dashboard(TITLES[uid])
+        .editable(True)
+        .cursor_sync(models.DashboardCursorSync.CROSSHAIR)
+        .elements(elements)
+        .layout(dashboardv2.Grid().items(items))
+        .time_settings(
+            dashboardv2.TimeSettings()
+            .timezone("browser")
+            .from_val(window.start)
+            .to("now")
+            .auto_refresh("")
+            .auto_refresh_intervals([window.refresh])
+            .quick_ranges([dashboardv2.TimeRangeOption().display(f"Last {option}").from_val(f"now-{option}").to("now") for option in window.options])
+        )
+    )
     DASHBOARDS[uid] = encoded(dashboardv2.manifest(uid, builder).build())
     return DASHBOARDS[uid]
 
@@ -805,8 +878,9 @@ def metadata_dashboard(uid, ceiling, entities_df, group=None, placed=None):
         if entity["unique_id"] in HASS_MEASUREMENTS:
             declared = [dimension.entities for dimension in HASS_MEASUREMENTS[entity["unique_id"]].dimensions if dimension.key == "unit_of_measurement"]
         elif entity["entity_namespace"] in HASS_PATHS:
-            warned(f"entity [{entity['unique_id']}] has no homeassistant schema measurement so dashboard [{uid}] draws no data for it, "
-                   f"run [fab generate] in [src/meg/homeassistant] once it has written")
+            warned(
+                f"entity [{entity['unique_id']}] has no homeassistant schema measurement so dashboard [{uid}] draws no data for it, run [fab generate] in [src/meg/homeassistant] once it has written"
+            )
         else:
             warned(f"entity [{entity['unique_id']}] has no homeassistant schema measurement and namespace [{entity['entity_namespace']}] is no homeassistant relation so is left off dashboard [{uid}]")
             continue
@@ -819,10 +893,11 @@ def metadata_dashboard(uid, ceiling, entities_df, group=None, placed=None):
         relation = Relation("homeassistant", measurement_paths[entities[0]["unique_id"]])
         unmeasured = [member["unique_id"] for member in entities if member["unique_id"] not in expanded(relation.relation, relation.relation.subject)]
         if unmeasured:
-            relation.relation = replace(relation.relation, entities=relation.relation.entities + unmeasured, dimensions=[
-                replace(dimension, entities=dimension.entities + unmeasured) if dimension.subject and dimension.entities else dimension
-                for dimension in relation.relation.dimensions
-            ])
+            relation.relation = replace(
+                relation.relation,
+                entities=relation.relation.entities + unmeasured,
+                dimensions=[replace(dimension, entities=dimension.entities + unmeasured) if dimension.subject and dimension.entities else dimension for dimension in relation.relation.dimensions],
+            )
         return relation.query(
             ["value"],
             [member["unique_id"] for member in entities],
@@ -848,8 +923,7 @@ def metadata_dashboard(uid, ceiling, entities_df, group=None, placed=None):
         split_runs = []
         for entity in members:
             unit, kind = units.get(entity["unique_id"]), entity["grafana_display_type"]
-            if split_runs and split_runs[-1].kind == kind and split_runs[-1].members[-1].get("grafana_index") == entity.get("grafana_index") \
-                    and (unit is None or split_runs[-1].unit in (None, unit)):
+            if split_runs and split_runs[-1].kind == kind and split_runs[-1].members[-1].get("grafana_index") == entity.get("grafana_index") and (unit is None or split_runs[-1].unit in (None, unit)):
                 split_runs[-1].unit = split_runs[-1].unit or unit
                 split_runs[-1].members.append(entity)
             else:
@@ -883,7 +957,7 @@ def metadata_dashboard(uid, ceiling, entities_df, group=None, placed=None):
             warned(f"entity [{entity['unique_id']}] grafana_kpi [{reducer}] expected one of [{','.join(REDUCERS)}] so shows its last value")
             reducer = "last"
         name = entity.get("friendly_name", entity["unique_id"])
-        device_class = measurement_paths[entity["unique_id"]].partition("__")[2]
+        device_class: str = measurement_paths[entity["unique_id"]].partition("__")[2]
         noun = DEVICE_CLASS_NOUNS.get(device_class, device_class.replace("_", " ").title())
         if measurements_differ and device_class and noun.lower() not in name.lower():
             name = f"{name} {noun}"
