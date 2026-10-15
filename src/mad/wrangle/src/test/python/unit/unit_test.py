@@ -4083,6 +4083,13 @@ class WrangleTest(unittest.TestCase):
                 _print("FINISHED (assert)")
             else:
                 first_counters = copy.deepcopy(run_counters)
+                if not plugin.config.disable_drive_uploads and plugin_module.remote_repos.drive_folder is not None:
+                    local_names = {basename(path).lower() for path in glob.glob(f"{plugin_module.local_cache}/*") if isfile(path) and not basename(path).startswith(("_", "~$"))}
+                    listed_deadline = time.time() + 60
+                    while local_names - {drive_file["name"].lower() for drive_file in drive_list(plugin_module.remote_repos.drive_folder)[1]}:
+                        if time.time() > listed_deadline:
+                            self.fail(f"Drive listing never showed uploaded files [{plugin_module.remote_repos.drive_folder}]")
+                        time.sleep(2)
                 plugin_module.reset_counters()
                 _print("STARTING (rerun)")
                 plugin_module.run()
@@ -4877,20 +4884,28 @@ def reset_config(log="warning"):
 def drive_delete(drive_dir, file_name):
     if drive_dir is None or file_name is None:
         return
+    service, drive_files = drive_list(drive_dir, f"name = '{file_name}'")
+    for drive_file in drive_files:
+        service.files().delete(fileId=drive_file["id"]).execute()
+
+
+def drive_list(drive_dir, query=None):
     credentials = google.oauth2.service_account.Credentials.from_service_account_file(get_file(".google_service_account.json"), scopes=["https://www.googleapis.com/auth/drive"])
     service = build("drive", "v3", credentials=credentials, cache_discovery=False)
+    drive_files = []
     token = None
-    drive_file_id = None
     while True:
-        response = service.files().list(q=f"'{drive_dir}' in parents and name = '{file_name}' and trashed = false", spaces="drive", fields="nextPageToken, files(id, name)", pageToken=token).execute()
-        for drive_file in response.get("files", []):
-            drive_file_id = drive_file["id"]
-            break
+        response = (
+            service.files()
+            .list(
+                q=f"'{drive_dir}' in parents and trashed = false" + ("" if query is None else f" and {query}"), spaces="drive", fields="nextPageToken, files(id, name)", pageSize=1000, pageToken=token
+            )
+            .execute()
+        )
+        drive_files.extend(response.get("files", []))
         token = response.get("nextPageToken")
-        if not token or drive_file_id is not None:
-            break
-    if drive_file_id is not None:
-        service.files().delete(fileId=drive_file_id).execute()
+        if not token:
+            return service, drive_files
 
 
 def bank_api_offline(test_name, scope="local"):
