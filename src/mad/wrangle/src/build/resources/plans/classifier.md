@@ -8,7 +8,7 @@
 | Category Manual  | The only sticky cell. Set only by the operator, never by bank.                                                                                                             |
 | Category         | Category Manual if set, else Category Derived.                                                                                                                             |
 | Bucket           | Looked up from the category on the `Classifier` tab. Never stored, never clears a tick.                                                                                    |
-| Vetted           | "Checked at the current category". Bank clears it whenever a row's category changes other than by the operator, so an unticked row means the row needs looking at.         |
+| Vetted           | "Checked at the current category". Bank clears a tick whenever a row's category changes other than by the operator, so an unticked row needs looking at; `No` stays.       |
 
 A row with Category Manual never changes category or loses its tick through the classifier; its Category Derived still tracks the
 classifier, so Manual differing from Derived marks a live override and Manual equal to Derived a redundant one.
@@ -37,8 +37,8 @@ classifier, so Manual differing from Derived marks a live override and Manual eq
 ### A2. Sheet merge
 
 - A tick is cleared only when the row's effective category (Category Manual, else Category Derived) changes and the tick was left as
-  it was. Setting Category Manual to the category the row already shows, or clearing it when Category Derived equals it, keeps the
-  tick.
+  it was. A `No` is never cleared, by this or by a classifier move: it already says the row needs looking at. Setting Category
+  Manual to the category the row already shows, or clearing it when Category Derived equals it, keeps the tick.
 - Stale-sheet guard: a sheet row's Vetted is not taken when it would re-tick a row (sheet `Yes`, file blank) whose sheet Category
   Derived disagrees with the file's. That row predates a move, from a tab whose upload was skipped as moved. An untick is always
   taken, so the worst case is a lost tick, shown as unvetted, never a wrong one.

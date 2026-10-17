@@ -721,8 +721,8 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # Vetted typed on a linked account's rows: a tick is saved, a category change clears a tick left as it was but keeps one set with it, an unknown value is one
-    # rejected record reverted by the rewrite, and a value is saved title cased whatever its case and spacing
+    # Vetted typed on a linked account's rows: a tick is saved, a category change clears a tick left as it was but keeps one set with it and a No left as it was, an
+    # unknown value is one rejected record reverted by the rewrite, and a value is saved title cased whatever its case and spacing
     def test_bank_local_partial_40(self):
         self._bank_run(
             "partial_40",
@@ -731,8 +731,8 @@ class WrangleTest(unittest.TestCase):
             errored={plugin.CTR_SRC_DATA: 1},
             file_asserts={
                 "redbark_transactions_2025.csv": [
-                    assert_file_column_values("Vetted", ["Yes", None, "Yes", None, "No"], sort_by=["Description"]),
-                    assert_file_column_values("Category Manual", [None, "Clothing", "Clothing", None, None], sort_by=["Description"]),
+                    assert_file_column_values("Vetted", ["Yes", None, "Yes", None, "No", "No"], sort_by=["Description"]),
+                    assert_file_column_values("Category Manual", [None, "Clothing", "Clothing", None, None, "Clothing"], sort_by=["Description"]),
                 ],
                 "__bank_logs.csv": [assert_file_column_values("Code", ["TRANSACTIONS_UNVETTED", "TRANSACTION_VETTED"], sort_by=["Code"])],
             },
@@ -746,7 +746,6 @@ class WrangleTest(unittest.TestCase):
             standing=2,
             rerun=False,
             force=True,
-            errored={plugin.CTR_SRC_DATA: 1},
             file_asserts={
                 "redbark_transactions_2025.csv": [
                     assert_file_column_values("Category Derived", [None] * 9 + ["Groceries", "Groceries"], sort_by=["Description"]),
@@ -755,30 +754,29 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A classifier edit re-derives every row on the next run: a vetted row whose category moves loses its tick, a manual row keeps category and tick while its derived
-    # category follows, an unmatched row is blanked and loses its tick, the snapshot is replaced, and each change is logged once in the run's month, the closed month
-    # untouched, the rerun and reprocess moving nothing more
+    # A classifier edit re-derives every row on the next run: a vetted row whose category moves loses its tick and one marked No keeps it, a manual row keeps category
+    # and tick while its derived category follows, an unmatched row is blanked and loses its tick, the snapshot is replaced, and each change is logged once in the
+    # run's month, the closed month untouched, the rerun and reprocess moving nothing more
     def test_bank_local_partial_47(self):
         self._bank_run(
             "partial_47",
             standing=2,
-            errored={plugin.CTR_SRC_DATA: 1},
             file_asserts={
                 "redbark_transactions_2025.csv": [
-                    assert_file_column_values("Category Derived", ["Restaurants", "Restaurants"] + [None] * 7 + ["Groceries"], sort_by=["Description"]),
-                    assert_file_column_values("Vetted", [None, "Yes"] + [None] * 7 + ["Yes"], sort_by=["Description"]),
+                    assert_file_column_values("Category Derived", ["Restaurants"] * 3 + [None] * 11 + ["Groceries"], sort_by=["Description"]),
+                    assert_file_column_values("Vetted", [None, "No", "Yes"] + [None] * 11 + ["Yes"], sort_by=["Description"]),
                 ],
                 "bank_reclassified_2026_01.csv": [
-                    assert_file_column_values("Description", ["Cafe One", "Cafe Two", "Gone One"], sort_by=["Description"]),
-                    assert_file_column_values("Source", ["classifier"] * 3, sort_by=["Description"]),
-                    assert_file_column_values("Derived Before", ["Food"] * 3, sort_by=["Description"]),
-                    assert_file_column_values("Derived After", ["Restaurants", "Restaurants", None], sort_by=["Description"]),
-                    assert_file_column_values("Vetted After", [None, "Yes", None], sort_by=["Description"]),
+                    assert_file_column_values("Description", ["Cafe One", "Cafe Three", "Cafe Two", "Gone One"], sort_by=["Description"]),
+                    assert_file_column_values("Source", ["classifier"] * 4, sort_by=["Description"]),
+                    assert_file_column_values("Derived Before", ["Food"] * 4, sort_by=["Description"]),
+                    assert_file_column_values("Derived After", ["Restaurants", "Restaurants", "Restaurants", None], sort_by=["Description"]),
+                    assert_file_column_values("Vetted After", [None, "No", "Yes", None], sort_by=["Description"]),
                     assert_file_nones_per_col(include=r"File MD5"),
                 ],
                 "bank_reclassified_2025_12.csv": [assert_file_size(min_rows=1, max_rows=1)],
                 "__bank_classifier.csv": [assert_file_column_values("Category", ["Groceries", "Food", "Restaurants"])],
-                "__bank_logs.csv": [assert_file_column_values("Code", ["TRANSACTIONS_MOVED", "TRANSACTIONS_UNCLASSIFIED", "TRANSACTIONS_UNVETTED"], sort_by=["Code"])],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["TRANSACTIONS_UNCLASSIFIED", "TRANSACTIONS_UNVETTED"], sort_by=["Code"])],
             },
         )
 
@@ -804,7 +802,6 @@ class WrangleTest(unittest.TestCase):
             standing=2,
             rerun=False,
             force=True,
-            errored={plugin.CTR_SRC_DATA: 1},
             file_asserts={
                 "redbark_transactions_2025.csv": [
                     assert_file_column_values("Category Derived", [None] * 5 + ["Groceries"], sort_by=["Description"]),
@@ -826,7 +823,7 @@ class WrangleTest(unittest.TestCase):
             "corrupt_33",
             standing=2,
             rerun=False,
-            errored={plugin.CTR_SRC_SOURCES: 2, plugin.CTR_SRC_DATA: 1},
+            errored={plugin.CTR_SRC_SOURCES: 2},
             file_asserts={
                 "redbark_transactions_2025.csv": [
                     assert_file_column_values("Category Derived", ["Food"] + [None] * 3 + ["Food", "Groceries"], sort_by=["Description"]),
@@ -836,7 +833,7 @@ class WrangleTest(unittest.TestCase):
                 "__bank_logs.csv": [
                     assert_file_column_values(
                         "Code",
-                        ["CLASSIFIER_HELD", "CLASSIFIER_PATTERN_CONFLICT", "TRANSACTIONS_MOVED", "TRANSACTIONS_UNCLASSIFIED", "TRANSACTIONS_UNVETTED"],
+                        ["CLASSIFIER_HELD", "CLASSIFIER_PATTERN_CONFLICT", "TRANSACTIONS_UNCLASSIFIED", "TRANSACTIONS_UNVETTED"],
                         sort_by=["Code"],
                     )
                 ],
@@ -850,7 +847,7 @@ class WrangleTest(unittest.TestCase):
             standing=2,
             rerun=False,
             force=True,
-            errored={plugin.CTR_SRC_SOURCES: 2, plugin.CTR_SRC_DATA: 1},
+            errored={plugin.CTR_SRC_SOURCES: 2},
             file_asserts={
                 "redbark_transactions_2025.csv": [
                     assert_file_column_values("Category Derived", ["Food"] + [None] * 3 + ["Food", "Groceries"], sort_by=["Description"]),
@@ -860,7 +857,7 @@ class WrangleTest(unittest.TestCase):
                 "__bank_logs.csv": [
                     assert_file_column_values(
                         "Code",
-                        ["CLASSIFIER_HELD", "CLASSIFIER_PATTERN_CONFLICT", "TRANSACTIONS_MOVED", "TRANSACTIONS_UNCLASSIFIED", "TRANSACTIONS_UNVETTED"],
+                        ["CLASSIFIER_HELD", "CLASSIFIER_PATTERN_CONFLICT", "TRANSACTIONS_UNCLASSIFIED", "TRANSACTIONS_UNVETTED"],
                         sort_by=["Code"],
                     )
                 ],
@@ -889,7 +886,6 @@ class WrangleTest(unittest.TestCase):
             "partial_50",
             standing=3,
             sheet_downloads=1,
-            errored={plugin.CTR_SRC_DATA: 1},
             file_asserts={
                 "redbark_transactions_2025.csv": [
                     assert_file_column_values("Category Derived", ["Food"] + [None] * 4 + ["Groceries"], sort_by=["Description"]),
@@ -935,11 +931,11 @@ class WrangleTest(unittest.TestCase):
             standing=2,
             rerun=False,
             drive_failed=True,
-            errored={plugin.CTR_SRC_SOURCES: 2, plugin.CTR_SRC_DATA: 1},
+            errored={plugin.CTR_SRC_SOURCES: 2},
             file_asserts={
                 "redbark_transactions_2025.csv": [assert_file_column_values("Vetted", [None, "Yes"] + [None] * 7 + ["Yes"], sort_by=["Description"])],
                 "bank_reclassified_2026_01.csv": [assert_file_does_not_exist()],
-                "__bank_logs.csv": [assert_file_column_values("Code", ["CHANGES_UNLOGGED", "TRANSACTIONS_MOVED", "TRANSACTIONS_UNCLASSIFIED", "TRANSACTIONS_UNVETTED"], sort_by=["Code"])],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["CHANGES_UNLOGGED", "TRANSACTIONS_UNCLASSIFIED", "TRANSACTIONS_UNVETTED"], sort_by=["Code"])],
             },
         )
 
@@ -1191,7 +1187,6 @@ class WrangleTest(unittest.TestCase):
         self._bank_run(
             "partial_24",
             standing=2,
-            errored={plugin.CTR_SRC_DATA: 1},
             file_asserts={
                 "redbark_transactions_2026.csv": [
                     assert_file_column_values(

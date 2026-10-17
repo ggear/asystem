@@ -242,14 +242,13 @@ ERROR_CODES = {
     "BALANCE_JUMP": (plugin.LOG_KIND_WARNING, False, plugin.CTR_SRC_DATA),
     "CATEGORY_UNKNOWN": (plugin.LOG_KIND_WARNING, False, plugin.CTR_SRC_DATA),
     "MANUAL_DUPLICATE": (plugin.LOG_KIND_WARNING, False, plugin.CTR_SRC_DATA),
-    "TRANSACTION_GONE": (plugin.LOG_KIND_WARNING, False, plugin.CTR_SRC_DATA),
+    "TRANSACTION_GONE": (plugin.LOG_KIND_ERROR, False, plugin.CTR_SRC_DATA),
     "DEDUPE_REMOVED": (plugin.LOG_KIND_INFO, False, plugin.CTR_SRC_DATA),
     "TRANSACTIONS_UNCLASSIFIED": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_DATA),
     "TRANSACTIONS_UNCLASSIFIED_CURRENT": (plugin.LOG_KIND_WARNING, True, plugin.CTR_SRC_DATA),
     "TRANSACTIONS_UNVETTED": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_DATA),
     "TRANSACTIONS_UNVETTED_CURRENT": (plugin.LOG_KIND_WARNING, True, plugin.CTR_SRC_DATA),
     "TRANSACTION_TWO_ACCOUNTS": (plugin.LOG_KIND_WARNING, True, plugin.CTR_SRC_DATA),
-    "TRANSACTIONS_MOVED": (plugin.LOG_KIND_WARNING, False, plugin.CTR_SRC_DATA),
 }
 CLASSIFIER_HOLDING_CODES = {
     "CLASSIFIER_BANK_CODE",
@@ -1032,7 +1031,7 @@ class Bank(plugin.Plugin):
             if _base_part is not None:
                 _category_before = _base_part["Category Manual"] or _base_part["Category Derived"]
                 _category_after = _part["Category Manual"] or _base_part["Category Derived"]
-                if _category_after != _category_before and _part["__vetted"] == _base_part["Vetted"]:
+                if _category_after != _category_before and _part["__vetted"] == _base_part["Vetted"] == FLAG_YES:
                     return None
                 if (
                     "Category Derived" in _part
@@ -1744,7 +1743,8 @@ class Bank(plugin.Plugin):
             _effective_before = pl.coalesce("Category Manual", "Category Derived")
             _effective_after = pl.coalesce("Category Manual", "__new")
             _moved = _effective_after.ne_missing(_effective_before)
-            _moved_years: dict[int, list[int]] = {}
+            _moved_count = 0
+            _cleared_count = 0
             for _path, _frame_df in _classify_frames.items():
                 _updates_df = _derived_df.filter(pl.col("__path") == _path).select(["__index", "__derived"])
                 _classified_df = (
@@ -1753,20 +1753,16 @@ class Bank(plugin.Plugin):
                     .with_columns(pl.when(pl.col("__index").is_in(_updates_df["__index"].implode())).then(pl.col("__derived")).otherwise(pl.col("Category Derived")).alias("__new"))
                     .with_columns(_moved.alias("__moved"), (_moved & (bank_flag("Vetted") == FLAG_YES)).fill_null(False).alias("__cleared"))
                 )
-                _counts = _moved_years.setdefault(_bank_file(_path)[1], [0, 0])
-                _counts[0] += int(_classified_df["__moved"].sum())
-                _counts[1] += int(_classified_df["__cleared"].sum())
+                _moved_count += int(_classified_df["__moved"].sum())
+                _cleared_count += int(_classified_df["__cleared"].sum())
                 _classified_df = _classified_df.with_columns(
-                    pl.when(pl.col("__moved")).then(pl.lit(None, dtype=pl.Utf8)).otherwise(pl.col("Vetted")).alias("Vetted"), pl.col("__new").alias("Category Derived")
+                    pl.when(pl.col("__cleared")).then(pl.lit(None, dtype=pl.Utf8)).otherwise(pl.col("Vetted")).alias("Vetted"), pl.col("__new").alias("Category Derived")
                 ).drop(["__index", "__derived", "__new", "__moved", "__cleared"])
                 if not _classified_df.equals(_frame_df):
                     _bank_write(_classified_df, _path, "classified")
-            for _year, (_moved_count, _cleared_count) in sorted(_moved_years.items()):
-                if _moved_count:
-                    _bank_error(f"Transactions_{_year}", str(_year), "TRANSACTIONS_MOVED", f"[{_moved_count}] rows changed category by the classifier, [{_cleared_count}] ticks cleared")
             self.print_log(
                 f"Classified [{_derived_df['__derived'].is_not_null().sum()}] of [{len(_targets_df)}] rows with the [{'last applied' if _held or not classifier_usable else 'live'}] tab, "
-                f"moved [{sum(_year_counts[0] for _year_counts in _moved_years.values())}] ticks cleared [{sum(_year_counts[1] for _year_counts in _moved_years.values())}]",
+                f"moved [{_moved_count}] ticks cleared [{_cleared_count}]",
                 started=_started_time,
             )
             return _held
