@@ -1028,8 +1028,9 @@ def _release(context):
                 ssh_pass: str | None = None
                 try:
                     ssh_pass = _ssh_pass(context, host)
-                except Exception:
+                except Exception as e:
                     host_up = False
+                    print(e)
                 group_path = Path(join(ROOT_MODULE_DIR, release_module, ".group"))
 
                 print(host_up)
