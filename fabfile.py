@@ -1018,6 +1018,9 @@ def _release(context):
         )
     for release_module in modules:
         for host in _get_hosts(release_module):
+
+            print(get_host_label(host))
+
             if FAB_SKIP_HOST_ALLBUT not in os.environ or os.environ[FAB_SKIP_HOST_ALLBUT] == get_host_label(host):
                 _clean(context, filter_module=release_module, filter_host=host)
                 _generate(context, filter_module=release_module, filter_host=host, is_release=True)
