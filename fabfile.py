@@ -1028,13 +1028,18 @@ def _release(context):
                 ssh_pass: str | None = None
                 try:
                     ssh_pass = _ssh_pass(context, host)
-                except Exception as e:
+                except Exception as exception:
+                    print(exception)
                     host_up = False
-                    print(e)
                 group_path = Path(join(ROOT_MODULE_DIR, release_module, ".group"))
+
+
 
                 print(host_up)
                 print(ssh_pass)
+
+
+
 
                 if group_path.exists() and group_path.read_text().strip().isnumeric() and int(group_path.read_text().strip()) >= 0 and host_up and ssh_pass is not None:
                     _run_local(context, "mkdir -p target/release", release_module)
