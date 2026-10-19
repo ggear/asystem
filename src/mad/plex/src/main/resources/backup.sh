@@ -54,6 +54,7 @@ BACKUP_INTERNAL_SIZE=0
 BACKUP_INTERNAL_STARTED=0
 BACKUP_INTERNAL_STATUS=0
 BACKUP_INTERNAL_WRITTEN="false"
+BACKUP_INTERNAL_VERIFIER=""
 
 backup_target() {
   local suffix="${1:-}" extension="${2:-}"
@@ -385,12 +386,17 @@ if backup_written; then
   elif [ ! -s "${BACKUP_TARGET_PATH}.tmp" ]; then
     echo "Backup [${BACKUP_TARGET_PATH}] was written empty, discarding it" >&2
   else
-    BACKUP_INTERNAL_WRITTEN="true"
     case "${BACKUP_TARGET_PATH}" in
-    *.gz) gzip -t "${BACKUP_TARGET_PATH}.tmp" 2>/dev/null || BACKUP_INTERNAL_WRITTEN="false" ;;
-    *.zip) unzip -t "${BACKUP_TARGET_PATH}.tmp" >/dev/null 2>&1 || BACKUP_INTERNAL_WRITTEN="false" ;;
+    *.gz) BACKUP_INTERNAL_VERIFIER="gzip" ;;
+    *.zip) BACKUP_INTERNAL_VERIFIER="unzip" ;;
     esac
-    [ "${BACKUP_INTERNAL_WRITTEN}" = "true" ] || echo "Backup [${BACKUP_TARGET_PATH}] failed its integrity check, discarding it" >&2
+    if [ -n "${BACKUP_INTERNAL_VERIFIER}" ] && ! command -v "${BACKUP_INTERNAL_VERIFIER}" >/dev/null 2>&1; then
+      echo "Backup [${BACKUP_TARGET_PATH}] cannot be checked, [${BACKUP_INTERNAL_VERIFIER}] is not installed, discarding it" >&2
+    elif [ -n "${BACKUP_INTERNAL_VERIFIER}" ] && ! "${BACKUP_INTERNAL_VERIFIER}" -t "${BACKUP_TARGET_PATH}.tmp" >/dev/null 2>&1; then
+      echo "Backup [${BACKUP_TARGET_PATH}] failed its integrity check, discarding it" >&2
+    else
+      BACKUP_INTERNAL_WRITTEN="true"
+    fi
   fi
 fi
 if [ "${BACKUP_INTERNAL_WRITTEN}" = "true" ]; then
@@ -404,5 +410,5 @@ else
 fi
 backup_completed || BACKUP_INTERNAL_STATUS=1
 
-find "${BACKUP_INTERNAL_ROOT_DIR}" -depth -empty -delete -type d 2>/dev/null
+find "${BACKUP_INTERNAL_ROOT_DIR}" -depth -type d -empty -delete 2>/dev/null
 exit "${BACKUP_INTERNAL_STATUS}"

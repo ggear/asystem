@@ -26,8 +26,22 @@ The HSBC card (`HSBC Credit`, Redbark account `xxxx5418`, card `xxxx0651`) loses
   Monday 12 Oct, 2 to 4 days later; rows made those days that posted on a weekday survived, as did that Monday's Sunday and Monday
   purchases, and two of its four Saturday ones. Across Apr to Sep 2026, Redbark misses 69% of HSBC purchases made on a Friday and
   76% of those made on a Saturday, against 19% to 25% on other days; credits are missed less (14%), and the week of the month makes
-  no difference. Transactions held over a weekend for Monday's posting are the ones lost, which suggests HSBC's feed reissues them
-  at posting and Redbark loses or deduplicates a copy. Put this pattern to Redbark support.
+  no difference.
+- **The cause is the posting lag.** HSBC posts only on weekdays. Of the transactions Redbark holds, those posted 2 or more days
+  after purchase were 24% to 65% of each month to Mar 2026 (about 40% typically), and 2% to 22% from May (about 10%): from April,
+  Redbark loses most transactions that take 2 or more days to post, which is about the third missing. It explains the rest:
+  Friday and Saturday purchases post Monday, 2 to 3 days on, and go (Saturday purchase days are wholly missing on 15 of 21);
+  Sunday's post Monday a day on and stay; weekday losses are partial, the occasional slow posting. The 7 dated October drops all
+  posted 2 to 4 days on, and were listed then removed, so Redbark deletes them rather than never seeing them. Card, merchant,
+  amount and description play no part, and there is no daily cap (the busiest day falls from 13 to 9 with no ceiling).
+- **Likely mechanism, unconfirmed.** Redbark reconciling a pending transaction with its posted copy within about a day, so one
+  posted 2 or more days later is left unmatched and later removed. Put the lag pattern to Redbark support, with the October drops
+  as examples of a listed row removed.
+
+In all, Redbark lacks 191 HSBC transactions: 8 dropped, 2 never listed and 181 missing from its history. They are told apart
+only by what wrangle could see, since it was not fetching live before October, so the 181 may equally have been listed then
+dropped; the shared posting-lag pattern makes them one fault. None is lost from the year files: the 181 came from statement imports,
+the 2 were added by hand, and the 8 were kept when Redbark dropped them.
 
 Every other line of the 86 HSBC statements since May 2021 matches a held row, and every held row in a statement period is on one.
 
