@@ -107,14 +107,8 @@ func runOneService(ctx context.Context, request stageRequest, loaded *config.Con
 		backupTimeoutVariable+"="+strconv.Itoa(moduleTimeoutHours(loaded, request)))
 	runErr := command.Run()
 
-	state, ok := metric.BackupStateSuccess, true
-	if runErr != nil {
-		state, ok = metric.BackupStateFailure, false
-	}
-	newest := newestBackupDir(backupDir)
-	if state == metric.BackupStateSuccess && newest == previous {
-		state = metric.BackupStateSkipped
-	}
+	ok := runErr == nil
+	state, newest := backupOutcome(ok, previous, newestBackupDir(backupDir))
 
 	sizeMB, files, kind, version := 0, 0, "unknown", "unknown"
 	if newest != "" {
@@ -249,6 +243,19 @@ func backupIdentity(newest string) string {
 		return "none"
 	}
 	return filepath.Base(newest)
+}
+
+func backupOutcome(ok bool, previous, newest string) (state, artefact string) {
+	switch {
+	case ok && newest == previous:
+		return metric.BackupStateSkipped, newest
+	case ok:
+		return metric.BackupStateSuccess, newest
+	case newest == previous:
+		return metric.BackupStateFailure, ""
+	default:
+		return metric.BackupStateFailure, newest
+	}
 }
 
 func moduleSkipHours() int {

@@ -45,7 +45,7 @@ import (
 //	    "disk_total_mb":         <number>,      STAGE
 //	    "disk_unclean_bool":     <true|false>,  STAGE             The mount replayed its log
 //	    "total_mb":              <number>,      STAGE             Expected, against which size_mb is progress
-//	    "backup_id":             "<timestamp>", SERVICE           Artefact the run points at, reused when skipped
+//	    "backup_id":             "<timestamp>", SERVICE           Artefact the run points at, reused when skipped, none when a failure left none
 //	    "kind":                  "<kind>",      SERVICE           [full|delta|unknown]
 //	    "version":               "<text>",      SERVICE
 //	    "resumed_bool":          <true|false>,  SCRUB             Resumed an unfinished pass rather than starting one

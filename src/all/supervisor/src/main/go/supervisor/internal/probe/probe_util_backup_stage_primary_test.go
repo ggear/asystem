@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"supervisor/internal/config"
+	"supervisor/internal/metric"
 )
 
 func loadedWithTimeout(t *testing.T, hours int) *config.Config {
@@ -154,6 +155,33 @@ func TestProbeUtilBackupStagePrimary_BackupIdentity(t *testing.T) {
 		if got := backupIdentity(testCase.newest); got != testCase.expected {
 			t.Errorf("backupIdentity(%q) = %q, want %q", testCase.newest, got, testCase.expected)
 		}
+	}
+}
+
+func TestProbeUtilBackupStagePrimary_BackupOutcome(t *testing.T) {
+	const previous, written = "/backup/2026-10-15_01-00-00", "/backup/2026-10-16_01-00-00"
+	tests := []struct {
+		name             string
+		ok               bool
+		previous         string
+		newest           string
+		expectedState    string
+		expectedArtefact string
+	}{
+		{name: "success_writes_a_new_artefact", ok: true, previous: previous, newest: written, expectedState: metric.BackupStateSuccess, expectedArtefact: written},
+		{name: "first_success_writes_the_first_artefact", ok: true, previous: "", newest: written, expectedState: metric.BackupStateSuccess, expectedArtefact: written},
+		{name: "throttled_success_reuses_the_previous_artefact", ok: true, previous: previous, newest: previous, expectedState: metric.BackupStateSkipped, expectedArtefact: previous},
+		{name: "failure_never_claims_the_previous_artefact", ok: false, previous: previous, newest: previous, expectedState: metric.BackupStateFailure, expectedArtefact: ""},
+		{name: "failure_keeping_its_archive_reports_it", ok: false, previous: previous, newest: written, expectedState: metric.BackupStateFailure, expectedArtefact: written},
+		{name: "failure_with_no_artefact_ever", ok: false, previous: "", newest: "", expectedState: metric.BackupStateFailure, expectedArtefact: ""},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			state, artefact := backupOutcome(testCase.ok, testCase.previous, testCase.newest)
+			if state != testCase.expectedState || artefact != testCase.expectedArtefact {
+				t.Errorf("backupOutcome() = (%q, %q), want (%q, %q)", state, artefact, testCase.expectedState, testCase.expectedArtefact)
+			}
+		})
 	}
 }
 

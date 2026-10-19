@@ -28,12 +28,23 @@ backup_written() {
 set -o pipefail
 response=$(mktemp)
 trap "rm -f ${response}" EXIT
-mosquitto_sub -h "${VERNEMQ_SERVICE:?}" -p "${VERNEMQ_API_PORT:?}" -t zigbee/bridge/response/backup -C 1 -W 60 >"${response}" 2>/dev/null &
-subscriber=$!
-sleep 1
-mosquitto_pub -h "${VERNEMQ_SERVICE:?}" -p "${VERNEMQ_API_PORT:?}" -t zigbee/bridge/request/backup -m "{}" 2>/dev/null || exit 1
-wait "${subscriber}" 2>/dev/null
-[ "$(jq -r ".status // empty" "${response}" 2>/dev/null)" = "ok" ] || exit 1
-jq -r ".data.zip // empty" "${response}" | base64 -d
+for attempt in 1 2 3; do
+  transaction="backup-$$-${attempt}"
+  mosquitto_sub -h "${VERNEMQ_SERVICE:?}" -p "${VERNEMQ_API_PORT:?}" -t zigbee/bridge/response/backup -C 1 -W 60 >"${response}" 2>/dev/null &
+  subscriber=$!
+  sleep "${attempt}"
+  if mosquitto_pub -h "${VERNEMQ_SERVICE:?}" -p "${VERNEMQ_API_PORT:?}" -t zigbee/bridge/request/backup -m "{\"transaction\":\"${transaction}\"}" 2>/dev/null; then
+    wait "${subscriber}" 2>/dev/null
+    if [ "$(jq -r --arg transaction "${transaction}" "select(.transaction == \$transaction) | .status // empty" "${response}" 2>/dev/null)" = "ok" ]; then
+      jq -r ".data.zip // empty" "${response}" | base64 -d
+      exit
+    fi
+  else
+    kill "${subscriber}" 2>/dev/null
+    wait "${subscriber}" 2>/dev/null
+  fi
+  echo "Backup request [${transaction}] got no ok response, attempt [${attempt}/3]" >&2
+done
+exit 1
   ' >"${BACKUP_TARGET_PATH}.tmp"
 }

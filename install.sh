@@ -213,16 +213,18 @@ if [[ "${SERVICE_FORM_FACTOR:-}" == "edge" || "${SERVICE_FORM_FACTOR:-}" == "ser
     export SERVICE_VERSION_CHANGED="true"
   fi
   mapfile -t EXISTING_HOMES < <(find "${SERVICE_PARENT}" -maxdepth 1 -mindepth 1 -type d ! -name latest 2>/dev/null |
-    grep -E '/[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9]+)?$' | sort)
-  SERVICE_HOME_OLD=""
-  SERVICE_HOME_OLDEST=()
-  if ((${#EXISTING_HOMES[@]} > 0)); then
-    LAST_HOME_INDEX=$((${#EXISTING_HOMES[@]} - 1))
-    SERVICE_HOME_OLD="${EXISTING_HOMES[${LAST_HOME_INDEX}]}"
-    if ((${#EXISTING_HOMES[@]} > 1)); then
-      SERVICE_HOME_OLDEST=("${EXISTING_HOMES[@]:0:${#EXISTING_HOMES[@]}-1}")
+    grep -E '/[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9]+)?$' | sort -V)
+  SERVICE_HOME_OLD="$(readlink -f "${SERVICE_PARENT}/latest" 2>/dev/null || true)"
+  if [[ -z "${SERVICE_HOME_OLD}" || ! -d "${SERVICE_HOME_OLD}" || "$(dirname "${SERVICE_HOME_OLD}")" != "${SERVICE_PARENT}" ]]; then
+    SERVICE_HOME_OLD=""
+    if ((${#EXISTING_HOMES[@]} > 0)); then
+      SERVICE_HOME_OLD="${EXISTING_HOMES[$((${#EXISTING_HOMES[@]} - 1))]}"
     fi
   fi
+  SERVICE_HOME_OLDEST=()
+  for EXISTING_HOME in "${EXISTING_HOMES[@]}"; do
+    [[ "${EXISTING_HOME}" == "${SERVICE_HOME_OLD}" ]] || SERVICE_HOME_OLDEST+=("${EXISTING_HOME}")
+  done
   IMAGE_TAR="${SERVICE_NAME}-${SERVICE_VERSION_ABSOLUTE}.tar.gz"
   [[ -f "${IMAGE_TAR}" ]] && docker image load -i "${IMAGE_TAR}"
   if [[ -f "docker-compose.yml" ]]; then
@@ -259,6 +261,8 @@ if [[ "${SERVICE_FORM_FACTOR:-}" == "edge" || "${SERVICE_FORM_FACTOR:-}" == "ser
   shopt -u dotglob nullglob
   rm -f "${SERVICE_PARENT}/latest"
   ln -sfv "${SERVICE_HOME}" "${SERVICE_PARENT}/latest"
+  rm -f "${SERVICE_INSTALL}/../latest"
+  ln -sfv "${SERVICE_INSTALL}" "${SERVICE_INSTALL}/../latest"
   run_hook "./install_pre.sh"
   if [[ -f "docker-compose.yml" ]]; then
     start_service

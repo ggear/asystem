@@ -1078,9 +1078,9 @@ def _release(context):
                     _run_local(
                         context,
                         f"{ssh_pass}ssh -q root@{host}.local "
-                        f"'find $(dirname {install}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | sort | "
-                        f"head -n $(($(find $(dirname {install}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | wc -l) - 2)) | "
-                        "xargs rm -rf'",
+                        f'\'cd $(dirname {install}) && keep="$(basename "$(readlink latest)")" && '
+                        'find . -maxdepth 1 -mindepth 1 -type d -name "[0-9]*.[0-9]*.[0-9]*" ! -name "$keep" | sed "s|^\\./||" | '
+                        'sort -t. -k1,1n -k2,2n -k3,3n | sed "\\$d" | xargs rm -rf\'',
                         hide="err",
                         warn=True,
                     )

@@ -519,7 +519,7 @@ class WrangleTest(unittest.TestCase):
         )
 
     # An id-less held transaction absorbs at most one live transaction of the same amount within three days, the nearest, by name across a replaced card number,
-    # adopting its source id, and a transaction posted six days after it was made is matched on the day it was made, as history dates it, while a second identical
+    # adopting its source id and Redbark's dates, and a transaction posted six days after it was made is matched on the day it was made, as history dates it, while a second identical
     # one, one four days away and a new one are kept
     def test_bank_local_partial_14(self):
         self._bank_run(
@@ -529,7 +529,7 @@ class WrangleTest(unittest.TestCase):
             file_asserts={
                 "redbark_transactions_2026.csv": [
                     assert_file_size(min_rows=7, max_rows=7),
-                    assert_file_column_values("Source ID", ["l6", "l3", "l1", "l2", "l4", None, "l5"], sort_by=["Date", "Source ID"]),
+                    assert_file_column_values("Source ID", ["l6", "l3", "l1", "l2", None, "l4", "l5"], sort_by=["Date", "Source ID"]),
                 ],
                 "__bank_transactions_current.csv": [assert_file_column_distinct("Transaction ID", 7)],
             },
@@ -561,8 +561,8 @@ class WrangleTest(unittest.TestCase):
         )
 
     # Accounts, balances and transactions together: a history year file, a live posting held there without a source id, a pending one ignored, Redbark's codes
-    # stored as codes with the placeholder merchant code blank, and every transaction id pinned to its account id, posted date, amount in cents, description and
-    # ordinal
+    # stored as codes with the placeholder merchant code blank, a live transaction dated the day it was made with its posted day beside it, and every transaction
+    # id pinned to its account id, date, amount in cents, description and ordinal
     def test_bank_local_replete_4(self):
         self._bank_run(
             "replete_4",
@@ -585,10 +585,11 @@ class WrangleTest(unittest.TestCase):
                             "79c5ee12276f525c84b5abfb49908ed8",
                             "d2ffeef11422516c894c30eb44339739",
                             "61bee1da79965981a8a42ea991258df9",
-                            "91ae10de62c15064b77e3b46e137bacc",
+                            "cfa299a9ce9d5f4daf8e88ac3d081aab",
                         ],
                         sort_by=["Date"],
                     ),
+                    assert_file_column_values("Date Posted", [None, None, "2025-11-05", "2026-01-10", "2026-01-12"], sort_by=["Date"]),
                     assert_file_column_values("Split", ["0", "0", "0", "0", "0"]),
                 ],
             },
@@ -1301,25 +1302,105 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A sweep on a normal run writes a transaction Redbark now dates inside the window whose source id an unchanged older year file holds: the dedupe compares every
-    # file, removing it from the changed one as a data error
+    # A sweep on a normal run finds a transaction Redbark now dates in a later year whose source id an older year file holds, never dated: matched by its source id
+    # wherever it is held, it takes Redbark's dates once and moves to the later year's file, never written twice, leaving the older file header-only
     def test_bank_local_partial_45(self):
         self._bank_run(
             "partial_45",
-            standing=4,
+            standing=2,
             source=True,
             rerun=False,
-            errored={plugin.CTR_SRC_DATA: 1},
             file_asserts={
-                "redbark_transactions_2025.csv": [assert_file_column_values("Source ID", ["t1"])],
-                "redbark_transactions_2026.csv": [assert_file_column_values("Source ID", ["t9"])],
+                "redbark_transactions_2025.csv": [assert_file_size(min_rows=0, max_rows=0)],
+                "redbark_transactions_2026.csv": [
+                    assert_file_column_values("Source ID", ["t1", "t9"], sort_by=["Date"]),
+                    assert_file_column_values("Date Posted", ["2026-01-05", "2026-01-10"], sort_by=["Date"]),
+                ],
                 "__bank_transactions_current.csv": [assert_file_size(min_rows=2, max_rows=2)],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED_CURRENT"], sort_by=["Code"])],
+            },
+        )
+
+    # A held transaction Redbark relists under a new id is adopted, keeping its dates, as a suspect; one it no longer lists is kept and counted as suspect; one never
+    # dated takes Redbark's dates once while one already dated keeps its own
+    def test_bank_local_partial_52(self):
+        self._bank_run(
+            "partial_52",
+            standing=2,
+            source=True,
+            rerun=False,
+            errored={plugin.CTR_SRC_DATA: 2},
+            file_asserts={
+                "redbark_transactions_2026.csv": [
+                    assert_file_size(min_rows=4, max_rows=4),
+                    assert_file_column_values("Source ID", ["t4", "t1b", "t3", "t2"], sort_by=["Date"]),
+                    assert_file_column_values("Date", ["2026-01-06", "2026-01-08", "2026-01-09", "2026-01-12"], sort_by=["Date"]),
+                    assert_file_column_values("Date Posted", ["2026-01-07", "2026-01-09", "2026-01-11", "2026-01-12"], sort_by=["Date"]),
+                ],
                 "__bank_logs.csv": [
                     assert_file_column_values(
                         "Code",
-                        ["DEDUPE_REMOVED", "TRANSACTIONS_UNCLASSIFIED", "TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED", "TRANSACTIONS_UNVETTED_CURRENT"],
+                        ["TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED_CURRENT", "TRANSACTION_GONE", "TRANSACTION_RELISTED"],
                         sort_by=["Code"],
                     )
+                ],
+            },
+        )
+
+    # A forced download fetches the whole history: a held transaction never dated takes Redbark's dates, while one Redbark lists but nothing holds and one held but
+    # no longer listed, both before the window, are left alone
+    def test_bank_local_partial_53(self):
+        self._bank_run(
+            "partial_53",
+            standing=4,
+            source=True,
+            rerun=False,
+            downloads=True,
+            file_asserts={
+                "redbark_transactions_2025.csv": [
+                    assert_file_column_values("Source ID", ["t5", "t8"], sort_by=["Date"]),
+                    assert_file_column_values("Date", ["2025-06-09", "2025-08-01"], sort_by=["Date"]),
+                    assert_file_column_values("Date Posted", ["2025-06-10", "2025-08-02"], sort_by=["Date"]),
+                ],
+                "redbark_transactions_2026.csv": [assert_file_column_values("Source ID", ["t6"])],
+                "__bank_logs.csv": [
+                    assert_file_column_values("Code", ["TRANSACTIONS_UNCLASSIFIED", "TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED", "TRANSACTIONS_UNVETTED_CURRENT"], sort_by=["Code"])
+                ],
+            },
+        )
+
+    # A linked balance moving more than its held transactions explain is unreconciled once, between the readings it broke across, while one explained only by a
+    # transaction made before a reading and posted after it, or posted the day of the reading, is not, and a reading too recent to have settled is not judged
+    def test_bank_local_partial_54(self):
+        self._bank_run(
+            "partial_54",
+            standing=3,
+            rerun=False,
+            file_asserts={
+                "__bank_logs.csv": [
+                    assert_file_column_values(
+                        "Code",
+                        ["BALANCE_UNRECONCILED", "TRANSACTIONS_UNCLASSIFIED", "TRANSACTIONS_UNVETTED"],
+                        sort_by=["Code"],
+                    ),
+                    assert_file_column_values("Key", ["One 2025-12-24", "2025", "2025"], sort_by=["Code"]),
+                ],
+            },
+        )
+
+    # An HSBC transaction is dated the day its time falls in Sydney, as its statements date it, whether stamped at midnight or late in a Perth evening, while
+    # another bank's keeps the date Redbark gives
+    def test_bank_local_partial_55(self):
+        self._bank_run(
+            "partial_55",
+            standing=2,
+            source=True,
+            rerun=False,
+            file_asserts={
+                "redbark_transactions_2026.csv": [
+                    assert_file_column_values("Source ID", ["b1", "h1", "h2", "h3"], sort_by=["Source ID"]),
+                    assert_file_column_values("Date", ["2026-01-05", "2026-01-06", "2026-01-08", "2026-01-09"], sort_by=["Source ID"]),
+                    assert_file_column_values("Date Posted", ["2026-01-05", "2026-01-06", "2026-01-08", "2026-01-09"], sort_by=["Source ID"]),
                 ],
             },
         )
@@ -4339,6 +4420,7 @@ class WrangleTest(unittest.TestCase):
         restyled_tabs=(),
         rerun=True,
         force=False,
+        downloads=False,
         errored=None,
         standing=0,
         counters=None,
@@ -4370,7 +4452,7 @@ class WrangleTest(unittest.TestCase):
             disable_drive_uploads=True,
             enable_rerun=rerun,
             force_reprocessing=force,
-            force_downloads=False,
+            force_downloads=downloads,
             today=today,
             rerun_errored={plugin.CTR_SRC_DATA: standing} if standing else None,
             counter_asserts=merge_asserts(

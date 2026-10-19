@@ -14,3 +14,4 @@ rsync
 util-linux
 docker.io
 btrfs-progs
+unzip

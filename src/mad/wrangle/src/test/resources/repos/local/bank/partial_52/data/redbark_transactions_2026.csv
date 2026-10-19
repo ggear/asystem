@@ -1,0 +1,5 @@
+Date,Date Posted,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Vetted,Category,Category Manual,Category Derived,Account ID,Source ID,Transaction ID
+2026-01-12,2026-01-12,One,-3.0,-3.0,Vanished,,,,,,,540a8918175f5ca38559395087eb552c,t2,
+2026-01-11,,One,-9.0,-9.0,Legacy,,,,,,,540a8918175f5ca38559395087eb552c,t3,
+2026-01-08,2026-01-09,One,-5.0,-5.0,Cafe,,,,,,,540a8918175f5ca38559395087eb552c,t1,
+2026-01-06,2026-01-07,One,-2.0,-2.0,Fixed,,,,,,,540a8918175f5ca38559395087eb552c,t4,

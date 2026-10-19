@@ -1,0 +1,5 @@
+Date,Date Posted,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Vetted,Category,Category Manual,Category Derived,Account ID,Source ID,Transaction ID
+2025-12-26,2025-12-26,One,-5.0,-5.0,Bakery,,,,,,,540a8918175f5ca38559395087eb552c,t3,
+2025-12-24,2025-12-24,Two,-3.0,-3.0,Same Day,,,,,,,69c576ba31725c77a2ff31acd55cfbca,t6,
+2025-12-21,2025-12-23,Two,-10.0,-10.0,In Flight,,,,,,,69c576ba31725c77a2ff31acd55cfbca,t5,
+2025-12-21,2025-12-21,One,-10.0,-10.0,Lunch,,,,,,,540a8918175f5ca38559395087eb552c,t1,

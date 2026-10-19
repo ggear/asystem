@@ -1,0 +1,4 @@
+id,accountId,status,date,postDate,amount,direction,description,category,merchantCategoryCode
+t5,a1,posted,2025-06-09,2025-06-10,-11.0,debit,Old,,
+t7,a1,posted,2025-07-01,2025-07-02,-13.0,debit,Unheld,,
+t6,a1,posted,2026-01-10,2026-01-10,-6.0,debit,Recent,,
