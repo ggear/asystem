@@ -16,25 +16,61 @@ The HSBC card (`HSBC Credit`, Redbark account `xxxx5418`, card `xxxx0651`) loses
   sees rows it holds, and balance reconciliation cannot reach them (the card's first Redbark balance reading is 15 Oct), so only a
   statement shows them.
 
+- **Missing from Redbark's history.** Redbark's HSBC history (from 27 Mar 2024) lists every statement line to Mar 2026, then about
+  a third fewer: 181 statement lines from Apr to Sep 2026 have no Redbark row, on both cards (`0651` and `9613`), 22 to 44 a month.
+  The year files hold them only because those months were imported from statements, as rows without a Source ID; so a Redbark
+  history sync was incomplete, and the October drops look like the tail of the same fault. Since live tracking began in October,
+  Redbark lists every line but the 2 above.
+
+- **The link is the weekend.** The 7 dated dropped rows were all made Thursday to Saturday (8 to 10 Oct) and posted together on
+  Monday 12 Oct, 2 to 4 days later; rows made those days that posted on a weekday survived, as did that Monday's Sunday and Monday
+  purchases, and two of its four Saturday ones. Across Apr to Sep 2026, Redbark misses 69% of HSBC purchases made on a Friday and
+  76% of those made on a Saturday, against 19% to 25% on other days; credits are missed less (14%), and the week of the month makes
+  no difference. Transactions held over a weekend for Monday's posting are the ones lost, which suggests HSBC's feed reissues them
+  at posting and Redbark loses or deduplicates a copy. Put this pattern to Redbark support.
+
 Every other line of the 86 HSBC statements since May 2021 matches a held row, and every held row in a statement period is on one.
 
 ## Done
 
 - Drive `redbark_transactions_2026.csv`, edited 19 Oct 2026 19:08 AWST (a Drive revision exists from before): the 7 dropped rows
-  re-dated from posting to their statement date, and the 2 never-listed charges added without a Source ID, so a later Redbark
-  listing is adopted rather than duplicated. The server picked it up on its next run.
-- Code (uncommitted at the time of writing): dropped rows are kept and raised as `TRANSACTION_GONE` with the window start; a copy
-  relisted under a new id is adopted (`TRANSACTION_RELISTED`); balance readings reconcile against held rows
-  (`BALANCE_UNRECONCILED`), catching a future drop about a week after it.
+  re-dated from posting to their statement date, and the 2 never-listed charges added without a Source ID.
+- Code (released 10.200.1837): dropped rows are kept and raised as `TRANSACTION_GONE` with the window start; a copy relisted
+  under a new id is adopted (`TRANSACTION_RELISTED`); balance readings reconcile against held rows (`BALANCE_UNRECONCILED`),
+  catching a future drop about a week after it.
+- Year files backfilled 19 Oct 2026 20:28 and 20:53 AWST from a full Redbark fetch: every row Redbark lists by its Source ID has
+  `Date Posted` (the 7 dropped rows took the posting day), and id-less CBA history matched to Redbark adopted its ids.
+
+## Blank `Date Posted` marks a row Redbark has not dated
+
+The 181 gap rows, the 2 never-listed charges and pre-Redbark history keep `Date Posted` blank, deliberately: blank means no
+Redbark row has dated it, and filling it with `Date` would invent a posting day (HSBC posts 0 to 6 days after purchase).
+
+The code dates a blank row automatically only when Redbark lists it by the Source ID it is held under, or, for a row without one,
+when Redbark lists a match (account, cents, three days) inside the normal fetch window. The gap rows are far older than that
+window, so if Redbark re-syncs and lists them, nothing happens automatically: no duplicate is added and nothing is adopted. They
+need the manual matching backfill used for CBA: match each blank, id-less row one to one to an unheld Redbark row by account,
+cents and purchase date (the Sydney day of `datetime` for HSBC), then set `Date Posted` and adopt the Source ID. Blank is what
+selects them.
+
+The 8 dropped rows keep their Redbark Source IDs, and blank matters differently for them:
+
+- **The 7 on the Oct statement** are dated: `Date` is the statement's purchase day and `Date Posted` the posting day Redbark gave
+  before it dropped them. If Redbark relists one under the same id it is matched by id and its dates stay; under a new id, while
+  it is still inside the fetch window, it is adopted (`TRANSACTION_RELISTED`) and its dates stay. Once the window has passed it
+  (late October 2026), Redbark is no longer asked for it, so a relisting goes unnoticed; check by hand as for the gap rows.
+- **The 8th, posted 13 Oct**, has `Date Posted` blank and `Date` still on its posting day, because its statement had not been
+  issued. When the Nov 2026 statement arrives, set `Date` to its purchase day there and `Date Posted` to 2026-10-13, by hand on
+  Drive between runs. Until then it is one row dated by posting, and its gone check uses the posting fallback.
 
 ## Next
 
-1. After deploying the code, set `Date Posted` to the posting day on the 7 dropped rows. The running release strips unknown
-   columns, so it could not be done before, and Redbark will never list them, so nothing else will.
-2. Raise the dropped and never-listed rows with Redbark support, with the Source IDs from the `Logs` tab, and ask whether early
-   October was a re-sync of the HSBC connection.
-3. On the Nov 2026 HSBC statement (13 Oct to 12 Nov): check the 8th dropped row is on it, and reconcile every line against the
-   held rows, adding any missing one by hand as above.
+1. Raise the dropped and never-listed rows with Redbark support, with the Source IDs from the `Logs` tab: Redbark's HSBC history
+   omits about a third of Apr to Sep 2026 on both cards, and 8 listed rows vanished in October. Ask whether the connection's
+   history sync failed and can be re-run, then re-check its coverage against the statements.
+2. If Redbark re-syncs, run the matching backfill above for the blank, id-less HSBC rows, dry run first.
+3. On the Nov 2026 HSBC statement (13 Oct to 12 Nov): check the 8th dropped row is on it and set its dates as above, and
+   reconcile every line against the held rows, adding any missing one by hand as above.
 4. Reconcile each later HSBC statement the same way until Redbark is shown to be reliable, or build it into bank: parse the
    statement PDFs, match each line by account, cents and date within a few days, and log lines with no held row and held rows on
    no statement.
