@@ -61,10 +61,10 @@ class DataFramesMixin(ContractMixin):
             started=started_time,
         )
 
-    def csv_write(self, data_df, local_path, print_prefix="File", print_label=None, print_verb="written", print_rows=PL_PRINT_ROWS, started=None):
+    def csv_write(self, data_df, local_path, print_prefix="File", print_label=None, print_verb="written", print_rows=PL_PRINT_ROWS, started=None, float_precision=None):
         started_time = time.time() if started is None else started
         local_path = str(local_path).lower()
-        data_df.write_csv(local_path, line_terminator="\n")
+        data_df.write_csv(local_path, line_terminator="\n", float_precision=float_precision)
         return dataframe_print(
             self.name,
             data_df,

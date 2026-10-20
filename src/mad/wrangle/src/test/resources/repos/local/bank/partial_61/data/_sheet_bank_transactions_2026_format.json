@@ -1,4 +1,8 @@
 {
+  "decimals": [
+    "Amount",
+    "Amount Split"
+  ],
   "dropdowns": {
     "Category Manual": "Classifier!A2:A",
     "Vetted": [
@@ -12,8 +16,9 @@
   },
   "highlights": [
     "E",
-    "I",
-    "L"
+    "K",
+    "J",
+    "I"
   ],
   "raw": [
     "Account",
@@ -23,6 +28,7 @@
     "Category Manual",
     "Description",
     "Merchant Code",
+    "Notes",
     "Source ID",
     "Transaction ID",
     "Vetted"

@@ -1,4 +1,4 @@
-Category,Bucket,Bank Code,Merchant Code,Pattern
-Food,Living,,,shop
-Car,Costs,,,fuel
-Groceries,Living,,,
+Category,Bucket,Bank Code,Merchant Code,Pattern,Notes
+Food,Living,,,shop,
+Car,Costs,,,fuel,
+Groceries,Living,,,,

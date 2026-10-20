@@ -1,3 +1,3 @@
-Category,Bucket,Bank Code,Merchant Code,Pattern
-Groceries,Living,,,shop
-Legacy,Living,,,
+Category,Bucket,Bank Code,Merchant Code,Pattern,Notes
+Groceries,Living,,,shop,
+Legacy,Living,,,,

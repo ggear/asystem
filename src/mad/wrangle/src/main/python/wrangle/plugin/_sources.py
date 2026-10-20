@@ -730,6 +730,7 @@ class SourcesMixin(ContractMixin):
         formula_columns=None,
         dropdown_columns=None,
         highlight_cells=None,
+        decimal_columns=None,
         sheet_before=None,
         sheet_after=None,
         print_label=None,
@@ -740,7 +741,7 @@ class SourcesMixin(ContractMixin):
     ) -> UploadStatus:
         """
         Replaces a tab's values with `data_df`, its grid sized to exactly the data, and caches what was written.
-        Raw, formula, dropdown and highlight columns are applied and their format cached beside it for the
+        Raw, formula, dropdown, highlight and two decimal columns are applied and their format cached beside it for the
         caller to compare; a new tab is placed by `sheet_before` and `sheet_after`. With `check` and a `schema`
         the upload is skipped when the cached tab and its format already match; with `guard` the tab is read
         again first and left when it changed since cached. Returns the upload's status.
@@ -786,8 +787,14 @@ class SourcesMixin(ContractMixin):
                 highlights.append(reference)
             else:
                 _unresolved("highlight reference", reference)
-        formatted = raw_columns is not None or formula_columns is not None or dropdown_columns is not None or highlight_cells is not None
-        layout = {"raw": sorted(raw_set), "formulas": formulas, "dropdowns": dropdowns, "highlights": highlights}
+        decimals = []
+        for column in decimal_columns or []:
+            if column in column_letters:
+                decimals.append(column)
+            else:
+                _unresolved("decimal column", column)
+        formatted = raw_columns is not None or formula_columns is not None or dropdown_columns is not None or highlight_cells is not None or decimal_columns is not None
+        layout = {"raw": sorted(raw_set), "formulas": formulas, "dropdowns": dropdowns, "highlights": highlights, **({"decimals": sorted(decimals)} if decimal_columns is not None else {})}
 
         cached_df = self.sheet_cached(workbook_name, sheet_name) if guard or (check and schema is not None) else None
         format_path = abspath(f"{self.local_cache}/_sheet_{name}_format.json")
@@ -892,6 +899,23 @@ class SourcesMixin(ContractMixin):
                                 },
                                 "cell": {"userEnteredFormat": {"textFormat": {"foregroundColorStyle": {"rgbColor": SHEET_MANUAL_COLOUR}}}},
                                 "fields": "userEnteredFormat.textFormat.foregroundColorStyle",
+                            }
+                        }
+                    )
+                for column in decimals:
+                    column_index = start_column_index + columns.index(column)
+                    layout_requests.append(
+                        {
+                            "repeatCell": {
+                                "range": {
+                                    "sheetId": worksheet.id,
+                                    "startRowIndex": sheet_start_row,
+                                    "endRowIndex": sheet_start_row - 1 + len(all_values),
+                                    "startColumnIndex": column_index,
+                                    "endColumnIndex": column_index + 1,
+                                },
+                                "cell": {"userEnteredFormat": {"numberFormat": {"type": "NUMBER", "pattern": "0.00"}}},
+                                "fields": "userEnteredFormat.numberFormat",
                             }
                         }
                     )

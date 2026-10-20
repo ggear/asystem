@@ -19,6 +19,7 @@
 #        4.4  Dedupe Transactions: drop a source id held twice                  [R] every file
 #     5. Derive: compute plugin-owned columns in the files
 #        5.1  Classify Transactions: derive categories in changed files         [R] every file
+#        5.2  Format Files: rewrite one in an earlier layout or amount format   [R] every file
 #     6. Commit: state_cache each changed year, giving its delta                [R] rebuild every year
 #        6.1  Commit Balances: readings, manual ones carried to linked moments
 #        6.2  Commit Transactions: rows joined to their accounts and buckets
@@ -66,6 +67,7 @@ RECORD_ID_SEPARATOR = "\x1f"
 FLAG_YES = "Yes"
 FLAG_NO = "No"
 FLAGS = [FLAG_YES, FLAG_NO]
+AMOUNT_DECIMALS = 2
 
 REDBARK_TYPE_CREDIT = "credit-card"
 REDBARK_TIMEZONE = "Australia/Perth"
@@ -172,7 +174,7 @@ TRANSACTIONS_CATEGORY_FORMULA = '=IF({Category Manual}<>"",{Category Manual},{Ca
 TRANSACTIONS_BUCKET_FORMULA = '=IFERROR(VLOOKUP({Category},Classifier!A:B,2,FALSE),"")'
 TRANSACTIONS_CATEGORY_OPTIONS = "Classifier!A2:A"
 TRANSACTIONS_KEY_COLUMNS = ["Date", "Transaction ID", "Split"]
-TRANSACTIONS_RAW_COLUMNS = ["Account", "Description", "Bank Code", "Merchant Code", "Vetted", "Category Manual", "Category Derived", "Notes", "Account ID", "Source ID", "Transaction ID"]
+TRANSACTIONS_RAW_COLUMNS = ["Account", "Description", "Bank Code", "Merchant Code", "Notes", "Vetted", "Category Manual", "Category Derived", "Account ID", "Source ID", "Transaction ID"]
 TRANSACTIONS_EDIT_COLUMNS = ["Amount Split", "Category Manual", "Vetted", "Notes"]
 TRANSACTIONS_FIXED_COLUMNS = ["Date", "Date Posted", "Account", "Amount", "Description", "Bank Code", "Merchant Code", "Category Derived", "Account ID", "Source ID"]
 TRANSACTIONS_AMOUNT_PATTERN = r"^-?\$?-?(\d{1,3}(,\d{3})+|\d+)(\.\d+)?$"
@@ -185,11 +187,11 @@ TRANSACTIONS_SCHEMA = {
     "Description": pl.Utf8,
     "Bank Code": pl.Utf8,
     "Merchant Code": pl.Utf8,
+    "Notes": pl.Utf8,
     "Vetted": pl.Utf8,
     "Category Manual": pl.Utf8,
     "Category Derived": pl.Utf8,
     "Category": pl.Utf8,
-    "Notes": pl.Utf8,
     "Account ID": pl.Utf8,
     "Source ID": pl.Utf8,
     "Transaction ID": pl.Utf8,
@@ -203,12 +205,12 @@ TRANSACTIONS_YEAR_TAB_SCHEMA = {
     "Description": pl.Utf8,
     "Bank Code": pl.Utf8,
     "Merchant Code": pl.Utf8,
+    "Notes": pl.Utf8,
     "Vetted": pl.Utf8,
     "Category Manual": pl.Utf8,
     "Category Derived": pl.Utf8,
     "Category": pl.Utf8,
     "Bucket": pl.Utf8,
-    "Notes": pl.Utf8,
     "Account ID": pl.Utf8,
     "Source ID": pl.Utf8,
     "Transaction ID": pl.Utf8,
@@ -227,12 +229,12 @@ TRANSACTIONS_STATE_SCHEMA = {
     "Description": pl.Utf8,
     "Bank Code": pl.Utf8,
     "Merchant Code": pl.Utf8,
+    "Notes": pl.Utf8,
     "Vetted": pl.Utf8,
     "Category Manual": pl.Utf8,
     "Category Derived": pl.Utf8,
     "Category": pl.Utf8,
     "Bucket": pl.Utf8,
-    "Notes": pl.Utf8,
     "Account ID": pl.Utf8,
     "Source ID": pl.Utf8,
 }
@@ -463,22 +465,24 @@ class Bank(plugin.Plugin):
         def _bank_writable(_path: str) -> bool:
             return not isfile(_path) or _bank_readable(_path, TRANSACTIONS_SCHEMA) is not None
 
+        def _bank_rendered(_data_df: pl.DataFrame, _path: str) -> pl.DataFrame:
+            if _bank_file(_path)[0].endswith("_balances"):
+                return bank_balances_identified(_data_df.select(list(BALANCES_SCHEMA))).sort(["Date", "Time", "Account ID"], descending=[True, True, False], maintain_order=True)
+            return (
+                bank_transactions_identified(_data_df.select(list(TRANSACTIONS_SCHEMA)))
+                .drop("Split")
+                .with_columns(pl.col("Merchant Code").cast(pl.Utf8), bank_flag("Vetted").alias("Vetted"))
+                .sort(["Date", "Account ID", "Amount", "Description"], descending=[True, False, False, False], maintain_order=True, nulls_last=True)
+            )
+
         def _bank_write(_data_df: pl.DataFrame, _path: str, _verb: str):
             for _key in [_key for _key in files_read if _key[0] == _path]:
                 del files_read[_key]
             files_md5.pop(_path, None)
             held_cache.clear()
-            if _bank_file(_path)[0].endswith("_balances"):
-                _data_df = bank_balances_identified(_data_df.select(list(BALANCES_SCHEMA))).sort(["Date", "Time", "Account ID"], descending=[True, True, False], maintain_order=True)
-            else:
-                _data_df = (
-                    bank_transactions_identified(_data_df.select(list(TRANSACTIONS_SCHEMA)))
-                    .drop("Split")
-                    .with_columns(pl.col("Merchant Code").cast(pl.Utf8), bank_flag("Vetted").alias("Vetted"))
-                    .sort(["Date", "Account ID", "Amount", "Description"], descending=[True, False, False, False], maintain_order=True, nulls_last=True)
-                )
+            _data_df = _bank_rendered(_data_df, _path)
             os.makedirs(dirname(_path), exist_ok=True)
-            self.csv_write(_data_df, _path, print_verb=_verb, print_rows=0)
+            self.csv_write(_data_df, _path, print_verb=_verb, print_rows=0, float_precision=AMOUNT_DECIMALS)
 
         def _bank_md5(_path: str) -> str | None:
             if _path not in files_md5 and isfile(_path):
@@ -1012,11 +1016,11 @@ class Bank(plugin.Plugin):
                     pl.col("Description"),
                     pl.col("Bank Code"),
                     pl.col("Merchant Code"),
+                    pl.col("Notes"),
                     pl.col("__vetted").alias("Vetted"),
                     pl.col("Category Manual"),
                     pl.col("Category Derived"),
                     pl.lit(None, dtype=pl.Utf8).alias("Category"),
-                    pl.col("Notes"),
                     pl.col("__account_id").alias("Account ID"),
                     pl.col("Source ID"),
                     pl.lit(None, dtype=pl.Utf8).alias("Transaction ID"),
@@ -1912,6 +1916,22 @@ class Bank(plugin.Plugin):
 
         classifier_held = _bank_transactions_classified()
 
+        # 5.2 Format Files
+        started_time = time.time()
+        formatted_count = 0
+        if plugin.config.force_reprocessing:
+            for path in _bank_paths("redbark_balances", "manual_balances", "redbark_transactions", "manual_transactions"):
+                if _bank_file(path)[1] in years_held or (data_df := _bank_readable(path, BALANCES_SCHEMA if _bank_file(path)[0].endswith("_balances") else TRANSACTIONS_SCHEMA)) is None:
+                    continue
+                if data_df["Account ID"].null_count() or data_df["Date"].null_count():
+                    continue
+                with open(path, encoding="utf-8", newline="") as handle:
+                    if handle.read() == _bank_rendered(data_df, path).write_csv(line_terminator="\n", float_precision=AMOUNT_DECIMALS):
+                        continue
+                _bank_write(data_df, path, "formatted")
+                formatted_count += 1
+        self.print_log(f"Files formatted [{formatted_count}]", started=started_time)
+
         def _bank_collected(_file_path: str, _schema: dict) -> pl.DataFrame | None:
             if _file_path in files_unreadable or _file_path in files_invalid:
                 return None
@@ -2206,6 +2226,7 @@ class Bank(plugin.Plugin):
                 formula_columns=_formula_columns,
                 dropdown_columns=_dropdown_columns,
                 highlight_cells=_highlight_cells,
+                decimal_columns=[column for column, dtype in _schema.items() if dtype == pl.Float64 and column in _render_df.columns],
                 sheet_before=_before,
                 sheet_after=_after,
                 check=not plugin.config.force_reprocessing,
@@ -2356,7 +2377,7 @@ class Bank(plugin.Plugin):
                 changes_df = changes_df.with_columns(pl.col("Year File").replace_strict(changes_md5, default=None, return_dtype=pl.Utf8).alias("File MD5")).select(list(CHANGES_SCHEMA))
                 if isfile(changes_file):
                     changes_df = pl.concat([self.csv_read(changes_file, schema=CHANGES_SCHEMA, print_rows=0).select(list(CHANGES_SCHEMA)), changes_df], how="vertical_relaxed")
-                self.csv_write(changes_df, changes_file, print_verb="appended", print_rows=0)
+                self.csv_write(changes_df, changes_file, print_verb="appended", print_rows=0, float_precision=AMOUNT_DECIMALS)
 
         # 10.3 Commit Files
         if committed:

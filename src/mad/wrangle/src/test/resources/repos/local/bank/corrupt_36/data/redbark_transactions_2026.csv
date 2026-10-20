@@ -1,5 +1,5 @@
-Date,Date Posted,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Vetted,Category,Category Manual,Category Derived,Account ID,Source ID,Transaction ID
-2026-01-03,,One,-10.0,-10.0,Shop,,,,,,,540a8918175f5ca38559395087eb552c,,
-2026-01-04,,One,-30.0,-10.0,Split,,,,,Food,,540a8918175f5ca38559395087eb552c,,
-2026-01-04,,One,-30.0,-20.0,Split,,,,,Car,,540a8918175f5ca38559395087eb552c,,
-2026-01-05,,One,-5.0,-5.0,Kiosk,,,,,,,540a8918175f5ca38559395087eb552c,,
+Date,Date Posted,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Notes,Vetted,Category Manual,Category Derived,Category,Account ID,Source ID,Transaction ID
+2026-01-03,,One,-10.0,-10.0,Shop,,,,,,,,540a8918175f5ca38559395087eb552c,,
+2026-01-04,,One,-30.0,-10.0,Split,,,,,Food,,,540a8918175f5ca38559395087eb552c,,
+2026-01-04,,One,-30.0,-20.0,Split,,,,,Car,,,540a8918175f5ca38559395087eb552c,,
+2026-01-05,,One,-5.0,-5.0,Kiosk,,,,,,,,540a8918175f5ca38559395087eb552c,,

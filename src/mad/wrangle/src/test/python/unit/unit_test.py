@@ -758,6 +758,27 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
+    # Files in an earlier column order and amount format are rewritten in the current form by a reprocess that changes none of their rows
+    def test_bank_local_partial_67(self):
+        self._bank_run(
+            "partial_67",
+            rerun=False,
+            force=True,
+            file_asserts={
+                "redbark_transactions_2025.csv": [
+                    assert_file_columns(list(TRANSACTIONS_SCHEMA)),
+                    assert_file_column_values("Amount", ["-1.00"], raw=True),
+                    assert_file_column_values("Amount Split", ["-1.00"], raw=True),
+                    assert_file_column_values("Category Derived", ["Groceries"]),
+                    assert_file_column_values("Vetted", ["Yes"]),
+                ],
+                "redbark_balances_2025.csv": [
+                    assert_file_column_values("Balance", ["11.00"], raw=True),
+                    assert_file_column_values("Balance Linked", ["11.00"], raw=True),
+                ],
+            },
+        )
+
     # A classifier edit re-derives every row, each cleared tick logged once
     def test_bank_local_partial_47(self):
         self._bank_run(
@@ -3350,11 +3371,26 @@ class WrangleTest(unittest.TestCase):
 
     def test_bank_tab_edits(self):
         test = PluginStub("Test", "SOME_NON_EXISTANT_GUID")
-        columns = ["Date", "Account", "Amount", "Amount Split", "Description", "Vetted", "Category", "Bucket", "Category Manual", "Category Derived", "Account ID", "Source ID", "Transaction ID"]
+        columns = [
+            "Date",
+            "Account",
+            "Amount",
+            "Amount Split",
+            "Description",
+            "Vetted",
+            "Category Manual",
+            "Category Derived",
+            "Category",
+            "Bucket",
+            "Notes",
+            "Account ID",
+            "Source ID",
+            "Transaction ID",
+        ]
         base = [
-            ["2026-01-02", "One", "-10.0", "-10.0", "Shop", "", "Food", "Living", "", "Food", "a1", "s1", "t1"],
-            ["2026-01-03", "One", "-20.0", "-20.0", "Fuel", "Yes", "Car", "Costs", "", "Car", "a1", "s2", "t2"],
-            ["2026-01-04", "One", "-30.0", "-30.0", "Rent", "No", "", "", "", "", "a1", "", "t3"],
+            ["2026-01-02", "One", "-10.0", "-10.0", "Shop", "", "", "Food", "Food", "Living", "", "a1", "s1", "t1"],
+            ["2026-01-03", "One", "-20.0", "-20.0", "Fuel", "Yes", "", "Car", "Car", "Costs", "", "a1", "s2", "t2"],
+            ["2026-01-04", "One", "-30.0", "-30.0", "Rent", "No", "", "", "", "", "", "a1", "", "t3"],
         ]
 
         def _tab(_rows, _columns=None):
@@ -3366,26 +3402,27 @@ class WrangleTest(unittest.TestCase):
             return _rows
 
         def _parts(*_parts):
-            return [{"Amount Split": split, "Category Manual": manual, "Vetted": vetted} for split, manual, vetted in _parts]
+            return [{"Amount Split": split, "Category Manual": manual, "Vetted": vetted, "Notes": notes} for split, manual, vetted, notes in _parts]
 
         for label, tab_rows, tab_columns, expected in [
             ("unchanged", base, None, ({}, 0, 0)),
             ("sorted", list(reversed(base)), None, ({}, 0, 0)),
             ("restyled", [[*row[:2], "$" + row[2].replace(".0", ".00"), *row[3:]] for row in base], None, ({}, 0, 0)),
-            ("category manual", _edited(base, "Category Manual", "Groceries"), None, ({"t1": _parts((-1000, "Groceries", None))}, 0, 0)),
-            ("vetted", _edited(base, "Vetted", " yes "), None, ({"t1": _parts((-1000, None, "Yes"))}, 0, 0)),
-            ("vetted cleared", _edited(base, "Vetted", "", 1), None, ({"t2": _parts((-2000, None, None))}, 0, 0)),
-            ("split", [*_edited(base, "Amount Split", "-4.0"), _edited(base, "Amount Split", "-6.0")[0]], None, ({"t1": _parts((-400, None, None), (-600, None, None))}, 0, 0)),
+            ("category manual", _edited(base, "Category Manual", "Groceries"), None, ({"t1": _parts((-1000, "Groceries", None, None))}, 0, 0)),
+            ("vetted", _edited(base, "Vetted", " yes "), None, ({"t1": _parts((-1000, None, "Yes", None))}, 0, 0)),
+            ("vetted cleared", _edited(base, "Vetted", "", 1), None, ({"t2": _parts((-2000, None, None, None))}, 0, 0)),
+            ("notes", _edited(base, "Notes", "Gift for Sam"), None, ({"t1": _parts((-1000, None, None, "Gift for Sam"))}, 0, 0)),
+            ("split", [*_edited(base, "Amount Split", "-4.0"), _edited(base, "Amount Split", "-6.0")[0]], None, ({"t1": _parts((-400, None, None, None), (-600, None, None, None))}, 0, 0)),
             ("formula", _edited(_edited(base, "Category", "Other"), "Bucket", "Elsewhere"), None, ({}, 0, 0)),
             ("description", _edited(base, "Description", "Shop Two"), None, ({}, 1, 0)),
-            ("description and vetted", _edited(_edited(base, "Description", "Shop Two"), "Vetted", "Yes"), None, ({"t1": _parts((-1000, None, "Yes"))}, 1, 0)),
-            ("idless", [*base, ["2026-01-05", "Cash", "-1.0", "", "Typed", "", "", "", "", "", "", "", ""]], None, ({}, 0, 1)),
+            ("description and vetted", _edited(_edited(base, "Description", "Shop Two"), "Vetted", "Yes"), None, ({"t1": _parts((-1000, None, "Yes", None))}, 1, 0)),
+            ("idless", [*base, ["2026-01-05", "Cash", "-1.0", "", "Typed", "", "", "", "", "", "", "", "", ""]], None, ({}, 0, 1)),
             ("cut short", base[:1], None, ({}, 0, 0)),
             (
                 "without vetted",
                 [[*row[:5], *row[6:]] for row in _edited(base, "Category Manual", "Groceries")],
                 [column for column in columns if column != "Vetted"],
-                ({"t1": _parts((-1000, "Groceries", None))}, 0, 0),
+                ({"t1": _parts((-1000, "Groceries", None, None))}, 0, 0),
             ),
         ]:
             edits, ignored, idless = bank_tab_edits(_tab(tab_rows, tab_columns), _tab(base))
@@ -3393,7 +3430,7 @@ class WrangleTest(unittest.TestCase):
         edits, _, _ = bank_tab_edits(_tab(_edited(base, "Vetted", "maybe")), _tab(base))
         self.assertEqual("maybe", edits["t1"]["Bad Vetted"])
         edits, _, _ = bank_tab_edits(_tab([[*row[:5], *row[6:]] for row in _edited(base, "Category Manual", "Groceries")], [column for column in columns if column != "Vetted"]), _tab(base))
-        self.assertEqual(["Amount Split", "Category Manual"], edits["t1"]["Present"])
+        self.assertEqual(["Amount Split", "Category Manual", "Notes"], edits["t1"]["Present"])
 
     def test_bank_export_parsed(self):
         header = "Date,Date Processed,Description,Card Member,Account #,Amount"

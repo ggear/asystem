@@ -1,6 +1,6 @@
-Category,Bucket,Bank Code,Merchant Code,Pattern
-Groceries,Living,,,shop a
-Groceries,Living,,,shop b
-Groceries,Living,,,shop c
-Groceries,Living,,,shop d
-Food,Living,,,
+Category,Bucket,Bank Code,Merchant Code,Pattern,Notes
+Groceries,Living,,,shop a,
+Groceries,Living,,,shop b,
+Groceries,Living,,,shop c,
+Groceries,Living,,,shop d,
+Food,Living,,,,
