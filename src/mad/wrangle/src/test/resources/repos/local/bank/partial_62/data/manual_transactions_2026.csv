@@ -1,0 +1,4 @@
+Date,Date Posted,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Vetted,Category,Category Manual,Category Derived,Account ID,Source ID,Transaction ID
+2026-01-13,,Card,-12.0,-12.0,SHOP TWO,,,Yes,,Groceries,,6f4582d7caef5dd587335edd2e068f20,,
+2026-01-10,,Card,-30.0,-10.0,SPLIT FOUR,,,Yes,,,,6f4582d7caef5dd587335edd2e068f20,,
+2026-01-10,,Card,-30.0,-20.0,SPLIT FOUR,,,Yes,,,,6f4582d7caef5dd587335edd2e068f20,,

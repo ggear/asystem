@@ -1,3 +1,37 @@
+# Equity plugin flow
+#   [R] marks what a reprocess changes
+#   [F] marks what --force-downloads changes
+#   unmarked runs the same on a standard run and a reprocess
+#
+#     1. Download: bring every source into the cache
+#        1.1  Download Stock and Fund Data: fetch prices for open or missing
+#             months, pull statements and prices from Drive
+#        1.2  Download Index Data: read the index weights tab
+#     2. Load: none
+#     3. Merge: none
+#     4. Fetch: none
+#     5. Derive: collect, process and enrich the prices                         [R] every file
+#        5.1  Collect File List: files to read, new years with predecessors
+#        5.2  Collect Stock Data: read the price files
+#        5.3  Collect Fund Data: parse the fund statements
+#        5.4  Process Fund Data: the statements' positions
+#        5.5  Process Stock and Fund Data: join prices and positions by day
+#        5.6  Process Manual Data: the manual prices tab and the bank rate
+#        5.7  Normalise Data: every ticker's columns present
+#        5.8  Enrich Rate Data: spot prices from the currency rates
+#        5.9  Derive Data: spot volumes, manual tickers filled forward
+#        5.10 Update Data: the change metrics over each period
+#        5.11 Select Data: the state's columns
+#        5.12 Aggregate Data: upsample and fill forward, run by the commit
+#        5.13 Normalise Data: drop empty days, keep the committed columns
+#     6. Commit: state_cache the prices, giving their delta                     [R] rebuild the state
+#        6.1  Commit Data: the prices with their change metrics
+#        6.2  Enrich Index Data: weight and derive indexes on the whole state
+#     7. Check: verify the committed state
+#     8. Sync: push changed files to Drive, in Plugin.run()
+#     9. Upload: write the delta to the database, the prices to the sheet       [R] every row
+#    10. Snapshot: none
+
 import calendar
 import json
 import re
@@ -237,15 +271,12 @@ class Equity(plugin.Plugin):
         stock_files = {}
         statement_files = {}
 
-        # Get Data
         def _equity_tickers(_equity_df):
             return sorted([column.replace(" Price Close", "") for column in _equity_df.columns if column.endswith("Price Close")])
 
-        # Get MetaData
         def _equity_columns(_equity_df, _ticker):
             return [_column for _column in _equity_df.columns if _column.startswith(_ticker)]
 
-        # Clean Data
         def _equity_clean(_equity_df):
             _tickers = _equity_tickers(_equity_df)
             _mask_exprs = [pl.when(pl.col(f"{_ticker} Price Close").is_null()).then(None).otherwise(pl.col(_equity_columns(_equity_df, _ticker))).name.keep() for _ticker in _tickers]
@@ -254,7 +285,6 @@ class Equity(plugin.Plugin):
             _equity_df = _equity_df.filter(pl.col("Date").is_not_null()).filter(~pl.all_horizontal(pl.all().exclude("Date").is_null())).sort("Date").set_sorted("Date")
             return _equity_df
 
-        # Upsample Data
         def _equity_upsample(_equity_df, numeric_fill="interpolate"):
             _equity_df = _equity_df.filter(pl.col("Date").is_not_null())
             if len(_equity_df) == 0:
@@ -263,7 +293,6 @@ class Equity(plugin.Plugin):
             _equity_df = _equity_df.with_columns(cs.numeric().forward_fill()) if numeric_fill == "forward_fill" else _equity_df.with_columns(cs.numeric().interpolate())
             return _equity_df.with_columns(cs.string().forward_fill())
 
-        # Print Data
         def _equity_print(_equity_df, _dimensions=None, print_label=None, print_verb=None, print_rows=PL_PRINT_ROWS, started=None):
             if _dimensions is None:
                 _dimensions = DIMENSIONS_PRICE_AUX
@@ -282,7 +311,6 @@ class Equity(plugin.Plugin):
                         print_rows=print_rows,
                     )
 
-        # Fill Data
         def _equity_forward_fill(_equity_df, _dimensions, _tickers=None):
             _fill_exprs = []
             _target_tickers = _equity_tickers(_equity_df) if _tickers is None else _tickers
@@ -298,7 +326,6 @@ class Equity(plugin.Plugin):
                 _equity_df = _equity_df.with_columns(_fill_exprs)
             return _equity_df
 
-        # Predecessor Files
         def _stock_file_predecessors(_stock_files, _cache_files):
             _cache_bases = {basename(_cache_file) for _cache_file in _cache_files}
             _eligible_files = {}
@@ -325,7 +352,7 @@ class Equity(plugin.Plugin):
 
         stock_downloaded_count = 0
         if not plugin.config.disable_source_downloads:
-            # Download Stock Data
+            # 1.1 Download Stock and Fund Data
             for stock in STOCK:
                 ticker = stock.strip()
                 today = self.now()
@@ -361,9 +388,11 @@ class Equity(plugin.Plugin):
                         if result.file_status == plugin.DownloadStatus.DOWNLOADED:
                             stock_downloaded_count += 1
 
-        # Download Stock and Fund Data
         if not plugin.config.disable_drive_downloads:
-            files = self.drive_synchronise(self.remote_repos.drive_folder, self.local_cache, download=True)
+            files = {
+                file_name: (True, file_status in (plugin.DriveStatus.DOWNLOADED, plugin.DriveStatus.CONFLICTED))
+                for file_name, file_status in self.drive_synchronise(self.remote_repos.drive_folder, self.local_cache, download=True).items()
+            }
             for file_name in files:
                 if basename(file_name).startswith("58861"):
                     statement_files[file_name] = files[file_name]
@@ -385,7 +414,29 @@ class Equity(plugin.Plugin):
                 or (all(s[0] for s in statement_files.values()) and any(s[1] for s in statement_files.values()))
             )
 
-        # Process Stock and Fund File List
+        # 1.2 Download Index Data
+        indexes: list[str] = []
+        index_weights = self.dataframe_new()
+        indexes_exception = None
+        try:
+            portfolio_indexes_result = self.sheet_download(self.remote_repos.sheet_portfolio, "Portfolio", sheet_name="Indexes", sheet_start_row=2)
+            index_weights = self.csv_read(portfolio_indexes_result.file_paths[0]) if portfolio_indexes_result.file_status != plugin.DownloadStatus.FAILED else self.dataframe_new()
+            quantity_columns = sorted([column for column in index_weights.columns if column.endswith(" Quantity")])
+            indexes = [f"I{column.removesuffix(' Quantity').upper()}" for column in quantity_columns]
+            if "Exchange Symbol" in index_weights.columns:
+                index_weights = index_weights.select(["Exchange Symbol"] + quantity_columns).drop_nulls()
+                index_weights = index_weights.rename(dict(zip(index_weights.columns, ["Ticker"] + indexes, strict=False)))
+                index_weights = index_weights.unique(subset=["Ticker"], keep="first").sort("Ticker").set_sorted("Ticker")
+                if indexes:
+                    index_weights = index_weights.with_columns([pl.col(index).cast(pl.Float64, strict=False) for index in indexes])
+            else:
+                self.print_log("Index weights sheet missing required column [Exchange Symbol], using empty index weights")
+                index_weights = self.dataframe_new(schema={"Ticker": pl.Utf8, **dict.fromkeys(indexes, pl.Float64)}, print_rows=-1)
+            dataframe_print(self.name, index_weights, print_label="Index_Weights_Sheet", print_verb="processed", print_rows=1000)
+        except Exception as exception:
+            indexes_exception = exception
+
+        # 5.1 Collect File List
         if plugin.config.force_reprocessing:
             stock_files = {f: plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED, [f]) for f in self.file_list(self.local_cache, "yahoo")}
             stock_file_bases = {basename(f) for f in stock_files}
@@ -413,7 +464,7 @@ class Equity(plugin.Plugin):
         statement_processable_count = sum(1 for s in statement_files.values() if s[0])
         self.print_log(f"Files downloaded [{stock_downloaded_count}] and cached [{stock_processable_count + statement_processable_count - stock_downloaded_count}]", started=started_time)
 
-        # Collect Stock Data
+        # 5.2 Collect Stock Data
         started_time = time.time()
         stocks_df = {}
         stocks_files_count = 0
@@ -468,7 +519,7 @@ class Equity(plugin.Plugin):
             dataframe_print(self.name, stocks_df[stock_ticker], print_label=stock_ticker, print_verb="collected")
         self.print_log(f"DataFrame [Stocks] collected with [{len(stocks_df)}] stocks across [{stocks_files_count}] files", started=started_time)
 
-        # Collect Fund Data
+        # 5.3 Collect Fund Data
         started_time = time.time()
         statement_data = {}
 
@@ -601,7 +652,7 @@ class Equity(plugin.Plugin):
         statement_tickers = []
         try:
             if new_data:
-                # Process Fund Data
+                # 5.4 Process Fund Data
                 started_time = time.time()
                 statements_positions = []
                 for file_name in statement_data:
@@ -671,7 +722,7 @@ class Equity(plugin.Plugin):
                     statement_df = _equity_clean(statement_df)
                 _equity_print(statement_df, print_label="Funds", print_verb="collected", started=started_time)
 
-                # Process Stock and Fund Data
+                # 5.5 Process Stock and Fund Data
                 started_time = time.time()
                 for ticker in stocks_df:
                     if ticker.upper().strip() in {key.strip().upper() for key in STOCK}:
@@ -685,7 +736,7 @@ class Equity(plugin.Plugin):
                     equity_df = _equity_forward_fill(equity_df, DIMENSIONS_PRICE_AUX, _tickers=statement_tickers)
                 _equity_print(equity_df, print_label="Equity", print_verb="concatenated", started=started_time)
 
-                # Process Manual Data
+                # 5.6 Process Manual Data
                 started_time = time.time()
                 prices_manual_result = self.sheet_download(self.remote_repos.sheet_prices, "Prices", sheet_name="Manual")
                 equity_df_manual = (
@@ -756,7 +807,7 @@ ORDER BY time
                 equity_df = _equity_clean(equity_df)
                 _equity_print(equity_df, print_label="Equity", print_verb="added manual stock prices", started=started_time)
 
-                # Normalise Data
+                # 5.7 Normalise Data
                 started_time = time.time()
                 columns = []
                 missing_exprs = []
@@ -781,7 +832,7 @@ ORDER BY time
                 equity_df = equity_df.select(["Date"] + columns).sort("Date")
                 _equity_print(equity_df, print_label="Equity", print_verb="normalise", started=started_time)
 
-                # Enrich Rate Data
+                # 5.8 Enrich Rate Data
                 started_time = time.time()
                 equity_df = _equity_clean(equity_df)
                 tickers = _equity_tickers(equity_df)
@@ -847,7 +898,7 @@ ORDER BY time
                         equity_df = equity_df.with_columns(spot_recompute_exprs)
                 _equity_print(equity_df, _dimensions=DIMENSIONS_PRICE_AUX_TYPES, print_label="Equity", print_verb="added FX rates", started=started_time)
 
-                # Derive Data
+                # 5.9 Derive Data
                 started_time = time.time()
                 volume_exprs = [(pl.col(f"{ticker} Market Volume") * pl.col(f"{ticker} Price Close Spot")).alias(f"{ticker} Market Volume Spot") for ticker in tickers]
                 if volume_exprs:
@@ -863,23 +914,10 @@ ORDER BY time
             self.counters_set_all_errored(plugin.CTR_SRC_FILES)
 
         try:
-            # Download Index Data
-            portfolio_indexes_result = self.sheet_download(self.remote_repos.sheet_portfolio, "Portfolio", sheet_name="Indexes", sheet_start_row=2)
-            index_weights = self.csv_read(portfolio_indexes_result.file_paths[0]) if portfolio_indexes_result.file_status != plugin.DownloadStatus.FAILED else self.dataframe_new()
-            quantity_columns = sorted([column for column in index_weights.columns if column.endswith(" Quantity")])
-            indexes = [f"I{column.removesuffix(' Quantity').upper()}" for column in quantity_columns]
-            if "Exchange Symbol" in index_weights.columns:
-                index_weights = index_weights.select(["Exchange Symbol"] + quantity_columns).drop_nulls()
-                index_weights = index_weights.rename(dict(zip(index_weights.columns, ["Ticker"] + indexes, strict=False)))
-                index_weights = index_weights.unique(subset=["Ticker"], keep="first").sort("Ticker").set_sorted("Ticker")
-                if indexes:
-                    index_weights = index_weights.with_columns([pl.col(index).cast(pl.Float64, strict=False) for index in indexes])
-            else:
-                self.print_log("Index weights sheet missing required column [Exchange Symbol], using empty index weights")
-                index_weights = self.dataframe_new(schema={"Ticker": pl.Utf8, **dict.fromkeys(indexes, pl.Float64)}, print_rows=-1)
-            dataframe_print(self.name, index_weights, print_label="Index_Weights_Sheet", print_verb="processed", print_rows=1000)
+            if indexes_exception is not None:
+                raise indexes_exception
 
-            # Update Data
+            # 5.10 Update Data
             def _apply_change_metrics(_df, _tickers):
                 _create_exprs = []
                 for _ticker in _tickers:
@@ -904,13 +942,13 @@ ORDER BY time
                     _df = _df.with_columns(_create_exprs)
                 return _df
 
-            # Select Data
+            # 5.11 Select Data
             def _select_state(_df):
                 _all_tickers = _equity_tickers(_df)
                 _columns = [f"{_t} {_d}" for _t in sorted(_all_tickers) for _d in DIMENSIONS_STATE if f"{_t} {_d}" in _df.columns]
                 return _df.select(["Date"] + _columns).with_columns(cs.float().round(4))
 
-            # Aggregate Data
+            # 5.12 Aggregate Data
             def _aggregate_function(_data_df):
                 _data_df = _equity_upsample(_data_df, numeric_fill="forward_fill")
                 _data_df = _data_df.with_columns(cs.string().exclude("Date").cast(pl.Float64, strict=False))
@@ -929,7 +967,7 @@ ORDER BY time
                     _data_df = _data_df.with_columns(_price_round_exprs)
                 return _select_state(_apply_change_metrics(_data_df, _tickers))
 
-            # Normalise Data
+            # 5.13 Normalise Data
             if len(equity_df):
                 equity_df = equity_df.filter(pl.any_horizontal([pl.col(c).is_not_null() for c in [c for c in equity_df.columns if c != "Date"]]))
             existing_current_file = abspath(f"{self.local_cache}/__equity_current.csv")
@@ -942,8 +980,7 @@ ORDER BY time
                 if missing_exprs:
                     equity_df = equity_df.with_columns(missing_exprs)
 
-            # Commit Data: source-complete Stock/Fund/Manual input enriched with Rate spot prices and volumes
-            #              → committed state with forward-fill and derived change metrics (delta for egress).
+            # 6.1 Commit Data
             equity_delta_df, equity_current_df, _ = self.state_cache(equity_df, _aggregate_function)
 
             def _apply_indexes(_df, _indexes, _index_weights):
@@ -951,7 +988,6 @@ ORDER BY time
                     return _df
                 _tickers = _equity_tickers(_df)
 
-                # Derive Index Data
                 _weight_lookup = {row["Ticker"]: row for row in _index_weights.rows(named=True)}
                 for _index in _indexes:
                     for _column_price in DIMENSIONS_PRICE:
@@ -965,7 +1001,6 @@ ORDER BY time
                                 _existing = pl.col(_col_typed) if _col_typed in _df.columns else pl.lit(None).cast(pl.Float64)
                                 _df = _df.with_columns(pl.coalesce([_existing, pl.col(_column)]).alias(_col_typed))
 
-                # Normalise Index Data
                 for _index in _indexes:
                     _column_close = f"{_index} Price Close"
                     if _column_close in _df.columns:
@@ -987,7 +1022,6 @@ ORDER BY time
                             + [pl.when(pl.col(_cb_col).is_null() & pl.col(_column_close).is_not_null()).then(pl.lit("AUD")).otherwise(pl.col(_cb_col)).alias(_cb_col)]
                         )
 
-                # Derive Index Data
                 for _index in _indexes:
                     _mvs_col = f"{_index} Market Volume Spot"
                     _mv_col = f"{_index} Market Volume"
@@ -996,15 +1030,14 @@ ORDER BY time
                         _existing_mvs = pl.col(_mvs_col) if _mvs_col in _df.columns else pl.lit(None).cast(pl.Float64)
                         _df = _df.with_columns(pl.coalesce([_existing_mvs, pl.col(_mv_col) * pl.col(_pcs_col)]).alias(_mvs_col))
 
-                # Derive Index Data
                 _index_set = set(_indexes)
                 return _select_state(_apply_change_metrics(_df, [t for t in _equity_tickers(_df) if t in _index_set]))
 
-            # Enrich Index Data
+            # 6.2 Enrich Index Data
             if not equity_current_df.is_empty():
                 equity_current_df = _apply_indexes(equity_current_df, indexes, index_weights)
 
-            # Verify Data
+            # 7. Check
             if not equity_current_df.is_empty():
                 non_date_cols = [c for c in equity_current_df.columns if c != "Date"]
                 equity_current_df = equity_current_df.filter(pl.any_horizontal([pl.col(c).is_not_null() for c in non_date_cols]))
@@ -1031,7 +1064,7 @@ ORDER BY time
                             self.print_log(f"  {col}: {count}", level="error")
                         self.add_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_ERRORED, zero_count)
 
-            # Upload Data
+            # 9. Upload
             started_time = time.time()
             if len(equity_current_df) and (len(equity_delta_df) or plugin.config.force_reprocessing):
                 dimensions_sheet = ["Price Close", "Currency Rate Base"]
@@ -1095,4 +1128,10 @@ ORDER BY time
             self.print_log("No new data found")
 
     def __init__(self):
-        super().__init__("Equity", order=40, repos=REPOS_EQUITY, database=True)
+        super().__init__(
+            "Equity",
+            order=40,
+            repos=REPOS_EQUITY,
+            database=True,
+            throttles={"google_drive": plugin.GOOGLE_DRIVE_BACKOFF, "google_sheets": plugin.GOOGLE_SHEETS_BACKOFF, "yahoo": plugin.YAHOO_BACKOFF},
+        )

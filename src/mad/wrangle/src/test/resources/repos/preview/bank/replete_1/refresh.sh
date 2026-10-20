@@ -3,6 +3,7 @@ set -euo pipefail
 source "$(cd "$(dirname "$0")" && pwd)/../../../refresh_lib.sh"
 refresh_setup "$0"
 BANK_FILE_REGEX='.*/(redbark|manual)_(balances|transactions)_[0-9]{4}\.csv'
+EXPORT_FILE_REGEX='.*/(activity[^/]*|amex_[^/]*)\.csv'
 RELEASE_DRIVE_DIR="${WRANGLE_DRIVE_DIR}/${REPO_TEST_NAME}/release/data"
 REFRESH_TODAY="$(date +%Y-%m-%dT%H:%M:%S)"
 
@@ -13,8 +14,9 @@ rm -rf "${REPO_TEST_RUN_DIR}"
 mkdir -p "${REPO_TEST_RUN_DIR}"
 refresh_run_plugin "$(dirname "${REPO_TEST_RUN_DIR}")" online force
 
-# Test data is release's files as they stand on its Drive, mirrored onto the preview Drive, so the test replays the live responses onto exactly them
-find -E "${RELEASE_DRIVE_DIR}" -maxdepth 1 -type f -regex "${BANK_FILE_REGEX}" -exec cp -vpf {} "${REPO_TEST_DIR}"/ \;
+# Test data is release's files and AMEX exports, renamed or not, as they stand on its Drive, mirrored onto the preview Drive, so the test replays the live
+# responses onto exactly them and renames and imports the exports there; the sync never uploads an export, so the mirror is what places them
+find -E "${RELEASE_DRIVE_DIR}" -maxdepth 1 -type f \( -regex "${BANK_FILE_REGEX}" -o -iregex "${EXPORT_FILE_REGEX}" \) -exec cp -vpf {} "${REPO_TEST_DIR}"/ \;
 rsync -avci --delete --exclude ".git*" "${REPO_TEST_DIR}"/ "${REPO_TEST_DRIVE_DIR}"/
 
 # Add cache files, the release sheet's tabs standing in for the preview sheet's with sheet downloads disabled, and the live Redbark responses the test serves

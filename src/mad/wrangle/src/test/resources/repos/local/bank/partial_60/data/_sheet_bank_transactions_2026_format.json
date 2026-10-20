@@ -1,0 +1,30 @@
+{
+  "dropdowns": {
+    "Category Manual": "Classifier!A2:A",
+    "Vetted": [
+      "Yes",
+      "No"
+    ]
+  },
+  "formulas": {
+    "Bucket": "=IFERROR(VLOOKUP({Category},Classifier!A:B,2,FALSE),\"\")",
+    "Category": "=IF({Category Manual}<>\"\",{Category Manual},{Category Derived})"
+  },
+  "highlights": [
+    "E",
+    "I",
+    "L"
+  ],
+  "raw": [
+    "Account",
+    "Account ID",
+    "Bank Code",
+    "Category Derived",
+    "Category Manual",
+    "Description",
+    "Merchant Code",
+    "Source ID",
+    "Transaction ID",
+    "Vetted"
+  ]
+}

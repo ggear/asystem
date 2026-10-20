@@ -3,6 +3,7 @@ from typing import Any
 
 import polars as pl
 
+from ._throttle import Throttle
 from .config import Repos
 
 
@@ -15,6 +16,10 @@ class ContractMixin:
     _sheet_spreadsheets: dict[str, Any]
     _sheet_worksheets: dict[str, list[Any]]
     error_codes: dict[str, tuple[str, bool, str]]
+    drive_conflicts: set[str]
+    drive_download_only: tuple[str, ...]
+    drive_ids: dict[str, str]
+    throttles: dict[str, Throttle]
 
     def print_log(self, *args, **kwargs):
         raise NotImplementedError

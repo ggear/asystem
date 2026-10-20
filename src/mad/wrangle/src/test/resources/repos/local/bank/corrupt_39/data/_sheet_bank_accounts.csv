@@ -1,0 +1,5 @@
+From,Institution,Number,Name,Type,Status,Redbark Account ID,Redbark Connection ID
+,Bank A,xxxx0001,One,,Linked,a1,c1
+,American Express,xxxx0002,Card,Liability,Manual,,
+,American Express,xxxx0003,Other Card,Liability,Manual,,
+,American Express,xxxx0004,Linked Card,Liability,Linked,a4,c4

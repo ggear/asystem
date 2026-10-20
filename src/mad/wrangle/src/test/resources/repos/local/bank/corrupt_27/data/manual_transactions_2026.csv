@@ -1,3 +1,10 @@
-Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Category Manual,Category Derived,Account ID,Source ID,Transaction ID,Vetted
-2026-01-02,Cash,-10.0,-10.0,Lunch,,,,,,6ec277688b3c570982242484009c9cdb,,,
-2026-01-01,Cash,0.0,0.0,Null Transaction,,,,,,6ec277688b3c570982242484009c9cdb,,,
+Date,Account,Amount,Description
+2026-01-03,Cash,lots,Bad Amount
+2026-01-03,Nobody,-1.0,Bad Account
+2026-02-03,Cash,-1.0,Future
+2026-01-03,Cash,-1.005,Decimals
+2026-01-03,Cash,0.0,Zero
+2026-01-03,Cash,-1.0,
+2025-05-03,Cash,-1.0,Early
+2026-13-01,Cash,-1.0,Ambiguous
+2026-01-03,Cash,"1,23",Comma

@@ -3,6 +3,7 @@ from os.path import dirname
 
 sys.path.insert(0, dirname(__file__))
 
+import collections
 import copy
 import csv
 import dataclasses
@@ -10,6 +11,7 @@ import datetime
 import filecmp
 import functools
 import glob
+import hashlib
 import importlib
 import io
 import json
@@ -35,9 +37,14 @@ from unittest import mock
 
 import csv_diff
 import google.oauth2.service_account
+import googleapiclient.errors
+import gspread.exceptions
+import httplib2
 import pandas as pd
 import polars as pl
 import pytest
+import requests
+import yfinance.exceptions
 from googleapiclient.discovery import build
 
 sys.path.append("../../../main/python")
@@ -45,12 +52,17 @@ sys.path.append("../../../main/python")
 from wrangle import main as wrangle_main
 from wrangle import plugin
 from wrangle.plugin import DownloadResult, DownloadStatus, Plugin, database
+from wrangle.plugin._throttle import Throttle, google_failed, urllib_failed, yahoo_failed
 from wrangle.plugin.bank import BALANCES_KEY_COLUMNS as BANK_BALANCES_KEY_COLUMNS
 from wrangle.plugin.bank import (
     BALANCES_SCHEMA,
     REPOS_BANK,
     TRANSACTIONS_SCHEMA,
+    TRANSACTIONS_YEAR_TAB_SCHEMA,
+    bank_export_account,
+    bank_export_parsed,
     bank_flag,
+    bank_tab_edits,
 )
 from wrangle.plugin.bank import BALANCES_STATE_SCHEMA as BANK_BALANCES_STATE_SCHEMA
 from wrangle.plugin.bank import (
@@ -94,7 +106,7 @@ class WrangleTest(unittest.TestCase):
     # Bank
     ########################################################################################################################
 
-    # No data at all, nothing committed and no error
+    # No data, nothing committed and no error
     def test_bank_local_blank_1(self):
         self._bank_run(
             "blank_1",
@@ -104,7 +116,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # One unreadable balances file on forced reprocessing counts an errored file and commits nothing
+    # An unreadable balances file on a reprocess errors the file and commits nothing
     def test_bank_local_corrupt_1(self):
         self._bank_run(
             "corrupt_1",
@@ -112,11 +124,11 @@ class WrangleTest(unittest.TestCase):
             force=True,
             errored={plugin.CTR_SRC_FILES: 1},
             file_asserts={
-                "__bank_balances_current.csv": [assert_file_size(min_rows=0, max_rows=0)],
+                "__bank_balances_current.csv": [assert_file_does_not_exist()],
             },
         )
 
-    # A type 2 version renames one account from its from date, the tab with no committed snapshot re-deriving every balance
+    # An account renamed from its from date, with no committed snapshot, re-derives every balance
     def test_bank_local_replete_1(self):
         self._bank_run(
             "replete_1",
@@ -133,7 +145,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # Two numbers share a name in sequence without error, a third account on no accounts row keeps its stored name and is unmapped
+    # Two numbers share a name in sequence without error, an account on no accounts row is unmapped
     def test_bank_local_partial_1(self):
         self._bank_run(
             "partial_1",
@@ -150,8 +162,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A padded key maps and an extra column is ignored, a version not yet valid keeps the stored name, while its from date in the future, a blank name and the same
-    # number at another institution each count a source error
+    # A padded key maps, a future from date, a blank name and an unknown number are source errors
     def test_bank_local_partial_2(self):
         self._bank_run(
             "partial_2",
@@ -181,9 +192,9 @@ class WrangleTest(unittest.TestCase):
         )
 
     # No accounts tab, every reading keeps its stored name without error
-    def test_bank_local_missing_1(self):
+    def test_bank_local_partial_66(self):
         self._bank_run(
-            "missing_1",
+            "partial_66",
             rerun=False,
             force=True,
             file_asserts={
@@ -194,7 +205,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A file with a row lacking its account id errors that file only, the other still commits
+    # A row lacking its account id errors its file only, the other file commits
     def test_bank_local_corrupt_2(self):
         self._bank_run(
             "corrupt_2",
@@ -209,28 +220,31 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # An unusable accounts tab maps nothing and counts one source error while the balances still commit under their stored names: two rows for one account on
-    # one date, a header only, rows lacking a natural key, a missing natural key column, or an unparseable from date
+    # Two rows for one account on one date make the accounts tab unusable, balances commit under stored names
     def test_bank_local_corrupt_3(self):
         self._bank_unusable("corrupt_3")
 
+    # A header only accounts tab is unusable, balances commit under stored names
     def test_bank_local_corrupt_6(self):
         self._bank_unusable("corrupt_6")
 
+    # Accounts rows all lacking a natural key make the tab unusable, balances commit under stored names
     def test_bank_local_corrupt_7(self):
         self._bank_unusable("corrupt_7")
 
+    # An accounts tab missing a natural key column is unusable, balances commit under stored names
     def test_bank_local_corrupt_8(self):
         self._bank_unusable("corrupt_8")
 
+    # An unparseable from date makes the accounts tab unusable, balances commit under stored names
     def test_bank_local_corrupt_9(self):
         self._bank_unusable("corrupt_9")
 
-    # An empty accounts tab is unusable and drops the committed snapshot so the next usable tab re-derives every balance
+    # An empty accounts tab is unusable and drops the committed snapshot
     def test_bank_local_corrupt_5(self):
         self._bank_unusable("corrupt_5", {"__bank_accounts_dimension.csv": [assert_file_does_not_exist()]})
 
-    # Two accounts holding one name on the same date are a source error while both readings commit under their own ids
+    # Two accounts holding one name on one date are a source error, both readings commit
     def test_bank_local_corrupt_4(self):
         self._bank_run(
             "corrupt_4",
@@ -246,8 +260,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A first live check with no files: the weekly accounts call appends the Redbark account missing from the tab as linked, the opening snapshot of both is
-    # written with readings timed by their observed time and pinned ids, it sweeps the transactions, which have none, and reruns are fresh
+    # A first live run appends the unlisted Redbark account, writes the opening balances and sweeps no transactions
     def test_bank_local_partial_4(self):
         self._bank_run(
             "partial_4",
@@ -272,7 +285,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A current balances file stamped an hour ago is fresh: nothing is requested, and the fresh cache commits the file it holds
+    # A balances file stamped an hour ago is fresh, nothing is requested
     def test_bank_local_partial_5(self):
         self._bank_run(
             "partial_5",
@@ -285,7 +298,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A balances file stamped three hours ago is due: unchanged balances store nothing and only stamp it, and today's sweep is done so no transactions are requested
+    # A balances file stamped three hours ago is due, unchanged balances only stamp it
     def test_bank_local_partial_6(self):
         self._bank_run(
             "partial_6",
@@ -297,8 +310,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A due check with a moved balance appends one reading timed by its observed time and sweeps the transactions, an account with nothing held and a blank from
-    # date asking for the last seven years: postings land in the year files of their dates, one with its codes, and one older than seven years is not fetched
+    # A moved balance appends a reading and sweeps seven years of transactions into their year files
     def test_bank_local_partial_7(self):
         self._bank_run(
             "partial_7",
@@ -323,7 +335,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # The first check of a new year writes its opening snapshot of every linked account into a new year file and leaves the previous year's file untouched
+    # The first check of a year writes its opening balances to a new year file
     def test_bank_local_partial_8(self):
         self._bank_run(
             "partial_8",
@@ -336,8 +348,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # The first check of a new year compares each reading to the previous year file's latest: none moved, so the opening snapshot is written and, today's sweep
-    # done, no transactions are requested
+    # The first check of a year compares against the previous year file, nothing moved
     def test_bank_local_partial_46(self):
         self._bank_run(
             "partial_46",
@@ -350,8 +361,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # The first check of a new month appends its opening snapshot of every linked account to the year file though no balance moved, requesting no transactions,
-    # and the stamped file is fresh on the rerun
+    # The first check of a month appends its opening balances though nothing moved
     def test_bank_local_partial_36(self):
         self._bank_run(
             "partial_36",
@@ -368,7 +378,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # An unreadable current balances file is kept and not queried into, counting an errored file
+    # An unreadable current balances file is kept and errors the file
     def test_bank_local_corrupt_11(self):
         self._bank_run(
             "corrupt_11",
@@ -378,11 +388,11 @@ class WrangleTest(unittest.TestCase):
             counters={plugin.CTR_SRC_SOURCES: {plugin.CTR_ACT_DOWNLOADED: 0}},
             file_asserts={
                 "redbark_balances_2026.csv": [assert_file_does_exist()],
-                "__bank_balances_current.csv": [assert_file_size(min_rows=0, max_rows=0)],
+                "__bank_balances_current.csv": [assert_file_does_not_exist()],
             },
         )
 
-    # Live balances duplicated, without a numeric value or for an unknown account count one source error, the valid one is stored
+    # Duplicated, valueless and unknown live balances are one source error, the valid one is stored
     def test_bank_local_corrupt_12(self):
         self._bank_run(
             "corrupt_12",
@@ -394,7 +404,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A balances response with no balances is a source error and the linked account absent from it a data error, writing no file
+    # A balances response with no balances is a source error, the absent account a data error
     def test_bank_local_corrupt_13(self):
         self._bank_run(
             "corrupt_13",
@@ -402,6 +412,7 @@ class WrangleTest(unittest.TestCase):
             rerun=False,
             errored={plugin.CTR_SRC_SOURCES: 1, plugin.CTR_SRC_DATA: 1},
             file_asserts={
+                "__bank_logs.csv": [assert_file_column_values("Code", ["BALANCE_ABSENT", "BALANCE_RESPONSE"], sort_by=["Code"])],
                 "redbark_balances_2026.csv": [assert_file_does_not_exist()],
                 "__bank_balances_current.csv": [assert_file_does_not_exist()],
             },
@@ -415,12 +426,13 @@ class WrangleTest(unittest.TestCase):
             rerun=False,
             errored={plugin.CTR_SRC_SOURCES: 1},
             file_asserts={
+                "__bank_logs.csv": [assert_file_column_values("Code", ["BALANCE_RESPONSE"], sort_by=["Code"])],
                 "redbark_balances_2026.csv": [assert_file_does_not_exist()],
                 "redbark_transactions_2026.csv": [assert_file_does_not_exist()],
             },
         )
 
-    # A moved balance sweeps the transactions, but an unreadable year file is kept, not merged into, and counts an errored file while the balances commit
+    # An unreadable transactions year file is kept and errors the file, balances commit
     def test_bank_local_corrupt_16(self):
         self._bank_run(
             "corrupt_16",
@@ -429,12 +441,12 @@ class WrangleTest(unittest.TestCase):
             errored={plugin.CTR_SRC_FILES: 1},
             file_asserts={
                 "redbark_transactions_2026.csv": [assert_file_does_exist()],
-                "__bank_transactions_current.csv": [assert_file_size(min_rows=0, max_rows=0)],
+                "__bank_transactions_current.csv": [assert_file_does_not_exist()],
                 "__bank_balances_current.csv": [assert_file_size(min_rows=3, max_rows=3)],
             },
         )
 
-    # A live transactions list missing its status column is one source error writing no transactions, while the balances still commit
+    # A transactions response missing its status column is a source error, balances commit
     def test_bank_local_corrupt_17(self):
         self._bank_run(
             "corrupt_17",
@@ -447,7 +459,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A blank status triggers the accounts call, which fails, a source error leaving no linked account to check
+    # A failed accounts call is a source error, leaving no linked account to check
     def test_bank_local_corrupt_18(self):
         self._bank_run(
             "corrupt_18",
@@ -455,11 +467,12 @@ class WrangleTest(unittest.TestCase):
             rerun=False,
             errored={plugin.CTR_SRC_SOURCES: 1},
             file_asserts={
+                "__bank_logs.csv": [assert_file_column_values("Code", ["REDBARK_ACCOUNTS"], sort_by=["Code"])],
                 "redbark_balances_2026.csv": [assert_file_does_not_exist()],
             },
         )
 
-    # A moved balance sweeps each account from its newest held date less the leeway: a held transaction is not added again and the new ones land
+    # A sweep from each account's newest held date less the leeway adds only new transactions
     def test_bank_local_partial_11(self):
         self._bank_run(
             "partial_11",
@@ -474,7 +487,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A posting inside the leeway lands in the previous year's file, writing both years, and one before the window is not fetched
+    # A posting inside the leeway lands in the previous year's file, one before the window is not fetched
     def test_bank_local_partial_12(self):
         self._bank_run(
             "partial_12",
@@ -487,9 +500,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # Blank statuses trigger the accounts call: a match is linked, two Redbark accounts on one key duplicate and none missing, each a source error, a linked
-    # account Redbark no longer lists is marked missing, an unlisted Redbark account is appended linked below a row without a key, which is left untouched, and
-    # every account id cell is filled or corrected to the id its institution and number derive
+    # The accounts call links, duplicates, misses and appends accounts and fills every account id
     def test_bank_local_partial_13(self):
         self._bank_run(
             "partial_13",
@@ -518,9 +529,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # An id-less held transaction absorbs at most one live transaction of the same amount within three days, the nearest, by name across a replaced card number,
-    # adopting its source id and Redbark's dates, and a transaction posted six days after it was made is matched on the day it was made, as history dates it, while a second identical
-    # one, one four days away and a new one are kept
+    # An id-less held transaction adopts the nearest live one of its amount within three days
     def test_bank_local_partial_14(self):
         self._bank_run(
             "partial_14",
@@ -535,8 +544,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A first run with no files: an account backfills from its from date, a posting before it not fetched, and one with a blank from date takes everything within
-    # seven years
+    # A first run backfills each account from its from date, else seven years
     def test_bank_local_partial_17(self):
         self._bank_run(
             "partial_17",
@@ -549,7 +557,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A current balances file holding only its header has no readings, so every balance is stored
+    # A current balances file holding only its header stores every balance
     def test_bank_local_partial_18(self):
         self._bank_run(
             "partial_18",
@@ -560,9 +568,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # Accounts, balances and transactions together: a history year file, a live posting held there without a source id, a pending one ignored, Redbark's codes
-    # stored as codes with the placeholder merchant code blank, a live transaction dated the day it was made with its posted day beside it, and every transaction
-    # id pinned to its account id, date, amount in cents, description and ordinal
+    # Accounts, balances and transactions together, every transaction id pinned
     def test_bank_local_replete_4(self):
         self._bank_run(
             "replete_4",
@@ -595,7 +601,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A dead Redbark id answers 404: the accounts are fetched again, the row's id replaced, and the retried query lands
+    # A dead Redbark id is replaced from the accounts call and the retried query lands
     def test_bank_local_partial_19(self):
         self._bank_run(
             "partial_19",
@@ -607,7 +613,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A rate limited transactions call is a source error merging nothing for that account, while the other account merges
+    # A rate limited transactions call is a source error for its account only
     def test_bank_local_corrupt_19(self):
         self._bank_run(
             "corrupt_19",
@@ -616,6 +622,7 @@ class WrangleTest(unittest.TestCase):
             rerun=False,
             errored={plugin.CTR_SRC_SOURCES: 1},
             file_asserts={
+                "__bank_logs.csv": [assert_file_column_values("Code", ["TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED_CURRENT", "TRANSACTION_CALL"], sort_by=["Code"])],
                 "redbark_transactions_2026.csv": [assert_file_column_values("Source ID", ["t1"])],
             },
         )
@@ -632,7 +639,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A changed accounts tab against the committed snapshot and state re-derives every balance and transaction in place, after which reruns are no-ops
+    # A changed accounts tab re-derives every balance and transaction in place
     def test_bank_local_replete_2(self):
         self._bank_run(
             "replete_2",
@@ -643,7 +650,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A usable accounts tab with no committed snapshot, as after an unusable one, re-derives every balance and commits its snapshot
+    # A usable accounts tab with no committed snapshot re-derives every balance
     def test_bank_local_replete_3(self):
         self._bank_run(
             "replete_3",
@@ -654,8 +661,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # The balances tab holds every reading of the current and previous months and each active account's latest older one, sorted by account name then newest
-    # first, a closed account dropping off, while the state keeps every reading
+    # The balances tab holds the current and previous months and each account's latest older reading
     def test_bank_local_partial_9(self):
         self._bank_run(
             "partial_9",
@@ -670,8 +676,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # Review per year tab: unclassified or unvetted rows in a closed month are an error, only in the current month a warning, a vetted classified
-    # year clean, and a stored vetted value read whatever its case and spacing
+    # Unclassified or unvetted rows are an error in a closed month, a warning in the open month
     def test_bank_local_partial_37(self):
         self._bank_run(
             "partial_37",
@@ -692,10 +697,10 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A year with rows both before and in the open month raises a closed months error and an open month warning
-    def test_bank_local_partial_37_split(self):
+    # A year with rows both before and in the open month raises the error and the warning
+    def test_bank_local_partial_56(self):
         self._bank_run(
-            "partial_37",
+            "partial_56",
             today="2026-02-15T12:00:00",
             standing=7,
             file_asserts={
@@ -722,8 +727,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # Vetted typed on a linked account's rows: a tick is saved, a category change clears a tick left as it was but keeps one set with it and a No left as it was, an
-    # unknown value is one rejected record reverted by the rewrite, and a value is saved title cased whatever its case and spacing
+    # Vetted typed on the tab is saved title cased, a category change clears an untouched tick
     def test_bank_local_partial_40(self):
         self._bank_run(
             "partial_40",
@@ -739,8 +743,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A forced reprocess re-derives every row: a vetted row whose category moves loses its tick, one no pattern matches any more is blanked and loses its tick, and
-    # one held by a manual category keeps its tick while its derived category follows the classifier
+    # A reprocess re-derives every row, a moved row losing its tick, a manual category keeping it
     def test_bank_local_partial_41(self):
         self._bank_run(
             "partial_41",
@@ -755,9 +758,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A classifier edit re-derives every row on the next run: a vetted row whose category moves loses its tick and one marked No keeps it, a manual row keeps category
-    # and tick while its derived category follows, an unmatched row is blanked and loses its tick, the snapshot is replaced, and each change is logged once in the
-    # run's month, the closed month untouched, the rerun and reprocess moving nothing more
+    # A classifier edit re-derives every row, each cleared tick logged once
     def test_bank_local_partial_47(self):
         self._bank_run(
             "partial_47",
@@ -768,11 +769,12 @@ class WrangleTest(unittest.TestCase):
                     assert_file_column_values("Vetted", [None, "No", "Yes"] + [None] * 11 + ["Yes"], sort_by=["Description"]),
                 ],
                 "bank_reclassified_2026_01.csv": [
-                    assert_file_column_values("Description", ["Cafe One", "Cafe Three", "Cafe Two", "Gone One"], sort_by=["Description"]),
-                    assert_file_column_values("Source", ["classifier"] * 4, sort_by=["Description"]),
-                    assert_file_column_values("Derived Before", ["Food"] * 4, sort_by=["Description"]),
-                    assert_file_column_values("Derived After", ["Restaurants", "Restaurants", "Restaurants", None], sort_by=["Description"]),
-                    assert_file_column_values("Vetted After", [None, "No", "Yes", None], sort_by=["Description"]),
+                    assert_file_column_values("Description", ["Cafe One", "Gone One"], sort_by=["Description"]),
+                    assert_file_column_values("Source", ["classifier"] * 2, sort_by=["Description"]),
+                    assert_file_column_values("Derived Before", ["Food"] * 2, sort_by=["Description"]),
+                    assert_file_column_values("Derived After", ["Restaurants", None], sort_by=["Description"]),
+                    assert_file_column_values("Vetted Before", ["Yes", "Yes"], sort_by=["Description"]),
+                    assert_file_column_values("Vetted After", [None, None], sort_by=["Description"]),
                     assert_file_nones_per_col(include=r"File MD5"),
                 ],
                 "bank_reclassified_2025_12.csv": [assert_file_size(min_rows=1, max_rows=1)],
@@ -781,7 +783,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # With the tab unchanged a standard run leaves a category no rule produces, as the release's first run does, and logs nothing
+    # An unchanged classifier leaves a category no rule produces on a standard run
     def test_bank_local_partial_48(self):
         self._bank_run(
             "partial_48",
@@ -796,10 +798,10 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # With the tab unchanged a reprocess, as the release's second run, blanks the category no rule produces and clears its tick, logging the change
-    def test_bank_local_partial_48_reprocess(self):
+    # An unchanged classifier blanks a category no rule produces on a reprocess, logging the change
+    def test_bank_local_partial_57(self):
         self._bank_run(
-            "partial_48",
+            "partial_57",
             standing=2,
             rerun=False,
             force=True,
@@ -817,8 +819,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A classifier edit with a pattern in two categories is held: rows keep the last applied tab's categories and ticks, a new row is classified by it, and the
-    # snapshot is kept so the edit applies once the tab is fixed
+    # A classifier edit with a pattern in two categories is held, rows classified by the last applied tab
     def test_bank_local_corrupt_33(self):
         self._bank_run(
             "corrupt_33",
@@ -841,10 +842,10 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A reprocess holds the same edit, re-deriving every row with the last applied tab
-    def test_bank_local_corrupt_33_reprocess(self):
+    # A held classifier edit stays held on a reprocess
+    def test_bank_local_corrupt_35(self):
         self._bank_run(
-            "corrupt_33",
+            "corrupt_35",
             standing=2,
             rerun=False,
             force=True,
@@ -865,7 +866,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A bucket-only classifier edit clears no tick and logs nothing, the month totals regrouped under the new bucket
+    # A bucket only classifier edit clears no tick and regroups the month totals
     def test_bank_local_partial_49(self):
         self._bank_run(
             "partial_49",
@@ -880,8 +881,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # With the tab unchanged a normal run re-derives the files its edits changed: a ticked uncategorised row gains a category and loses the tick, an edited manual
-    # description is reclassified, the untouched row keeps its category and tick, and each change is logged by its source
+    # Files changed on Drive are reclassified without a reprocess, each change logged by its source
     def test_bank_local_partial_50(self):
         self._bank_run(
             "partial_50",
@@ -897,16 +897,15 @@ class WrangleTest(unittest.TestCase):
                     assert_file_column_values("Category Derived", ["Groceries"]),
                 ],
                 "bank_reclassified_2026_01.csv": [
-                    assert_file_column_values("Source", ["classifier", "classifier", "sheet"], sort_by=["Source", "Description"]),
-                    assert_file_column_values("Description", ["Shop Three", "Shop Two", "Shop Two"], sort_by=["Source", "Description"]),
-                    assert_file_column_values("Vetted After", [None, None, "Yes"], sort_by=["Source", "Description"]),
-                    assert_file_column_values("Derived After", ["Groceries", "Groceries", None], sort_by=["Source", "Description"]),
+                    assert_file_column_values("Source", ["classifier", "sheet"], sort_by=["Source", "Description"]),
+                    assert_file_column_values("Description", ["Shop Two", "Shop Two"], sort_by=["Source", "Description"]),
+                    assert_file_column_values("Vetted After", [None, "Yes"], sort_by=["Source", "Description"]),
+                    assert_file_column_values("Derived After", ["Groceries", None], sort_by=["Source", "Description"]),
                 ],
             },
         )
 
-    # A manual category equal to the row's category keeps its tick and a different one left unticked clears it; a stale tab, its derived category from before a move,
-    # cannot re-tick the row but can untick one, and only the edits are logged
+    # A stale tab cannot re-tick a moved row but can untick one, only edits logged
     def test_bank_local_partial_51(self):
         self._bank_run(
             "partial_51",
@@ -925,22 +924,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A failed drive sync leaves the run's changes unlogged with an error, the classifier edit still applied
-    def test_bank_local_corrupt_34(self):
-        self._bank_run(
-            "corrupt_34",
-            standing=2,
-            rerun=False,
-            drive_failed=True,
-            errored={plugin.CTR_SRC_SOURCES: 2},
-            file_asserts={
-                "redbark_transactions_2025.csv": [assert_file_column_values("Vetted", [None, "Yes"] + [None] * 7 + ["Yes"], sort_by=["Description"])],
-                "bank_reclassified_2026_01.csv": [assert_file_does_not_exist()],
-                "__bank_logs.csv": [assert_file_column_values("Code", ["CHANGES_UNLOGGED", "TRANSACTIONS_UNCLASSIFIED", "TRANSACTIONS_UNVETTED"], sort_by=["Code"])],
-            },
-        )
-
-    # A replaced card shares its name with the closed card it replaced, both holding transactions on one date without error
+    # A replaced card shares its name with the closed card it replaced without error
     def test_bank_local_partial_38(self):
         self._bank_run(
             "partial_38",
@@ -950,7 +934,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # Two open cards sharing a name both holding transactions on one date are a source error
+    # Two open cards sharing a name on one date are a source error
     def test_bank_local_corrupt_31(self):
         self._bank_run(
             "corrupt_31",
@@ -961,8 +945,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A transaction held on both a closed card and the card replacing it under one name, matched on date, cents and description whatever its case and spacing,
-    # is one standing warning, while the same purchase on another day is not
+    # A transaction held on both a closed card and its replacement is one standing warning
     def test_bank_local_partial_39(self):
         self._bank_run(
             "partial_39",
@@ -976,8 +959,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # An accounts tab holding only its header is filled from Redbark: every account appended linked with its ids, a credit card as a liability, and its balances
-    # stored on the same run
+    # A header only accounts tab is filled from Redbark and its balances stored on the same run
     def test_bank_local_partial_42(self):
         self._bank_run(
             "partial_42",
@@ -994,8 +976,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # Two otherwise identical linked transactions, the first given a category manual: the rewrite keeps each at its place in the file, so the edited one keeps its
-    # own id
+    # Two identical transactions, one given a category manual, each keep their own id
     def test_bank_local_partial_43(self):
         self._bank_run(
             "partial_43",
@@ -1008,7 +989,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A swept transactions response: a merchant code short of four digits is padded, and two transactions sharing a Redbark id are both rejected
+    # A short merchant code is padded and two transactions sharing a Redbark id are rejected
     def test_bank_local_partial_44(self):
         self._bank_run(
             "partial_44",
@@ -1022,7 +1003,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # Two identical history transactions stay two transactions told apart by their ordinal, each with its own pinned id
+    # Two identical history transactions keep distinct pinned ids by ordinal
     def test_bank_local_partial_10(self):
         self._bank_run(
             "partial_10",
@@ -1039,7 +1020,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # Split parts are derived on read: -1000, -500, -500 is one whole transaction and one split in two parts sharing an id
+    # Split parts are derived on read and share one id
     def test_bank_local_partial_15(self):
         self._bank_run(
             "partial_15",
@@ -1056,7 +1037,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # An unreadable year file is kept and counts an errored file, its year left as committed while another year commits
+    # An unreadable year file errors the file and holds its year, another year commits
     def test_bank_local_corrupt_15(self):
         self._bank_run(
             "corrupt_15",
@@ -1069,17 +1050,15 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # Manual balances typed on the balances tab: a value set on a carried reading makes it real, a changed one is saved, a cleared one deleted (a year left with none
-    # emptied rather than removed, so the empty file reaches Drive), and a new row with a blank date and time lands at the end of today, the carried readings
-    # following and a real reading winning at the same moment
+    # Manual balances on Drive are given account ids and carried to linked moments
     def test_bank_local_partial_21(self):
         self._bank_run(
             "partial_21",
-            sheet_downloads=1,
             file_asserts={
                 "manual_balances_2026.csv": [
                     assert_file_column_values("Balance Manual", ["101.0", "105.0", "110.0"], sort_by=["Date"]),
                     assert_file_column_values("Time", ["23:59:59", "09:00:00", "23:59:59"], sort_by=["Date"]),
+                    assert_file_column_values("Account ID", ["6ec277688b3c570982242484009c9cdb"] * 3),
                 ],
                 "manual_balances_2025.csv": [assert_file_size(min_rows=0, max_rows=0), assert_file_columns(list(BALANCES_SCHEMA))],
                 "__bank_balances_current.csv": [
@@ -1089,47 +1068,41 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # Rejected balance edits each count a data error and are reverted by the rewrite: a value on a linked row, an unknown account, a future date and an unparsed value
+    # A manual balances file with invalid rows is left as is and its year held
     def test_bank_local_corrupt_20(self):
         self._bank_run(
             "corrupt_20",
-            sheet_downloads=1,
+            standing=1,
             rerun=False,
             errored={plugin.CTR_SRC_DATA: 4},
             file_asserts={
-                "manual_balances_2026.csv": [assert_file_size(min_rows=1, max_rows=1)],
-                "_sheet_bank_balances.csv": [
-                    assert_file_column_values("Account", ["Cash", "Cash", "One"]),
-                    assert_file_column_values("Balance Manual", ["100.0", "100.0", None]),
-                ],
-                "__bank_logs.csv": [assert_file_column_values("Code", ["ACCOUNT_LINKED", "ACCOUNT_NOT_MANUAL", "DATE_FUTURE", "VALUE_UNPARSED"], sort_by=["Code"])],
+                "manual_balances_2026.csv": [assert_file_size(min_rows=5, max_rows=5), assert_file_columns(["Date", "Time", "Account", "Balance Manual"])],
+                "__bank_balances_current.csv": [assert_file_does_not_exist()],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["ACCOUNT_LINKED", "ACCOUNT_NOT_MANUAL", "BALANCE_MANUAL_STALE", "DATE_FUTURE", "VALUE_UNPARSED"], sort_by=["Code"])],
             },
         )
 
-    # Manual transactions typed on the year tabs: an edit moving its amount split, a deletion, a new row, a date moved across years and an edited placeholder each
-    # land in the right manual file, and the placeholders roll to exactly one per manual account this month, the stale one gone
+    # Manual transactions on Drive are given account ids and splits and moved to their year file
     def test_bank_local_partial_22(self):
         self._bank_run(
             "partial_22",
             standing=2,
-            sheet_downloads=1,
             file_asserts={
                 "manual_transactions_2026.csv": [
-                    assert_file_size(min_rows=6, max_rows=6),
-                    assert_file_column_values("Description", ["Tip", "Null Transaction", "Null Transaction", "Snack", "Lunch", "Dinner"], sort_by=["Date", "Amount", "Account"]),
-                    assert_file_column_values("Amount Split", ["-3.0", "0.0", "0.0", "-5.0", "-12.0", "-30.0"], sort_by=["Date", "Amount", "Account"]),
+                    assert_file_column_values("Description", ["Tip", "Snack", "Lunch", "Dinner"], sort_by=["Date"]),
+                    assert_file_column_values("Amount Split", ["-3.0", "-5.0", "-10.0", "-1030.0"], sort_by=["Date"]),
+                    assert_file_nones_per_col(include=r"Account ID|Transaction ID"),
                 ],
                 "manual_transactions_2025.csv": [assert_file_size(min_rows=0, max_rows=0), assert_file_columns(list(TRANSACTIONS_SCHEMA))],
                 "__bank_transactions_current.csv": [
                     assert_file_size(min_rows=5, max_rows=5),
                     assert_file_column_values("Description", ["Tip", "Snack", "Lunch", "Coffee", "Dinner"], sort_by=["Date"]),
                 ],
-                "_sheet_bank_transactions_2026.csv": [assert_file_size(min_rows=7, max_rows=7)],
+                "_sheet_bank_transactions_2026.csv": [assert_file_size(min_rows=5, max_rows=5)],
             },
         )
 
-    # Rejected transaction edits each count a data error and are reverted by the rewrite: a linked row's description, a new row for a linked account and a split not
-    # summing to its amount
+    # Tab edits outside the editable columns are rejected and put back
     def test_bank_local_corrupt_21(self):
         self._bank_run(
             "corrupt_21",
@@ -1141,28 +1114,26 @@ class WrangleTest(unittest.TestCase):
                 "redbark_transactions_2026.csv": [assert_file_column_values("Description", ["Coffee", "Fee"], sort_by=["Date"])],
                 "_sheet_bank_transactions_2026.csv": [assert_file_size(min_rows=2, max_rows=2)],
                 "__bank_logs.csv": [
-                    assert_file_column_values("Code", ["ACCOUNT_LINKED", "ACCOUNT_LINKED", "SPLIT_INVALID", "TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED_CURRENT"], sort_by=["Code"])
+                    assert_file_column_values("Code", ["SPLIT_INVALID", "TAB_EDIT_IGNORED", "TAB_EDIT_IGNORED", "TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED_CURRENT"], sort_by=["Code"])
                 ],
             },
         )
 
-    # A manual transaction moved into a year whose manual file is unreadable, and a new row dated in that year, are each rejected as a data error, the moved one kept
-    # where it was and the unreadable file counting an errored file
+    # A manual row dated in a year whose file is unreadable holds both years
     def test_bank_local_corrupt_32(self):
         self._bank_run(
             "corrupt_32",
-            standing=2,
-            sheet_downloads=1,
             rerun=False,
-            errored={plugin.CTR_SRC_DATA: 2, plugin.CTR_SRC_FILES: 1},
+            errored={plugin.CTR_SRC_DATA: 1, plugin.CTR_SRC_FILES: 1},
             file_asserts={
-                "manual_transactions_2026.csv": [assert_file_column_values("Description", ["Null Transaction", "Lunch"], sort_by=["Date"])],
+                "manual_transactions_2026.csv": [assert_file_columns(["Date", "Account", "Amount", "Description"])],
                 "manual_transactions_2025.csv": [assert_file_does_exist()],
-                "__bank_logs.csv": [assert_file_column_values("Code", ["FILE_UNREADABLE", "FILE_UNREADABLE", "TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED_CURRENT"], sort_by=["Code"])],
+                "__bank_transactions_current.csv": [assert_file_does_not_exist()],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["FILE_UNREADABLE"])],
             },
         )
 
-    # On linked rows a category manual and a valid split are kept, the split saved as contiguous parts sharing one id, the bucket following the resolved category
+    # A category manual and a valid split on linked rows are kept
     def test_bank_local_partial_23(self):
         self._bank_run(
             "partial_23",
@@ -1181,9 +1152,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # Classification by the longest literal pattern, then merchant code, then bank code: nested patterns across categories, padded whitespace, a metacharacter
-    # matched literally, a merchant code over a bank code and an unmapped income code left blank; the changed tab re-derives every row, the history's own category
-    # included, clearing the tick of the vetted row it moves, while a category manual still wins and keeps its tick
+    # Classification by longest pattern, then merchant code, then bank code
     def test_bank_local_partial_24(self):
         self._bank_run(
             "partial_24",
@@ -1207,8 +1176,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # Classifier standing errors, one source error each: a bank code not a CDR code, a merchant code not four digits, two code rows for one category, and two patterns
-    # of equal length from different categories matching one description, which takes neither; the edit is held, and with no tab yet applied nothing is classified
+    # Classifier code and tie errors hold the edit, with no applied tab nothing is classified
     def test_bank_local_corrupt_22(self):
         self._bank_run(
             "corrupt_22",
@@ -1235,8 +1203,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # The plugin's own uploads read back as no edit: every run sees the tabs moved and compares them, an id, a description starting with an equals sign or holding a
-    # comma and a merchant code with a leading zero round trip, and the rerun uploads nothing
+    # The plugin's own uploads read back as no edit
     def test_bank_local_partial_25(self):
         self._bank_run(
             "partial_25",
@@ -1244,43 +1211,27 @@ class WrangleTest(unittest.TestCase):
             sheet_downloads=99,
             file_asserts={
                 "_sheet_bank_balances.csv": [assert_file_does_exist()],
-                "_sheet_bank_transactions_2026.csv": [assert_file_size(min_rows=7, max_rows=7)],
+                "_sheet_bank_transactions_2026.csv": [assert_file_size(min_rows=5, max_rows=5)],
                 "_sheet_bank_transactions_2025.csv": [assert_file_size(min_rows=1, max_rows=1)],
                 "_sheet_bank_transactions.csv": [assert_file_column_distinct("End of Month", 1)],
             },
         )
 
-    # A tab edited between the read and the upload is not overwritten: its upload and every later one are skipped
+    # A tab edited between the read and the upload is skipped, later tabs upload
     def test_bank_local_partial_26(self):
         self._bank_run(
             "partial_26",
             standing=2,
             sheet_downloads=0,
-            moved_tabs=("Balances",),
             rerun=False,
             file_asserts={
                 "_sheet_bank_balances.csv": [assert_file_column_values("Balance Linked", ["10.0"])],
-                "_sheet_bank_transactions_2026.csv": [assert_file_does_not_exist()],
+                "_sheet_bank_transactions_2026.csv": [assert_file_size(min_rows=1, max_rows=1)],
                 "__bank_balances_current.csv": [assert_file_size(min_rows=1, max_rows=1)],
             },
         )
 
-    # A tab read back with its numbers displayed differently, as the sheet shows 10.0 as 10, is the same tab: the guard compares typed values and the upload goes ahead
-    def test_bank_local_partial_35(self):
-        self._bank_run(
-            "partial_35",
-            standing=2,
-            sheet_downloads=0,
-            restyled_tabs=("Balances",),
-            rerun=False,
-            file_asserts={
-                "_sheet_bank_balances.csv": [assert_file_column_values("Balance Linked", ["12.0"])],
-                "_sheet_bank_transactions_2026.csv": [assert_file_size(min_rows=1, max_rows=1)],
-            },
-        )
-
-    # Forced reprocessing dedupes every transactions file by source id, each removal a data error: one in two files keeps the earlier, while a sourced transaction
-    # beside an id-less one of the same amount within three days, as genuine repeats are, split parts sharing a source id and identical id-less transactions all stay
+    # A reprocess dedupes transactions by source id, genuine repeats kept
     def test_bank_local_partial_27(self):
         self._bank_run(
             "partial_27",
@@ -1302,8 +1253,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A sweep on a normal run finds a transaction Redbark now dates in a later year whose source id an older year file holds, never dated: matched by its source id
-    # wherever it is held, it takes Redbark's dates once and moves to the later year's file, never written twice, leaving the older file header-only
+    # A sweep re-dates a never dated transaction into a later year's file once
     def test_bank_local_partial_45(self):
         self._bank_run(
             "partial_45",
@@ -1321,8 +1271,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A held transaction Redbark relists under a new id is adopted, keeping its dates, as a suspect; one it no longer lists is kept and counted as suspect; one never
-    # dated takes Redbark's dates once while one already dated keeps its own
+    # A relisted transaction is adopted, an unlisted one kept, a never dated one takes Redbark's dates
     def test_bank_local_partial_52(self):
         self._bank_run(
             "partial_52",
@@ -1347,8 +1296,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A forced download fetches the whole history: a held transaction never dated takes Redbark's dates, while one Redbark lists but nothing holds and one held but
-    # no longer listed, both before the window, are left alone
+    # A forced download dates held history but adds or drops nothing before the window
     def test_bank_local_partial_53(self):
         self._bank_run(
             "partial_53",
@@ -1369,8 +1317,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A linked balance moving more than its held transactions explain is unreconciled once, between the readings it broke across, while one explained only by a
-    # transaction made before a reading and posted after it, or posted the day of the reading, is not, and a reading too recent to have settled is not judged
+    # A linked balance moving more than its transactions explain is unreconciled once
     def test_bank_local_partial_54(self):
         self._bank_run(
             "partial_54",
@@ -1388,8 +1335,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # An HSBC transaction is dated the day its time falls in Sydney, as its statements date it, whether stamped at midnight or late in a Perth evening, while
-    # another bank's keeps the date Redbark gives
+    # An HSBC transaction is dated by its Sydney day, other banks by Redbark's date
     def test_bank_local_partial_55(self):
         self._bank_run(
             "partial_55",
@@ -1405,8 +1351,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # Month end totals on the Transactions tab, a row per month for each category with transactions: labelled by the next month's first, the current month and quiet months
-    # left out, refunds netting, budgeted rows first then by bucket and category
+    # Month end totals per category on the Transactions tab, budgeted first
     def test_bank_local_partial_28(self):
         self._bank_run(
             "partial_28",
@@ -1423,7 +1368,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # The logs tab lists this run's standing problems and the last thirty days of rejected records, dropping older ones
+    # The logs tab lists standing problems and the last thirty days of records
     def test_bank_local_partial_29(self):
         self._bank_run(
             "partial_29",
@@ -1437,7 +1382,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # An account type outside the two and a status outside the vocabulary each count a source error, the type read as an asset
+    # An account type or status outside the vocabulary is a source error
     def test_bank_local_corrupt_23(self):
         self._bank_run(
             "corrupt_23",
@@ -1449,7 +1394,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A balance whose freshness is not fresh is a standing source error, the reading still stored
+    # A balance not fresh is a standing source error, the reading still stored
     def test_bank_local_corrupt_24(self):
         self._bank_run(
             "corrupt_24",
@@ -1462,7 +1407,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A dead Redbark id with no replacement on the accounts call is a standing source error, merging nothing for it
+    # A dead Redbark id with no replacement is a standing source error
     def test_bank_local_corrupt_25(self):
         self._bank_run(
             "corrupt_25",
@@ -1475,31 +1420,29 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # Manual balance checks: a reading before its account's from date and two entries for one moment are rejected, while a liability above zero and a ten-fold
-    # jump are kept as suspect, one data error per record
+    # Invalid manual balances hold their file, suspect ones are kept
     def test_bank_local_corrupt_26(self):
         self._bank_run(
             "corrupt_26",
-            sheet_downloads=1,
             rerun=False,
             errored={plugin.CTR_SRC_DATA: 5},
             file_asserts={
                 "manual_balances_2026.csv": [assert_file_column_values("Balance Manual", ["-50.0", "100.0", "20.0", "5000.0"], sort_by=["Date", "Account"])],
+                "manual_balances_2025.csv": [assert_file_columns(["Date", "Time", "Account", "Balance Manual"])],
                 "__bank_logs.csv": [assert_file_column_values("Code", ["BALANCE_DUPLICATE", "BALANCE_DUPLICATE", "BALANCE_JUMP", "BALANCE_SIGN", "DATE_BEFORE_FROM"], sort_by=["Code"])],
             },
         )
 
-    # Manual transaction checks, each rejected: an unparsed amount, an unknown account, a future date, a date before the account's from date, more than two decimals,
-    # a zero amount and a blank description; while one identical to another and an unknown category manual are kept as suspect
+    # Invalid manual transactions hold their file and year, suspect ones are kept
     def test_bank_local_corrupt_27(self):
         self._bank_run(
             "corrupt_27",
             standing=2,
-            sheet_downloads=1,
             rerun=False,
-            errored={plugin.CTR_SRC_DATA: 9, plugin.CTR_SRC_SOURCES: 1},
+            errored={plugin.CTR_SRC_DATA: 11, plugin.CTR_SRC_SOURCES: 1},
             file_asserts={
-                "manual_transactions_2026.csv": [assert_file_column_values("Description", ["Null Transaction", "Lunch", "Lunch", "Treat"], sort_by=["Date", "Description"])],
+                "manual_transactions_2026.csv": [assert_file_size(min_rows=9, max_rows=9), assert_file_columns(["Date", "Account", "Amount", "Description"])],
+                "manual_transactions_2025.csv": [assert_file_column_values("Description", ["Lunch", "Lunch", "Treat"], sort_by=["Date", "Description"])],
                 "__bank_logs.csv": [
                     assert_file_column_values(
                         "Code",
@@ -1510,11 +1453,13 @@ class WrangleTest(unittest.TestCase):
                             "DATE_BEFORE_FROM",
                             "DATE_FUTURE",
                             "MANUAL_DUPLICATE",
-                            "TRANSACTIONS_UNCLASSIFIED_CURRENT",
-                            "TRANSACTIONS_UNVETTED_CURRENT",
+                            "TRANSACTIONS_UNCLASSIFIED",
+                            "TRANSACTIONS_UNVETTED",
                             "TRANSACTION_DECIMALS",
                             "TRANSACTION_DESCRIPTION",
                             "TRANSACTION_ZERO",
+                            "VALUE_UNPARSED",
+                            "VALUE_UNPARSED",
                             "VALUE_UNPARSED",
                         ],
                         sort_by=["Code"],
@@ -1523,8 +1468,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A held transaction inside the window that Redbark no longer lists is kept and counted as suspect, while one posted inside the window but made before it, so
-    # not listed, is not
+    # A held transaction Redbark no longer lists inside the window is kept as suspect
     def test_bank_local_corrupt_28(self):
         self._bank_run(
             "corrupt_28",
@@ -1545,8 +1489,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # Classifier standing errors, one source error per code: a blank category, a category in two buckets, a blank budgeted, categories differing only in case, a
-    # short pattern, a code list on a pattern row, one pattern in two categories, a pattern matching over the share, and a category in use the tab lacks, holding the edit
+    # Classifier errors, one source error per code, hold the edit
     def test_bank_local_corrupt_29(self):
         self._bank_run(
             "corrupt_29",
@@ -1554,11 +1497,30 @@ class WrangleTest(unittest.TestCase):
             rerun=False,
             errored={plugin.CTR_SRC_SOURCES: 10},
             file_asserts={
-                "__bank_logs.csv": [assert_file_column_distinct("Code", 12)],
+                "__bank_logs.csv": [
+                    assert_file_column_values(
+                        "Code",
+                        [
+                            "CLASSIFIER_BUCKET",
+                            "CLASSIFIER_BUDGETED",
+                            "CLASSIFIER_CATEGORY",
+                            "CLASSIFIER_CATEGORY_CASE",
+                            "CLASSIFIER_CODE_LIST",
+                            "CLASSIFIER_HELD",
+                            "CLASSIFIER_PATTERN",
+                            "CLASSIFIER_PATTERN_CONFLICT",
+                            "CLASSIFIER_SHARE",
+                            "CLASSIFIER_UNBUCKETED",
+                            "TRANSACTIONS_UNCLASSIFIED_CURRENT",
+                            "TRANSACTIONS_UNVETTED_CURRENT",
+                        ],
+                        sort_by=["Code"],
+                    )
+                ],
             },
         )
 
-    # A classifier tab with a misplaced column is unusable, a source error classifying nothing
+    # A classifier tab with a misplaced column is unusable, nothing classified
     def test_bank_local_corrupt_30(self):
         self._bank_run(
             "corrupt_30",
@@ -1571,7 +1533,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A category manual typed on the tab is merged before the sweep, so the Redbark rewrite of the year file keeps it
+    # A category manual typed on the tab survives the Redbark rewrite of its year file
     def test_bank_local_partial_30(self):
         self._bank_run(
             "partial_30",
@@ -1587,25 +1549,24 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A tab sorted by hand is not an edit: rows are matched on their id, never their position, so no file changes and the tab is rewritten in order
+    # A tab sorted by hand is no edit
     def test_bank_local_partial_31(self):
         self._bank_run(
             "partial_31",
             standing=2,
             sheet_downloads=1,
             file_asserts={
-                "manual_transactions_2026.csv": [assert_file_size(min_rows=4, max_rows=4)],
-                "_sheet_bank_transactions_2026.csv": [assert_file_column_values("Description", ["Coffee", "Fuel", "Lunch", "Null Transaction", "Null Transaction"])],
+                "manual_transactions_2026.csv": [assert_file_size(min_rows=2, max_rows=2)],
+                "_sheet_bank_transactions_2026.csv": [assert_file_column_values("Description", ["Coffee", "Fuel", "Lunch"])],
             },
         )
 
-    # An accounts tab edited after the read is not written: the cells the call found are left for the next run, while this run still checks the account
+    # An accounts tab edited after the read is not written
     def test_bank_local_partial_32(self):
         self._bank_run(
             "partial_32",
             source=True,
             sheet_downloads=0,
-            moved_tabs=("Accounts",),
             rerun=False,
             file_asserts={
                 "_sheet_bank_accounts.csv": [assert_file_column_values("Status", ["Linked", None])],
@@ -1613,7 +1574,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # No accounts tab: the accounts are fetched as before and every Redbark account is checked under its own name, without error
+    # No accounts tab, every Redbark account checked under its own name
     def test_bank_local_partial_33(self):
         self._bank_run(
             "partial_33",
@@ -1625,7 +1586,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # Unsplitting: one copy deleted and the other's amount split set back to the amount restores one whole transaction
+    # Unsplitting restores one whole transaction
     def test_bank_local_partial_34(self):
         self._bank_run(
             "partial_34",
@@ -1636,10 +1597,303 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # Release's balances and transactions year files as the test data, never downloaded so every run starts from them, one deleted from the preview drive and
-    # uploaded back, the release sheet's input tabs cached in place of the preview sheet's, and the live Redbark responses of the refresh replayed offline at its
-    # pinned clock: the due balance check and transaction sweep land the live readings and postings exactly as the refresh's online run did, the changed files
-    # upload to the preview drive, the cached tabs raise no error, and the tabs, an empty logs tab included, upload to the preview sheet
+    # Edits on a tab against its base are taken and logged, the tab not re-uploaded
+    def test_bank_local_partial_58(self):
+        self._bank_run(
+            "partial_58",
+            standing=2,
+            file_asserts={
+                "redbark_transactions_2026.csv": [
+                    assert_file_column_values("Category Manual", ["Food", None, None, None, None, None], sort_by=["Date"]),
+                    assert_file_column_values("Vetted", ["Yes", "No", None, None, None, None], sort_by=["Date"]),
+                ],
+                "_sheet_bank_transactions_2026_v1_1_run.csv": [assert_file_does_not_exist()],
+                "__bank_tab_transactions_2026.csv": [assert_file_column_values("Category Manual", [None, None, None, None, None, "Food"])],
+                "bank_reclassified_2026_01.csv": [
+                    assert_file_column_values("Source", ["sheet", "sheet"]),
+                    assert_file_column_values("Description", ["Fuel", "Shop"], sort_by=["Description"]),
+                    assert_file_column_values("Manual After", [None, "Food"], sort_by=["Description"]),
+                    assert_file_column_values("Vetted After", ["No", "Yes"], sort_by=["Description"]),
+                    assert_file_nones_per_col(include=r"File MD5"),
+                ],
+            },
+        )
+
+    # A tab edit wins its cell over a Drive edit and follows a re-dated row by source id
+    def test_bank_local_partial_59(self):
+        self._bank_run(
+            "partial_59",
+            standing=2,
+            file_asserts={
+                "redbark_transactions_2026.csv": [
+                    assert_file_column_values("Category Manual", ["Food", None], sort_by=["Date"]),
+                    assert_file_column_values("Vetted", ["No", "Yes"], sort_by=["Date"]),
+                ],
+            },
+        )
+
+    # An edit on a row no file holds is unmatched, a short or resorted tab no edit
+    def test_bank_local_corrupt_36(self):
+        self._bank_run(
+            "corrupt_36",
+            standing=2,
+            errored={plugin.CTR_SRC_DATA: 1},
+            rerun=False,
+            file_asserts={
+                "redbark_transactions_2026.csv": [
+                    assert_file_size(min_rows=4, max_rows=4),
+                    assert_file_column_values("Amount Split", ["-10.0", "-15.0", "-15.0", "-5.0"], sort_by=["Date", "Amount Split"]),
+                    assert_file_column_values("Category Manual", [None, "Car", "Food", None], sort_by=["Date", "Category Manual"]),
+                ],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["EDIT_UNMATCHED", "TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED_CURRENT"], sort_by=["Code"])],
+                "bank_reclassified_2026_01.csv": [
+                    assert_file_column_values("Part", ["1", "2"], sort_by=["Part"]),
+                    assert_file_column_values("Split Before", ["-10.0", "-20.0"], sort_by=["Part"]),
+                    assert_file_column_values("Split After", ["-15.0", "-15.0"], sort_by=["Part"]),
+                    assert_file_column_values("Manual Before", ["Food", "Car"], sort_by=["Part"]),
+                ],
+            },
+        )
+
+    # A year file changed on Drive mid-run conflicts and holds its tab, base, log and record back
+    def test_bank_local_corrupt_37(self):
+        self._bank_run(
+            "corrupt_37",
+            standing=2,
+            rerun=False,
+            errored={plugin.CTR_SRC_SOURCES: 1},
+            file_asserts={
+                "redbark_transactions_2026.csv": [assert_file_column_values("Vetted", ["Yes", None], sort_by=["Date"])],
+                "_sheet_bank_transactions_2026_v1.csv": [assert_file_does_not_exist()],
+                "__bank_tab_transactions_2026.csv": [assert_file_column_values("Vetted", [None, None])],
+                "__bank_committed.json": [assert_file_does_not_exist()],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["DRIVE_CONFLICT", "TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED_CURRENT"], sort_by=["Code"])],
+                "bank_reclassified_2026_01.csv": [assert_file_does_not_exist()],
+            },
+        )
+
+    # A run killed mid-way and run again ends as an uninterrupted run does
+    def test_bank_local_partial_60(self):
+        def _bank(_kill=None):
+            reset_config(log="warning")
+            plugin.config.repo_scope = plugin.RepoScope.LOCAL
+            plugin.config.disable_source_downloads = True
+            plugin.config.disable_sheet_downloads = True
+            plugin.config.disable_database_downloads = True
+            plugin.config.clock = datetime.datetime.fromisoformat("2026-01-15T12:00:00")
+            bank = importlib.import_module("wrangle.plugin.bank").Bank()
+            self._load_caches(bank, join(DIR_ROOT, "src/test/resources/repos/local/bank/partial_60/data"))
+            if _kill is not None:
+                calls = {"count": 0}
+                original = getattr(Plugin, _kill)
+
+                def _killed(_self, *_args, **_kwargs):
+                    calls["count"] += 1
+                    if calls["count"] == 1:
+                        raise _Killed()
+                    return original(_self, *_args, **_kwargs)
+
+                with mock.patch.object(Plugin, _kill, _killed), self.assertRaises(_Killed):
+                    bank.run()
+            bank.run()
+            return {
+                name: open(join(bank.local_cache, name), "rb").read()
+                for name in ("redbark_transactions_2026.csv", "__bank_tab_transactions_2026.csv", "__bank_committed.json", "__bank_transactions_current.csv")
+            }
+
+        expected = _bank()
+        for kill in ("csv_write", "state_cache", "sheet_upload", "logs_merged"):
+            self.assertEqual(expected, _bank(kill), kill)
+
+    # An idle run makes one Drive listing and one sheet read and uploads nothing
+    def test_bank_local_partial_61(self):
+        drive = bank_drive_offline("partial_61")
+        assert drive is not None
+        reads = []
+
+        def _values(_self, _key, _titles):
+            reads.append(list(_titles))
+            cells = {}
+            for title in _titles:
+                path = _self._sheet_cache_path(f"bank_{title}".lower())
+                if path is not None:
+                    with open(path) as tab_file:
+                        cells[title] = list(csv.reader(tab_file))
+            return cells
+
+        mock.patch.object(Plugin, "_sheet_values", _values).start()
+        mock.patch.object(plugin.Repos, "__getattr__", lambda _self, name: {"drive_folder": "folder", "sheet_key": "key"}.get(name)).start()
+        reset_config(log="warning")
+        plugin.config.repo_scope = plugin.RepoScope.LOCAL
+        plugin.config.disable_source_downloads = True
+        plugin.config.disable_database_downloads = True
+        plugin.config.disable_drive_downloads = False
+        plugin.config.disable_drive_uploads = False
+        plugin.config.clock = datetime.datetime.fromisoformat("2026-01-15T12:00:00")
+        bank = importlib.import_module("wrangle.plugin.bank").Bank()
+        self._load_caches(bank, join(DIR_ROOT, "src/test/resources/repos/local/bank/partial_61/data"))
+        bank.run()
+        drive.calls.clear()
+        reads.clear()
+        bank.reset_counters()
+        bank.run()
+        self.assertEqual(({"list": 1}, 1), (dict(drive.calls), len(reads)))
+        self.assertEqual(0, bank.get_counter(plugin.CTR_SRC_EGRESS, plugin.CTR_ACT_SHEET_ROWS))
+
+    # The weekly sweep checks ninety days, raising gone, relisted and unheld transactions
+    def test_bank_local_corrupt_38(self):
+        self._bank_run(
+            "corrupt_38",
+            today="2026-03-01T12:00:00",
+            standing=2,
+            source=True,
+            rerun=False,
+            errored={plugin.CTR_SRC_DATA: 5},
+            file_asserts={
+                "redbark_transactions_2026.csv": [
+                    assert_file_size(min_rows=5, max_rows=5),
+                    assert_file_column_values("Source ID", [None, "s3", "s1", "s2n", "s7"], sort_by=["Date"]),
+                    assert_file_column_values("Date Posted", [None, "2026-01-11", "2026-01-21", "2026-01-22", "2026-02-26"], sort_by=["Date"]),
+                ],
+                "__bank_logs.csv": [
+                    assert_file_column_values(
+                        "Code",
+                        [
+                            "TRANSACTIONS_UNCLASSIFIED",
+                            "TRANSACTIONS_UNVETTED",
+                            "TRANSACTION_GONE",
+                            "TRANSACTION_RELISTED",
+                            "TRANSACTION_RELISTED",
+                            "TRANSACTION_RELISTED",
+                            "TRANSACTION_UNHELD",
+                        ],
+                        sort_by=["Code"],
+                    )
+                ],
+            },
+        )
+
+    # A new AMEX export maps by overlap, is renamed and imported
+    def test_bank_local_partial_62(self):
+        self._bank_run(
+            "partial_62",
+            standing=2,
+            file_asserts={
+                "activity.csv": [assert_file_does_not_exist()],
+                "amex_xxxx0002_transactions_2026-01-14.csv": [assert_file_size(min_rows=7, max_rows=7)],
+                "manual_transactions_2026.csv": [
+                    assert_file_size(min_rows=7, max_rows=7),
+                    assert_file_columns(list(TRANSACTIONS_SCHEMA)),
+                    assert_file_column_values(
+                        "Description", ["REFUND THREE", "SPLIT FOUR", "SPLIT FOUR", "SHOP TWO", "SHOP TWO", "SHOP TWO", "CAFE  ONE    PERTH"], sort_by=["Date", "Category Manual"]
+                    ),
+                    assert_file_column_values("Amount", ["20.0", "-30.0", "-30.0", "-12.0", "-12.0", "-12.0", "-4.5"], sort_by=["Date", "Category Manual"]),
+                    assert_file_column_values("Amount Split", ["20.0", "-20.0", "-10.0", "-12.0", "-12.0", "-12.0", "-4.5"], sort_by=["Date", "Amount Split", "Category Manual"]),
+                    assert_file_column_values("Category Manual", [None, None, None, None, None, "Groceries", None], sort_by=["Date", "Category Manual"]),
+                    assert_file_column_values("Date Posted", ["2026-01-03", "2026-01-11", "2026-01-11", "2026-01-14", "2026-01-14", "2026-01-14", "2026-01-15"], sort_by=["Date"]),
+                    assert_file_column_distinct("Transaction ID", 6),
+                ],
+                "__bank_transactions_current.csv": [assert_file_size(min_rows=7, max_rows=7), assert_file_column_distinct("Transaction ID", 6)],
+            },
+        )
+
+    # Overlapping and identical AMEX exports map by card and add each row once
+    def test_bank_local_partial_63(self):
+        self._bank_run(
+            "partial_63",
+            standing=2,
+            file_asserts={
+                "amex_xxxx0002_transactions_2026-01-12.csv": [assert_file_size(min_rows=3, max_rows=3)],
+                "amex_xxxx0002_transactions_2026-01-12_2.csv": [assert_file_size(min_rows=3, max_rows=3)],
+                "activity.csv": [assert_file_does_not_exist()],
+                "activity-2.csv": [assert_file_does_not_exist()],
+                "manual_transactions_2026.csv": [assert_file_column_values("Description", ["COFFEE", "LUNCH", "DINNER"], sort_by=["Date"])],
+            },
+        )
+
+    # A standard run reads only exports changed on Drive
+    def test_bank_local_partial_64(self):
+        self._bank_run(
+            "partial_64",
+            standing=2,
+            file_asserts={"manual_transactions_2026.csv": [assert_file_column_values("Description", ["COFFEE", "DINNER"], sort_by=["Date"])]},
+        )
+
+    # A forced download reads every export again
+    def test_bank_local_partial_65(self):
+        self._bank_run(
+            "partial_65",
+            standing=2,
+            rerun=False,
+            downloads=True,
+            file_asserts={"manual_transactions_2026.csv": [assert_file_column_values("Description", ["COFFEE", "LUNCH", "DINNER"], sort_by=["Date"])]},
+        )
+
+    # AMEX exports renamed by hand, of a linked account or unmapped
+    def test_bank_local_corrupt_39(self):
+        self._bank_run(
+            "corrupt_39",
+            standing=2,
+            rerun=False,
+            errored={plugin.CTR_SRC_SOURCES: 1, plugin.CTR_SRC_DATA: 1},
+            file_asserts={
+                "activity.csv": [assert_file_does_exist()],
+                "manual_transactions_2026.csv": [assert_file_column_values("Description", ["BOOKS"]), assert_file_column_values("Account", ["Other Card"])],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["ACCOUNT_LINKED", "IMPORT_UNMAPPED", "TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED_CURRENT"], sort_by=["Code"])],
+            },
+        )
+
+    # An unreadable AMEX export is left unrenamed and unimported
+    def test_bank_local_corrupt_40(self):
+        self._bank_run(
+            "corrupt_40",
+            rerun=False,
+            errored={plugin.CTR_SRC_SOURCES: 3},
+            file_asserts={
+                "activity.csv": [assert_file_does_exist()],
+                "activity-2.csv": [assert_file_does_exist()],
+                "activity-3.csv": [assert_file_does_exist()],
+                "manual_transactions_2026.csv": [assert_file_does_not_exist()],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["IMPORT_UNREADABLE"] * 3)],
+            },
+        )
+
+    # Held rows inside an export's dates that no export lists are gone or suspect
+    def test_bank_local_corrupt_41(self):
+        self._bank_run(
+            "corrupt_41",
+            standing=5,
+            file_asserts={
+                "manual_transactions_2026.csv": [assert_file_size(min_rows=5, max_rows=5)],
+                "__bank_logs.csv": [
+                    assert_file_column_values(
+                        "Code",
+                        ["IMPORT_GONE", "IMPORT_GONE", "IMPORT_SUSPECT", "TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED_CURRENT"],
+                        sort_by=["Code"],
+                    )
+                ],
+            },
+        )
+
+    # An AMEX export whose Drive rename fails keeps its name and is not imported
+    def test_bank_local_corrupt_42(self):
+        def _drive_rename(self, *_args, **_kwargs):
+            self.add_counter(plugin.CTR_SRC_EGRESS, plugin.CTR_ACT_ERRORED)
+            return False
+
+        mock.patch.object(Plugin, "drive_rename", _drive_rename).start()
+        self._bank_run(
+            "corrupt_42",
+            standing=2,
+            rerun=False,
+            errored={plugin.CTR_SRC_EGRESS: 1},
+            file_asserts={
+                "activity.csv": [assert_file_does_exist()],
+                "manual_transactions_2026.csv": [assert_file_column_values("Description", ["COFFEE", "LUNCH"], sort_by=["Date"])],
+            },
+        )
+
+    # Lots of current data, a specific amount of new data, no remote source data downloads, downloads and uploads from and to preview data repo
     @pytest.mark.xfail(strict=True, reason="production data cleanup")
     def test_bank_preview_replete_1(self):
         fixture = _load_fixture("preview", "bank", "replete_1")
@@ -1707,9 +1961,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # Balances and transactions current state from the release data repo, live balances and transactions downloaded from the source and the release sheet read, no
-    # remote data repo uploads: both states gain the live data, the run and the reprocess commit identical states, and the real accounts and classifier tabs raise
-    # no error
+    # Lots of current data, a lot of live new data, downloads from remote sources, downloads from release data repo, no remote data repo uploads
     @pytest.mark.xfail(strict=True, reason="production data cleanup")
     def test_bank_release_replete_1(self):
         fixture = _load_fixture("release", "bank", "replete_1")
@@ -2377,6 +2629,30 @@ class WrangleTest(unittest.TestCase):
                 ],
             },
         )
+
+    # An index weights tab that cannot be read skips the commit and the uploads and errors every file, as a failed commit does
+    def test_equity_local_corrupt_4(self):
+        sheet_download = Plugin.sheet_download
+
+        def _sheet_download(self, drive_key, workbook_name, *args, **kwargs):
+            if workbook_name == "Portfolio":
+                raise RuntimeError("index weights unreadable")
+            return sheet_download(self, drive_key, workbook_name, *args, **kwargs)
+
+        mock.patch.object(Plugin, "sheet_download", _sheet_download).start()
+        reset_config(log="warning")
+        plugin.config.repo_scope = plugin.RepoScope.LOCAL
+        for flag in ("disable_source_downloads", "disable_sheet_downloads", "disable_database_downloads", "disable_drive_downloads"):
+            setattr(plugin.config, flag, True)
+        plugin.config.force_reprocessing = True
+        equity = importlib.import_module("wrangle.plugin.equity").Equity()
+        data_dir = join(DIR_ROOT, "src/test/resources/repos/local/equity/replete_1/data")
+        self._load_caches(equity, data_dir)
+        equity.run()
+        self.assertTrue(filecmp.cmp(join(data_dir, "__equity_current.csv"), join(equity.local_cache, "__equity_current.csv"), shallow=False))
+        self.assertEqual([], glob.glob(join(equity.local_cache, "_sheet_prices_history*")) + glob.glob(join(equity.local_cache, "_database_equity.csv")))
+        processed, errored = (equity.get_counter(plugin.CTR_SRC_FILES, action) for action in (plugin.CTR_ACT_PROCESSED, plugin.CTR_ACT_ERRORED))
+        self.assertEqual((True, processed + equity.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)), (processed > 0, errored))
 
     # Lots of current data, a specific amount of new data, no remote source data downloads, downloads and uploads from and to preview data repo
     def test_equity_preview_replete_1(self):
@@ -3047,7 +3323,7 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(DownloadResult(DownloadStatus.CACHED, download.file_paths), blind)
         plugin.config.force_downloads = True
         forced = test.sheet_download(data_key, "Index_weights", "Indexes", 2, check=False)
-        self.assertEqual(DownloadResult(DownloadStatus.DOWNLOADED, download.file_paths), forced)
+        self.assertEqual(DownloadResult(DownloadStatus.CACHED, download.file_paths), forced)
         plugin.config.force_downloads = False
         data_df = _sheet_read(download)
         self.assertEqual(data_str.format("Float64"), test.dataframe_to_str(data_df))
@@ -3056,20 +3332,116 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(data_str.format(test.dataframe_type_to_str(pl.Utf8)), test.dataframe_to_str(data_df))
         self.assertEqual(24, len(data_df))
 
-        plugin.config.force_downloads = True
         batch = test.sheet_download(data_key, "Index_weights", ["Indexes", "Absent"], 2, schema={"Exchange Symbol": pl.Utf8, "Unit Price": pl.Float64})
-        plugin.config.force_downloads = False
-        self.assertEqual(DownloadStatus.DOWNLOADED, batch.file_status)
-        self.assertEqual(2, len(batch.file_paths))
-        self.assertEqual(24, len(test.csv_read(batch.file_paths[0])))
-        self.assertEqual(0, len(test.csv_read(batch.file_paths[1])))
-        self.assertEqual(DownloadStatus.CACHED, test.sheet_download(data_key, "Index_weights", ["Indexes", "Absent"], 2).file_status)
+        self.assertEqual({"Indexes": DownloadStatus.DOWNLOADED, "Absent": DownloadStatus.DOWNLOADED}, {tab: result.file_status for tab, result in batch.items()})
+        self.assertEqual(24, len(test.csv_read(batch["Indexes"].file_paths[0])))
+        self.assertEqual(0, len(test.csv_read(batch["Absent"].file_paths[0])))
+        self.assertEqual(
+            {"Indexes": DownloadStatus.CACHED, "Absent": DownloadStatus.CACHED},
+            {
+                tab: result.file_status
+                for tab, result in test.sheet_download(data_key, "Index_weights", ["Indexes", "Absent"], 2, schema={"Exchange Symbol": pl.Utf8, "Unit Price": pl.Float64}).items()
+            },
+        )
 
     def test_bank_flag(self):
         values = ["Yes", " yes ", "YES", "No", "no\t", " NO", "y", "", None, "true", "Yes No"]
         self.assertEqual(
             ["Yes", "Yes", "Yes", "No", "No", "No", None, None, None, None, None], pl.DataFrame({"Value": values}, schema={"Value": pl.Utf8}).select(bank_flag("Value"))["Value"].to_list()
         )
+
+    def test_bank_tab_edits(self):
+        test = PluginStub("Test", "SOME_NON_EXISTANT_GUID")
+        columns = ["Date", "Account", "Amount", "Amount Split", "Description", "Vetted", "Category", "Bucket", "Category Manual", "Category Derived", "Account ID", "Source ID", "Transaction ID"]
+        base = [
+            ["2026-01-02", "One", "-10.0", "-10.0", "Shop", "", "Food", "Living", "", "Food", "a1", "s1", "t1"],
+            ["2026-01-03", "One", "-20.0", "-20.0", "Fuel", "Yes", "Car", "Costs", "", "Car", "a1", "s2", "t2"],
+            ["2026-01-04", "One", "-30.0", "-30.0", "Rent", "No", "", "", "", "", "a1", "", "t3"],
+        ]
+
+        def _tab(_rows, _columns=None):
+            return test.sheet_typed(pl.DataFrame(_rows, schema=dict.fromkeys(_columns or columns, pl.Utf8), orient="row"), TRANSACTIONS_YEAR_TAB_SCHEMA)
+
+        def _edited(_rows, _column, _value, _index=0):
+            _rows = copy.deepcopy(_rows)
+            _rows[_index][columns.index(_column)] = _value
+            return _rows
+
+        def _parts(*_parts):
+            return [{"Amount Split": split, "Category Manual": manual, "Vetted": vetted} for split, manual, vetted in _parts]
+
+        for label, tab_rows, tab_columns, expected in [
+            ("unchanged", base, None, ({}, 0, 0)),
+            ("sorted", list(reversed(base)), None, ({}, 0, 0)),
+            ("restyled", [[*row[:2], "$" + row[2].replace(".0", ".00"), *row[3:]] for row in base], None, ({}, 0, 0)),
+            ("category manual", _edited(base, "Category Manual", "Groceries"), None, ({"t1": _parts((-1000, "Groceries", None))}, 0, 0)),
+            ("vetted", _edited(base, "Vetted", " yes "), None, ({"t1": _parts((-1000, None, "Yes"))}, 0, 0)),
+            ("vetted cleared", _edited(base, "Vetted", "", 1), None, ({"t2": _parts((-2000, None, None))}, 0, 0)),
+            ("split", [*_edited(base, "Amount Split", "-4.0"), _edited(base, "Amount Split", "-6.0")[0]], None, ({"t1": _parts((-400, None, None), (-600, None, None))}, 0, 0)),
+            ("formula", _edited(_edited(base, "Category", "Other"), "Bucket", "Elsewhere"), None, ({}, 0, 0)),
+            ("description", _edited(base, "Description", "Shop Two"), None, ({}, 1, 0)),
+            ("description and vetted", _edited(_edited(base, "Description", "Shop Two"), "Vetted", "Yes"), None, ({"t1": _parts((-1000, None, "Yes"))}, 1, 0)),
+            ("idless", [*base, ["2026-01-05", "Cash", "-1.0", "", "Typed", "", "", "", "", "", "", "", ""]], None, ({}, 0, 1)),
+            ("cut short", base[:1], None, ({}, 0, 0)),
+            (
+                "without vetted",
+                [[*row[:5], *row[6:]] for row in _edited(base, "Category Manual", "Groceries")],
+                [column for column in columns if column != "Vetted"],
+                ({"t1": _parts((-1000, "Groceries", None))}, 0, 0),
+            ),
+        ]:
+            edits, ignored, idless = bank_tab_edits(_tab(tab_rows, tab_columns), _tab(base))
+            self.assertEqual(expected, ({transaction_id: edit["Tab"] for transaction_id, edit in edits.items()}, ignored, idless), label)
+        edits, _, _ = bank_tab_edits(_tab(_edited(base, "Vetted", "maybe")), _tab(base))
+        self.assertEqual("maybe", edits["t1"]["Bad Vetted"])
+        edits, _, _ = bank_tab_edits(_tab([[*row[:5], *row[6:]] for row in _edited(base, "Category Manual", "Groceries")], [column for column in columns if column != "Vetted"]), _tab(base))
+        self.assertEqual(["Amount Split", "Category Manual"], edits["t1"]["Present"])
+
+    def test_bank_export_parsed(self):
+        header = "Date,Date Processed,Description,Card Member,Account #,Amount"
+        for label, content, expected in [
+            (
+                "credit and charge",
+                f"\ufeff{header}\r\n14/01/2026,15/01/2026,CAFE  ONE  ,A MEMBER,-00001,4.50\r\n13/01/2026,14/01/2026,REFUND,B MEMBER,-00002,-20.00",
+                ([("2026-01-14", "2026-01-15", -4.5, "CAFE  ONE", "-00001"), ("2026-01-13", "2026-01-14", 20.0, "REFUND", "-00002")], 0),
+            ),
+            ("dollars and pending", f'{header}\n02/01/2026,,PENDING,A,-00001,1.00\n03/01/2026,04/01/2026,BIG,A,-00001,"$1,234.50"\n', ([("2026-01-03", "2026-01-04", -1234.5, "BIG", "-00001")], 1)),
+            ("empty", f"{header}\n", ([], 0)),
+        ]:
+            parsed_df, pending = bank_export_parsed(content.encode())
+            self.assertEqual(expected, ([(str(row[0]), str(row[1]), row[2], row[3], row[4]) for row in parsed_df.rows()], pending), label)
+        for label, content in [
+            ("header", "Date,Description,Amount\n14/01/2026,X,1.00\n"),
+            ("date", f"{header}\n2026-01-14,15/01/2026,X,A,-00001,1.00\n"),
+            ("month", f"{header}\n01/13/2026,15/01/2026,X,A,-00001,1.00\n"),
+            ("decimals", f"{header}\n14/01/2026,15/01/2026,X,A,-00001,1.005\n"),
+            ("amount", f"{header}\n14/01/2026,15/01/2026,X,A,-00001,lots\n"),
+            ("cells", f"{header}\n14/01/2026,15/01/2026,X,A,1.00\n"),
+        ]:
+            with self.assertRaises(ValueError, msg=label):
+                bank_export_parsed(content.encode())
+
+    def test_bank_export_account(self):
+        export_df = pl.DataFrame(
+            [(date_type(2026, 1, day), -float(day), f"SHOP  {day}", card) for day, card in ((1, "-00001"), (2, "-00002"), (3, "-00001"), (20, "-00001"))],
+            schema={"Date": pl.Date, "Amount": pl.Float64, "Description": pl.Utf8, "Card": pl.Utf8},
+            orient="row",
+        )
+        accounts_df = pl.DataFrame({"Account ID": ["x", "y"]})
+
+        def _held(_rows):
+            return pl.DataFrame(_rows, schema={"Account ID": pl.Utf8, "Date": pl.Date, "Amount": pl.Float64, "Description": pl.Utf8}, orient="row")
+
+        overlap = [("x", date_type(2026, 1, 1), -1.0, "SHOP 1"), ("x", date_type(2026, 1, 3), -3.0, "SHOP 3"), ("x", date_type(2026, 1, 5), -9.0, "OTHER")]
+        for label, cards, held, expected in [
+            ("card", {"-00002": "y"}, overlap, ("y", "card")),
+            ("cards of two accounts", {"-00001": "x", "-00002": "y"}, overlap, (None, "cards of more than one account")),
+            ("overlap", {}, overlap, ("x", "overlap")),
+            ("overlap split", {}, [*overlap, ("y", date_type(2026, 1, 2), -2.0, "SHOP 2"), ("y", date_type(2026, 1, 3), -3.0, "SHOP 3")], (None, "overlap with more than one account")),
+            ("new card, no overlap", {"-00009": "x"}, [("x", date_type(2026, 1, 1), -5.0, "ELSE")], (None, "no overlap")),
+            ("nothing held", {}, [], (None, "no overlap")),
+        ]:
+            self.assertEqual(expected, bank_export_account(export_df, cards, accounts_df, _held(held)), label)
 
     def test_library_sheet_ensure(self):
         test = PluginStub("Test", "SOME_NON_EXISTANT_GUID")
@@ -3230,11 +3602,237 @@ class WrangleTest(unittest.TestCase):
         with open(join(test.local_cache, "_sheet_format_tab_format.json")) as format_file:
             self.assertEqual({"raw": [], "formulas": {}, "dropdowns": {}, "highlights": []}, json.load(format_file))
         self.assertEqual(5, test.get_counter(plugin.CTR_SRC_EGRESS, plugin.CTR_ACT_ERRORED))
-        self.assertTrue(isfile(join(test.local_cache, "_sheet_format_tab.csv")))
+        self.assertEqual(["_sheet_format_tab_v1.csv", "_sheet_format_tab_v2.csv"], sorted(basename(path) for path in glob.glob(join(test.local_cache, "_sheet_format_tab_v*.csv"))))
         test.sheet_upload(data_df, None, "Format", sheet_name="Tab", dropdown_columns={"Note": ["Yes", "No"], "Amount": [], "Amount Manual": ["Yes", ""]})
         with open(join(test.local_cache, "_sheet_format_tab_format.json")) as format_file:
             self.assertEqual({"raw": [], "formulas": {}, "dropdowns": {"Note": ["Yes", "No"]}, "highlights": []}, json.load(format_file))
         self.assertEqual(7, test.get_counter(plugin.CTR_SRC_EGRESS, plugin.CTR_ACT_ERRORED))
+
+    def test_library_sheet_versions(self):
+        test = PluginStub("Test", "SOME_NON_EXISTANT_GUID")
+        tabs = {"Tab": [["Date", "Amount", "Note"], ["2026-01-02", "1234.0", "a"]], "Other": [["Name"], ["x"]]}
+        reads = []
+
+        def _values(_self, _key, _titles):
+            reads.append(list(_titles))
+            return {title: copy.deepcopy(tabs[title]) for title in _titles if title in tabs}
+
+        mock.patch.object(Plugin, "_sheet_values", _values).start()
+        plugin.config.disable_sheet_downloads = False
+        schema = {"Date": pl.Date, "Amount": pl.Float64, "Note": pl.Utf8, "Name": pl.Utf8}
+
+        def _statuses(_results):
+            return {tab: (result.file_status, basename(result.file_paths[0]) if result.file_paths else None) for tab, result in _results.items()}
+
+        self.assertEqual(
+            {
+                "Tab": (DownloadStatus.DOWNLOADED, "_sheet_book_tab_v1.csv"),
+                "Other": (DownloadStatus.DOWNLOADED, "_sheet_book_other_v1.csv"),
+                "Absent": (DownloadStatus.DOWNLOADED, "_sheet_book_absent_v1.csv"),
+            },
+            _statuses(test.sheet_download("key", "Book", ["Tab", "Other", "Absent"], schema=schema)),
+        )
+        tabs["Tab"][1] = ["02/01/2026", "$1,234.00", " a "]
+        self.assertEqual({"Tab": (DownloadStatus.CACHED, "_sheet_book_tab_v1.csv")}, _statuses(test.sheet_download("key", "Book", ["Tab"], schema=schema)))
+        tabs["Tab"][1] = ["2026-01-02", "1234.5", "a"]
+        self.assertEqual({"Tab": (DownloadStatus.DOWNLOADED, "_sheet_book_tab_v2.csv")}, _statuses(test.sheet_download("key", "Book", ["Tab"], schema=schema)))
+        self.assertEqual(DownloadStatus.CACHED, test.sheet_download("key", "Book", "Tab", schema=schema).file_status)
+        self.assertEqual(DownloadStatus.CACHED, test.sheet_download("key", "Book", "Tab", schema=schema, check=False).file_status)
+        self.assertEqual(4, len(reads))
+        upload_df = pl.DataFrame({"Date": [date_type(2026, 1, 3)], "Amount": [7.0], "Note": ["b"]})
+        self.assertEqual(plugin.UploadStatus.UPLOADED, test.sheet_upload(upload_df, None, "Book", sheet_name="Tab", schema=schema))
+        self.assertEqual(["_sheet_book_tab_v2.csv", "_sheet_book_tab_v3.csv"], sorted(basename(path) for path in glob.glob(join(test.local_cache, "_sheet_book_tab_v*.csv"))))
+        self.assertEqual(plugin.UploadStatus.UNCHANGED, test.sheet_upload(upload_df, None, "Book", sheet_name="Tab", schema=schema))
+        tabs["Tab"][1] = ["03/01/2026", "7", "b"]
+        self.assertEqual(plugin.UploadStatus.UPLOADED, test.sheet_upload(upload_df.with_columns(pl.lit("c").alias("Note")), "key", "Book", sheet_name="Tab", schema=schema, guard=True))
+        tabs["Tab"][1] = ["03/01/2026", "8", "c"]
+        self.assertEqual(plugin.UploadStatus.MOVED, test.sheet_upload(upload_df, "key", "Book", sheet_name="Tab", schema=schema, guard=True))
+        plugin.config.disable_sheet_downloads = True
+        self.assertEqual({"Tab": DownloadStatus.CACHED, "Missing": DownloadStatus.FAILED}, {tab: result.file_status for tab, result in test.sheet_download("key", "Book", ["Tab", "Missing"]).items()})
+
+    def test_library_drive_synchronise(self):
+        test = PluginStub("Test", "folder")
+        test.drive_download_only = ("activity*.csv",)
+        test.error_codes = {"DRIVE_CONFLICT": (plugin.LOG_KIND_ERROR, False, plugin.CTR_SRC_SOURCES), "DRIVE_DUPLICATE": (plugin.LOG_KIND_ERROR, False, plugin.CTR_SRC_SOURCES)}
+        plugin.config.repo_scope = plugin.RepoScope.RELEASE
+        plugin.config.disable_drive_downloads = False
+        plugin.config.disable_drive_uploads = False
+        drive = _FakeDrive()
+        drive.put("a.csv", b"1")
+        drive.put("dup.csv", b"x")
+        drive.put("dup.csv", b"y")
+        activity_ids = [drive.put("activity.csv", b"e1"), drive.put("activity.csv", b"e2")]
+        drive.patch()
+        errors = []
+
+        def _sync(download=True, upload=False):
+            return {basename(path): str(status) for path, status in test.drive_synchronise("folder", test.local_cache, download=download, upload=upload, errors=errors).items()}
+
+        def _local(name):
+            with open(join(test.local_cache, name), "rb") as local_file:
+                return local_file.read()
+
+        def _write(name, content):
+            with open(join(test.local_cache, name), "wb") as local_file:
+                local_file.write(content)
+
+        def _codes():
+            codes = sorted({error["Code"] for error in errors})
+            errors.clear()
+            return codes
+
+        activity_names = [f"activity_{drive_id.lower()}.csv" for drive_id in activity_ids]
+        self.assertEqual({"a.csv": "downloaded", **dict.fromkeys(activity_names, "downloaded")}, _sync())
+        self.assertEqual(["DRIVE_DUPLICATE"], _codes())
+        self.assertFalse(isfile(join(test.local_cache, "dup.csv")))
+        self.assertEqual({"a.csv": "cached", **dict.fromkeys(activity_names, "cached")}, _sync())
+        drive.put("a.csv", b"2")
+        self.assertEqual("downloaded", _sync()["a.csv"])
+        self.assertEqual(b"2", _local("a.csv"))
+        _write("a.csv", b"local")
+        drive.put("a.csv", b"3")
+        self.assertEqual("conflicted", _sync()["a.csv"])
+        self.assertEqual((b"3", ["DRIVE_CONFLICT", "DRIVE_DUPLICATE"]), (_local("a.csv"), _codes()))
+        _write("a.csv", b"4")
+        _write("b.csv", b"new")
+        _write(activity_names[0], b"edited")
+        self.assertEqual({"a.csv": "uploaded", "b.csv": "uploaded"}, {name: status for name, status in _sync(download=False, upload=True).items() if name in ("a.csv", "b.csv")})
+        self.assertEqual((b"4", b"new", b"e1"), (drive.content("a.csv"), drive.content("b.csv"), drive.content_by_id(activity_ids[0])))
+        self.assertEqual("verified", _sync(download=False, upload=True)["a.csv"])
+        _write("a.csv", b"5")
+        drive.put("a.csv", b"6")
+        self.assertEqual("conflicted", _sync(download=False, upload=True)["a.csv"])
+        self.assertEqual((b"6", ["DRIVE_CONFLICT"]), (drive.content("a.csv"), _codes()))
+        self.assertTrue(test.drive_rename("folder", test.local_cache, activity_names[1], "amex_xxxx0001_transactions_2026-01-31.csv"))
+        self.assertEqual("amex_xxxx0001_transactions_2026-01-31.csv", drive.name_by_id(activity_ids[1]))
+        self.assertTrue(isfile(join(test.local_cache, "amex_xxxx0001_transactions_2026-01-31.csv")))
+        with open(join(test.local_cache, "_drive_synced.json")) as manifest_file:
+            manifest = json.load(manifest_file)
+        self.assertIn("amex_xxxx0001_transactions_2026-01-31.csv", manifest)
+        self.assertNotIn(activity_names[1], manifest)
+        os.remove(join(test.local_cache, "_drive_synced.json"))
+        self.assertEqual("cached", _sync()["b.csv"])
+        with open(join(test.local_cache, "_drive_synced.json")) as manifest_file:
+            self.assertIn("b.csv", json.load(manifest_file))
+
+    def test_library_throttle(self):
+        waits = []
+        mock.patch("wrangle.plugin._throttle.time.sleep", waits.append).start()
+
+        def _sent(_responses):
+            def _send():
+                status, headers = _responses.pop(0) if len(_responses) > 1 else _responses[0]
+                message = Message()
+                for key, value in headers.items():
+                    message[key] = value
+                if status != 200:
+                    raise urllib.error.HTTPError("https://example", status, "offline fixture error", message, None)
+                return urllib.response.addinfourl(io.BytesIO(b"{}"), message, "https://example", 200)
+
+            return _send
+
+        for label, calls, expected_waits, expected_raised in [
+            ("retry after then backoff", [[(429, {"Retry-After": "2"}), (503, {}), (200, {})]], [2, 10], [False]),
+            ("retry after as a date", [[(429, {"Retry-After": "Thu, 01 Jan 2099 00:00:00 GMT"}), (200, {})]], [60], [False]),
+            ("not retried", [[(500, {}), (200, {})]], [], [True]),
+            ("reset waited before the next call", [[(200, {"X-RateLimit-Remaining": "0", "X-RateLimit-Reset": "3"})], [(200, {})]], [3], [False, False]),
+            ("retries exhausted", [[(429, {})]], [5, 10, 20, 40], [True]),
+            ("budget shared by calls", [[(429, {})]] * 4, [5, 10, 20, 40, 5, 10, 20, 40, 5, 10, 15], [True] * 4),
+        ]:
+            waits.clear()
+            throttle = Throttle("test", plugin.REDBARK_BACKOFF, lambda *_args, **_kwargs: None)
+            raised = []
+            for responses in calls:
+                try:
+                    throttle.call(_sent(list(responses)), urllib_failed)
+                    raised.append(False)
+                except urllib.error.HTTPError:
+                    raised.append(True)
+            self.assertEqual((expected_waits, expected_raised), ([round(wait) for wait in waits], raised), label)
+        throttle.reset()
+        self.assertEqual((0.0, 0.0), (throttle.waited, throttle.resume))
+
+    def test_library_throttle_adapters(self):
+        def _google(_status, _reason=None, _retry=None):
+            content = json.dumps({"error": {"code": _status, "message": "m", "errors": [{"reason": _reason}] if _reason else []}}).encode()
+            return googleapiclient.errors.HttpError(httplib2.Response({"status": _status, **({"retry-after": _retry} if _retry else {})}), content)
+
+        def _gspread(_status):
+            response = requests.Response()
+            response.status_code = _status
+            response._content = json.dumps({"error": {"code": _status, "message": "m", "status": "s"}}).encode()
+            return gspread.exceptions.APIError(response)
+
+        for label, failed, exception, expected in [
+            ("google rate limit", google_failed, _google(429, _retry="7"), (429, "7")),
+            ("google user rate limit as 403", google_failed, _google(403, "userRateLimitExceeded"), (429, None)),
+            ("google forbidden", google_failed, _google(403, "forbidden"), (403, None)),
+            ("google backend", google_failed, _google(503, "backendError"), (503, None)),
+            ("gspread rate limit", google_failed, _gspread(429), (429, None)),
+            ("google transport", google_failed, TimeoutError("timed out"), (503, None)),
+            ("google other", google_failed, ValueError("bad"), None),
+            ("yahoo rate limit", yahoo_failed, yfinance.exceptions.YFRateLimitError(), (429, None)),
+            ("yahoo other", yahoo_failed, ValueError("bad"), None),
+        ]:
+            failure = failed(exception)
+            self.assertEqual(expected, None if failure is None else (failure[0], failure[1].get("Retry-After") if failure[1] is not None else None), label)
+
+    def test_library_drive_throttled(self):
+        waits = []
+        mock.patch("wrangle.plugin._throttle.time.sleep", waits.append).start()
+        test = PluginStub("Test", "folder")
+        test.throttles = {"google_drive": Throttle("google_drive", plugin.GOOGLE_DRIVE_BACKOFF, test.print_log)}
+        plugin.config.repo_scope = plugin.RepoScope.RELEASE
+        plugin.config.disable_drive_downloads = False
+        drive = _FakeDrive()
+        drive.put("a.csv", b"1")
+        drive.failures = [googleapiclient.errors.HttpError(httplib2.Response({"status": 403}), json.dumps({"error": {"errors": [{"reason": "rateLimitExceeded"}]}}).encode())]
+        drive.patch()
+        self.assertEqual({"a.csv": "downloaded"}, {basename(path): str(status) for path, status in test.drive_synchronise("folder", test.local_cache, download=True).items()})
+        self.assertEqual(([2], 2), ([round(wait) for wait in waits], drive.calls["list"]))
+
+    def test_library_stock_throttled(self):
+        waits, calls = [], []
+        mock.patch("wrangle.plugin._throttle.time.sleep", waits.append).start()
+
+        class _Ticker:
+            def __init__(self, _ticker):
+                pass
+
+            def history(self, **_kwargs):
+                calls.append(1)
+                if len(calls) == 1:
+                    raise yfinance.exceptions.YFRateLimitError()
+                return pd.DataFrame({"Close": [1.0]}, index=pd.DatetimeIndex(["2026-01-05"]))
+
+        mock.patch("wrangle.plugin._sources.yf.Ticker", _Ticker).start()
+        plugin.config.disable_source_downloads = False
+        plugin.config.clock = datetime.datetime.fromisoformat("2026-02-01T12:00:00")
+        test = PluginStub("Test", "SOME_NON_EXISTANT_GUID")
+        test.throttles = {"yahoo": Throttle("yahoo", plugin.YAHOO_BACKOFF, test.print_log)}
+        local_path = join(test.local_cache, "yahoo_test_2026-01.csv")
+        self.assertEqual(DownloadStatus.DOWNLOADED, test.stock_download(local_path, "TEST", "2026-01-01", "2026-01-31", check=False).file_status)
+        self.assertEqual(([5], 2), ([round(wait) for wait in waits], len(calls)))
+
+    def test_library_redbark_throttled(self):
+        requested = []
+
+        def _urlopen(request, *_args, **_kwargs):
+            requested.append(request.full_url)
+            if len(requested) == 1:
+                raise urllib.error.HTTPError(request.full_url, 429, "offline fixture error", Message(), None)
+            return urllib.response.addinfourl(io.BytesIO(json.dumps({"data": [{"id": "r1"}], "pagination": {"hasMore": False}}).encode()), Message(), request.full_url, 200)
+
+        mock.patch("wrangle.plugin._sources.urllib.request.urlopen", _urlopen).start()
+        mock.patch("wrangle.plugin._throttle.time.sleep", lambda _seconds: None).start()
+        plugin.config.disable_source_downloads = False
+        local_path = join(DIR_ROOT, "target", "data", "_redbark_things.csv")
+        unregistered = PluginStub("Test", "SOME_NON_EXISTANT_GUID")
+        self.assertEqual(([429], 1), ([error["Status"] for error in unregistered.redbark_download(["/v1/things"], local_path, ["id"], ignore=True).errors], len(requested)))
+        requested.clear()
+        registered = PluginStub("Test", "SOME_NON_EXISTANT_GUID")
+        registered.throttles = {"redbark": Throttle("redbark", plugin.REDBARK_BACKOFF, registered.print_log)}
+        self.assertEqual((DownloadStatus.DOWNLOADED, 2), (registered.redbark_download(["/v1/things"], local_path, ["id"]).file_status, len(requested)))
 
     def test_library_database(self):
         test = PluginStub("Test", "SOME_NON_EXISTANT_GUID")
@@ -4416,8 +5014,6 @@ class WrangleTest(unittest.TestCase):
         today="2026-01-15T12:00:00",
         source=False,
         sheet_downloads=None,
-        moved_tabs=(),
-        restyled_tabs=(),
         rerun=True,
         force=False,
         downloads=False,
@@ -4426,18 +5022,11 @@ class WrangleTest(unittest.TestCase):
         counters=None,
         file_asserts=None,
         custom_asserts=None,
-        drive_failed=False,
     ):
         bank_api_offline(test_name)
         if sheet_downloads is not None:
-            sheet_download_offline(sheet_downloads, moved_tabs, restyled_tabs)
-        if drive_failed:
-
-            def _drive_synchronise(self, *_args, **_kwargs):
-                self.add_counter(plugin.CTR_SRC_SOURCES, plugin.CTR_ACT_ERRORED)
-                return {}
-
-            mock.patch.object(Plugin, "drive_synchronise", _drive_synchronise).start()
+            sheet_download_offline(sheet_downloads)
+        drive = bank_drive_offline(test_name) is not None
         self.run_plugin(
             "bank",
             plugin.RepoScope.LOCAL,
@@ -4445,11 +5034,11 @@ class WrangleTest(unittest.TestCase):
             log_level="info",
             disable_sheet_downloads=True,
             disable_database_downloads=True,
-            disable_drive_downloads=not drive_failed,
+            disable_drive_downloads=True,
             disable_source_downloads=not source,
             disable_sheet_uploads=True,
             disable_database_uploads=True,
-            disable_drive_uploads=True,
+            disable_drive_uploads=not drive,
             enable_rerun=rerun,
             force_reprocessing=force,
             force_downloads=downloads,
@@ -4524,16 +5113,17 @@ class WrangleTest(unittest.TestCase):
                     expanded = [filename]
                 for expanded_filename in expanded:
                     file_path = join(plugin_module.local_cache, expanded_filename)
-                    if not isfile(file_path) and expanded_filename.endswith(".csv"):
+                    if expanded_filename.endswith(".csv"):
                         pass_match = re.search(r"(_\d_(run|rerun|reprocess))\.csv$", expanded_filename)
-                        if pass_match:
-                            pass_suffix = pass_match.group(1)
-                            base_stem = expanded_filename[:-4][: -len(pass_suffix)]
-                            versioned = sorted(glob.glob(join(plugin_module.local_cache, f"{base_stem}_v*{pass_suffix}.csv")))
-                        else:
-                            versioned = sorted(glob.glob(join(plugin_module.local_cache, f"{expanded_filename[:-4]}_v*.csv")))
+                        pass_suffix = pass_match.group(1) if pass_match else ""
+                        base_stem = expanded_filename[:-4][: len(expanded_filename) - 4 - len(pass_suffix)]
+                        versioned = sorted(
+                            (int(version_match.group(1)), path)
+                            for path in glob.glob(join(plugin_module.local_cache, f"{base_stem}_v*{pass_suffix}.csv"))
+                            if (version_match := re.fullmatch(rf"{re.escape(base_stem)}_v(\d+){re.escape(pass_suffix)}\.csv", basename(path)))
+                        )
                         if versioned:
-                            file_path = versioned[-1]
+                            file_path = versioned[-1][1]
                     for func in funcs:
                         started = time.time()
                         result = func(file_path, filename)
@@ -5228,29 +5818,42 @@ def bank_api_offline(test_name, scope="local"):
         )
 
     mock.patch("wrangle.plugin._sources.urllib.request.urlopen", _urlopen).start()
+    mock.patch("wrangle.plugin._throttle.time.sleep", lambda _seconds: None).start()
 
 
-def sheet_download_offline(downloads=1, moved_tabs=(), restyled_tabs=()):
+def bank_drive_offline(test_name):
+    drive_dir = join(DIR_ROOT, "src/test/resources/repos/local/bank", test_name, "drive")
+    if not isdir(drive_dir):
+        return None
+    drive = _FakeDrive()
+    for name in sorted(os.listdir(drive_dir)):
+        with open(join(drive_dir, name), "rb") as drive_file:
+            drive.put(name, drive_file.read())
+    drive.patch()
+    mock.patch.object(plugin.Repos, "__getattr__", lambda _self, name: "folder" if name == "drive_folder" else None).start()
+    return drive
+
+
+def sheet_download_offline(downloads=1):
     served = {"lists": 0}
 
     def _sheet_download(self, drive_key, workbook_name, sheet_name=None, *_args, **_kwargs):
         sheet_names = sheet_name if isinstance(sheet_name, list) else [sheet_name]
-        file_paths = [self._sheet_cache_path((workbook_name if name is None else f"{workbook_name}_{name}").lower()) or "" for name in sheet_names]
+        results = {}
+        for name in sheet_names:
+            cache_name = (workbook_name if name is None else f"{workbook_name}_{name}").lower()
+            file_path = self._sheet_cache_path(cache_name)
+            moved_path = abspath(f"{self.local_cache}/_sheet_{cache_name}_moved.csv")
+            if file_path is None:
+                results[name] = DownloadResult(DownloadStatus.FAILED, [])
+            elif not isinstance(sheet_name, list) and isfile(moved_path):
+                results[name] = DownloadResult(DownloadStatus.DOWNLOADED, [moved_path])
+            else:
+                results[name] = DownloadResult(DownloadStatus.DOWNLOADED if isinstance(sheet_name, list) and served["lists"] < downloads else DownloadStatus.CACHED, [file_path])
         if isinstance(sheet_name, list):
             served["lists"] += 1
-            status = DownloadStatus.DOWNLOADED if served["lists"] <= downloads else DownloadStatus.CACHED
-            return DownloadResult(status if any(file_paths) else DownloadStatus.FAILED, file_paths if any(file_paths) else [])
-        if not file_paths[0]:
-            return DownloadResult(DownloadStatus.FAILED, [])
-        if sheet_name in moved_tabs:
-            moved_path = file_paths[0].removesuffix(".csv") + "_moved.csv"
-            pl.concat([pl.read_csv(file_paths[0], infer_schema=False), pl.read_csv(file_paths[0], infer_schema=False).head(1)]).write_csv(moved_path)
-            return DownloadResult(DownloadStatus.DOWNLOADED, [moved_path])
-        if sheet_name in restyled_tabs:
-            restyled_path = file_paths[0].removesuffix(".csv") + "_restyled.csv"
-            pl.read_csv(file_paths[0], infer_schema=False).with_columns(pl.all().str.replace(r"^(-?\d+)\.0$", "$1")).write_csv(restyled_path)
-            return DownloadResult(DownloadStatus.DOWNLOADED, [restyled_path])
-        return DownloadResult(DownloadStatus.CACHED, file_paths)
+            return results
+        return results[sheet_name]
 
     mock.patch.object(Plugin, "sheet_download", _sheet_download).start()
 
@@ -5272,6 +5875,102 @@ def stock_download_offline(new_file_names):
         return DownloadResult(DownloadStatus.SKIPPED, [])
 
     mock.patch.object(Plugin, "stock_download", _stock_download).start()
+
+
+class _Killed(BaseException):
+    pass
+
+
+class _FakeDrive:
+    def __init__(self):
+        self.files_by_id = {}
+        self.clock = 1_700_000_000
+        self.calls = collections.Counter()
+        self.failures = []
+
+    def put(self, name, content):
+        self.clock += 60
+        existing = [drive_id for drive_id, drive_file in self.files_by_id.items() if drive_file["name"] == name]
+        drive_id = existing[0] if existing and name != "activity.csv" and name != "dup.csv" else f"Id{len(self.files_by_id)}"
+        self.files_by_id[drive_id] = {"name": name, "content": content, "modified": self.clock}
+        return drive_id
+
+    def content(self, name):
+        return next(drive_file["content"] for drive_file in self.files_by_id.values() if drive_file["name"] == name)
+
+    def content_by_id(self, drive_id):
+        return self.files_by_id[drive_id]["content"]
+
+    def name_by_id(self, drive_id):
+        return self.files_by_id[drive_id]["name"]
+
+    def patch(self):
+        drive = self
+
+        class _Request:
+            def __init__(self, result):
+                self.result = result
+
+            def execute(self):
+                return self.result() if callable(self.result) else self.result
+
+        class _Files:
+            def list(self, **_kwargs):
+                def _listed():
+                    drive.calls["list"] += 1
+                    if drive.failures:
+                        raise drive.failures.pop(0)
+                    return {
+                        "files": [
+                            {
+                                "id": drive_id,
+                                "name": drive_file["name"],
+                                "md5Checksum": hashlib.md5(drive_file["content"]).hexdigest(),
+                                "modifiedTime": datetime.datetime.fromtimestamp(drive_file["modified"], datetime.UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                            }
+                            for drive_id, drive_file in drive.files_by_id.items()
+                        ]
+                    }
+
+                return _Request(_listed)
+
+            def get_media(self, fileId):
+                return fileId
+
+            def create(self, body, media_body):
+                drive.calls["upload"] += 1
+                drive_id = f"Id{len(drive.files_by_id)}"
+                with open(media_body, "rb") as media_file:
+                    drive.files_by_id[drive_id] = {"name": body["name"], "content": media_file.read(), "modified": drive.clock}
+                return _Request({"id": drive_id})
+
+            def update(self, fileId, body, media_body=None):
+                if "name" in body:
+                    drive.files_by_id[fileId]["name"] = body["name"]
+                if media_body is not None:
+                    drive.calls["upload"] += 1
+                    with open(media_body, "rb") as media_file:
+                        drive.files_by_id[fileId]["content"] = media_file.read()
+                return _Request({"id": fileId})
+
+        class _Service:
+            def files(self):
+                return _Files()
+
+        class _Download:
+            def __init__(self, buffer, request):
+                self.buffer, self.request = buffer, request
+
+            def next_chunk(self):
+                self.buffer.write(drive.files_by_id[self.request]["content"])
+                return None, True
+
+        mock.patch("wrangle.plugin._sources.build", lambda *_args, **_kwargs: _Service()).start()
+        mock.patch("wrangle.plugin._sources.MediaIoBaseDownload", _Download).start()
+        mock.patch("wrangle.plugin._sources.MediaFileUpload", lambda path: path).start()
+        mock.patch("wrangle.plugin._sources.get_file", lambda name: name).start()
+        mock.patch("google.oauth2.service_account.Credentials.from_service_account_file", lambda *_args, **_kwargs: None).start()
+        mock.patch.object(Plugin, "_google_authorized_http", staticmethod(lambda _credentials: None)).start()
 
 
 class PluginStub(Plugin):

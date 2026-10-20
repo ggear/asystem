@@ -1,8 +1,0 @@
-Date,Time,Account,Balance,Balance Manual,Balance Linked,Account ID,Balance ID
-2025-05-01,,Cash,,90.0,,,
-2026-01-10,12:00:00,Cash,,95.0,,,
-2026-01-10,12:00:00,Cash,,96.0,,,
-2026-01-11,,Card,,20.0,,,
-2026-01-12,,Cash,,5000.0,,,
-2026-01-05,23:59:59,Cash,100.0,100.0,,6ec277688b3c570982242484009c9cdb,0f25aed226c256a9bbd5d9f53cc7dd1e
-2026-01-05,23:59:59,Card,-50.0,-50.0,,fdf95a5f6552584d9f67731cb4421aea,5e272fa4e88b53fd9123bb1850b173e6

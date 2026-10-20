@@ -3,5 +3,5 @@ set -euo pipefail
 source "$(cd "$(dirname "$0")" && pwd)/../../../refresh_lib.sh"
 refresh_setup "$0"
 
-# Synthetic fixture: hand-written data, manual transactions typed on the year tabs: an edit, a deletion, a new row, a date moved across years and an edited placeholder each land in the right manual file, and the placeholders roll to exactly one per manual account this month
+# Synthetic fixture: hand-written data, manual transactions in files on Drive: name-only rows given their account ids and amount splits, a row dated in the next year moved to its file, and a file saved by Excel parsed
 refresh_write_fixture 0 0 "" 0 -1

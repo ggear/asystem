@@ -22,6 +22,8 @@ REDBARK_PAGES_MAX = 1000
 FEED_CACHE_SECONDS = 60
 FEED_SYMBOL_PATTERN = r"^[A-Za-z0-9.^=-]{1,20}$"
 
+DRIVE_IGNORE_PREFIXES = ("_", "~$")
+
 SHEET_MANUAL_COLOUR = {"red": 0x4A / 255, "green": 0x86 / 255, "blue": 0xE8 / 255}
 SHEET_DATE_FORMATS = ["%Y-%m-%d", "%d/%m/%Y", "%d/%m/%y", "%d-%b-%Y", "%d %b %Y", "%Y/%m/%d"]
 
@@ -48,6 +50,23 @@ DATABASE_SCHEMA_DIRS = (
 )
 
 socket.setdefaulttimeout(TIMEOUT_NETWORK_SECONDS)
+
+
+@dataclass(frozen=True)
+class Backoff:
+    statuses: frozenset[int] = frozenset({429, 503})
+    retries: int = 4
+    first_seconds: float = 5
+    max_seconds: float = 60
+    budget_seconds: float = 3 * 60
+    remaining_header: str | None = "X-RateLimit-Remaining"
+    reset_header: str | None = "X-RateLimit-Reset"
+
+
+REDBARK_BACKOFF = Backoff()
+GOOGLE_SHEETS_BACKOFF = Backoff(statuses=frozenset({429, 500, 502, 503, 504}), first_seconds=2, remaining_header=None, reset_header=None)
+GOOGLE_DRIVE_BACKOFF = Backoff(statuses=frozenset({429, 500, 502, 503, 504}), first_seconds=2, remaining_header=None, reset_header=None)
+YAHOO_BACKOFF = Backoff(statuses=frozenset({429}), remaining_header=None, reset_header=None)
 
 
 class RepoScope(StrEnum):
@@ -115,6 +134,15 @@ class DownloadStatus(Enum):
     CACHED = auto()
     DOWNLOADED = auto()
     SKIPPED = auto()
+    FAILED = auto()
+
+
+class DriveStatus(StrEnum):
+    DOWNLOADED = auto()
+    CACHED = auto()
+    UPLOADED = auto()
+    VERIFIED = auto()
+    CONFLICTED = auto()
     FAILED = auto()
 
 

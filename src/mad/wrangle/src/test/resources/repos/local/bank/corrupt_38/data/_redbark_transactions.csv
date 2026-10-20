@@ -1,0 +1,7 @@
+id,accountId,status,date,postDate,amount,direction,description,category,merchantCategoryCode
+s2n,a1,posted,2026-01-21,2026-01-22,-6.0,debit,Relisted,,
+s3,a1,posted,2026-01-09,2026-01-11,-7.0,debit,Undated,,
+s4,a1,posted,2026-01-15,2026-01-16,-8.0,debit,Unheld,,
+s5,a1,posted,2026-01-05,2026-01-06,-4.0,debit,Coffee,,
+s6,a1,posted,2026-01-06,2026-01-07,-4.0,debit,Coffee,,
+s7,a1,posted,2026-02-25,2026-02-26,-9.0,debit,Recent,,

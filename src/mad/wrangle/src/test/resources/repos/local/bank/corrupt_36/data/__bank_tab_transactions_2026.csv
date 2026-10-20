@@ -1,0 +1,6 @@
+Date,Date Posted,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Vetted,Category,Bucket,Category Manual,Category Derived,Account ID,Source ID,Transaction ID
+2026-01-03,,One,-10.0,-10.0,Shop,,,,,,,,540a8918175f5ca38559395087eb552c,,676b8ef91c3e50aeaba0141fa56bc3f4
+2026-01-04,,One,-30.0,-10.0,Split,,,,Food,,Food,,540a8918175f5ca38559395087eb552c,,d69265854c4e58ccad2aee04787c6669
+2026-01-04,,One,-30.0,-20.0,Split,,,,Car,,Car,,540a8918175f5ca38559395087eb552c,,d69265854c4e58ccad2aee04787c6669
+2026-01-05,,One,-5.0,-5.0,Kiosk,,,,,,,,540a8918175f5ca38559395087eb552c,,225eaeb8b3465b3bb5a7889656aca0d4
+2026-01-06,,One,-7.0,-7.0,Vanished,,,,,,,,540a8918175f5ca38559395087eb552c,,08bedf58f6b3567d843b6f6232ebce80

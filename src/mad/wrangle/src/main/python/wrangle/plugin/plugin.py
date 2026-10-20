@@ -7,6 +7,7 @@ from ._dataframes import DataFramesMixin
 from ._logs import LogsMixin
 from ._sources import SourcesMixin
 from ._state import StateMixin
+from ._throttle import Throttle
 from .config import *
 from .config import DownloadResult, DownloadStatus
 from .counters import *
@@ -22,11 +23,14 @@ class Plugin(CountersMixin, SourcesMixin, DataFramesMixin, StateMixin, LogsMixin
         started_time = time.time()
         total_start = time.perf_counter()
         self.print_log("Starting ...")
+        for throttle in self.throttles.values():
+            throttle.reset()
+        self.drive_conflicts.clear()
         self._run()
         for csv_path, csv_df in self._db_cache_dfs.items():
             self.csv_write(csv_df, csv_path)
         if not config.disable_drive_uploads:
-            self.drive_synchronise(self.remote_repos.drive_folder, self.local_cache, check=True, download=False, upload=True)
+            self.drive_synchronise(self.remote_repos.drive_folder, self.local_cache, download=False, upload=True)
         total_elapsed_ms = int((time.perf_counter() - total_start) * 1000)
         marshall_ms = self.get_counter(CTR_SRC_TIMING, CTR_ACT_MARSHALL_MILLIS)
         egress_ms = self.get_counter(CTR_SRC_TIMING, CTR_ACT_EGRESS_MILLIS)
@@ -65,7 +69,7 @@ class Plugin(CountersMixin, SourcesMixin, DataFramesMixin, StateMixin, LogsMixin
     def now(self) -> datetime:
         return config.clock or datetime.now()
 
-    def __init__(self, name, repos: "Repos", order=999, disabled=False, database=False, error_codes=None):
+    def __init__(self, name, repos: "Repos", order=999, disabled=False, database=False, error_codes=None, drive_download_only=(), throttles=None):
         self._counters = {}
         self._db_cache_dfs = {}
         self._sheet_credentials = None
@@ -77,6 +81,10 @@ class Plugin(CountersMixin, SourcesMixin, DataFramesMixin, StateMixin, LogsMixin
         self.disabled = disabled
         self.database = database
         self.error_codes = error_codes or {}
+        self.drive_download_only = drive_download_only
+        self.drive_ids = {}
+        self.drive_conflicts = set()
+        self.throttles = {throttle_name: Throttle(throttle_name, backoff, self.print_log) for throttle_name, backoff in (throttles or {}).items()}
         self.remote_repos = repos
         self.local_cache = abspath(f"{config.cache_dir}/{name.lower()}")
         if not isdir(self.local_cache):

@@ -1,6 +1,6 @@
 # Bank run flow: sheet, Redbark, classifier, state, Drive
 
-A plan, not built. No merchant, amount or id appears here.
+Built; section 15 records how the build differs. No merchant, amount or id appears here.
 
 ## 1. What is wrong today
 
@@ -58,24 +58,23 @@ A plan, not built. No merchant, amount or id appears here.
 
 ## 3. Plugin flow, common to every plugin
 
-Every plugin file opens with this header, its blocks numbered and named, and each block in the code starts with the same one-line
-`# <n.m> <Label>` comment. Sections a plugin does not use are listed as `none`, so the numbering is the same everywhere.
+Every plugin file opens with this header, its blocks numbered and named, and each block in the code starts with the same
+`# <n.m> <Label>` comment (`# <n>. <Label>` for a section of one block). Sections a plugin does not use are listed as `none`,
+so the numbering is the same everywhere. The markers sit in one column, at 80 in every plugin:
 
 ```
-# Flow, every run in this order; [R] marks what a reprocess changes, [F] what --force-downloads changes.
+# Bank plugin flow
+#   [R] marks what a reprocess changes
+#   [F] marks what --force-downloads changes
+#   unmarked runs the same on a standard run and a reprocess
 #
-# 1 Download: bring every source into the cache.
-#   1.1 Download Drive    pull files whose Drive MD5 moved since the last sync
-#   1.2 Download Sheet    read the input tabs, a new local version where a tab's content changed
-# 2 Load: parse the operator's dimension tabs.
-# 3 Merge: apply operator edits to the golden files.
-# 4 Fetch: add upstream data to the golden files.
-# 5 Derive: compute plugin-owned columns in the files.
-# 6 Commit: state_cache each partition, giving its delta.                    [R] rebuild every partition
-# 7 Check: raise data problems to Logs.
-# 8 Sync: push changed files to Drive, skipping any Drive changed mid-run.  [R] verify every file
-# 9 Upload: write the delta to the database, each partition's tab to the sheet.  [R] every tab
-# 10 Snapshot: move the bases forward for what was persisted.
+#     1. Download: bring every source into the cache
+#        1.1  Download Drive: pull files changed on Drive since the last sync
+#        1.2  Download Sheet: read the input tabs, versioning changed ones
+#     ...
+#     6. Commit: state_cache each changed year, giving its delta                [R] rebuild every year
+#     ...
+#    10. Snapshot: move the bases forward for what was persisted
 ```
 
 Mapping of today's blocks: currency and interest are `1.x Download Rate Data`, `5 Derive (Process, Normalise)`, `6 Commit`,
@@ -477,8 +476,10 @@ Done once, on release, with the service stopped so no run starts part way:
    - move any manual rows or balances still typed on the sheet into the `manual_*` files on Drive;
    - confirm the last run's `Tabs uploaded` line shows nothing `skipped moved` or `failed`, and its `Logs` tab has no
      `CLASSIFIER_HELD`. The cutover deletes the classifier snapshot, so a held tab would leave nothing to classify with.
-2. **Deploy, then stop the container** before its first run. Release data is restored into the new release's directory
-   (`/home/asystem/wrangle/<version>/data`; `restore.sh` carries all of `data/bank`), so the cleanup below runs there.
+2. **Stop the old container.** The install starts the new one at once and its post-install hook reprocesses with uploads, so
+   the cleanup runs on the old release's directory (`/home/asystem/wrangle/<old version>/data`) before the install, which
+   copies it into the new release's. The old code must not run again after it: it would re-add placeholders and write the
+   change log in the old format.
 3. **Archive:** copy the bank Drive data folder and the new release's `data/bank` to `~/Backup/asystem/wrangle-cutover-<date>/`,
    outside Drive's data folder and the cache. This is the only place the old residue lives on, for rollback.
 4. **Drop residue on Drive** (moved to Drive's trash, which keeps it 30 days): every `bank_reclassified_*` file.
@@ -490,7 +491,7 @@ Done once, on release, with the service stopped so no run starts part way:
    - `__bank_classifier.csv` and `__bank_accounts_dimension.csv`, so the first run classifies every file;
    - `__bank_logs.csv`, so the `Logs` tab carries no first-seen dates or codes from the old release.
    Year files, `manual_*`, exports and `_redbark_*` caches stay. The year files are pulled from Drive anyway.
-7. **Start the container.** Its first loop run is the cutover run, with no flag needed:
+7. **Release.** The install's first loop run is the cutover run, with no flag needed:
    - no manifest, so it builds one from Drive;
    - no bases, so tabs are diffed against the files, which also picks up any edit the old release missed;
    - the exports are new, so they are renamed and imported;
@@ -499,7 +500,8 @@ Done once, on release, with the service stopped so no run starts part way:
    - every tab is re-rendered, and the change log starts.
    `--force-downloads` is not exposed by the run API, and nothing in the cutover needs a full Redbark history check.
    Read its `Logs` tab: expect the 3 `activity.csv` rows added, and no `EDIT_UNMATCHED`, `DRIVE_CONFLICT` or `TAB_EDIT_IGNORED`.
-   Then trigger one reprocess from the dashboard, and confirm it changes nothing. That proves the first run converged.
+   The post-install reprocess follows it; confirm it, and the next standard run, change nothing. That proves the first run
+   converged.
 8. **Check the clean state:**
    - no file in the cache or the Drive data folder matches an old-format pattern;
    - `grep` of the code for every removed name and code (`CHANGES_UNLOGGED`, `TRANSACTION_PLACEHOLDER`, `_sheet_version`,
@@ -725,7 +727,8 @@ Every finding is fixed, or written down with its reason, before the work counts 
 
 For a fresh session picking this up.
 
-- **Status.** This plan is agreed; nothing is built. Start at build step 1 (11.1) and run the review (12) after each step.
+- **Status.** Built, steps 1 to 8, and cutover steps 1 to 6 done on 20 Oct 2026. What remains is the release and its
+  close-out, section 16, for a fresh session.
 - **Read first:**
   - the root, module and global `CLAUDE.md`s;
   - this plan;
@@ -774,4 +777,99 @@ One entry per deviation, newest last. Each entry gives:
 No values from personal data, as everywhere in this plan. When the build is done, section 12's review checks that every
 deviation is reflected in the sections it touches, and the entries stay as the record of how the build differed.
 
-None yet.
+1. **Change signal (3, step 2).** Planned: MD5 against the Drive manifest. Built: bank's own `__bank_committed.json`, each file's MD5
+   as last committed and persisted, advanced in a new 10.3 Commit Files. Why: local runs have no Drive, and it keeps a file whose
+   year was held "changed" until committed. Effect: fixtures model a committed file with `__bank_committed.json`.
+2. **States (6.2, step 2).** Planned: one state per year. Built: one `bank_transactions` and one `bank_balances` state, each
+   changed year's partition replaced whole. Why: same guarantees, no state rename. Effect: balances are held per year too.
+3. **Sweep clock (6.4, step 5).** A missing `_redbark_transactions_sweep.csv` is stamped, not swept; the first sweep is a week later.
+4. **`TRANSACTION_UNHELD`** is a per-run warning, since a weekly check cannot stand between sweeps.
+5. **Manual files (3.1, step 3).** A row with an explicit Account ID of any account is kept; only a name-only row must resolve to
+   a Manual account (`ACCOUNT_LINKED` when the name is a linked one's). Rows dated in another year move to that year's file.
+6. **Placeholders (7.1).** Not dropped by 3.1: a zero row invalidates its file; cutover step 5 removes them.
+7. **Upload sync** lists nothing when no local file changed since its sync, so an idle run lists Drive once.
+8. **Labels (3, step 7).** Bank's Accounts cell writes are 9.1, so the tabs are 9.2 to 9.5; equity's blocks are numbered as found.
+9. **Tests.** The restyled-tab bank case moved to a library test of `sheet_download`; the drive-failed change-log case went with
+   `CHANGES_UNLOGGED`. Release data check: no id changes under the new ordinal order; both exports map by overlap, 3 rows added.
+
+10. **Size (12.2).** `bank.py` is about 2570 lines against the 1850 to 1950 estimated. The sheet entry, balances merge and
+    placeholders went (about 490 lines), but normalising the manual files (3.1, about 240), the 3-way merge (3.2, about 130),
+    the import (4.3, about 190), the sweep and 10.3 came in larger than estimated, and the blocks pyright could not analyse in
+    one function are closures beside their call, as the module requires.
+11. **Row loops (12.3).** Kept where the data is small: the per-edit loop of 3.2 runs per edited id, the account fill per
+    Accounts row, the Redbark match per round of a vectorised pairing, and the reconciliation per linked reading. Ids stay one
+    Python `uuid5` per row, as polars has no uuid5.
+12. **Timings (12.3).** On the release-derived preview fixture, offline: a first run about 0.8 s, an idle run about 0.2 s, a
+    one-edit run about 0.6 s. No before figure: the old flow cannot run against the new `_sources.py`.
+13. **Cutover (11.2).** Steps 3 to 6 are `src/build/resources/cutover.sh <version>`, copied to the host by hand, run with the
+    container stopped, and deleted after the release; the archive defaults to `~/Backup/asystem/wrangle-cutover-<date>`.
+14. **Residual.** A run killed after 3.2 wrote an edit but before 10.2 replays the edit next run onto a file that already holds
+    it, so the change log misses that edit. A file deleted on Drive is re-uploaded only by a reprocess, since an idle upload
+    sync no longer lists Drive.
+15. **Cutover order (11.2, steps 2 and 7).** Planned: deploy, stop the new container before its first run, clean up, start it.
+    Built: stop the old container, run `cutover.sh <old version>`, then release. Why: the install starts the new container
+    and its first run at once, and `install_post.sh` reprocesses with uploads, so there is no window before the first run.
+    Effect: 11.2 and `cutover.sh` updated; the install's backup then runs with the old container stopped.
+
+## 16. Close-out after the release
+
+For a fresh session picking this up once the release is installed. Read sections 11.2, 14 and 15 first.
+
+### 16.1 Where things stand
+
+- **Cutover steps 1 to 6 are done**, on 20 Oct 2026 at 14:35 AWST, against the running release `10.200.1837`:
+  - preconditions held: the sheet was not edited since the last reprocess, and the last runs showed nothing skipped as moved
+    or failed and no `CLASSIFIER_HELD`;
+  - the container was stopped after the 14:22 run cycle finished, and `/root/cutover.sh 10.200.1837` ran clean;
+  - archive: `/root/Backup/asystem/wrangle-cutover-2026-10-20/` on the host, `drive/` (the 18 Drive files, named
+    `<id>_<name>`) and `cache/` (the 60 files of `data/bank`);
+  - Drive now holds 17 files: no `bank_reclassified_*`, both exports (`activity.csv`, `activity-2.csv`), and
+    `manual_transactions_2026.csv` header-only, as its 2 rows were placeholders;
+  - the cache holds only the year files, the manual file, the exports and the `_redbark_*` caches. Its
+    `manual_transactions_2026.csv` still has the placeholders; the first run takes Drive's copy, which is newer and has no
+    manifest entry.
+- **The old container must stay stopped.** The old code would re-add the placeholders and write the old-format change log.
+  If the release cannot go ahead, roll back instead: copy the archive's `cache/` over `data/bank` and re-upload the
+  archived Drive files, then start the old container.
+- **Not verified:** that the install's backup step accepts the old container already stopped (its restore skips the stop
+  when the container is not running, which suggests it does). If the install aborts there, do not start the old
+  container; ask.
+- **The health check reads unhealthy** before the cutover too: bank's standing `TRANSACTIONS_UNVETTED` and
+  `TRANSACTIONS_UNCLASSIFIED` errors count as an errored plugin. Not a fault of this release.
+
+### 16.2 Release
+
+1. `fab release` from the repo, run by the user: it commits, tags and pushes. The install starts the new container, whose
+   first loop run is the cutover run, then `install_post.sh` reprocesses with uploads.
+
+### 16.3 Check the first runs (11.2 step 7)
+
+Read-only on the host (`ssh root@macmini-mad`); print counts and codes, never values.
+
+1. `docker logs wrangle 2>&1 | grep -E "\[Bank\]"` for the first loop run and the post-install reprocess. Expect:
+   - `Exports [2] imported [2]`, `activity-2.csv` all held, `activity.csv` 3 rows added, both renamed
+     `amex_<Number>_transactions_<last>.csv` on Drive and in the cache;
+   - `Files normalised` naming the manual file, `invalid [0]`;
+   - every year committed, every tab uploaded once, `skipped moved []` and `failed []`;
+   - no `DRIVE_CONFLICT`, `DRIVE_DUPLICATE`, `EDIT_UNMATCHED`, `TAB_EDIT_IGNORED`, `IMPORT_UNMAPPED`, `IMPORT_UNREADABLE`,
+     and no `Plugin threw`.
+2. The `Logs` tab: the standing errors as before, plus any `IMPORT_GONE` or `IMPORT_SUSPECT` to read (none expected, 7.1).
+3. The next standard run after the reprocess changes nothing: `Tabs uploaded []`, no file uploaded, `No new data found`.
+4. The cache: `__bank_committed.json`, `_drive_synced.json` and `__bank_tab_transactions_<year>.csv` present; a
+   `bank_reclassified_2026_10.csv` only if the reprocess cleared ticks.
+
+### 16.4 Clean state (11.2 step 8)
+
+1. No old-format file: in the cache and on Drive, no `_sheet_bank_*_v7*` caches numbered by the old Drive version, no
+   `Null Transaction` row, no `bank_reclassified_*` with the old header (no `Split Before` column).
+2. `grep -rn "CHANGES_UNLOGGED\|TRANSACTION_PLACEHOLDER\|_sheet_version(\|files_changed\|bank_files\|__editable" src/mad/wrangle/src`
+   finds nothing.
+
+### 16.5 Then tidy up
+
+1. Delete `/root/cutover.sh` on the host and `src/build/resources/cutover.sh` in the repo; keep the archive until the
+   next monthly backup has run.
+2. Refresh the preview and release fixtures (`refresh.sh` in each), run their tests, and drop their
+   `xfail(strict=True, reason="production data cleanup")` markers if they now pass.
+3. Mark this plan done: section 14's status, and the memory note `project_bank_flow_plan`.
+

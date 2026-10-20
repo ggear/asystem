@@ -1,0 +1,9 @@
+Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Bucket,Category Manual,Category Derived,Account ID,Source ID,Transaction ID,Vetted
+2025-12-01,One,-1.0,-1.0,Shop A,,,Groceries,,,Groceries,540a8918175f5ca38559395087eb552c,,acd012dc423357e1bd459d11d482e1c8,Yes
+2025-12-02,One,-2.0,-2.0,Shop B,,,Groceries,,,Groceries,540a8918175f5ca38559395087eb552c,,3a188f0989545f0381427d73d1a7bd23,Yes
+2025-12-03,One,-3.0,-3.0,Shop C,,,Groceries,,,Food,540a8918175f5ca38559395087eb552c,,4b5729745596514381488e13dd418bb7,Yes
+2025-12-04,One,-4.0,-4.0,Shop D,,,Groceries,,,Food,540a8918175f5ca38559395087eb552c,,3ebbbf37b1a15289966a8599a99c6d92,Yes
+2025-12-20,One,-1.0,-1.0,Filler 1,,,,,,,540a8918175f5ca38559395087eb552c,,00ae16b1da8659ffac1bc60a5939d692,
+2025-12-21,One,-2.0,-2.0,Filler 2,,,,,,,540a8918175f5ca38559395087eb552c,,1f7bd84cfe8b5846a0d36e892fedfee7,
+2025-12-22,One,-3.0,-3.0,Filler 3,,,,,,,540a8918175f5ca38559395087eb552c,,e83c4961b5f55b58a9964d671dc69162,
+2025-12-23,One,-4.0,-4.0,Filler 4,,,,,,,540a8918175f5ca38559395087eb552c,,0b4c0358118b51469977695930c31b43,

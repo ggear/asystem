@@ -1,3 +1,22 @@
+# Interest plugin flow
+#   [R] marks what a reprocess changes
+#   [F] marks what --force-downloads changes
+#   unmarked runs the same on a standard run and a reprocess
+#
+#     1. Download: bring every source into the cache
+#        1.1 Download Rate Data: fetch rate and inflation files that moved
+#     2. Load: none
+#     3. Merge: none
+#     4. Fetch: none
+#     5. Derive: compute the monthly rates and their rolling means              [R] every file
+#        5.1 Collect Rate Data: read the term deposit and inflation series
+#        5.2 Process Rate Data: join them by month, net of inflation
+#     6. Commit: state_cache the rates, giving their delta                      [R] rebuild the state
+#     7. Check: none
+#     8. Sync: push changed files to Drive, in Plugin.run()
+#     9. Upload: write the delta to the database, the rates to the sheet        [R] every row
+#    10. Snapshot: none
+
 import time
 from collections import OrderedDict
 from datetime import date
@@ -41,7 +60,7 @@ class Interest(plugin.Plugin):
         interest_df = self.dataframe_new(schema={"Date": pl.Date})
         interest_delta_df = self.dataframe_new()
         if not plugin.config.disable_source_downloads or plugin.config.force_reprocessing:
-            # Download Rate Data
+            # 1.1 Download Rate Data
             new_data = False
             started_time = time.time()
             started_time_retail = time.time()
@@ -82,18 +101,18 @@ class Interest(plugin.Plugin):
             self.print_log(f"Files downloaded [{interest_downloaded}] and cached [{interest_cached}]", started=started_time)
             if new_data:
                 try:
-                    # Collect Rate Data
+                    # 5.1 Collect Rate Data
                     if retail_should_read:
                         retail_df = self.excel_read(retail_file, schema={"Series ID": pl.Date}, skip_rows=10, print_rows=12)
 
-                        # NOTE: Select Term Deposit >$10k deposit, 3-year term
+                        # FRDIRBTD10K3Y is the term deposit rate, over $10k for 3 years
                         retail_df = retail_df.select([pl.col("Series ID").alias("Date"), pl.col("FRDIRBTD10K3Y").alias("Bank")])
 
                         retail_df = retail_df.with_columns((pl.col("Date").dt.strftime("%Y-%m-01").str.to_date()).alias("Date"))
                     if inflation_should_read:
                         inflation_df = self.excel_read(inflation_file, schema={"Series ID": pl.Date}, skip_rows=10, print_rows=12)
 
-                        # NOTE: Select Annual Consumer Price Index
+                        # GCPIAGYP is the annual consumer price index
                         inflation_df = inflation_df.select([pl.col("Series ID").alias("Date"), pl.col("GCPIAGYP").alias("Inflation")])
 
                         inflation_df = inflation_df.with_columns((pl.col("Date").dt.strftime("%Y-%m-01").str.to_date()).alias("Date"))
@@ -109,7 +128,7 @@ class Interest(plugin.Plugin):
             inflation_df = inflation_df if len(inflation_df) == 0 else inflation_df.fill_nan(pl.lit(None)).drop_nulls()
             dataframe_print(self.name, inflation_df, print_label="Inflation", print_verb="collected", started=started_time_inflation)
 
-            # Process Rate Data
+            # 5.2 Process Rate Data
             try:
                 if new_data:
                     started_time_inner = time.time()
@@ -137,10 +156,10 @@ class Interest(plugin.Plugin):
                         _data_df = _data_df.with_columns((pl.col(rate).rolling_mean(window_size=PERIODS[_period])).alias(_column))
                 return _data_df.select(_columns).with_columns(cs.float().round(2))
 
-            # Commit Rate Data: source-complete monthly Bank/Inflation/Net rates → committed state with derived rolling means (delta for egress)
+            # 6. Commit
             interest_delta_df, interest_current_df, _ = self.state_cache(interest_df, _aggregate_function)
 
-            # Upload Data
+            # 9. Upload
             started_time = time.time()
             if len(interest_current_df) and (len(interest_delta_df) or plugin.config.force_reprocessing):
                 interest_sheet_df = interest_current_df.filter(pl.col("Date") > pl.lit(date(2015, 1, 1))).sort("Date", descending=True)
@@ -160,4 +179,4 @@ class Interest(plugin.Plugin):
             self.print_log("No new data found")
 
     def __init__(self):
-        super().__init__("Interest", order=20, repos=REPOS_INTEREST, database=True)
+        super().__init__("Interest", order=20, repos=REPOS_INTEREST, database=True, throttles={"google_drive": plugin.GOOGLE_DRIVE_BACKOFF, "google_sheets": plugin.GOOGLE_SHEETS_BACKOFF})

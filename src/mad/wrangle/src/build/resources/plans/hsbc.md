@@ -34,7 +34,6 @@ files (`Wrangle/Bank/release/data`) on Drive.
     (`archive/transactions/csv`), repeat same-day purchases included;
   - Bankwest history re-dated to purchase day and given its Redbark Source IDs, CBA history given its Redbark Source IDs;
   - 2 AMEX purchases from 16 and 17 Oct added from the AMEX activity export.
-- Rows added or changed on Drive by hand are rebuilt into the sheets but not classified, so a reprocess run follows any hand edit.
 
 ## Blank `Date Posted`
 
@@ -51,30 +50,25 @@ Apr to mid Jul 2026 and the 2021 to 2023 history stay blank for good; that is co
    fault in HSBC, Fiskil or Redbark, and whether the history can be re-synced. Cite the lag pattern and the October drops. Ask
    whether HSBC's `oldest-time` filters on posting or execution time, and how far back each incremental fetch overlaps.
 2. If Redbark re-syncs, run the matching backfill above, dry run first.
-3. Monthly, export HSBC's last 90 days and AMEX's activity as CSV into `archive/transactions/csv` (`HSBC_xxxx0651_<download
-   day>.csv`, `American Express_xxxx<card>_<download day>.csv`), then match them to the held rows: add any missing transaction,
-   fill blank `Date Posted`, and reprocess. This finds drops weeks before the statement. Reconcile each statement too.
+3. Monthly, drop AMEX's activity export into the bank's Drive data folder, where the run imports it, and export HSBC's last
+   90 days into `archive/transactions/csv` (`HSBC_xxxx0651_<download day>.csv`) and match it to the held rows by hand: add any
+   missing transaction and fill blank `Date Posted` on Drive. This finds drops weeks before the statement. Reconcile each
+   statement too.
 
 ## Proposed code changes
 
-Not built; each removes a manual step above.
+The export import, the weekly 90-day sweep, the Drive upload conflict check and classifying Drive edits are built
+(`plans/flow.md`). Still open:
 
-- **Import bank exports:** match a CSV dropped in `archive/transactions/csv` (HSBC 90-day, AMEX activity) to the held rows on
-  each run: add transactions no feed has, fill blank `Date Posted`, and log export lines with no held row and held rows missing
-  from an export covering their dates.
-- **Weekly 90-day sweep:** fetch the last 90 days once a week and only check (gone, relisted, `Date Posted`), never add rows, so
-  drops and relistings older than the two-week window are seen. About 8 calls a week; back off and retry on Redbark's 429.
-- **Drive upload conflict:** re-list Drive before uploading and skip a file that moved since the run started, with an error, so
-  an edit saved mid-run is not overwritten.
-- **Classify files changed on Drive**, so a hand edit needs no reprocess.
 - **Check CBA dates** against a CBA statement or export: CBA is a Sydney bank, so it may need Sydney-day dating like HSBC.
+- **Import HSBC exports** the way AMEX's are, once an HSBC 90-day export's format is pinned.
 
 ## Editing the year files by hand
 
 Edit the Drive copy (`Wrangle/Bank/release/data`) between server runs: the last run's time is the latest `Upload complete` in
 `docker logs wrangle` on the host, and runs come about every 30 minutes. Read the file back as CSV and write it byte for byte,
-changing only the intended cells; a re-dated row needs its Transaction ID re-derived (`bank_transactions_identified`). Confirm
-Drive's md5 matches before the next run, then reprocess. Roll back from the file's Drive version history.
+changing only the intended cells. The next run takes the change by its MD5 and classifies and commits it, no reprocess needed;
+an edit landing mid-run is a `DRIVE_CONFLICT`, Drive's copy winning next run. Roll back from the file's Drive version history.
 
 ## Moving day-to-day spending off HSBC
 
@@ -99,7 +93,7 @@ What to test, what to expect, and how to read a wrong answer. Read the `Logs` ta
   the balance moved beyond the held transactions: negative is a charge missing from the files, positive a held charge the bank
   reversed.
   - **Check one** against the bank's export for the days between its two readings: a missing line of that amount is a true
-    positive, so add it by hand and reprocess; the error clears on the next run.
+    positive, so add it by hand on Drive; the error clears on the next run.
   - **False positive, likely causes:** Redbark listing a transaction more than a week after the balance moved (raise
     `BALANCES_RECONCILE_SETTLE_DAYS`); a pre-authorisation held in the balance for over a week then released (a break and its
     reversal, a few days apart, same amount); more than 12 transactions in flight on one day, where the check falls back to all or

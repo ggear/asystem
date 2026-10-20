@@ -1,3 +1,2 @@
-Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Category Manual,Category Derived,Account ID,Source ID,Transaction ID,Vetted
-2025-12-01,Cash,0.0,0.0,Null Transaction,,,,,,6ec277688b3c570982242484009c9cdb,,,
-2025-12-10,Cash,-5.0,-5.0,Snack,,,,,,6ec277688b3c570982242484009c9cdb,,,
+﻿Date,Account,Amount,Description
+02/01/2026,Cash,-$5.00,Snack

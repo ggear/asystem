@@ -1,3 +1,22 @@
+# Currency plugin flow
+#   [R] marks what a reprocess changes
+#   [F] marks what --force-downloads changes
+#   unmarked runs the same on a standard run and a reprocess
+#
+#     1. Download: bring every source into the cache
+#        1.1 Download Rate Data: fetch the RBA rate files whose stamp moved
+#     2. Load: none
+#     3. Merge: none
+#     4. Fetch: none
+#     5. Derive: compute the daily rates and their period changes               [R] every file
+#        5.1 Process Rate Data: dedupe, fill gaps and keep the trading days
+#        5.2 Normalise Data: fill every calendar day forward
+#     6. Commit: state_cache the rates, giving their delta                      [R] rebuild the state
+#     7. Check: none
+#     8. Sync: push changed files to Drive, in Plugin.run()
+#     9. Upload: write the delta to the database, the rates to the sheet        [R] every row
+#    10. Snapshot: none
+
 import datetime
 import time
 from collections import OrderedDict
@@ -63,7 +82,7 @@ class Currency(plugin.Plugin):
         )
         rba_delta_df = self.dataframe_new()
         if not plugin.config.disable_source_downloads or plugin.config.force_reprocessing:
-            # Download Rate Data
+            # 1.1 Download Rate Data
             new_data = False
             started_time = time.time()
             rba_files_downloaded_count = 0
@@ -104,7 +123,7 @@ class Currency(plugin.Plugin):
             self.print_log(f"Files downloaded [{rba_files_downloaded_count}] and cached [{rba_files_cached_count}]", started=started_time)
             dataframe_print(self.name, rba_df, print_label="Currency", print_verb="collected")
 
-            # Process Rate Data
+            # 5.1 Process Rate Data
             try:
                 if new_data:
                     started_time_inner = time.time()
@@ -142,7 +161,7 @@ class Currency(plugin.Plugin):
 
                 return _data_df.select(_columns).with_columns(cs.float().round(4)).fill_nan(0).fill_null(0)
 
-            # Normalise Data
+            # 5.2 Normalise Data
             if len(rba_df) == 0:
                 rba_df = self.dataframe_new(schema={"Date": pl.Date})
             else:
@@ -150,10 +169,10 @@ class Currency(plugin.Plugin):
                     rba_df = rba_df.drop("Source")
                 rba_df = rba_df.upsample(time_column="Date", every="1d").with_columns(pl.all().forward_fill()).drop_nulls()
 
-            # Commit Rate Data: source-complete daily rates → committed state with derived period-change percentages (delta for egress)
+            # 6. Commit
             rba_delta_df, rba_current_df, _ = self.state_cache(rba_df, _aggregate_function)
 
-            # Upload Data
+            # 9. Upload
             started_time = time.time()
             if len(rba_current_df) and (len(rba_delta_df) or plugin.config.force_reprocessing):
                 rba_sheet_df = rba_current_df.select(["Date"] + PAIRS).filter(pl.col("Date") > pl.lit(datetime.date(2006, 1, 1))).sort("Date", descending=True)
@@ -173,4 +192,4 @@ class Currency(plugin.Plugin):
             self.print_log("No new data found")
 
     def __init__(self):
-        super().__init__("Currency", order=10, repos=REPOS_CURRENCY, database=True)
+        super().__init__("Currency", order=10, repos=REPOS_CURRENCY, database=True, throttles={"google_drive": plugin.GOOGLE_DRIVE_BACKOFF, "google_sheets": plugin.GOOGLE_SHEETS_BACKOFF})

@@ -1,6 +1,7 @@
 import collections
 import concurrent.futures
 import contextlib
+import fnmatch
 import functools
 import glob
 import hashlib
@@ -36,6 +37,7 @@ from requests.adapters import HTTPAdapter
 
 from . import database
 from ._contract import ContractMixin
+from ._throttle import google_failed, urllib_failed, yahoo_failed
 from .config import *
 from .counters import *
 from .logger import dataframe_print
@@ -170,10 +172,10 @@ class SourcesMixin(ContractMixin):
     @_timed(CTR_ACT_MARSHALL_MILLIS)
     def redbark_download(self, url_paths: list[str], local_path: str, columns: list[str], check: bool = True, ignore: bool = False, paged: bool = True) -> DownloadResult:
         """
-        Fetches each Redbark API path in `url_paths`, following `limit` and `offset` pages when `paged`, caches the returned
-        rows' `columns` in `local_path` stamped now, and returns them as `data_frame`. Without `check` any cache
-        is kept and downloads disabled serve the cache; a failed path comes back in `errors` with its HTTP status, leaves the
-        cache as it was and is logged unless `ignore`.
+        Fetches each Redbark API path in `url_paths`, following `limit` and `offset` pages when `paged`, through the plugin's
+        `redbark` throttle when it registers one, caches the returned rows' `columns` in `local_path` stamped now, and returns
+        them as `data_frame`. Without `check` any cache is kept and downloads disabled serve the cache; a failed path comes back
+        in `errors` with its HTTP status, leaves the cache as it was and is logged unless `ignore`.
         """
         started_time = time.time()
         local_path = abspath(local_path)
@@ -193,15 +195,17 @@ class SourcesMixin(ContractMixin):
             return DownloadResult(DownloadStatus.FAILED, [])
 
         def _request(_path):
-            _response = urllib.request.urlopen(
-                urllib.request.Request(
-                    f"{REDBARK_URL}{_path}", headers={"Authorization": f"Bearer {os.environ.get('REDBARK_TOKEN', '')}", "Content-Type": "application/json", "User-Agent": "curl/8.0"}
-                ),
-                timeout=TIMEOUT_NETWORK_SECONDS,
-                context=ssl._create_unverified_context(),
-            )
-            self.print_log(f"Redbark request [{_path.split('?')[0]}] rate limit remaining [{_response.headers.get('X-RateLimit-Remaining')}]", level="debug")
-            return json.loads(_response.read().decode())
+            def _sent():
+                return urllib.request.urlopen(
+                    urllib.request.Request(
+                        f"{REDBARK_URL}{_path}",
+                        headers={"Authorization": f"Bearer {os.environ.get('REDBARK_TOKEN', '')}", "Content-Type": "application/json", "User-Agent": "curl/8.0"},
+                    ),
+                    timeout=TIMEOUT_NETWORK_SECONDS,
+                    context=ssl._create_unverified_context(),
+                )
+
+            return json.loads(self._throttled("redbark", _sent, urllib_failed).read().decode())
 
         rows, errors = [], []
         for url_path in url_paths:
@@ -367,7 +371,7 @@ class SourcesMixin(ContractMixin):
                             self.print_log(f"File [{label}] cached (but empty) at [{local_path}]", started=started_time)
                             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                             return DownloadResult(DownloadStatus.CACHED, [local_path])
-                data_df = yf.Ticker(ticker).history(start=start, end=end_exclusive, timeout=TIMEOUT_NETWORK_SECONDS)
+                data_df = self._throttled("yahoo", lambda: yf.Ticker(ticker).history(start=start, end=end_exclusive, timeout=TIMEOUT_NETWORK_SECONDS), yahoo_failed)
                 if hasattr(data_df.index, "tz_localize"):
                     data_df.index = data_df.index.tz_localize(None)  # type: ignore[union-attr]
                 if "Capital Gains" in data_df.columns:
@@ -561,26 +565,6 @@ class SourcesMixin(ContractMixin):
             self._sheet_credentials = creds
         return self._sheet_credentials
 
-    def _sheet_cache_cleanup(self, name, current_version):
-        name = name.lower()
-        pattern = abspath(f"{self.local_cache}/_sheet_{name}_v*.csv")
-        for file_path in glob.glob(pattern):
-            filename = basename(file_path)
-            prefix = f"_sheet_{name}_v"
-            version_str = filename[len(prefix) : -len(".csv")]
-            if version_str.isdigit() and int(version_str) <= current_version - 2:
-                os.remove(file_path)
-                self.print_log(f"File [{name}] deleted old version [{file_path}]", level="debug")
-
-    def _sheet_version(self, drive_key) -> str | None:
-        try:
-            drive_service = build("drive", "v3", http=self._google_authorized_http(self._sheets_credentials()), cache_discovery=False)
-            raw_version = drive_service.files().get(fileId=drive_key, fields="version").execute().get("version")
-            return None if raw_version is None else str(raw_version)
-        except Exception as exception:
-            self.print_log(f"Failed to get Drive version of sheet [https://docs.google.com/spreadsheets/d/{drive_key}]", exception=exception, level="error")
-            return None
-
     def sheet_cached(self, workbook_name, sheet_name=None) -> pl.DataFrame | None:
         """
         Reads a tab as last downloaded or uploaded from its cache, as text, or None when there is no cache or it cannot
@@ -596,19 +580,45 @@ class SourcesMixin(ContractMixin):
             self.print_log(f"File [{label}] cache unreadable at [{cache_path}]", exception=exception, level="warn")
             return None
 
+    def sheet_typed(self, tab_df, schema) -> pl.DataFrame:
+        """
+        Types a tab read as text for comparison: the columns `schema` declares parsed as the sheet displays them, amounts in
+        cents, dates ISO, text stripped with blanks as null, and any other column kept as stripped text.
+        """
+
+        def _typed(_column):
+            _dtype = (schema or {}).get(_column, pl.Utf8)
+            _text = pl.col(_column).cast(pl.Utf8).str.strip_chars()
+            if _dtype == pl.Date:
+                return pl.coalesce([_text.str.to_date(_date_format, strict=False) for _date_format in SHEET_DATE_FORMATS]).alias(_column)
+            if _dtype == pl.Float64:
+                return (_text.str.replace_all(r"[$£,\s]", "").cast(pl.Float64, strict=False) * 100).round().cast(pl.Int64).alias(_column)
+            if _dtype.is_numeric():
+                return _text.str.replace_all(r"[$£,\s]", "").cast(_dtype, strict=False).alias(_column)
+            return _text.replace("", None).alias(_column)
+
+        return tab_df.select([_typed(_column) for _column in tab_df.columns])
+
     @_timed(CTR_ACT_MARSHALL_MILLIS)
     def sheet_download(self, drive_key, workbook_name, sheet_name=None, sheet_start_row=1, sheet_load_secs=10, sheet_retry_max=5, check=True, schema=None, print_rows=PL_PRINT_ROWS):
         """
-        Downloads one tab, or several in one read, into versioned caches: one Drive version lookup serves every
-        tab from cache while the spreadsheet is unchanged, and a tab it lacks is written empty. With `schema` no
-        blank column is dropped, declared numeric columns are stripped of `$`, `£` and `,`, and declared dates
-        are rewritten ISO.
+        Reads one tab, or several in one read, into versioned caches: a tab whose content, typed by `schema`, differs from its
+        latest cached version is written as the next version and `DOWNLOADED`, else `CACHED`, and a tab the spreadsheet lacks
+        is read empty. A list of tabs returns a result per tab. With `schema` no blank column is dropped, declared numeric
+        columns are stripped of `$`, `£` and `,`, and declared dates are rewritten ISO.
         """
         started_time = time.time()
         sheet_names = sheet_name if isinstance(sheet_name, list) else [sheet_name]
         names = [(workbook_name if name is None else f"{workbook_name}_{name}").lower() for name in sheet_names]
         label = workbook_name if sheet_name is None or isinstance(sheet_name, list) else f"{workbook_name}:{sheet_name}"
-        effective_force = config.force_downloads
+
+        def _results(_statuses):
+            _tab_results = {_name: DownloadResult(_status, [_path] if _status != DownloadStatus.FAILED else []) for _name, (_status, _path) in zip(sheet_names, _statuses, strict=True)}
+            return _tab_results if isinstance(sheet_name, list) else _tab_results[sheet_name]
+
+        def _cached():
+            _paths = [self._sheet_cache_path(_name) for _name in names]
+            return [(DownloadStatus.CACHED, _path) if _path is not None else (DownloadStatus.FAILED, "") for _path in _paths]
 
         def _tab_dataframe(_cells, _label):
             _numeric_pattern = r"^\s*[-+]?[$£]?[\d,]*\.?\d+\s*$"
@@ -643,82 +653,38 @@ class SourcesMixin(ContractMixin):
             for _column in _data_df.columns:
                 if _data_df.schema[_column] == pl.Utf8 and len(_data_df.filter(pl.col(_column) == "Loading...")) > 0:
                     raise SheetStillLoadingError(f"DataFrame [{_label}] loaded from sheet that is yet to finish rendering column [{_column}]")
-            return _data_df
-
-        def _cached(_partial=False):
-            _file_paths = [self._sheet_cache_path(name) or "" for name in names]
-            if all(_file_paths) or (_partial and any(_file_paths)):
-                self.print_log(f"File [{label}] cached at [{', '.join(_file_paths)}]", started=started_time, level="debug")
-                return DownloadResult(DownloadStatus.CACHED, _file_paths)
-            return None
+            return _data_df.with_columns(pl.all().cast(pl.Utf8))
 
         if config.disable_sheet_downloads or drive_key is None:
-            cached = _cached(_partial=True)
-            if cached is not None:
-                return cached
-            if config.disable_sheet_downloads and drive_key is not None:
+            cached = _cached()
+            if config.disable_sheet_downloads and drive_key is not None and all(_status == DownloadStatus.FAILED for _status, _ in cached):
                 self.print_log(f"File [{label}] sheet download skipped, downloads disabled and no cache available")
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_SKIPPED)
-            return DownloadResult(DownloadStatus.FAILED, [])
-        if not effective_force and not check:
+            else:
+                self.print_log(f"File [{label}] cached", started=started_time, level="debug")
+            return _results(cached)
+        if not config.force_downloads and not check:
             cached = _cached()
-            if cached is not None:
-                return cached
+            if all(_status == DownloadStatus.CACHED for _status, _ in cached):
+                self.print_log(f"File [{label}] cached", started=started_time, level="debug")
+                return _results(cached)
         drive_url = "https://docs.google.com/spreadsheets/d/" + drive_key
-        credentials = self._sheets_credentials()
-        drive_version = self._sheet_version(drive_key)
-        if drive_version is not None:
-            file_paths = [abspath(f"{self.local_cache}/_sheet_{name}_v{drive_version}.csv") for name in names]
-            for name in names:
-                self._sheet_cache_cleanup(name, int(drive_version))
-            if not effective_force and all(isfile(file_path) for file_path in file_paths):
-                self.print_log(f"File [{label}] cached at version [{drive_version}]", started=started_time, level="debug")
-                return DownloadResult(DownloadStatus.CACHED, file_paths)
-        else:
-            if not effective_force:
-                cached = _cached()
-                if cached is not None:
-                    return cached
-            file_paths = [abspath(f"{self.local_cache}/_sheet_{name}.csv") for name in names]
         retries = 0
         caught_exception = None
+        statuses = []
+        data_dfs = []
         try:
-            sheets_service = build("sheets", "v4", http=self._google_authorized_http(credentials), cache_discovery=False)
-            sheet_titles = [
-                sheet["properties"]["title"]
-                for sheet in sorted(
-                    sheets_service.spreadsheets().get(spreadsheetId=drive_key, fields="sheets.properties(title,index)").execute().get("sheets", []),
-                    key=lambda sheet: sheet["properties"].get("index", 0),
-                )
-            ]
-            titles = [sheet_titles[0] if name is None and sheet_titles else name for name in sheet_names]
-            present = [title for title in titles if title in sheet_titles]
             while retries < sheet_retry_max:
                 try:
                     retries += 1
-                    value_ranges = (
-                        sheets_service.spreadsheets()
-                        .values()
-                        .batchGet(spreadsheetId=drive_key, ranges=[f"'{title}'" for title in present], valueRenderOption="FORMATTED_VALUE")
-                        .execute()
-                        .get("valueRanges", [])
-                        if present
-                        else []
-                    )
-                    cells_by_title = {title: value_range.get("values", []) for title, value_range in zip(present, value_ranges, strict=True)}
-                    data_dfs = []
-                    for title in titles:
+                    cells_by_title = self._sheet_values(drive_key, sheet_names)
+                    data_dfs.clear()
+                    for title in sheet_names:
                         if title not in cells_by_title:
-                            self.print_log(f"File [{workbook_name}:{title}] written empty, no such tab at [{drive_url}]", level="warn")
+                            self.print_log(f"File [{workbook_name}:{title}] read empty, no such tab at [{drive_url}]", level="warn")
                         cells = cells_by_title.get(title, [])[sheet_start_row - 1 :]
                         width = max((len(row) for row in cells), default=0)
                         data_dfs.append(_tab_dataframe([[*row, *([""] * (width - len(row)))] for row in cells], f"{workbook_name}:{title}"))
-                    for title, data_df, file_path in zip(titles, data_dfs, file_paths, strict=True):
-                        tab_label = workbook_name if sheet_name is None else f"{workbook_name}_{title}"
-                        self.csv_write(data_df, file_path, print_label=tab_label, print_rows=-1)
-                        dataframe_print(
-                            self.name, data_df, print_label=tab_label, print_verb="downloaded", print_suffix=f"from [{drive_url}][{workbook_name}:{title}]", print_rows=print_rows, started=started_time
-                        )
                     caught_exception = None
                     break
                 except SheetStillLoadingError as exception:
@@ -726,14 +692,29 @@ class SourcesMixin(ContractMixin):
                     caught_exception = exception
             if caught_exception is not None:
                 raise caught_exception
+            for title, name, data_df in zip(sheet_names, names, data_dfs, strict=True):
+                tab_label = workbook_name if title is None else f"{workbook_name}_{title}"
+                version, latest_path = self._sheet_version_latest(name)
+                latest_df = self.sheet_cached(workbook_name, title) if latest_path is not None else None
+                if latest_df is not None and list(latest_df.columns) == list(data_df.columns) and self.sheet_typed(latest_df, schema).equals(self.sheet_typed(data_df, schema)):
+                    self.print_log(f"Sheet [{workbook_name}:{title}] cached version [{version}]", level="debug")
+                    statuses.append((DownloadStatus.CACHED, latest_path))
+                    continue
+                file_path = abspath(f"{self.local_cache}/_sheet_{name}_v{version + 1}.csv")
+                self.csv_write(data_df, file_path, print_label=tab_label, print_rows=-1)
+                self._sheet_cache_cleanup(name)
+                dataframe_print(
+                    self.name, data_df, print_label=tab_label, print_verb="downloaded", print_suffix=f"version [{version + 1}] from [{drive_url}]", print_rows=print_rows, started=started_time
+                )
+                statuses.append((DownloadStatus.DOWNLOADED, file_path))
         except Exception as exception:
             self.print_log(
                 f"DataFrame [{label}] unavailable at [{drive_url}]" + ("" if retries < sheet_retry_max else f" after retrying [{sheet_retry_max}] times over [{sheet_retry_max * sheet_load_secs}s]"),
                 exception=exception,
             )
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
-            return DownloadResult(DownloadStatus.FAILED, [])
-        return DownloadResult(DownloadStatus.DOWNLOADED, file_paths)
+            return _results([(DownloadStatus.FAILED, "")] * len(sheet_names))
+        return _results(statuses)
 
     @_timed(CTR_ACT_EGRESS_MILLIS)
     def sheet_upload(
@@ -806,40 +787,24 @@ class SourcesMixin(ContractMixin):
             else:
                 _unresolved("highlight reference", reference)
         formatted = raw_columns is not None or formula_columns is not None or dropdown_columns is not None or highlight_cells is not None
-
-        def _typed(_data_df) -> pl.DataFrame | None:
-            if schema is None or not set(schema) <= set(_data_df.columns):
-                return None
-            return _data_df.select(
-                [
-                    ((pl.col(_column) * 100).round().cast(pl.Int64) if _dtype == pl.Float64 else pl.col(_column).cast(pl.Utf8).replace("", None) if _dtype == pl.Utf8 else pl.col(_column)).alias(
-                        _column
-                    )
-                    for _column, _dtype in schema.items()
-                ]
-            )
-
-        def _tab_typed(_tab_df) -> pl.DataFrame | None:
-            if schema is None or list(_tab_df.columns) != list(schema):
-                return None
-
-            def _tab_parsed(_column, _dtype):
-                if _dtype == pl.Date:
-                    return pl.coalesce([pl.col(_column).str.to_date(_date_format, strict=False) for _date_format in SHEET_DATE_FORMATS])
-                if _dtype.is_numeric():
-                    return pl.col(_column).str.replace_all(r"[$£,\s]", "").cast(_dtype, strict=False)
-                return pl.col(_column)
-
-            return _typed(_tab_df.with_columns([_tab_parsed(_column, _dtype).alias(_column) for _column, _dtype in schema.items()]))
+        layout = {"raw": sorted(raw_set), "formulas": formulas, "dropdowns": dropdowns, "highlights": highlights}
 
         cached_df = self.sheet_cached(workbook_name, sheet_name) if guard or (check and schema is not None) else None
         format_path = abspath(f"{self.local_cache}/_sheet_{name}_format.json")
-        if check and cached_df is not None and (cached_typed_df := _tab_typed(cached_df)) is not None and cached_typed_df.equals(_typed(data_df)):
-            layout = {"raw": sorted(raw_set), "formulas": formulas, "dropdowns": dropdowns, "highlights": highlights}
-            if formatted == isfile(format_path) and (not formatted or self._sheet_format_cached(format_path) == layout):
-                self.print_log(f"Sheet [{label}] status [{UploadStatus.UNCHANGED.name}] since cached", started=started_time, level="debug")
-                return UploadStatus.UNCHANGED
-        if guard and cached_df is not None and self._sheet_moved(drive_key, workbook_name, sheet_name, schema, cached_df, _tab_typed):
+        if (
+            check
+            and schema is not None
+            and cached_df is not None
+            and list(cached_df.columns) == columns
+            and self.sheet_typed(cached_df, schema).equals(
+                self.sheet_typed(data_df.with_columns([pl.col(column).dt.strftime("%Y-%m-%d") for column in columns if data_df[column].dtype == pl.Date]).cast(pl.Utf8), schema)
+            )
+            and formatted == isfile(format_path)
+            and (not formatted or self._sheet_format_cached(format_path) == layout)
+        ):
+            self.print_log(f"Sheet [{label}] status [{UploadStatus.UNCHANGED.name}] since cached", started=started_time, level="debug")
+            return UploadStatus.UNCHANGED
+        if guard and cached_df is not None and self._sheet_moved(drive_key, workbook_name, sheet_name, schema):
             self.print_log(f"Sheet [{label}] status [{UploadStatus.MOVED.name}] edited since cached", started=started_time, level="warn")
             return UploadStatus.MOVED
         try:
@@ -852,7 +817,6 @@ class SourcesMixin(ContractMixin):
                     sheet_row = sheet_start_row + row_index
                     all_values[row_index][column_index] = re.sub(r"\{([^{}]+)}", lambda match, _row=sheet_row: f"{column_letters[match.group(1)]}{_row}", template)
             drive_url = f"https://docs.google.com/spreadsheets/d/{drive_key}" if drive_key is not None else None
-            drive_version: str | None = None
             if drive_key is not None and not config.disable_sheet_uploads:
                 spreadsheet, credentials = self._sheet_opened(drive_key)
                 grid_rows = max(sheet_start_row - 1 + len(all_values), sheet_start_row + 1)
@@ -861,7 +825,7 @@ class SourcesMixin(ContractMixin):
                 worksheet = next((existing for existing in worksheets if existing.title == sheet_name), None) if sheet_name is not None else next(iter(worksheets), None)
                 if worksheet is None:
                     position = self._sheet_insert_index([existing.title for existing in worksheets], sheet_before, sheet_after)
-                    worksheet = spreadsheet.add_worksheet(title=str(sheet_name), rows=grid_rows, cols=grid_columns, index=position)
+                    worksheet = self._throttled("google_sheets", lambda: spreadsheet.add_worksheet(title=str(sheet_name), rows=grid_rows, cols=grid_columns, index=position), google_failed)
                     worksheets.insert(len(worksheets) if position is None else position, worksheet)
                 sheets_service = build("sheets", "v4", http=self._google_authorized_http(credentials), cache_discovery=False)
                 clear_fields = (
@@ -955,37 +919,46 @@ class SourcesMixin(ContractMixin):
                             },
                         ]
                     )
-                sheets_service.spreadsheets().batchUpdate(spreadsheetId=drive_key, body={"requests": layout_requests}).execute()
+                self._throttled("google_sheets", sheets_service.spreadsheets().batchUpdate(spreadsheetId=drive_key, body={"requests": layout_requests}).execute, google_failed)
                 tab_prefix = f"'{sheet_name}'!" if sheet_name is not None else ""
                 for chunk_start in range(0, len(all_values), sheet_chunk_rows):
                     chunk = all_values[chunk_start : chunk_start + sheet_chunk_rows]
                     chunk_row = sheet_start_row + chunk_start
                     if not raw_set:
-                        sheets_service.spreadsheets().values().update(
-                            spreadsheetId=drive_key, range=f"{tab_prefix}{sheet_start_column}{chunk_row}", valueInputOption="USER_ENTERED", body={"values": chunk}
-                        ).execute()
+                        self._throttled(
+                            "google_sheets",
+                            sheets_service.spreadsheets()
+                            .values()
+                            .update(spreadsheetId=drive_key, range=f"{tab_prefix}{sheet_start_column}{chunk_row}", valueInputOption="USER_ENTERED", body={"values": chunk})
+                            .execute,
+                            google_failed,
+                        )
                         continue
                     for input_option, input_columns in (("USER_ENTERED", [c for c in columns if c not in raw_set]), ("RAW", [c for c in columns if c in raw_set])):
                         if input_columns:
-                            sheets_service.spreadsheets().values().batchUpdate(
-                                spreadsheetId=drive_key,
-                                body={
-                                    "valueInputOption": input_option,
-                                    "data": [
-                                        {"range": f"{tab_prefix}{column_letters[column]}{chunk_row}", "majorDimension": "COLUMNS", "values": [[row[columns.index(column)] for row in chunk]]}
-                                        for column in input_columns
-                                    ],
-                                },
-                            ).execute()
-                drive_version = self._sheet_version(drive_key)
-            suffix = f"_v{drive_version}" if drive_version is not None else ""
-            file_path = abspath(f"{self.local_cache}/_sheet_{name}{suffix}.csv")
+                            self._throttled(
+                                "google_sheets",
+                                sheets_service.spreadsheets()
+                                .values()
+                                .batchUpdate(
+                                    spreadsheetId=drive_key,
+                                    body={
+                                        "valueInputOption": input_option,
+                                        "data": [
+                                            {"range": f"{tab_prefix}{column_letters[column]}{chunk_row}", "majorDimension": "COLUMNS", "values": [[row[columns.index(column)] for row in chunk]]}
+                                            for column in input_columns
+                                        ],
+                                    },
+                                )
+                                .execute,
+                                google_failed,
+                            )
+            file_path = abspath(f"{self.local_cache}/_sheet_{name}_v{self._sheet_version_latest(name)[0] + 1}.csv")
             self.csv_write(data_df, file_path)
             if formatted:
-                with open(abspath(f"{self.local_cache}/_sheet_{name}_format.json"), "w") as format_file:
-                    json.dump({"raw": sorted(raw_set), "formulas": formulas, "dropdowns": dropdowns, "highlights": highlights}, format_file, indent=2, sort_keys=True)
-            if drive_version is not None:
-                self._sheet_cache_cleanup(name, int(drive_version))
+                with open(format_path, "w") as format_file:
+                    json.dump(layout, format_file, indent=2, sort_keys=True)
+            self._sheet_cache_cleanup(name)
             dataframe_print(
                 self.name,
                 data_df,
@@ -1018,7 +991,7 @@ class SourcesMixin(ContractMixin):
         if not cells and not rows:
             return UploadStatus.UNCHANGED
         cached_df = self.sheet_cached(workbook_name, sheet_name)
-        if guard and self._sheet_moved(drive_key, workbook_name, sheet_name, schema, cached_df):
+        if guard and cached_df is not None and self._sheet_moved(drive_key, workbook_name, sheet_name, schema):
             self.print_log(f"Sheet [{label}] status [{UploadStatus.MOVED.name}] edited since cached", started=started_time, level="warn")
             return UploadStatus.MOVED
         header = list(cached_df.columns) if cached_df is not None else []
@@ -1042,21 +1015,35 @@ class SourcesMixin(ContractMixin):
             letters = {column: self._sheet_column_letter(index) for index, column in enumerate(header)}
             service = build("sheets", "v4", http=self._google_authorized_http(self._sheets_credentials()), cache_discovery=False)
             if cells:
-                service.spreadsheets().values().batchUpdate(
-                    spreadsheetId=drive_key,
-                    body={
-                        "valueInputOption": "RAW",
-                        "data": [{"range": f"{tab_prefix}{letters[column]}{row_number}", "values": [["" if value is None else str(value)]]} for (row_number, column), value in cells.items()],
-                    },
-                ).execute()
+                self._throttled(
+                    "google_sheets",
+                    service.spreadsheets()
+                    .values()
+                    .batchUpdate(
+                        spreadsheetId=drive_key,
+                        body={
+                            "valueInputOption": "RAW",
+                            "data": [{"range": f"{tab_prefix}{letters[column]}{row_number}", "values": [["" if value is None else str(value)]]} for (row_number, column), value in cells.items()],
+                        },
+                    )
+                    .execute,
+                    google_failed,
+                )
             if rows:
-                service.spreadsheets().values().append(
-                    spreadsheetId=drive_key,
-                    range=f"{tab_prefix}A1",
-                    valueInputOption="RAW",
-                    insertDataOption="INSERT_ROWS",
-                    body={"values": [["" if row.get(column) is None else str(row[column]) for column in header] for row in rows]},
-                ).execute()
+                self._throttled(
+                    "google_sheets",
+                    service.spreadsheets()
+                    .values()
+                    .append(
+                        spreadsheetId=drive_key,
+                        range=f"{tab_prefix}A1",
+                        valueInputOption="RAW",
+                        insertDataOption="INSERT_ROWS",
+                        body={"values": [["" if row.get(column) is None else str(row[column]) for column in header] for row in rows]},
+                    )
+                    .execute,
+                    google_failed,
+                )
             if highlight_cells:
                 worksheets = self._sheet_tabs(drive_key)
                 sheet_id = next(worksheet.id for worksheet in worksheets if sheet_name is None or worksheet.title == sheet_name)
@@ -1080,7 +1067,7 @@ class SourcesMixin(ContractMixin):
                             }
                         }
                     )
-                service.spreadsheets().batchUpdate(spreadsheetId=drive_key, body={"requests": requests}).execute()
+                self._throttled("google_sheets", service.spreadsheets().batchUpdate(spreadsheetId=drive_key, body={"requests": requests}).execute, google_failed)
             self.print_log(f"Sheet [{label}] status [{UploadStatus.UPLOADED.name}] cells [{len(cells)}] rows [{len(rows)}] to [{drive_url}]", started=started_time)
             return UploadStatus.UPLOADED
         except Exception as exception:
@@ -1107,9 +1094,11 @@ class SourcesMixin(ContractMixin):
                 if name in titles:
                     continue
                 position = self._sheet_insert_index(titles, order[index + 1 :], order[:index])
-                worksheet = spreadsheet.add_worksheet(title=name, rows=2, cols=max(len(columns), 1), index=position)
+                worksheet = self._throttled(
+                    "google_sheets", lambda name=name, columns=columns, position=position: spreadsheet.add_worksheet(title=name, rows=2, cols=max(len(columns), 1), index=position), google_failed
+                )
                 if columns:
-                    worksheet.update(values=[list(columns)], range_name="A1")
+                    self._throttled("google_sheets", lambda worksheet=worksheet, columns=columns: worksheet.update(values=[list(columns)], range_name="A1"), google_failed)
                 titles.insert(len(titles) if position is None else position, name)
                 worksheets.insert(len(worksheets) if position is None else position, worksheet)
                 created.append(name)
@@ -1203,181 +1192,304 @@ class SourcesMixin(ContractMixin):
         )
         return collections.OrderedDict(sorted(actioned_files.items()))
 
-    def drive_synchronise(self, drive_dir, local_dir, check=True, download=True, upload=False):
+    def drive_synchronise(self, drive_dir, local_dir, download=True, upload=False, errors=None):
         """
-        Syncs a Drive folder with `local_dir`, skipping names starting `_` or `~$`: downloads files missing
-        locally or newer on Drive, and with `upload` uploads files missing on Drive or differing in size or
-        hash. Never deletes on either side. Returns each file's (present, downloaded).
+        Syncs a Drive folder with `local_dir` by the MD5 each file had at its last sync, kept in `_drive_synced.json`, skipping
+        names starting `_` or `~$`. A download takes a file Drive changed, Drive winning a file changed on both sides as
+        `conflicted`; an upload, after listing Drive again, sends a file changed only locally and skips one Drive changed too
+        as `conflicted`, and lists nothing when no local file changed since its sync. Without a recorded MD5 the newer side wins
+        once. A name listed twice is left alone, the plugin's download-only names are never uploaded, and nothing is deleted
+        on either side. Returns each file's status.
         """
         if drive_dir is None:
             return collections.OrderedDict()
         started_time = time.time()
+        statuses: dict[str, str] = {}
+        duplicates: set[str] = set()
+        manifest_path = abspath(f"{local_dir}/_drive_synced.json")
+        manifest: dict[str, str] = {}
+        if isfile(manifest_path):
+            try:
+                with open(manifest_path) as manifest_file:
+                    manifest = json.load(manifest_file)
+            except Exception as exception:
+                self.print_log(f"Directory [{basename(local_dir).title()}] manifest unreadable at [{manifest_path}], newer side wins", exception=exception, level="warn")
 
-        def file_hash(file_name) -> str:
-            hasher = hashlib.new("md5")
-            with open(file_name, "rb") as f:
-                for block in iter(lambda: f.read(8 * 1024), b""):
-                    hasher.update(block)
-            return hasher.hexdigest()
+        def _problem(_name, _code, _detail):
+            if errors is not None and _code in self.error_codes:
+                self.error(errors, "Drive", _name, _code, _detail)
+            else:
+                self.print_log(f"File [{_name}] {_detail}", level="error")
+                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
 
-        local_files = {}
-        actioned_files = {}
-        ignore_prefixes = ("_", "~$")
-        drive_files = {}
+        def _recorded(_name, _hash):
+            manifest[_name] = _hash
+            with open(f"{manifest_path}.tmp", "w") as _manifest_file:
+                json.dump(dict(sorted(manifest.items())), _manifest_file, indent=2)
+            os.replace(f"{manifest_path}.tmp", manifest_path)
+
+        def _download_only(_name):
+            return any(fnmatch.fnmatch(_name, _pattern) for _pattern in self.drive_download_only)
+
+        if not download and not config.force_reprocessing and not config.force_uploads:
+            local_hashes = {
+                basename(path).lower(): (abspath(path).lower(), self._file_md5(path))
+                for path in glob.glob(f"{local_dir}/*")
+                if isfile(path) and not basename(path).startswith(DRIVE_IGNORE_PREFIXES) and not _download_only(basename(path).lower())
+            }
+            if all(manifest.get(name) == file_hash for name, (_, file_hash) in local_hashes.items()):
+                self.print_log(f"Directory [{basename(local_dir).title()}] unchanged since its last sync, not listed", started=started_time, level="debug")
+                return collections.OrderedDict(sorted((path, DriveStatus.VERIFIED) for path, _ in local_hashes.values()))
+
         auth_start = time.perf_counter()
         credentials = google.oauth2.service_account.Credentials.from_service_account_file(  # type: ignore[attr-defined]
             get_file(".google_service_account.json"), scopes=["https://www.googleapis.com/auth/drive"]
         )
         service = build("drive", "v3", http=self._google_authorized_http(credentials), cache_discovery=False)
-        force_download = config.force_downloads and not config.disable_drive_downloads
-        force_upload = config.force_uploads and not config.disable_drive_uploads
         auth_elapsed_ms = int((time.perf_counter() - auth_start) * 1000)
+
+        def _listed():
+            _local_files = {
+                basename(_path).lower(): {"path": abspath(_path).lower(), "hash": self._file_md5(_path), "modified": int(getmtime(_path))}
+                for _path in glob.glob(f"{local_dir}/*")
+                if isfile(_path) and not basename(_path).startswith(DRIVE_IGNORE_PREFIXES)
+            }
+            _drive_listed: dict[str, list[dict]] = {}
+            _token = None
+            while True:
+                _response = self._throttled(
+                    "google_drive",
+                    service.files()
+                    .list(q=f"'{drive_dir}' in parents and trashed = false", spaces="drive", fields="nextPageToken, files(id, name, modifiedTime, md5Checksum)", pageSize=1000, pageToken=_token)
+                    .execute,
+                    google_failed,
+                )
+                for _drive_file in _response.get("files", []):
+                    if not _drive_file["name"].startswith(DRIVE_IGNORE_PREFIXES):
+                        _drive_listed.setdefault(_drive_file["name"].lower(), []).append(
+                            {
+                                "id": _drive_file["id"],
+                                "name": _drive_file["name"],
+                                "hash": _drive_file.get("md5Checksum"),
+                                "modified": int(datetime.strptime(_drive_file["modifiedTime"], "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=UTC).timestamp()),
+                            }
+                        )
+                _token = _response.get("nextPageToken")
+                if not _token:
+                    break
+            _drive_files = {}
+            for _name, _listings in sorted(_drive_listed.items()):
+                if len(_listings) == 1:
+                    _drive_files[_name] = _listings[0]
+                elif _download_only(_name):
+                    for _listing in _listings:
+                        _stem, _extension = os.path.splitext(_name)
+                        _drive_files[f"{_stem}_{_listing['id'].lower()}{_extension}"] = _listing
+                else:
+                    duplicates.add(_name)
+                    if download:
+                        _problem(_name, "DRIVE_DUPLICATE", f"listed [{len(_listings)}] times on Drive, left alone")
+            self.drive_ids.update({_name: _drive_file["id"] for _name, _drive_file in _drive_files.items()})
+            self.print_log(f"Directory [{basename(local_dir).title()}] listed [{len(_drive_files)}] files from [https://drive.google.com/drive/folders/{drive_dir}]", started=started_time)
+            return _local_files, _drive_files
+
         marshall_start = time.perf_counter()
         try:
-            for local_file in glob.glob(f"{local_dir}/*"):
-                if basename(local_file).startswith(ignore_prefixes):
-                    continue
-                local_files[basename(local_file).lower()] = {"path": local_file, "hash": None, "size": os.path.getsize(local_file), "modified": int(getmtime(local_file)) if check else None}
-            token = None
-            while True:
-                response = (
-                    service.files()
-                    .list(q=f"'{drive_dir}' in parents", spaces="drive", fields="nextPageToken, files(id, name, modifiedTime, md5Checksum, size)", pageSize=1000, pageToken=token)
-                    .execute()
-                )
-                for drive_file in response.get("files", []):
-                    if drive_file["name"].startswith(ignore_prefixes):
-                        continue
-                    drive_files[drive_file["name"]] = {
-                        "id": drive_file["id"],
-                        "hash": drive_file.get("md5Checksum"),
-                        "size": int(drive_file.get("size", -1)),
-                        "modified": int(datetime.strptime(drive_file["modifiedTime"], "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=UTC).timestamp()),
-                    }
-                token = response.get("nextPageToken")
-                if not token:
-                    break
-            self.print_log(f"Directory [{basename(local_dir).title()}] listed [{len(drive_files)}] files from [https://drive.google.com/drive/folders/{drive_dir}]", started=started_time)
-            started_time = time.time()
+            local_files, drive_files = _listed()
             thread_local = threading.local()
             to_download = []
-            for drive_file in drive_files:
-                local_path = abspath(f"{local_dir}/{drive_file}").lower()
-                drive_file_lower = drive_file.lower()
-                needs_download = drive_file_lower not in local_files or (check and not force_download and drive_files[drive_file]["modified"] > local_files[drive_file_lower]["modified"])
-                if download and not config.disable_drive_downloads and (force_download or needs_download):
-                    to_download.append((drive_file, local_path))
+            for drive_name, drive_file in drive_files.items() if download else []:
+                local_path = abspath(f"{local_dir}/{drive_name}").lower()
+                local_file = local_files.get(drive_name)
+                recorded = manifest.get(drive_name)
+                if local_file is not None and local_file["hash"] == drive_file["hash"]:
+                    if recorded != drive_file["hash"]:
+                        _recorded(drive_name, drive_file["hash"])
+                    statuses[local_path] = DriveStatus.CACHED
+                    continue
+                if config.disable_drive_downloads:
+                    statuses[local_path] = DriveStatus.CACHED
+                    continue
+                if local_file is None:
+                    to_download.append((drive_name, local_path, False))
+                elif recorded is None:
+                    if drive_file["modified"] > local_file["modified"] or config.force_downloads:
+                        to_download.append((drive_name, local_path, False))
+                    else:
+                        statuses[local_path] = DriveStatus.CACHED
+                elif drive_file["hash"] != recorded:
+                    to_download.append((drive_name, local_path, local_file["hash"] != recorded))
                 else:
-                    self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
+                    statuses[local_path] = DriveStatus.CACHED
                     self.print_log(f"File [{basename(local_path).split('.')[0]}] cached at [{local_path}]", level="debug")
-                    actioned_files[local_path] = True, False
 
             def _thread_service():
                 if not hasattr(thread_local, "service"):
                     thread_local.service = build("drive", "v3", http=self._google_authorized_http(credentials), cache_discovery=False)
                 return thread_local.service
 
-            def _download_one(_drive_file_name, _local_path):
+            def _download_one(_drive_name, _local_path):
                 _file_started = time.time()
-                _label = basename(_local_path).split(".")[0]
-                _last_error = None
-                for _attempt in range(3):
-                    if _attempt > 0:
-                        time.sleep(2)
-                    try:
-                        _request = _thread_service().files().get_media(fileId=drive_files[_drive_file_name]["id"])
-                        buf = io.BytesIO()
-                        downloader = MediaIoBaseDownload(buf, _request)
-                        done = False
-                        while not done:
-                            _, done = downloader.next_chunk()
-                        if not exists(dirname(_local_path)):
-                            os.makedirs(dirname(_local_path))
-                        with open(_local_path, "wb") as f:
-                            f.write(buf.getvalue())
-                        _utime_error = None
-                        try:
-                            os.utime(_local_path, (drive_files[_drive_file_name]["modified"], drive_files[_drive_file_name]["modified"]))
-                        except Exception as e:
-                            _utime_error = e
-                        return _drive_file_name, _local_path, _label, _file_started, None, _utime_error
-                    except Exception as e:
-                        _last_error = e
-                return _drive_file_name, _local_path, _label, _file_started, _last_error, None
+
+                def _fetched():
+                    _buffer = io.BytesIO()
+                    _downloader = MediaIoBaseDownload(_buffer, _thread_service().files().get_media(fileId=drive_files[_drive_name]["id"]))
+                    _done = False
+                    while not _done:
+                        _, _done = _downloader.next_chunk()
+                    return _buffer.getvalue()
+
+                try:
+                    _content = self._throttled("google_drive", _fetched, google_failed)
+                    os.makedirs(dirname(_local_path), exist_ok=True)
+                    with open(f"{_local_path}.tmp", "wb") as _local_file:
+                        _local_file.write(_content)
+                    os.replace(f"{_local_path}.tmp", _local_path)
+                    with contextlib.suppress(OSError):
+                        os.utime(_local_path, (drive_files[_drive_name]["modified"], drive_files[_drive_name]["modified"]))
+                    return _file_started, None
+                except Exception as exception:
+                    return _file_started, exception
 
             with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-                futures = {executor.submit(_download_one, df, lp): (df, lp) for df, lp in to_download}
+                futures = {executor.submit(_download_one, drive_name, local_path): (drive_name, local_path, conflicted) for drive_name, local_path, conflicted in to_download}
                 for future in concurrent.futures.as_completed(futures):
-                    drive_file, local_path, label, file_started, download_error, utime_error = future.result()
+                    drive_name, local_path, conflicted = futures[future]
+                    file_started, download_error = future.result()
+                    label = basename(local_path).split(".")[0]
                     if download_error is None:
-                        local_files[drive_file.lower()] = {"hash": drive_files[drive_file]["hash"], "modified": drive_files[drive_file]["modified"]}
+                        _recorded(drive_name, self._file_md5(local_path))
                         self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
-                        self.print_log(f"File [{label}] downloaded to [{local_path}]", started=file_started)
-                        if utime_error is not None:
-                            self.print_log(f"File [{label}] downloaded file [{local_path}] modified timestamp set failed [{drive_files[drive_file]['modified']}]", exception=utime_error)
+                        if conflicted:
+                            statuses[local_path] = DriveStatus.CONFLICTED
+                            _problem(drive_name, "DRIVE_CONFLICT", "changed both locally and on Drive since the last sync, Drive's taken")
+                        else:
+                            statuses[local_path] = DriveStatus.DOWNLOADED
+                            self.print_log(f"File [{label}] downloaded to [{local_path}]", started=file_started)
                     else:
                         self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
                         self.print_log(f"File [{label}] failed to download to [{local_path}]", exception=download_error)
-                    actioned_files[local_path] = True, download_error is None
+                        statuses[local_path] = DriveStatus.FAILED
+            self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED, sum(1 for status in statuses.values() if status == DriveStatus.CACHED))
         finally:
             self.add_counter(CTR_SRC_TIMING, CTR_ACT_MARSHALL_MILLIS, int((time.perf_counter() - marshall_start) * 1000) + (auth_elapsed_ms if download else 0))
 
         egress_start = time.perf_counter()
         try:
             if upload:
-                for local_file in local_files:
-                    if not local_file.startswith(ignore_prefixes):
-                        started_time_file = time.time()
-                        file_actioned = False
-                        local_path = abspath(f"{local_dir}/{local_file}").lower()
-                        label = basename(local_path).split(".")[0]
-                        drive_match = next((k for k in drive_files if k.lower() == local_file), None)
-                        needs_upload = drive_match is None
-                        if not needs_upload and check and not force_upload:
-                            needs_upload = local_files[local_file]["size"] != drive_files[drive_match]["size"]
-                            if not needs_upload and not local_file.endswith(".pdf") and drive_files[drive_match]["hash"] is not None:
-                                if local_files[local_file]["hash"] is None:
-                                    local_files[local_file]["hash"] = file_hash(local_files[local_file]["path"])
-                                needs_upload = drive_files[drive_match]["hash"] != local_files[local_file]["hash"]
-                        if (force_upload or needs_upload) and not config.disable_drive_uploads:
-                            try:
-                                data = MediaFileUpload(local_path)
-                                drive_id = drive_files[drive_match]["id"] if drive_match is not None else None
-                                metadata: dict[str, object] = {"modifiedTime": datetime.fromtimestamp(local_files[local_file]["modified"], UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ")}
-                                if drive_id is None:
-                                    metadata["name"] = basename(local_file)
-                                    metadata["parents"] = [drive_dir]
-                                    request = service.files().create(body=metadata, media_body=data).execute()
-                                else:
-                                    request = service.files().update(fileId=drive_id, body=metadata, media_body=data).execute()
-                                file_actioned = True
-                                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_UPLOADED)
-                                self.print_log(f"File [{label}] uploaded to [https://drive.google.com/file/d/{request.get('id') if drive_id is None else drive_id}]", started=started_time_file)
-                            except Exception as exception:
-                                self.print_log(f"File [{label}] failed to upload to [https://drive.google.com/drive/folders/{drive_dir}]", exception=exception)
-                                self.add_counter(CTR_SRC_EGRESS, CTR_ACT_ERRORED)
-                        else:
+                if download:
+                    local_files, drive_files = _listed()
+                for local_name, local_file in local_files.items():
+                    started_time_file = time.time()
+                    local_path = local_file["path"]
+                    label = basename(local_path).split(".")[0]
+                    if statuses.get(local_path) in (DriveStatus.CONFLICTED, DriveStatus.FAILED) or local_name in duplicates or _download_only(local_name):
+                        continue
+                    drive_file = drive_files.get(local_name)
+                    recorded = manifest.get(local_name)
+                    if drive_file is not None and drive_file["hash"] == local_file["hash"]:
+                        if recorded != local_file["hash"]:
+                            _recorded(local_name, local_file["hash"])
+                        if not config.force_uploads:
                             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_PERSISTED)
-                            self.print_log(f"File [{label}] verified at [https://drive.google.com/file/d/{drive_files[drive_match]['id']}]", started=started_time_file, level="debug")
-                        actioned_files[local_path] = True, file_actioned
+                            self.print_log(f"File [{label}] verified at [https://drive.google.com/file/d/{drive_file['id']}]", started=started_time_file, level="debug")
+                            statuses[local_path] = DriveStatus.VERIFIED
+                            continue
+                    elif drive_file is not None and (local_file["hash"] == recorded if recorded is not None else drive_file["modified"] > local_file["modified"]):
+                        statuses[local_path] = DriveStatus.CACHED
+                        continue
+                    elif drive_file is not None and recorded is not None and drive_file["hash"] != recorded:
+                        statuses[local_path] = DriveStatus.CONFLICTED
+                        if local_name not in self.drive_conflicts:
+                            self.drive_conflicts.add(local_name)
+                            _problem(local_name, "DRIVE_CONFLICT", "changed on Drive during the run, upload skipped")
+                        continue
+                    if config.disable_drive_uploads:
+                        statuses[local_path] = DriveStatus.CACHED
+                        continue
+                    try:
+                        media = MediaFileUpload(local_path)
+                        metadata: dict[str, object] = {"modifiedTime": datetime.fromtimestamp(local_file["modified"], UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ")}
+                        if drive_file is None:
+                            metadata["name"] = basename(local_path)
+                            metadata["parents"] = [drive_dir]
+                            drive_id = self._throttled("google_drive", service.files().create(body=metadata, media_body=media).execute, google_failed).get("id")
+                            self.drive_ids[local_name] = drive_id
+                        else:
+                            drive_id = drive_file["id"]
+                            self._throttled("google_drive", service.files().update(fileId=drive_id, body=metadata, media_body=media).execute, google_failed)
+                        _recorded(local_name, local_file["hash"])
+                        statuses[local_path] = DriveStatus.UPLOADED
+                        self.add_counter(CTR_SRC_SOURCES, CTR_ACT_UPLOADED)
+                        self.print_log(f"File [{label}] uploaded to [https://drive.google.com/file/d/{drive_id}]", started=started_time_file)
+                    except Exception as exception:
+                        statuses[local_path] = DriveStatus.FAILED
+                        self.print_log(f"File [{label}] failed to upload to [https://drive.google.com/drive/folders/{drive_dir}]", exception=exception)
+                        self.add_counter(CTR_SRC_EGRESS, CTR_ACT_ERRORED)
         finally:
             self.add_counter(CTR_SRC_TIMING, CTR_ACT_EGRESS_MILLIS, int((time.perf_counter() - egress_start) * 1000) + (auth_elapsed_ms if not download else 0))
 
-        self.print_log(f"Directory [{basename(local_dir).title()}] synchronised [{len(actioned_files)}] files from [https://drive.google.com/drive/folders/{drive_dir}]", started=started_time)
-        return collections.OrderedDict(sorted(actioned_files.items()))
+        self.print_log(f"Directory [{basename(local_dir).title()}] synchronised [{len(statuses)}] files from [https://drive.google.com/drive/folders/{drive_dir}]", started=started_time)
+        return collections.OrderedDict(sorted(statuses.items()))
+
+    def drive_rename(self, drive_dir, local_dir, name, renamed):
+        """
+        Renames a synced file to `renamed`: on Drive by its id from the last listing, keeping its id and revisions, then the
+        cached copy and its manifest entry. With Drive uploads disabled, or no id listed, only the cached copy is renamed.
+        Returns whether the rename was done.
+        """
+        started_time = time.time()
+        drive_id = self.drive_ids.get(name.lower())
+        if drive_dir is not None and drive_id is not None and not config.disable_drive_uploads:
+            try:
+                credentials = google.oauth2.service_account.Credentials.from_service_account_file(  # type: ignore[attr-defined]
+                    get_file(".google_service_account.json"), scopes=["https://www.googleapis.com/auth/drive"]
+                )
+                self._throttled(
+                    "google_drive",
+                    build("drive", "v3", http=self._google_authorized_http(credentials), cache_discovery=False).files().update(fileId=drive_id, body={"name": renamed}).execute,
+                    google_failed,
+                )
+                self.drive_ids[renamed.lower()] = self.drive_ids.pop(name.lower())
+            except Exception as exception:
+                self.print_log(f"File [{name}] failed to rename to [{renamed}] on Drive", exception=exception)
+                self.add_counter(CTR_SRC_EGRESS, CTR_ACT_ERRORED)
+                return False
+        try:
+            os.rename(abspath(f"{local_dir}/{name}").lower(), abspath(f"{local_dir}/{renamed}").lower())
+            manifest_path = abspath(f"{local_dir}/_drive_synced.json")
+            if isfile(manifest_path):
+                with open(manifest_path) as manifest_file:
+                    manifest = json.load(manifest_file)
+                if name.lower() in manifest:
+                    manifest[renamed.lower()] = manifest.pop(name.lower())
+                    with open(f"{manifest_path}.tmp", "w") as manifest_file:
+                        json.dump(dict(sorted(manifest.items())), manifest_file, indent=2)
+                    os.replace(f"{manifest_path}.tmp", manifest_path)
+        except Exception as exception:
+            self.print_log(f"File [{name}] failed to rename to [{renamed}] locally", exception=exception)
+            self.add_counter(CTR_SRC_FILES, CTR_ACT_ERRORED)
+            return False
+        self.print_log(f"File [{name}] renamed to [{renamed}]", started=started_time)
+        return True
+
+    def _throttled(self, name, send, failed):
+        throttle = self.throttles.get(name)
+        return send() if throttle is None else throttle.call(send, failed)
+
+    @staticmethod
+    def _file_md5(file_path) -> str:
+        hasher = hashlib.new("md5")
+        with open(file_path, "rb") as file:
+            for block in iter(lambda: file.read(64 * 1024), b""):
+                hasher.update(block)
+        return hasher.hexdigest()
 
     def _sheet_opened(self, drive_key):
         if drive_key not in self._sheet_spreadsheets:
             client = gspread.Client(auth=self._sheets_credentials())
             client.set_timeout(TIMEOUT_NETWORK_SECONDS)
-            for attempt in range(3):
-                try:
-                    self._sheet_spreadsheets[drive_key] = client.open_by_key(drive_key)
-                    break
-                except gspread.exceptions.APIError as api_exception:
-                    if attempt == 2 or api_exception.response.status_code < 500:
-                        raise
-                    time.sleep(10 * (attempt + 1))
+            self._sheet_spreadsheets[drive_key] = self._throttled("google_sheets", lambda: client.open_by_key(drive_key), google_failed)
         return self._sheet_spreadsheets[drive_key], self._sheets_credentials()
 
     @staticmethod
@@ -1394,22 +1506,35 @@ class SourcesMixin(ContractMixin):
         with open(format_path) as format_file:
             return json.load(format_file)
 
-    def _sheet_moved(self, drive_key, workbook_name, sheet_name, schema, cached_df, typed=None) -> bool:
-        result = self.sheet_download(drive_key, workbook_name, sheet_name, schema=schema)
-        if result.file_status == DownloadStatus.FAILED:
-            return True
-        if result.file_status != DownloadStatus.DOWNLOADED:
-            return False
-        sheet_df = pl.read_csv(result.file_paths[0], infer_schema=False, raise_if_empty=False)
-        if typed is not None and cached_df is not None:
-            sheet_typed_df, cached_typed_df = typed(sheet_df), typed(cached_df)
-            if sheet_typed_df is not None and cached_typed_df is not None:
-                return not sheet_typed_df.equals(cached_typed_df)
-        return not (cached_df is not None and sheet_df.equals(cached_df))
+    def _sheet_moved(self, drive_key, workbook_name, sheet_name, schema) -> bool:
+        return self.sheet_download(drive_key, workbook_name, sheet_name, schema=schema).file_status != DownloadStatus.CACHED
+
+    def _sheet_values(self, drive_key, titles):
+        sheets_service = build("sheets", "v4", http=self._google_authorized_http(self._sheets_credentials()), cache_discovery=False)
+        sheet_titles = [
+            sheet["properties"]["title"]
+            for sheet in sorted(
+                self._throttled("google_sheets", sheets_service.spreadsheets().get(spreadsheetId=drive_key, fields="sheets.properties(title,index)").execute, google_failed).get("sheets", []),
+                key=lambda sheet: sheet["properties"].get("index", 0),
+            )
+        ]
+        resolved = {title: sheet_titles[0] if title is None and sheet_titles else title for title in titles}
+        present = [title for title in titles if resolved[title] in sheet_titles]
+        value_ranges = (
+            self._throttled(
+                "google_sheets",
+                sheets_service.spreadsheets().values().batchGet(spreadsheetId=drive_key, ranges=[f"'{resolved[title]}'" for title in present], valueRenderOption="FORMATTED_VALUE").execute,
+                google_failed,
+            ).get("valueRanges", [])
+            if present
+            else []
+        )
+        return {title: value_range.get("values", []) for title, value_range in zip(present, value_ranges, strict=True)}
 
     def _sheet_tabs(self, drive_key):
         if drive_key not in self._sheet_worksheets:
-            self._sheet_worksheets[drive_key] = self._sheet_opened(drive_key)[0].worksheets()
+            spreadsheet = self._sheet_opened(drive_key)[0]
+            self._sheet_worksheets[drive_key] = self._throttled("google_sheets", spreadsheet.worksheets, google_failed)
         return self._sheet_worksheets[drive_key]
 
     @staticmethod
@@ -1421,12 +1546,24 @@ class SourcesMixin(ContractMixin):
         return min(before_indexes) if before_indexes else None
 
     def _sheet_cache_path(self, name):
+        path = self._sheet_version_latest(name)[1]
+        if path is not None:
+            return path
+        unversioned_path = abspath(f"{self.local_cache}/_sheet_{name}.csv")
+        return unversioned_path if isfile(unversioned_path) else None
+
+    def _sheet_versions(self, name):
         prefix = f"_sheet_{name}_v"
-        versioned_files = sorted(
+        return sorted(
             [(int(basename(path)[len(prefix) : -len(".csv")]), path) for path in glob.glob(abspath(f"{self.local_cache}/{prefix}*.csv")) if basename(path)[len(prefix) : -len(".csv")].isdigit()],
             reverse=True,
         )
-        if versioned_files:
-            return versioned_files[0][1]
-        unversioned_path = abspath(f"{self.local_cache}/_sheet_{name}.csv")
-        return unversioned_path if isfile(unversioned_path) else None
+
+    def _sheet_version_latest(self, name):
+        versions = self._sheet_versions(name)
+        return versions[0] if versions else (0, None)
+
+    def _sheet_cache_cleanup(self, name):
+        for _, file_path in self._sheet_versions(name)[2:]:
+            os.remove(file_path)
+            self.print_log(f"File [{name}] deleted old version [{file_path}]", level="debug")

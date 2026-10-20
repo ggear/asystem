@@ -1,2 +1,6 @@
-Date,Time,Account,Balance,Balance Manual,Balance Linked,Account ID,Balance ID
-2026-01-05,23:59:59,Cash,100.0,100.0,,6ec277688b3c570982242484009c9cdb,
+Date,Time,Account,Balance Manual
+2026-01-05,23:59:59,Cash,100.0
+2026-01-14,,One,50.0
+2026-01-10,,Nobody,5.0
+2026-02-01,,Cash,5.0
+2026-01-12,,Cash,abc
