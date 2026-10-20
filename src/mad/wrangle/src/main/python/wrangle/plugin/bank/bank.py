@@ -121,10 +121,10 @@ CLASSIFIER_MERCHANT_CODE_NONE = "0000"
 CLASSIFIER_SCHEMA = {
     "Category": pl.Utf8,
     "Bucket": pl.Utf8,
-    "Budgeted": pl.Utf8,
     "Bank Code": pl.Utf8,
     "Merchant Code": pl.Utf8,
     "Pattern": pl.Utf8,
+    "Notes": pl.Utf8,
 }
 
 BALANCES_MAX_AGE_HOURS = 3
@@ -172,8 +172,8 @@ TRANSACTIONS_CATEGORY_FORMULA = '=IF({Category Manual}<>"",{Category Manual},{Ca
 TRANSACTIONS_BUCKET_FORMULA = '=IFERROR(VLOOKUP({Category},Classifier!A:B,2,FALSE),"")'
 TRANSACTIONS_CATEGORY_OPTIONS = "Classifier!A2:A"
 TRANSACTIONS_KEY_COLUMNS = ["Date", "Transaction ID", "Split"]
-TRANSACTIONS_RAW_COLUMNS = ["Account", "Description", "Bank Code", "Merchant Code", "Vetted", "Category Manual", "Category Derived", "Account ID", "Source ID", "Transaction ID"]
-TRANSACTIONS_EDIT_COLUMNS = ["Amount Split", "Category Manual", "Vetted"]
+TRANSACTIONS_RAW_COLUMNS = ["Account", "Description", "Bank Code", "Merchant Code", "Vetted", "Category Manual", "Category Derived", "Notes", "Account ID", "Source ID", "Transaction ID"]
+TRANSACTIONS_EDIT_COLUMNS = ["Amount Split", "Category Manual", "Vetted", "Notes"]
 TRANSACTIONS_FIXED_COLUMNS = ["Date", "Date Posted", "Account", "Amount", "Description", "Bank Code", "Merchant Code", "Category Derived", "Account ID", "Source ID"]
 TRANSACTIONS_AMOUNT_PATTERN = r"^-?\$?-?(\d{1,3}(,\d{3})+|\d+)(\.\d+)?$"
 TRANSACTIONS_SCHEMA = {
@@ -186,9 +186,10 @@ TRANSACTIONS_SCHEMA = {
     "Bank Code": pl.Utf8,
     "Merchant Code": pl.Utf8,
     "Vetted": pl.Utf8,
-    "Category": pl.Utf8,
     "Category Manual": pl.Utf8,
     "Category Derived": pl.Utf8,
+    "Category": pl.Utf8,
+    "Notes": pl.Utf8,
     "Account ID": pl.Utf8,
     "Source ID": pl.Utf8,
     "Transaction ID": pl.Utf8,
@@ -203,10 +204,11 @@ TRANSACTIONS_YEAR_TAB_SCHEMA = {
     "Bank Code": pl.Utf8,
     "Merchant Code": pl.Utf8,
     "Vetted": pl.Utf8,
-    "Category": pl.Utf8,
-    "Bucket": pl.Utf8,
     "Category Manual": pl.Utf8,
     "Category Derived": pl.Utf8,
+    "Category": pl.Utf8,
+    "Bucket": pl.Utf8,
+    "Notes": pl.Utf8,
     "Account ID": pl.Utf8,
     "Source ID": pl.Utf8,
     "Transaction ID": pl.Utf8,
@@ -226,10 +228,11 @@ TRANSACTIONS_STATE_SCHEMA = {
     "Bank Code": pl.Utf8,
     "Merchant Code": pl.Utf8,
     "Vetted": pl.Utf8,
-    "Category": pl.Utf8,
-    "Bucket": pl.Utf8,
     "Category Manual": pl.Utf8,
     "Category Derived": pl.Utf8,
+    "Category": pl.Utf8,
+    "Bucket": pl.Utf8,
+    "Notes": pl.Utf8,
     "Account ID": pl.Utf8,
     "Source ID": pl.Utf8,
 }
@@ -238,7 +241,6 @@ TRANSACTIONS_UNBUCKETED = "Unbucketed"
 TRANSACTIONS_UNCATEGORISED = "Uncategorised"
 TRANSACTIONS_TAB_SCHEMA = {
     "End of Month": pl.Date,
-    "Budgeted": pl.Utf8,
     "Bucket": pl.Utf8,
     "Category": pl.Utf8,
     "Total": pl.Float64,
@@ -265,7 +267,6 @@ ERROR_CODES = {
     "REDBARK_GONE": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
     "CLASSIFIER_BANK_CODE": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
     "CLASSIFIER_BUCKET": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
-    "CLASSIFIER_BUDGETED": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
     "CLASSIFIER_CATEGORY": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
     "CLASSIFIER_CATEGORY_CASE": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
     "CLASSIFIER_CODE_LIST": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
@@ -613,21 +614,6 @@ class Bank(plugin.Plugin):
                 for category, buckets in category_buckets_df.filter(pl.col("Bucket").list.len() != 1).iter_rows():
                     _bank_error("Classifier", category, "CLASSIFIER_BUCKET", f"buckets [{', '.join(buckets)}] left unbucketed")
                 category_bucket_df = category_buckets_df.with_columns(pl.when(pl.col("Bucket").list.len() == 1).then(pl.col("Bucket").list.first()).alias("Bucket"))
-                bucket_budgeted_df = (
-                    classifier_rows_df.join(category_bucket_df.rename({"Bucket": "__bucket"}), on="Category")
-                    .drop_nulls("__bucket")
-                    .group_by("__bucket", maintain_order=True)
-                    .agg(pl.coalesce(bank_flag("Budgeted"), pl.col("Budgeted")).unique())
-                )
-                for bucket, budgeted in bucket_budgeted_df.iter_rows():
-                    if len(budgeted) != 1 or budgeted[0] not in FLAGS:
-                        _bank_error("Classifier", bucket, "CLASSIFIER_BUDGETED", f"budgeted [{', '.join(str(value) for value in budgeted)}] not one of [{', '.join(FLAGS)}] counted as [{FLAG_NO}]")
-                bucket_budgeted_df = bucket_budgeted_df.select(
-                    [
-                        pl.col("__bucket").alias("Bucket"),
-                        pl.when((pl.col("Budgeted").list.len() == 1) & (pl.col("Budgeted").list.first() == FLAG_YES)).then(pl.lit(FLAG_YES)).otherwise(pl.lit(FLAG_NO)).alias("Budgeted"),
-                    ]
-                )
                 for name, categories in (
                     classifier_rows_df.select(["Category"])
                     .unique(maintain_order=True)
@@ -642,18 +628,13 @@ class Bank(plugin.Plugin):
                 for row in classifier_raw_df.with_row_index("Row", offset=2).filter(pl.col("Pattern").is_not_null() & (pl.col("Pattern") != pl.col("Pattern").str.strip_chars())).iter_rows(named=True):
                     _bank_error("Classifier", f"row {row['Row']}", "CLASSIFIER_PATTERN", f"pattern [{row['Pattern']}] has edge spaces")
                 classifier_patterns_df, classifier_bank_df, classifier_merchant_df = _bank_matchers(classifier_rows_df, True)
-                classifier_df = (
-                    classifier_rows_df.drop(["Row", "Bucket", "Budgeted"])
-                    .join(category_bucket_df, on="Category", how="left", maintain_order="left")
-                    .join(bucket_budgeted_df, on="Bucket", how="left", maintain_order="left")
-                    .select(list(CLASSIFIER_SCHEMA))
-                )
+                classifier_df = classifier_rows_df.drop(["Row", "Bucket"]).join(category_bucket_df, on="Category", how="left", maintain_order="left").select(list(CLASSIFIER_SCHEMA))
             except Exception as exception:
                 _bank_error("Classifier", "tab", "TAB_UNUSABLE", f"tab unusable [{exception}]")
         classifier_usable = len(classifier_df) > 0
-        classifier_content_changed = classifier_usable and (classifier_snapshot_df is None or not classifier_snapshot_df.equals(classifier_df))
+        classifier_content_changed = classifier_usable and (classifier_snapshot_df is None or not classifier_snapshot_df.drop("Notes").equals(classifier_df.drop("Notes")))
         classifier_holding = classifier_content_changed and any(error["Code"] in CLASSIFIER_HOLDING_CODES for error in errors[classifier_errors_start:])
-        classifier_buckets = ["Category", "Bucket", "Budgeted"]
+        classifier_buckets = ["Category", "Bucket"]
         classifier_buckets_df = classifier_df.select(classifier_buckets).unique(maintain_order=True)
         classifier_changed = classifier_usable and (classifier_snapshot_df is None or not classifier_snapshot_df.select(classifier_buckets).unique(maintain_order=True).equals(classifier_buckets_df))
         classifier_categories = set(classifier_df["Category"].to_list())
@@ -1032,9 +1013,10 @@ class Bank(plugin.Plugin):
                     pl.col("Bank Code"),
                     pl.col("Merchant Code"),
                     pl.col("__vetted").alias("Vetted"),
-                    pl.lit(None, dtype=pl.Utf8).alias("Category"),
                     pl.col("Category Manual"),
                     pl.col("Category Derived"),
+                    pl.lit(None, dtype=pl.Utf8).alias("Category"),
+                    pl.col("Notes"),
                     pl.col("__account_id").alias("Account ID"),
                     pl.col("Source ID"),
                     pl.lit(None, dtype=pl.Utf8).alias("Transaction ID"),
@@ -1148,7 +1130,7 @@ class Bank(plugin.Plugin):
                     base_raw_df = _bank_tab_rendered(_bank_bucketed(_bank_accounts_applied(_bank_held().filter(pl.col("Date").dt.year() == year), accounts_df))).cast(pl.Utf8)
                 tab_edits, tab_ignored, tab_idless = bank_tab_edits(self.sheet_typed(tab_raw_df, TRANSACTIONS_YEAR_TAB_SCHEMA), self.sheet_typed(base_raw_df, TRANSACTIONS_YEAR_TAB_SCHEMA))
                 if tab_ignored:
-                    _bank_error(tab, "tab", "TAB_EDIT_IGNORED", f"[{tab_ignored}] transactions edited outside amount split, category manual and vetted, put back")
+                    _bank_error(tab, "tab", "TAB_EDIT_IGNORED", f"[{tab_ignored}] transactions edited outside amount split, category manual, vetted and notes, put back")
                 if tab_idless:
                     _bank_error(tab, "rows", "TAB_EDIT_IGNORED", f"[{tab_idless}] rows without a transaction id ignored, manual rows go in the manual files on Drive")
                 merged_counts["ignored"] += tab_ignored + tab_idless
@@ -1177,7 +1159,12 @@ class Bank(plugin.Plugin):
                     held_parts = held_df.to_dicts()
                     cents = round(held_parts[0]["Amount"] * 100)
                     held_values = [
-                        {"Amount Split": None if part["Amount Split"] is None else round(part["Amount Split"] * 100), "Category Manual": part["Category Manual"], "Vetted": part["Vetted"]}
+                        {
+                            "Amount Split": None if part["Amount Split"] is None else round(part["Amount Split"] * 100),
+                            "Category Manual": part["Category Manual"],
+                            "Vetted": part["Vetted"],
+                            "Notes": part["Notes"],
+                        }
                         for part in held_parts
                     ]
                     if len(edit["Tab"]) == len(edit["Base"]) == len(held_parts) == 1:
@@ -1212,6 +1199,7 @@ class Bank(plugin.Plugin):
                             "Vetted": None
                             if part["Vetted"] == FLAG_YES and not part["__vetted_edited"] and (part["Category Manual"] or held_parts[0]["Category Derived"]) != held_category
                             else part["Vetted"],
+                            "Notes": part["Notes"],
                         }
                         for part, split in zip(parts, splits, strict=True)
                     ]
@@ -2304,7 +2292,7 @@ class Bank(plugin.Plugin):
                     TRANSACTIONS_RAW_COLUMNS,
                     {"Category": TRANSACTIONS_CATEGORY_FORMULA, "Bucket": TRANSACTIONS_BUCKET_FORMULA},
                     {"Vetted": FLAGS, "Category Manual": TRANSACTIONS_CATEGORY_OPTIONS},
-                    [_bank_letter(sheet_columns, "Amount Split"), _bank_letter(sheet_columns, "Vetted"), _bank_letter(sheet_columns, "Category Manual")],
+                    [_bank_letter(sheet_columns, column) for column in TRANSACTIONS_EDIT_COLUMNS],
                     TRANSACTIONS_YEAR_TAB_SCHEMA,
                     [f"Transactions_{older}" for older in transactions_tab_years if older < year],
                     ["Transactions", *(f"Transactions_{newer}" for newer in transactions_tab_years if newer > year)],
@@ -2331,14 +2319,12 @@ class Bank(plugin.Plugin):
                 )
                 if len(transactions_month_df):
                     started_time = time.time()
-                    budgeted_buckets = set(classifier_df.filter(pl.col("Budgeted") == FLAG_YES)["Bucket"].drop_nulls().to_list())
                     transactions_tab_df = (
                         transactions_month_df.group_by(["End of Month", "Bucket", "Category"])
                         .agg(pl.col("__total").sum().round(2).alias("Total"))
                         .filter(pl.col("Total") != 0)
-                        .with_columns(pl.when(pl.col("Bucket").is_in(list(budgeted_buckets))).then(pl.lit(FLAG_YES)).otherwise(pl.lit(FLAG_NO)).alias("Budgeted"))
                         .select(list(TRANSACTIONS_TAB_SCHEMA))
-                        .sort(["End of Month", "Budgeted", "Bucket", "Category"], descending=[True, True, False, False])
+                        .sort(["End of Month", "Bucket", "Category"], descending=[True, False, False])
                     )
                     dataframe_print(self.name, transactions_tab_df, print_label="Transactions", print_verb="bucketed", started=started_time)
                     _bank_tab_uploaded(

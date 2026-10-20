@@ -1351,16 +1351,15 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # Month end totals per category on the Transactions tab, budgeted first
+    # Month end totals per category on the Transactions tab, by bucket
     def test_bank_local_partial_28(self):
         self._bank_run(
             "partial_28",
             standing=2,
             file_asserts={
                 "_sheet_bank_transactions.csv": [
-                    assert_file_columns(["End of Month", "Budgeted", "Bucket", "Category", "Total"]),
+                    assert_file_columns(["End of Month", "Bucket", "Category", "Total"]),
                     assert_file_column_values("End of Month", ["2026-01-01"] * 4 + ["2025-11-01"]),
-                    assert_file_column_values("Budgeted", ["Yes", "Yes", "No", "No", "Yes"]),
                     assert_file_column_values("Bucket", ["Discretionary", "Living", "Transfers", "Unbucketed", "Living"]),
                     assert_file_column_values("Category", ["Restaurants", "Groceries", "Transfer", "Uncategorised", "Groceries"]),
                     assert_file_column_values("Total", ["50.0", "-20.0", "200.0", "1.0", "100.0"]),
@@ -1495,14 +1494,13 @@ class WrangleTest(unittest.TestCase):
             "corrupt_29",
             standing=2,
             rerun=False,
-            errored={plugin.CTR_SRC_SOURCES: 10},
+            errored={plugin.CTR_SRC_SOURCES: 9},
             file_asserts={
                 "__bank_logs.csv": [
                     assert_file_column_values(
                         "Code",
                         [
                             "CLASSIFIER_BUCKET",
-                            "CLASSIFIER_BUDGETED",
                             "CLASSIFIER_CATEGORY",
                             "CLASSIFIER_CATEGORY_CASE",
                             "CLASSIFIER_CODE_LIST",

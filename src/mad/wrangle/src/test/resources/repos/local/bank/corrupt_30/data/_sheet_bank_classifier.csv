@@ -1,2 +1,2 @@
-Bucket,Category,Budgeted,Bank Code,Merchant Code,Pattern
-Living,Groceries,Yes,,,grocer
+Bucket,Category,Bank Code,Merchant Code,Pattern
+Living,Groceries,,,grocer

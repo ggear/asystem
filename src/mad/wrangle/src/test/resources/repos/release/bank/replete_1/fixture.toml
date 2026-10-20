@@ -4,7 +4,7 @@ end_date = "2026-09-01"
 expected_errors = 0
 cols_data = -1
 transactions_rows_delta = 1
-transactions_end_date = "2026-09-29"
+transactions_end_date = "2026-10-09"
 
 [mtimes]
 "redbark_balances_2026.csv" = "2000-01-01T00:00:00"

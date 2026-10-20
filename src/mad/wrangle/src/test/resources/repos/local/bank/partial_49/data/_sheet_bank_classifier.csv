@@ -1,3 +1,3 @@
-Category,Bucket,Budgeted,Bank Code,Merchant Code,Pattern
-Groceries,Living,Yes,,,shop
-Food,Discretionary,Yes,,,cafe
+Category,Bucket,Bank Code,Merchant Code,Pattern
+Groceries,Living,,,shop
+Food,Discretionary,,,cafe

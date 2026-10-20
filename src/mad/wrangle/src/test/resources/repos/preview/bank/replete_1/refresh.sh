@@ -19,8 +19,9 @@ refresh_run_plugin "$(dirname "${REPO_TEST_RUN_DIR}")" online force
 find -E "${RELEASE_DRIVE_DIR}" -maxdepth 1 -type f \( -regex "${BANK_FILE_REGEX}" -o -iregex "${EXPORT_FILE_REGEX}" \) -exec cp -vpf {} "${REPO_TEST_DIR}"/ \;
 rsync -avci --delete --exclude ".git*" "${REPO_TEST_DIR}"/ "${REPO_TEST_DRIVE_DIR}"/
 
-# Add cache files, the release sheet's tabs standing in for the preview sheet's with sheet downloads disabled, and the live Redbark responses the test serves
-find "${REPO_TEST_RUN_DIR}" -maxdepth 1 -name '_sheet_bank_*_v*.csv' ! -name '*_run.csv' -exec cp -vpf {} "${REPO_TEST_DIR}" \;
+# Add cache files, the release sheet's tabs standing in for the preview sheet's with sheet downloads disabled, and the live Redbark responses the test serves;
+# only each tab's v1, the download into the empty cache, since a later version is the run's own render, which holds Redbark rows release's files do not yet
+find "${REPO_TEST_RUN_DIR}" -maxdepth 1 -name '_sheet_bank_*_v1.csv' -exec cp -vpf {} "${REPO_TEST_DIR}" \;
 for RESOURCE in accounts balances transactions; do
   cp -vpf "${REPO_TEST_RUN_DIR}/_redbark_${RESOURCE}.csv" "${REPO_TEST_DIR}"/
 done

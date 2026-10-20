@@ -57,8 +57,7 @@ Apr to mid Jul 2026 and the 2021 to 2023 history stay blank for good; that is co
 
 ## Proposed code changes
 
-The export import, the weekly 90-day sweep, the Drive upload conflict check and classifying Drive edits are built
-(`plans/flow.md`). Still open:
+The export import, the weekly 90-day sweep, the Drive upload conflict check and classifying Drive edits are built. Still open:
 
 - **Check CBA dates** against a CBA statement or export: CBA is a Sydney bank, so it may need Sydney-day dating like HSBC.
 - **Import HSBC exports** the way AMEX's are, once an HSBC 90-day export's format is pinned.
