@@ -943,6 +943,7 @@
               "driveway_repeater_linkquality_energy_yearly",
               "edwin_desk_outlet_linkquality",
               "front_door_lock_action_source_name",
+              "front_door_lock_action_user",
               "garden_pool_filter_plug_energy_total_daily",
               "garden_pool_filter_plug_energy_total_monthly",
               "garden_pool_filter_plug_energy_total_weekly",

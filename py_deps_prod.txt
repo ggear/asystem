@@ -12,7 +12,7 @@ aenum==3.1.17
 varsubst==2.0.0
 packaging==26.3
 requests==2.34.2
-setuptools==84.0.0
+setuptools==84.2.0
 pathlib2==2.3.7.post1
 ruff==$RUFF_VERSION
 pyright==$PYRIGHT_VERSION
@@ -38,9 +38,10 @@ polars==2.0.0
 orjson==3.13.0
 tabulate==0.10.0
 jproperties==2.1.2
+python-calamine==0.9.0
+# MISREPORTED: pip outdated ranks legacy <epoch>!11.x builds above the 0.0.x line
 grafana-foundation-sdk==0.0.20
-python-calamine==0.8.3
-# NOTES: HELD, not stale, mlserver requires pyarrow<26, unblocks with MLSERVER_VERSION
+# HELD: not stale, mlserver requires pyarrow<26, unblocks with MLSERVER_VERSION
 pyarrow==25.0.1
 
 # Machine learning/visualisation
@@ -49,10 +50,10 @@ notebook==7.6.3
 pdftotext==4.0.0
 jupyterlab==4.6.4
 matplotlib==3.11.2
-virtualenv==21.14.7
+virtualenv==21.14.11
 matplotlib-inline==0.2.2
 mlflow==$MLFLOW_VERSION
-# NOTES: HELD, not stale, mlserver requires fastapi<0.116.0, unblocks with MLSERVER_VERSION
+# HELD: not stale, mlserver requires fastapi<0.116.0, unblocks with MLSERVER_VERSION
 fastapi==0.115.14
 
 # Storage/databases
@@ -76,7 +77,7 @@ python-kasa==0.11.0.1
 speedtest-cli==2.1.3
 ffmpeg-python==0.2.0
 subtitle-filter==1.5.1
-decode-config==15.6.0.0
+decode-config==16.0.0.0
 google-auth==2.62.0
 google-auth-httplib2==0.4.4
 google-auth-oauthlib==1.5.0

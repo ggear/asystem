@@ -15,6 +15,13 @@ files (`Wrangle/Bank/release/data`) on Drive.
 - **Where.** Redbark takes all accounts from Fiskil, a CDR intermediary; its v2 API (header `Redbark-Version: 2026-10-01.wattle`)
   returns the same gap as v1. So the loss is in HSBC's CDR feed, Fiskil, or Redbark's import. A guess: a pending transaction
   reconciled with its posted copy only within about a day.
+- **Known CDR gaps that fit (Oct 2026).** No public report of Fiskil or Redbark losing late postings was found, but the standard
+  leaves two openings. Its transactions `oldest-time` filters on an "effective time" it never defines for a transaction, so a bank
+  may filter on purchase day: an incremental fetch then misses anything posted after its cursor passed the purchase day, which
+  matches the lag and weekend pattern. And it guarantees no id linking a pending copy to its posted one, with at least one bank
+  sending card authorisations as `POSTED` (standards-maintenance issue 656, open), so de-duplication can drop a copy, which fits
+  the October drops better than the never-listed rows. Redbark syncs only posted transactions and the provider takes one refresh
+  per person per 24 hours. Both point at the bank's feed rather than Fiskil.
 
 ## Done
 
@@ -41,7 +48,8 @@ Apr to mid Jul 2026 and the 2021 to 2023 history stay blank for good; that is co
 ## Next
 
 1. Ask Redbark support whether Fiskil's raw HSBC feed holds a missing transaction (say a Saturday purchase in May), to place the
-   fault in HSBC, Fiskil or Redbark, and whether the history can be re-synced. Cite the lag pattern and the October drops.
+   fault in HSBC, Fiskil or Redbark, and whether the history can be re-synced. Cite the lag pattern and the October drops. Ask
+   whether HSBC's `oldest-time` filters on posting or execution time, and how far back each incremental fetch overlaps.
 2. If Redbark re-syncs, run the matching backfill above, dry run first.
 3. Monthly, export HSBC's last 90 days and AMEX's activity as CSV into `archive/transactions/csv` (`HSBC_xxxx0651_<download
    day>.csv`, `American Express_xxxx<card>_<download day>.csv`), then match them to the held rows: add any missing transaction,
@@ -71,7 +79,10 @@ Drive's md5 matches before the next run, then reprocess. Roll back from the file
 ## Moving day-to-day spending off HSBC
 
 BWA Joint is the safest home: Redbark's Bankwest feed is complete, late postings included, and it is already linked and
-classified. A new card (Bankwest or CBA) is untested on Redbark, and the HSBC fault is on a card, so reconcile its first one or
+classified. That record is thin, though: a handful of Redbark rows a year, nearly all online transfers, so the card path that
+fails on HSBC (pending, then posted days later) is untested on Bankwest. Reconcile the first one or two BWA Joint statements once a
+debit card carries the spending, Friday and Saturday purchases especially; its linked balance means `BALANCE_UNRECONCILED` covers
+it too. A new card (Bankwest or CBA) is untested on Redbark, and the HSBC fault is on a card, so reconcile its first one or
 two statements against the year files before trusting the feed; a CBA card may also need Sydney-day dating.
 
 ## Watch, from 20 Oct 2026
