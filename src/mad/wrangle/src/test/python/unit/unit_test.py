@@ -733,6 +733,7 @@ class WrangleTest(unittest.TestCase):
             "partial_40",
             standing=1,
             sheet_downloads=1,
+            rerun=False,
             errored={plugin.CTR_SRC_DATA: 1},
             file_asserts={
                 "redbark_transactions_2025.csv": [
@@ -775,6 +776,20 @@ class WrangleTest(unittest.TestCase):
                 "redbark_balances_2025.csv": [
                     assert_file_column_values("Balance", ["11.00"], raw=True),
                     assert_file_column_values("Balance Linked", ["11.00"], raw=True),
+                ],
+            },
+        )
+
+    # A held description and a note holding spreadsheet error values are each raised as a standing warning, the rows kept
+    def test_bank_local_partial_68(self):
+        self._bank_run(
+            "partial_68",
+            standing=2,
+            file_asserts={
+                "redbark_transactions_2025.csv": [assert_file_size(min_rows=3, max_rows=3)],
+                "__bank_logs.csv": [
+                    assert_file_column_values("Code", ["TRANSACTION_SPREADSHEET_ERROR"] * 2),
+                    assert_file_column_values("Kind", [plugin.LOG_KIND_WARNING] * 2),
                 ],
             },
         )
@@ -1388,7 +1403,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # The logs tab lists standing problems and the last thirty days of records
+    # The logs tab lists errors then warnings newest first, a problem a run no longer raises historic and a warning for thirty days from its date raised
     def test_bank_local_partial_29(self):
         self._bank_run(
             "partial_29",
@@ -1396,8 +1411,12 @@ class WrangleTest(unittest.TestCase):
             errored={plugin.CTR_SRC_SOURCES: 1},
             file_asserts={
                 "_sheet_bank_logs.csv": [
-                    assert_file_columns(["Date", "Time", "Kind", "Counter", "Tab", "Key", "Code", "Detail"]),
-                    assert_file_column_values("Code", ["ACCOUNT_UNMAPPED", "VALUE_UNPARSED"]),
+                    assert_file_columns(["Date", "Time", "Date Raised", "Kind", "State", "Counter", "Tab", "Key", "Code", "Detail"]),
+                    assert_file_column_values("Code", ["ACCOUNT_UNMAPPED", "VALUE_UNPARSED", "TRANSACTIONS_UNVETTED"]),
+                    assert_file_column_values("Kind", ["Error", "Warning", "Warning"]),
+                    assert_file_column_values("State", ["Current", "Historic", "Historic"]),
+                    assert_file_column_values("Date", ["2026-01-01", "2026-01-10", "2025-11-01"]),
+                    assert_file_column_values("Date Raised", ["2026-01-15", "2026-01-10", "2026-01-14"]),
                 ],
             },
         )
@@ -3379,8 +3398,8 @@ class WrangleTest(unittest.TestCase):
             "Description",
             "Vetted",
             "Category Manual",
-            "Category Derived",
             "Category",
+            "Category Derived",
             "Bucket",
             "Notes",
             "Account ID",

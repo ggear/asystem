@@ -1,7 +1,7 @@
-Date,Date Posted,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Notes,Vetted,Category Manual,Category Derived,Category,Bucket,Account ID,Source ID,Transaction ID
-2026-01-08,,One,-8.0,-8.0,Filler 8,,,,,,,,,540a8918175f5ca38559395087eb552c,,8ebfa56db5ff5876818b33b1c54c7edb
-2026-01-07,,One,-7.0,-7.0,Filler 7,,,,,,,,,540a8918175f5ca38559395087eb552c,,8b9bbb3bcf6758b1ac95d605bf2007cc
-2026-01-06,,One,-6.0,-6.0,Filler 6,,,,,,,,,540a8918175f5ca38559395087eb552c,,d51d2a60f4b7536886d574f4bdb06b9e
-2026-01-05,,One,-30.0,-30.0,Split,,,,,,,,,540a8918175f5ca38559395087eb552c,,d97a98f9e8785ea98cad286c6afa9995
-2026-01-04,,One,-20.0,-20.0,Fuel,,,,Yes,,Car,Car,Costs,540a8918175f5ca38559395087eb552c,,45f4c23f0f5f5824bac101afbde86bd9
-2026-01-03,,One,-10.0,-10.0,Shop,,,,Yes,,Food,Food,Living,540a8918175f5ca38559395087eb552c,,676b8ef91c3e50aeaba0141fa56bc3f4
+Date,Date Posted,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Notes,Vetted,Category Manual,Category,Category Derived,Bucket,End of Month,Account ID,Source ID,Transaction ID
+2026-01-08,,One,-8.0,-8.0,Filler 8,,,,,,,,,2026-02-01,540a8918175f5ca38559395087eb552c,,8ebfa56db5ff5876818b33b1c54c7edb
+2026-01-07,,One,-7.0,-7.0,Filler 7,,,,,,,,,2026-02-01,540a8918175f5ca38559395087eb552c,,8b9bbb3bcf6758b1ac95d605bf2007cc
+2026-01-06,,One,-6.0,-6.0,Filler 6,,,,,,,,,2026-02-01,540a8918175f5ca38559395087eb552c,,d51d2a60f4b7536886d574f4bdb06b9e
+2026-01-05,,One,-30.0,-30.0,Split,,,,,,,,,2026-02-01,540a8918175f5ca38559395087eb552c,,d97a98f9e8785ea98cad286c6afa9995
+2026-01-04,,One,-20.0,-20.0,Fuel,,,,Yes,,Car,Car,Costs,2026-02-01,540a8918175f5ca38559395087eb552c,,45f4c23f0f5f5824bac101afbde86bd9
+2026-01-03,,One,-10.0,-10.0,Shop,,,,Yes,,Food,Food,Living,2026-02-01,540a8918175f5ca38559395087eb552c,,676b8ef91c3e50aeaba0141fa56bc3f4

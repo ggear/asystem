@@ -31,12 +31,16 @@ LOG_KIND_ERROR = "Error"
 LOG_KIND_WARNING = "Warning"
 LOG_KIND_INFO = "Info"
 LOG_RECORD_DAYS = 30
-LOG_RAW_COLUMNS = ["Time", "Kind", "Counter", "Tab", "Key", "Code", "Detail"]
+LOG_STATE_CURRENT = "Current"
+LOG_STATE_HISTORIC = "Historic"
+LOG_RAW_COLUMNS = ["Time", "Kind", "State", "Counter", "Tab", "Key", "Code", "Detail"]
 
 LOG_SCHEMA = {
     "Date": pl.Date,
     "Time": pl.Utf8,
+    "Date Raised": pl.Date,
     "Kind": pl.Utf8,
+    "State": pl.Utf8,
     "Counter": pl.Utf8,
     "Tab": pl.Utf8,
     "Key": pl.Utf8,

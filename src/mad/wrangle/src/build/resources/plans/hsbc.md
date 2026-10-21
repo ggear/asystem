@@ -61,6 +61,46 @@ The export import, the weekly 90-day sweep, the Drive upload conflict check and 
 
 - **Check CBA dates** against a CBA statement or export: CBA is a Sydney bank, so it may need Sydney-day dating like HSBC.
 - **Import HSBC exports** the way AMEX's are, once an HSBC 90-day export's format is pinned.
+- **Grade `TRANSACTION_GONE` by the balance**, below.
+
+### `TRANSACTION_GONE` today
+
+A one-off event (not standing), so on the `Logs` tab it is `Current` only in the run that raised it, then `Historic`, an error
+shown as a warning, and dropped 30 days after its `Date Raised`. It is raised only by a run that fetches transactions (when balances
+are due and moved, or the first fetch of the day), for a held Redbark row Redbark no longer lists inside the check window: 14 days
+behind the newest held row, 90 on the weekly sweep. So a row that stays gone is re-raised each fetch until it leaves the window,
+then weekly for about 90 days, and its detail names the window start, so each new window start is a separate entry. Two faults
+follow: a row still gone reads `Historic` between fetches, and the entries multiply.
+
+### Proposed: graded by the balance, and standing
+
+Make `TRANSACTION_GONE` a standing problem, raised every run while true, its kind set by the balance reconcile:
+
+- **Gone set.** Each fetch records the held rows it found unlisted (by Source ID) in a state file, and removes one Redbark lists
+  again, relisted or under its own id, or the files no longer hold. Every run raises one entry per row in the set, keyed by Source
+  ID, with a stable detail (no window start), so it never multiplies and its `State` means "still gone".
+- **Graded against the reading pair spanning the row's posting day** (`Date Posted`, else `Date`), on linked accounts only:
+  - *Confirmed*, the pair reconciles counting the row and not without it: the bank holds it and Redbark dropped it. **Warning.**
+  - *Contradicted*, the pair reconciles only without it: the bank likely reversed it. **Error**: check the statement and remove
+    the row on Drive if it agrees.
+  - *Unjudged*, no settled pair spans it (before the account's first reading, readings under 7 days old, older than the 35-day
+    window, no linked balance such as AMEX) or it reconciles either way (in-flight ambiguity): **Error**, until judged.
+- **Operator acknowledgement.** A gone row ticked `Vetted` (checked against the statement) is a **Warning** whatever its grade, so
+  the 8 October drops, all posted before the first Redbark reading (15 Oct) and never judgeable, stop being errors once ticked.
+- **Leaving.** A row stops being raised once Redbark lists it, it is removed, or it is a warning and past both the check window
+  and the 35-day reconcile window; it is then `Historic` for 30 days. An error stays `Current` until fixed or vetted.
+
+### Proposed: `BALANCE_UNRECONCILED` in the same structure
+
+- Stays a standing **Error**, `Current` while the break stands among the judged readings (7 to 35 days old), one entry per
+  account and reading day.
+- Its detail names any gone row of that account whose amount the break matches, and the gone row is then *contradicted* (break
+  the opposite sign of the row) or *confirmed* (break disappears when it is counted), so the two entries explain each other.
+- A break and an equal, opposite break on the same account a few days apart are a pre-authorisation held and released: both a
+  **Warning**, not an error.
+- A break whose readings pass the 35-day window unfixed is no longer raised, so it turns `Historic`, a warning, for 30 days from
+  its `Date Raised` rather than vanishing: built, as the general `Logs` rule (any problem a run no longer raises, standing or not,
+  so a fixed one lingers as a warning too).
 
 ## Editing the year files by hand
 
@@ -82,10 +122,13 @@ two statements against the year files before trusting the feed; a CBA card may a
 
 What to test, what to expect, and how to read a wrong answer. Read the `Logs` tab after the runs of each day that week.
 
-- **The 6 HSBC purchases made Thu 15 to Sun 18 Oct and posted Mon 19 Oct**, the slow-posting kind Redbark loses. Expect them
-  fetched by the first run of 20 Oct. A `TRANSACTION_GONE` for any in the following days confirms the fault live: check it against
-  a fresh 90-day HSBC export, keep the row, and add it to the Redbark support case. If none goes, the fault may be confined to
-  history, which is worth telling Redbark too.
+- **The 6 HSBC purchases made Thu 15 to Sun 18 Oct and posted Mon 19 Oct**, the slow-posting kind Redbark loses. Fetched on
+  20 Oct, all 6 with Source IDs and `Date Posted` 19 Oct. A `TRANSACTION_GONE` for any in the following days confirms the fault
+  live: check it against a fresh 90-day HSBC export, keep the row, and add it to the Redbark support case. If none goes, the fault
+  may be confined to history, which is worth telling Redbark too.
+- **The 8 `TRANSACTION_GONE` on `Logs` from 20 Oct 15:19** are the 8 known October drops (purchases 8 to 10 Oct, posted 12 and
+  13 Oct, already re-dated from the statement), raised by that day's first fetch: expected, not new drops. They recur on each
+  fetch while inside the check window, so expect more entries for the same rows until the change proposed above lands.
 - **`BALANCE_UNRECONCILED` from about 22 Oct**, when the first Redbark balance readings (from 15 Oct) are a week old and judged.
   Expect none for Bankwest and CBA, which backtested clean since 2025. On HSBC, expect one only where a transaction went missing
   (its amount, about a week later), and none for the 8 dropped rows, which are held. Each entry names two readings and the amount

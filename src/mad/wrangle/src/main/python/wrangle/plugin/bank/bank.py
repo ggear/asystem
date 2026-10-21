@@ -25,7 +25,7 @@
 #        6.2  Commit Transactions: rows joined to their accounts and buckets
 #     7. Check: raise data problems to Logs
 #        7.1  Check Accounts: unmapped, shared, stale and unreconciled
-#        7.2  Check Transactions: unclassified, unvetted and unbucketed
+#        7.2  Check Transactions: unclassified, unvetted, unbucketed and spreadsheet errors
 #     8. Sync: push changed files, skipping any Drive changed mid-run           [R] verify every file
 #        8.1  Sync Drive: upload, or conflict a file Drive moved since 1.1
 #     9. Upload: write each changed tab to the sheet                            [R] every tab
@@ -178,6 +178,8 @@ TRANSACTIONS_RAW_COLUMNS = ["Account", "Description", "Bank Code", "Merchant Cod
 TRANSACTIONS_EDIT_COLUMNS = ["Amount Split", "Category Manual", "Vetted", "Notes"]
 TRANSACTIONS_FIXED_COLUMNS = ["Date", "Date Posted", "Account", "Amount", "Description", "Bank Code", "Merchant Code", "Category Derived", "Account ID", "Source ID"]
 TRANSACTIONS_AMOUNT_PATTERN = r"^-?\$?-?(\d{1,3}(,\d{3})+|\d+)(\.\d+)?$"
+TRANSACTIONS_SPREADSHEET_ERROR_PATTERN = r"^#(NAME\?|REF!|VALUE!|N/A|DIV/0!|NUM!|NULL!|ERROR!|SPILL!|CALC!)$"
+TRANSACTIONS_SPREADSHEET_ERROR_COLUMNS = ["Description", "Notes"]
 TRANSACTIONS_SCHEMA = {
     "Date": pl.Date,
     "Date Posted": pl.Date,
@@ -190,8 +192,8 @@ TRANSACTIONS_SCHEMA = {
     "Notes": pl.Utf8,
     "Vetted": pl.Utf8,
     "Category Manual": pl.Utf8,
-    "Category Derived": pl.Utf8,
     "Category": pl.Utf8,
+    "Category Derived": pl.Utf8,
     "Account ID": pl.Utf8,
     "Source ID": pl.Utf8,
     "Transaction ID": pl.Utf8,
@@ -208,9 +210,10 @@ TRANSACTIONS_YEAR_TAB_SCHEMA = {
     "Notes": pl.Utf8,
     "Vetted": pl.Utf8,
     "Category Manual": pl.Utf8,
-    "Category Derived": pl.Utf8,
     "Category": pl.Utf8,
+    "Category Derived": pl.Utf8,
     "Bucket": pl.Utf8,
+    "End of Month": pl.Date,
     "Account ID": pl.Utf8,
     "Source ID": pl.Utf8,
     "Transaction ID": pl.Utf8,
@@ -232,8 +235,8 @@ TRANSACTIONS_STATE_SCHEMA = {
     "Notes": pl.Utf8,
     "Vetted": pl.Utf8,
     "Category Manual": pl.Utf8,
-    "Category Derived": pl.Utf8,
     "Category": pl.Utf8,
+    "Category Derived": pl.Utf8,
     "Bucket": pl.Utf8,
     "Account ID": pl.Utf8,
     "Source ID": pl.Utf8,
@@ -241,6 +244,7 @@ TRANSACTIONS_STATE_SCHEMA = {
 
 TRANSACTIONS_UNBUCKETED = "Unbucketed"
 TRANSACTIONS_UNCATEGORISED = "Uncategorised"
+TRANSACTIONS_END_OF_MONTH = pl.col("Date").dt.month_start().dt.offset_by("1mo").alias("End of Month")
 TRANSACTIONS_TAB_SCHEMA = {
     "End of Month": pl.Date,
     "Bucket": pl.Utf8,
@@ -321,6 +325,7 @@ ERROR_CODES = {
     "TRANSACTIONS_UNVETTED": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_DATA),
     "TRANSACTIONS_UNVETTED_CURRENT": (plugin.LOG_KIND_WARNING, True, plugin.CTR_SRC_DATA),
     "TRANSACTION_TWO_ACCOUNTS": (plugin.LOG_KIND_WARNING, True, plugin.CTR_SRC_DATA),
+    "TRANSACTION_SPREADSHEET_ERROR": (plugin.LOG_KIND_WARNING, True, plugin.CTR_SRC_DATA),
 }
 CLASSIFIER_HOLDING_CODES = {
     "CLASSIFIER_BANK_CODE",
@@ -863,8 +868,10 @@ class Bank(plugin.Plugin):
             )
 
         def _bank_tab_rendered(_rows_df: pl.DataFrame) -> pl.DataFrame:
-            return _rows_df.sort(["Date", "Account", "Amount", "Transaction ID", "Split"], descending=[True, False, False, False, False], nulls_last=True, maintain_order=True).select(
-                list(TRANSACTIONS_YEAR_TAB_SCHEMA)
+            return (
+                _rows_df.sort(["Date", "Account", "Amount", "Transaction ID", "Split"], descending=[True, False, False, False, False], nulls_last=True, maintain_order=True)
+                .with_columns(TRANSACTIONS_END_OF_MONTH)
+                .select(list(TRANSACTIONS_YEAR_TAB_SCHEMA))
             )
 
         # 3.1 Normalise Files
@@ -1019,8 +1026,8 @@ class Bank(plugin.Plugin):
                     pl.col("Notes"),
                     pl.col("__vetted").alias("Vetted"),
                     pl.col("Category Manual"),
-                    pl.col("Category Derived"),
                     pl.lit(None, dtype=pl.Utf8).alias("Category"),
+                    pl.col("Category Derived"),
                     pl.col("__account_id").alias("Account ID"),
                     pl.col("Source ID"),
                     pl.lit(None, dtype=pl.Utf8).alias("Transaction ID"),
@@ -2172,6 +2179,13 @@ class Bank(plugin.Plugin):
         if len(classifier_df):
             for category in sorted(set(transactions_current_df.filter(pl.col("Category").is_not_null() & pl.col("Bucket").is_null())["Category"].to_list())):
                 _bank_error("Classifier", category, "CLASSIFIER_UNBUCKETED", "category in use but not on the Classifier tab")
+        for column in TRANSACTIONS_SPREADSHEET_ERROR_COLUMNS:
+            for row in (
+                transactions_current_df.filter(pl.col(column).str.contains(TRANSACTIONS_SPREADSHEET_ERROR_PATTERN).fill_null(False))
+                .unique("Transaction ID", keep="first", maintain_order=True)
+                .iter_rows(named=True)
+            ):
+                _bank_error(f"Transactions_{row['Date'].year}", row["Transaction ID"], "TRANSACTION_SPREADSHEET_ERROR", f"column [{column}] holds spreadsheet error [{row[column]}]")
         review_df = (
             transactions_current_df.with_columns(
                 pl.col("Category").is_null().alias("__unclassified"), (pl.col("Vetted") != FLAG_YES).fill_null(True).alias("__unvetted"), (pl.col("Date") >= month_start).alias("__open")
@@ -2333,7 +2347,7 @@ class Bank(plugin.Plugin):
             transactions_tab_stale = transactions_tab_cached_df is None or transactions_tab_cached_df.head(1).get_column("End of Month", default=pl.Series([])).to_list() != [month_start.isoformat()]
             if len(transactions_current_df) and (len(transactions_delta_df) or transactions_rebuild or transactions_tab_stale):
                 transactions_month_df = transactions_current_df.filter(pl.col("Date") < month_start).with_columns(
-                    pl.col("Date").dt.month_start().dt.offset_by("1mo").alias("End of Month"),
+                    TRANSACTIONS_END_OF_MONTH,
                     (-pl.col("Amount Split")).alias("__total"),
                     pl.col("Bucket").fill_null(TRANSACTIONS_UNBUCKETED),
                     pl.col("Category").fill_null(TRANSACTIONS_UNCATEGORISED),
