@@ -12,15 +12,26 @@
 #   3. If that recovery server still cannot load the WAL, list the partially
 #      written WAL files it rejected and print the `rm` commands to remove them.
 #      These are left for an operator: unlike stage 1 they may hold partial data.
+# Independently of the node stages, empty compactor checkpoints are deleted
+# first: power loss leaves the newest ones zero length, and serve then retries
+# forever with "Failed to decompress V2 checkpoint: expected another byte".
 set -euo pipefail
 
 node_id="${INFLUXDB3_NODE_ID:-}"
+cluster_id="${INFLUXDB3_CLUSTER_ID:-}"
 data_dir="${INFLUXDB3_DATA_DIR:-/asystem/mnt}"
 wal_dir="$data_dir/$node_id/wal"
+checkpoint_dir="$data_dir/$cluster_id/cv2/checkpoints"
 recover_addr="127.0.0.1:18181"
 recover_log="/tmp/recover.log"
 
 log() { echo "entrypoint: $*"; }
+
+if [[ ("${1:-}" == serve || "${1:-}" == influxdb3 || "${1:-}" =~ ^-) &&
+  -n "$cluster_id" && -d "$checkpoint_dir" ]]; then
+  log "removing empty compactor checkpoints under '$checkpoint_dir'"
+  find "$checkpoint_dir" -maxdepth 1 -type f -name '*.ptv2chk.lz4' -empty -print -delete || true
+fi
 
 if [[ ("${1:-}" == serve || "${1:-}" == influxdb3 || "${1:-}" =~ ^-) &&
   -n "$node_id" && -d "$data_dir/$node_id" ]]; then
