@@ -12,9 +12,10 @@
 #   3. If that recovery server still cannot load the WAL, list the partially
 #      written WAL files it rejected and print the `rm` commands to remove them.
 #      These are left for an operator: unlike stage 1 they may hold partial data.
-# Independently of the node stages, empty compactor checkpoints are deleted
-# first: power loss leaves the newest ones zero length, and serve then retries
-# forever with "Failed to decompress V2 checkpoint: expected another byte".
+# Independently of the node stages, empty compactor checkpoints and gen0
+# snapshot manifests are deleted first: power loss leaves the newest ones zero
+# length, and serve then retries forever with "Failed to decompress V2
+# checkpoint: expected another byte" or "Manifest too small for magic".
 set -euo pipefail
 
 node_id="${INFLUXDB3_NODE_ID:-}"
@@ -27,10 +28,16 @@ recover_log="/tmp/recover.log"
 
 log() { echo "entrypoint: $*"; }
 
-if [[ ("${1:-}" == serve || "${1:-}" == influxdb3 || "${1:-}" =~ ^-) &&
-  -n "$cluster_id" && -d "$checkpoint_dir" ]]; then
-  log "removing empty compactor checkpoints under '$checkpoint_dir'"
-  find "$checkpoint_dir" -maxdepth 1 -type f -name '*.ptv2chk.lz4' -empty -print -delete || true
+if [[ "${1:-}" == serve || "${1:-}" == influxdb3 || "${1:-}" =~ ^- ]]; then
+  if [[ -n "$cluster_id" && -d "$checkpoint_dir" ]]; then
+    log "removing empty compactor checkpoints under '$checkpoint_dir'"
+    find "$checkpoint_dir" -maxdepth 1 -type f -name '*.ptv2chk.lz4' -empty -print -delete || true
+  fi
+  for snapshot_dir in "$data_dir"/*/pt_snapshots; do
+    [[ -d "$snapshot_dir" ]] || continue
+    log "removing empty snapshot manifests under '$snapshot_dir'"
+    find "$snapshot_dir" -maxdepth 1 -type f -name '*.ptsnap' -empty -print -delete || true
+  done
 fi
 
 if [[ ("${1:-}" == serve || "${1:-}" == influxdb3 || "${1:-}" =~ ^-) &&
