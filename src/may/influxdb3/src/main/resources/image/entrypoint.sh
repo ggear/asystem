@@ -12,10 +12,11 @@
 #   3. If that recovery server still cannot load the WAL, list the partially
 #      written WAL files it rejected and print the `rm` commands to remove them.
 #      These are left for an operator: unlike stage 1 they may hold partial data.
-# Independently of the node stages, empty compactor checkpoints and gen0
-# snapshot manifests are deleted first: power loss leaves the newest ones zero
-# length, and serve then retries forever with "Failed to decompress V2
-# checkpoint: expected another byte" or "Manifest too small for magic".
+# Those stages target the Parquet engine layout. For the PachaTree layout, empty
+# compactor checkpoints, gen0 snapshot manifests and WAL segments are deleted
+# first: power loss leaves the newest ones zero length, and serve then retries
+# forever with "Failed to decompress V2 checkpoint: expected another byte",
+# "Manifest too small for magic" or "WAL ... File too small for header".
 set -euo pipefail
 
 node_id="${INFLUXDB3_NODE_ID:-}"
@@ -38,6 +39,8 @@ if [[ "${1:-}" == serve || "${1:-}" == influxdb3 || "${1:-}" =~ ^- ]]; then
     log "removing empty snapshot manifests under '$snapshot_dir'"
     find "$snapshot_dir" -maxdepth 1 -type f -name '*.ptsnap' -empty -print -delete || true
   done
+  log "removing empty WAL segments under '$data_dir/*/*/pt_wal'"
+  find "$data_dir" -mindepth 4 -maxdepth 4 -type f -path '*/pt_wal/*.pt' -empty -print -delete || true
 fi
 
 if [[ ("${1:-}" == serve || "${1:-}" == influxdb3 || "${1:-}" =~ ^-) &&
