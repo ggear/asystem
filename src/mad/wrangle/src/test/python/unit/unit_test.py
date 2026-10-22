@@ -3702,6 +3702,10 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(plugin.UploadStatus.UPLOADED, test.sheet_upload(upload_df.with_columns(pl.lit("c").alias("Note")), "key", "Book", sheet_name="Tab", schema=schema, guard=True))
         tabs["Tab"][1] = ["03/01/2026", "8", "c"]
         self.assertEqual(plugin.UploadStatus.MOVED, test.sheet_upload(upload_df, "key", "Book", sheet_name="Tab", schema=schema, guard=True))
+        self.assertEqual(plugin.UploadStatus.UPLOADED, test.sheet_upload(upload_df.clear(), None, "Book", sheet_name="Empty", schema=schema))
+        tabs["Empty"] = [["Date", "Amount", "Note"]]
+        self.assertEqual(DownloadStatus.CACHED, test.sheet_download("key", "Book", "Empty", schema=schema).file_status)
+        self.assertEqual(plugin.UploadStatus.UPLOADED, test.sheet_upload(upload_df, "key", "Book", sheet_name="Empty", schema=schema, guard=True))
         plugin.config.disable_sheet_downloads = True
         self.assertEqual({"Tab": DownloadStatus.CACHED, "Missing": DownloadStatus.FAILED}, {tab: result.file_status for tab, result in test.sheet_download("key", "Book", ["Tab", "Missing"]).items()})
 

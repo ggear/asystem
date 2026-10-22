@@ -622,7 +622,11 @@ class SourcesMixin(ContractMixin):
 
         def _tab_dataframe(_cells, _label):
             _numeric_pattern = r"^\s*[-+]?[$£]?[\d,]*\.?\d+\s*$"
-            _data_df = self.dataframe_new(data=_cells[1:], orient="row", print_label=_label, print_rows=-1)
+            _data_df = (
+                self.dataframe_new(data=_cells[1:], orient="row", print_label=_label, print_rows=-1)
+                if len(_cells) > 1
+                else pl.DataFrame(schema={f"column_{_index}": pl.Utf8 for _index in range(len(_cells[0]) if _cells else 0)})
+            )
             if len(_cells) > 0:
                 _data_df.columns = [_named if _named != "" else _default for _default, _named in zip(_data_df.columns, _cells[0], strict=False)]
             _data_df = _data_df.with_columns(pl.col(pl.Utf8).replace("#N/A", None))
