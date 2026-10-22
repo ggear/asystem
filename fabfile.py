@@ -29,6 +29,7 @@ FAB_SKIP_GROUP_BELOW = "FAB_SKIP_GROUP_BELOW"
 FAB_SKIP_GROUP_ABOVE = "FAB_SKIP_GROUP_ABOVE"
 FAB_SKIP_GROUP_ALLBUT = "FAB_SKIP_GROUP_ALLBUT"
 FAB_SKIP_HOST_ALLBUT = "FAB_SKIP_HOST_ALLBUT"
+FAB_FORCE_INSTALL = "FAB_FORCE_INSTALL"
 
 if FAB_SKIP_GROUP_ALLBUT in os.environ:
     os.environ[FAB_SKIP_GROUP_BELOW] = str(int(os.environ[FAB_SKIP_GROUP_ALLBUT]) + 1)
@@ -1072,7 +1073,7 @@ def _release(context):
                     _run_local(context, f"{ssh_pass}ssh -q root@{host}.local 'rm -rf {install} && mkdir -p {install}'")
                     _run_local(context, f"{ssh_pass}scp -qpr target/release/.  root@{host}.local:{install}", release_module)
                     print(f"Installing release to {host} ... ")
-                    _run_local(context, f"{ssh_pass}ssh -q root@{host}.local 'chmod +x {install}/install.sh && {install}/install.sh install 2>&1'")
+                    _run_local(context, f"{ssh_pass}ssh -q root@{host}.local 'chmod +x {install}/install.sh && {install}/install.sh install{' force' if FAB_FORCE_INSTALL in os.environ else ''} 2>&1'")
                     _run_local(context, f"{ssh_pass}ssh -q root@{host}.local 'rm -f {install}/../latest && ln -sfv {install} {install}/../latest'")
                     _run_local(context, f"{ssh_pass}ssh -q root@{host}.local 'docker system prune --volumes -f'", hide="err", warn=True)
                     _run_local(

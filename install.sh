@@ -45,6 +45,10 @@ run_backup() {
   BACKUP_SOURCE_PATH="${backup_source}" BACKUP_SKIP_HOURS=0 BACKUP_SERVICE_RESTART=false \
     timeout 1800 "${backup_script}" || {
     docker start "${SERVICE_NAME}" >/dev/null 2>&1 || true
+    if [[ "${INSTALL_MODE}" == "force" ]]; then
+      log_warn "Backup failed, forcing the install of [${SERVICE_VERSION_ABSOLUTE}] without a backup of [${backup_source}] [${backup_script}]"
+      return 0
+    fi
     log_error "Backup failed, abandoning the install of [${SERVICE_VERSION_ABSOLUTE}] and restoring [${backup_source}] [${backup_script}]"
   }
 }
@@ -164,6 +168,12 @@ SCHEMA_ROLE="all"
 case "${SCHEMA_ROLE}" in
 all | broker | database) ;;
 *) log_error "Unknown schema role [${SCHEMA_ROLE}] expected [broker] [database] or none" ;;
+esac
+INSTALL_MODE="safe"
+[[ "${COMMAND}" == "install" && "$#" -ge 2 ]] && INSTALL_MODE="$2"
+case "${INSTALL_MODE}" in
+safe | force) ;;
+*) log_error "Unknown install mode [${INSTALL_MODE}] expected [force] or none" ;;
 esac
 
 export SERVICE_COMMAND="${COMMAND}"
