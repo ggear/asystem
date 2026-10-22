@@ -43,7 +43,7 @@ fi
 shopt -s expand_aliases
 
 if
-  /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && awk -v port="$(printf '%04X' "$VERNEMQ_API_PORT")" '$4 == "01" && substr($3, index($3, ":") + 1) == port { found = 1 } END { exit !found }' /proc/net/tcp /proc/net/tcp6 && mosquitto_sub -h "$VERNEMQ_SERVICE" -p "$VERNEMQ_API_PORT" -t 'zigbee/bridge/state' -W 1 2>/dev/null | jq -e '.state == "online"' >/dev/null
+  /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && { mosquitto_sub -h "$VERNEMQ_SERVICE" -p "$VERNEMQ_API_PORT" -t 'zigbee/bridge/response/health_check' -C 1 -W 5 2>/dev/null & sleep 1 && mosquitto_pub -h "$VERNEMQ_SERVICE" -p "$VERNEMQ_API_PORT" -t 'zigbee/bridge/request/health_check' -m '{}' 2>/dev/null; wait; } | jq -e '.status == "ok" and .data.healthy' >/dev/null && mosquitto_sub -h "$VERNEMQ_SERVICE" -p "$VERNEMQ_API_PORT" -t 'zigbee/bridge/state' -W 1 2>/dev/null | jq -e '.state == "online"' >/dev/null
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && exec {HEALTHCHECK_TRACE}>&- && wait "${HEALTHCHECK_TRACER}"
