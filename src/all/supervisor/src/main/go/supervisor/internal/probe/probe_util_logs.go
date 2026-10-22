@@ -294,7 +294,24 @@ func parseLogRecord(line string, boot time.Time) (time.Time, string, bool) {
 	if err != nil {
 		return time.Time{}, "", false
 	}
-	message := strings.TrimSpace(after)
+	unescaped := func(escaped string) string {
+		if !strings.Contains(escaped, `\x`) {
+			return escaped
+		}
+		builder := strings.Builder{}
+		for index := 0; index < len(escaped); index++ {
+			if escaped[index] == '\\' && index+4 <= len(escaped) && escaped[index+1] == 'x' {
+				if decoded, err := strconv.ParseUint(escaped[index+2:index+4], 16, 8); err == nil {
+					builder.WriteByte(byte(decoded))
+					index += 3
+					continue
+				}
+			}
+			builder.WriteByte(escaped[index])
+		}
+		return builder.String()
+	}
+	message := strings.TrimSpace(unescaped(after))
 	if !isLogError(priority, message) {
 		return time.Time{}, "", false
 	}

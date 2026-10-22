@@ -902,17 +902,18 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A bucket only classifier edit clears no tick and regroups the month totals
+    # A bucket only classifier edit clears no tick and regroups the closed month's totals
     def test_bank_local_partial_49(self):
         self._bank_run(
             "partial_49",
             standing=2,
             file_asserts={
-                "redbark_transactions_2025.csv": [assert_file_column_values("Vetted", ["Yes"] + [None] * 6 + ["Yes"], sort_by=["Description"])],
+                "redbark_transactions_2025.csv": [assert_file_column_values("Vetted", ["Yes"] * 2 + [None] * 6 + ["Yes"] * 2, sort_by=["Description"])],
                 "bank_reclassified_2026_01.csv": [assert_file_does_not_exist()],
                 "_sheet_bank_transactions.csv": [
-                    assert_file_column_values("Category", ["Food", "Groceries", "Uncategorised"]),
-                    assert_file_column_values("Bucket", ["Discretionary", "Living", "Unbucketed"]),
+                    assert_file_column_values("Bucket", [None, "Discretionary", "Living", "Discretionary", "Living"]),
+                    assert_file_column_values("Category", [None, None, None, "Food", "Groceries"]),
+                    assert_file_column_values("Total", ["12.0", "8.0", "4.0", "8.0", "4.0"]),
                 ],
             },
         )
@@ -1249,7 +1250,7 @@ class WrangleTest(unittest.TestCase):
                 "_sheet_bank_balances.csv": [assert_file_does_exist()],
                 "_sheet_bank_transactions_2026.csv": [assert_file_size(min_rows=5, max_rows=5)],
                 "_sheet_bank_transactions_2025.csv": [assert_file_size(min_rows=1, max_rows=1)],
-                "_sheet_bank_transactions.csv": [assert_file_column_distinct("End of Month", 1)],
+                "_sheet_bank_transactions.csv": [assert_file_does_not_exist()],
             },
         )
 
@@ -1387,7 +1388,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # Month end totals per category on the Transactions tab, by bucket
+    # Closed month totals on the Transactions tab, month then bucket then category, skipping unvetted, uncategorised and current months and the excluded bucket
     def test_bank_local_partial_28(self):
         self._bank_run(
             "partial_28",
@@ -1395,10 +1396,10 @@ class WrangleTest(unittest.TestCase):
             file_asserts={
                 "_sheet_bank_transactions.csv": [
                     assert_file_columns(["End of Month", "Bucket", "Category", "Total"]),
-                    assert_file_column_values("End of Month", ["2026-01-01"] * 4 + ["2025-11-01"]),
-                    assert_file_column_values("Bucket", ["Discretionary", "Living", "Transfers", "Unbucketed", "Living"]),
-                    assert_file_column_values("Category", ["Restaurants", "Groceries", "Transfer", "Uncategorised", "Groceries"]),
-                    assert_file_column_values("Total", ["50.0", "-20.0", "200.0", "1.0", "100.0"]),
+                    assert_file_column_values("End of Month", ["2026-01-01", "2025-11-01"] + ["2026-01-01"] * 2 + ["2025-11-01"] * 2 + ["2026-01-01"] * 2 + ["2025-11-01"] * 2),
+                    assert_file_column_values("Bucket", [None, None, "Discretionary", "Living", "Living", "Maintenance", "Discretionary", "Living", "Living", "Maintenance"]),
+                    assert_file_column_values("Category", [None] * 6 + ["Restaurants", "Groceries", "Groceries", "Car"]),
+                    assert_file_column_values("Total", ["30.0", "400.0", "50.0", "-20.0", "100.0", "300.0", "50.0", "-20.0", "100.0", "300.0"]),
                 ],
             },
         )

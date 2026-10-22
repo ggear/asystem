@@ -2,4 +2,4 @@ Category,Bucket,Bank Code,Merchant Code,Pattern,Notes
 Groceries,Living,,5411,,
 Restaurants,Discretionary,,5812,,
 Car,Maintenance,,,,
-Transfer,Transfers,TRANSFER_OUT,,,
+Transfer,Excluded,TRANSFER_OUT,,,

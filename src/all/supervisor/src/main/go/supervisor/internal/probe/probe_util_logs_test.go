@@ -136,7 +136,7 @@ func TestProbeUtilLogs_AnOOMKillCountsOnceAndItsStackDumpNotAtAll(t *testing.T) 
 0,12539,7226955548385,-; el0t_64_sync_handler+0xc4/0x140
 0,12540,7226955548386,-; el0t_64_sync+0x1b0/0x1b8
 3,12616,7226955566694,-;Memory cgroup out of memory: Killed process 1327212 (wrangle) total-vm:8633456kB, anon-rss:2049920kB, file-rss:31008kB, shmem-rss:0kB, UID:0 pgtables:3520kB oom_score_adj:0
-3,12700,7300000000000,-;CIFS: VFS: \\macmini-max\share-20 Close interrupted close
+3,12700,7300000000000,-;CIFS: VFS: \x5c\x5cmacmini-max\x5cshare-20 Close interrupted close
 4,12800,7400000000000,-;BTRFS warning (device sdd1): read-write for sector size 4096 with page size 16384 is experimental`
 	var counted []string
 	for line := range strings.SplitSeq(captured, "\n") {
@@ -150,7 +150,7 @@ func TestProbeUtilLogs_AnOOMKillCountsOnceAndItsStackDumpNotAtAll(t *testing.T) 
 	for _, kept := range []string{
 		"1,1,1,-;BUG: kernel NULL pointer dereference, address: 0000000000000008",
 		"3,3,3,-;systemd-journald[637]: Failed to create new system journal: No space left on device",
-		"3,4,4,-;CIFS: VFS: \\\\macmini-max\\share-20 error -5 on ioctl to get interface list",
+		`3,4,4,-;CIFS: VFS: \x5c\x5cmacmini-max\x5cshare-20 error -5 on ioctl to get interface list`,
 	} {
 		if _, _, ok := parseLogRecord(kept, time.Now()); !ok {
 			t.Errorf("parseLogRecord(%q) dropped it, want a headline or a real share fault still counted", kept)
@@ -176,7 +176,7 @@ func TestProbeUtilLogs_ClusterColdBootNoiseIsIgnored(t *testing.T) {
 		},
 		{
 			name:       "happy_acpi_pdc_abort_ignored",
-			line:       "3,103,129175,-;ACPI Error: Aborting method \\_PR.CPU0._PDC due to previous error (AE_AML_OPERAND_TYPE) (20220331/psparse-529)",
+			line:       `3,103,129175,-;ACPI Error: Aborting method \x5c_PR.CPU0._PDC due to previous error (AE_AML_OPERAND_TYPE) (20220331/psparse-529)`,
 			expectedOK: false,
 		},
 		{
@@ -226,7 +226,7 @@ func TestProbeUtilLogs_ClusterColdBootNoiseIsIgnored(t *testing.T) {
 		},
 		{
 			name:       "happy_other_acpi_error_kept",
-			line:       "3,113,140000,-;ACPI Error: Aborting method \\_SB.PCI0.LPCB.EC._Q66 due to previous error (AE_NOT_FOUND) (20220331/psparse-529)",
+			line:       `3,113,140000,-;ACPI Error: Aborting method \x5c_SB.PCI0.LPCB.EC._Q66 due to previous error (AE_NOT_FOUND) (20220331/psparse-529)`,
 			expectedOK: true,
 		},
 		{
@@ -257,6 +257,13 @@ func TestProbeUtilLogs_ParseLogRecord(t *testing.T) {
 			name:            "happy_error_record",
 			line:            "3,2547,1500000000,-;ata1.00: failed command",
 			expectedMessage: "ata1.00: failed command",
+			expectedElapsed: 1500 * time.Second,
+			expectedOK:      true,
+		},
+		{
+			name:            "happy_escaped_bytes_decoded",
+			line:            `3,2549,1500000000,-;ACPI Error: Aborting method \x5c_PR.CPU0._PDC tab\x09end \xzz kept`,
+			expectedMessage: "ACPI Error: Aborting method \\_PR.CPU0._PDC tab\tend \\xzz kept",
 			expectedElapsed: 1500 * time.Second,
 			expectedOK:      true,
 		},

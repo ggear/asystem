@@ -32,7 +32,7 @@
 #        9.1  Upload Accounts Tab: the Redbark and account ids found
 #        9.2  Upload Balances Tab: the recent readings
 #        9.3  Upload Transactions Tabs: each year whose files reached Drive
-#        9.4  Upload Summary Tab: the month end totals
+#        9.4  Upload Summary Tab: closed month totals by bucket and category
 #        9.5  Upload Logs Tab: this run's problems and the last 30 days'
 #    10. Snapshot: move the bases forward for what was persisted
 #        10.1 Commit Bases: each tab as uploaded, or as read once on Drive
@@ -242,8 +242,7 @@ TRANSACTIONS_STATE_SCHEMA = {
     "Source ID": pl.Utf8,
 }
 
-TRANSACTIONS_UNBUCKETED = "Unbucketed"
-TRANSACTIONS_UNCATEGORISED = "Uncategorised"
+TRANSACTIONS_BUCKET_EXCLUDED = "Excluded"
 TRANSACTIONS_END_OF_MONTH = pl.col("Date").dt.month_start().dt.offset_by("1mo").alias("End of Month")
 TRANSACTIONS_TAB_SCHEMA = {
     "End of Month": pl.Date,
@@ -2343,25 +2342,32 @@ class Bank(plugin.Plugin):
                 shutil.copyfile(path, abspath(f"{self.local_cache}/__bank_tab_{tab.lower()}.csv"))
 
             # 9.4 Upload Summary Tab
-            transactions_tab_cached_df = self.sheet_cached("Bank", "Transactions")
-            transactions_tab_stale = transactions_tab_cached_df is None or transactions_tab_cached_df.head(1).get_column("End of Month", default=pl.Series([])).to_list() != [month_start.isoformat()]
-            if len(transactions_current_df) and (len(transactions_delta_df) or transactions_rebuild or transactions_tab_stale):
-                transactions_month_df = transactions_current_df.filter(pl.col("Date") < month_start).with_columns(
-                    TRANSACTIONS_END_OF_MONTH,
-                    (-pl.col("Amount Split")).alias("__total"),
-                    pl.col("Bucket").fill_null(TRANSACTIONS_UNBUCKETED),
-                    pl.col("Category").fill_null(TRANSACTIONS_UNCATEGORISED),
-                )
-                if len(transactions_month_df):
-                    started_time = time.time()
-                    transactions_tab_df = (
-                        transactions_month_df.group_by(["End of Month", "Bucket", "Category"])
-                        .agg(pl.col("__total").sum().round(2).alias("Total"))
-                        .filter(pl.col("Total") != 0)
-                        .select(list(TRANSACTIONS_TAB_SCHEMA))
-                        .sort(["End of Month", "Bucket", "Category"], descending=[True, False, False])
+            if len(transactions_current_df):
+                started_time = time.time()
+                transactions_month_df = (
+                    transactions_current_df.filter(pl.col("Date") < month_start)
+                    .with_columns(TRANSACTIONS_END_OF_MONTH, (-pl.col("Amount Split")).alias("__total"))
+                    .filter(
+                        ((pl.col("Vetted") == FLAG_YES) & pl.col("Category").is_not_null() & pl.col("Bucket").is_not_null()).fill_null(False).all().over("End of Month")
+                        & (pl.col("Bucket") != TRANSACTIONS_BUCKET_EXCLUDED)
                     )
-                    dataframe_print(self.name, transactions_tab_df, print_label="Transactions", print_verb="bucketed", started=started_time)
+                )
+                transactions_tab_df = (
+                    pl.concat(
+                        [
+                            transactions_month_df.group_by("End of Month").agg(pl.col("__total").sum().round(2).alias("Total"), pl.lit(0).alias("__level")),
+                            transactions_month_df.group_by(["End of Month", "Bucket"]).agg(pl.col("__total").sum().round(2).alias("Total"), pl.lit(1).alias("__level")),
+                            transactions_month_df.group_by(["End of Month", "Bucket", "Category"])
+                            .agg(pl.col("__total").sum().round(2).alias("Total"), pl.lit(2).alias("__level"))
+                            .filter(pl.col("Total") != 0),
+                        ],
+                        how="diagonal_relaxed",
+                    )
+                    .sort(["__level", "End of Month", "Bucket", "Category"], descending=[False, True, False, False])
+                    .select(list(TRANSACTIONS_TAB_SCHEMA))
+                )
+                if len(transactions_tab_df) or self.sheet_cached("Bank", "Transactions") is not None:
+                    dataframe_print(self.name, transactions_tab_df, print_label="Transactions", print_verb="totalled", started=started_time)
                     _bank_tab_uploaded(
                         "Transactions",
                         transactions_tab_df,
