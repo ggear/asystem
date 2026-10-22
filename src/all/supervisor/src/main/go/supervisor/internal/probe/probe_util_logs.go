@@ -411,6 +411,22 @@ var (
 
 		// A boot-time RAS announcement, not an error
 		regexp.MustCompile(`^RAS: Correctable Errors collector initialized\.`),
+
+		// Boot-time firmware noise, harmless on every boot
+		regexp.MustCompile(`^ACPI Error: Needed type \[Reference\], found \[Integer\] \(____ptrval____\) \(\d+/exresop-\d+\)$`),
+		regexp.MustCompile(`^ACPI Error: AE_AML_OPERAND_TYPE, While resolving operands for \[OpcodeName unavailable\] \(\d+/dswexec-\d+\)$`),
+		regexp.MustCompile(`^ACPI Error: Aborting method \\_PR\.CPU0\._PDC due to previous error \(AE_AML_OPERAND_TYPE\) \(\d+/psparse-\d+\)$`),
+		regexp.MustCompile(`^uart-pl011 [0-9a-f]+\.serial: Failed to create device link \(0x[0-9a-f]+\) with soc:firmware:gpio$`),
+		regexp.MustCompile(`^systemd-journald\[\d+\]: Failed to create new runtime journal: No such file or directory$`),
+
+		// Apple display coprocessor chatter on boot and hotplug
+		regexp.MustCompile(`^apple-dcp [0-9a-f]+\.dcp: RTKit: syslog message: `),
+		regexp.MustCompile(`^apple-dcp [0-9a-f]+\.dcp: get_drive_settings: unexpected retcode \d+$`),
+		regexp.MustCompile(`^apple-dcp [0-9a-f]+\.dcp: set_active_lane_count: unexpected lane count:\d+ phy: \d+$`),
+
+		// A peer's share unreachable, owned by the shares metric
+		regexp.MustCompile(`^CIFS: VFS: Error connecting to socket\. Aborting operation\.$`),
+		regexp.MustCompile(`^CIFS: VFS: cifs_mount failed w/return code = -(110|111|112|113|115)$`),
 	}
 
 	logCache   = map[string]*logSet{}

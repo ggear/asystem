@@ -241,14 +241,17 @@ blacklist nouveau
 EOF
 tee /etc/modprobe.d/blacklist-wifi.conf <<'EOF'
 blacklist b43
+blacklist bcma
 blacklist r8152
+blacklist brcmfmac
+blacklist brcmfmac_wcc
 EOF
 tee /etc/modprobe.d/blacklist-bluetooth.conf <<'EOF'
 blacklist bluetooth
+blacklist btusb
+blacklist hci_bcm4377
 EOF
-tee /etc/modprobe.d/brcmfmac-ignore.conf <<'EOF'
-options brcmfmac fwload_disable=1
-EOF
+rm -f /etc/modprobe.d/brcmfmac-ignore.conf
 tee /etc/dracut.conf.d/no-i18n.conf <<'EOF'
 omit_dracutmodules+=" i18n "
 EOF

@@ -158,6 +158,92 @@ func TestProbeUtilLogs_AnOOMKillCountsOnceAndItsStackDumpNotAtAll(t *testing.T) 
 	}
 }
 
+func TestProbeUtilLogs_ClusterColdBootNoiseIsIgnored(t *testing.T) {
+	tests := []struct {
+		name       string
+		line       string
+		expectedOK bool
+	}{
+		{
+			name:       "happy_acpi_pdc_operand_ignored",
+			line:       "3,101,129163,-;ACPI Error: Needed type [Reference], found [Integer] (____ptrval____) (20220331/exresop-66)",
+			expectedOK: false,
+		},
+		{
+			name:       "happy_acpi_pdc_resolving_ignored",
+			line:       "3,102,129170,-;ACPI Error: AE_AML_OPERAND_TYPE, While resolving operands for [OpcodeName unavailable] (20220331/dswexec-431)",
+			expectedOK: false,
+		},
+		{
+			name:       "happy_acpi_pdc_abort_ignored",
+			line:       "3,103,129175,-;ACPI Error: Aborting method \\_PR.CPU0._PDC due to previous error (AE_AML_OPERAND_TYPE) (20220331/psparse-529)",
+			expectedOK: false,
+		},
+		{
+			name:       "happy_pl011_device_link_ignored",
+			line:       "3,104,5692842,-;uart-pl011 3f201000.serial: Failed to create device link (0x180) with soc:firmware:gpio",
+			expectedOK: false,
+		},
+		{
+			name:       "happy_initrd_runtime_journal_ignored",
+			line:       "3,105,2442065,-;systemd-journald[265]: Failed to create new runtime journal: No such file or directory",
+			expectedOK: false,
+		},
+		{
+			name:       "happy_dcp_rtkit_syslog_ignored",
+			line:       "6,106,3317513,-;apple-dcp 289c00000.dcp: RTKit: syslog message: UPPipe.cpp:3767: IOMFB read_pmu_data_sync: pmu ram read error (e00002d8)",
+			expectedOK: false,
+		},
+		{
+			name:       "happy_dcp_drive_settings_ignored",
+			line:       "3,107,5747843,-;apple-dcp 289c00000.dcp: get_drive_settings: unexpected retcode 4",
+			expectedOK: false,
+		},
+		{
+			name:       "happy_dcp_lane_count_ignored",
+			line:       "3,108,712395490,-;apple-dcp 289c00000.dcp: set_active_lane_count: unexpected lane count:4 phy: 0",
+			expectedOK: false,
+		},
+		{
+			name:       "happy_cifs_socket_ignored",
+			line:       "3,109,19039110,-;CIFS: VFS: Error connecting to socket. Aborting operation.",
+			expectedOK: false,
+		},
+		{
+			name:       "happy_cifs_host_unreachable_ignored",
+			line:       "3,110,19039437,-;CIFS: VFS: cifs_mount failed w/return code = -113",
+			expectedOK: false,
+		},
+		{
+			name:       "happy_cifs_connection_refused_ignored",
+			line:       "3,111,127069166,-;CIFS: VFS: cifs_mount failed w/return code = -111",
+			expectedOK: false,
+		},
+		{
+			name:       "happy_cifs_permission_denied_kept",
+			line:       "3,112,130000000,-;CIFS: VFS: cifs_mount failed w/return code = -13",
+			expectedOK: true,
+		},
+		{
+			name:       "happy_other_acpi_error_kept",
+			line:       "3,113,140000,-;ACPI Error: Aborting method \\_SB.PCI0.LPCB.EC._Q66 due to previous error (AE_NOT_FOUND) (20220331/psparse-529)",
+			expectedOK: true,
+		},
+		{
+			name:       "happy_other_dcp_error_kept",
+			line:       "3,114,6000000,-;apple-dcp 289c00000.dcp: crashed, err -22",
+			expectedOK: true,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if _, _, ok := parseLogRecord(testCase.line, time.Now()); ok != testCase.expectedOK {
+				t.Fatalf("parseLogRecord ok: got %v want %v", ok, testCase.expectedOK)
+			}
+		})
+	}
+}
+
 func TestProbeUtilLogs_ParseLogRecord(t *testing.T) {
 	boot := time.Now().Add(-time.Hour)
 	tests := []struct {

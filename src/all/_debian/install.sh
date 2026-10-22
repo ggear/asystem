@@ -6,6 +6,18 @@ SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOL
 set -ex
 
 ################################################################################
+# Modules
+################################################################################
+touch /etc/modprobe.d/blacklist-wifi.conf /etc/modprobe.d/blacklist-bluetooth.conf
+sed -i '/^blacklist bcma-pci-bridge$/d' /etc/modprobe.d/blacklist-wifi.conf
+grep -qxF 'blacklist bcma' /etc/modprobe.d/blacklist-wifi.conf || echo 'blacklist bcma' | tee -a /etc/modprobe.d/blacklist-wifi.conf
+grep -qxF 'blacklist bluetooth' /etc/modprobe.d/blacklist-bluetooth.conf || echo 'blacklist bluetooth' | tee -a /etc/modprobe.d/blacklist-bluetooth.conf
+grep -qxF 'blacklist btusb' /etc/modprobe.d/blacklist-bluetooth.conf || echo 'blacklist btusb' | tee -a /etc/modprobe.d/blacklist-bluetooth.conf
+grep -qxF 'blacklist btbcm' /etc/modprobe.d/blacklist-bluetooth.conf || echo 'blacklist btbcm' | tee -a /etc/modprobe.d/blacklist-bluetooth.conf
+grep -qxF 'blacklist hci_uart' /etc/modprobe.d/blacklist-bluetooth.conf || echo 'blacklist hci_uart' | tee -a /etc/modprobe.d/blacklist-bluetooth.conf
+update-initramfs -u -k all
+
+################################################################################
 # Python
 ################################################################################
 if [ ! -d /root/.pyenv/.git ]; then
