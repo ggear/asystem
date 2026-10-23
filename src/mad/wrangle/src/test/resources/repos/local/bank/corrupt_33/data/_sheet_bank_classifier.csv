@@ -1,4 +1,4 @@
-Category,Bucket,Bank Code,Merchant Code,Pattern,Notes
-Food,Living,,,cafe,
-Restaurants,Discretionary,,,cafe,
-Groceries,Living,,,shop,
+Category,Bucket,Bank Code,Merchant Code,Pattern,Description,Notes
+Food,Living,,,cafe,,
+Restaurants,Discretionary,,,cafe,,
+Groceries,Living,,,shop,,

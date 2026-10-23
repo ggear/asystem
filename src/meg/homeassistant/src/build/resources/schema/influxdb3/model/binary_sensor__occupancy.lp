@@ -10,8 +10,7 @@
 #     deck_east_fan_occupancy,
 #     deck_west_fan_occupancy,
 #     edwin_fan_occupancy,
-#     lounge_fan_occupancy,
-#     parents_fan_occupancy]
+#     lounge_fan_occupancy]
 #   field state - <on-change> [Home Assistant value]
 #   field value - <on-change> [Home Assistant value]
 

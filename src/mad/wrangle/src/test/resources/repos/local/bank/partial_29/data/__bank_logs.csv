@@ -1,6 +1,8 @@
 Date,Time,Date Raised,Kind,State,Counter,Tab,Key,Code,Detail
 2026-01-01,08:00:00,2026-01-14,Error,Current,Sources,Accounts,69c576ba31725c77a2ff31acd55cfbca,ACCOUNT_UNMAPPED,first raised earlier
 2025-11-01,08:00:00,2026-01-14,Error,Current,Data,Transactions_2025,2025,TRANSACTIONS_UNVETTED,standing until yesterday
+2025-11-01,08:00:00,2026-01-14,Error,Current,Data,Balances,Bank Z,BALANCE_UNRECONCILED,standing until yesterday
 2025-11-02,08:00:00,2025-12-01,Error,Historic,Data,Transactions_2025,2024,TRANSACTIONS_UNVETTED,resolved long ago
 2025-12-01,10:00:00,,Error,,Data,Balances,row 3,DATE_FUTURE,old
 2026-01-10,10:00:00,,Error,,Data,Balances,row 4,VALUE_UNPARSED,recent
+2026-01-10,10:00:00,2026-01-10,Error,Historic,Data,Transactions_2026,bank_tx_0001,TRANSACTION_GONE,recent

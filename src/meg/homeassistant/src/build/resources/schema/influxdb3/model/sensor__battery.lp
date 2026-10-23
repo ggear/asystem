@@ -12,11 +12,9 @@
 #     front_door_lock_battery,
 #     ipad_graham_battery_level,
 #     iphone_graham_battery_level,
-#     iphone_graham_watch_battery,
 #     janes_ipad_battery_level,
 #     janes_iphone_battery_level,
 #     janes_iphone_battery_level_2,
-#     janes_iphone_watch_battery_level,
 #     kitchen_deck_battery,
 #     kitchen_move_battery,
 #     office_basement_battery,
@@ -28,8 +26,7 @@
 #     pixel_tablet_battery_level_2,
 #     tablet_ada_battery_level,
 #     tablet_ada_battery_level_2,
-#     tablet_edwin_battery_level_2,
-#     template_weatherstation_console_battery_percent_int]
+#     tablet_edwin_battery_level_2]
 #   tag unit_of_measurement [Home Assistant unit_of_measurement:
 #     %]
 #   field value - <on-change> [Home Assistant value]

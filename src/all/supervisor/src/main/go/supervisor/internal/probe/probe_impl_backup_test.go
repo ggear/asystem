@@ -801,6 +801,44 @@ func TestProbeImplBackup_LeadClosesItsWatchWhenNotLeading(t *testing.T) {
 	}
 }
 
+func TestProbeImplBackup_LeadRedialsADeafWatch(t *testing.T) {
+	tests := []struct {
+		name          string
+		heardAgo      time.Duration
+		expectedStale int
+		expectedError bool
+	}{
+		{name: "hearing_its_own_candidacy_is_watched", heardAgo: time.Second, expectedStale: 0, expectedError: false},
+		{name: "silent_past_the_ttl_counts_unwatched", heardAgo: 0, expectedStale: 1, expectedError: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			holder := leaderStubCampaign([]string{"mad"}, "mad")
+			holder.attached, holder.standing, holder.leading, holder.epoch = true, true, true, 7
+			holder.lastAck, holder.lastLease = time.Now().Add(time.Hour), time.Now().Add(time.Hour)
+			holder.lease, holder.leaseArrived = leaderLease{Host: "mad", Epoch: 7}, time.Now()
+			leaderCampaignsMu.Lock()
+			leaderCampaigns[metric.LeaderDutyBackup] = holder
+			leaderCampaignsMu.Unlock()
+			t.Cleanup(func() {
+				leaderCampaignsMu.Lock()
+				delete(leaderCampaigns, metric.LeaderDutyBackup)
+				leaderCampaignsMu.Unlock()
+			})
+			now := time.Now()
+			watch := &brokerWatcher{brokerPayloads: brokerPayloads{payloads: map[string]string{}}, client: &stubClient{connected: true}, heartbeat: metric.TopicLeaderCandidate("mad"), ready: true, readyAt: now.Add(-time.Hour)}
+			if tt.heardAgo > 0 {
+				watch.heardAt = now.Add(-tt.heardAgo)
+			}
+			probe := &backupProbe{serverHost: true, hostName: "mad", leadWatch: watch}
+			probe.lead()
+			if probe.leadStale != tt.expectedStale {
+				t.Errorf("stale: got %d want %d", probe.leadStale, tt.expectedStale)
+			}
+		})
+	}
+}
+
 func TestProbeImplBackup_ReapLocalStaleKeepsEveryFieldItRewrites(t *testing.T) {
 	original := stageStream
 	t.Cleanup(func() { stageStream = original })

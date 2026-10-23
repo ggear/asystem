@@ -1,5 +1,5 @@
-Category,Bucket,Bank Code,Merchant Code,Pattern,Notes
-Restaurants,Discretionary,FOOD,,tie aa,
-Groceries,Living,,54x1,,
-Groceries,Living,,5411,,
-Fuel,Living,,,tie bb,
+Category,Bucket,Bank Code,Merchant Code,Pattern,Description,Notes
+Restaurants,Discretionary,FOOD,,tie aa,,
+Groceries,Living,,54x1,,,
+Groceries,Living,,5411,,,
+Fuel,Living,,,tie bb,,

@@ -727,7 +727,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # Vetted typed on the tab is saved title cased, a category change clears an untouched tick
+    # Vetted typed on the tab is saved title cased, a manual category edit keeps the tick
     def test_bank_local_partial_40(self):
         self._bank_run(
             "partial_40",
@@ -737,7 +737,7 @@ class WrangleTest(unittest.TestCase):
             errored={plugin.CTR_SRC_DATA: 1},
             file_asserts={
                 "redbark_transactions_2025.csv": [
-                    assert_file_column_values("Vetted", ["Yes", None, "Yes", None, "No", "No"], sort_by=["Description"]),
+                    assert_file_column_values("Vetted", ["Yes", "Yes", "Yes", None, "No", "No"], sort_by=["Description"]),
                     assert_file_column_values("Category Manual", [None, "Clothing", "Clothing", None, None, "Clothing"], sort_by=["Description"]),
                 ],
                 "__bank_logs.csv": [assert_file_column_values("Code", ["TRANSACTIONS_UNVETTED", "TRANSACTION_VETTED"], sort_by=["Code"])],
@@ -942,7 +942,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A stale tab cannot re-tick a moved row but can untick one, only edits logged
+    # A stale tab cannot re-tick a moved row but can untick one, a manual category edit keeps its tick, only edits logged
     def test_bank_local_partial_51(self):
         self._bank_run(
             "partial_51",
@@ -950,13 +950,13 @@ class WrangleTest(unittest.TestCase):
             sheet_downloads=1,
             file_asserts={
                 "redbark_transactions_2025.csv": [
-                    assert_file_column_values("Vetted", [None] * 4 + ["Yes", None, None, None], sort_by=["Description"]),
+                    assert_file_column_values("Vetted", [None] * 4 + ["Yes", "Yes", None, None], sort_by=["Description"]),
                     assert_file_column_values("Category Manual", [None] * 4 + ["Groceries", "Food", None, None], sort_by=["Description"]),
                 ],
                 "bank_reclassified_2026_01.csv": [
                     assert_file_column_values("Description", ["Shop A", "Shop B", "Shop D"], sort_by=["Description"]),
                     assert_file_column_values("Source", ["sheet"] * 3, sort_by=["Description"]),
-                    assert_file_column_values("Vetted After", ["Yes", None, None], sort_by=["Description"]),
+                    assert_file_column_values("Vetted After", ["Yes", "Yes", None], sort_by=["Description"]),
                 ],
             },
         )
@@ -1388,6 +1388,38 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
+    # Closed month totals described, a category by its Classifier description, a bucket by its categories, a month by its buckets, a pattern row description a warning
+    def test_bank_local_partial_69(self):
+        self._bank_run(
+            "partial_69",
+            rerun=False,
+            errored={plugin.CTR_SRC_SOURCES: 1, plugin.CTR_SRC_DATA: 2},
+            file_asserts={
+                "_sheet_bank_transactions.csv": [
+                    assert_file_column_values("Category", [None] * 6 + ["Restaurants", "Groceries", "Fuel", "Groceries", "Pharmacy", "Car RAC"]),
+                    assert_file_column_values("Total", ["30.0", "445.0", "50.0", "-20.0", "145.0", "300.0", "50.0", "-20.0", "40.0", "100.0", "5.0", "300.0"]),
+                    assert_file_column_values(
+                        "Description",
+                        [
+                            "Includes discretionary & living buckets this month",
+                            "Includes living & maintenance buckets this month",
+                            "Includes the restaurants category this month",
+                            "Includes the groceries category this month",
+                            "Includes fuel, groceries & pharmacy categories this month",
+                            "Includes the car RAC category this month",
+                            None,
+                            "Supermarkets & bakeries",
+                            "Petrol & diesel",
+                            "Supermarkets & bakeries",
+                            "Medicines",
+                            "Servicing & repairs",
+                        ],
+                    ),
+                ],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["CLASSIFIER_DESCRIPTION", "TRANSACTIONS_UNCLASSIFIED", "TRANSACTIONS_UNVETTED"], sort_by=["Code"])],
+            },
+        )
+
     # Closed month totals on the Transactions tab, month then bucket then category, skipping unvetted, uncategorised and current months and the excluded bucket
     def test_bank_local_partial_28(self):
         self._bank_run(
@@ -1395,7 +1427,7 @@ class WrangleTest(unittest.TestCase):
             standing=2,
             file_asserts={
                 "_sheet_bank_transactions.csv": [
-                    assert_file_columns(["End of Month", "Bucket", "Category", "Total"]),
+                    assert_file_columns(["End of Month", "Bucket", "Category", "Total", "Description"]),
                     assert_file_column_values("End of Month", ["2026-01-01", "2025-11-01"] + ["2026-01-01"] * 2 + ["2025-11-01"] * 2 + ["2026-01-01"] * 2 + ["2025-11-01"] * 2),
                     assert_file_column_values("Bucket", [None, None, "Discretionary", "Living", "Living", "Maintenance", "Discretionary", "Living", "Living", "Maintenance"]),
                     assert_file_column_values("Category", [None] * 6 + ["Restaurants", "Groceries", "Groceries", "Car"]),
@@ -1404,7 +1436,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # The logs tab lists errors then warnings newest first, a problem a run no longer raises historic and a warning for thirty days from its date raised
+    # The logs tab lists errors then warnings newest first, a kept problem a run no longer raises historic and a warning for thirty days from its date raised, any other dropped
     def test_bank_local_partial_29(self):
         self._bank_run(
             "partial_29",
@@ -1413,7 +1445,7 @@ class WrangleTest(unittest.TestCase):
             file_asserts={
                 "_sheet_bank_logs.csv": [
                     assert_file_columns(["Date", "Time", "Date Raised", "Kind", "State", "Counter", "Tab", "Key", "Code", "Detail"]),
-                    assert_file_column_values("Code", ["ACCOUNT_UNMAPPED", "VALUE_UNPARSED", "TRANSACTIONS_UNVETTED"]),
+                    assert_file_column_values("Code", ["ACCOUNT_UNMAPPED", "TRANSACTION_GONE", "BALANCE_UNRECONCILED"]),
                     assert_file_column_values("Kind", ["Error", "Warning", "Warning"]),
                     assert_file_column_values("State", ["Current", "Historic", "Historic"]),
                     assert_file_column_values("Date", ["2026-01-01", "2026-01-10", "2025-11-01"]),
@@ -3712,7 +3744,7 @@ class WrangleTest(unittest.TestCase):
     def test_library_drive_synchronise(self):
         test = PluginStub("Test", "folder")
         test.drive_download_only = ("activity*.csv",)
-        test.error_codes = {"DRIVE_CONFLICT": (plugin.LOG_KIND_ERROR, False, plugin.CTR_SRC_SOURCES), "DRIVE_DUPLICATE": (plugin.LOG_KIND_ERROR, False, plugin.CTR_SRC_SOURCES)}
+        test.error_codes = {"DRIVE_CONFLICT": (plugin.LOG_KIND_ERROR, False, True, plugin.CTR_SRC_SOURCES), "DRIVE_DUPLICATE": (plugin.LOG_KIND_ERROR, False, False, plugin.CTR_SRC_SOURCES)}
         plugin.config.repo_scope = plugin.RepoScope.RELEASE
         plugin.config.disable_drive_downloads = False
         plugin.config.disable_drive_uploads = False

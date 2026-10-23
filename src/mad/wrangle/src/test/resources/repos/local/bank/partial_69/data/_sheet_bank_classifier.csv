@@ -1,0 +1,8 @@
+Category,Bucket,Bank Code,Merchant Code,Pattern,Description,Notes
+Groceries,Living,,5411,,Supermarkets & bakeries,
+Groceries,Living,,,corner store,Corner store,
+Fuel,Living,,5541,,Petrol & diesel,
+Pharmacy,Living,,5912,,Medicines,
+Restaurants,Discretionary,,5812,,,
+Car RAC,Maintenance,,,,Servicing & repairs,
+Transfer,Excluded,TRANSFER_OUT,,,Moves between own accounts,

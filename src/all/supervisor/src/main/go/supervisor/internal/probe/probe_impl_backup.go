@@ -249,7 +249,7 @@ func (p *backupProbe) reap(ctx context.Context) {
 		return
 	}
 	if p.reapWatch == nil {
-		watch, err := brokerWatch(p.configPath, p.hostName, stateTopic, backupAllStatusTopic, backupAllReaperTopic, metric.TopicBackupStage(backupAnyHost, metric.BackupStageTertiary))
+		watch, err := brokerWatchHearing(p.configPath, p.hostName, metric.TopicLeaderCandidate(p.hostName), stateTopic, backupAllStatusTopic, backupAllReaperTopic, metric.TopicBackupStage(backupAnyHost, metric.BackupStageTertiary))
 		if err != nil {
 			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("faulting", reapStart, "[%v] watching the cluster, retrying on the next tick", err)
 			return
@@ -257,6 +257,15 @@ func (p *backupProbe) reap(ctx context.Context) {
 		p.reapWatch = watch
 	}
 	retained, watching := p.reapWatch.readRetained()
+	if silent, deaf := p.reapWatch.deaf(leaderTimingProduction.ttl); watching && deaf {
+		if leading, _ := Leading(metric.LeaderDutyBackup); leading {
+			watching = false
+			if p.reapStale == 0 {
+				scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("faulting", reapStart,
+					"[%s] s without this host's own candidacy arriving on the cluster watch, counting it unwatched", elapsedSeconds(silent))
+			}
+		}
+	}
 	if !watching {
 		p.reapIdle = 0
 		p.reapStale++
@@ -483,7 +492,7 @@ func (p *backupProbe) lead() {
 	}
 	leadStart := time.Now()
 	if p.leadWatch == nil {
-		watch, err := brokerWatch(p.configPath, p.hostName, metric.TopicBackupStatus(backupAnyHost), metric.TopicBackupStage(backupAnyHost, backupAnyLevel), backupAllStatusTopic)
+		watch, err := brokerWatchHearing(p.configPath, p.hostName, metric.TopicLeaderCandidate(p.hostName), metric.TopicBackupStatus(backupAnyHost), metric.TopicBackupStage(backupAnyHost, backupAnyLevel), backupAllStatusTopic)
 		if err != nil {
 			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("deferred", leadStart, "[%v] watching the cluster backup run, retrying on the next tick", err)
 			return
@@ -491,6 +500,13 @@ func (p *backupProbe) lead() {
 		p.leadWatch = watch
 	}
 	retained, watching := p.leadWatch.readRetained()
+	if silent, deaf := p.leadWatch.deaf(leaderTimingProduction.ttl); watching && deaf {
+		watching = false
+		if p.leadStale == 0 {
+			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("faulting", leadStart,
+				"[%s] s without this host's own candidacy arriving on the cluster backup run watch, counting it unwatched", elapsedSeconds(silent))
+		}
+	}
 	if !watching {
 		p.leadStale++
 		if p.leadStale >= reaperStaleTicks {

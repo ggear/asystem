@@ -32,7 +32,7 @@
 #        9.1  Upload Accounts Tab: the Redbark and account ids found
 #        9.2  Upload Balances Tab: the recent readings
 #        9.3  Upload Transactions Tabs: each year whose files reached Drive
-#        9.4  Upload Summary Tab: closed month totals by bucket and category
+#        9.4  Upload Summary Tab: closed month totals and what each includes
 #        9.5  Upload Logs Tab: this run's problems and the last 30 days'
 #    10. Snapshot: move the bases forward for what was persisted
 #        10.1 Commit Bases: each tab as uploaded, or as read once on Drive
@@ -126,6 +126,7 @@ CLASSIFIER_SCHEMA = {
     "Bank Code": pl.Utf8,
     "Merchant Code": pl.Utf8,
     "Pattern": pl.Utf8,
+    "Description": pl.Utf8,
     "Notes": pl.Utf8,
 }
 
@@ -249,6 +250,7 @@ TRANSACTIONS_TAB_SCHEMA = {
     "Bucket": pl.Utf8,
     "Category": pl.Utf8,
     "Total": pl.Float64,
+    "Description": pl.Utf8,
 }
 
 EXPORT_INSTITUTION_PATTERN = r"(?i)^(american express|amex)$"
@@ -260,71 +262,72 @@ EXPORT_OVERLAP_SHARE = 0.5
 
 TABS_SCHEMA = {**ACCOUNTS_SCHEMA, **CLASSIFIER_SCHEMA, **TRANSACTIONS_YEAR_TAB_SCHEMA}
 ERROR_CODES = {
-    "TAB_UNUSABLE": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
-    "ACCOUNT_DUPLICATE": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
-    "ACCOUNT_FROM": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
-    "ACCOUNT_MISSING": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
-    "ACCOUNT_NAME": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
-    "ACCOUNT_NAME_SHARED": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
-    "ACCOUNT_STATUS": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
-    "ACCOUNT_TYPE": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
-    "ACCOUNT_UNMAPPED": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
-    "REDBARK_GONE": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
-    "CLASSIFIER_BANK_CODE": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
-    "CLASSIFIER_BUCKET": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
-    "CLASSIFIER_CATEGORY": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
-    "CLASSIFIER_CATEGORY_CASE": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
-    "CLASSIFIER_CODE_LIST": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
-    "CLASSIFIER_CODE_ROWS": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
-    "CLASSIFIER_MERCHANT_CODE": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
-    "CLASSIFIER_PATTERN": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
-    "CLASSIFIER_PATTERN_CONFLICT": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
-    "CLASSIFIER_UNBUCKETED": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
-    "CLASSIFIER_TIE": (plugin.LOG_KIND_WARNING, True, plugin.CTR_SRC_SOURCES),
-    "CLASSIFIER_SHARE": (plugin.LOG_KIND_WARNING, True, plugin.CTR_SRC_SOURCES),
-    "CLASSIFIER_HELD": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
-    "IMPORT_UNMAPPED": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
-    "IMPORT_UNREADABLE": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_SOURCES),
-    "BALANCE_MANUAL_STALE": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_DATA),
-    "BALANCE_UNRECONCILED": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_DATA),
-    "BALANCE_ABSENT": (plugin.LOG_KIND_WARNING, True, plugin.CTR_SRC_DATA),
-    "IMPORT_GONE": (plugin.LOG_KIND_WARNING, True, plugin.CTR_SRC_DATA),
-    "IMPORT_SUSPECT": (plugin.LOG_KIND_WARNING, True, plugin.CTR_SRC_DATA),
-    "REDBARK_ACCOUNTS": (plugin.LOG_KIND_INFO, True, plugin.CTR_SRC_SOURCES),
-    "BALANCE_RESPONSE": (plugin.LOG_KIND_INFO, True, plugin.CTR_SRC_SOURCES),
-    "BALANCE_STALE": (plugin.LOG_KIND_INFO, True, plugin.CTR_SRC_SOURCES),
-    "TRANSACTION_CALL": (plugin.LOG_KIND_INFO, True, plugin.CTR_SRC_SOURCES),
-    "TRANSACTION_RESPONSE": (plugin.LOG_KIND_INFO, True, plugin.CTR_SRC_SOURCES),
-    "DRIVE_CONFLICT": (plugin.LOG_KIND_ERROR, False, plugin.CTR_SRC_SOURCES),
-    "DRIVE_DUPLICATE": (plugin.LOG_KIND_ERROR, False, plugin.CTR_SRC_SOURCES),
-    "TAB_EDIT_IGNORED": (plugin.LOG_KIND_ERROR, False, plugin.CTR_SRC_DATA),
-    "EDIT_UNMATCHED": (plugin.LOG_KIND_ERROR, False, plugin.CTR_SRC_DATA),
-    "ACCOUNT_NOT_MANUAL": (plugin.LOG_KIND_ERROR, False, plugin.CTR_SRC_DATA),
-    "FILE_UNREADABLE": (plugin.LOG_KIND_ERROR, False, plugin.CTR_SRC_DATA),
-    "VALUE_UNPARSED": (plugin.LOG_KIND_ERROR, False, plugin.CTR_SRC_DATA),
-    "BALANCE_DUPLICATE": (plugin.LOG_KIND_ERROR, False, plugin.CTR_SRC_DATA),
-    "DATE_BEFORE_FROM": (plugin.LOG_KIND_ERROR, False, plugin.CTR_SRC_DATA),
-    "DATE_FUTURE": (plugin.LOG_KIND_ERROR, False, plugin.CTR_SRC_DATA),
-    "ACCOUNT_LINKED": (plugin.LOG_KIND_ERROR, False, plugin.CTR_SRC_DATA),
-    "SPLIT_INVALID": (plugin.LOG_KIND_ERROR, False, plugin.CTR_SRC_DATA),
-    "TRANSACTION_DECIMALS": (plugin.LOG_KIND_ERROR, False, plugin.CTR_SRC_DATA),
-    "TRANSACTION_DESCRIPTION": (plugin.LOG_KIND_ERROR, False, plugin.CTR_SRC_DATA),
-    "TRANSACTION_VETTED": (plugin.LOG_KIND_ERROR, False, plugin.CTR_SRC_DATA),
-    "TRANSACTION_ZERO": (plugin.LOG_KIND_ERROR, False, plugin.CTR_SRC_DATA),
-    "BALANCE_SIGN": (plugin.LOG_KIND_WARNING, False, plugin.CTR_SRC_DATA),
-    "BALANCE_JUMP": (plugin.LOG_KIND_WARNING, False, plugin.CTR_SRC_DATA),
-    "CATEGORY_UNKNOWN": (plugin.LOG_KIND_WARNING, False, plugin.CTR_SRC_DATA),
-    "MANUAL_DUPLICATE": (plugin.LOG_KIND_WARNING, False, plugin.CTR_SRC_DATA),
-    "TRANSACTION_GONE": (plugin.LOG_KIND_ERROR, False, plugin.CTR_SRC_DATA),
-    "TRANSACTION_RELISTED": (plugin.LOG_KIND_WARNING, False, plugin.CTR_SRC_DATA),
-    "TRANSACTION_UNHELD": (plugin.LOG_KIND_WARNING, False, plugin.CTR_SRC_DATA),
-    "DEDUPE_REMOVED": (plugin.LOG_KIND_INFO, False, plugin.CTR_SRC_DATA),
-    "TRANSACTIONS_UNCLASSIFIED": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_DATA),
-    "TRANSACTIONS_UNCLASSIFIED_CURRENT": (plugin.LOG_KIND_WARNING, True, plugin.CTR_SRC_DATA),
-    "TRANSACTIONS_UNVETTED": (plugin.LOG_KIND_ERROR, True, plugin.CTR_SRC_DATA),
-    "TRANSACTIONS_UNVETTED_CURRENT": (plugin.LOG_KIND_WARNING, True, plugin.CTR_SRC_DATA),
-    "TRANSACTION_TWO_ACCOUNTS": (plugin.LOG_KIND_WARNING, True, plugin.CTR_SRC_DATA),
-    "TRANSACTION_SPREADSHEET_ERROR": (plugin.LOG_KIND_WARNING, True, plugin.CTR_SRC_DATA),
+    "TAB_UNUSABLE": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_SOURCES),
+    "ACCOUNT_DUPLICATE": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_SOURCES),
+    "ACCOUNT_FROM": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_SOURCES),
+    "ACCOUNT_MISSING": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_SOURCES),
+    "ACCOUNT_NAME": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_SOURCES),
+    "ACCOUNT_NAME_SHARED": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_SOURCES),
+    "ACCOUNT_STATUS": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_SOURCES),
+    "ACCOUNT_TYPE": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_SOURCES),
+    "ACCOUNT_UNMAPPED": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_SOURCES),
+    "REDBARK_GONE": (plugin.LOG_KIND_ERROR, True, True, plugin.CTR_SRC_SOURCES),
+    "CLASSIFIER_BANK_CODE": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_SOURCES),
+    "CLASSIFIER_BUCKET": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_SOURCES),
+    "CLASSIFIER_CATEGORY": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_SOURCES),
+    "CLASSIFIER_CATEGORY_CASE": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_SOURCES),
+    "CLASSIFIER_CODE_LIST": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_SOURCES),
+    "CLASSIFIER_CODE_ROWS": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_SOURCES),
+    "CLASSIFIER_MERCHANT_CODE": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_SOURCES),
+    "CLASSIFIER_PATTERN": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_SOURCES),
+    "CLASSIFIER_PATTERN_CONFLICT": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_SOURCES),
+    "CLASSIFIER_UNBUCKETED": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_SOURCES),
+    "CLASSIFIER_TIE": (plugin.LOG_KIND_WARNING, True, False, plugin.CTR_SRC_SOURCES),
+    "CLASSIFIER_SHARE": (plugin.LOG_KIND_WARNING, True, False, plugin.CTR_SRC_SOURCES),
+    "CLASSIFIER_HELD": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_SOURCES),
+    "CLASSIFIER_DESCRIPTION": (plugin.LOG_KIND_WARNING, True, False, plugin.CTR_SRC_SOURCES),
+    "IMPORT_UNMAPPED": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_SOURCES),
+    "IMPORT_UNREADABLE": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_SOURCES),
+    "BALANCE_MANUAL_STALE": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_DATA),
+    "BALANCE_UNRECONCILED": (plugin.LOG_KIND_ERROR, True, True, plugin.CTR_SRC_DATA),
+    "BALANCE_ABSENT": (plugin.LOG_KIND_WARNING, True, False, plugin.CTR_SRC_DATA),
+    "IMPORT_GONE": (plugin.LOG_KIND_WARNING, True, True, plugin.CTR_SRC_DATA),
+    "IMPORT_SUSPECT": (plugin.LOG_KIND_WARNING, True, True, plugin.CTR_SRC_DATA),
+    "REDBARK_ACCOUNTS": (plugin.LOG_KIND_INFO, True, False, plugin.CTR_SRC_SOURCES),
+    "BALANCE_RESPONSE": (plugin.LOG_KIND_INFO, True, False, plugin.CTR_SRC_SOURCES),
+    "BALANCE_STALE": (plugin.LOG_KIND_INFO, True, False, plugin.CTR_SRC_SOURCES),
+    "TRANSACTION_CALL": (plugin.LOG_KIND_INFO, True, False, plugin.CTR_SRC_SOURCES),
+    "TRANSACTION_RESPONSE": (plugin.LOG_KIND_INFO, True, False, plugin.CTR_SRC_SOURCES),
+    "DRIVE_CONFLICT": (plugin.LOG_KIND_ERROR, False, True, plugin.CTR_SRC_SOURCES),
+    "DRIVE_DUPLICATE": (plugin.LOG_KIND_ERROR, False, False, plugin.CTR_SRC_SOURCES),
+    "TAB_EDIT_IGNORED": (plugin.LOG_KIND_ERROR, False, False, plugin.CTR_SRC_DATA),
+    "EDIT_UNMATCHED": (plugin.LOG_KIND_ERROR, False, True, plugin.CTR_SRC_DATA),
+    "ACCOUNT_NOT_MANUAL": (plugin.LOG_KIND_ERROR, False, False, plugin.CTR_SRC_DATA),
+    "FILE_UNREADABLE": (plugin.LOG_KIND_ERROR, False, False, plugin.CTR_SRC_DATA),
+    "VALUE_UNPARSED": (plugin.LOG_KIND_ERROR, False, False, plugin.CTR_SRC_DATA),
+    "BALANCE_DUPLICATE": (plugin.LOG_KIND_ERROR, False, False, plugin.CTR_SRC_DATA),
+    "DATE_BEFORE_FROM": (plugin.LOG_KIND_ERROR, False, False, plugin.CTR_SRC_DATA),
+    "DATE_FUTURE": (plugin.LOG_KIND_ERROR, False, False, plugin.CTR_SRC_DATA),
+    "ACCOUNT_LINKED": (plugin.LOG_KIND_ERROR, False, False, plugin.CTR_SRC_DATA),
+    "SPLIT_INVALID": (plugin.LOG_KIND_ERROR, False, False, plugin.CTR_SRC_DATA),
+    "TRANSACTION_DECIMALS": (plugin.LOG_KIND_ERROR, False, False, plugin.CTR_SRC_DATA),
+    "TRANSACTION_DESCRIPTION": (plugin.LOG_KIND_ERROR, False, False, plugin.CTR_SRC_DATA),
+    "TRANSACTION_VETTED": (plugin.LOG_KIND_ERROR, False, False, plugin.CTR_SRC_DATA),
+    "TRANSACTION_ZERO": (plugin.LOG_KIND_ERROR, False, False, plugin.CTR_SRC_DATA),
+    "BALANCE_SIGN": (plugin.LOG_KIND_WARNING, False, True, plugin.CTR_SRC_DATA),
+    "BALANCE_JUMP": (plugin.LOG_KIND_WARNING, False, True, plugin.CTR_SRC_DATA),
+    "CATEGORY_UNKNOWN": (plugin.LOG_KIND_WARNING, False, False, plugin.CTR_SRC_DATA),
+    "MANUAL_DUPLICATE": (plugin.LOG_KIND_WARNING, False, True, plugin.CTR_SRC_DATA),
+    "TRANSACTION_GONE": (plugin.LOG_KIND_ERROR, False, True, plugin.CTR_SRC_DATA),
+    "TRANSACTION_RELISTED": (plugin.LOG_KIND_WARNING, False, True, plugin.CTR_SRC_DATA),
+    "TRANSACTION_UNHELD": (plugin.LOG_KIND_WARNING, False, True, plugin.CTR_SRC_DATA),
+    "DEDUPE_REMOVED": (plugin.LOG_KIND_INFO, False, True, plugin.CTR_SRC_DATA),
+    "TRANSACTIONS_UNCLASSIFIED": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_DATA),
+    "TRANSACTIONS_UNCLASSIFIED_CURRENT": (plugin.LOG_KIND_WARNING, True, False, plugin.CTR_SRC_DATA),
+    "TRANSACTIONS_UNVETTED": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_DATA),
+    "TRANSACTIONS_UNVETTED_CURRENT": (plugin.LOG_KIND_WARNING, True, False, plugin.CTR_SRC_DATA),
+    "TRANSACTION_TWO_ACCOUNTS": (plugin.LOG_KIND_WARNING, True, False, plugin.CTR_SRC_DATA),
+    "TRANSACTION_SPREADSHEET_ERROR": (plugin.LOG_KIND_WARNING, True, False, plugin.CTR_SRC_DATA),
 }
 CLASSIFIER_HOLDING_CODES = {
     "CLASSIFIER_BANK_CODE",
@@ -635,12 +638,16 @@ class Bank(plugin.Plugin):
                     _bank_error("Classifier", category, "CLASSIFIER_CODE_ROWS", f"code rows [{count}] for one category")
                 for row in classifier_raw_df.with_row_index("Row", offset=2).filter(pl.col("Pattern").is_not_null() & (pl.col("Pattern") != pl.col("Pattern").str.strip_chars())).iter_rows(named=True):
                     _bank_error("Classifier", f"row {row['Row']}", "CLASSIFIER_PATTERN", f"pattern [{row['Pattern']}] has edge spaces")
+                for row in classifier_rows_df.filter(pl.col("Pattern").is_not_null() & pl.col("Description").is_not_null()).iter_rows(named=True):
+                    _bank_error("Classifier", f"row {row['Row']}", "CLASSIFIER_DESCRIPTION", f"description on pattern [{row['Pattern']}] row, put it in notes")
                 classifier_patterns_df, classifier_bank_df, classifier_merchant_df = _bank_matchers(classifier_rows_df, True)
                 classifier_df = classifier_rows_df.drop(["Row", "Bucket"]).join(category_bucket_df, on="Category", how="left", maintain_order="left").select(list(CLASSIFIER_SCHEMA))
             except Exception as exception:
                 _bank_error("Classifier", "tab", "TAB_UNUSABLE", f"tab unusable [{exception}]")
         classifier_usable = len(classifier_df) > 0
-        classifier_content_changed = classifier_usable and (classifier_snapshot_df is None or not classifier_snapshot_df.drop("Notes").equals(classifier_df.drop("Notes")))
+        classifier_content_changed = classifier_usable and (
+            classifier_snapshot_df is None or not classifier_snapshot_df.drop(["Description", "Notes"]).equals(classifier_df.drop(["Description", "Notes"]))
+        )
         classifier_holding = classifier_content_changed and any(error["Code"] in CLASSIFIER_HOLDING_CODES for error in errors[classifier_errors_start:])
         classifier_buckets = ["Category", "Bucket"]
         classifier_buckets_df = classifier_df.select(classifier_buckets).unique(maintain_order=True)
@@ -1179,18 +1186,10 @@ class Bank(plugin.Plugin):
                     ]
                     if len(edit["Tab"]) == len(edit["Base"]) == len(held_parts) == 1:
                         tab_part, base_part = edit["Tab"][0], edit["Base"][0]
-                        parts = [
-                            {
-                                **{column: tab_part[column] if column in edit["Present"] and tab_part[column] != base_part[column] else held_values[0][column] for column in TRANSACTIONS_EDIT_COLUMNS},
-                                "__vetted_edited": "Vetted" not in edit["Present"] or tab_part["Vetted"] != base_part["Vetted"],
-                            }
-                        ]
+                        parts = [{column: tab_part[column] if column in edit["Present"] and tab_part[column] != base_part[column] else held_values[0][column] for column in TRANSACTIONS_EDIT_COLUMNS}]
                     else:
                         parts = [
-                            {
-                                **{column: part[column] if column in edit["Present"] else held_values[min(index, len(held_values) - 1)][column] for column in TRANSACTIONS_EDIT_COLUMNS},
-                                "__vetted_edited": "Vetted" not in edit["Present"] or len(edit["Tab"]) != len(edit["Base"]) or part["Vetted"] != edit["Base"][index]["Vetted"],
-                            }
+                            {column: part[column] if column in edit["Present"] else held_values[min(index, len(held_values) - 1)][column] for column in TRANSACTIONS_EDIT_COLUMNS}
                             for index, part in enumerate(edit["Tab"])
                         ]
                     splits = [cents if part["Amount Split"] is None else part["Amount Split"] for part in parts]
@@ -1200,15 +1199,12 @@ class Bank(plugin.Plugin):
                     for part in parts:
                         if part["Category Manual"] is not None and classifier_usable and part["Category Manual"] not in classifier_categories:
                             _bank_error(tab, transaction_id, "CATEGORY_UNKNOWN", f"category manual [{part['Category Manual']}] not on the Classifier tab")
-                    held_category = held_parts[0]["Category Manual"] or held_parts[0]["Category Derived"]
                     edits_by_path.setdefault(held_path, {})[held_parts[0]["Transaction ID"]] = [
                         {
                             **{column: held_parts[0][column] for column in TRANSACTIONS_SCHEMA},
                             "Amount Split": split / 100,
                             "Category Manual": part["Category Manual"],
-                            "Vetted": None
-                            if part["Vetted"] == FLAG_YES and not part["__vetted_edited"] and (part["Category Manual"] or held_parts[0]["Category Derived"]) != held_category
-                            else part["Vetted"],
+                            "Vetted": part["Vetted"],
                             "Notes": part["Notes"],
                         }
                         for part, split in zip(parts, splits, strict=True)
@@ -2352,17 +2348,41 @@ class Bank(plugin.Plugin):
                         & (pl.col("Bucket") != TRANSACTIONS_BUCKET_EXCLUDED)
                     )
                 )
-                transactions_tab_df = (
-                    pl.concat(
-                        [
-                            transactions_month_df.group_by("End of Month").agg(pl.col("__total").sum().round(2).alias("Total"), pl.lit(0).alias("__level")),
-                            transactions_month_df.group_by(["End of Month", "Bucket"]).agg(pl.col("__total").sum().round(2).alias("Total"), pl.lit(1).alias("__level")),
-                            transactions_month_df.group_by(["End of Month", "Bucket", "Category"])
-                            .agg(pl.col("__total").sum().round(2).alias("Total"), pl.lit(2).alias("__level"))
-                            .filter(pl.col("Total") != 0),
-                        ],
-                        how="diagonal_relaxed",
+
+                def _bank_included(_names: pl.Series, _noun: str, _nouns: str) -> str | None:
+                    _words = [" ".join(_word if len(_word) > 1 and _word.isupper() else _word.lower() for _word in _name.split()) for _name in _names.to_list()]
+                    if not _words:
+                        return None
+                    if len(_words) == 1:
+                        return f"Includes the {_words[0]} {_noun} this month"
+                    return f"Includes {', '.join(_words[:-1])} & {_words[-1]} {_nouns} this month"
+
+                transactions_categories_df = (
+                    transactions_month_df.group_by(["End of Month", "Bucket", "Category"])
+                    .agg(pl.col("__total").sum().round(2).alias("Total"), pl.lit(2).alias("__level"))
+                    .filter(pl.col("Total") != 0)
+                    .join(
+                        classifier_df.filter(pl.col("Pattern").is_null() & pl.col("Description").is_not_null())
+                        .unique("Category", keep="first", maintain_order=True)
+                        .select(["Category", "Description"]),
+                        on="Category",
+                        how="left",
                     )
+                )
+                transactions_buckets_df = (
+                    transactions_month_df.group_by(["End of Month", "Bucket"])
+                    .agg(pl.col("__total").sum().round(2).alias("Total"), pl.lit(1).alias("__level"))
+                    .join(transactions_categories_df.group_by(["End of Month", "Bucket"]).agg(pl.col("Category").sort().alias("__included")), on=["End of Month", "Bucket"], how="left")
+                    .with_columns(pl.col("__included").map_elements(lambda _names: _bank_included(_names, "category", "categories"), return_dtype=pl.Utf8).alias("Description"))
+                )
+                transactions_months_df = (
+                    transactions_month_df.group_by("End of Month")
+                    .agg(pl.col("__total").sum().round(2).alias("Total"), pl.lit(0).alias("__level"))
+                    .join(transactions_buckets_df.group_by("End of Month").agg(pl.col("Bucket").sort().alias("__included")), on="End of Month", how="left")
+                    .with_columns(pl.col("__included").map_elements(lambda _names: _bank_included(_names, "bucket", "buckets"), return_dtype=pl.Utf8).alias("Description"))
+                )
+                transactions_tab_df = (
+                    pl.concat([transactions_months_df, transactions_buckets_df, transactions_categories_df], how="diagonal_relaxed")
                     .sort(["__level", "End of Month", "Bucket", "Category"], descending=[False, True, False, False])
                     .select(list(TRANSACTIONS_TAB_SCHEMA))
                 )

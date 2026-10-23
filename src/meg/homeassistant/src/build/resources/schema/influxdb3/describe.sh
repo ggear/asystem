@@ -473,18 +473,6 @@ WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
-    'sensor__pm25'                   AS relation,
-    'entity_id*/unit_of_measurement' AS dimension,
-    1                                AS measures,
-    '<on-change>'                    AS cadence,
-    count(*)                         AS rows,
-    CAST(min(time) AS VARCHAR)       AS oldest,
-    CAST(max(time) AS VARCHAR)       AS newest
-FROM sensor__pm25
-WHERE
-    module = 'homeassistant'
-UNION ALL
-SELECT
     'sensor__power'                  AS relation,
     'entity_id*/unit_of_measurement' AS dimension,
     1                                AS measures,
@@ -1644,33 +1632,6 @@ WHERE
     AND column_name NOT IN ('entity_id', 'module', 'time', 'unit_of_measurement', 'value')
 UNION ALL
 SELECT
-    'sensor__pm25'                                              AS relation,
-    'value'                                                     AS measure,
-    'float'                                                     AS kind,
-    '-'                                                         AS unit,
-    '<on-change>'                                               AS period,
-    count(value)                                                AS rows,
-    CAST(min(time) FILTER (WHERE value IS NOT NULL) AS VARCHAR) AS oldest,
-    CAST(max(time) FILTER (WHERE value IS NOT NULL) AS VARCHAR) AS newest
-FROM sensor__pm25
-WHERE
-    module = 'homeassistant'
-UNION ALL
-SELECT
-    '-'                   AS relation,
-    column_name           AS measure,
-    '-'                   AS kind,
-    '-'                   AS unit,
-    '-'                   AS period,
-    CAST(NULL AS BIGINT)  AS rows,
-    CAST(NULL AS VARCHAR) AS oldest,
-    CAST(NULL AS VARCHAR) AS newest
-FROM information_schema.columns
-WHERE
-    table_name = 'sensor__pm25'
-    AND column_name NOT IN ('entity_id', 'module', 'time', 'unit_of_measurement', 'value')
-UNION ALL
-SELECT
     'sensor__power'                                             AS relation,
     'value'                                                     AS measure,
     'float'                                                     AS kind,
@@ -2263,19 +2224,6 @@ SELECT
     CAST(min(time) AS VARCHAR)                  AS oldest,
     CAST(max(time) AS VARCHAR)                  AS newest
 FROM sensor__humidity
-WHERE
-    module = 'homeassistant'
-GROUP BY concat(entity_id, '/', unit_of_measurement)
-UNION ALL
-SELECT
-    'sensor__pm25'                              AS relation,
-    'entity_id*/unit_of_measurement'            AS dimension,
-    concat(entity_id, '/', unit_of_measurement) AS entity,
-    '-'                                         AS declared,
-    count(*)                                    AS rows,
-    CAST(min(time) AS VARCHAR)                  AS oldest,
-    CAST(max(time) AS VARCHAR)                  AS newest
-FROM sensor__pm25
 WHERE
     module = 'homeassistant'
 GROUP BY concat(entity_id, '/', unit_of_measurement)

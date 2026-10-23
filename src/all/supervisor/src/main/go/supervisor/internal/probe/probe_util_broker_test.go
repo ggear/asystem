@@ -123,6 +123,52 @@ func TestProbeUtilBroker_WatcherReportsFreshOnlyWhenConnectedAndReady(t *testing
 	}
 }
 
+func TestProbeUtilBroker_WatcherIsDeafWithoutItsHeartbeat(t *testing.T) {
+	tests := []struct {
+		name          string
+		heartbeat     string
+		ready         bool
+		readyAgo      time.Duration
+		heardAgo      time.Duration
+		expectedDeaf  bool
+		expectedError bool
+	}{
+		{name: "no_heartbeat_declared_is_never_deaf", heartbeat: "", ready: true, readyAgo: time.Hour, expectedDeaf: false, expectedError: false},
+		{name: "not_yet_attached_is_left_to_readiness", heartbeat: "a/heartbeat", ready: false, readyAgo: time.Hour, expectedDeaf: false, expectedError: false},
+		{name: "heard_within_the_window", heartbeat: "a/heartbeat", ready: true, readyAgo: time.Hour, heardAgo: time.Second, expectedDeaf: false, expectedError: false},
+		{name: "silent_since_attaching_past_the_window", heartbeat: "a/heartbeat", ready: true, readyAgo: time.Hour, expectedDeaf: true, expectedError: false},
+		{name: "heard_only_before_the_current_attach", heartbeat: "a/heartbeat", ready: true, readyAgo: time.Hour, heardAgo: 2 * time.Hour, expectedDeaf: true, expectedError: false},
+		{name: "attached_within_the_window", heartbeat: "a/heartbeat", ready: true, readyAgo: time.Second, expectedDeaf: false, expectedError: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			now := time.Now()
+			watch := &brokerWatcher{brokerPayloads: brokerPayloads{payloads: map[string]string{}}, client: &stubClient{connected: true}, heartbeat: tt.heartbeat, ready: tt.ready, readyAt: now.Add(-tt.readyAgo)}
+			if tt.heardAgo > 0 {
+				watch.heardAt = now.Add(-tt.heardAgo)
+			}
+			if _, deaf := watch.deaf(time.Minute); deaf != tt.expectedDeaf {
+				t.Errorf("deaf: got %v want %v", deaf, tt.expectedDeaf)
+			}
+		})
+	}
+}
+
+func TestProbeUtilBroker_HeartbeatCountsOnlyLiveDeliveries(t *testing.T) {
+	watch := &brokerWatcher{brokerPayloads: brokerPayloads{payloads: map[string]string{}}, heartbeat: "a/heartbeat", ready: true, readyAt: time.Now().Add(-time.Hour)}
+	watch.hear(nil, leaderStubMessage{topic: "a/heartbeat", retained: true})
+	if _, deaf := watch.deaf(time.Minute); !deaf {
+		t.Errorf("deaf: got false want true, a retained copy is replayed by the store and proves no live routing")
+	}
+	watch.hear(nil, leaderStubMessage{topic: "a/heartbeat"})
+	if _, deaf := watch.deaf(time.Minute); deaf {
+		t.Errorf("deaf: got true want false after a live delivery")
+	}
+	if len(watch.snapshot()) != 0 {
+		t.Errorf("payloads: got %v want none, the heartbeat is not a watched topic", watch.snapshot())
+	}
+}
+
 func TestProbeUtilBroker_ForgetClearsPayloadsAndReadiness(t *testing.T) {
 	watch := &brokerWatcher{
 		brokerPayloads: brokerPayloads{payloads: map[string]string{"a/b": "1"}},

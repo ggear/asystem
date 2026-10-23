@@ -15,7 +15,7 @@ class ContractMixin:
     _sheet_credentials: Any
     _sheet_spreadsheets: dict[str, Any]
     _sheet_worksheets: dict[str, list[Any]]
-    error_codes: dict[str, tuple[str, bool, str]]
+    error_codes: dict[str, tuple[str, bool, bool, str]]
     drive_conflicts: set[str]
     drive_download_only: tuple[str, ...]
     drive_ids: dict[str, str]

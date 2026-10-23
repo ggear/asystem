@@ -1,0 +1,10 @@
+Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Category Manual,Category Derived,Account ID,Source ID,Transaction ID,Vetted
+2025-09-08,One,-1.0,-1.0,Mystery,,,,,,540a8918175f5ca38559395087eb552c,m1,,Yes
+2025-10-10,One,-100.0,-100.0,Grocer,,5411,,,Groceries,540a8918175f5ca38559395087eb552c,g1,,Yes
+2025-10-12,One,-300.0,-300.0,Mechanic,,,,Car RAC,,540a8918175f5ca38559395087eb552c,c1,,Yes
+2025-10-15,One,-40.0,-40.0,Servo,,5541,,,Fuel,540a8918175f5ca38559395087eb552c,f1,,Yes
+2025-10-20,One,-5.0,-5.0,Chemist,,5912,,,Pharmacy,540a8918175f5ca38559395087eb552c,p1,,Yes
+2025-11-03,One,-10.0,-10.0,Coffee,,5812,,,Restaurants,540a8918175f5ca38559395087eb552c,r2,,
+2025-12-05,One,-50.0,-50.0,Coffee,,5812,,,Restaurants,540a8918175f5ca38559395087eb552c,r1,,Yes
+2025-12-06,One,-200.0,-200.0,Transfer,TRANSFER_OUT,,,,Transfer,540a8918175f5ca38559395087eb552c,x1,,Yes
+2025-12-07,One,20.0,20.0,Grocer refund,,5411,,,Groceries,540a8918175f5ca38559395087eb552c,g2,,Yes

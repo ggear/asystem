@@ -12,12 +12,10 @@
 #     deck_west_fan,
 #     dining_air_purifier,
 #     edwin_fan,
-#     kitchen_air_purifier,
 #     kitchen_fan_plug,
 #     lounge_air_purifier,
 #     lounge_fan,
-#     parents_air_purifier,
-#     parents_fan]
+#     parents_air_purifier]
 #   field direction_str - <on-change> [Home Assistant value]
 #   field percentage - <on-change> [Home Assistant value]
 #   field percentage_str - <on-change> [Home Assistant value]

@@ -12,7 +12,7 @@ from .logger import dataframe_print
 
 class LogsMixin(ContractMixin):
     def error(self, errors, tab, key, code, detail):
-        kind, _, counter = self.error_codes[code]
+        kind, _, _, counter = self.error_codes[code]
         if counter != CTR_SRC_SOURCES or not any(error["Counter"] == counter and error["Tab"] == tab and error["Code"] == code for error in errors):
             self.add_counter(counter, CTR_ACT_ERRORED)
         raised = self.now()
@@ -41,8 +41,9 @@ class LogsMixin(ContractMixin):
             .with_columns(pl.coalesce("Date Raised", "Date").alias("Date Raised"))
             .select(list(LOG_SCHEMA))
         )
-        kinds = {code: kind for code, (kind, _, _) in self.error_codes.items()}
-        standing = [code for code, (_, held, _) in self.error_codes.items() if held]
+        kinds = {code: kind for code, (kind, _, _, _) in self.error_codes.items()}
+        standing = [code for code, (_, held, _, _) in self.error_codes.items() if held]
+        kept = [code for code, (_, _, history, _) in self.error_codes.items() if history]
         identity = ["Counter", "Tab", "Key", "Code"]
         now_df = pl.DataFrame(errors, schema=LOG_SCHEMA).with_columns(pl.lit(today, dtype=pl.Date).alias("Date Raised"))
         prior_standing_df = prior_df.filter(pl.col("Code").is_in(standing))
@@ -77,7 +78,7 @@ class LogsMixin(ContractMixin):
         )
         logs_df = (
             pl.concat([standing_df, resolved_df, records_df])
-            .filter(pl.col("Code").is_in(list(kinds)) & ((pl.col("State") == LOG_STATE_CURRENT) | (pl.col("Date Raised") > today - timedelta(days=LOG_RECORD_DAYS))))
+            .filter(pl.col("Code").is_in(list(kinds)) & ((pl.col("State") == LOG_STATE_CURRENT) | (pl.col("Code").is_in(kept) & (pl.col("Date Raised") > today - timedelta(days=LOG_RECORD_DAYS)))))
             .with_columns(pl.col("Code").replace_strict(kinds).alias("Kind"))
             .with_columns(pl.when((pl.col("State") == LOG_STATE_HISTORIC) & (pl.col("Kind") == LOG_KIND_ERROR)).then(pl.lit(LOG_KIND_WARNING)).otherwise(pl.col("Kind")).alias("Kind"))
             .with_columns(pl.col("Kind").replace_strict({LOG_KIND_ERROR: 0, LOG_KIND_WARNING: 1, LOG_KIND_INFO: 2}, default=3, return_dtype=pl.Int8).alias("__rank"))

@@ -55,8 +55,11 @@ type brokerWatcher struct {
 	client    mqtt.Client
 	host      string
 	filters   []string
+	heartbeat string
 	attaching sync.Mutex
 	ready     bool
+	readyAt   time.Time
+	heardAt   time.Time
 }
 
 func brokerWatcherWith(client mqtt.Client, payloads map[string]string) *brokerWatcher {
@@ -64,7 +67,11 @@ func brokerWatcherWith(client mqtt.Client, payloads map[string]string) *brokerWa
 }
 
 func brokerWatch(configPath, host string, filters ...string) (*brokerWatcher, error) {
-	watch := &brokerWatcher{brokerPayloads: brokerPayloads{payloads: map[string]string{}}, host: host, filters: filters}
+	return brokerWatchHearing(configPath, host, "", filters...)
+}
+
+func brokerWatchHearing(configPath, host, heartbeat string, filters ...string) (*brokerWatcher, error) {
+	watch := &brokerWatcher{brokerPayloads: brokerPayloads{payloads: map[string]string{}}, host: host, filters: filters, heartbeat: heartbeat}
 	options, err := brokerOptions(configPath, "watch")
 	if err != nil {
 		return nil, err
@@ -109,16 +116,45 @@ func (w *brokerWatcher) attach(client mqtt.Client) {
 	defer w.attaching.Unlock()
 	w.forget()
 	attachStart := time.Now()
-	if err := brokerSubscribe(client, &w.brokerPayloads, w.filters); err != nil {
+	if err := brokerSubscribe(client, w.collect, w.filters); err != nil {
 		scribe.Log(scribe.SourceProbeBroker, scribe.SubjectHost(w.host), scribe.ActionSubscribe).Warnf("faulting", attachStart, "[%v] watching the cluster, retrying on the next tick", err)
 		return
+	}
+	if w.heartbeat != "" {
+		if err := brokerSubscribe(client, w.hear, []string{w.heartbeat}); err != nil {
+			scribe.Log(scribe.SourceProbeBroker, scribe.SubjectHost(w.host), scribe.ActionSubscribe).Warnf("faulting", attachStart, "[%v] watching the cluster, retrying on the next tick", err)
+			return
+		}
 	}
 	time.Sleep(brokerSettle)
 	w.mutex.Lock()
 	w.ready = true
+	w.readyAt = time.Now()
 	held := len(w.payloads)
 	w.mutex.Unlock()
 	scribe.Log(scribe.SourceProbeBroker, scribe.SubjectHost(w.host), scribe.ActionSubscribe).Debugf("attached", attachStart, "[%d] topics across [%d] filters, watching the cluster", held, len(w.filters))
+}
+
+func (w *brokerWatcher) hear(_ mqtt.Client, message mqtt.Message) {
+	if message.Retained() {
+		return
+	}
+	w.mutex.Lock()
+	w.heardAt = time.Now()
+	w.mutex.Unlock()
+}
+
+func (w *brokerWatcher) deaf(within time.Duration) (time.Duration, bool) {
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
+	if w.heartbeat == "" || !w.ready {
+		return 0, false
+	}
+	silent := time.Since(w.readyAt)
+	if w.heardAt.After(w.readyAt) {
+		silent = time.Since(w.heardAt)
+	}
+	return silent, silent > within
 }
 
 func (w *brokerWatcher) forget() {
@@ -176,10 +212,10 @@ func brokerConnect(options *mqtt.ClientOptions) (mqtt.Client, error) {
 	return client, nil
 }
 
-func brokerSubscribe(client mqtt.Client, into *brokerPayloads, filters []string) error {
+func brokerSubscribe(client mqtt.Client, handler mqtt.MessageHandler, filters []string) error {
 	var refused []string
 	for _, filter := range filters {
-		token := client.Subscribe(filter, 1, into.collect)
+		token := client.Subscribe(filter, 1, handler)
 		if !token.WaitTimeout(brokerTimeout) || token.Error() != nil {
 			refused = append(refused, filter)
 			continue

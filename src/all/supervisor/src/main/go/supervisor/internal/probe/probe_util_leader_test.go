@@ -656,6 +656,130 @@ func TestProbeUtilLeader_YieldsWhenTheBrokerStopsAnswering(t *testing.T) {
 	watch("settled_after_thaw", 2*time.Second, nil)
 }
 
+func TestProbeUtilLeader_DeafSessionRedials(t *testing.T) {
+	tests := []struct {
+		name            string
+		echo            bool
+		echoRetained    bool
+		unacked         bool
+		attachedFor     time.Duration
+		expectedRedial  bool
+		expectedLeading bool
+		expectedError   bool
+	}{
+		{name: "hearing_its_own_renewals_keeps_the_session", echo: true, attachedFor: time.Hour, expectedRedial: false, expectedLeading: true, expectedError: false},
+		{name: "acknowledged_but_unheard_past_the_ttl_redials", echo: false, attachedFor: time.Hour, expectedRedial: true, expectedLeading: false, expectedError: false},
+		{name: "retained_copies_alone_do_not_prove_delivery", echo: true, echoRetained: true, attachedFor: time.Hour, expectedRedial: true, expectedLeading: false, expectedError: false},
+		{name: "unheard_within_the_ttl_of_attaching_waits", echo: false, attachedFor: time.Second, expectedRedial: false, expectedLeading: true, expectedError: false},
+		{name: "unacknowledged_renewals_are_left_to_the_ack_window", echo: false, unacked: true, attachedFor: time.Hour, expectedRedial: false, expectedLeading: false, expectedError: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Cleanup(config.Reset)
+			configFile := filepath.Join(t.TempDir(), "config.json")
+			if err := os.WriteFile(configFile, []byte(`{"asystem":{"version":"10.100.6000","host":"alpha","broker":{"host":"127.0.0.1","port":"1"}}}`), 0644); err != nil {
+				t.Fatalf("write config file failed: %v", err)
+			}
+			campaign := leaderStubCampaign([]string{"alpha", "bravo"}, "alpha")
+			campaign.configPath = configFile
+			stub := campaign.client.(*leaderStubClient)
+			stub.retained, stub.unacked = tt.echoRetained, tt.unacked
+			if !tt.echo {
+				stub.handler = nil
+			}
+			now := time.Now()
+			campaign.attached, campaign.standing, campaign.leading, campaign.epoch = true, true, true, 1
+			campaign.attachedAt = now.Add(-tt.attachedFor)
+			campaign.lastAck, campaign.lastLease = now, now
+			if tt.unacked {
+				campaign.lastAck, campaign.lastLease = now.Add(-campaign.timing.ackWindow-time.Second), now.Add(-campaign.timing.ackWindow-time.Second)
+			}
+			campaign.lease, campaign.leaseArrived = leaderLease{Host: "alpha", Epoch: 1}, now
+			campaign.candidates["alpha"] = now
+			campaign.tick(now)
+			t.Cleanup(func() { campaign.session().Disconnect(0) })
+			if redialled := campaign.session() != mqtt.Client(stub); redialled != tt.expectedRedial {
+				t.Errorf("redialled: got %v want %v", redialled, tt.expectedRedial)
+			}
+			if tt.expectedRedial && stub.IsConnectionOpen() {
+				t.Errorf("deaf session: got open want disconnected")
+			}
+			if leading, _ := campaign.holding(time.Now()); leading != tt.expectedLeading {
+				t.Errorf("leading: got %v want %v", leading, tt.expectedLeading)
+			}
+		})
+	}
+}
+
+func TestProbeUtilLeader_StaleAttachDoesNotAdoptAReplacedSession(t *testing.T) {
+	campaign := leaderStubCampaign([]string{"alpha"}, "alpha")
+	replaced := &leaderStubClient{open: true}
+	campaign.attach(replaced)
+	if campaign.attached {
+		t.Errorf("attached: got true want false for an onConnect from a session the campaign has replaced")
+	}
+	campaign.attach(campaign.client)
+	if !campaign.attached {
+		t.Errorf("attached: got false want true for the campaign's current session")
+	}
+}
+
+func TestProbeUtilLeader_ElectedPeerWithoutALeaseIsFlagged(t *testing.T) {
+	tests := []struct {
+		name             string
+		host             string
+		attachedFor      time.Duration
+		leaseSeenAgo     time.Duration
+		leaseHeld        bool
+		bravoOnly        bool
+		expectedOrphaned string
+		expectedError    bool
+	}{
+		{name: "peer_elected_and_unleased_past_a_full_failover", host: "bravo", attachedFor: time.Hour, expectedOrphaned: "alpha", expectedError: false},
+		{name: "unleased_within_a_failover_is_a_handover", host: "bravo", attachedFor: 2 * time.Second, expectedOrphaned: "", expectedError: false},
+		{name: "a_lease_message_restarts_the_grace", host: "bravo", attachedFor: time.Hour, leaseSeenAgo: 2 * time.Second, expectedOrphaned: "", expectedError: false},
+		{name: "a_held_lease_is_not_orphaned", host: "bravo", attachedFor: time.Hour, leaseHeld: true, expectedOrphaned: "", expectedError: false},
+		{name: "this_host_elected_is_its_own_claim", host: "alpha", attachedFor: time.Hour, expectedOrphaned: "", expectedError: false},
+		{name: "nobody_standing_is_a_vacancy", host: "bravo", attachedFor: time.Hour, bravoOnly: true, expectedOrphaned: "", expectedError: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			campaign := leaderStubCampaign([]string{"alpha", "bravo"}, tt.host)
+			now := time.Now()
+			campaign.attached, campaign.attachedAt = true, now.Add(-tt.attachedFor)
+			if tt.leaseSeenAgo > 0 {
+				campaign.leaseSeen = now.Add(-tt.leaseSeenAgo)
+			}
+			if tt.leaseHeld {
+				campaign.lease, campaign.leaseArrived, campaign.leaseSeen = leaderLease{Host: "alpha", Epoch: 1}, now, now
+			}
+			if !tt.bravoOnly {
+				campaign.candidates["alpha"] = now
+			}
+			campaign.census(now)
+			if campaign.orphanedBy != tt.expectedOrphaned {
+				t.Errorf("orphaned: got %q want %q", campaign.orphanedBy, tt.expectedOrphaned)
+			}
+		})
+	}
+}
+
+func TestProbeUtilLeader_OrphanSurvivesAReattachUntilALeaseArrives(t *testing.T) {
+	campaign := leaderStubCampaign([]string{"alpha", "bravo"}, "bravo")
+	now := time.Now()
+	campaign.attached, campaign.attachedAt, campaign.orphanedBy = true, now, "alpha"
+	campaign.candidates["alpha"] = now
+	campaign.census(now)
+	if campaign.orphanedBy != "alpha" {
+		t.Errorf("orphaned: got %q want alpha kept while no lease has arrived since the reattach", campaign.orphanedBy)
+	}
+	campaign.lease, campaign.leaseArrived, campaign.leaseSeen = leaderLease{Host: "alpha", Epoch: 1}, now, now
+	campaign.census(now)
+	if campaign.orphanedBy != "" {
+		t.Errorf("orphaned: got %q want cleared once the elected host's lease arrives", campaign.orphanedBy)
+	}
+}
+
 func leaderStubCampaign(eligible []string, host string) *leaderCampaign {
 	campaign := newLeaderCampaignState("", host, leaderElection{name: "test", root: "test/election", eligible: func() []string { return eligible }}, leaderTiming{
 		refresh: 200 * time.Millisecond, publishTimeout: 150 * time.Millisecond, ackWindow: 550 * time.Millisecond,
@@ -676,6 +800,8 @@ type leaderStubClient struct {
 	sent      []leaderStubPublish
 	onPublish func(topic string) func()
 	handler   mqtt.MessageHandler
+	retained  bool
+	unacked   bool
 }
 
 func (s *leaderStubClient) IsConnected() bool      { return s.open }
@@ -692,12 +818,12 @@ func (s *leaderStubClient) Publish(topic string, _ byte, _ bool, payload any) mq
 	}
 	s.mutex.Lock()
 	s.sent = append(s.sent, leaderStubPublish{topic: topic, payload: body})
-	handler := s.handler
+	handler, retained, unacked := s.handler, s.retained, s.unacked
 	s.mutex.Unlock()
 	if handler != nil {
-		handler(s, leaderStubMessage{topic: topic, payload: []byte(body)})
+		handler(s, leaderStubMessage{topic: topic, payload: []byte(body), retained: retained})
 	}
-	token := &leaderStubToken{}
+	token := &leaderStubToken{failed: unacked}
 	if s.onPublish != nil {
 		token.hook = s.onPublish(topic)
 	}
@@ -741,7 +867,8 @@ func (s *leaderStubClient) count(topic string) int {
 }
 
 type leaderStubToken struct {
-	hook func()
+	hook   func()
+	failed bool
 }
 
 func (t *leaderStubToken) Wait() bool { return t.WaitTimeout(0) }
@@ -749,7 +876,7 @@ func (t *leaderStubToken) WaitTimeout(time.Duration) bool {
 	if t.hook != nil {
 		t.hook()
 	}
-	return true
+	return !t.failed
 }
 func (t *leaderStubToken) Done() <-chan struct{} {
 	done := make(chan struct{})
