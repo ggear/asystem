@@ -26,7 +26,7 @@ fi
 replace_path "${ZIP_CACHE}" "${ROOT_DIR}/src/main/resources/image/install/weewx-mqtt.zip" || exit $?
 
 # NOTES: https://github.com/chaunceygardiner/weewx-loopdata/releases
-VERSION=v7.5.2
+VERSION=v8.0.3
 pull_repo "${ROOT_DIR}" "${1}" "weewx" "weewx-loopdata" "chaunceygardiner/weewx-loopdata" "${VERSION}" || exit $?
 ZIP_CACHE="${ROOT_DIR}/../../../.deps/weewx/weewx-loopdata-$(git -C "${ROOT_DIR}/../../../.deps/weewx/weewx-loopdata" rev-parse HEAD).zip"
 if [ ! -s "${ZIP_CACHE}" ]; then
