@@ -95,39 +95,92 @@ Window changes, measured against today's sizes (influxdb3 full 177M, growing abo
 ### 4. Restore gains modes and walks chains
 
 ```
-restore.sh [--mode=replace|merge|drill] [--from=<run>] [--file=<path>] [--force] [--no-backup]
+restore.sh [--mode=replace|merge|drill] [--from=<run>] [--file=<path>] [--source=<dir>] [--keep-scratch] [--force] [--no-backup]
 ```
 
 The wrapper resolves the **chain**, not one artifact: the full named by the target run's manifest plus every delta up to
-it, searched in order through primary, then secondary (`/share/<index>0/backup/<svc>`), then tertiary. `--file` stays for
-an artifact off anywhere else. Each artifact is integrity checked before anything is staged.
+it. It searches primary, then secondary (`/share/<index>0/backup/<svc>`), then tertiary, or only `--source` when given (a
+directory of runs pinned outside the stages, as this incident's is). `--file` stays for a single artifact from anywhere
+else. Each artifact passes `gzip -t` before anything is staged. As today, a bare run prints the plan and only `--force`
+applies it.
 
 | Mode | Touches live? | Needs | Use |
 |---|---|---|---|
 | `replace` | yes, stop or running per `RESTORE_SERVICE_STATE` | `restore_applied` (today's hook) | Wholesale rollback |
-| `merge` | yes, additively | `restore_staged`, `restore_merged` | Put back history the live service lost, keeping what it has written since |
-| `drill` | no | `restore_staged` | Prove a backup restores and matches its own fingerprint |
+| `merge` | yes, additively | `backup_fingerprinted`, `restore_staged`, `restore_merged` | Put back history the live service lost, keeping what it has written since |
+| `drill` | no | `backup_fingerprinted`, `restore_staged` | Prove a backup restores and matches its own fingerprint |
 
-New optional hooks:
+A module that defines none of the new hooks keeps today's behaviour, and `merge` and `drill` refuse by name.
+
+#### Invariants, and who enforces them
+
+These are the rules the 2026-10-27 tests established (see *Recovering this incident*). The wrapper holds all but the
+last two, so a module cannot skip one.
+
+| Invariant | Enforced by | How |
+|---|---|---|
+| Scratch is read-only | wrapper | Fingerprints scratch straight after staging, before any other hook runs, then calls `restore_sealed` and fingerprints again. A sealed scratch whose fingerprint moved is a fault |
+| Never restore into live and replay on top | wrapper | `merge` never calls `restore_applied`. `replace` refuses while live fingerprints any unit newer than the backup, unless `--force` |
+| Verify after a restart, not after the write | wrapper | Restarts live through its compose before fingerprinting it again |
+| Merge only what live lacks | wrapper | Diffs the two fingerprints and hands `restore_merged` only units where staged > live |
+| Interrupted merges resume | wrapper | Records each finished unit in the restore run dir and skips it on a rerun |
+| Rerun is harmless | contract | `restore_merged` must be idempotent: influxdb3 line protocol, `ON CONFLICT DO NOTHING`, `INSERT IGNORE` |
+| Tags stay tags, time stays integer ns | influxdb3 hook | Tag set derived from `information_schema` (the `Dictionary` columns), never listed by hand; time selected as `CAST(time AS BIGINT)` |
+
+#### Hooks
 
 ```
-restore_staged    bring the resolved chain up in a scratch instance: container <module>_restore, data under
-                  /home/asystem/<svc>/restore/<run>, bound to loopback on a free port, torn down by the wrapper on exit
-restore_merged    copy from the scratch instance into live whatever live lacks, idempotently
+backup_fingerprinted  $1 = service address; print "<unit> <count>" per unit. The same hook fingerprints a backup at
+                      write time, scratch, and live, so the three are always comparable
+restore_staged        bring the resolved chain up in container <module>_restore, data under
+                      /home/asystem/<svc>/restore/<run>, loopback on a free port; print its address
+restore_sealed        optional; make scratch refuse writes
+restore_merged        $1 = unit, $2 = scratch address; copy that unit into live
 ```
 
-After staging, the wrapper fingerprints the scratch instance with the module's `backup_fingerprinted` pointed at it,
-and diffs that against the manifest. For `merge` it fingerprints live again after merging. Every unit must be
-greater than or equal to the scratch instance's count for the merged range.
+The wrapper tears scratch down on exit, unless `--keep-scratch` is given.
 
-A module that defines neither hook keeps today's behaviour, and `--mode=merge` refuses by name.
+#### Flow
 
-| Module | `restore_merged` |
-|---|---|
-| influxdb3 | For each table, find days where live count < staged count (from the two fingerprints), export those days from scratch as line protocol (tags vs fields from `information_schema.columns`), and write them to live through `/api/v3/write_lp` in chunks. The same series key and timestamp overwrite, so a rerun is harmless |
-| postgres | `pg_dump --data-only` per table from scratch into a staging schema in live, then `INSERT … SELECT … ON CONFLICT DO NOTHING`. Tables without a primary key are listed and skipped |
-| mariadb | Same, with `INSERT IGNORE` |
-| plex, letsencrypt, wrangle, zigbee2mqtt | None: file state has no meaningful merge, so `replace` and `drill` only |
+```
+resolve chain      full + deltas up to --from; gzip -t each
+safety backup      of live (existing step)
+restore_staged     scratch up with the chain restored
+fingerprint S      scratch; compared to the manifest when the run has one (pre-manifest runs skip this)
+restore_sealed     scratch now refuses writes
+                   ── drill ends here: teardown, publish the drill state
+fingerprint L      live
+plan               units where S > L, printed; without --force stop here
+restore_merged     per planned unit, progress recorded
+restart live       stop/start through the module's compose
+fingerprint L'     every planned unit must have L' >= S, else fault naming the short units
+teardown           scratch container and data dir
+```
+
+| Module | `backup_fingerprinted` unit | `restore_sealed` | `restore_merged` |
+|---|---|---|---|
+| influxdb3 | `<table>/<day>` rows | re-run scratch with `--mode query` on the same data dir | Export the day from scratch as jsonl (`--format jsonl` emits blank lines, so skip them), convert to line protocol, and write to live's `/api/v3/write_lp?precision=nanosecond` in chunks. The conversion is a small Python script the hook pipes through, with tag escaping and null or empty tags left out of the series key |
+| postgres | `<database>.<table>` rows | `default_transaction_read_only` on the scratch database | `pg_dump --data-only` per table from scratch into a staging schema in live, then `INSERT … SELECT … ON CONFLICT DO NOTHING`. Tables without a primary key are listed and skipped |
+| mariadb | `<database>.<table>` rows | `SET GLOBAL read_only` on scratch | Same, with `INSERT IGNORE` |
+| plex, letsencrypt, wrangle, zigbee2mqtt | include path (wrapper computes it) | none | None: file state has no meaningful merge, so `replace` and `drill` only |
+
+#### Settled 2026-10-27
+
+1. **`--mode query` serves restored data and refuses writes.** A chain restored in the default mode and then restarted
+   with `--mode query` (scratch dropped and re-run on the same data dir, about 4s) served all 4,907,096
+   `sensor__temperature` rows over the same range. A write got HTTP 500 "cannot write to a read-only server: must enable
+   ingest mode", and nothing landed. So influxdb3's `restore_sealed` is: restore in the default mode, then re-run
+   scratch with `--mode query`.
+2. **The live restart costs supervisor a few seconds of metrics, and HA nothing.** A graceful stop and start of the same
+   image on the same data size took 1.7s three times running (stop 0.7–0.8s), and live's own startups logged
+   0.9–3.6s to ready. The entrypoint's node stages are skipped on live, because its node dir is `cluster_1/node_1`, not
+   `node_1`. How each writer handles the gap:
+   - HA (`max_retries: 3`) retries a batch every `RETRY_DELAY` 20s and keeps its queue for `QUEUE_BACKLOG_SECONDS`
+     30s plus the retries, so it rides out anything under about 20s. Its log shows `Catching up, dropped` if not.
+   - supervisor (`engine_util_database.go`) retries once after 500ms, then drops the batch. A restart therefore loses
+     every supervisor point due inside the gap, on every host. That is the same cost as every influxdb3 release, which
+     restarts it the same way, so the merge accepts it. If it ever needs fixing, it is fixed in supervisor's
+     retries, not here.
 
 ### 5. Releases exercise it
 
@@ -168,8 +221,15 @@ Use the secondary chain. It is complete and passes `gzip -t`:
 /share/30/backup/influxdb3/2026-10-22_01-00-08   delta   11M
 ```
 
-This is the first real run of `--mode=merge` for influxdb3, and it is done by hand until the tooling exists. A copy of
-the chain, pinned outside every pruner, is at `/share/30/tmp/influxdb3-restore-2026-10-22/`.
+A copy of the chain, pinned outside every pruner, is at `/share/30/tmp/influxdb3-restore-2026-10-22/`. Once step 5 of
+the order of work lands, the recovery is one command, run bare to read the plan, then again with `--force`:
+
+```
+/var/lib/asystem/install/influxdb3/latest/restore.sh --mode=merge --from=2026-10-22_01-00-08 --source=/share/30/tmp/influxdb3-restore-2026-10-22
+```
+
+The planned units should be every table's days from 2026-08-13 to 2026-10-21. Live has none of them, so the merged
+range cannot overlap anything live has written.
 
 **Drilled by hand on 2026-10-27, and it works.** This is the recipe `restore_staged` encodes:
 
@@ -188,13 +248,34 @@ the chain, pinned outside every pruner, is at `/share/30/tmp/influxdb3-restore-2
   `sensor__temperature` has 4,907,096 rows. The full took 7s for 2790 files and 331MB, and each delta a few seconds.
   The scratch data dir is 808M.
 
+**Merge semantics, tested the same day** with one hour of `sensor__temperature` (3535 rows):
+
+- **Rewriting deduplicates, on an instance that was never restored.** Writing the hour twice, plus a control row 1ns
+  off, gives exactly 3536 rows and 3536 distinct timestamps. That holds before and after two clean restarts. A same-key
+  write replaces the value (last write wins), and the 1ns control proves the count can see a duplicate.
+- **The export must keep tags as tags and time as integer nanoseconds.** Tags are the `Dictionary(Int32, Utf8)`
+  columns in `information_schema.columns`, and everything else is a field. Select `CAST(time AS BIGINT)`, because the
+  text output drops sub-microsecond digits. Leave null or empty tags out of the series key. `--format jsonl` emits
+  blank lines.
+- **A restored instance silently drops new writes into restored day windows at its next restart**: HTTP 204,
+  snapshotted, and gone after `gen0 restore-eviction`. Writes into a day the restore did not cover persist. So:
+  - scratch is read-only. Never write into it, and fingerprint it before anything else touches it;
+  - never merge by restoring into live and then replaying newer data on top;
+  - the wrapper re-fingerprints live **after a restart**, not just after the write, since the post-write count
+    alone would have passed here;
+  - live itself was never restored, so this does not apply to the merge target. If a `create restore` ever runs on
+    live, though, later backfills into restored days would vanish the same way. Report it to InfluxData along with the
+    fsync fault.
+
 ## Order of work
 
 1. ~~Pin the five runs above outside every pruner, until the anchor exists.~~ Done, see above.
 2. `commit=600` out of the `fstab` sources. Make the entrypoint quarantine-and-refuse change.
 3. Manifest, chain-aware pruner and anchor in `container.py`. Raise influxdb3's window. Regenerate every enrolled module
    and read the generated `backup.sh` diffs.
-4. Restore chain resolution and `drill`. Wire drill into `install.sh`, then into supervisor weekly.
-5. influxdb3 `restore_staged` / `restore_merged`, then use it to recover 2026-08-13 → 2026-10-22.
+4. Restore wrapper in `container.py`: chain resolution, `--source`, the flow and every wrapper-held invariant above,
+   and `drill`. Wire drill into `install.sh`, then into supervisor weekly.
+5. influxdb3 `backup_fingerprinted`, `restore_staged`, `restore_sealed` and `restore_merged`. Drill against the pinned
+   chain, then run the merge to recover 2026-08-13 → 2026-10-22.
 6. postgres and mariadb `restore_merged`.
 7. Fold the durable rules into supervisor's `CLAUDE.md` Backup section, and delete this plan.
