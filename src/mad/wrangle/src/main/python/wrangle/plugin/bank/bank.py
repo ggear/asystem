@@ -12,10 +12,11 @@
 #     3. Merge: apply operator edits to the golden files
 #        3.1  Normalise Files: fill and check manual files changed on Drive     [R] every manual file
 #        3.2  Merge Transactions Tabs: take cells edited since the base
+#        3.3  Merge Balances Tab: take manual balances edited since the base
 #     4. Fetch: add upstream data to the golden files
 #        4.1  Fetch Balances: read the linked balances three-hourly
-#        4.2  Fetch Transactions: add and adopt postings, check 90 days weekly  [F] whole history
-#        4.3  Import Exports: rename new AMEX exports, merge them by id         [R] none [F] every export
+#        4.2  Fetch Transactions: add postings each balance read, sweep weekly  [F] whole history
+#        4.3  Import Exports: rename and merge AMEX exports, carry balances     [R] none [F] every export
 #        4.4  Dedupe Transactions: drop a source id held twice                  [R] every file
 #     5. Derive: compute plugin-owned columns in the files
 #        5.1  Classify Transactions: derive categories in changed files         [R] every file
@@ -24,13 +25,13 @@
 #        6.1  Commit Balances: readings, manual ones carried to linked moments
 #        6.2  Commit Transactions: rows joined to their accounts and buckets
 #     7. Check: raise data problems to Logs
-#        7.1  Check Accounts: unmapped, shared, stale and unreconciled
+#        7.1  Check Accounts: unmapped, shared, unbalanced months, unreconciled
 #        7.2  Check Transactions: unclassified, unvetted, unbucketed and spreadsheet errors
 #     8. Sync: push changed files, skipping any Drive changed mid-run           [R] verify every file
 #        8.1  Sync Drive: upload, or conflict a file Drive moved since 1.1
 #     9. Upload: write each changed tab to the sheet                            [R] every tab
 #        9.1  Upload Accounts Tab: the Redbark and account ids found
-#        9.2  Upload Balances Tab: the recent readings
+#        9.2  Upload Balances Tab: the recent readings, manual balances blue
 #        9.3  Upload Transactions Tabs: each year whose files reached Drive
 #        9.4  Upload Summary Tab: closed month totals and what each includes
 #        9.5  Upload Logs Tab: this run's problems and the last 30 days'
@@ -131,7 +132,6 @@ CLASSIFIER_SCHEMA = {
 }
 
 BALANCES_MAX_AGE_HOURS = 3
-BALANCES_MANUAL_STALE_DAYS = 35
 BALANCES_MANUAL_JUMP = 10
 BALANCES_MANUAL_TIME = "23:59:59"
 BALANCES_RECONCILE_DAYS = 35
@@ -260,7 +260,7 @@ EXPORT_COLUMNS = ["Date", "Date Processed", "Description", "Card Member", "Accou
 EXPORT_SCHEMA = {"Date": pl.Date, "Date Posted": pl.Date, "Amount": pl.Float64, "Description": pl.Utf8, "Card": pl.Utf8}
 EXPORT_OVERLAP_SHARE = 0.5
 
-TABS_SCHEMA = {**ACCOUNTS_SCHEMA, **CLASSIFIER_SCHEMA, **TRANSACTIONS_YEAR_TAB_SCHEMA}
+TABS_SCHEMA = {**ACCOUNTS_SCHEMA, **CLASSIFIER_SCHEMA, **BALANCES_SCHEMA, **TRANSACTIONS_YEAR_TAB_SCHEMA}
 ERROR_CODES = {
     "TAB_UNUSABLE": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_SOURCES),
     "ACCOUNT_DUPLICATE": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_SOURCES),
@@ -290,6 +290,7 @@ ERROR_CODES = {
     "IMPORT_UNREADABLE": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_SOURCES),
     "BALANCE_MANUAL_STALE": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_DATA),
     "BALANCE_UNRECONCILED": (plugin.LOG_KIND_ERROR, True, True, plugin.CTR_SRC_DATA),
+    "BALANCE_UNRECONCILED_CURRENT": (plugin.LOG_KIND_WARNING, True, False, plugin.CTR_SRC_DATA),
     "BALANCE_ABSENT": (plugin.LOG_KIND_WARNING, True, False, plugin.CTR_SRC_DATA),
     "IMPORT_GONE": (plugin.LOG_KIND_WARNING, True, True, plugin.CTR_SRC_DATA),
     "IMPORT_SUSPECT": (plugin.LOG_KIND_WARNING, True, True, plugin.CTR_SRC_DATA),
@@ -526,6 +527,14 @@ class Bank(plugin.Plugin):
                 )
             return held_cache[0]
 
+        def _bank_manual_readings() -> pl.DataFrame:
+            _frames = [pl.DataFrame(schema={"__index": pl.UInt32, **BALANCES_SCHEMA, "__path": pl.Utf8})]
+            for _path in _bank_paths("manual_balances"):
+                _data_df = _bank_readable(_path, BALANCES_SCHEMA)
+                if _data_df is not None:
+                    _frames.append(_data_df.with_row_index("__index").with_columns(pl.lit(_path).alias("__path")))
+            return bank_balances_identified(pl.concat(_frames, how="vertical_relaxed").drop_nulls(["Account ID", "Date", "Time"]))
+
         def _bank_raw(_path: str | None) -> pl.DataFrame | None:
             return pl.read_csv(_path, infer_schema=False, raise_if_empty=False) if _path and isfile(_path) else None
 
@@ -548,7 +557,7 @@ class Bank(plugin.Plugin):
         # 1.2 Download Sheet
         started_time = time.time()
         sheet_years = sorted({*_bank_years(), today.year})
-        sheet_tabs = ["Accounts", "Classifier", *(f"Transactions_{year}" for year in sheet_years)]
+        sheet_tabs = ["Accounts", "Classifier", "Balances", *(f"Transactions_{year}" for year in sheet_years)]
         sheet_results = self.sheet_download(sheet_key, "Bank", sheet_tabs, schema=TABS_SCHEMA)
         sheet_files: dict[str, str] = {tab: result.file_paths[0] for tab, result in sheet_results.items() if result.file_status != plugin.DownloadStatus.FAILED}
         self.print_log(
@@ -1233,13 +1242,64 @@ class Bank(plugin.Plugin):
 
         _bank_tabs_merged()
 
+        # 3.3 Merge Balances Tab
+        def _bank_balances_tab_merged():
+            started_time = time.time()
+            tab_raw_df = _bank_raw(sheet_files.get("Balances"))
+            if tab_raw_df is None or not accounts_usable or tab_raw_df.height == 0:
+                return
+            tab_missing = [column for column in ("Balance ID", "Balance Manual") if column not in tab_raw_df.columns]
+            if tab_missing:
+                _bank_error("Balances", "tab", "TAB_UNUSABLE", f"columns missing [{', '.join(tab_missing)}]")
+                return
+            tab_merged.add("Balances")
+            tab_edited["Balances"] = set()
+            base_file = abspath(f"{self.local_cache}/__bank_tab_balances.csv")
+            if not isfile(base_file):
+                return
+            tab_df = self.sheet_typed(tab_raw_df, BALANCES_SCHEMA)
+            base_df = self.sheet_typed(pl.read_csv(base_file, infer_schema=False, raise_if_empty=False), BALANCES_SCHEMA)
+            fixed = [column for column in BALANCES_SCHEMA if column not in ("Balance ID", "Balance Manual") and column in tab_df.columns and column in base_df.columns]
+            changed_df = tab_df.join(base_df.unique("Balance ID", keep="first"), on="Balance ID", suffix="__base").filter(
+                pl.any_horizontal([pl.col(column).ne_missing(pl.col(f"{column}__base")) for column in [*fixed, "Balance Manual"]])
+            )
+            readings_df = _bank_manual_readings()
+            types = dict(_bank_accounts_current().select(["Account ID", "Type"]).iter_rows())
+            edits_by_path: dict[str, dict[int, float]] = {}
+            ignored = 0
+            for row in changed_df.iter_rows(named=True):
+                reading_df = readings_df.filter(pl.col("Balance ID") == row["Balance ID"])
+                if any(row[column] != row[f"{column}__base"] for column in fixed) or len(reading_df) != 1 or row["Balance Manual"] is None:
+                    ignored += 1
+                    continue
+                reading = reading_df.row(0, named=True)
+                value = row["Balance Manual"] / 100
+                if (types.get(reading["Account ID"]) == ACCOUNT_TYPE_LIABILITY and value > 0) or (types.get(reading["Account ID"]) != ACCOUNT_TYPE_LIABILITY and value < 0):
+                    _bank_error("Balances", row["Balance ID"], "BALANCE_SIGN", f"account [{reading['Account']}] type [{types.get(reading['Account ID'])}] value [{value}]")
+                edits_by_path.setdefault(reading["__path"], {})[reading["__index"]] = value
+            if ignored:
+                _bank_error("Balances", "tab", "TAB_EDIT_IGNORED", f"[{ignored}] balances edited outside a manual balance's balance manual, put back")
+            for path, path_edits in sorted(edits_by_path.items()):
+                edited = pl.col("__index").replace_strict(path_edits, default=None, return_dtype=pl.Float64)
+                _bank_write(
+                    _bank_read(path, BALANCES_SCHEMA)
+                    .with_row_index("__index")
+                    .with_columns(pl.coalesce(edited, "Balance Manual").alias("Balance Manual"), pl.coalesce(edited, "Balance").alias("Balance"))
+                    .drop("__index"),
+                    path,
+                    "merged",
+                )
+                tab_edited["Balances"].add(path)
+            self.print_log(f"Balances tab edits merged [{sum(len(path_edits) for path_edits in edits_by_path.values())}] ignored [{ignored}]", started=started_time)
+
+        _bank_balances_tab_merged()
+
         # 4.1 Fetch Balances
         started_time = time.time()
         balances_year_path = _bank_path("redbark_balances", today.year)
         balances_previous_year_path = _bank_path("redbark_balances", today.year - 1)
         balances_age_hours = (now.timestamp() - getmtime(balances_year_path)) / 3600 if isfile(balances_year_path) else float("inf")
         balances_due = not plugin.config.disable_source_downloads and (plugin.config.force_downloads or balances_age_hours >= BALANCES_MAX_AGE_HOURS)
-        balances_moved = False
         linked_schema = {"Redbark Account ID": pl.Utf8, "Redbark Connection ID": pl.Utf8, "Account ID": pl.Utf8, "From First": pl.Date, "Name": pl.Utf8, "Institution": pl.Utf8}
         linked_df = pl.DataFrame(schema=linked_schema)
         balances_year_df = _bank_readable(balances_year_path, BALANCES_SCHEMA) if balances_due and isfile(balances_year_path) else pl.DataFrame(schema=BALANCES_SCHEMA)
@@ -1334,7 +1394,6 @@ class Bank(plugin.Plugin):
                         readings_df.join(latest_df, on="Account ID", how="left").filter(pl.col("__latest").is_null() | (bank_cents("Balance") != bank_cents("__latest"))).select(list(BALANCES_SCHEMA))
                     )
                     changed_count = len(changed_df)
-                    balances_moved = changed_count > 0
                     opening = len(balances_year_df.filter(pl.col("Date") >= month_start)) == 0
                     written_df = readings_df.join(balances_year_df, on=["Date", "Time", "Account ID"], how="anti") if opening else changed_df
                     if len(written_df):
@@ -1353,13 +1412,12 @@ class Bank(plugin.Plugin):
             started_time = time.time()
             redbark_transactions_file = abspath(f"{self.local_cache}/_redbark_transactions.csv")
             sweep_file = abspath(f"{self.local_cache}/_redbark_transactions_sweep.csv")
-            fetch_daily = not isfile(redbark_transactions_file) or datetime.fromtimestamp(getmtime(redbark_transactions_file)).astimezone().date() != today
             sweep_due = isfile(sweep_file) and (now.timestamp() - getmtime(sweep_file)) / 86400 >= TRANSACTIONS_SWEEP_EVERY_DAYS
 
             def _bank_named(_frame_df: pl.DataFrame) -> pl.DataFrame:
                 return _bank_accounts_applied(_frame_df, accounts_df).with_columns(_bank_name("Account").alias("__name"), bank_cents("Amount").alias("__cents"))
 
-            if balances_due and len(linked_df) and (balances_moved or fetch_daily):
+            if balances_due and len(linked_df):
                 held_frames = [pl.DataFrame(schema={"__index": pl.UInt32, **TRANSACTIONS_SCHEMA, "__path": pl.Utf8})]
                 for path in _bank_paths("redbark_transactions", "manual_transactions"):
                     held_file_df = _bank_readable(path, TRANSACTIONS_SCHEMA)
@@ -1484,7 +1542,7 @@ class Bank(plugin.Plugin):
                         & pl.col("Source ID").is_not_null()
                         & ~pl.col("Source ID").is_in(list(returned_all))
                         & pl.col("Account ID").is_in(list(returned_ids))
-                        & (pl.when(pl.col("Date Posted").is_null()).then(pl.col("Date") - timedelta(days=TRANSACTIONS_POSTING_DAYS)).otherwise(pl.col("Date")) >= pl.col("__check"))
+                        & (pl.when(pl.col("Date Posted").is_null()).then(pl.col("Date") - timedelta(days=TRANSACTIONS_POSTING_DAYS)).otherwise(pl.col("Date")) > pl.col("__check"))
                     )
                     .fill_null(False)
                     .alias("__gone")
@@ -1606,7 +1664,7 @@ class Bank(plugin.Plugin):
                     prior_df = _bank_read(year_path, TRANSACTIONS_SCHEMA) if isfile(year_path) else pl.DataFrame(schema=TRANSACTIONS_SCHEMA)
                     _bank_write(pl.concat([prior_df, fresh_df.filter(pl.col("Date").dt.year() == year)], how="vertical_relaxed"), year_path, "fetched")
                 self.print_log(
-                    f"Transactions fetched [{len(transactions_new_df)}] across [{len(returned_rows)}] accounts, trigger [{'moved' if balances_moved else 'daily'}] sweep [{sweep_due}], "
+                    f"Transactions fetched [{len(transactions_new_df)}] across [{len(returned_rows)}] accounts, sweep [{sweep_due}], "
                     f"new [{len(fresh_df)}] held [{len(matched)}] relisted [{relisted_count}] dated [{dated_count}]",
                     started=started_time,
                 )
@@ -1743,6 +1801,38 @@ class Bank(plugin.Plugin):
                 exports_counts["added"] += file_counts["added"]
                 exports_counts["held"] += file_counts["held"]
                 self.print_log(f"File [{basename(path)}] imported [{len(export_df)}] added [{file_counts['added']}] held [{file_counts['held']}]")
+            carried_rows = []
+            carried_path = _bank_path("manual_balances", today.year)
+            carried_ids = sorted(
+                {account_id for path, (_, account_id) in exports.items() if account_id is not None and path in exports_imported and exports_status.get(account_id) == ACCOUNT_STATUS_MANUAL}
+            )
+            if carried_ids and isfile(carried_path) and _bank_readable(carried_path, BALANCES_SCHEMA) is None:
+                _bank_error(basename(carried_path), "file", "FILE_UNREADABLE", "balances file unreadable or invalid, no balance carried to today")
+            elif carried_ids:
+                readings_df = _bank_manual_readings().filter(pl.col("Balance Manual").is_not_null()).sort(["Date", "Time"])
+                for account_id in carried_ids:
+                    account_readings_df = readings_df.filter(pl.col("Account ID") == account_id)
+                    if len(account_readings_df.filter(pl.col("Date") >= today)) == 0:
+                        carried = account_readings_df["Balance Manual"][-1] if len(account_readings_df) else 0.0
+                        carried_rows.append(
+                            {
+                                "Date": today,
+                                "Time": BALANCES_MANUAL_TIME,
+                                "Account": exports_accounts_df.filter(pl.col("Account ID") == account_id)["Name"][0],
+                                "Balance": carried,
+                                "Balance Manual": carried,
+                                "Account ID": account_id,
+                            }
+                        )
+                if carried_rows:
+                    _bank_write(
+                        pl.concat(
+                            [_bank_read(carried_path, BALANCES_SCHEMA) if isfile(carried_path) else pl.DataFrame(schema=BALANCES_SCHEMA), pl.DataFrame(carried_rows, schema=BALANCES_SCHEMA)],
+                            how="vertical_relaxed",
+                        ),
+                        carried_path,
+                        "carried",
+                    )
             for account_id, spans in exports_spans.items():
                 account_df = (
                     _bank_held()
@@ -1777,7 +1867,9 @@ class Bank(plugin.Plugin):
                         f"held transaction date [{row['Date']}] near exported transaction [{row['Transaction ID_listed']}] of the same amount",
                     )
             self.print_log(
-                f"Exports [{len(exports)}] imported [{len(exports_imported)}] added [{exports_counts['added']}] held [{exports_counts['held']}] dated [{exports_counts['dated']}]", started=started_time
+                f"Exports [{len(exports)}] imported [{len(exports_imported)}] added [{exports_counts['added']}] held [{exports_counts['held']}] dated [{exports_counts['dated']}] "
+                f"balances carried [{len(carried_rows)}]",
+                started=started_time,
             )
 
         _bank_exports_imported()
@@ -2124,23 +2216,35 @@ class Bank(plugin.Plugin):
                     "TRANSACTION_TWO_ACCOUNTS",
                     f"same date, amount and description as transaction [{row['Transaction ID_other']}] on another account named [{row['Account']}]",
                 )
-            for account_id, name, latest in (
-                _bank_accounts_current()
-                .filter(pl.col("Status") == ACCOUNT_STATUS_MANUAL)
-                .join(balances_current_df.filter(pl.col("Balance Linked").is_null()).group_by("Account ID").agg(pl.col("Date").max().alias("__latest")), on="Account ID", how="left")
-                .select(["Account ID", "Name", "__latest"])
-                .sort("Account ID")
-                .iter_rows()
-            ):
-                if latest is None:
+            manual_accounts_df = _bank_accounts_current().filter(pl.col("Status") == ACCOUNT_STATUS_MANUAL).select(["Account ID", "Name"])
+            manual_readings_df = (
+                _bank_manual_readings()
+                .filter(pl.col("Balance Manual").is_not_null())
+                .drop("Account")
+                .join(manual_accounts_df.rename({"Name": "Account"}), on="Account ID")
+                .with_columns(pl.col("Balance Manual").alias("__balance"), pl.lit(True).alias("__manual"))
+            )
+            for account_id, name in manual_accounts_df.sort("Account ID").iter_rows():
+                months = set(manual_readings_df.filter(pl.col("Account ID") == account_id)["Date"].dt.truncate("1mo").to_list())
+                if not months:
                     _bank_error("Balances", name, "BALANCE_MANUAL_STALE", f"manual account [{account_id}] has no reading")
-                elif (today - latest).days > BALANCES_MANUAL_STALE_DAYS:
-                    _bank_error("Balances", name, "BALANCE_MANUAL_STALE", f"manual account [{account_id}] latest reading [{latest}] older than [{BALANCES_MANUAL_STALE_DAYS}] days")
+                    continue
+                month = min(months)
+                while month < month_start:
+                    if month not in months:
+                        _bank_error("Balances", f"{name} {month:%Y-%m}", "BALANCE_MANUAL_STALE", f"manual account [{account_id}] has no reading in closed month [{month:%Y-%m}]")
+                    month = (month + timedelta(days=32)).replace(day=1)
             reconcile_ids = _bank_accounts_current().filter(pl.col("Status") == ACCOUNT_STATUS_LINKED)["Account ID"].implode()
-            reconcile_readings_df = balances_current_df.filter(
-                pl.col("Balance Linked").is_not_null()
-                & pl.col("Account ID").is_in(reconcile_ids)
-                & pl.col("Date").is_between(today - timedelta(days=BALANCES_RECONCILE_DAYS), today - timedelta(days=BALANCES_RECONCILE_SETTLE_DAYS))
+            reconcile_readings_df = pl.concat(
+                [
+                    balances_current_df.filter(
+                        pl.col("Balance Linked").is_not_null()
+                        & pl.col("Account ID").is_in(reconcile_ids)
+                        & pl.col("Date").is_between(today - timedelta(days=BALANCES_RECONCILE_DAYS), today - timedelta(days=BALANCES_RECONCILE_SETTLE_DAYS))
+                    ).with_columns(pl.col("Balance Linked").alias("__balance"), pl.lit(False).alias("__manual")),
+                    manual_readings_df.filter(pl.col("Account ID").is_in(transactions_current_df["Account ID"].implode())),
+                ],
+                how="diagonal_relaxed",
             ).sort(["Date", "Time"])
             reconcile_postings_df = transactions_current_df.select(["Account ID", "Date", pl.coalesce("Date Posted", "Date").alias("__posted"), bank_cents("Amount Split").alias("__cents")])
             for (account_id,), account_readings_df in reconcile_readings_df.partition_by("Account ID", as_dict=True, maintain_order=True).items():
@@ -2149,23 +2253,24 @@ class Bank(plugin.Plugin):
                 for reading in account_readings_df.iter_rows(named=True):
                     day = reading["Date"]
                     in_flight = account_postings_df.filter((pl.col("Date") <= day) & (pl.col("__posted") >= day))["__cents"].to_list()
-                    in_flight_sums = {0}
+                    in_flight_sums = {0: 0}
                     for cents in in_flight if len(in_flight) <= BALANCES_RECONCILE_IN_FLIGHT else [sum(in_flight)]:
-                        in_flight_sums |= {total + cents for total in in_flight_sums}
+                        for total, count in list(in_flight_sums.items()):
+                            in_flight_sums[total + cents] = min(in_flight_sums.get(total + cents, count + 1), count + 1)
                     applied = account_postings_df.filter(pl.col("__posted") < day)["__cents"].sum()
-                    explained = {round(reading["Balance Linked"] * 100) - applied - total for total in in_flight_sums}
-                    if explained_before is not None and reading_before is not None and not explained & explained_before:
-                        unexplained = min((after - before for after in explained for before in explained_before), key=abs)
+                    explained = {round(reading["__balance"] * 100) - applied - total: count for total, count in in_flight_sums.items()}
+                    if explained_before is not None and reading_before is not None and not explained.keys() & explained_before:
+                        after, before = min(((after, before) for after in explained for before in explained_before), key=lambda pair: (explained[pair[0]], abs(pair[0] - pair[1])))
                         _bank_error(
                             "Balances",
                             f"{reading['Account']} {day}",
-                            "BALANCE_UNRECONCILED",
-                            f"balance [{reading_before['Balance Linked']}] at [{reading_before['Date']} {reading_before['Time']}] to [{reading['Balance Linked']}] at [{day} {reading['Time']}] "
-                            f"moved at least [{unexplained / 100}] more than held transactions explain",
+                            "BALANCE_UNRECONCILED_CURRENT" if reading["__manual"] and day >= month_start else "BALANCE_UNRECONCILED",
+                            f"balance [{reading_before['__balance']}] at [{reading_before['Date']} {reading_before['Time']}] to [{reading['__balance']}] at [{day} {reading['Time']}] "
+                            f"moved [{(after - before) / 100}] more than held transactions explain, fewest in flight assumed",
                         )
-                        explained_before = explained
+                        explained_before = set(explained)
                     else:
-                        explained_before = explained if explained_before is None else explained & explained_before
+                        explained_before = set(explained) if explained_before is None else explained.keys() & explained_before
                     reading_before = reading
         self.print_log(f"Accounts checked with [{len(errors) - checked_errors}] problems", started=started_time)
 
@@ -2285,9 +2390,17 @@ class Bank(plugin.Plugin):
                     )
 
             # 9.2 Upload Balances Tab
-            if len(balances_current_df):
+            tabs_status: dict[str, plugin.UploadStatus] = {}
+            if balances_held or tab_edited.get("Balances", set()) & files_conflicted:
+                self.print_log("Sheet [Bank:Balances] skipped, a balances file conflicted on Drive or was left as committed", level="warn")
+            elif len(balances_current_df):
                 started_time = time.time()
-                balances_active_df = balances_current_df.join(accounts_current_df, on="Account ID", how="left").filter(pl.col("Status").fill_null("") != ACCOUNT_STATUS_CLOSED)
+                manual_ids = _bank_manual_readings()["Balance ID"].implode()
+                balances_active_df = (
+                    balances_current_df.join(accounts_current_df, on="Account ID", how="left")
+                    .filter(pl.col("Status").fill_null("") != ACCOUNT_STATUS_CLOSED)
+                    .filter((pl.col("Status").fill_null("") != ACCOUNT_STATUS_MANUAL) | pl.col("Balance ID").is_in(manual_ids))
+                )
                 balances_sheet_df = (
                     pl.concat(
                         [
@@ -2299,13 +2412,14 @@ class Bank(plugin.Plugin):
                     .sort(["Account", "Date", "Time"], descending=[False, True, True])
                     .select(list(BALANCES_SCHEMA))
                 )
+                manual_letter = _bank_letter(list(BALANCES_SCHEMA), "Balance Manual")
+                manual_cells = [f"{manual_letter}{index + 2}" for index, manual in enumerate(balances_sheet_df["Balance ID"].is_in(manual_ids).to_list()) if manual]
                 dataframe_print(self.name, balances_sheet_df, print_label="Balances", print_verb="rendered", started=started_time)
-                _bank_tab_uploaded("Balances", balances_sheet_df, BALANCES_RAW_COLUMNS, {}, {}, [], BALANCES_SCHEMA)
+                tabs_status["Balances"] = _bank_tab_uploaded("Balances", balances_sheet_df, BALANCES_RAW_COLUMNS, {}, {}, manual_cells, BALANCES_SCHEMA)
 
             # 9.3 Upload Transactions Tabs
             transactions_tab_years = sorted({*_bank_years(), *(int(tab.rsplit("_", 1)[-1]) for tab in sheet_files if re.fullmatch(r"Transactions_\d{4}", tab))})
             sheet_columns = list(TRANSACTIONS_YEAR_TAB_SCHEMA)
-            tabs_bases: dict[str, str] = {}
             for year in transactions_tab_years:
                 tab = f"Transactions_{year}"
                 if year in years_conflicted or year in years_held:
@@ -2316,7 +2430,7 @@ class Bank(plugin.Plugin):
                 if len(year_sheet_df) == 0 and tab not in sheet_files:
                     continue
                 dataframe_print(self.name, year_sheet_df, print_label=tab, print_verb="rendered", started=started_time)
-                status = _bank_tab_uploaded(
+                tabs_status[tab] = _bank_tab_uploaded(
                     tab,
                     year_sheet_df,
                     TRANSACTIONS_RAW_COLUMNS,
@@ -2328,14 +2442,13 @@ class Bank(plugin.Plugin):
                     ["Transactions", *(f"Transactions_{newer}" for newer in transactions_tab_years if newer > year)],
                 )
 
-                # 10.1 Commit Bases
+            # 10.1 Commit Bases
+            for tab, status in tabs_status.items():
                 uploaded_path = self._sheet_cache_path(f"bank_{tab}".lower())
                 if status == plugin.UploadStatus.UPLOADED and uploaded_path is not None:
-                    tabs_bases[tab] = uploaded_path
+                    shutil.copyfile(uploaded_path, abspath(f"{self.local_cache}/__bank_tab_{tab.lower()}.csv"))
                 elif tab in tab_merged and not tab_edited.get(tab, set()) & files_conflicted:
-                    tabs_bases[tab] = sheet_files[tab]
-            for tab, path in tabs_bases.items():
-                shutil.copyfile(path, abspath(f"{self.local_cache}/__bank_tab_{tab.lower()}.csv"))
+                    shutil.copyfile(sheet_files[tab], abspath(f"{self.local_cache}/__bank_tab_{tab.lower()}.csv"))
 
             # 9.4 Upload Summary Tab
             if len(transactions_current_df):

@@ -256,6 +256,42 @@
       "messages_per_sec": <number>,
       "leave_count": <number>,
       "network_address_changes": <number>
+    },
+    "0x00178801039f4eed": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x00178801039f69d4": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x00178801039f56c4": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x00178801039f584a": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x00178801039f574e": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x00178801039f69d5": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
     }
   }
 }

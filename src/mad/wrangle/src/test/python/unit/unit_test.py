@@ -298,15 +298,16 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A balances file stamped three hours ago is due, unchanged balances only stamp it
+    # A balances file stamped three hours ago is due, unchanged balances only stamp it and transactions are still fetched
     def test_bank_local_partial_6(self):
         self._bank_run(
             "partial_6",
+            standing=2,
             source=True,
-            counters={plugin.CTR_SRC_SOURCES: {plugin.CTR_ACT_DOWNLOADED: 1}, plugin.CTR_SRC_FILES: {plugin.CTR_ACT_PROCESSED: 1}},
+            counters={plugin.CTR_SRC_SOURCES: {plugin.CTR_ACT_DOWNLOADED: 2}, plugin.CTR_SRC_FILES: {plugin.CTR_ACT_PROCESSED: 2}},
             file_asserts={
                 "redbark_balances_2026.csv": [assert_file_size(min_rows=2, max_rows=2)],
-                "redbark_transactions_2026.csv": [assert_file_does_not_exist()],
+                "redbark_transactions_2026.csv": [assert_file_column_values("Source ID", ["t1"])],
             },
         )
 
@@ -353,7 +354,7 @@ class WrangleTest(unittest.TestCase):
         self._bank_run(
             "partial_46",
             source=True,
-            counters={plugin.CTR_SRC_SOURCES: {plugin.CTR_ACT_DOWNLOADED: 1}, plugin.CTR_SRC_FILES: {plugin.CTR_ACT_PROCESSED: 2}},
+            counters={plugin.CTR_SRC_SOURCES: {plugin.CTR_ACT_DOWNLOADED: 2}, plugin.CTR_SRC_FILES: {plugin.CTR_ACT_PROCESSED: 2}},
             file_asserts={
                 "redbark_balances_2026.csv": [assert_file_size(min_rows=2, max_rows=2)],
                 "redbark_transactions_2026.csv": [assert_file_does_not_exist()],
@@ -367,7 +368,7 @@ class WrangleTest(unittest.TestCase):
             "partial_36",
             today="2026-02-02T12:00:00",
             source=True,
-            counters={plugin.CTR_SRC_SOURCES: {plugin.CTR_ACT_DOWNLOADED: 1}, plugin.CTR_SRC_FILES: {plugin.CTR_ACT_PROCESSED: 1}},
+            counters={plugin.CTR_SRC_SOURCES: {plugin.CTR_ACT_DOWNLOADED: 2}, plugin.CTR_SRC_FILES: {plugin.CTR_ACT_PROCESSED: 1}},
             file_asserts={
                 "redbark_balances_2026.csv": [
                     assert_file_size(min_rows=4, max_rows=4),
@@ -1384,6 +1385,82 @@ class WrangleTest(unittest.TestCase):
                     assert_file_column_values("Source ID", ["b1", "h1", "h2", "h3"], sort_by=["Source ID"]),
                     assert_file_column_values("Date", ["2026-01-05", "2026-01-06", "2026-01-08", "2026-01-09"], sort_by=["Source ID"]),
                     assert_file_column_values("Date Posted", ["2026-01-05", "2026-01-06", "2026-01-08", "2026-01-09"], sort_by=["Source ID"]),
+                ],
+            },
+        )
+
+    # An HSBC transaction held on the check window's first day is not gone, one a day later Redbark no longer lists is
+    def test_bank_local_partial_70(self):
+        self._bank_run(
+            "partial_70",
+            standing=2,
+            source=True,
+            rerun=False,
+            errored={plugin.CTR_SRC_DATA: 1},
+            file_asserts={
+                "redbark_transactions_2026.csv": [assert_file_column_values("Source ID", ["h1", "h2", "h3"], sort_by=["Date"])],
+                "__bank_logs.csv": [
+                    assert_file_column_values("Code", ["TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED_CURRENT", "TRANSACTION_GONE"], sort_by=["Code"]),
+                    assert_file_column_values("Key", ["2026", "2026", "h2"], sort_by=["Code"]),
+                ],
+            },
+        )
+
+    # Each card's import carries its last balance, or zero, to today, and the unmoved carried balance is a current month warning
+    def test_bank_local_partial_71(self):
+        self._bank_run(
+            "partial_71",
+            standing=3,
+            rerun=False,
+            file_asserts={
+                "manual_balances_2026.csv": [
+                    assert_file_column_values("Account", ["Card", "Card", "Other Card"], sort_by=["Date", "Account"]),
+                    assert_file_column_values("Date", ["2026-01-10", "2026-01-15", "2026-01-15"], sort_by=["Date", "Account"]),
+                    assert_file_column_values("Balance Manual", ["-100.0", "-100.0", "0.0"], sort_by=["Date", "Account"]),
+                ],
+                "__bank_logs.csv": [
+                    assert_file_column_values("Code", ["BALANCE_UNRECONCILED_CURRENT", "TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED_CURRENT"], sort_by=["Code"]),
+                    assert_file_column_values("Key", ["Card 2026-01-15", "2026", "2026"], sort_by=["Code"]),
+                ],
+            },
+        )
+
+    # A manual balance edited on the Balances tab is written to its file, a linked balance edit put back
+    def test_bank_local_partial_72(self):
+        self._bank_run(
+            "partial_72",
+            standing=2,
+            rerun=False,
+            file_asserts={
+                "manual_balances_2026.csv": [assert_file_column_values("Balance Manual", ["-125.5"])],
+                "redbark_balances_2026.csv": [assert_file_column_values("Balance Linked", ["10.0"])],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["BALANCE_MANUAL_STALE", "TAB_EDIT_IGNORED"], sort_by=["Code"])],
+            },
+        )
+
+    # A break into a closed month and a closed month without a balance are errors, a break in the current month a warning
+    def test_bank_local_partial_73(self):
+        self._bank_run(
+            "partial_73",
+            standing=8,
+            rerun=False,
+            file_asserts={
+                "__bank_logs.csv": [
+                    assert_file_column_values(
+                        "Code",
+                        [
+                            "BALANCE_MANUAL_STALE",
+                            "BALANCE_MANUAL_STALE",
+                            "BALANCE_UNRECONCILED",
+                            "BALANCE_UNRECONCILED_CURRENT",
+                            "TRANSACTIONS_UNCLASSIFIED",
+                            "TRANSACTIONS_UNCLASSIFIED_CURRENT",
+                            "TRANSACTIONS_UNVETTED",
+                            "TRANSACTIONS_UNVETTED_CURRENT",
+                        ],
+                        sort_by=["Code"],
+                    ),
+                    assert_file_column_values("Key", ["Card 2025-12", "Other Card", "Card 2025-10-31", "Card 2026-01-10", "2025", "2026", "2025", "2026"], sort_by=["Code", "Key"]),
                 ],
             },
         )
