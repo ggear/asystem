@@ -168,13 +168,29 @@ Use the secondary chain. It is complete and passes `gzip -t`:
 /share/30/backup/influxdb3/2026-10-22_01-00-08   delta   11M
 ```
 
-This is the first real run of `--mode=merge` for influxdb3, and it is done by hand until the tooling exists. Open
-question to settle first: whether the Home licence accepts a second instance (the scratch container) on its own data dir,
-since the licence binds `object_store_info`. Try it with `drill` before relying on it.
+This is the first real run of `--mode=merge` for influxdb3, and it is done by hand until the tooling exists. A copy of
+the chain, pinned outside every pruner, is at `/share/30/tmp/influxdb3-restore-2026-10-22/`.
+
+**Drilled by hand on 2026-10-27, and it works.** This is the recipe `restore_staged` encodes:
+
+- Data dir `/home/asystem/influxdb3/restore/drill-<ts>`, holding only a copy of the live `cluster_1/trial_or_home_license`.
+  The Home licence verifies on a second instance with a fresh catalog. It binds `object_store_info`, which is a hash of
+  the store type and the in-container path (`file`, `/asystem/mnt`), so the scratch mount must keep that path. Never pass
+  `--license-email` to scratch: with no licence file, that would start the email verification.
+- `docker run --name influxdb3_restore -p 127.0.0.1:18182:8181 --entrypoint influxdb3 <image> serve --node-id node_1
+  --cluster-id cluster_1 --object-store file --data-dir /asystem/mnt --license-type home --without-auth
+  --disable-telemetry-upload`. The module's `entrypoint.sh` is bypassed, and loopback plus no auth need no token.
+- Extract the full into `cluster_1/backups/`, then `create restore --backup full-…`. Extract each delta into
+  `backups/full-…/incremental/`, then `create restore --backup delta-…`, one at a time in order, polling
+  `status restore --id` on its `Status:` line until it reads `completed`. The `Completed At:` label also matches
+  "completed", so don't grep the whole output for it.
+- Result: 2026-08-13T02:03Z → 2026-10-21T16:59Z, 70 consecutive days, and the same table set as live.
+  `sensor__temperature` has 4,907,096 rows. The full took 7s for 2790 files and 331MB, and each delta a few seconds.
+  The scratch data dir is 808M.
 
 ## Order of work
 
-1. Pin the five runs above outside every pruner, until the anchor exists.
+1. ~~Pin the five runs above outside every pruner, until the anchor exists.~~ Done, see above.
 2. `commit=600` out of the `fstab` sources. Make the entrypoint quarantine-and-refuse change.
 3. Manifest, chain-aware pruner and anchor in `container.py`. Raise influxdb3's window. Regenerate every enrolled module
    and read the generated `backup.sh` diffs.
