@@ -1226,8 +1226,10 @@ class SourcesMixin(ContractMixin):
         names starting `_` or `~$`. A download takes a file Drive changed, Drive winning a file changed on both sides as
         `conflicted`; an upload, after listing Drive again, sends a file changed only locally and skips one Drive changed too
         as `conflicted`, and lists nothing when no local file changed since its sync. Without a recorded MD5 the newer side wins
-        once. A name listed twice is left alone, the plugin's download-only names are never uploaded, and nothing is deleted
-        on either side. Returns each file's status.
+        once. A name listed more than once with one content keeps its oldest copy, the others trashed when uploads are on, and
+        with different contents is left alone. An upload creates a file only when Drive lists none of its name just before, so
+        a copy another writer added since the listing is updated instead. The plugin's download-only names are never uploaded,
+        and nothing else is deleted on either side. Returns each file's status.
         """
         if drive_dir is None:
             return collections.OrderedDict()
@@ -1288,7 +1290,13 @@ class SourcesMixin(ContractMixin):
                 _response = self._throttled(
                     "google_drive",
                     service.files()
-                    .list(q=f"'{drive_dir}' in parents and trashed = false", spaces="drive", fields="nextPageToken, files(id, name, modifiedTime, md5Checksum)", pageSize=1000, pageToken=_token)
+                    .list(
+                        q=f"'{drive_dir}' in parents and trashed = false",
+                        spaces="drive",
+                        fields="nextPageToken, files(id, name, createdTime, modifiedTime, md5Checksum)",
+                        pageSize=1000,
+                        pageToken=_token,
+                    )
                     .execute,
                     google_failed,
                 )
@@ -1299,6 +1307,7 @@ class SourcesMixin(ContractMixin):
                                 "id": _drive_file["id"],
                                 "name": _drive_file["name"],
                                 "hash": _drive_file.get("md5Checksum"),
+                                "created": _drive_file.get("createdTime") or _drive_file["modifiedTime"],
                                 "modified": int(datetime.strptime(_drive_file["modifiedTime"], "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=UTC).timestamp()),
                             }
                         )
@@ -1313,10 +1322,26 @@ class SourcesMixin(ContractMixin):
                     for _listing in _listings:
                         _stem, _extension = os.path.splitext(_name)
                         _drive_files[f"{_stem}_{_listing['id'].lower()}{_extension}"] = _listing
+                elif len({_listing["hash"] for _listing in _listings}) == 1 and _listings[0]["hash"] is not None:
+                    _kept = min(_listings, key=lambda _listing: (_listing["created"], _listing["id"]))
+                    _drive_files[_name] = _kept
+                    if not config.disable_drive_uploads:
+                        try:
+                            for _listing in _listings:
+                                if _listing is not _kept:
+                                    self._throttled("google_drive", service.files().update(fileId=_listing["id"], body={"trashed": True}).execute, google_failed)
+                            self.print_log(f"File [{_name}] listed [{len(_listings)}] times on Drive with one content, all but the oldest [{_kept['id']}] trashed", level="warn")
+                        except Exception as exception:
+                            self.print_log(f"File [{_name}] listed [{len(_listings)}] times on Drive with one content, trash failed, oldest [{_kept['id']}] used", exception=exception, level="warn")
                 else:
                     duplicates.add(_name)
                     if download:
-                        _problem(_name, "DRIVE_DUPLICATE", f"listed [{len(_listings)}] times on Drive, left alone")
+                        _copies = ", ".join(
+                            f"[{_listing['id']}] modified [{datetime.fromtimestamp(_listing['modified'], UTC):%Y-%m-%dT%H:%M:%S}] md5 [{_listing['hash']}]"
+                            + (" last synced" if _listing["hash"] == manifest.get(_name) else "")
+                            for _listing in sorted(_listings, key=lambda _listing: _listing["modified"])
+                        )
+                        _problem(_name, "DRIVE_DUPLICATE", f"listed [{len(_listings)}] times on Drive with different contents, left alone, copies {_copies}")
             self.drive_ids.update({_name: _drive_file["id"] for _name, _drive_file in _drive_files.items()})
             self.print_log(f"Directory [{basename(local_dir).title()}] listed [{len(_drive_files)}] files from [https://drive.google.com/drive/folders/{drive_dir}]", started=started_time)
             return _local_files, _drive_files
@@ -1438,14 +1463,22 @@ class SourcesMixin(ContractMixin):
                     try:
                         media = MediaFileUpload(local_path)
                         metadata: dict[str, object] = {"modifiedTime": datetime.fromtimestamp(local_file["modified"], UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ")}
-                        if drive_file is None:
+                        drive_id = None if drive_file is None else drive_file["id"]
+                        if drive_id is None:
+                            escaped = basename(local_path).replace("\\", "\\\\").replace("'", "\\'")
+                            existing = self._throttled(
+                                "google_drive",
+                                service.files().list(q=f"'{drive_dir}' in parents and name = '{escaped}' and trashed = false", spaces="drive", fields="files(id)").execute,
+                                google_failed,
+                            ).get("files", [])
+                            drive_id = existing[0]["id"] if existing else None
+                        if drive_id is None:
                             metadata["name"] = basename(local_path)
                             metadata["parents"] = [drive_dir]
                             drive_id = self._throttled("google_drive", service.files().create(body=metadata, media_body=media).execute, google_failed).get("id")
-                            self.drive_ids[local_name] = drive_id
                         else:
-                            drive_id = drive_file["id"]
                             self._throttled("google_drive", service.files().update(fileId=drive_id, body=metadata, media_body=media).execute, google_failed)
+                        self.drive_ids[local_name] = drive_id
                         _recorded(local_name, local_file["hash"])
                         statuses[local_path] = DriveStatus.UPLOADED
                         self.add_counter(CTR_SRC_SOURCES, CTR_ACT_UPLOADED)

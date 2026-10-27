@@ -3784,6 +3784,7 @@ class WrangleTest(unittest.TestCase):
         drive.put("a.csv", b"1")
         drive.put("dup.csv", b"x")
         drive.put("dup.csv", b"y")
+        same_ids = [drive.put("same.csv", b"s"), drive.put("same.csv", b"s")]
         activity_ids = [drive.put("activity.csv", b"e1"), drive.put("activity.csv", b"e2")]
         drive.patch()
         errors = []
@@ -3805,10 +3806,12 @@ class WrangleTest(unittest.TestCase):
             return codes
 
         activity_names = [f"activity_{drive_id.lower()}.csv" for drive_id in activity_ids]
-        self.assertEqual({"a.csv": "downloaded", **dict.fromkeys(activity_names, "downloaded")}, _sync())
+        self.assertEqual({"a.csv": "downloaded", "same.csv": "downloaded", **dict.fromkeys(activity_names, "downloaded")}, _sync())
         self.assertEqual(["DRIVE_DUPLICATE"], _codes())
         self.assertFalse(isfile(join(test.local_cache, "dup.csv")))
-        self.assertEqual({"a.csv": "cached", **dict.fromkeys(activity_names, "cached")}, _sync())
+        self.assertEqual(([same_ids[0]], b"s"), (drive.live("same.csv"), _local("same.csv")))
+        self.assertEqual(2, len(drive.live("dup.csv")))
+        self.assertEqual({"a.csv": "cached", "same.csv": "cached", **dict.fromkeys(activity_names, "cached")}, _sync())
         drive.put("a.csv", b"2")
         self.assertEqual("downloaded", _sync()["a.csv"])
         self.assertEqual(b"2", _local("a.csv"))
@@ -3822,6 +3825,10 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual({"a.csv": "uploaded", "b.csv": "uploaded"}, {name: status for name, status in _sync(download=False, upload=True).items() if name in ("a.csv", "b.csv")})
         self.assertEqual((b"4", b"new", b"e1"), (drive.content("a.csv"), drive.content("b.csv"), drive.content_by_id(activity_ids[0])))
         self.assertEqual("verified", _sync(download=False, upload=True)["a.csv"])
+        _write("c.csv", b"c")
+        drive.after_list.append(lambda: drive.put("c.csv", b"other writer"))
+        self.assertEqual("uploaded", _sync(download=False, upload=True)["c.csv"])
+        self.assertEqual((1, b"c"), (len(drive.live("c.csv")), drive.content("c.csv")))
         _write("a.csv", b"5")
         drive.put("a.csv", b"6")
         self.assertEqual("conflicted", _sync(download=False, upload=True)["a.csv"])
@@ -6010,16 +6017,21 @@ class _FakeDrive:
         self.clock = 1_700_000_000
         self.calls = collections.Counter()
         self.failures = []
+        self.after_list = []
 
     def put(self, name, content):
         self.clock += 60
-        existing = [drive_id for drive_id, drive_file in self.files_by_id.items() if drive_file["name"] == name]
-        drive_id = existing[0] if existing and name != "activity.csv" and name != "dup.csv" else f"Id{len(self.files_by_id)}"
-        self.files_by_id[drive_id] = {"name": name, "content": content, "modified": self.clock}
+        existing = [drive_id for drive_id, drive_file in self.files_by_id.items() if drive_file["name"] == name and not drive_file["trashed"]]
+        drive_id = existing[0] if existing and name not in ("activity.csv", "dup.csv", "same.csv") else f"Id{len(self.files_by_id)}"
+        created = self.files_by_id[drive_id]["created"] if drive_id in self.files_by_id else self.clock
+        self.files_by_id[drive_id] = {"name": name, "content": content, "modified": self.clock, "created": created, "trashed": False}
         return drive_id
 
+    def live(self, name):
+        return [drive_id for drive_id, drive_file in self.files_by_id.items() if drive_file["name"] == name and not drive_file["trashed"]]
+
     def content(self, name):
-        return next(drive_file["content"] for drive_file in self.files_by_id.values() if drive_file["name"] == name)
+        return next(drive_file["content"] for drive_file in self.files_by_id.values() if drive_file["name"] == name and not drive_file["trashed"])
 
     def content_by_id(self, drive_id):
         return self.files_by_id[drive_id]["content"]
@@ -6038,22 +6050,28 @@ class _FakeDrive:
                 return self.result() if callable(self.result) else self.result
 
         class _Files:
-            def list(self, **_kwargs):
+            def list(self, q="", **_kwargs):
                 def _listed():
                     drive.calls["list"] += 1
                     if drive.failures:
                         raise drive.failures.pop(0)
-                    return {
+                    named = re.search(r"name = '((?:[^'\\]|\\.)*)'", q)
+                    listed = {
                         "files": [
                             {
                                 "id": drive_id,
                                 "name": drive_file["name"],
                                 "md5Checksum": hashlib.md5(drive_file["content"]).hexdigest(),
+                                "createdTime": datetime.datetime.fromtimestamp(drive_file["created"], datetime.UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
                                 "modifiedTime": datetime.datetime.fromtimestamp(drive_file["modified"], datetime.UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
                             }
                             for drive_id, drive_file in drive.files_by_id.items()
+                            if not drive_file["trashed"] and (named is None or drive_file["name"] == re.sub(r"\\(.)", r"\1", named[1]))
                         ]
                     }
+                    while drive.after_list:
+                        drive.after_list.pop(0)()
+                    return listed
 
                 return _Request(_listed)
 
@@ -6064,12 +6082,14 @@ class _FakeDrive:
                 drive.calls["upload"] += 1
                 drive_id = f"Id{len(drive.files_by_id)}"
                 with open(media_body, "rb") as media_file:
-                    drive.files_by_id[drive_id] = {"name": body["name"], "content": media_file.read(), "modified": drive.clock}
+                    drive.files_by_id[drive_id] = {"name": body["name"], "content": media_file.read(), "modified": drive.clock, "created": drive.clock, "trashed": False}
                 return _Request({"id": drive_id})
 
             def update(self, fileId, body, media_body=None):
                 if "name" in body:
                     drive.files_by_id[fileId]["name"] = body["name"]
+                if body.get("trashed"):
+                    drive.files_by_id[fileId]["trashed"] = True
                 if media_body is not None:
                     drive.calls["upload"] += 1
                     with open(media_body, "rb") as media_file:
