@@ -151,7 +151,7 @@ func diagnoseWeewx(samples []Sample) Aggregate {
 	case !reading.fresh:
 		result = Diagnose(StatusDead, 0, "STALE: weather station not reporting or last update older than one hour")
 	case !reading.hasQuality:
-		result = Diagnose(StatusDead, 0, "NO_DATA: no retained weather station signal quality on broker")
+		result = Diagnose(StatusSick, 0, "NO_DATA: weather station reporting but no retained signal quality on broker")
 	case quality >= weewxFitMin:
 		result = Diagnose(StatusFit, score, fmt.Sprintf("HEALTHY: weather station signal quality %.0f%%", quality))
 	default:

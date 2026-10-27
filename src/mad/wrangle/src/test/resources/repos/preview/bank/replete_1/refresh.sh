@@ -16,7 +16,7 @@ find "${REPO_TEST_RUN_DIR}" -maxdepth 1 -type f -name '[!_]*' ! -name 'bank_recl
 touch "${REPO_TEST_DIR}/.gitkeep"
 
 # Repopulate Drive repo, mirrored exactly since the test syncs it live
-rsync -avci --delete --exclude ".git*" "${REPO_TEST_DIR}"/ "${REPO_TEST_DRIVE_DIR}"/
+refresh_drive_mirror delete
 
 # Add cache files, the release sheet's tabs standing in for the preview sheet's with sheet downloads disabled, only each tab's v1, the download into the
 # empty cache, since a later version is the run's own render

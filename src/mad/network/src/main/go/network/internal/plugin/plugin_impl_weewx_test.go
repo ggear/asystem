@@ -74,9 +74,9 @@ func TestWeewx_Diagnose(t *testing.T) {
 			expectedReason: "STALE",
 		},
 		{
-			name:           "dead_fresh_no_signal",
+			name:           "sick_fresh_no_signal",
 			samples:        []Sample{weewxPoll(true, false, 0)},
-			expectedStatus: StatusDead,
+			expectedStatus: StatusSick,
 			expectedScore:  0,
 			expectedReason: "NO_DATA",
 		},

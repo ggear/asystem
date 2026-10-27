@@ -55,6 +55,7 @@ from wrangle.plugin import DownloadResult, DownloadStatus, Plugin, database
 from wrangle.plugin._throttle import Throttle, google_failed, urllib_failed, yahoo_failed
 from wrangle.plugin.bank import BALANCES_KEY_COLUMNS as BANK_BALANCES_KEY_COLUMNS
 from wrangle.plugin.bank import (
+    BALANCES_MAX_AGE_HOURS,
     BALANCES_SCHEMA,
     REPOS_BANK,
     TRANSACTIONS_SCHEMA,
@@ -1290,7 +1291,6 @@ class WrangleTest(unittest.TestCase):
             "partial_52",
             source=True,
             rerun=False,
-            errored={plugin.CTR_SRC_DATA: 1},
             file_asserts={
                 "redbark_transactions_2026.csv": [
                     assert_file_size(min_rows=4, max_rows=4),
@@ -1368,7 +1368,6 @@ class WrangleTest(unittest.TestCase):
             "partial_70",
             source=True,
             rerun=False,
-            errored={plugin.CTR_SRC_DATA: 1},
             file_asserts={
                 "redbark_transactions_2026.csv": [assert_file_column_values("Source ID", ["h1", "h2", "h3"], sort_by=["Date"])],
                 "__bank_logs.csv": [
@@ -1604,7 +1603,7 @@ class WrangleTest(unittest.TestCase):
     def test_bank_local_corrupt_28(self):
         self._bank_run(
             "corrupt_28",
-            standing=2,
+            standing=1,
             source=True,
             rerun=False,
             errored={plugin.CTR_SRC_DATA: 1},
@@ -1869,7 +1868,7 @@ class WrangleTest(unittest.TestCase):
             today="2026-03-01T12:00:00",
             source=True,
             rerun=False,
-            errored={plugin.CTR_SRC_DATA: 3},
+            errored={plugin.CTR_SRC_DATA: 2},
             file_asserts={
                 "redbark_transactions_2026.csv": [
                     assert_file_size(min_rows=5, max_rows=5),
@@ -2072,6 +2071,7 @@ class WrangleTest(unittest.TestCase):
             "bank",
             plugin.RepoScope.RELEASE,
             "replete_1",
+            today=(datetime.datetime.now().astimezone() + datetime.timedelta(hours=BALANCES_MAX_AGE_HOURS + 1)).strftime("%Y-%m-%dT%H:%M:%S"),
             log_level="info",
             disable_sheet_downloads=False,
             disable_database_downloads=False,
@@ -2080,7 +2080,7 @@ class WrangleTest(unittest.TestCase):
             disable_sheet_uploads=True,
             disable_database_uploads=True,
             disable_drive_uploads=True,
-            enable_rerun=True,
+            enable_rerun=False,
             force_reprocessing=False,
             force_downloads=False,
             counter_asserts=merge_asserts(
@@ -2093,6 +2093,9 @@ class WrangleTest(unittest.TestCase):
                         },
                     },
                     "counter_at_least": {
+                        plugin.CTR_SRC_SOURCES: {
+                            plugin.CTR_ACT_DOWNLOADED: 2,
+                        },
                         plugin.CTR_SRC_DATA: {
                             plugin.CTR_ACT_DELTA_ROWS: fixture["rows_delta"],
                         },
@@ -2100,6 +2103,8 @@ class WrangleTest(unittest.TestCase):
                 },
             ),
             file_asserts={
+                "_redbark_balances.csv": [assert_file_size()],
+                "_redbark_transactions.csv": [assert_file_size()],
                 "__bank_balances_current.csv": [
                     assert_file_size(),
                     assert_file_dates(end_date_at_least=fixture["end_date"] or None, descending=False),

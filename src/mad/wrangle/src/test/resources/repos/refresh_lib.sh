@@ -10,7 +10,6 @@ WRANGLE_DIR="${HOME}/Code/asystem/src/mad/wrangle"
 WRANGLE_UNIT_DIR="${WRANGLE_DIR}/src/test/python/unit"
 WRANGLE_PYTHON="${HOME}/.pyenv/versions/asystem/bin/python"
 WRANGLE_PYTEST="${HOME}/.pyenv/versions/asystem/bin/pytest"
-WRANGLE_DRIVE_DIR="/Users/graham/Google Drive/My Drive/Wrangle"
 
 refresh_log_sep() {
   printf '%s\n' "$REFRESH_LOG_SEP"
@@ -46,7 +45,6 @@ refresh_setup() {
   REPO_TEST_DIR="${REPO_TEST_CASE_DIR}/data"
   REPO_TEST_RUN_DIR="${WRANGLE_DIR}/target/data/${REPO_TEST_NAME}"
   REPO_TEST_FIXTURE_FILE="${REPO_TEST_CASE_DIR}/fixture.toml"
-  REPO_TEST_DRIVE_DIR="${WRANGLE_DRIVE_DIR}/${REPO_TEST_NAME}/${REPO_TEST_SCOPE}/data"
 }
 
 # Run the plugin derived from REPO_TEST_NAME against a cache dir, with the module .env loaded as the unit tests do. Pass "online" as the second arg to enable
@@ -129,6 +127,58 @@ refresh_replete_trimmed() {
   mv "${current_file}.tmp" "${current_file}"
   files_processed=$(find "${REPO_TEST_DIR}" -maxdepth 1 -name "${count_glob}" | wc -l | tr -d ' ')
   refresh_write_fixture "${files_processed}" 1 "${end_date}" 0 -1
+}
+
+# Mirror the test data dir onto the scope's Drive folder through the Drive API, the plugin's own writer, never the Drive desktop mount, which syncs late and
+# races the API into a second file of one name. Names the plugin's sync ignores are left out. Each name keeps its oldest copy, updated in place when its
+# content differs, and is created only when absent; other copies are trashed, and with "delete" so are names the dir lacks. Fails unless the folder then
+# lists each name once with the dir's content.
+refresh_drive_mirror() {
+  refresh_python - "${REPO_TEST_DIR}" "${REPO_TEST_NAME}" "${REPO_TEST_SCOPE}" "${1:-}" <<'PYEOF'
+import collections, glob, hashlib, importlib, os, sys
+import google.oauth2.service_account
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
+from wrangle.plugin.config import DRIVE_IGNORE_PREFIXES, get_file
+data_dir, plugin_name, scope, mode = sys.argv[1:5]
+folder = getattr(importlib.import_module(f"wrangle.plugin.{plugin_name}.{plugin_name}"), f"REPOS_{plugin_name.upper()}")._scopes[scope]["drive_folder"]
+credentials = google.oauth2.service_account.Credentials.from_service_account_file(get_file(".google_service_account.json"), scopes=["https://www.googleapis.com/auth/drive"])
+files = build("drive", "v3", credentials=credentials, cache_discovery=False).files()
+def listed():
+    by_name, token = collections.defaultdict(list), None
+    while True:
+        response = files.list(q=f"'{folder}' in parents and trashed = false", spaces="drive", fields="nextPageToken, files(id, name, md5Checksum, createdTime)", pageSize=1000, pageToken=token).execute()
+        for drive_file in response.get("files", []):
+            if not drive_file["name"].startswith(DRIVE_IGNORE_PREFIXES):
+                by_name[drive_file["name"]].append(drive_file)
+        token = response.get("nextPageToken")
+        if not token:
+            return {name: sorted(copies, key=lambda copy: (copy["createdTime"], copy["id"])) for name, copies in by_name.items()}
+local = {
+    os.path.basename(path): (path, hashlib.md5(open(path, "rb").read()).hexdigest())
+    for path in sorted(glob.glob(f"{data_dir}/*"))
+    if os.path.isfile(path) and not os.path.basename(path).startswith((*DRIVE_IGNORE_PREFIXES, "."))
+}
+counts = collections.Counter()
+for name, copies in listed().items():
+    for copy in copies[1:] if name in local or mode != "delete" else copies:
+        files.update(fileId=copy["id"], body={"trashed": True}).execute()
+        counts["trashed"] += 1
+drive = listed()
+for name, (path, md5) in local.items():
+    if name not in drive:
+        files.create(body={"name": name, "parents": [folder]}, media_body=MediaFileUpload(path)).execute()
+        counts["created"] += 1
+    elif drive[name][0].get("md5Checksum") != md5:
+        files.update(fileId=drive[name][0]["id"], media_body=MediaFileUpload(path)).execute()
+        counts["updated"] += 1
+drive = listed()
+wrong = sorted(name for name, (_, md5) in local.items() if len(drive.get(name, [])) != 1 or drive[name][0].get("md5Checksum") != md5)
+extra = sorted(set(drive) - set(local)) if mode == "delete" else []
+print(f"Drive folder [{folder}] mirrored, created [{counts['created']}] updated [{counts['updated']}] trashed [{counts['trashed']}]")
+if wrong or extra:
+    sys.exit(f"Drive folder [{folder}] does not mirror [{data_dir}], names not listed once with its content [{', '.join(wrong)}], extra [{', '.join(extra)}]")
+PYEOF
 }
 
 # Run the project python with the wrangle package importable from any directory.

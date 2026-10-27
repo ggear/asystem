@@ -320,7 +320,7 @@ ERROR_CODES = {
     "BALANCE_JUMP": (plugin.LOG_KIND_WARNING, False, True, plugin.CTR_SRC_DATA),
     "CATEGORY_UNKNOWN": (plugin.LOG_KIND_WARNING, False, False, plugin.CTR_SRC_DATA),
     "MANUAL_DUPLICATE": (plugin.LOG_KIND_WARNING, False, True, plugin.CTR_SRC_DATA),
-    "TRANSACTION_GONE": (plugin.LOG_KIND_ERROR, False, True, plugin.CTR_SRC_DATA),
+    "TRANSACTION_GONE": (plugin.LOG_KIND_WARNING, False, True, plugin.CTR_SRC_DATA),
     "TRANSACTION_RELISTED": (plugin.LOG_KIND_WARNING, False, True, plugin.CTR_SRC_DATA),
     "TRANSACTION_UNHELD": (plugin.LOG_KIND_WARNING, False, True, plugin.CTR_SRC_DATA),
     "DEDUPE_REMOVED": (plugin.LOG_KIND_INFO, False, True, plugin.CTR_SRC_DATA),

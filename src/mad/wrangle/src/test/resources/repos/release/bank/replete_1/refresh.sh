@@ -37,9 +37,9 @@ for STATE in balances transactions; do
   fi
 done
 
-# Write fixture toml, the trimmed balances file stale so the test's live balance check and transaction sweep are due
+# Write fixture toml; the test pins its clock past the balance check interval, so its live balance check and transaction fetch are due whatever time the
+# Drive sync gives the balances file
 FILES_PROCESSED=$(find -E "${REPO_TEST_DIR}" -maxdepth 1 -type f -regex "${BANK_FILE_REGEX}" | wc -l | tr -d ' ')
 refresh_write_fixture "${FILES_PROCESSED}" 1 "$(refresh_last_date "${REPO_TEST_DIR}/__${REPO_TEST_NAME}_balances_current.csv")" 0 -1
 printf 'transactions_rows_delta = 1\ntransactions_end_date = "%s"\n' \
   "$(refresh_last_date "${REPO_TEST_DIR}/__${REPO_TEST_NAME}_transactions_current.csv")" >>"${REPO_TEST_FIXTURE_FILE}"
-printf '\n[mtimes]\n"redbark_balances_%s.csv" = "2000-01-01T00:00:00"\n' "$(date +%Y)" >>"${REPO_TEST_FIXTURE_FILE}"

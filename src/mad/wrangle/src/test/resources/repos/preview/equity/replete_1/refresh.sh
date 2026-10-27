@@ -5,11 +5,11 @@ refresh_setup "$0"
 
 # Ensure last run data dir is populated, then clean and repopulate test data from last run
 refresh_download
-rm -rf "${REPO_TEST_DIR}"/*
+rm -rf "${REPO_TEST_DIR:?}"/*
 find "${REPO_TEST_RUN_DIR}" -maxdepth 1 -type f -name '[!_]*' -exec cp -vpf {} "${REPO_TEST_DIR}"/ \;
 
 # Repopulate Drive repo
-rsync -avci "${REPO_TEST_DIR}"/ "${REPO_TEST_DRIVE_DIR}"/
+refresh_drive_mirror
 
 # Add cache files
 find "${REPO_TEST_RUN_DIR}" -maxdepth 1 -name '_database_*.csv' ! -name '*_run.csv' ! -name '_database_equity.csv' -exec cp -vpf {} "${REPO_TEST_DIR}" \;
