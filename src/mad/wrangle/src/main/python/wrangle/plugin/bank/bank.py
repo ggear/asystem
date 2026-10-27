@@ -373,7 +373,7 @@ CHANGES_SOURCE_CLASSIFIER = "classifier"
 REPOS_BANK = plugin.Repos(
     preview={
         "drive_folder": "1ELcrbuJxjlYcDJ8FRWacvsKvSM5sypaV",
-        "sheet_key": "1l69phyvfkK65WKnoShNgIIMkk8S6E_ZEI3M7Pep0eqg",
+        "sheet_key": "18SJGNZEsdDRyqkZGn8mxl6c5Ec09fqMgVlyyPYyhXtM",
     },
     release={
         "drive_folder": "1bfBMTDUj2Y5sZSu0yMR48ao_b6XEI72r",

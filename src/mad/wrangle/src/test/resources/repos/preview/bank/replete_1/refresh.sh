@@ -3,38 +3,38 @@ set -euo pipefail
 source "$(cd "$(dirname "$0")" && pwd)/../../../refresh_lib.sh"
 refresh_setup "$0"
 BANK_FILE_REGEX='.*/(redbark|manual)_(balances|transactions)_[0-9]{4}\.csv'
-EXPORT_FILE_REGEX='.*/(activity[^/]*|amex_[^/]*)\.csv'
-RELEASE_DRIVE_DIR="${WRANGLE_DRIVE_DIR}/${REPO_TEST_NAME}/release/data"
-REFRESH_TODAY="$(date +%Y-%m-%dT%H:%M:%S)"
 
-# Run once online against release from a clean cache, forcing every download, so the run dir holds the release sheet's tabs, the live Redbark responses and the
-# states those responses make of release's files
-find "${REPO_TEST_DIR}" -mindepth 1 ! -name '.git*' -delete
+# Run once online against release from a clean cache, so the run dir holds release's files and exports as they stand on its Drive, its sheet's input tabs and
+# the states those files make
 rm -rf "${REPO_TEST_RUN_DIR}"
 mkdir -p "${REPO_TEST_RUN_DIR}"
-refresh_run_plugin "$(dirname "${REPO_TEST_RUN_DIR}")" online force
+refresh_run_plugin "$(dirname "${REPO_TEST_RUN_DIR}")" online
 
-# Test data is release's files and AMEX exports, renamed or not, as they stand on its Drive, mirrored onto the preview Drive, so the test replays the live
-# responses onto exactly them and renames and imports the exports there; the sync never uploads an export, so the mirror is what places them
-find -E "${RELEASE_DRIVE_DIR}" -maxdepth 1 -type f \( -regex "${BANK_FILE_REGEX}" -o -iregex "${EXPORT_FILE_REGEX}" \) -exec cp -vpf {} "${REPO_TEST_DIR}"/ \;
-rsync -avci --delete --exclude ".git*" "${REPO_TEST_DIR}"/ "${REPO_TEST_DRIVE_DIR}"/
-
-# Add cache files, the release sheet's tabs standing in for the preview sheet's with sheet downloads disabled, and the live Redbark responses the test serves;
-# only each tab's v1, the download into the empty cache, since a later version is the run's own render, which holds Redbark rows release's files do not yet
-find "${REPO_TEST_RUN_DIR}" -maxdepth 1 -name '_sheet_bank_*_v1.csv' -exec cp -vpf {} "${REPO_TEST_DIR}" \;
-for RESOURCE in accounts balances transactions; do
-  cp -vpf "${REPO_TEST_RUN_DIR}/_redbark_${RESOURCE}.csv" "${REPO_TEST_DIR}"/
-done
+# Clean and repopulate test data from the run, release's year files and AMEX exports, leaving out the change logs
+find "${REPO_TEST_DIR}" -mindepth 1 ! -name '.git*' -delete
+find "${REPO_TEST_RUN_DIR}" -maxdepth 1 -type f -name '[!_]*' ! -name 'bank_reclassified_*' -exec cp -vpf {} "${REPO_TEST_DIR}"/ \;
 touch "${REPO_TEST_DIR}/.gitkeep"
 
-# Write fixture toml, expecting the states the online run made, the clock pinned to it, the balances file and the last sweep stale so both are due, and the
-# accounts response fresh so the weekly call is not
+# Repopulate Drive repo, mirrored exactly since the test syncs it live
+rsync -avci --delete --exclude ".git*" "${REPO_TEST_DIR}"/ "${REPO_TEST_DRIVE_DIR}"/
+
+# Add cache files, the release sheet's tabs standing in for the preview sheet's with sheet downloads disabled, only each tab's v1, the download into the
+# empty cache, since a later version is the run's own render
+find "${REPO_TEST_RUN_DIR}" -maxdepth 1 -name '_sheet_bank_*_v1.csv' -exec cp -vpf {} "${REPO_TEST_DIR}" \;
+
+# Add current states, trim each one's last line so rows_delta=1 (ie one row in the year files to add to each state)
+for STATE in balances transactions; do
+  cp -vpf "${REPO_TEST_RUN_DIR}/__${REPO_TEST_NAME}_${STATE}_current.csv" "${REPO_TEST_DIR}"
+  sed -i '' 's/\r//; $d' "${REPO_TEST_DIR}/__${REPO_TEST_NAME}_${STATE}_current.csv"
+done
+
+# Write fixture toml, the clock pinned to the refresh so the files and states stand as of then
 BALANCES_FILE="${REPO_TEST_RUN_DIR}/__${REPO_TEST_NAME}_balances_current.csv"
 TRANSACTIONS_FILE="${REPO_TEST_RUN_DIR}/__${REPO_TEST_NAME}_transactions_current.csv"
-FILES_PROCESSED=$(find -E "${REPO_TEST_RUN_DIR}" -maxdepth 1 -type f -regex "${BANK_FILE_REGEX}" | wc -l | tr -d ' ')
+FILES_PROCESSED=$(find -E "${REPO_TEST_DIR}" -maxdepth 1 -type f -regex "${BANK_FILE_REGEX}" | wc -l | tr -d ' ')
 TRANSACTIONS_IDS=$(refresh_python -c 'import sys, polars; print(polars.read_csv(sys.argv[1], infer_schema=False)["Transaction ID"].n_unique())' "${TRANSACTIONS_FILE}")
-refresh_write_fixture "${FILES_PROCESSED}" "$(($(wc -l <"${BALANCES_FILE}") - 1))" "$(refresh_last_date "${BALANCES_FILE}")" 0 -1
-printf 'transactions_rows_delta = %s\ntransactions_end_date = "%s"\ntransactions_ids = %s\ntoday = "%s"\n' "$(($(wc -l <"${TRANSACTIONS_FILE}") - 1))" \
-  "$(refresh_last_date "${TRANSACTIONS_FILE}")" "${TRANSACTIONS_IDS}" "${REFRESH_TODAY}" >>"${REPO_TEST_FIXTURE_FILE}"
-printf '\n[mtimes]\n"*" = "%s"\n"redbark_balances_%s.csv" = "2000-01-01T00:00:00"\n"_redbark_transactions.csv" = "2000-01-01T00:00:00"\n' \
-  "${REFRESH_TODAY}" "${REFRESH_TODAY:0:4}" >>"${REPO_TEST_FIXTURE_FILE}"
+REFRESH_TODAY="$(date +%Y-%m-%dT%H:%M:%S)"
+refresh_write_fixture "${FILES_PROCESSED}" 1 "$(refresh_last_date "${BALANCES_FILE}")" 0 -1
+printf 'transactions_rows_delta = 1\ntransactions_rows = %s\ntransactions_end_date = "%s"\ntransactions_ids = %s\ntoday = "%s"\n' \
+  "$(($(wc -l <"${TRANSACTIONS_FILE}") - 1))" "$(refresh_last_date "${TRANSACTIONS_FILE}")" "${TRANSACTIONS_IDS}" "${REFRESH_TODAY}" >>"${REPO_TEST_FIXTURE_FILE}"
+printf '\n[mtimes]\n"*" = "%s"\n' "${REFRESH_TODAY}" >>"${REPO_TEST_FIXTURE_FILE}"

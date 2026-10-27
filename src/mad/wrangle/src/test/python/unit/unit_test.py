@@ -2008,11 +2008,9 @@ class WrangleTest(unittest.TestCase):
         )
 
     # Lots of current data, a specific amount of new data, no remote source data downloads, downloads and uploads from and to preview data repo
-    @pytest.mark.xfail(strict=True, reason="production data cleanup")
     def test_bank_preview_replete_1(self):
         fixture = _load_fixture("preview", "bank", "replete_1")
         drive_delete(REPOS_BANK._scopes["preview"]["drive_folder"], "redbark_balances_2019.csv")
-        bank_api_offline("replete_1", "preview")
         self.run_plugin(
             "bank",
             plugin.RepoScope.PREVIEW,
@@ -2020,8 +2018,8 @@ class WrangleTest(unittest.TestCase):
             log_level="info",
             disable_sheet_downloads=True,
             disable_database_downloads=True,
-            disable_drive_downloads=True,
-            disable_source_downloads=False,
+            disable_drive_downloads=False,
+            disable_source_downloads=True,
             disable_sheet_uploads=False,
             disable_database_uploads=True,
             disable_drive_uploads=False,
@@ -2031,13 +2029,10 @@ class WrangleTest(unittest.TestCase):
             counter_asserts=merge_asserts(
                 ASSERT_RUN,
                 {
-                    "counter_at_least": {
+                    "counter_equals": {
                         plugin.CTR_SRC_SOURCES: {
                             plugin.CTR_ACT_UPLOADED: 1,
-                            plugin.CTR_ACT_DOWNLOADED: 2,
                         },
-                    },
-                    "counter_equals": {
                         plugin.CTR_SRC_FILES: {
                             plugin.CTR_ACT_PROCESSED: fixture["files_processed"],
                         },
@@ -2054,24 +2049,19 @@ class WrangleTest(unittest.TestCase):
                 assert_custom_rows_delta(equals=fixture["transactions_rows_delta"], state="bank_transactions"),
             ],
             file_asserts={
+                "redbark_balances_2019.csv": [assert_file_size()],
                 "__bank_balances_current.csv": [
                     assert_file_size(),
                     assert_file_dates(end_date=fixture["end_date"], descending=False),
                     assert_file_nones_per_row(exclude=r"Balance Manual|Balance Auto|Account Institution|Account Number|Account Type"),
                 ],
-                "_sheet_bank_balances.csv": [
-                    assert_file_size(),
-                    assert_file_columns(list(BALANCES_SCHEMA)),
-                ],
-                "_sheet_bank_logs.csv": [
-                    assert_file_size(min_rows=0, max_rows=0),
-                    assert_file_columns(list(LOG_SCHEMA)),
-                ],
                 "__bank_transactions_current.csv": [
-                    assert_file_size(min_rows=fixture["transactions_rows_delta"], max_rows=fixture["transactions_rows_delta"]),
+                    assert_file_size(min_rows=fixture["transactions_rows"], max_rows=fixture["transactions_rows"]),
                     assert_file_dates(end_date=fixture["transactions_end_date"], descending=False),
                     assert_file_column_distinct("Transaction ID", fixture["transactions_ids"]),
                 ],
+                "_sheet_bank_balances.csv": [assert_file_size(), assert_file_columns(list(BALANCES_SCHEMA))],
+                "_sheet_bank_logs.csv": [assert_file_columns(list(LOG_SCHEMA))],
             },
         )
 
@@ -2090,7 +2080,7 @@ class WrangleTest(unittest.TestCase):
             disable_sheet_uploads=True,
             disable_database_uploads=True,
             disable_drive_uploads=True,
-            enable_rerun=False,
+            enable_rerun=True,
             force_reprocessing=False,
             force_downloads=False,
             counter_asserts=merge_asserts(

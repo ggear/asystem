@@ -15,6 +15,9 @@ files (`Wrangle/Bank/release/data`) on Drive.
   Sat) were removed by 25 Oct: the October drop pattern, listed then removed, not the April to September one, never listed. The
   balance confirms all 4 (each breaks the reconcile when taken out), so they are held and kept. The 7 purchases of Fri 23 to Sun 25
   Oct, posted Mon 26 Oct, were listed a day late, after the balance had already moved; they match the balance exactly.
+- **Weekdays too.** 4 more were listed then removed by 27 Oct: purchases made Mon 19 and Tue 20 Oct and posted Wed 21 and Thu 22
+  Oct, one of them a refund and one an overseas fee. They are held, and the balance judges them from about 29 Oct. So the fault is
+  not limited to Friday and Saturday purchases: a posting 2 or more days after purchase is enough, whatever the day.
 - **HSBC only.** Bankwest (which also posts late at times) and CBA are complete against Redbark: on 27 Oct their whole Redbark
   history (from Dec 2019) was diffed against the year files, and every row from May 2021, where the held history starts, is held
   with Redbark's amount, `Date` and `Date Posted`. 47 rows from 2022 to 2026 are held without a Source ID or under one Redbark
@@ -61,7 +64,8 @@ Apr to mid Jul 2026 and the 2021 to 2023 history stay blank for good; that is co
 ## Next
 
 1. Ask Redbark support whether Fiskil's raw HSBC feed holds a missing transaction (say a Saturday purchase in May), to place the
-   fault in HSBC, Fiskil or Redbark, and whether the history can be re-synced. Cite the lag pattern and the October drops. Ask
+   fault in HSBC, Fiskil or Redbark, and whether the history can be re-synced. Cite the lag pattern and the 16 October drops (the
+   8 of 8 to 10 Oct, the 4 of 15 to 17 Oct and the 4 of 19 to 20 Oct, listed then removed), weekday purchases among them. Ask
    whether HSBC's `oldest-time` filters on posting or execution time, and how far back each incremental fetch overlaps.
 2. If Redbark re-syncs, run the matching backfill above, dry run first.
 3. Monthly, drop AMEX's activity export into the bank's Drive data folder, where the run imports it, and export HSBC's last
@@ -139,8 +143,8 @@ What to test, what to expect, and how to read a wrong answer. Read the `Logs` ta
 Checked 27 Oct: the fault is live (4 of the 6 purchases posted 19 Oct went, see Findings), each a `TRANSACTION_GONE` on every
 fetch since, alongside the 8 known October drops, as expected until the proposed change lands. No `BALANCE_UNRECONCILED` was
 raised, correctly: every judged reading (15 to 20 Oct) on all 8 linked accounts reconciles, HSBC only because the dropped rows are
-held, and taking out any one of them raises it with its exact amount. The 4 new drops and the 8 known ones still belong in the
-Redbark support case.
+held, and taking out any one of them raises it with its exact amount. All 16 October drops belong in the Redbark support case,
+the 4 weekday ones of 19 and 20 Oct (found 27 Oct) with the 12 before them.
 
 - **Each fetch's `TRANSACTION_GONE`**: check a new one against a fresh 90-day HSBC export, keep the row, and add it to the support
   case. A Bankwest or CBA one that clears on the next fetch is Redbark flickering, not a drop.
