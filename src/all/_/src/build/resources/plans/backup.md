@@ -66,8 +66,9 @@ The manifest also records `kind` (full/delta), `parent` (the full a delta hangs 
 alphabetically, as the artifact: `restore_resolved` and `backup_versioned` in `container.py`, and supervisor's
 `parseBackupArtefact`. `restore_intact` passes any file it does not recognise. A `manifest.json` beside the archive
 sorts before mariadb, plex, postgres, wrangle and zigbee2mqtt archives, and a `drill.json` before every module's. Each
-would become "the artifact". So `manifest.json` and `drill.json` go in `<run>/.meta/`, which a bash `*` glob and a
-`!entry.IsDir()` filter both skip. Separately, all three readers select the artifact by its name pattern,
+would become "the artifact". So `manifest.json` and the drill verdicts go in `<run>/.meta/`, which a bash `*` glob and a
+`!entry.IsDir()` filter both skip. Each stage writes its drill verdict only under its own subdir, `.meta/primary/` or
+`.meta/secondary/` (§5a). Separately, all three readers select the artifact by its name pattern,
 `<module>_at_<run>_from_<version>_{full,delta}.*`, rather than by position. That fix ships before the first manifest is
 written.
 
@@ -91,10 +92,14 @@ After writing, the wrapper compares the new fingerprint with the newest *accepte
   - **it shows in `backup tail` and `backup list`, with its reason.** Today supervisor sets a service's state from the
     script's exit code alone (`backupOutcome(ok, …)` in `probe_util_backup_stage_primary.go`), and a module script's
     own output goes to `stage/primary/service/<svc>/output.log`, which tail never reads. A regressed run exits 0,
-    because its archive is kept, so it would show as `as [success]`. Instead, primary reads the newest run's
-    `.meta/manifest.json` after the script exits. A `regressed` verdict sets the service state to `regressed`
-    (`SuccessBool` false), and that counts as a failure when the stage resolves, so the summary row's primary cell
-    and the run's result both read failure. supervisor also writes the verdict's evidence into `run.log`, one line
+    because its archive is kept, so it would show as `as [success]`. Instead, when the script wrote a new run (the
+    newest run differs from the one before the script started), primary reads that run's `.meta/manifest.json` after
+    the script exits. A skipped or failed run writes no new run, so it carries no verdict and never re-reads an older
+    run's; a run since `--accept`ed reads as accepted. A `regressed` verdict sets the service state to `regressed`.
+    That is its own field beside `SuccessBool`, which stays true because the archive was written and kept: secondary's
+    `gradedServices` promotes on `SuccessBool`, so a regressed run is still copied to the share and tertiary, and the
+    module's GFS pass still runs. The `regressed` field counts as a failure when the stage resolves, so the summary
+    row's primary cell and the run's result both read failure. supervisor also writes the verdict's evidence into `run.log`, one line
     per guarded unit that went missing or shrank, plus the module total against the threshold. Followed live, tail
     then reads like this:
     ```
@@ -105,9 +110,11 @@ After writing, the wrapper compares the new fingerprint with the newest *accepte
     secondary GFS, retire_home) until acknowledged;
   - acknowledging is `backup.sh --accept=<run>`, which marks the regressed run accepted and releases the anchor. It is
     for an intentional shrink, such as a retention change or a dropped table.
-- For influxdb3, the 08:11 pre-install backup on 22 Oct would have flagged: every closed day counted zero on live
-  (§1). The anchor would then have kept `full-2026-10-19` and its chain indefinitely, and the install of release 1849
-  would have been abandoned (invariants).
+- For influxdb3, the 08:11 pre-install backup on 22 Oct, taken as release 1850 installed over 1849, would have
+  flagged: every closed day counted zero on live (§1). The anchor would then have kept `full-2026-10-19` and its
+  chain indefinitely, and the install of release 1850 would have been abandoned (invariants). Releases 1848 and 1849
+  took no pre-install backup at all (08:11 and 08:15 are the only two), so the guard had nothing to judge for them.
+  The invariant that refuses an install without a pre-install backup is what would have stopped 1848.
 
 ### 3. One chain-aware pruner, three policies
 
@@ -168,8 +175,8 @@ wrapper, or `install.sh` where marked, holds all but the last two, so a module c
 | Scratch is read-only | wrapper | Fingerprints scratch straight after staging, before any other hook runs, then calls `restore_sealed` and fingerprints again. A sealed scratch whose fingerprint moved is a fault |
 | Never restore into live and replay on top | wrapper | `merge` never calls `restore_applied`. For a module that has `merge`, `replace` refuses while live holds units newer than the backup, and names `merge` as the alternative. For a snapshot module, live is always newer, so the plan lists what `replace` will discard and `--force` applies it |
 | Verify after a restart, not after the write | wrapper | Restarts live through its compose before fingerprinting it again |
-| Merge only what live lacks | wrapper | Diffs the two fingerprints and hands `restore_merged` every unit where staged differs from live, not only where staged > live. A boundary day where live has more rows but is missing some of staged's must still merge, and the merge is idempotent. Verify is `L' >= S` per unit |
-| Never install over a regressed state | `install.sh` | A pre-install backup that comes back `regressed` abandons the install, like a failed one does, unless `FAB_FORCE_INSTALL=1`. On 22 Oct, releases 1848–1851 each installed on top of the reset. The guard would have stopped the first one, and the force flag is there for a release that is itself the repair |
+| Merge only what live lacks | wrapper | Diffs the two fingerprints and hands `restore_merged` every closed unit present in staged whose count differs from live's, not only where staged > live. A boundary day where live has more rows but is missing some of staged's must still merge, and the merge is idempotent. A unit only live holds is never planned. Verify is `L' >= S` per planned unit |
+| Never install over a state nothing judged | `install.sh` | A pre-install backup that comes back `regressed` abandons the install, like a failed one does. So does a skipped one: today `run_backup` skips when the container is not running and installs anyway. The only skips left are a first install (no current home) and a reinstall of the running version. `FAB_FORCE_INSTALL=1` overrides both, for a release that is itself the repair. On 22 Oct, 1848 and 1849 installed with no pre-install backup, and 1850 and 1851 over regressed ones. The guard would have stopped 1848, the first |
 | Never restore a regressed run by default | wrapper | `--from` defaults to the newest **accepted** run, never a `regressed` one, and naming a regressed run needs `--force`. A delta restores the source's whole state, not a diff (*Pressure test*), so restoring the post-loss delta would have wiped history |
 | One actor per module at a time | wrapper | `backup.sh`, `restore.sh` and `install.sh` take the same per-module `flock`. Today nothing locks, so a nightly stage, a release and a restore can interleave. The restore's own safety backup runs with pruning off, so it cannot prune the chain being restored |
 | A snapshot replace leaves nothing newer behind | wrapper | `restore_files` moves each declared include to `/home/asystem/<svc>/replaced/<run>/` before extracting, then carries back only entries matching the module's excludes, never SQLite sidecars (§8). So files created after the backup, and foreign WAL files, cannot survive it |
@@ -201,7 +208,7 @@ fingerprint S      scratch; every closed unit must hold at least the manifest's 
 restore_sealed     scratch now refuses writes
                    ── drill ends here: teardown, publish the drill state
 fingerprint L      live
-plan               units where S differs from L, printed; without --force stop here
+plan               closed units present in S whose count differs from L, printed; without --force stop here
 restore_merged     per planned unit, progress recorded
 restart live       stop/start through the module's compose
 fingerprint L'     every planned unit must have L' >= S, else fault naming the short units
@@ -321,7 +328,7 @@ Every enrolled backup was drilled by hand against its newest artifact, and all s
 | letsencrypt | `live/` symlinks survive into `archive/`, and the cert is valid to Jan 2027 | Default staging only; no check |
 | wrangle | The history files parse | Default staging only; no check |
 | supervisor | *Retracted.* A first reading said the 27 Oct nightly run stopped on all five hosts, at "promoting [supervisor] [1/N]". It did not. Every host's local `/home/asystem/supervisor/backup/2026-10-27_*/status.json` reads `success`, tertiary included. The misreading came from secondary: it promotes the run tree to the share *while that run is still running*, so the share copy of the current run always ends at that line, without `status.json`, until the next night re-copies it | Anything that judges a run reads the **local** run tree, never the share copy, which is a night behind by design. The rule that a run with no `status.json` after its timeout is a failure stays, applied to the local tree |
-| coverage | *Decided 2026-10-27:* homeassistant is enrolled (§8). **sonarr and sabnzbd are not enrolled, on either host, and their duplicate homes on may and mad are left as they are.** The shares' guest `0777` permissions are accepted as they are, with HA's tokens and letsencrypt's private key on them. Measured at the time: Not enrolled, but holding state git cannot rebuild: homeassistant `.storage` (9.2M, measured; 22M was the whole config dir: registries, auth, and the UI-configured integrations, influxdb included per `configuration.yaml`), sonarr `sonarr.db` (147M on may), and sabnzbd `history1.db`. sonarr and sabnzbd have homes on both may and mad | Decided: see the first cell |
+| coverage | *Decided 2026-10-27:* homeassistant is enrolled (§8). **sonarr and sabnzbd are not enrolled, on either host, and their duplicate homes on may and mad are left as they are**, because losing either costs no data: the media folders hold the real data, so sonarr's `sonarr.db` is rebuilt by re-adding the series and rescanning them, with its settings re-entered by hand, and sabnzbd's `history1.db` is download history that nothing later depends on. The shares' guest `0777` permissions are accepted as they are, with HA's tokens and letsencrypt's private key on them. Measured at the time: Not enrolled, but holding state git cannot rebuild: homeassistant `.storage` (9.2M, measured; 22M was the whole config dir: registries, auth, and the UI-configured integrations, influxdb included per `configuration.yaml`), sonarr `sonarr.db` (147M on may), and sabnzbd `history1.db`. sonarr and sabnzbd have homes on both may and mad | homeassistant is enrolled (§8). sonarr and sabnzbd stay out, for the reason recorded with the decision |
 
 **Second round, testing the assumptions the design added:**
 
@@ -333,7 +340,7 @@ Every enrolled backup was drilled by hand against its newest artifact, and all s
 | Sidecars can sit beside the archive | Three readers take the first file in the run dir as the artifact | `.meta/`, plus name-pattern selection (§1) |
 | One pruner owns every keep decision | supervisor's `gfsThin` thins tertiary snapshots and any secondary dir without an executable `backup.sh` | Refuses manifest-bearing dirs (§3) |
 | A missed Monday is harmless | A missed drill left its point counting for nothing forever | Catch-up drills (§5a) |
-| A pre-install backup protects the install | It runs and passes on a regressed state | Regressed aborts the install (invariants) |
+| A pre-install backup protects the install | It runs and passes on a regressed state, and `install.sh` skips it, then installs anyway, when the container is down | A regressed or skipped pre-install backup aborts the install (invariants) |
 
 **Third round, testing §7, §8 and wholesale replace:**
 
@@ -389,24 +396,27 @@ that has been shown to restore.
 
 - **When.** On the first nightly run of each ISO week (Monday, Perth), supervisor's secondary stage drills the
   previous week's weekly point **before** that night's `--prune-gfs`. Every run also catches up: it drills every
-  settled sparse point that has no `.meta/drill.json`. A Monday lost to an outage or a hung run is
+  settled sparse point that has no `.meta/secondary/drill.json`. A Monday lost to an outage or a hung run is
   then drilled the next night instead of never. On the first run of a month, it also drills
   the previous month's point, if that was not already the weekly one (a month that ends mid-week). That is the moment a
   point settles: GFS keeps the newest full in each ISO week and month, and for a module that takes a full every night,
   the newest full is only final once its bucket has closed.
 - **What.** `restore.sh --mode=drill --from=<point> --source=/share/<index>0/backup/<svc>`, on the module's own host,
   which has its image. It holds the module's `flock`, like every other actor.
-- **Where the result lives.** Supervisor writes `<run>/.meta/drill.json` into the drilled run's secondary dir, and publishes
-  the `drill` state. Tertiary mirrors it alongside the run, so the verdict travels with the artifact.
+- **Where the result lives.** Supervisor writes `<run>/.meta/secondary/drill.json` into the drilled run's secondary dir,
+  and publishes the `drill` state. Tertiary mirrors it alongside the run, so the verdict travels with the artifact.
+  Each stage writes only under its own `.meta/<stage>/`, so promotion, which copies primary's run dirs onto the share
+  with `rsync -a` and no `--delete`, can never overwrite the weekly verdict.
 - **It shows in `backup tail`.** The drill runs inside secondary, so supervisor logs one line per drilled point into
   `run.log` (`drilled [<svc>] point [<run>] as [success|failure] in [<s>] s`). A failure adds the first fault line
   from `restore.sh`, with the path of the drill's full `output.log`. A failed drill fails the secondary stage, so
   the summary row's secondary cell and the run's result read failure. Catch-up drills log the same way.
 - **Release drills reach it too.** `install.sh`'s post-start drill (§5) is not a supervisor run, so it records its
-  verdict in the pre-install run's `.meta/drill.json` with `trigger: release`. The next nightly primary stage logs
+  verdict in the pre-install run's `.meta/primary/drill.json`. The next nightly primary stage logs
   every release drill recorded since the previous run (`release drill of [<svc>] point [<run>] as […]`), and a
   failed one fails that stage. The release itself already prints the result as it happens.
-- **How pruning uses it.** A sparse point counts towards its tier's quota only once its `drill.json` is green. A point
+- **How pruning uses it.** A sparse point counts towards its tier's quota only once its `secondary/drill.json` is green.
+  A release drill's `primary/drill.json` is logged but never counts here. A point
   whose drill failed, or never ran because the run hung, is kept but counts for nothing. So the tier keeps reaching
   back, and **the oldest drilled point of a tier is never pruned until a newer one has drilled green.** A failed drill
   also publishes `drill` failed and counts as a failed stage in `Fail BKP` until a later drill of that module is
@@ -621,7 +631,7 @@ range cannot overlap anything live has written.
 | supervisor rejects an unknown backup state | `regressed` and `drill` are new words in a vocabulary `metric_schema.go` owns | supervisor releases first, with both words and the parity test |
 | The influxdb3 restarts | each release, and the merge, restart it | Accepted: a few seconds of supervisor metrics, nothing from HA (*Settled 2026-10-27*) |
 | The merge writes wrong data into live | it is the only step that writes history into production | Safety backup first, plan read before `--force`, verified after a restart. The pinned chain stays until a new full covers it |
-| A plex restore before phase 4 corrupts its databases | Today's `restore_files` extracts over live, leaving live's `-wal`/`-shm` beside the restored `.db` files (§8, round 3) | Until phase 4 ships wholesale replace, a plex restore by hand first moves `Plug-in Support/Databases/*-wal` and `*-shm` aside |
+| A plex restore before phase 4 corrupts its databases | Today's `restore_files` extracts over live, leaving live's `-wal`/`-shm` beside the restored `.db` files (§8, round 3) | Until phase 4 ships wholesale replace, a plex restore by hand stops plex, moves `Plug-in Support/Databases/*-wal` and `*-shm` aside, then runs `restore.sh`. Moving them while plex runs would leave it writing to an unlinked WAL |
 | A bad prune anywhere | | tertiary's read-only snapshots, which every phase leaves untouched. Tertiary ran on every host every night through 27 Oct |
 
 **Shadow pruning.** For the first release of each module, the new pruner computes its keep set and the old pruner's,
@@ -644,13 +654,13 @@ are expected, and neither matters while the pin holds.
 | 0 | ~~Pin the incident chain~~ Done: `/share/30/tmp/influxdb3-restore-2026-10-22/` | five runs, `cmp` and `gzip -t` clean |
 | 1 Durability | Drop `commit=600` from the four `fstab` sources, and apply it with `mount -o remount,commit=5` on each mount (no reboot needed). influxdb3 `entrypoint.sh` quarantine-and-refuse | `findmnt -no OPTIONS` shows no `commit=600` on any host. A drill on scratch: zero-length checkpoints make the entrypoint refuse to start, with the quarantine dir populated |
 | 1b postgres | §7: the bootstrap fragment restored, then the extension update added to it. One postgres release | Every database reports `extversion = default_version`. The generated `image/bootstrap.sh` holds the banner once. The pre-install backup taken just before this release stays as the rollback point until phase 4's drill of a post-update dump is green |
-| 1c homeassistant | Delete the two stale `.storage` migration copies and the six tested leftovers (§8). Ship `backup_files`' tar changes first: stderr to the run log for every module, and the exit-1 retry for a module declaring `_BACKUP_LIVE=atomic`. Without them a running HA copy fails intermittently with no reason (§8, round 3). Then enrol `.storage`, `custom_templates` and `blueprints`, excluding `.storage/tmp*`, `*.bak-*` and `*.migration_backup`. One homeassistant release. It is additive, so it does not wait for the framework: it gains manifests in phase 3 like every other module | The next nightly run shows homeassistant in primary and secondary. `backup_files` reports no unmatched entry. A bare `restore.sh` prints a plan naming exactly the three includes. The archive extracts into scratch |
-| 2 supervisor | `regressed` and `drill` states in `metric_schema.go`, the shell mirror, the parity test. Both feed `BKP` (false) and `Fail BKP` (a failed stage), with the two descriptions widened (§2). Report a run whose local `status.json` is missing after its timeout as failed | supervisor released to every host, parity test green, existing backup states unchanged in HA, a planted `regressed` run on a test module turns `BKP` false and `Fail BKP` non-zero, and `backup tail` of that run shows `as [regressed]` with its evidence line and a failed result; a planted failed drill shows the same way in the secondary cell, and two consecutive nightly runs complete on every host with tertiary |
+| 1c homeassistant | First, `backup_files`' tar changes, as a framework change: stderr to the run log, and the exit-1 retry for a module declaring `_BACKUP_LIVE=atomic`. Without them a running HA copy fails intermittently with no reason (§8, round 3). `backup_files` is inlined into each generated `backup.sh`, so regenerate every module, read every `backup.sh` diff, and release each module whose script changed (plex, letsencrypt and wrangle call it). Then stderr reaches the run log for every module once 1c lands, and phase 3's diffs hold only phase 3's change. Then delete the two stale `.storage` migration copies and the six tested leftovers (§8), and enrol `.storage`, `custom_templates` and `blueprints`, excluding `.storage/tmp*`, `*.bak-*` and `*.migration_backup`, in a homeassistant release. The enrolment is additive: it gains manifests in phase 3 like every other module | Every module whose `backup.sh` changed is released, and its next nightly run succeeds. The next nightly run shows homeassistant in primary and secondary. `backup_files` reports no unmatched entry. A bare `restore.sh` prints a plan naming exactly the three includes. The archive extracts into scratch |
+| 2 supervisor | `regressed` and `drill` states in `metric_schema.go`, the shell mirror, the parity test. A `regressed` run feeds `BKP` (false) and `Fail BKP` (a failed stage); a failed drill feeds `Fail BKP` only (§5a). The two descriptions widen (§2). Primary reads a new run's `.meta/manifest.json` after the script exits, records `regressed` beside `SuccessBool`, which stays true so secondary still promotes, and writes the evidence lines to `run.log` (§2). Secondary logs `drilled [...]` per drilled point, and primary logs release drills from `.meta/primary/drill.json` (§5a). A failed drill holds `Fail BKP` non-zero across runs: each run reads the module's newest `.meta/secondary/drill.json`, not only its own roll-up, until a later drill is green. Report a run whose local `status.json` is missing after its timeout as failed | supervisor released to every host, parity test green, existing backup states unchanged in HA, a planted `regressed` run on a test module turns `BKP` false and `Fail BKP` non-zero, still reaches the share, and `backup tail` of that run shows `as [regressed]` with its evidence line and a failed result; the next skipped run of that module does not re-report it; a planted failed drill shows the same way in the secondary cell, and two consecutive nightly runs complete on every host with tertiary |
 | 3 Backup side | Manifest, fingerprints, regression guard (report only: it publishes `regressed` and pins an anchor, but nothing waits on `--accept`), chain-aware pruner in shadow mode, influxdb3's raised window. Regenerate every module and read every generated `backup.sh` diff. Release in rising order of what a mistake would cost: letsencrypt, zigbee2mqtt, wrangle, homeassistant, mariadb, postgres, plex, influxdb3 | Per module: its pre-install and next nightly runs each write a manifest, no `Prune disagreement`, and secondary's GFS log deletes nothing it did not delete before |
 | 4 Restore side | Restore wrapper with chain resolution, `--source`, `replace`/`drill`/`merge`, and every wrapper-held invariant. Each module's staging, sealing and fingerprint hooks. `install.sh` drills after start, as a warning. `fab generate` fails a module defining `restore_merged` without deltas. postgres `restore_applied` rewritten per *Pressure test*, with the extension update after a `replace` (§7). Wholesale replace in `restore_files`, with exclude carry-back and no SQLite sidecars (§8). The per-module `flock` | Per module: its release drill is green. A deliberately corrupted artifact (`--file` pointing at a truncated copy) fails the drill by name, so the drill is shown to bite |
 | 5 Recover | influxdb3 `restore_merged`. A drill against the pinned chain, then a bare `merge` run to read the plan, then `--force` | Plan lists every table's days 2026-08-13 → 2026-10-21 and nothing after. The post-restart fingerprint holds every unit. HA's log has no `Catching up, dropped`. Grafana shows the history |
 | 6 Release the pin | `backup.sh --full` straight after the merge. Wait for its secondary copy and tertiary snapshot. Then do the incident cleanup in *Cleanup* | That full's fingerprint covers every unit of the staged chain's. Only then delete the post-loss runs and the pin |
-| 7 Steady state | Remove the old pruner after 7 clean nights per module. The regression guard enforces (an anchor holds until `--accept`). GFS-synced weekly drills (§5a) start, and pruning requires a green `drill.json`. Every existing sparse point is drilled once to backfill its `drill.json`. Until then it counts for nothing and is kept, which is safe but is residue | Fold the durable rules into supervisor's `CLAUDE.md` Backup section, and delete this plan. The residue check below comes back empty |
+| 7 Steady state | Remove the old pruner after 7 clean nights per module. The regression guard enforces (an anchor holds until `--accept`). GFS-synced weekly drills (§5a) start, and pruning requires a green `.meta/secondary/drill.json`. Every existing sparse point is drilled once to backfill it. Until then it counts for nothing and is kept, which is safe but is residue | Fold the durable rules into supervisor's `CLAUDE.md` Backup section, and delete this plan. The residue check below comes back empty |
 
 ## Cleanup
 
@@ -700,7 +710,7 @@ grep -rn 'commit=600' src | grep -v -E '/target/|/\.deps/'
 ssh root@<each server> 'findmnt -rno OPTIONS | grep commit=600'
 ssh root@<each server> 'docker ps -a --format {{.Names}} | grep _restore$'
 ssh root@<each server> 'ls -d /home/asystem/*/restore /home/asystem/*/replaced/* /home/asystem/influxdb3/latest/cluster_1/cv2/quarantine 2>/dev/null'
-ssh root@macmini-meg 'cd /home/asystem/homeassistant/latest && ls -d .storage/*.bak-* .storage/*.migration_backup checkready.sh influxdb-ignores.yaml ui-panel-custom.yaml scripts.yaml entities.yaml python_scripts 2>/dev/null'
+ssh root@macmini-meg 'cd /home/asystem/homeassistant/latest && ls -d .storage/core.entity_registry.bak-20261009140938 .storage/core.device_registry.20260810_040425.migration_backup checkready.sh influxdb-ignores.yaml ui-panel-custom.yaml scripts.yaml entities.yaml python_scripts 2>/dev/null'
 ssh root@macmini-may 'ls -d /tmp/backup /share/30/tmp/influxdb3-restore-* /share/30/backup/influxdb3/2026-10-22_08-* 2>/dev/null'
 for f in src/*/*/src/main/resources/image/bootstrap.sh; do [ "$(grep -c 'WARNING: This file is written' "$f")" -gt 1 ] && echo "$f"; done
 for db in hass mlflow postgres template1 wrangle; do ssh root@macmini-mad "docker exec postgres psql -X -U postgres -d $db -Atc \"SELECT '$db' FROM pg_available_extensions WHERE name = 'timescaledb' AND installed_version <> default_version\""; done
