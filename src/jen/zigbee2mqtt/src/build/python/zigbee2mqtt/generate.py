@@ -1,9 +1,6 @@
-import pandas as pd
 import yaml
 
 from asystem import *
-
-pd.options.mode.chained_assignment = None
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 

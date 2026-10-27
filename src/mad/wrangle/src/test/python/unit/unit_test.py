@@ -123,7 +123,7 @@ class WrangleTest(unittest.TestCase):
             "corrupt_1",
             rerun=False,
             force=True,
-            errored={plugin.CTR_SRC_FILES: 1},
+            errored={plugin.CTR_SRC_DATA: 1, plugin.CTR_SRC_FILES: 1},
             file_asserts={
                 "__bank_balances_current.csv": [assert_file_does_not_exist()],
             },
@@ -379,17 +379,18 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # An unreadable current balances file is kept and errors the file
+    # An unreadable current balances file is kept and errors the file, transactions still fetched
     def test_bank_local_corrupt_11(self):
         self._bank_run(
             "corrupt_11",
             source=True,
             rerun=False,
-            errored={plugin.CTR_SRC_FILES: 1},
-            counters={plugin.CTR_SRC_SOURCES: {plugin.CTR_ACT_DOWNLOADED: 0}},
+            errored={plugin.CTR_SRC_DATA: 1, plugin.CTR_SRC_FILES: 1},
+            counters={plugin.CTR_SRC_SOURCES: {plugin.CTR_ACT_DOWNLOADED: 1}},
             file_asserts={
                 "redbark_balances_2026.csv": [assert_file_does_exist()],
                 "__bank_balances_current.csv": [assert_file_does_not_exist()],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["FILE_UNREADABLE"])],
             },
         )
 
@@ -436,7 +437,7 @@ class WrangleTest(unittest.TestCase):
             "corrupt_16",
             source=True,
             rerun=False,
-            errored={plugin.CTR_SRC_FILES: 1},
+            errored={plugin.CTR_SRC_DATA: 1, plugin.CTR_SRC_FILES: 1},
             file_asserts={
                 "redbark_transactions_2026.csv": [assert_file_does_exist()],
                 "__bank_transactions_current.csv": [assert_file_does_not_exist()],
@@ -1064,7 +1065,7 @@ class WrangleTest(unittest.TestCase):
             "corrupt_15",
             standing=2,
             rerun=False,
-            errored={plugin.CTR_SRC_FILES: 1},
+            errored={plugin.CTR_SRC_DATA: 1, plugin.CTR_SRC_FILES: 1},
             file_asserts={
                 "redbark_transactions_2026.csv": [assert_file_does_exist()],
                 "__bank_transactions_current.csv": [assert_file_size(min_rows=1, max_rows=1), assert_file_dates(start_date="2025-12-03", end_date="2025-12-03")],
@@ -1143,12 +1144,12 @@ class WrangleTest(unittest.TestCase):
         self._bank_run(
             "corrupt_32",
             rerun=False,
-            errored={plugin.CTR_SRC_DATA: 1, plugin.CTR_SRC_FILES: 1},
+            errored={plugin.CTR_SRC_DATA: 2, plugin.CTR_SRC_FILES: 1},
             file_asserts={
                 "manual_transactions_2026.csv": [assert_file_columns(["Date", "Account", "Amount", "Description"])],
                 "manual_transactions_2025.csv": [assert_file_does_exist()],
                 "__bank_transactions_current.csv": [assert_file_does_not_exist()],
-                "__bank_logs.csv": [assert_file_column_values("Code", ["FILE_UNREADABLE"])],
+                "__bank_logs.csv": [assert_file_column_values("Tab", ["manual_transactions_2025.csv", "manual_transactions_2026.csv"], sort_by=["Tab"])],
             },
         )
 
@@ -1308,7 +1309,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A forced download dates held history but adds or drops nothing before the window
+    # A forced download dates held history, adds what Redbark lists across the whole history and reports what it no longer lists
     def test_bank_local_partial_53(self):
         self._bank_run(
             "partial_53",
@@ -1318,13 +1319,16 @@ class WrangleTest(unittest.TestCase):
             downloads=True,
             file_asserts={
                 "redbark_transactions_2025.csv": [
-                    assert_file_column_values("Source ID", ["t5", "t8"], sort_by=["Date"]),
-                    assert_file_column_values("Date", ["2025-06-09", "2025-08-01"], sort_by=["Date"]),
-                    assert_file_column_values("Date Posted", ["2025-06-10", "2025-08-02"], sort_by=["Date"]),
+                    assert_file_column_values("Source ID", ["t5", "t7", "t8"], sort_by=["Date"]),
+                    assert_file_column_values("Date", ["2025-06-09", "2025-07-01", "2025-08-01"], sort_by=["Date"]),
+                    assert_file_column_values("Date Posted", ["2025-06-10", "2025-07-02", "2025-08-02"], sort_by=["Date"]),
                 ],
                 "redbark_transactions_2026.csv": [assert_file_column_values("Source ID", ["t6"])],
                 "__bank_logs.csv": [
-                    assert_file_column_values("Code", ["TRANSACTIONS_UNCLASSIFIED", "TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED", "TRANSACTIONS_UNVETTED_CURRENT"], sort_by=["Code"])
+                    assert_file_column_values(
+                        "Code", ["TRANSACTIONS_UNCLASSIFIED", "TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED", "TRANSACTIONS_UNVETTED_CURRENT", "TRANSACTION_GONE"], sort_by=["Code"]
+                    ),
+                    assert_file_column_values("Key", ["2025", "2026", "2025", "2026", "t8"], sort_by=["Code"]),
                 ],
             },
         )
@@ -1377,21 +1381,122 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # Each card's import carries its last balance, or zero, to today, and the unmoved carried balance is a current month warning
+    # A card's import carries its last balance to today, one without a reading carries none and stays stale, and the unmoved carried balance is a current month warning
     def test_bank_local_partial_71(self):
         self._bank_run(
             "partial_71",
             rerun=False,
+            errored={plugin.CTR_SRC_DATA: 1},
             file_asserts={
                 "manual_balances_2026.csv": [
-                    assert_file_column_values("Account", ["Card", "Card", "Other Card"], sort_by=["Date", "Account"]),
-                    assert_file_column_values("Date", ["2026-01-10", "2026-01-15", "2026-01-15"], sort_by=["Date", "Account"]),
-                    assert_file_column_values("Balance Manual", ["-100.0", "-100.0", "0.0"], sort_by=["Date", "Account"]),
+                    assert_file_column_values("Account", ["Card", "Card"], sort_by=["Date", "Account"]),
+                    assert_file_column_values("Date", ["2026-01-10", "2026-01-15"], sort_by=["Date", "Account"]),
+                    assert_file_column_values("Balance Manual", ["-100.0", "-100.0"], sort_by=["Date", "Account"]),
                 ],
                 "__bank_logs.csv": [
-                    assert_file_column_values("Code", ["BALANCE_UNRECONCILED_CURRENT", "TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED_CURRENT"], sort_by=["Code"]),
-                    assert_file_column_values("Key", ["Card 2026-01-15", "2026", "2026"], sort_by=["Code"]),
+                    assert_file_column_values("Code", ["BALANCE_MANUAL_STALE", "BALANCE_UNRECONCILED_CURRENT", "TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED_CURRENT"], sort_by=["Code"]),
+                    assert_file_column_values("Key", ["Other Card", "Card 2026-01-15", "2026", "2026"], sort_by=["Code"]),
                 ],
+            },
+        )
+
+    # An Accounts tab with a duplicate row leaves a year tab's edits unmerged, the tab not uploaded over them and its base kept
+    def test_bank_local_partial_75(self):
+        self._bank_run(
+            "partial_75",
+            rerun=False,
+            errored={plugin.CTR_SRC_SOURCES: 1},
+            file_asserts={
+                "redbark_transactions_2026.csv": [assert_file_column_values("Vetted", ["Yes", "Yes", None, None, None, None], sort_by=["Date"])],
+                "_sheet_bank_transactions_2026_v1.csv": [assert_file_does_not_exist()],
+                "__bank_tab_transactions_2026.csv": [assert_file_column_values("Vetted", [None, None, None, None, "Yes", "Yes"])],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["TAB_UNUSABLE", "TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED_CURRENT"], sort_by=["Code"])],
+            },
+        )
+
+    # An Accounts tab with a duplicate row holds a changed manual file's year unchecked, nothing committed
+    def test_bank_local_partial_76(self):
+        self._bank_run(
+            "partial_76",
+            rerun=False,
+            errored={plugin.CTR_SRC_SOURCES: 1},
+            file_asserts={
+                "manual_transactions_2026.csv": [assert_file_column_values("Vetted", ["Yse"])],
+                "__bank_transactions_current.csv": [assert_file_does_not_exist()],
+                "__bank_committed.json": [assert_file_does_not_exist()],
+            },
+        )
+
+    # A manual balance dated outside its file's year is an error holding the file's year, its account then without a reading
+    def test_bank_local_partial_77(self):
+        self._bank_run(
+            "partial_77",
+            rerun=False,
+            errored={plugin.CTR_SRC_DATA: 2},
+            file_asserts={
+                "__bank_balances_current.csv": [assert_file_does_not_exist()],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["BALANCE_MANUAL_STALE", "DATE_YEAR"], sort_by=["Code"])],
+            },
+        )
+
+    # An export spanning a year whose manual file is unreadable imports the other year but is not recorded as imported
+    def test_bank_local_partial_78(self):
+        def _export_unrecorded(_first, _second, _third, local_cache=""):
+            with open(join(local_cache, "__bank_committed.json")) as committed_file:
+                recorded = sorted(json.load(committed_file))
+            return None if recorded == ["manual_balances_2026.csv", "manual_transactions_2026.csv"] else f"recorded [{', '.join(recorded)}]"
+
+        self._bank_run(
+            "partial_78",
+            rerun=False,
+            errored={plugin.CTR_SRC_DATA: 2, plugin.CTR_SRC_FILES: 1},
+            custom_asserts=[_export_unrecorded],
+            file_asserts={
+                "manual_transactions_2026.csv": [assert_file_column_values("Description", ["CAFE ONE"])],
+                "__bank_logs.csv": [
+                    assert_file_column_values("Code", ["FILE_UNREADABLE", "FILE_UNREADABLE", "TRANSACTIONS_UNCLASSIFIED_CURRENT", "TRANSACTIONS_UNVETTED_CURRENT"], sort_by=["Code"]),
+                    assert_file_column_values("Tab", ["Transactions_2026", "Transactions_2026", "amex_xxxx0002_transactions_2026-01-14.csv", "manual_transactions_2025.csv"], sort_by=["Tab"]),
+                ],
+            },
+        )
+
+    # A reprocess with an invalid manual file of the year before keeps that year's committed transactions and balances
+    def test_bank_local_partial_79(self):
+        self._bank_run(
+            "partial_79",
+            rerun=False,
+            force=True,
+            errored={plugin.CTR_SRC_DATA: 2},
+            file_asserts={
+                "__bank_transactions_current.csv": [assert_file_column_values("Date", ["2025-11-04", "2026-01-03"], sort_by=["Date"])],
+                "__bank_balances_current.csv": [assert_file_column_values("Date", ["2025-11-30", "2026-01-10"], sort_by=["Date"])],
+            },
+        )
+
+    # A manual file not in UTF-8 is unreadable and holds its year, the run not stopped renaming columns
+    def test_bank_local_corrupt_43(self):
+        self._bank_run(
+            "corrupt_43",
+            rerun=False,
+            errored={plugin.CTR_SRC_DATA: 1, plugin.CTR_SRC_FILES: 1},
+            file_asserts={
+                "manual_transactions_2026.csv": [assert_file_does_exist()],
+                "__bank_transactions_current.csv": [assert_file_does_not_exist()],
+                "__bank_logs.csv": [assert_file_column_values("Code", ["FILE_UNREADABLE"])],
+            },
+        )
+
+    # A manual file whose rows move into a file itself held by an unreadable year is held in turn
+    def test_bank_local_corrupt_44(self):
+        self._bank_run(
+            "corrupt_44",
+            rerun=False,
+            errored={plugin.CTR_SRC_DATA: 3, plugin.CTR_SRC_FILES: 1},
+            file_asserts={
+                "manual_transactions_2024.csv": [assert_file_column_values("Description", ["Snack"])],
+                "manual_transactions_2025.csv": [assert_file_column_values("Description", ["Coffee"])],
+                "__bank_transactions_current.csv": [assert_file_does_not_exist()],
+                "__bank_logs.csv": [assert_file_column_values("Tab", ["manual_transactions_2024.csv", "manual_transactions_2025.csv", "manual_transactions_2026.csv"], sort_by=["Tab"])],
             },
         )
 

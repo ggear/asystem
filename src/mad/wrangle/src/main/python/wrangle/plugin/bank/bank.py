@@ -310,6 +310,7 @@ ERROR_CODES = {
     "BALANCE_DUPLICATE": (plugin.LOG_KIND_ERROR, False, False, plugin.CTR_SRC_DATA),
     "DATE_BEFORE_FROM": (plugin.LOG_KIND_ERROR, False, False, plugin.CTR_SRC_DATA),
     "DATE_FUTURE": (plugin.LOG_KIND_ERROR, False, False, plugin.CTR_SRC_DATA),
+    "DATE_YEAR": (plugin.LOG_KIND_ERROR, False, False, plugin.CTR_SRC_DATA),
     "ACCOUNT_LINKED": (plugin.LOG_KIND_ERROR, False, False, plugin.CTR_SRC_DATA),
     "SPLIT_INVALID": (plugin.LOG_KIND_ERROR, False, False, plugin.CTR_SRC_DATA),
     "TRANSACTION_DECIMALS": (plugin.LOG_KIND_ERROR, False, False, plugin.CTR_SRC_DATA),
@@ -460,9 +461,12 @@ class Bank(plugin.Plugin):
             return files_read[_key]
 
         def _bank_unreadable(_path: str, _exception: Exception):
+            if _path in files_unreadable:
+                return
             files_unreadable.add(_path)
             self.print_log(f"File [{basename(_path)}] unreadable, kept and skipped", exception=_exception)
             self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED)
+            _bank_error(basename(_path), "file", "FILE_UNREADABLE", f"file unreadable [{_exception}], kept and skipped until fixed")
 
         def _bank_readable(_path: str, _schema: dict) -> pl.DataFrame | None:
             if _path in files_unreadable or _path in files_invalid:
@@ -559,8 +563,12 @@ class Bank(plugin.Plugin):
         for path in glob.glob(f"{self.local_cache}/*.csv"):
             if basename(path).startswith("_sheet_"):
                 continue
-            with open(path, encoding="utf-8", newline="") as handle:
-                header, rest = handle.readline(), handle.read()
+            try:
+                with open(path, encoding="utf-8", newline="") as handle:
+                    header, rest = handle.readline(), handle.read()
+            except Exception as exception:
+                self.print_log(f"File [{basename(path)}] columns not renamed, unreadable", exception=exception)
+                continue
             columns = next(csv.reader([header]), [])
             if set(columns) & set(COLUMNS_RENAMED):
                 with open(path, "w", encoding="utf-8", newline="") as handle:
@@ -980,9 +988,13 @@ class Bank(plugin.Plugin):
 
             normalised_frames: dict[str, pl.DataFrame] = {}
             for path in _bank_paths("manual_transactions"):
-                if not _bank_changed(path) or not accounts_usable:
+                if not _bank_changed(path):
                     continue
                 file_name, file_year = basename(path), _bank_file(path)[1]
+                if not accounts_usable:
+                    years_held.add(file_year)
+                    self.print_log(f"File [{file_name}] left as is, unchecked with the Accounts tab unusable", level="warn")
+                    continue
                 try:
                     rows_df = _bank_operator_rows(path, list(TRANSACTIONS_SCHEMA))
                 except Exception as exception:
@@ -1070,17 +1082,24 @@ class Bank(plugin.Plugin):
                     pl.lit(None, dtype=pl.Utf8).alias("Transaction ID"),
                 )
                 normalised_frames[path] = normalised_df
-            for path, normalised_df in normalised_frames.items():
-                file_name, file_year = basename(path), _bank_file(path)[1]
-                unmovable = [
-                    year
-                    for year in sorted(set(normalised_df["Date"].dt.year().to_list()) - {file_year})
-                    if _bank_path("manual_transactions", year) not in normalised_frames and (year in years_held or not _bank_writable(_bank_path("manual_transactions", year)))
-                ]
-                if unmovable:
-                    _bank_error(file_name, ", ".join(str(year) for year in unmovable), "FILE_UNREADABLE", "rows dated in a year whose manual file is unreadable or invalid, left as is")
-                    years_held.add(file_year)
-                    files_invalid.add(path)
+            unmoved = True
+            while unmoved:
+                unmoved = False
+                for path, normalised_df in normalised_frames.items():
+                    if path in files_invalid:
+                        continue
+                    file_name, file_year = basename(path), _bank_file(path)[1]
+                    unmovable = [
+                        year
+                        for year in sorted(set(normalised_df["Date"].dt.year().to_list()) - {file_year})
+                        if (_bank_path("manual_transactions", year) not in normalised_frames or _bank_path("manual_transactions", year) in files_invalid)
+                        and (year in years_held or not _bank_writable(_bank_path("manual_transactions", year)))
+                    ]
+                    if unmovable:
+                        _bank_error(file_name, ", ".join(str(year) for year in unmovable), "FILE_UNREADABLE", "rows dated in a year whose manual file is unreadable or invalid, left as is")
+                        years_held.add(file_year)
+                        files_invalid.add(path)
+                        unmoved = True
             for path in [path for path in normalised_frames if path in files_invalid]:
                 del normalised_frames[path]
             for year in sorted({year for normalised_df in normalised_frames.values() for year in normalised_df["Date"].dt.year().to_list()} | {_bank_file(path)[1] for path in normalised_frames}):
@@ -1091,14 +1110,18 @@ class Bank(plugin.Plugin):
                 _bank_write(pl.concat([pl.DataFrame(schema=TRANSACTIONS_SCHEMA), *year_frames], how="vertical_relaxed"), year_path, "normalised")
 
             for path in _bank_paths("manual_balances"):
-                if not _bank_changed(path) or not accounts_usable:
+                if not _bank_changed(path):
                     continue
-                file_name = basename(path)
+                file_name, file_year = basename(path), _bank_file(path)[1]
+                if not accounts_usable:
+                    balances_held.add(file_year)
+                    self.print_log(f"File [{file_name}] left as is, unchecked with the Accounts tab unusable", level="warn")
+                    continue
                 try:
                     rows_df = _bank_operator_rows(path, list(BALANCES_SCHEMA))
                 except Exception as exception:
                     _bank_unreadable(path, exception)
-                    balances_held.add(_bank_file(path)[1])
+                    balances_held.add(file_year)
                     continue
                 rows_df = _bank_operator_accounts(
                     rows_df.with_columns(
@@ -1115,13 +1138,16 @@ class Bank(plugin.Plugin):
                     elif row["__time"] is None:
                         _bank_error(file_name, f"row {row['__row']}", "VALUE_UNPARSED", f"time [{row['Time']}] unparsed")
                         file_valid = False
+                    elif row["__date"].year != file_year:
+                        _bank_error(file_name, f"row {row['__row']}", "DATE_YEAR", f"date [{row['__date']}] outside the file's year, move it to the file of its year")
+                        file_valid = False
                 for row in rows_df.filter(pl.struct(["__date", "__time", "__account_id"]).is_duplicated() & pl.col("__account_id").is_not_null()).iter_rows(named=True):
                     _bank_error(file_name, f"row {row['__row']}", "BALANCE_DUPLICATE", f"account [{row['__account_name']}] date [{row['__date']}] time [{row['__time']}] entered twice")
                     file_valid = False
                 normalised_counts["files"] += 1
                 if not file_valid:
                     normalised_counts["invalid"] += 1
-                    balances_held.add(_bank_file(path)[1])
+                    balances_held.add(file_year)
                     files_invalid.add(path)
                     self.print_log(f"File [{file_name}] left as is, invalid rows", level="warn")
                     continue
@@ -1331,8 +1357,6 @@ class Bank(plugin.Plugin):
         linked_schema = {"Redbark Account ID": pl.Utf8, "Redbark Connection ID": pl.Utf8, "Account ID": pl.Utf8, "From First": pl.Date, "Name": pl.Utf8, "Institution": pl.Utf8}
         linked_df = pl.DataFrame(schema=linked_schema)
         balances_year_df = _bank_readable(balances_year_path, BALANCES_SCHEMA) if balances_due and isfile(balances_year_path) else pl.DataFrame(schema=BALANCES_SCHEMA)
-        if balances_year_df is None:
-            balances_due, balances_year_df = False, pl.DataFrame(schema=BALANCES_SCHEMA)
         if balances_due:
             if accounts_usable:
                 linked_df = _bank_accounts_current().filter((pl.col("Status") == ACCOUNT_STATUS_LINKED) & pl.col("Redbark Account ID").is_not_null()).select(list(linked_schema))
@@ -1413,6 +1437,8 @@ class Bank(plugin.Plugin):
             linked_ids = linked_df["Redbark Account ID"].to_list()
             if len(linked_ids) == 0:
                 self.print_log("Balances check skipped, no linked accounts", level="debug")
+            elif balances_year_df is None:
+                self.print_log(f"Balances check skipped, file [{basename(balances_year_path)}] unreadable", level="warn")
             else:
                 readings_df = _bank_balances_fetched(linked_ids)
                 if len(readings_df):
@@ -1464,10 +1490,10 @@ class Bank(plugin.Plugin):
                         _history = max(_account["From First"] or date(1, 1, 1), today - timedelta(days=TRANSACTIONS_HISTORY_DAYS))
                         _from = held_latest[_account["Account ID"]] - timedelta(days=TRANSACTIONS_LEEWAY_DAYS) if _account["Account ID"] in held_latest else _history
                         _check = max(min(_from, today - timedelta(days=TRANSACTIONS_SWEEP_DAYS)), _history) if sweep_due else _from
+                        if plugin.config.force_downloads:
+                            _from = _check = _history
                         transactions_windows[_account["Account ID"]] = (_from, _check)
-                        _paths[_account["Account ID"]] = (
-                            f"/v1/transactions?connectionId={_account['Redbark Connection ID']}&accountId={_account['Redbark Account ID']}&from={_history if plugin.config.force_downloads else _check}"
-                        )
+                        _paths[_account["Account ID"]] = f"/v1/transactions?connectionId={_account['Redbark Connection ID']}&accountId={_account['Redbark Account ID']}&from={_check}"
                     _result = self.redbark_download(list(_paths.values()), redbark_transactions_file, REDBARK_TRANSACTIONS_COLUMNS, ignore=True)
                     _failed = {_error["Path"]: _error for _error in _result.errors}
                     _rows_df = _result.data_frame
@@ -1709,6 +1735,7 @@ class Bank(plugin.Plugin):
         exports: dict[str, tuple[pl.DataFrame, str | None]] = {}
         exports_md5: dict[str, str] = {}
         exports_imported: set[str] = set()
+        exports_written: dict[str, set[str]] = {}
 
         # 4.3 Import Exports
         def _bank_exports_imported():
@@ -1783,14 +1810,16 @@ class Bank(plugin.Plugin):
                     exports_spans.setdefault(cast(str, account_id), []).append((cast(date, export_df["Date"].min()), cast(date, export_df["Date"].max())))
                 if not plugin.config.force_downloads and (plugin.config.force_reprocessing or files_committed.get(basename(path)) == exports_md5[path]):
                     continue
-                exports_imported.add(path)
                 file_counts = {"added": 0, "held": 0}
+                file_skipped = False
                 for year in sorted(set(keys_df["Date"].dt.year().to_list())):
                     year_df = _bank_year_frame(year)
                     manual_path = _bank_path("manual_transactions", year)
                     if year_df is None or not _bank_writable(manual_path):
                         _bank_error(basename(path), str(year), "FILE_UNREADABLE", f"year [{year}] has an unreadable file, export rows not imported")
+                        file_skipped = True
                         continue
+                    exports_written.setdefault(path, set()).update(year_df["__path"].unique().to_list() + [manual_path])
                     held_ordinals_df = (
                         year_df.filter((pl.col("Account ID") == account_id) & pl.col("Transaction ID").is_not_null())
                         .unique("Transaction ID", keep="first", maintain_order=True)
@@ -1833,6 +1862,8 @@ class Bank(plugin.Plugin):
                             "imported",
                         )
                         file_counts["added"] += len(added_df)
+                if not file_skipped:
+                    exports_imported.add(path)
                 exports_counts["added"] += file_counts["added"]
                 exports_counts["held"] += file_counts["held"]
                 self.print_log(f"File [{basename(path)}] imported [{len(export_df)}] added [{file_counts['added']}] held [{file_counts['held']}]")
@@ -1847,8 +1878,8 @@ class Bank(plugin.Plugin):
                 readings_df = _bank_manual_readings().filter(pl.col("Balance Manual").is_not_null()).sort(["Date", "Time"])
                 for account_id in carried_ids:
                     account_readings_df = readings_df.filter(pl.col("Account ID") == account_id)
-                    if len(account_readings_df.filter(pl.col("Date") >= today)) == 0:
-                        carried = account_readings_df["Balance Manual"][-1] if len(account_readings_df) else 0.0
+                    if len(account_readings_df) and len(account_readings_df.filter(pl.col("Date") >= today)) == 0:
+                        carried = account_readings_df["Balance Manual"][-1]
                         carried_rows.append(
                             {
                                 "Date": today,
@@ -2105,6 +2136,11 @@ class Bank(plugin.Plugin):
             def _transactions_aggregate_function(_data_df):
                 return _data_df.select(list(TRANSACTIONS_STATE_SCHEMA)).with_columns(cs.float().round(2))
 
+            def _bank_state_kept(_current_file: str, _schema: dict, _years: set[int]) -> pl.DataFrame:
+                if not _years or not isfile(_current_file):
+                    return pl.DataFrame(schema=_schema)
+                return _bank_read(_current_file, _schema).filter(pl.col("Date").dt.year().is_in(sorted(_years)))
+
             # 6.1 Commit Balances
             def _bank_balances_carried(_balances_df: pl.DataFrame) -> pl.DataFrame:
                 _manual_ids = _bank_accounts_current().filter(pl.col("Status") == ACCOUNT_STATUS_MANUAL)["Account ID"]
@@ -2157,12 +2193,17 @@ class Bank(plugin.Plugin):
                     .filter(pl.col("Date").dt.year().is_in(balances_committed))
                 )
                 balances_df = _bank_accounts_applied(balances_df, accounts_df).select(list(BALANCES_STATE_SCHEMA)).sort(BALANCES_KEY_COLUMNS)
+                balances_partitioned = isfile(balances_current_file) and not plugin.config.force_reprocessing
+                if not balances_partitioned:
+                    balances_df = pl.concat([balances_df, _bank_state_kept(balances_current_file, BALANCES_STATE_SCHEMA, set(balances_years) - set(balances_committed))], how="vertical_relaxed").sort(
+                        BALANCES_KEY_COLUMNS
+                    )
                 balances_delta_df, _, _ = self.state_cache(
                     balances_df,
                     _balances_aggregate_function,
                     key_columns=BALANCES_KEY_COLUMNS,
                     name="bank_balances",
-                    replace=pl.col("Date").dt.year().is_in(balances_committed) if isfile(balances_current_file) and not plugin.config.force_reprocessing else None,
+                    replace=pl.col("Date").dt.year().is_in(balances_committed) if balances_partitioned else None,
                 )
                 if not isfile(balances_current_file):
                     self.csv_write(pl.DataFrame(schema=BALANCES_STATE_SCHEMA), balances_current_file, print_rows=0)
@@ -2187,6 +2228,10 @@ class Bank(plugin.Plugin):
             transactions_df = pl.concat(transactions_frames, how="vertical_relaxed").sort(TRANSACTIONS_KEY_COLUMNS)
             if transactions_committed:
                 transactions_partitioned = isfile(transactions_current_file) and not transactions_stale and not plugin.config.force_reprocessing
+                if not transactions_partitioned:
+                    transactions_df = pl.concat(
+                        [transactions_df, _bank_state_kept(transactions_current_file, TRANSACTIONS_STATE_SCHEMA, set(transactions_years) - set(transactions_committed))], how="vertical_relaxed"
+                    ).sort(TRANSACTIONS_KEY_COLUMNS)
                 transactions_delta_df, _, _ = self.state_cache(
                     transactions_df,
                     _transactions_aggregate_function,
@@ -2438,6 +2483,8 @@ class Bank(plugin.Plugin):
             tabs_status: dict[str, plugin.UploadStatus] = {}
             if balances_held or tab_edited.get("Balances", set()) & files_conflicted:
                 self.print_log("Sheet [Bank:Balances] skipped, a balances file conflicted on Drive or was left as committed", level="warn")
+            elif not accounts_usable and "Balances" in sheet_files:
+                self.print_log("Sheet [Bank:Balances] skipped, its edits unmerged with the Accounts tab unusable", level="warn")
             elif len(balances_current_df):
                 started_time = time.time()
                 manual_ids = _bank_manual_readings()["Balance ID"].implode()
@@ -2469,6 +2516,9 @@ class Bank(plugin.Plugin):
                 tab = f"Transactions_{year}"
                 if year in years_conflicted or year in years_held:
                     self.print_log(f"Sheet [Bank:{tab}] skipped, a file of its year conflicted on Drive or was left as committed", level="warn")
+                    continue
+                if not accounts_usable and tab in sheet_files:
+                    self.print_log(f"Sheet [Bank:{tab}] skipped, its edits unmerged with the Accounts tab unusable", level="warn")
                     continue
                 started_time = time.time()
                 year_sheet_df = _bank_tab_rendered(transactions_current_df.filter(pl.col("Date").dt.year() == year))
@@ -2600,8 +2650,8 @@ class Bank(plugin.Plugin):
                     held = year in balances_held or (_bank_changed(path) and year not in balances_committed)
                 if path not in files_conflicted and path not in files_unreadable and not held:
                     files_recorded[basename(path)] = cast(str, _bank_md5(path))
-            for path in exports:
-                if path not in files_conflicted and (path in exports_imported or basename(path) in files_committed):
+            for path in exports_imported:
+                if path not in files_conflicted and not exports_written.get(path, set()) & files_conflicted:
                     files_recorded[basename(path)] = exports_md5[path]
             if files_recorded != files_committed:
                 with open(f"{files_committed_file}.tmp", "w") as files_committed_handle:

@@ -1,11 +1,7 @@
 import json
 from os.path import abspath, dirname, join, realpath
 
-import pandas as pd
-
 from asystem import load_bootstrap_entities
-
-pd.options.mode.chained_assignment = None
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 

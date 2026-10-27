@@ -7,7 +7,6 @@ from datetime import UTC, datetime
 from os.path import abspath, dirname, expanduser, isdir, join, realpath
 
 import osxphotos
-import pandas as pd
 import urllib3
 from osxphotos import ExportOptions, PhotoExporter
 from pathvalidate import sanitize_filepath
@@ -15,7 +14,6 @@ from pathvalidate import sanitize_filepath
 from asystem import load_bootstrap_env
 
 urllib3.disable_warnings()
-pd.options.mode.chained_assignment = None
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 

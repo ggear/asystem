@@ -1,0 +1,7 @@
+Date,Date Posted,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Notes,Vetted,Category Manual,Category Auto,Category,Account ID,Source ID,Transaction ID
+2026-01-08,,One,-8.0,-8.0,Filler 8,,,,,,,,540a8918175f5ca38559395087eb552c,,
+2026-01-07,,One,-7.0,-7.0,Filler 7,,,,,,,,540a8918175f5ca38559395087eb552c,,
+2026-01-06,,One,-6.0,-6.0,Filler 6,,,,,,,,540a8918175f5ca38559395087eb552c,,
+2026-01-05,,One,-30.0,-30.0,Split,,,,,,,,540a8918175f5ca38559395087eb552c,,
+2026-01-04,,One,-20.0,-20.0,Fuel,,,,Yes,,Car,,540a8918175f5ca38559395087eb552c,,
+2026-01-03,,One,-10.0,-10.0,Shop,,,,Yes,,Food,,540a8918175f5ca38559395087eb552c,,

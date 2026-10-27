@@ -4,14 +4,12 @@ import sys
 from glob import glob as glob
 from os.path import abspath, dirname, join, realpath
 
-import pandas as pd
 import requests
 import urllib3
 
 from asystem import load_bootstrap_entities, load_bootstrap_env, load_bootstrap_modules, write_container_certificates
 
 urllib3.disable_warnings()
-pd.options.mode.chained_assignment = None
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
