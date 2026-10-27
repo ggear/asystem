@@ -726,7 +726,7 @@ command_find() {
     print_header "$(hostname)" "find" 0
   fi
   "${share_ssh[@]}" bash -s <<EOF | while IFS= read -r file_found; do
-find /share -type f ! -name "._*" ! -path "*/audio/*" -path "*/media/*" -iname "*${token}*"
+find /share -name lost+found -prune -o -type f ! -name "._*" ! -path "*/audio/*" -path "*/media/*" -iname "*${token}*" -print
 EOF
     [ -n "${file_found}" ] || continue
     if [[ "${file_found}" == *"/series/"* ]]; then

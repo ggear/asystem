@@ -1,4 +1,4 @@
-required-version = "==0.17.1"
+required-version = "==0.17.3"
 line-length = 200
 target-version = "py312"
 include = [

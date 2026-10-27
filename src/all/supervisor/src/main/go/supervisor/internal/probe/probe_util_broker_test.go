@@ -1,6 +1,7 @@
 package probe
 
 import (
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -20,7 +21,10 @@ func (t *stubToken) Error() error                   { return nil }
 
 type stubClient struct {
 	connected  bool
+	granted    bool
 	subscribes atomic.Int64
+	mutex      sync.Mutex
+	handlers   map[string]mqtt.MessageHandler
 }
 
 func (c *stubClient) IsConnected() bool      { return c.connected }
@@ -30,9 +34,15 @@ func (c *stubClient) Disconnect(uint)        {}
 func (c *stubClient) Publish(string, byte, bool, any) mqtt.Token {
 	return &stubToken{granted: true, done: closedChannel()}
 }
-func (c *stubClient) Subscribe(string, byte, mqtt.MessageHandler) mqtt.Token {
+func (c *stubClient) Subscribe(filter string, _ byte, handler mqtt.MessageHandler) mqtt.Token {
 	c.subscribes.Add(1)
-	return &stubToken{done: closedChannel()}
+	c.mutex.Lock()
+	if c.handlers == nil {
+		c.handlers = map[string]mqtt.MessageHandler{}
+	}
+	c.handlers[filter] = handler
+	c.mutex.Unlock()
+	return &stubToken{granted: c.granted, done: closedChannel()}
 }
 func (c *stubClient) SubscribeMultiple(map[string]byte, mqtt.MessageHandler) mqtt.Token {
 	return &stubToken{done: closedChannel()}
@@ -155,17 +165,45 @@ func TestProbeUtilBroker_WatcherIsDeafWithoutItsHeartbeat(t *testing.T) {
 }
 
 func TestProbeUtilBroker_HeartbeatCountsOnlyLiveDeliveries(t *testing.T) {
-	watch := &brokerWatcher{brokerPayloads: brokerPayloads{payloads: map[string]string{}}, heartbeat: "a/heartbeat", ready: true, readyAt: time.Now().Add(-time.Hour)}
-	watch.hear(nil, leaderStubMessage{topic: "a/heartbeat", retained: true})
-	if _, deaf := watch.deaf(time.Minute); !deaf {
+	client := &stubClient{connected: true, granted: true}
+	watch := &brokerWatcher{brokerPayloads: brokerPayloads{payloads: map[string]string{}}, client: client, filters: []string{"a/watched"}, heartbeat: "a/heartbeat"}
+	watch.attach(client)
+	client.mutex.Lock()
+	heard := client.handlers["a/heartbeat"]
+	client.mutex.Unlock()
+	if heard == nil {
+		t.Fatalf("heartbeat: got no subscription want one on [a/heartbeat]")
+	}
+	time.Sleep(20 * time.Millisecond)
+	heard(client, leaderStubMessage{topic: "a/heartbeat", retained: true})
+	if _, deaf := watch.deaf(10 * time.Millisecond); !deaf {
 		t.Errorf("deaf: got false want true, a retained copy is replayed by the store and proves no live routing")
 	}
-	watch.hear(nil, leaderStubMessage{topic: "a/heartbeat"})
-	if _, deaf := watch.deaf(time.Minute); deaf {
+	heard(client, leaderStubMessage{topic: "a/heartbeat"})
+	if _, deaf := watch.deaf(10 * time.Millisecond); deaf {
 		t.Errorf("deaf: got true want false after a live delivery")
 	}
-	if len(watch.snapshot()) != 0 {
-		t.Errorf("payloads: got %v want none, the heartbeat is not a watched topic", watch.snapshot())
+	if _, found := watch.snapshot()["a/heartbeat"]; found {
+		t.Errorf("payloads: got the heartbeat want it kept out of the watched topics")
+	}
+}
+
+func TestProbeUtilBroker_AttachInterruptedByALostConnectionIsNotReady(t *testing.T) {
+	client := &stubClient{connected: true, granted: true}
+	watch := &brokerWatcher{brokerPayloads: brokerPayloads{payloads: map[string]string{}}, client: client, filters: []string{"a/watched"}}
+	attached := make(chan struct{})
+	go func() {
+		watch.attach(client)
+		close(attached)
+	}()
+	deadline := time.Now().Add(time.Second)
+	for client.subscribes.Load() == 0 && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	watch.forget()
+	<-attached
+	if _, fresh := watch.readRetained(); fresh {
+		t.Errorf("fresh: got true want false, the connection was lost while the attach settled so its subscriptions are gone")
 	}
 }
 

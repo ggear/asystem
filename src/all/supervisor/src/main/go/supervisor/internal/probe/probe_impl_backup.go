@@ -258,12 +258,10 @@ func (p *backupProbe) reap(ctx context.Context) {
 	}
 	retained, watching := p.reapWatch.readRetained()
 	if silent, deaf := p.reapWatch.deaf(leaderTimingProduction.ttl); watching && deaf {
-		if leading, _ := Leading(metric.LeaderDutyBackup); leading {
-			watching = false
-			if p.reapStale == 0 {
-				scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("faulting", reapStart,
-					"[%s] s without this host's own candidacy arriving on the cluster watch, counting it unwatched", elapsedSeconds(silent))
-			}
+		watching = false
+		if p.reapStale == 0 {
+			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("faulting", reapStart,
+				"[%s] s without this host's own candidacy arriving on the cluster watch, counting it unwatched", elapsedSeconds(silent))
 		}
 	}
 	if !watching {

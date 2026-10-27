@@ -12,6 +12,7 @@
 #     deck_west_fan,
 #     dining_air_purifier,
 #     edwin_fan,
+#     kitchen_air_purifier,
 #     kitchen_fan_plug,
 #     lounge_air_purifier,
 #     lounge_fan,

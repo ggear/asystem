@@ -729,10 +729,14 @@ func TestProbeImplBackup_LeaderOpensAndClosesTheClusterBackupRun(t *testing.T) {
 	}
 	probe := &backupProbe{configPath: configFile, hostName: "mad", serverHost: true}
 	t.Cleanup(func() { probe.leadWatch.close() })
+	lead := func() {
+		observer.Publish(metric.TopicLeaderCandidate("mad"), 1, false, []byte(`{"host":"mad"}`)).WaitTimeout(2 * time.Second)
+		probe.lead()
+	}
 	await := func(phase string, done func() bool) {
 		deadline := time.Now().Add(30 * time.Second)
 		for time.Now().Before(deadline) {
-			probe.lead()
+			lead()
 			mutex.Lock()
 			finished := done()
 			mutex.Unlock()
@@ -756,7 +760,7 @@ func TestProbeImplBackup_LeaderOpensAndClosesTheClusterBackupRun(t *testing.T) {
 	}
 	publish("supervisor/mad/backup/status", backupSummary{State: metric.BackupStateSuccess, Trigger: metric.BackupTriggerSystem, StartedTS: started.Format(time.RFC3339), SuccessBool: true})
 	time.Sleep(time.Second)
-	probe.lead()
+	lead()
 	mutex.Lock()
 	partial := cluster().State
 	mutex.Unlock()
@@ -781,7 +785,7 @@ func TestProbeImplBackup_LeaderOpensAndClosesTheClusterBackupRun(t *testing.T) {
 	publish("supervisor/max/backup/stage/primary/status", backupSummary{RunID: time.Now().Format(backupTimestampFormat), State: metric.BackupStateRunning, Trigger: metric.BackupTriggerSystem,
 		StartedTS: time.Now().Format(time.RFC3339), ExpiresTS: time.Now().Add(time.Hour).Format(time.RFC3339)})
 	time.Sleep(time.Second)
-	probe.lead()
+	lead()
 	mutex.Lock()
 	defer mutex.Unlock()
 	if seen[plug] != "" || cluster().State != metric.BackupStateSuccess {

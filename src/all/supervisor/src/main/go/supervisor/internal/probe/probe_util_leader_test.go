@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -133,7 +134,7 @@ func TestProbeUtilLeader_FreshnessIgnoresTheSendersClock(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			campaign := leaderStubCampaign([]string{"alpha", "bravo"}, "alpha")
 			payload, _ := json.Marshal(leaderCandidacy{Host: "bravo", RenewedTS: time.Now().Add(tt.timestampOffset).Format(time.RFC3339Nano)})
-			campaign.observe(nil, leaderStubMessage{topic: campaign.election.candidateTopic("bravo"), payload: payload})
+			campaign.observe(campaign.client, leaderStubMessage{topic: campaign.election.candidateTopic("bravo"), payload: payload})
 			if leader := leaderElected([]string{"bravo"}, campaign.candidates, leaderLease{}, time.Time{}, time.Now(), campaign.timing.ttl); leader != "bravo" {
 				t.Errorf("leader: got %q want bravo, a renewal that just arrived is fresh whatever it is stamped", leader)
 			}
@@ -155,7 +156,7 @@ func TestProbeUtilLeader_ClaimAcrossAReattachIsDiscarded(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			campaign := leaderStubCampaign([]string{"alpha"}, "alpha")
 			now := time.Now()
-			campaign.attached, campaign.standing, campaign.lastAck = true, true, now
+			campaign.attached, campaign.standing, campaign.lastAck, campaign.heardSelf = true, true, now, now
 			campaign.candidates["alpha"] = now
 			campaign.electedFrom = now.Add(-campaign.timing.settle - time.Second)
 			stub := campaign.client.(*leaderStubClient)
@@ -325,15 +326,15 @@ func TestProbeUtilLeader_GracefulResignationShortensTheSettle(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			campaign := leaderStubCampaign([]string{"alpha", "bravo"}, "bravo")
 			start := time.Now()
-			campaign.attached, campaign.standing, campaign.lastAck = true, true, start.Add(time.Hour)
+			campaign.attached, campaign.standing, campaign.lastAck, campaign.heardSelf = true, true, start.Add(time.Hour), start
 			campaign.candidates["alpha"], campaign.candidates["bravo"] = start, start
 			alphaLease, _ := json.Marshal(leaderLease{Host: "alpha", Epoch: 1})
-			campaign.observe(nil, leaderStubMessage{topic: campaign.election.leaseTopic(), payload: alphaLease})
+			campaign.observe(campaign.client, leaderStubMessage{topic: campaign.election.leaseTopic(), payload: alphaLease})
 			if tt.clearCandidacy {
-				campaign.observe(nil, leaderStubMessage{topic: campaign.election.candidateTopic("alpha"), retained: tt.retained})
+				campaign.observe(campaign.client, leaderStubMessage{topic: campaign.election.candidateTopic("alpha"), retained: tt.retained})
 			}
 			if tt.clearLease {
-				campaign.observe(nil, leaderStubMessage{topic: campaign.election.leaseTopic(), retained: tt.retained})
+				campaign.observe(campaign.client, leaderStubMessage{topic: campaign.election.leaseTopic(), retained: tt.retained})
 			}
 			if !tt.clearCandidacy {
 				delete(campaign.candidates, "alpha")
@@ -537,7 +538,7 @@ func TestProbeUtilLeader_OneHolderAcrossFailover(t *testing.T) {
 	cancels["alpha"] = func() {}
 	delete(campaigns, "alpha")
 	mutex.Unlock()
-	crashed.client.Disconnect(0)
+	crashed.session().Disconnect(0)
 	await("crash_failover", "bravo", timing.ttl+timing.settle+3*time.Second)
 	join("alpha")
 	hold("incumbent_survives_a_lower_rejoin", "bravo", timing.ttl+timing.settle)
@@ -701,8 +702,8 @@ func TestProbeUtilLeader_DeafSessionRedials(t *testing.T) {
 			if redialled := campaign.session() != mqtt.Client(stub); redialled != tt.expectedRedial {
 				t.Errorf("redialled: got %v want %v", redialled, tt.expectedRedial)
 			}
-			if tt.expectedRedial && stub.IsConnectionOpen() {
-				t.Errorf("deaf session: got open want disconnected")
+			if tt.expectedRedial && (campaign.retired != mqtt.Client(stub) || !stub.IsConnectionOpen()) {
+				t.Errorf("deaf session: got retired [%v] open [%v] want kept open as retired until the fresh session attaches, its will still covering the candidacy", campaign.retired == mqtt.Client(stub), stub.IsConnectionOpen())
 			}
 			if leading, _ := campaign.holding(time.Now()); leading != tt.expectedLeading {
 				t.Errorf("leading: got %v want %v", leading, tt.expectedLeading)
@@ -732,6 +733,7 @@ func TestProbeUtilLeader_ElectedPeerWithoutALeaseIsFlagged(t *testing.T) {
 		leaseSeenAgo     time.Duration
 		leaseHeld        bool
 		bravoOnly        bool
+		newlyElected     bool
 		expectedOrphaned string
 		expectedError    bool
 	}{
@@ -741,17 +743,22 @@ func TestProbeUtilLeader_ElectedPeerWithoutALeaseIsFlagged(t *testing.T) {
 		{name: "a_held_lease_is_not_orphaned", host: "bravo", attachedFor: time.Hour, leaseHeld: true, expectedOrphaned: "", expectedError: false},
 		{name: "this_host_elected_is_its_own_claim", host: "alpha", attachedFor: time.Hour, expectedOrphaned: "", expectedError: false},
 		{name: "nobody_standing_is_a_vacancy", host: "bravo", attachedFor: time.Hour, bravoOnly: true, expectedOrphaned: "", expectedError: false},
+		{name: "a_peer_newly_elected_after_a_long_vacancy_gets_its_settle", host: "bravo", attachedFor: time.Hour, newlyElected: true, expectedOrphaned: "", expectedError: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			campaign := leaderStubCampaign([]string{"alpha", "bravo"}, tt.host)
 			now := time.Now()
 			campaign.attached, campaign.attachedAt = true, now.Add(-tt.attachedFor)
+			campaign.electedPeer, campaign.electedAt = "alpha", now.Add(-tt.attachedFor)
+			if tt.newlyElected {
+				campaign.electedPeer = ""
+			}
 			if tt.leaseSeenAgo > 0 {
 				campaign.leaseSeen = now.Add(-tt.leaseSeenAgo)
 			}
 			if tt.leaseHeld {
-				campaign.lease, campaign.leaseArrived, campaign.leaseSeen = leaderLease{Host: "alpha", Epoch: 1}, now, now
+				campaign.lease, campaign.leaseArrived, campaign.leaseSeen, campaign.leaseLive = leaderLease{Host: "alpha", Epoch: 1}, now, now, now
 			}
 			if !tt.bravoOnly {
 				campaign.candidates["alpha"] = now
@@ -764,7 +771,7 @@ func TestProbeUtilLeader_ElectedPeerWithoutALeaseIsFlagged(t *testing.T) {
 	}
 }
 
-func TestProbeUtilLeader_OrphanSurvivesAReattachUntilALeaseArrives(t *testing.T) {
+func TestProbeUtilLeader_OrphanSurvivesAReattachUntilALiveLeaseArrives(t *testing.T) {
 	campaign := leaderStubCampaign([]string{"alpha", "bravo"}, "bravo")
 	now := time.Now()
 	campaign.attached, campaign.attachedAt, campaign.orphanedBy = true, now, "alpha"
@@ -773,10 +780,261 @@ func TestProbeUtilLeader_OrphanSurvivesAReattachUntilALeaseArrives(t *testing.T)
 	if campaign.orphanedBy != "alpha" {
 		t.Errorf("orphaned: got %q want alpha kept while no lease has arrived since the reattach", campaign.orphanedBy)
 	}
-	campaign.lease, campaign.leaseArrived, campaign.leaseSeen = leaderLease{Host: "alpha", Epoch: 1}, now, now
+	staleLease, _ := json.Marshal(leaderLease{Host: "alpha", Epoch: 1})
+	campaign.observe(campaign.client, leaderStubMessage{topic: campaign.election.leaseTopic(), payload: staleLease, retained: true})
+	campaign.census(now)
+	if campaign.orphanedBy != "alpha" {
+		t.Errorf("orphaned: got %q want alpha kept, a retained replay of the stale lease proves nothing is held", campaign.orphanedBy)
+	}
+	campaign.observe(campaign.client, leaderStubMessage{topic: campaign.election.leaseTopic(), payload: staleLease})
 	campaign.census(now)
 	if campaign.orphanedBy != "" {
 		t.Errorf("orphaned: got %q want cleared once the elected host's lease arrives", campaign.orphanedBy)
+	}
+}
+
+func TestProbeUtilLeader_RetainedReplayAloneNeverClaims(t *testing.T) {
+	tests := []struct {
+		name            string
+		retainedOnly    bool
+		expectedLeading bool
+		expectedError   bool
+	}{
+		{name: "a_live_echo_of_its_own_renewal_lets_it_claim", retainedOnly: false, expectedLeading: true, expectedError: false},
+		{name: "a_retained_replay_alone_does_not", retainedOnly: true, expectedLeading: false, expectedError: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			campaign := leaderStubCampaign([]string{"alpha"}, "alpha")
+			stub := campaign.client.(*leaderStubClient)
+			stub.retained = tt.retainedOnly
+			now := time.Now()
+			campaign.attached, campaign.standing, campaign.attachedAt, campaign.lastAck = true, true, now.Add(-time.Second), now
+			campaign.candidates["alpha"] = now
+			campaign.electedFrom = now.Add(-campaign.timing.settle - time.Second)
+			campaign.tick(now)
+			if leading, _ := campaign.holding(time.Now()); leading != tt.expectedLeading {
+				t.Errorf("leading: got %v want %v", leading, tt.expectedLeading)
+			}
+		})
+	}
+}
+
+func TestProbeUtilLeader_RestandingIsNotMistakenForDeafness(t *testing.T) {
+	alive := false
+	campaign := leaderStubCampaign([]string{"alpha"}, "alpha")
+	campaign.configPath = leaderUnreachableConfig(t)
+	campaign.election.alive = func() bool { return alive }
+	echo := &leaderDelayedEchoClient{leaderStubClient: campaign.client.(*leaderStubClient), delay: 5 * time.Millisecond}
+	campaign.client = echo
+	start := time.Now()
+	campaign.attached, campaign.attachedAt, campaign.standing, campaign.lastAck, campaign.heardSelf = true, start.Add(-time.Hour), true, start, start
+	campaign.tick(start)
+	echo.wg.Wait()
+	if campaign.standing {
+		t.Fatalf("setup standing: got true want withdrawn while unfit")
+	}
+	campaign.mutex.Lock()
+	campaign.heardSelf = time.Now().Add(-campaign.timing.ttl - time.Second)
+	campaign.mutex.Unlock()
+	alive = true
+	campaign.tick(time.Now())
+	t.Cleanup(func() { campaign.session().Disconnect(0) })
+	echo.wg.Wait()
+	if campaign.session() != mqtt.Client(echo) {
+		t.Errorf("session: got redialled want kept, the first renewal after standing again has had no time to echo")
+	}
+}
+
+func TestProbeUtilLeader_DeafRedialYieldsToResignation(t *testing.T) {
+	campaign := leaderStubCampaign([]string{"alpha", "bravo"}, "alpha")
+	campaign.configPath = leaderUnreachableConfig(t)
+	stub := campaign.client.(*leaderStubClient)
+	stub.handler = nil
+	now := time.Now()
+	campaign.attached, campaign.standing, campaign.attachedAt, campaign.lastAck = true, true, now.Add(-time.Hour), now
+	stub.onPublish = func(string) func() {
+		return func() { campaign.stopping.Store(true) }
+	}
+	campaign.tick(now)
+	t.Cleanup(func() { campaign.session().Disconnect(0) })
+	if campaign.session() != mqtt.Client(stub) {
+		t.Errorf("session: got a fresh one dialled want none once resignation began")
+	}
+}
+
+func TestProbeUtilLeader_StaleAttachLeavesTheLiveLeaderAlone(t *testing.T) {
+	campaign := leaderStubCampaign([]string{"alpha"}, "alpha")
+	now := time.Now()
+	campaign.attached, campaign.standing, campaign.leading, campaign.epoch = true, true, true, 1
+	campaign.attachedAt, campaign.lastAck, campaign.lastLease = now.Add(-time.Minute), now, now
+	campaign.lease, campaign.leaseArrived = leaderLease{Host: "alpha", Epoch: 1}, now
+	campaign.candidates["alpha"] = now
+	campaign.attach(&leaderStubClient{open: true})
+	if leading, _ := campaign.holding(time.Now()); !leading {
+		t.Errorf("leading: got false want true, an onConnect from a replaced session must not touch the live one")
+	}
+}
+
+func TestProbeUtilLeader_AttachSpanningALostConnectionIsDiscarded(t *testing.T) {
+	campaign := leaderStubCampaign([]string{"alpha"}, "alpha")
+	stub := campaign.client.(*leaderStubClient)
+	stub.onPublish = func(string) func() {
+		return func() { campaign.detach("connection lost mid attach") }
+	}
+	campaign.attach(stub)
+	if campaign.attached {
+		t.Errorf("attached: got true want false, the subscriptions belonged to the connection that was lost")
+	}
+}
+
+func TestProbeUtilLeader_RetiredSessionCoversTheCandidacyUntilTheFreshOneAttaches(t *testing.T) {
+	campaign := leaderStubCampaign([]string{"alpha"}, "alpha")
+	retired := &leaderStubClient{open: true}
+	campaign.retired = retired
+	campaign.attach(campaign.client)
+	if !campaign.attached || retired.IsConnectionOpen() || campaign.retired != nil {
+		t.Errorf("retired: got attached [%v] open [%v] kept [%v] want it disconnected once the fresh session attached", campaign.attached, retired.IsConnectionOpen(), campaign.retired != nil)
+	}
+}
+
+func TestProbeUtilLeader_ResignationClearsThroughTheRetiredSession(t *testing.T) {
+	campaign := leaderStubCampaign([]string{"alpha"}, "alpha")
+	fresh := campaign.client.(*leaderStubClient)
+	fresh.open = false
+	retired := &leaderStubClient{open: true}
+	campaign.retired = retired
+	campaign.lease = leaderLease{Host: "alpha", Epoch: 1}
+	campaign.resign()
+	if !retired.published(campaign.election.candidateTopic("alpha"), "") || !retired.published(campaign.election.leaseTopic(), "") {
+		t.Errorf("retired publishes: got %v want the candidacy and lease emptied while the fresh session is still connecting", retired.publishes())
+	}
+	if retired.IsConnectionOpen() {
+		t.Errorf("retired: got open want disconnected after resigning")
+	}
+}
+
+func TestProbeUtilLeader_DeafRedialConnectsTheFreshSession(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen failed: %v", err)
+	}
+	t.Cleanup(func() { _ = listener.Close() })
+	accepted := make(chan struct{}, 1)
+	go func() {
+		if conn, acceptErr := listener.Accept(); acceptErr == nil {
+			accepted <- struct{}{}
+			_ = conn.Close()
+		}
+	}()
+	t.Cleanup(config.Reset)
+	configFile := filepath.Join(t.TempDir(), "config.json")
+	port := listener.Addr().(*net.TCPAddr).Port
+	if err := os.WriteFile(configFile, fmt.Appendf(nil, `{"asystem":{"version":"10.100.6000","host":"alpha","broker":{"host":"127.0.0.1","port":"%d"}}}`, port), 0644); err != nil {
+		t.Fatalf("write config file failed: %v", err)
+	}
+	campaign := leaderStubCampaign([]string{"alpha"}, "alpha")
+	campaign.configPath = configFile
+	campaign.client.(*leaderStubClient).handler = nil
+	now := time.Now()
+	campaign.attached, campaign.standing, campaign.attachedAt, campaign.lastAck = true, true, now.Add(-time.Hour), now
+	campaign.tick(now)
+	t.Cleanup(func() { campaign.session().Disconnect(0) })
+	select {
+	case <-accepted:
+	case <-time.After(3 * time.Second):
+		t.Errorf("fresh session: got no connection attempt want one to the broker")
+	}
+}
+
+func TestProbeUtilLeader_ConsecutiveRedialsAreCountedUntilItHearsItself(t *testing.T) {
+	campaign := leaderStubCampaign([]string{"alpha"}, "alpha")
+	campaign.configPath = leaderUnreachableConfig(t)
+	t.Cleanup(func() { campaign.session().Disconnect(0) })
+	for range 2 {
+		now := time.Now()
+		campaign.client = &leaderStubClient{open: true}
+		campaign.attached, campaign.standing, campaign.attachedAt, campaign.lastAck = true, true, now.Add(-time.Hour), now
+		campaign.tick(now)
+	}
+	if campaign.redials != 2 {
+		t.Errorf("redials: got %d want 2", campaign.redials)
+	}
+	echoing := &leaderStubClient{open: true}
+	echoing.handler = campaign.observe
+	campaign.client = echoing
+	now := time.Now()
+	campaign.attached, campaign.attachedAt, campaign.lastAck = true, now.Add(-time.Second), now
+	campaign.tick(now)
+	if campaign.redials != 0 {
+		t.Errorf("redials: got %d want 0 once it hears itself again", campaign.redials)
+	}
+}
+
+func TestProbeUtilLeader_RetiredSessionDeliveriesAreIgnored(t *testing.T) {
+	campaign := leaderStubCampaign([]string{"alpha"}, "alpha")
+	retired := &leaderStubClient{open: true}
+	campaign.retired = retired
+	campaign.observe(retired, leaderStubMessage{topic: campaign.election.candidateTopic("alpha"), payload: []byte(`{"host":"alpha"}`)})
+	if !campaign.heardSelf.IsZero() || len(campaign.candidates) != 0 {
+		t.Errorf("view: got heard [%v] candidates [%v] want untouched, only the current session proves delivery", campaign.heardSelf, campaign.candidates)
+	}
+}
+
+func TestProbeUtilLeader_BriefAckFailuresDoNotHideDeafness(t *testing.T) {
+	tests := []struct {
+		name           string
+		ackGap         time.Duration
+		expectedRedial bool
+		expectedError  bool
+	}{
+		{name: "a_brief_ack_failure_keeps_the_silence_running", ackGap: time.Second, expectedRedial: true, expectedError: false},
+		{name: "acks_lost_past_the_ttl_restart_the_silence", ackGap: time.Minute, expectedRedial: false, expectedError: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			campaign := leaderStubCampaign([]string{"alpha"}, "alpha")
+			campaign.configPath = leaderUnreachableConfig(t)
+			stub := campaign.client.(*leaderStubClient)
+			stub.handler = nil
+			now := time.Now()
+			campaign.attached, campaign.standing, campaign.attachedAt = true, true, now.Add(-time.Hour)
+			campaign.lastAck, campaign.renewFailing = now.Add(-tt.ackGap), true
+			campaign.tick(now)
+			t.Cleanup(func() { campaign.session().Disconnect(0) })
+			if redialled := campaign.session() != mqtt.Client(stub); redialled != tt.expectedRedial {
+				t.Errorf("redialled: got %v want %v", redialled, tt.expectedRedial)
+			}
+		})
+	}
+}
+
+func TestProbeUtilLeader_OrphanFollowsTheElectedPeer(t *testing.T) {
+	campaign := leaderStubCampaign([]string{"alpha", "bravo", "charlie"}, "charlie")
+	now := time.Now()
+	campaign.attached, campaign.attachedAt, campaign.orphanedBy = true, now.Add(-time.Hour), "alpha"
+	campaign.electedPeer, campaign.electedAt = "alpha", now.Add(-time.Hour)
+	campaign.candidates["bravo"] = now
+	campaign.census(now)
+	if campaign.orphanedBy != "" {
+		t.Errorf("orphaned: got %q want cleared once alpha is no longer elected", campaign.orphanedBy)
+	}
+	later := now.Add(campaign.timing.settle + 2*campaign.timing.ttl + time.Second)
+	campaign.candidates["bravo"] = later
+	campaign.census(later)
+	if campaign.orphanedBy != "bravo" {
+		t.Errorf("orphaned: got %q want bravo after its own grace", campaign.orphanedBy)
+	}
+}
+
+func TestProbeUtilLeader_RetainedLeaseIsNeverLive(t *testing.T) {
+	campaign := leaderStubCampaign([]string{"alpha", "bravo"}, "charlie")
+	alpha, _ := json.Marshal(leaderLease{Host: "alpha", Epoch: 1})
+	bravo, _ := json.Marshal(leaderLease{Host: "bravo", Epoch: 2})
+	campaign.observe(campaign.client, leaderStubMessage{topic: campaign.election.leaseTopic(), payload: alpha})
+	campaign.observe(campaign.client, leaderStubMessage{topic: campaign.election.leaseTopic(), payload: bravo, retained: true})
+	if !campaign.leaseLive.IsZero() {
+		t.Errorf("live lease: got [%v] want none, bravo's lease arrived only as a retained replay", campaign.leaseLive)
 	}
 }
 
@@ -963,4 +1221,38 @@ func TestProbeUtilLeader_PresenceRequiresHoldingTheRole(t *testing.T) {
 	if present != nil {
 		t.Errorf("presence: got a session opened want none for a host that does not hold the role")
 	}
+}
+
+type leaderDelayedEchoClient struct {
+	*leaderStubClient
+	delay time.Duration
+	wg    sync.WaitGroup
+}
+
+func (d *leaderDelayedEchoClient) Publish(topic string, qos byte, retained bool, payload any) mqtt.Token {
+	d.leaderStubClient.mutex.Lock()
+	handler := d.handler
+	d.handler = nil
+	d.leaderStubClient.mutex.Unlock()
+	token := d.leaderStubClient.Publish(topic, qos, retained, payload)
+	d.leaderStubClient.mutex.Lock()
+	d.handler = handler
+	d.leaderStubClient.mutex.Unlock()
+	body, _ := payload.([]byte)
+	if handler != nil {
+		d.wg.Go(func() {
+			time.Sleep(d.delay)
+			handler(d, leaderStubMessage{topic: topic, payload: body})
+		})
+	}
+	return token
+}
+
+func leaderUnreachableConfig(t *testing.T) string {
+	t.Cleanup(config.Reset)
+	configFile := filepath.Join(t.TempDir(), "config.json")
+	if err := os.WriteFile(configFile, []byte(`{"asystem":{"version":"10.100.6000","host":"alpha","broker":{"host":"127.0.0.1","port":"1"}}}`), 0644); err != nil {
+		t.Fatalf("write config file failed: %v", err)
+	}
+	return configFile
 }

@@ -250,6 +250,12 @@
       "messages_per_sec": <number>,
       "leave_count": <number>,
       "network_address_changes": <number>
+    },
+    "0x8c65a3fffef0c92d": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
     }
   }
 }
