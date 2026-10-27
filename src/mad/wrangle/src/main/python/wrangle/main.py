@@ -10,7 +10,10 @@ import os
 import signal
 import sys
 import time
+import warnings
 from os.path import basename, dirname, isdir, join, realpath
+
+import pandas.errors
 
 from wrangle import plugin
 from wrangle import server as web_server
@@ -22,6 +25,9 @@ try:
     import pyarrow
 except Exception:
     pyarrow = None
+
+# Remove once yfinance stops passing inplace to pandas, deprecated from pandas 3.1
+warnings.filterwarnings("ignore", category=pandas.errors.Pandas4Warning, module=r"yfinance(\.|$)")
 
 
 def _release_memory():
