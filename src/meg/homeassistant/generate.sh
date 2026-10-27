@@ -95,7 +95,7 @@ pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "adaptive-lighting-component" "ba
 replace_path "${ROOT_DIR}/../../../.deps/homeassistant/adaptive-lighting-component/custom_components/adaptive_lighting" "${ROOT_DIR}/src/main/resources/data/custom_components/adaptive_lighting" || exit $?
 
 # NOTES: https://github.com/bramstroker/homeassistant-powercalc/releases
-VERSION=v1.26.0
+VERSION=v1.26.1
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "powercalc-component" "ggear/homeassistant-powercalc" "ggear-powercalc" "https://github.com/bramstroker/homeassistant-powercalc.git" "${VERSION}" || exit $?
 for PATCH_FILE in sonos/move/model.json signify/LCT010/model.json; do
 	if [ ! -f "${ROOT_DIR}/../../../.deps/homeassistant/powercalc-component/custom_components/powercalc/custom_data/${PATCH_FILE}" ]; then
