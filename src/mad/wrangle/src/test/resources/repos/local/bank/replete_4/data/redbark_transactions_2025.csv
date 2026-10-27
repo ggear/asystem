@@ -1,4 +1,4 @@
-Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Category Manual,Category Derived,Account ID,Source ID,Transaction ID,Vetted
+Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Category Manual,Category Auto,Account ID,Source ID,Transaction ID,Vetted
 2025-11-05,Raw One,-40.0,-40.0,Fuel,,,,,Transport,540a8918175f5ca38559395087eb552c,,,Yes
 2025-11-04,Raw Two,100.0,100.0,Salary,,,,,Income,69c576ba31725c77a2ff31acd55cfbca,,,Yes
 2025-11-03,Raw One,-12.5,-12.5,Coffee,,,,,Food,540a8918175f5ca38559395087eb552c,,,Yes

@@ -1,4 +1,4 @@
-Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Bucket,Category Manual,Category Derived,Account ID,Source ID,Transaction ID,Vetted
+Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Bucket,Category Manual,Category Auto,Account ID,Source ID,Transaction ID,Vetted
 2025-12-01,One,-1.0,-1.0,Shop Two,,,,,,,540a8918175f5ca38559395087eb552c,,a4baf511cf2e57669a79311208c4cefd,Yes
 2025-12-02,One,-2.0,-2.0,Cafe One,,,Food,,,Food,540a8918175f5ca38559395087eb552c,,6245f78c11115814bbd76aeff6a96e5f,Yes
 2025-12-20,One,-1.0,-1.0,Filler 1,,,,,,,540a8918175f5ca38559395087eb552c,,00ae16b1da8659ffac1bc60a5939d692,

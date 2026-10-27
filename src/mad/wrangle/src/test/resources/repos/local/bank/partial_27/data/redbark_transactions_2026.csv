@@ -1,4 +1,4 @@
-Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Category Manual,Category Derived,Account ID,Source ID,Transaction ID,Vetted
+Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Category Manual,Category Auto,Account ID,Source ID,Transaction ID,Vetted
 2026-01-01,One,-5.0,-5.0,Moved,,,,,,540a8918175f5ca38559395087eb552c,s1,,
 2026-01-05,One,-9.99,-9.99,History,,,,,,540a8918175f5ca38559395087eb552c,,,
 2026-01-06,One,-9.99,-9.99,Live,,,,,,540a8918175f5ca38559395087eb552c,s2,,

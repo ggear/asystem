@@ -1,4 +1,4 @@
-Date,Date Posted,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Notes,Vetted,Category Manual,Category Derived,Category,Bucket,Account ID,Source ID,Transaction ID
+Date,Date Posted,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Notes,Vetted,Category Manual,Category Auto,Category,Bucket,Account ID,Source ID,Transaction ID
 2026-01-06,,One,-7.0,-7.0,Vanished,,,,Yes,,,,Elsewhere,540a8918175f5ca38559395087eb552c,,08bedf58f6b3567d843b6f6232ebce80
 2026-01-04,,One,-30.0,-15.0,Split,,,,,Car,,Car,Elsewhere,540a8918175f5ca38559395087eb552c,,d69265854c4e58ccad2aee04787c6669
 2026-01-04,,One,-30.0,-15.0,Split,,,,,Food,,Food,Elsewhere,540a8918175f5ca38559395087eb552c,,d69265854c4e58ccad2aee04787c6669

@@ -1,3 +1,3 @@
-Date,Date Posted,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Notes,Vetted,Category Manual,Category Derived,Category,Account ID,Source ID,Transaction ID
+Date,Date Posted,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Notes,Vetted,Category Manual,Category Auto,Category,Account ID,Source ID,Transaction ID
 2025-08-01,2025-08-02,One,-8.0,-8.0,Dropped,,,,,,,,540a8918175f5ca38559395087eb552c,t8,
 2025-06-10,,One,-11.0,-11.0,Old,,,,,,,,540a8918175f5ca38559395087eb552c,t5,

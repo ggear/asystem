@@ -1,0 +1,2 @@
+Run,Source,Year File,Transaction ID,Part,Date,Account,Amount,Description,Manual Before,Manual After,Derived Before,Derived After,Vetted Before,Vetted After,Split Before,Split After,File MD5
+2026-01-12T09:00:00,classifier,redbark_transactions_2026.csv,abc,0,2026-01-10,One,-5.0,Cafe,,,Restaurants,Groceries,Yes,,,,0

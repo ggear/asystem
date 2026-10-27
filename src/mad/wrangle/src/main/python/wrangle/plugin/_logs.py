@@ -13,7 +13,7 @@ from .logger import dataframe_print
 class LogsMixin(ContractMixin):
     def error(self, errors, tab, key, code, detail):
         kind, _, _, counter = self.error_codes[code]
-        if counter != CTR_SRC_SOURCES or not any(error["Counter"] == counter and error["Tab"] == tab and error["Code"] == code for error in errors):
+        if kind == LOG_KIND_ERROR and (counter != CTR_SRC_SOURCES or not any(error["Counter"] == counter and error["Tab"] == tab and error["Code"] == code for error in errors)):
             self.add_counter(counter, CTR_ACT_ERRORED)
         raised = self.now()
         errors.append(

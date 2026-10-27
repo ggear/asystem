@@ -1,4 +1,4 @@
-Date,Date Posted,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Notes,Vetted,Category Manual,Category Derived,Category,Account ID,Source ID,Transaction ID
+Date,Date Posted,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Notes,Vetted,Category Manual,Category Auto,Category,Account ID,Source ID,Transaction ID
 2026-01-15,2026-01-15,Card,-3.0,-3.0,Lunch,,,,,,,,12e14adab2725e0a8c474e22a208bb0e,h3,
 2026-01-02,2026-01-03,Card,-2.0,-2.0,Vanished,,,,,,,,12e14adab2725e0a8c474e22a208bb0e,h2,
 2026-01-01,2026-01-02,Card,-1.0,-1.0,Payment,,,,,,,,12e14adab2725e0a8c474e22a208bb0e,h1,

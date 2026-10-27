@@ -12,7 +12,7 @@
   },
   "formulas": {
     "Bucket": "=IFERROR(VLOOKUP({Category},Classifier!A:B,2,FALSE),\"\")",
-    "Category": "=IF({Category Manual}<>\"\",{Category Manual},{Category Derived})"
+    "Category": "=IF({Category Manual}<>\"\",{Category Manual},{Category Auto})"
   },
   "highlights": [
     "E",
@@ -24,7 +24,7 @@
     "Account",
     "Account ID",
     "Bank Code",
-    "Category Derived",
+    "Category Auto",
     "Category Manual",
     "Description",
     "Merchant Code",

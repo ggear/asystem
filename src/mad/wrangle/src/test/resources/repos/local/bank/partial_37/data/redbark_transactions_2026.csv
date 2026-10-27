@@ -1,4 +1,4 @@
-Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Category Manual,Category Derived,Account ID,Source ID,Transaction ID,Vetted
+Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Category Manual,Category Auto,Account ID,Source ID,Transaction ID,Vetted
 2026-01-03,One,-4.5,-4.5,Coffee,,,,,,540a8918175f5ca38559395087eb552c,,,
 2026-01-04,One,-9.0,-9.0,Lunch,,,,,Food,540a8918175f5ca38559395087eb552c,,,Yes
 2026-02-02,One,-3.0,-3.0,Snack,,,,,,540a8918175f5ca38559395087eb552c,,,

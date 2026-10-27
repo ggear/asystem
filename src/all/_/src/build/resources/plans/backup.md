@@ -38,7 +38,7 @@ are limited to the hook bodies.
 
 ### 1. Every run writes a manifest
 
-Beside the archive, `<run>/manifest.json`, written by the wrapper from a new optional hook:
+In `<run>/.meta/manifest.json` (never beside the archive, see below), written by the wrapper from a new optional hook:
 
 ```
 backup_fingerprinted   print one "<unit> <count>" line per unit of the backed-up state
@@ -49,7 +49,7 @@ backup_fingerprinted   print one "<unit> <count>" line per unit of the backed-up
 | influxdb3 | `<table>/<day>` | rows of each closed day, counted on live at backup time (`date_trunc('day', time)`, `count(*)` per table). Its own hook, because a delta's bytes say nothing about the state it restores. No restore runs nightly |
 | postgres | `<database>.<table>` | rows, from `COPY` lines counted in the dump stream. Wrapper default for a SQL dump |
 | mariadb | `<database>` | bytes, split on the dump's `-- Current Database:` markers. Wrapper default for a SQL dump: no nightly staging |
-| plex, letsencrypt, wrangle | each **include** | bytes summed per include from the archive's own listing (`tar -tvzf`). Wrapper default for a `backup_files` module. Never per file: wrangle's bank files carry versions in their names (`_sheet_bank_balances_v18.csv` → `v19`), so 6–21 entries vanish every night |
+| plex, letsencrypt, wrangle, homeassistant | each **include** | bytes summed per include from the archive's own listing (`tar -tvzf`). Wrapper default for a `backup_files` module. Never per file: wrangle's bank files carry versions in their names (`_sheet_bank_balances_v18.csv` → `v19`), so 6–21 entries vanish every night |
 | zigbee2mqtt | each archive entry | bytes from `unzip -l`. Wrapper default for an API-written archive, whose 8 entries were stable all week |
 
 Only influxdb3 defines `backup_fingerprinted`. Every other module gets the wrapper's default for its artifact type, so
@@ -82,12 +82,32 @@ After writing, the wrapper compares the new fingerprint with the newest *accepte
   - the run is published with a new backup state, `regressed`, through supervisor. That is a vocabulary change:
     `internal/metric/metric_schema.go` owns it, and the shell side mirrors `BACKUP_STATE_REGRESSED` under the existing
     parity test;
+  - **it turns the existing indicators red.** The service's `BKP` (`MetricServiceBackupStatus`) reads false, and its
+    stage counts as failed in the host's `Fail BKP` (`MetricHostFailedBackupStages`), whose `Bounded(Self, Exactly, 0)`
+    rule already turns the host pulse red. Today both only see a process that failed or timed out. From 22 to 27 Oct,
+    `Fail BKP` read 0% on all five hosts and influxdb3's `BKP` read true every day, because every backup of the empty
+    database succeeded. Their descriptions widen to match: "backup completed and accepted", and "backup stages failing,
+    timing out, regressed or failing their drill";
+  - **it shows in `backup tail` and `backup list`, with its reason.** Today supervisor sets a service's state from the
+    script's exit code alone (`backupOutcome(ok, …)` in `probe_util_backup_stage_primary.go`), and a module script's
+    own output goes to `stage/primary/service/<svc>/output.log`, which tail never reads. A regressed run exits 0,
+    because its archive is kept, so it would show as `as [success]`. Instead, primary reads the newest run's
+    `.meta/manifest.json` after the script exits. A `regressed` verdict sets the service state to `regressed`
+    (`SuccessBool` false), and that counts as a failure when the stage resolves, so the summary row's primary cell
+    and the run's result both read failure. supervisor also writes the verdict's evidence into `run.log`, one line
+    per guarded unit that went missing or shrank, plus the module total against the threshold. Followed live, tail
+    then reads like this:
+    ```
+    service/influxdb3  stop  exported [0.0] GiB ... from [influxdb3] as [regressed], kind [delta], version [10.200.1849]
+    service/influxdb3  stop  regressed [<n>] closed units missing against [2026-10-22_01-00-08], total [-100]% beyond [20]%, first [sensor__temperature/2026-08-13]
+    ```
   - the last accepted full and its chain become the **anchor**, pinned by every pruner (primary, server-side store,
     secondary GFS, retire_home) until acknowledged;
   - acknowledging is `backup.sh --accept=<run>`, which marks the regressed run accepted and releases the anchor. It is
     for an intentional shrink, such as a retention change or a dropped table.
-- For influxdb3 the first `full` after 26 Oct would have flagged the moment it was written, and the anchor would have
-  kept `full-2026-10-19` indefinitely.
+- For influxdb3, the 08:11 pre-install backup on 22 Oct would have flagged: every closed day counted zero on live
+  (§1). The anchor would then have kept `full-2026-10-19` and its chain indefinitely, and the install of release 1849
+  would have been abandoned (invariants).
 
 ### 3. One chain-aware pruner, three policies
 
@@ -140,8 +160,8 @@ A module that defines none of the new hooks keeps today's behaviour, and `merge`
 
 #### Invariants, and who enforces them
 
-These are the rules the 2026-10-27 tests established (see *Recovering this incident*). The wrapper holds all but the
-last two, so a module cannot skip one.
+These are the rules the 2026-10-27 tests established (see *Recovering this incident* and *Pressure test*). The
+wrapper, or `install.sh` where marked, holds all but the last two, so a module cannot skip one.
 
 | Invariant | Enforced by | How |
 |---|---|---|
@@ -181,7 +201,7 @@ fingerprint S      scratch; every closed unit must hold at least the manifest's 
 restore_sealed     scratch now refuses writes
                    ── drill ends here: teardown, publish the drill state
 fingerprint L      live
-plan               units where S > L, printed; without --force stop here
+plan               units where S differs from L, printed; without --force stop here
 restore_merged     per planned unit, progress recorded
 restart live       stop/start through the module's compose
 fingerprint L'     every planned unit must have L' >= S, else fault naming the short units
@@ -192,7 +212,7 @@ teardown           scratch container and data dir
 |---|---|---|---|
 | influxdb3 | `<table>/<day>` rows | re-run scratch with `--mode query` on the same data dir | Export the day from scratch as jsonl (`--format jsonl` emits blank lines, so skip them), convert to line protocol, and write to live's `/api/v3/write_lp?precision=nanosecond` in chunks. The conversion is a small Python script the hook pipes through, with tag escaping and null or empty tags left out of the series key |
 | postgres, mariadb | wrapper default for a SQL dump | `default_transaction_read_only` / `SET GLOBAL read_only` on scratch | None, so `replace` and `drill` only. See *Fit across modules* |
-| plex, letsencrypt, wrangle, zigbee2mqtt | wrapper default for an archive | wrapper default, `chmod -R a-w` | None, so `replace` and `drill` only |
+| plex, letsencrypt, wrangle, zigbee2mqtt, homeassistant | wrapper default for an archive | wrapper default, `chmod -R a-w` | None, so `replace` and `drill` only |
 
 #### Fit across modules
 
@@ -201,11 +221,12 @@ to all of them unchanged: every module but influxdb3 writes only fulls, so for t
 parts of the model, as first written for influxdb3, do not generalise and are restated here.
 
 **1. Staging is not always a second running instance.** influxdb3, postgres (TimescaleDB image) and mariadb stage as a
-scratch container on loopback. Three modules must never run a second copy:
+scratch container on loopback. Four modules must never run a second copy:
 
 - plex: `Preferences.xml` carries the server's plex.tv identity;
 - zigbee2mqtt: it claims the USB coordinator and publishes on the live broker;
-- letsencrypt: it could renew against the ACME account.
+- letsencrypt: it could renew against the ACME account;
+- homeassistant: it would claim the same integrations, devices and cloud links (§8).
 
 For those, the wrapper's default staging extracts the archive into the scratch dir and seals it with `chmod -R a-w`.
 That alone proves the artifact extracts, symlinks included. A module adds a drill check only where a real mechanism
@@ -283,7 +304,7 @@ The checked tables are kept as the record of why, and as the starting point if a
 | mariadb | `replace`, `drill` | staging (load into scratch, waiting for init) |
 | plex | `replace`, `drill` | one drill check (`Plex SQLite` integrity) |
 | letsencrypt, wrangle, zigbee2mqtt | `replace`, `drill` | none |
-| homeassistant | `replace`, `drill` | enrolment only: a `backup_files` `backup.sh` and `restore_files` `restore.sh`, no hooks (§8) |
+| homeassistant | `replace`, `drill` | enrolment only: a `backup_files` `backup.sh` and `restore_files` `restore.sh`, plus `HOMEASSISTANT_BACKUP_LIVE=atomic` for the tar retry. No hooks (§8) |
 
 #### Pressure test, 2026-10-27
 
@@ -300,7 +321,7 @@ Every enrolled backup was drilled by hand against its newest artifact, and all s
 | letsencrypt | `live/` symlinks survive into `archive/`, and the cert is valid to Jan 2027 | Default staging only; no check |
 | wrangle | The history files parse | Default staging only; no check |
 | supervisor | *Retracted.* A first reading said the 27 Oct nightly run stopped on all five hosts, at "promoting [supervisor] [1/N]". It did not. Every host's local `/home/asystem/supervisor/backup/2026-10-27_*/status.json` reads `success`, tertiary included. The misreading came from secondary: it promotes the run tree to the share *while that run is still running*, so the share copy of the current run always ends at that line, without `status.json`, until the next night re-copies it | Anything that judges a run reads the **local** run tree, never the share copy, which is a night behind by design. The rule that a run with no `status.json` after its timeout is a failure stays, applied to the local tree |
-| coverage | *homeassistant is now planned, §8.* Not enrolled, but holding state git cannot rebuild: homeassistant `.storage` (9.2M, measured; 22M was the whole config dir: registries, auth, and the UI-configured integrations, influxdb included per `configuration.yaml`), sonarr `sonarr.db` (147M on may), and sabnzbd `history1.db`. sonarr and sabnzbd have homes on both may and mad, one of which is probably residue | Decide per module: enrol it, or record why it is rebuildable |
+| coverage | *Decided 2026-10-27:* homeassistant is enrolled (§8). **sonarr and sabnzbd are not enrolled, on either host, and their duplicate homes on may and mad are left as they are.** The shares' guest `0777` permissions are accepted as they are, with HA's tokens and letsencrypt's private key on them. Measured at the time: Not enrolled, but holding state git cannot rebuild: homeassistant `.storage` (9.2M, measured; 22M was the whole config dir: registries, auth, and the UI-configured integrations, influxdb included per `configuration.yaml`), sonarr `sonarr.db` (147M on may), and sabnzbd `history1.db`. sonarr and sabnzbd have homes on both may and mad | Decided: see the first cell |
 
 **Second round, testing the assumptions the design added:**
 
@@ -377,10 +398,19 @@ that has been shown to restore.
   which has its image. It holds the module's `flock`, like every other actor.
 - **Where the result lives.** Supervisor writes `<run>/.meta/drill.json` into the drilled run's secondary dir, and publishes
   the `drill` state. Tertiary mirrors it alongside the run, so the verdict travels with the artifact.
+- **It shows in `backup tail`.** The drill runs inside secondary, so supervisor logs one line per drilled point into
+  `run.log` (`drilled [<svc>] point [<run>] as [success|failure] in [<s>] s`). A failure adds the first fault line
+  from `restore.sh`, with the path of the drill's full `output.log`. A failed drill fails the secondary stage, so
+  the summary row's secondary cell and the run's result read failure. Catch-up drills log the same way.
+- **Release drills reach it too.** `install.sh`'s post-start drill (§5) is not a supervisor run, so it records its
+  verdict in the pre-install run's `.meta/drill.json` with `trigger: release`. The next nightly primary stage logs
+  every release drill recorded since the previous run (`release drill of [<svc>] point [<run>] as […]`), and a
+  failed one fails that stage. The release itself already prints the result as it happens.
 - **How pruning uses it.** A sparse point counts towards its tier's quota only once its `drill.json` is green. A point
   whose drill failed, or never ran because the run hung, is kept but counts for nothing. So the tier keeps reaching
   back, and **the oldest drilled point of a tier is never pruned until a newer one has drilled green.** A failed drill
-  also publishes `drill` failed, and the point is never pruned while it is the newest of its bucket, so it stays
+  also publishes `drill` failed and counts as a failed stage in `Fail BKP` until a later drill of that module is
+  green, as for `regressed` (§2), and the point is never pruned while it is the newest of its bucket, so it stays
   for diagnosis.
 - **Cost per week, measured on the pressure test:** influxdb3 drills a full alone (about 7s, growing with history),
   postgres 10s, mariadb 19s, plex 4s to extract, and the small archives in a second or two. A weekly point is always a
@@ -463,12 +493,13 @@ and only the first needs a backup:
 | Kind | Entries | Why |
 |---|---|---|
 | **State git cannot rebuild** (the includes) | `.storage` (9.2M: entity, device and area registries, `core.config_entries` with every UI-configured integration including influxdb, `auth`, `person`, `core.restore_state`, `lovelace_dashboards`, `homeassistant.exposed_entities`, `trace.saved_traces`), `custom_templates`, `blueprints` | Written by HA at run time. `blueprints` holds only HA's defaults today, but it is where an imported blueprint lands, and it is 44K |
-| From the repo, rewritten every release | `automations.yaml`, `configuration.yaml`, `customise.yaml`, `custom_components`, `custom_config`, `custom_packages`, `hass-entities.yaml`, `network_devices.json`, `ui-lovelace*`, `www`, the health-check scripts, and the generated `scripts.yaml` and `entities.yaml` | Excluded. `install.sh` copies `data/*` over the home on every release |
+| From the repo, rewritten every release | `automations.yaml`, `configuration.yaml`, `customise.yaml`, `custom_components`, `custom_config`, `custom_packages` (including the generated `custom_packages/scripts.yaml`), `hass-entities.yaml`, `network_devices.json`, `ui-lovelace*`, `www`, `.google_service_account.json`, the health-check scripts | Excluded. `install.sh` copies `data/*` over the home on every release |
+| Leftovers nothing writes or reads any more (tested 2026-10-27) | `checkready.sh` (mtime 2025-10), `influxdb-ignores.yaml` (2026-08-13, superseded by `custom_config/influxdb/ignore_*.yaml`), `ui-panel-custom.yaml` (deleted from the repo in `385556fdb`, 2026-03-22), top-level `scripts.yaml` (2024-10, the generator now writes `custom_packages/scripts.yaml`), `entities.yaml` (0 bytes), `python_scripts/` (empty) | Deleted in phase 1c, before enrolment. None is in the release package, none is referenced by `configuration.yaml` or any included file, and no current code writes it. The home copy carries every file forward on each release, which is the only reason they exist. (`configuration.yaml`'s apparent `entities.yaml` reference is `hass-entities.yaml`) |
 | Runtime, regenerable | `.HA_VERSION`, `.cache`, `.cloud`, `.ha_run.lock`, `deps`, `tts`, `home-assistant.log*` | Excluded |
 
 Inside `.storage`, HA's two stale one-off migration copies, `core.entity_registry.bak-20261009140938` (3.4M, from
 the 9 Oct registry flush) and `core.device_registry.20260810_040425.migration_backup`, are deleted in phase 1c before
-the first backup. `.storage` is then included whole, with no excludes inside it.
+the first backup. Inside `.storage`, the only excludes are HA's temp files and any future migration copies (below).
 
 - **Backup** is a `backup_files "." HOMEASSISTANT_BACKUP_INCLUDES HOMEASSISTANT_BACKUP_EXCLUDES` snippet, enrolled in
   `generate.py` with `write_container_backup()` and `write_container_restore()`, as letsencrypt does. **HA keeps
@@ -497,7 +528,7 @@ the first backup. `.storage` is then included whole, with no excludes inside it.
 - **The archive is sensitive.** `auth` holds refresh tokens and password hashes, and `core.config_entries` holds
   integration credentials (the influxdb token among them). That is true of letsencrypt's private key already. But
   the shares are guest-mounted CIFS with `dir_mode=0777`, so every backup on them is readable by any host that mounts
-  the share. That is a separate decision, not part of this enrolment.
+  the share. Decided 2026-10-27: that is accepted.
 
 **Snapshot replace replaces each include wholesale, for every `backup_files` module.** Today `restore_files` extracts
 over what is there, so anything created after the backup survives the restore. For HA, that is a store file for an
@@ -532,8 +563,8 @@ Use the secondary chain. It is complete and passes `gzip -t`:
 /share/30/backup/influxdb3/2026-10-22_01-00-08   delta   11M
 ```
 
-A copy of the chain, pinned outside every pruner, is at `/share/30/tmp/influxdb3-restore-2026-10-22/`. Once step 5 of
-the order of work lands, the recovery is one command, run bare to read the plan, then again with `--force`:
+A copy of the chain, pinned outside every pruner, is at `/share/30/tmp/influxdb3-restore-2026-10-22/`. Once rollout phase 5
+lands, the recovery is one command, run bare to read the plan, then again with `--force`:
 
 ```
 /var/lib/asystem/install/influxdb3/latest/restore.sh --mode=merge --from=2026-10-22_01-00-08 --source=/share/30/tmp/influxdb3-restore-2026-10-22
@@ -590,6 +621,7 @@ range cannot overlap anything live has written.
 | supervisor rejects an unknown backup state | `regressed` and `drill` are new words in a vocabulary `metric_schema.go` owns | supervisor releases first, with both words and the parity test |
 | The influxdb3 restarts | each release, and the merge, restart it | Accepted: a few seconds of supervisor metrics, nothing from HA (*Settled 2026-10-27*) |
 | The merge writes wrong data into live | it is the only step that writes history into production | Safety backup first, plan read before `--force`, verified after a restart. The pinned chain stays until a new full covers it |
+| A plex restore before phase 4 corrupts its databases | Today's `restore_files` extracts over live, leaving live's `-wal`/`-shm` beside the restored `.db` files (§8, round 3) | Until phase 4 ships wholesale replace, a plex restore by hand first moves `Plug-in Support/Databases/*-wal` and `*-shm` aside |
 | A bad prune anywhere | | tertiary's read-only snapshots, which every phase leaves untouched. Tertiary ran on every host every night through 27 Oct |
 
 **Shadow pruning.** For the first release of each module, the new pruner computes its keep set and the old pruner's,
@@ -612,10 +644,10 @@ are expected, and neither matters while the pin holds.
 | 0 | ~~Pin the incident chain~~ Done: `/share/30/tmp/influxdb3-restore-2026-10-22/` | five runs, `cmp` and `gzip -t` clean |
 | 1 Durability | Drop `commit=600` from the four `fstab` sources, and apply it with `mount -o remount,commit=5` on each mount (no reboot needed). influxdb3 `entrypoint.sh` quarantine-and-refuse | `findmnt -no OPTIONS` shows no `commit=600` on any host. A drill on scratch: zero-length checkpoints make the entrypoint refuse to start, with the quarantine dir populated |
 | 1b postgres | §7: the bootstrap fragment restored, then the extension update added to it. One postgres release | Every database reports `extversion = default_version`. The generated `image/bootstrap.sh` holds the banner once. The pre-install backup taken just before this release stays as the rollback point until phase 4's drill of a post-update dump is green |
-| 1c homeassistant | Delete the two stale `.storage` migration copies (§8). Then enrol `.storage`, `custom_templates` and `blueprints`. One homeassistant release. It is additive, so it does not wait for the framework: it gains manifests in phase 3 like every other module | The next nightly run shows homeassistant in primary and secondary. `backup_files` reports no unmatched entry. A bare `restore.sh` prints a plan naming exactly the three includes. The archive extracts into scratch |
-| 2 supervisor | `regressed` and `drill` states in `metric_schema.go`, the shell mirror, the parity test. Report a run whose local `status.json` is missing after its timeout as failed | supervisor released to every host, parity test green, existing backup states unchanged in HA, and two consecutive nightly runs complete on every host with tertiary |
-| 3 Backup side | Manifest, fingerprints, regression guard (report only: it publishes `regressed` and pins an anchor, but nothing waits on `--accept`), chain-aware pruner in shadow mode, influxdb3's raised window. Regenerate every module and read every generated `backup.sh` diff. Release in rising order of what a mistake would cost: letsencrypt, zigbee2mqtt, wrangle, mariadb, postgres, plex, influxdb3 | Per module: its pre-install and next nightly runs each write a manifest, no `Prune disagreement`, and secondary's GFS log deletes nothing it did not delete before |
-| 4 Restore side | Restore wrapper with chain resolution, `--source`, `replace`/`drill`/`merge`, and every wrapper-held invariant. Each module's staging, sealing and fingerprint hooks. `install.sh` drills after start, as a warning. `fab generate` fails a module defining `restore_merged` without deltas. postgres `restore_applied` rewritten per *Pressure test*. The per-module `flock` | Per module: its release drill is green. A deliberately corrupted artifact (`--file` pointing at a truncated copy) fails the drill by name, so the drill is shown to bite |
+| 1c homeassistant | Delete the two stale `.storage` migration copies and the six tested leftovers (§8). Ship `backup_files`' tar changes first: stderr to the run log for every module, and the exit-1 retry for a module declaring `_BACKUP_LIVE=atomic`. Without them a running HA copy fails intermittently with no reason (§8, round 3). Then enrol `.storage`, `custom_templates` and `blueprints`, excluding `.storage/tmp*`, `*.bak-*` and `*.migration_backup`. One homeassistant release. It is additive, so it does not wait for the framework: it gains manifests in phase 3 like every other module | The next nightly run shows homeassistant in primary and secondary. `backup_files` reports no unmatched entry. A bare `restore.sh` prints a plan naming exactly the three includes. The archive extracts into scratch |
+| 2 supervisor | `regressed` and `drill` states in `metric_schema.go`, the shell mirror, the parity test. Both feed `BKP` (false) and `Fail BKP` (a failed stage), with the two descriptions widened (§2). Report a run whose local `status.json` is missing after its timeout as failed | supervisor released to every host, parity test green, existing backup states unchanged in HA, a planted `regressed` run on a test module turns `BKP` false and `Fail BKP` non-zero, and `backup tail` of that run shows `as [regressed]` with its evidence line and a failed result; a planted failed drill shows the same way in the secondary cell, and two consecutive nightly runs complete on every host with tertiary |
+| 3 Backup side | Manifest, fingerprints, regression guard (report only: it publishes `regressed` and pins an anchor, but nothing waits on `--accept`), chain-aware pruner in shadow mode, influxdb3's raised window. Regenerate every module and read every generated `backup.sh` diff. Release in rising order of what a mistake would cost: letsencrypt, zigbee2mqtt, wrangle, homeassistant, mariadb, postgres, plex, influxdb3 | Per module: its pre-install and next nightly runs each write a manifest, no `Prune disagreement`, and secondary's GFS log deletes nothing it did not delete before |
+| 4 Restore side | Restore wrapper with chain resolution, `--source`, `replace`/`drill`/`merge`, and every wrapper-held invariant. Each module's staging, sealing and fingerprint hooks. `install.sh` drills after start, as a warning. `fab generate` fails a module defining `restore_merged` without deltas. postgres `restore_applied` rewritten per *Pressure test*, with the extension update after a `replace` (§7). Wholesale replace in `restore_files`, with exclude carry-back and no SQLite sidecars (§8). The per-module `flock` | Per module: its release drill is green. A deliberately corrupted artifact (`--file` pointing at a truncated copy) fails the drill by name, so the drill is shown to bite |
 | 5 Recover | influxdb3 `restore_merged`. A drill against the pinned chain, then a bare `merge` run to read the plan, then `--force` | Plan lists every table's days 2026-08-13 → 2026-10-21 and nothing after. The post-restart fingerprint holds every unit. HA's log has no `Catching up, dropped`. Grafana shows the history |
 | 6 Release the pin | `backup.sh --full` straight after the merge. Wait for its secondary copy and tertiary snapshot. Then do the incident cleanup in *Cleanup* | That full's fingerprint covers every unit of the staged chain's. Only then delete the post-loss runs and the pin |
 | 7 Steady state | Remove the old pruner after 7 clean nights per module. The regression guard enforces (an anchor holds until `--accept`). GFS-synced weekly drills (§5a) start, and pruning requires a green `drill.json`. Every existing sparse point is drilled once to backfill its `drill.json`. Until then it counts for nothing and is kept, which is safe but is residue | Fold the durable rules into supervisor's `CLAUDE.md` Backup section, and delete this plan. The residue check below comes back empty |
@@ -653,7 +685,7 @@ way, the regression guard also skips any regressed run when choosing sparse poin
 | Stale docs: `storage/plans/filesystem.md`'s `commit=600` risk, and "`max` holds influxdb3" (it is on `may`) | Phase 1, in the same change as the `fstab` edit |
 | postgres's corrupted bootstrap source and its doubly-wrapped generated output | Phase 1b, §7 |
 | HA's stale migration copies, `.storage/core.entity_registry.bak-20261009140938` (3.4M) and `.storage/core.device_registry.20260810_040425.migration_backup` | Deleted in phase 1c, before the first backup |
-| HA config-dir entries nothing in the repo writes any more: `checkready.sh`, `influxdb-ignores.yaml`, `ui-panel-custom.yaml`, `python_scripts/` (empty) | By hand. The home copy carries every file forward on each release, so leftovers never clear on their own. Confirm each is unused first |
+| HA config-dir leftovers: `checkready.sh`, `influxdb-ignores.yaml`, `ui-panel-custom.yaml`, top-level `scripts.yaml`, `entities.yaml`, `python_scripts/` | Deleted in phase 1c. All six were tested unused (§8). The home copy carries every file forward on each release, so leftovers never clear on their own |
 | `/home/asystem/<svc>/replaced/<run>/` from a snapshot replace | The next successful backup of that module |
 | Databases left on an old TimescaleDB extension | Phase 1b, then every postgres release, §7 |
 | New supervisor backup topics (`regressed`, `drill`) | Additive, so nothing is stranded. Any topic renamed during development is cleared with `mosquitto_pub -r -n`, per the repo rule |
@@ -668,7 +700,7 @@ grep -rn 'commit=600' src | grep -v -E '/target/|/\.deps/'
 ssh root@<each server> 'findmnt -rno OPTIONS | grep commit=600'
 ssh root@<each server> 'docker ps -a --format {{.Names}} | grep _restore$'
 ssh root@<each server> 'ls -d /home/asystem/*/restore /home/asystem/*/replaced/* /home/asystem/influxdb3/latest/cluster_1/cv2/quarantine 2>/dev/null'
-ssh root@macmini-meg 'cd /home/asystem/homeassistant/latest && ls -d .storage/*.bak-* .storage/*.migration_backup checkready.sh influxdb-ignores.yaml ui-panel-custom.yaml python_scripts 2>/dev/null'
+ssh root@macmini-meg 'cd /home/asystem/homeassistant/latest && ls -d .storage/*.bak-* .storage/*.migration_backup checkready.sh influxdb-ignores.yaml ui-panel-custom.yaml scripts.yaml entities.yaml python_scripts 2>/dev/null'
 ssh root@macmini-may 'ls -d /tmp/backup /share/30/tmp/influxdb3-restore-* /share/30/backup/influxdb3/2026-10-22_08-* 2>/dev/null'
 for f in src/*/*/src/main/resources/image/bootstrap.sh; do [ "$(grep -c 'WARNING: This file is written' "$f")" -gt 1 ] && echo "$f"; done
 for db in hass mlflow postgres template1 wrangle; do ssh root@macmini-mad "docker exec postgres psql -X -U postgres -d $db -Atc \"SELECT '$db' FROM pg_available_extensions WHERE name = 'timescaledb' AND installed_version <> default_version\""; done

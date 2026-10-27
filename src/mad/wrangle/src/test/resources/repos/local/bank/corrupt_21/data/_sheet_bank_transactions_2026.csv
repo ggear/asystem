@@ -1,4 +1,4 @@
-Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Bucket,Category Manual,Category Derived,Account ID,Source ID,Transaction ID
+Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Bucket,Category Manual,Category Auto,Account ID,Source ID,Transaction ID
 2026-01-05,One,-7.25,-7.25,Coffee Edited,,,,,,,540a8918175f5ca38559395087eb552c,t1,87106769165c50a09aa03797fe526cc5
 2026-01-07,One,-1.0,,Typed,,,,,,,,,
 2026-01-06,Two,-10.0,-6.0,Fee,,,,,,,69c576ba31725c77a2ff31acd55cfbca,t2,a2ec0708c94b5bc8a3dddb930309a35f

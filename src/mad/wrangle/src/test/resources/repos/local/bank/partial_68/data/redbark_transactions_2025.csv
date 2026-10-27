@@ -1,4 +1,4 @@
-Date,Date Posted,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Notes,Vetted,Category Manual,Category,Category Derived,Account ID,Source ID,Transaction ID
+Date,Date Posted,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Notes,Vetted,Category Manual,Category,Category Auto,Account ID,Source ID,Transaction ID
 2025-11-01,,One,-1.00,-1.00,Shop One,,5411,,Yes,,,Groceries,540a8918175f5ca38559395087eb552c,,
 2025-11-02,,One,-2.00,-2.00,#NAME?,,5411,,Yes,,,Groceries,540a8918175f5ca38559395087eb552c,,
 2025-11-03,,One,-3.00,-3.00,Shop Three,,5411,#REF!,Yes,,,Groceries,540a8918175f5ca38559395087eb552c,,

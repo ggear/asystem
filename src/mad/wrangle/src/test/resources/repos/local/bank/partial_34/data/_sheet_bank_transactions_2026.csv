@@ -1,2 +1,2 @@
-Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Bucket,Category Manual,Category Derived,Account ID,Source ID,Transaction ID
+Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Bucket,Category Manual,Category Auto,Account ID,Source ID,Transaction ID
 2026-01-03,One,-1000.0,-1000.0,ATM,,,Car,Maintenance,Car,,540a8918175f5ca38559395087eb552c,t1,fef8aa044e7f51c4877463cd7e3d2191

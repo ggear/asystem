@@ -1,4 +1,4 @@
-Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Vetted,Category,Category Manual,Category Derived,Account ID,Source ID,Transaction ID
+Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Vetted,Category,Category Manual,Category Auto,Account ID,Source ID,Transaction ID
 2025-12-01,One,-1.0,-1.0,Cafe One,,,Yes,,,Food,540a8918175f5ca38559395087eb552c,,
 2025-12-02,One,-2.0,-2.0,Shop One,,,Yes,,,Groceries,540a8918175f5ca38559395087eb552c,,
 2025-12-03,One,-3.0,-3.0,New Cafe,,,,,,,540a8918175f5ca38559395087eb552c,,

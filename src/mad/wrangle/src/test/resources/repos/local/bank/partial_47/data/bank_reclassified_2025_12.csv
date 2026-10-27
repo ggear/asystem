@@ -1,2 +1,2 @@
-Run,Source,Year File,Transaction ID,Part,Date,Account,Amount,Description,Manual Before,Manual After,Derived Before,Derived After,Vetted Before,Vetted After,File MD5
+Run,Source,Year File,Transaction ID,Part,Date,Account,Amount,Description,Manual Before,Manual After,Auto Before,Auto After,Vetted Before,Vetted After,File MD5
 2025-12-20T12:00:00,sheet,redbark_transactions_2025.csv,00000000000000000000000000000000,0,2025-12-01,One,-1.0,Shop One,,,,,,Yes,

@@ -1,3 +1,3 @@
-Date,Date Posted,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Notes,Vetted,Category Manual,Category Derived,Category,Bucket,Account ID,Source ID,Transaction ID
+Date,Date Posted,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Notes,Vetted,Category Manual,Category Auto,Category,Bucket,Account ID,Source ID,Transaction ID
 2026-01-03,,One,-10.0,-10.0,Shop,,,,,,,,,540a8918175f5ca38559395087eb552c,,676b8ef91c3e50aeaba0141fa56bc3f4
 2026-01-04,,One,-20.0,-20.0,Fuel,,,,,,,,,540a8918175f5ca38559395087eb552c,,45f4c23f0f5f5824bac101afbde86bd9

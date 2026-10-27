@@ -1,3 +1,3 @@
-Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Category Manual,Category Derived,Account ID,Source ID,Transaction ID,Vetted
+Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Category Manual,Category Auto,Account ID,Source ID,Transaction ID,Vetted
 2026-01-05,Card,-10.0,-10.0,Shop A,,,,,Food,63e9431c123f504f9f69377d147b5e86,,,Yes
 2026-01-05,Card,-20.0,-20.0,Shop B,,,,,Food,770f3a439ceb5231a8e255a8a3efa627,,,Yes

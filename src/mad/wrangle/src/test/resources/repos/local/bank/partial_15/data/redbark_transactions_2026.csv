@@ -1,4 +1,4 @@
-Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Category Manual,Category Derived,Account ID,Source ID,Transaction ID,Vetted
+Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Category Manual,Category Auto,Account ID,Source ID,Transaction ID,Vetted
 2026-01-03,One,-1000.0,-1000.0,ATM,,,,,,540a8918175f5ca38559395087eb552c,s1,,
 2026-01-03,One,-1000.0,-500.0,ATM,,,,Car,,540a8918175f5ca38559395087eb552c,s2,,Yes
 2026-01-03,One,-1000.0,-500.0,ATM,,,,Groceries,,540a8918175f5ca38559395087eb552c,s2,,Yes

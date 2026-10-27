@@ -1,2 +1,2 @@
-Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Category Manual,Category Derived,Account ID,Source ID,Transaction ID,Vetted
+Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Category Manual,Category Auto,Account ID,Source ID,Transaction ID,Vetted
 2026-01-05,One,-12.5,-12.5,Coffee,FOOD_AND_DRINK,,,,,540a8918175f5ca38559395087eb552c,t1,,

@@ -1,4 +1,4 @@
-Date,Date Posted,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Notes,Vetted,Category Manual,Category Derived,Category,Account ID,Source ID,Transaction ID
+Date,Date Posted,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Notes,Vetted,Category Manual,Category Auto,Category,Account ID,Source ID,Transaction ID
 2025-12-05,2025-12-06,Card,-30.0,-30.0,SHOP THREE,,,,,,,,6f4582d7caef5dd587335edd2e068f20,,
 2025-11-10,2025-11-11,Card,-60.0,-60.0,SHOP TWO,,,,,,,,6f4582d7caef5dd587335edd2e068f20,,
 2025-10-15,2025-10-16,Card,-10.0,-10.0,SHOP ONE,,,,,,,,6f4582d7caef5dd587335edd2e068f20,,

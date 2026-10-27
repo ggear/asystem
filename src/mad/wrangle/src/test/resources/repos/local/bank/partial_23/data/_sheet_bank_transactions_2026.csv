@@ -1,4 +1,4 @@
-Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Bucket,Category Manual,Category Derived,Account ID,Source ID,Transaction ID
+Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Bucket,Category Manual,Category Auto,Account ID,Source ID,Transaction ID
 2026-01-03,One,-1000.0,-400.0,ATM,,,,,Car,,540a8918175f5ca38559395087eb552c,t1,fef8aa044e7f51c4877463cd7e3d2191
 2026-01-03,One,-1000.0,-600.0,ATM,,,,,Groceries,,540a8918175f5ca38559395087eb552c,t1,fef8aa044e7f51c4877463cd7e3d2191
 2026-01-04,Two,-4.5,-4.5,Coffee,,,Restaurants,Discretionary,Groceries,Restaurants,69c576ba31725c77a2ff31acd55cfbca,t2,0286d297087757df9c5b071a63404eff

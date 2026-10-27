@@ -1,4 +1,4 @@
-Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Category Manual,Category Derived,Account ID,Source ID,Transaction ID,Vetted
+Date,Account,Amount,Amount Split,Description,Bank Code,Merchant Code,Category,Category Manual,Category Auto,Account ID,Source ID,Transaction ID,Vetted
 2025-09-08,One,-1.0,-1.0,Mystery,,,,,,540a8918175f5ca38559395087eb552c,m1,,Yes
 2025-10-10,One,-100.0,-100.0,Grocer,,5411,,,Groceries,540a8918175f5ca38559395087eb552c,g1,,Yes
 2025-10-12,One,-300.0,-300.0,Mechanic,,,,Car RAC,,540a8918175f5ca38559395087eb552c,c1,,Yes

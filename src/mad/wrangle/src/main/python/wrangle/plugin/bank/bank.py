@@ -4,7 +4,7 @@
 #   unmarked runs the same on a standard run and a reprocess
 #
 #     1. Download: bring every source into the cache
-#        1.1  Download Drive: pull files changed on Drive since the last sync
+#        1.1  Download Drive: pull files changed on Drive, renaming old columns
 #        1.2  Download Sheet: read the input tabs, versioning changed ones
 #     2. Load: parse the operator's dimension tabs
 #        2.1  Load Classifier: parse the rules, holding an edit in error
@@ -137,6 +137,7 @@ BALANCES_MANUAL_TIME = "23:59:59"
 BALANCES_RECONCILE_DAYS = 35
 BALANCES_RECONCILE_SETTLE_DAYS = 7
 BALANCES_RECONCILE_IN_FLIGHT = 12
+BALANCES_BALANCE_FORMULA = '=IF({Balance Manual}<>"",{Balance Manual},{Balance Auto})'
 BALANCE_ID_NAMESPACE = uuid.uuid5(uuid.NAMESPACE_URL, "wrangle/balance/v2")
 BALANCES_KEY_COLUMNS = ["Date", "Time", "Account ID"]
 BALANCES_RAW_COLUMNS = ["Time", "Account", "Account ID", "Balance ID"]
@@ -146,7 +147,7 @@ BALANCES_SCHEMA = {
     "Account": pl.Utf8,
     "Balance": pl.Float64,
     "Balance Manual": pl.Float64,
-    "Balance Linked": pl.Float64,
+    "Balance Auto": pl.Float64,
     "Account ID": pl.Utf8,
     "Balance ID": pl.Utf8,
 }
@@ -160,7 +161,7 @@ BALANCES_STATE_SCHEMA = {
     "Account Type": pl.Utf8,
     "Balance": pl.Float64,
     "Balance Manual": pl.Float64,
-    "Balance Linked": pl.Float64,
+    "Balance Auto": pl.Float64,
     "Balance ID": pl.Utf8,
 }
 
@@ -171,13 +172,13 @@ TRANSACTIONS_HISTORY_DAYS = 7 * 365 - 7
 TRANSACTIONS_SWEEP_DAYS = 90
 TRANSACTIONS_SWEEP_EVERY_DAYS = 7
 TRANSACTION_ID_NAMESPACE = uuid.uuid5(uuid.NAMESPACE_URL, "wrangle/transaction/v1")
-TRANSACTIONS_CATEGORY_FORMULA = '=IF({Category Manual}<>"",{Category Manual},{Category Derived})'
+TRANSACTIONS_CATEGORY_FORMULA = '=IF({Category Manual}<>"",{Category Manual},{Category Auto})'
 TRANSACTIONS_BUCKET_FORMULA = '=IFERROR(VLOOKUP({Category},Classifier!A:B,2,FALSE),"")'
 TRANSACTIONS_CATEGORY_OPTIONS = "Classifier!A2:A"
 TRANSACTIONS_KEY_COLUMNS = ["Date", "Transaction ID", "Split"]
-TRANSACTIONS_RAW_COLUMNS = ["Account", "Description", "Bank Code", "Merchant Code", "Notes", "Vetted", "Category Manual", "Category Derived", "Account ID", "Source ID", "Transaction ID"]
+TRANSACTIONS_RAW_COLUMNS = ["Account", "Description", "Bank Code", "Merchant Code", "Notes", "Vetted", "Category Manual", "Category Auto", "Account ID", "Source ID", "Transaction ID"]
 TRANSACTIONS_EDIT_COLUMNS = ["Amount Split", "Category Manual", "Vetted", "Notes"]
-TRANSACTIONS_FIXED_COLUMNS = ["Date", "Date Posted", "Account", "Amount", "Description", "Bank Code", "Merchant Code", "Category Derived", "Account ID", "Source ID"]
+TRANSACTIONS_FIXED_COLUMNS = ["Date", "Date Posted", "Account", "Amount", "Description", "Bank Code", "Merchant Code", "Category Auto", "Account ID", "Source ID"]
 TRANSACTIONS_AMOUNT_PATTERN = r"^-?\$?-?(\d{1,3}(,\d{3})+|\d+)(\.\d+)?$"
 TRANSACTIONS_SPREADSHEET_ERROR_PATTERN = r"^#(NAME\?|REF!|VALUE!|N/A|DIV/0!|NUM!|NULL!|ERROR!|SPILL!|CALC!)$"
 TRANSACTIONS_SPREADSHEET_ERROR_COLUMNS = ["Description", "Notes"]
@@ -194,7 +195,7 @@ TRANSACTIONS_SCHEMA = {
     "Vetted": pl.Utf8,
     "Category Manual": pl.Utf8,
     "Category": pl.Utf8,
-    "Category Derived": pl.Utf8,
+    "Category Auto": pl.Utf8,
     "Account ID": pl.Utf8,
     "Source ID": pl.Utf8,
     "Transaction ID": pl.Utf8,
@@ -212,7 +213,7 @@ TRANSACTIONS_YEAR_TAB_SCHEMA = {
     "Vetted": pl.Utf8,
     "Category Manual": pl.Utf8,
     "Category": pl.Utf8,
-    "Category Derived": pl.Utf8,
+    "Category Auto": pl.Utf8,
     "Bucket": pl.Utf8,
     "End of Month": pl.Date,
     "Account ID": pl.Utf8,
@@ -237,7 +238,7 @@ TRANSACTIONS_STATE_SCHEMA = {
     "Vetted": pl.Utf8,
     "Category Manual": pl.Utf8,
     "Category": pl.Utf8,
-    "Category Derived": pl.Utf8,
+    "Category Auto": pl.Utf8,
     "Bucket": pl.Utf8,
     "Account ID": pl.Utf8,
     "Source ID": pl.Utf8,
@@ -344,6 +345,8 @@ CLASSIFIER_HOLDING_CODES = {
 }
 
 CHANGES_FILE_PREFIX = "bank_reclassified"
+# Remove with the header rewrite in 1.1 once release has run it, every file then holding the new names
+COLUMNS_RENAMED = {"Category Derived": "Category Auto", "Balance Linked": "Balance Auto", "Derived Before": "Auto Before", "Derived After": "Auto After"}
 CHANGES_SCHEMA = {
     "Run": pl.Utf8,
     "Source": pl.Utf8,
@@ -356,8 +359,8 @@ CHANGES_SCHEMA = {
     "Description": pl.Utf8,
     "Manual Before": pl.Utf8,
     "Manual After": pl.Utf8,
-    "Derived Before": pl.Utf8,
-    "Derived After": pl.Utf8,
+    "Auto Before": pl.Utf8,
+    "Auto After": pl.Utf8,
     "Vetted Before": pl.Utf8,
     "Vetted After": pl.Utf8,
     "Split Before": pl.Float64,
@@ -553,6 +556,17 @@ class Bank(plugin.Plugin):
         # 1.1 Download Drive
         if drive_folder is not None and not plugin.config.disable_drive_downloads:
             self.drive_synchronise(drive_folder, self.local_cache, download=True, errors=errors)
+        for path in glob.glob(f"{self.local_cache}/*.csv"):
+            if basename(path).startswith("_sheet_"):
+                continue
+            with open(path, encoding="utf-8", newline="") as handle:
+                header, rest = handle.readline(), handle.read()
+            columns = next(csv.reader([header]), [])
+            if set(columns) & set(COLUMNS_RENAMED):
+                with open(path, "w", encoding="utf-8", newline="") as handle:
+                    csv.writer(handle, lineterminator=header[len(header.rstrip("\r\n")) :] or "\n").writerow([COLUMNS_RENAMED.get(column, column) for column in columns])
+                    handle.write(rest)
+                self.print_log(f"File [{basename(path)}] columns renamed")
 
         # 1.2 Download Sheet
         started_time = time.time()
@@ -841,7 +855,7 @@ class Bank(plugin.Plugin):
                     "Amount Split",
                     "Description",
                     "Category Manual",
-                    "Category Derived",
+                    "Category Auto",
                     "Vetted",
                 ]
             )
@@ -849,7 +863,7 @@ class Bank(plugin.Plugin):
         changes_frames: list[pl.DataFrame] = []
 
         def _bank_categories_logged(_before_df: pl.DataFrame, _after_df: pl.DataFrame, _source: str):
-            _columns = {"Category Manual": "Manual", "Category Derived": "Derived", "Vetted": "Vetted", "Amount Split": "Split"}
+            _columns = {"Category Manual": "Manual", "Category Auto": "Auto", "Vetted": "Vetted", "Amount Split": "Split"}
             _context = ["Year File", "Date", "Account", "Amount", "Description"]
             _ids = _before_df["Transaction ID"].implode()
             _parts_df = (
@@ -878,7 +892,7 @@ class Bank(plugin.Plugin):
             _buckets_df = classifier_df.select(["Category", "Bucket"]).drop_nulls("Category").unique("Category", keep="first", maintain_order=True)
             return (
                 _transactions_df.drop("Bucket", strict=False)
-                .with_columns(pl.coalesce("Category Manual", "Category Derived").alias("Category"))
+                .with_columns(pl.coalesce("Category Manual", "Category Auto").alias("Category"))
                 .join(_buckets_df, on="Category", how="left", maintain_order="left")
             )
 
@@ -991,19 +1005,19 @@ class Bank(plugin.Plugin):
                     if not _bank_operator_checked(file_name, row):
                         file_valid = False
                     elif abs(round(row["__value"] * 100) - row["__value"] * 100) > 1e-6:
-                        _bank_error(file_name, key, "TRANSACTION_DECIMALS", f"amount [{row['Amount']}] has more than two decimals")
+                        _bank_error(file_name, key, "TRANSACTION_DECIMALS", f"transaction on [{row['__account_name']}] amount [{row['Amount']}] has more than two decimals")
                         file_valid = False
                     elif row["__value"] == 0:
-                        _bank_error(file_name, key, "TRANSACTION_ZERO", "amount zero")
+                        _bank_error(file_name, key, "TRANSACTION_ZERO", f"transaction on [{row['__account_name']}] amount zero")
                         file_valid = False
                     elif row["Description"] is None:
-                        _bank_error(file_name, key, "TRANSACTION_DESCRIPTION", "description blank")
+                        _bank_error(file_name, key, "TRANSACTION_DESCRIPTION", f"transaction on [{row['__account_name']}] description blank")
                         file_valid = False
                     elif row["Vetted"] is not None and row["__vetted"] is None:
-                        _bank_error(file_name, key, "TRANSACTION_VETTED", f"vetted [{row['Vetted']}] not one of [{', '.join(FLAGS)}]")
+                        _bank_error(file_name, key, "TRANSACTION_VETTED", f"transaction on [{row['__account_name']}] vetted [{row['Vetted']}] not one of [{', '.join(FLAGS)}]")
                         file_valid = False
                     elif (row["Amount Split"] is not None and row["__split"] is None) or (row["Date Posted"] is not None and row["__posted"] is None):
-                        _bank_error(file_name, key, "VALUE_UNPARSED", f"amount split [{row['Amount Split']}] date posted [{row['Date Posted']}] unparsed")
+                        _bank_error(file_name, key, "VALUE_UNPARSED", f"transaction on [{row['__account_name']}] amount split [{row['Amount Split']}] date posted [{row['Date Posted']}] unparsed")
                         file_valid = False
                 if file_valid:
                     for _, group_df in rows_df.with_columns(pl.coalesce("__split", "__value").alias("__split")).group_by(
@@ -1012,12 +1026,18 @@ class Bank(plugin.Plugin):
                         cents, splits = round(group_df["__value"][0] * 100), [round(split * 100) for split in group_df["__split"].to_list()]
                         if any(split == 0 or (split > 0) != (cents > 0) for split in splits) or sum(splits) % cents != 0:
                             _bank_error(
-                                file_name, f"row {group_df['__row'][0]}", "SPLIT_INVALID", f"split parts [{', '.join(str(split / 100) for split in splits)}] do not sum to amount [{cents / 100}]"
+                                file_name,
+                                f"row {group_df['__row'][0]}",
+                                "SPLIT_INVALID",
+                                f"transaction on [{group_df['__account_name'][0]}] split parts [{', '.join(str(split / 100) for split in splits)}] do not sum to amount [{cents / 100}]",
                             )
                             file_valid = False
                         elif sum(splits) // cents > 1 and group_df["__posted"].is_null().all():
                             _bank_error(
-                                file_name, f"row {group_df['__row'][0]}", "MANUAL_DUPLICATE", f"manual transaction [{group_df['Description'][0]}] identical to another on the same account and date"
+                                file_name,
+                                f"row {group_df['__row'][0]}",
+                                "MANUAL_DUPLICATE",
+                                f"manual transaction [{group_df['Description'][0]}] on [{group_df['__account_name'][0]}] identical to another on the same date",
                             )
                 normalised_counts["files"] += 1
                 if not file_valid:
@@ -1028,7 +1048,9 @@ class Bank(plugin.Plugin):
                     continue
                 for row in rows_df.filter(pl.col("Category Manual").is_not_null()).iter_rows(named=True):
                     if classifier_usable and row["Category Manual"] not in classifier_categories:
-                        _bank_error(file_name, f"row {row['__row']}", "CATEGORY_UNKNOWN", f"category manual [{row['Category Manual']}] not on the Classifier tab")
+                        _bank_error(
+                            file_name, f"row {row['__row']}", "CATEGORY_UNKNOWN", f"transaction on [{row['__account_name']}] category manual [{row['Category Manual']}] not on the Classifier tab"
+                        )
                 normalised_df = rows_df.select(
                     pl.col("__date").alias("Date"),
                     pl.col("__posted").alias("Date Posted"),
@@ -1042,7 +1064,7 @@ class Bank(plugin.Plugin):
                     pl.col("__vetted").alias("Vetted"),
                     pl.col("Category Manual"),
                     pl.lit(None, dtype=pl.Utf8).alias("Category"),
-                    pl.col("Category Derived"),
+                    pl.col("Category Auto"),
                     pl.col("__account_id").alias("Account ID"),
                     pl.col("Source ID"),
                     pl.lit(None, dtype=pl.Utf8).alias("Transaction ID"),
@@ -1118,7 +1140,7 @@ class Bank(plugin.Plugin):
                         pl.coalesce("Account", "__account_name").alias("Account"),
                         pl.col("__value").alias("Balance"),
                         pl.col("__value").alias("Balance Manual"),
-                        pl.lit(None, dtype=pl.Float64).alias("Balance Linked"),
+                        pl.lit(None, dtype=pl.Float64).alias("Balance Auto"),
                         pl.col("__account_id").alias("Account ID"),
                         pl.lit(None, dtype=pl.Utf8).alias("Balance ID"),
                     ),
@@ -1137,6 +1159,7 @@ class Bank(plugin.Plugin):
             started_time = time.time()
             merged_counts = {"edits": 0, "ignored": 0}
             edits_by_path: dict[str, dict[str, list[dict]]] = {}
+            account_names = dict(_bank_accounts_current().select(["Account ID", "Name"]).iter_rows())
             for year in sheet_years:
                 tab = f"Transactions_{year}"
                 tab_raw_df = _bank_raw(sheet_files.get(tab))
@@ -1175,12 +1198,12 @@ class Bank(plugin.Plugin):
                         if candidates_df["Transaction ID"].n_unique() == 1:
                             held_df = candidates_df
                     if len(held_df) == 0 or held_df["Transaction ID"].n_unique() != 1:
-                        _bank_error(tab, transaction_id, "EDIT_UNMATCHED", "edited transaction held by no file, edit not applied")
+                        _bank_error(tab, transaction_id, "EDIT_UNMATCHED", f"edited transaction on [{account_names.get(edit['Account ID'])}] held by no file, edit not applied")
                         continue
                     held_df = held_df.filter(pl.col("__path") == held_df["__path"][0]).sort("__index")
                     held_path = held_df["__path"][0]
                     if edit["Bad Vetted"] is not None:
-                        _bank_error(tab, transaction_id, "TRANSACTION_VETTED", f"vetted [{edit['Bad Vetted']}] not one of [{', '.join(FLAGS)}]")
+                        _bank_error(tab, transaction_id, "TRANSACTION_VETTED", f"transaction on [{held_df['Account'][0]}] vetted [{edit['Bad Vetted']}] not one of [{', '.join(FLAGS)}]")
                         continue
                     held_parts = held_df.to_dicts()
                     cents = round(held_parts[0]["Amount"] * 100)
@@ -1203,11 +1226,16 @@ class Bank(plugin.Plugin):
                         ]
                     splits = [cents if part["Amount Split"] is None else part["Amount Split"] for part in parts]
                     if any(split == 0 or (split > 0) != (cents > 0) for split in splits) or sum(splits) != cents:
-                        _bank_error(tab, transaction_id, "SPLIT_INVALID", f"split parts [{', '.join(str(split / 100) for split in splits)}] do not sum to amount [{cents / 100}]")
+                        _bank_error(
+                            tab,
+                            transaction_id,
+                            "SPLIT_INVALID",
+                            f"transaction on [{held_parts[0]['Account']}] split parts [{', '.join(str(split / 100) for split in splits)}] do not sum to amount [{cents / 100}]",
+                        )
                         continue
                     for part in parts:
                         if part["Category Manual"] is not None and classifier_usable and part["Category Manual"] not in classifier_categories:
-                            _bank_error(tab, transaction_id, "CATEGORY_UNKNOWN", f"category manual [{part['Category Manual']}] not on the Classifier tab")
+                            _bank_error(tab, transaction_id, "CATEGORY_UNKNOWN", f"transaction on [{held_parts[0]['Account']}] category manual [{part['Category Manual']}] not on the Classifier tab")
                     edits_by_path.setdefault(held_path, {})[held_parts[0]["Transaction ID"]] = [
                         {
                             **{column: held_parts[0][column] for column in TRANSACTIONS_SCHEMA},
@@ -1259,7 +1287,7 @@ class Bank(plugin.Plugin):
                 return
             tab_df = self.sheet_typed(tab_raw_df, BALANCES_SCHEMA)
             base_df = self.sheet_typed(pl.read_csv(base_file, infer_schema=False, raise_if_empty=False), BALANCES_SCHEMA)
-            fixed = [column for column in BALANCES_SCHEMA if column not in ("Balance ID", "Balance Manual") and column in tab_df.columns and column in base_df.columns]
+            fixed = [column for column in BALANCES_SCHEMA if column not in ("Balance ID", "Balance Manual", "Balance") and column in tab_df.columns and column in base_df.columns]
             changed_df = tab_df.join(base_df.unique("Balance ID", keep="first"), on="Balance ID", suffix="__base").filter(
                 pl.any_horizontal([pl.col(column).ne_missing(pl.col(f"{column}__base")) for column in [*fixed, "Balance Manual"]])
             )
@@ -1326,6 +1354,7 @@ class Bank(plugin.Plugin):
                 )
 
             def _bank_balances_fetched(_linked_ids) -> pl.DataFrame:
+                _linked_names = dict(linked_df.select(["Redbark Account ID", "Name"]).iter_rows())
                 try:
                     _redbark_balances_file = abspath(f"{self.local_cache}/_redbark_balances.csv")
                     _balances_result = self.redbark_download(
@@ -1359,21 +1388,21 @@ class Bank(plugin.Plugin):
                     )
                     for _account_id, _usable, _freshness in _response_df.select(["accountId", "__usable", "freshness"]).iter_rows():
                         if not _usable:
-                            _bank_error("Redbark", _account_id, "BALANCE_RESPONSE", "balance unknown, duplicated or without value or observed time")
+                            _bank_error("Redbark", _account_id, "BALANCE_RESPONSE", f"balance on [{_linked_names.get(_account_id)}] unknown, duplicated or without value or observed time")
                         elif _freshness not in (None, "fresh"):
-                            _bank_error("Redbark", _account_id, "BALANCE_STALE", f"freshness [{_freshness}]")
+                            _bank_error("Redbark", _account_id, "BALANCE_STALE", f"balance on [{_linked_names.get(_account_id)}] freshness [{_freshness}]")
                     _readings_df = _response_df.filter("__usable").select(
                         pl.col("__observed").dt.date().alias("Date"),
                         pl.col("__observed").dt.strftime("%H:%M:%S").alias("Time"),
                         pl.col("Name").alias("Account"),
                         pl.col("__amount").alias("Balance"),
                         pl.lit(None, dtype=pl.Float64).alias("Balance Manual"),
-                        pl.col("__amount").alias("Balance Linked"),
+                        pl.col("__amount").alias("Balance Auto"),
                         "Account ID",
                         pl.lit(None, dtype=pl.Utf8).alias("Balance ID"),
                     )
                     for _redbark_id in sorted(set(_linked_ids) - set(_response_df["accountId"].to_list())):
-                        _bank_error("Redbark", _redbark_id, "BALANCE_ABSENT", "linked account absent from the balances response")
+                        _bank_error("Redbark", _redbark_id, "BALANCE_ABSENT", f"linked account [{_linked_names.get(_redbark_id)}] absent from the balances response")
                     if len(_readings_df) == 0:
                         raise ValueError("balances response has no usable balances")
                     return _readings_df
@@ -1457,7 +1486,7 @@ class Bank(plugin.Plugin):
                         elif _error["Status"] == 404:
                             _dead.append(_account)
                         else:
-                            _bank_error("Redbark", _account["Account ID"], "TRANSACTION_CALL", f"transactions call failed [{_error['Status'] or _error['Detail']}]")
+                            _bank_error("Redbark", _account["Account ID"], "TRANSACTION_CALL", f"transactions call for [{_account['Name']}] failed [{_error['Status'] or _error['Detail']}]")
                     return _returned, _dead
 
                 linked_accounts = list(linked_df.iter_rows(named=True))
@@ -1480,7 +1509,7 @@ class Bank(plugin.Plugin):
                         returned_rows, dead = _bank_transactions_fetched([replacements.get(account["Account ID"], account) for account in linked_accounts])
                         gone += [(account, "still not found [HTTP Error 404]") for account in dead]
                 for account, reason in gone:
-                    _bank_error("Accounts", account["Account ID"], "REDBARK_GONE", f"Redbark id [{account['Redbark Account ID']}] {reason}")
+                    _bank_error("Accounts", account["Account ID"], "REDBARK_GONE", f"Redbark id [{account['Redbark Account ID']}] of [{account['Name']}] {reason}")
                 transaction_valid = (
                     pl.col("__amount").is_not_null()
                     & ~pl.col("__amount").is_nan()
@@ -1598,11 +1627,17 @@ class Bank(plugin.Plugin):
                 for row in unmatched_df.filter(~pl.col("__window") & pl.col("__checked")).iter_rows(named=True):
                     if row["__new"] in ambiguous:
                         _bank_error(
-                            f"Transactions_{row['Date'].year}", row["Source ID"], "TRANSACTION_RELISTED", f"transaction date [{row['Date']}] pairs with more than one held transaction, not adopted"
+                            f"Transactions_{row['Date'].year}",
+                            row["Source ID"],
+                            "TRANSACTION_RELISTED",
+                            f"transaction on [{row['Account']}] date [{row['Date']}] pairs with more than one held transaction, not adopted",
                         )
                     else:
                         _bank_error(
-                            f"Transactions_{row['Date'].year}", row["Source ID"], "TRANSACTION_UNHELD", f"transaction date [{row['Date']}] listed by Redbark before the add window and held by no file"
+                            f"Transactions_{row['Date'].year}",
+                            row["Source ID"],
+                            "TRANSACTION_UNHELD",
+                            f"transaction on [{row['Account']}] date [{row['Date']}] listed by Redbark before the add window and held by no file",
                         )
                 held_rows = {(row["__path"], row["__index"]): row for row in held_df.iter_rows(named=True)}
                 new_rows = transactions_new_df.to_dicts()
@@ -1619,7 +1654,7 @@ class Bank(plugin.Plugin):
                                 f"Transactions_{held_row['Date'].year}",
                                 held_row["Source ID"],
                                 "TRANSACTION_RELISTED",
-                                f"held transaction [{(held_row['Description'] or '').strip()}] date [{held_row['Date']}] relisted by Redbark as [{new_row['Source ID']}]",
+                                f"held transaction [{(held_row['Description'] or '').strip()}] on [{held_row['Account']}] date [{held_row['Date']}] relisted by Redbark as [{new_row['Source ID']}]",
                             )
                     if held_row["Date Posted"] is None and (new_row["Date"].year == held_row["Date"].year or _bank_writable(_bank_path(_bank_file(held_key[0])[0], new_row["Date"].year))):
                         update.update({"Date": new_row["Date"], "Date Posted": new_row["Date Posted"]})
@@ -1653,7 +1688,7 @@ class Bank(plugin.Plugin):
                             f"Transactions_{row['Date'].year}",
                             row["Source ID"],
                             "TRANSACTION_GONE",
-                            f"held transaction [{(row['Description'] or '').strip()}] date [{row['Date']}]"
+                            f"held transaction [{(row['Description'] or '').strip()}] on [{row['Account']}] date [{row['Date']}]"
                             + (f" posted [{row['Date Posted']}]" if row["Date Posted"] is not None else "")
                             + f" window from [{row['__check']}] no longer listed by Redbark",
                         )
@@ -1853,7 +1888,12 @@ class Bank(plugin.Plugin):
                 )
                 unlisted_df = account_df.filter(~pl.col("__listed") & pl.any_horizontal([(pl.col("Date") > first) & (pl.col("Date") < last) for first, last in spans]))
                 for row in unlisted_df.iter_rows(named=True):
-                    _bank_error(f"Transactions_{row['Date'].year}", row["Transaction ID"], "IMPORT_GONE", f"held transaction date [{row['Date']}] inside an export's dates listed by no export")
+                    _bank_error(
+                        f"Transactions_{row['Date'].year}",
+                        row["Transaction ID"],
+                        "IMPORT_GONE",
+                        f"held transaction on [{row['Account']}] date [{row['Date']}] inside an export's dates listed by no export",
+                    )
                 for row in (
                     unlisted_df.join(account_df.filter(pl.col("__listed")).select(["__cents", "Date", "Transaction ID"]), on="__cents", suffix="_listed")
                     .filter((pl.col("Date") - pl.col("Date_listed")).dt.total_days().abs() <= TRANSACTIONS_MATCH_DAYS)
@@ -1864,7 +1904,7 @@ class Bank(plugin.Plugin):
                         f"Transactions_{row['Date'].year}",
                         row["Transaction ID"],
                         "IMPORT_SUSPECT",
-                        f"held transaction date [{row['Date']}] near exported transaction [{row['Transaction ID_listed']}] of the same amount",
+                        f"held transaction on [{row['Account']}] date [{row['Date']}] near exported transaction [{row['Transaction ID_listed']}] of the same amount",
                     )
             self.print_log(
                 f"Exports [{len(exports)}] imported [{len(exports_imported)}] added [{exports_counts['added']}] held [{exports_counts['held']}] dated [{exports_counts['dated']}] "
@@ -1898,7 +1938,7 @@ class Bank(plugin.Plugin):
                         f"Transactions_{row['Date'].year}",
                         row["Source ID"] or row["Transaction ID"],
                         "DEDUPE_REMOVED",
-                        f"duplicate transaction [{row['Description']}] date [{row['Date']}] removed from [{basename(row['__path'])}]",
+                        f"duplicate transaction [{row['Description']}] on [{row['Account']}] date [{row['Date']}] removed from [{basename(row['__path'])}]",
                     )
                 for path in sorted(set(exact_df["__path"].to_list())):
                     _bank_write(
@@ -1985,7 +2025,7 @@ class Bank(plugin.Plugin):
             if derived_df is None:
                 self.print_log(f"Classified [0] of [{len(classify_df)}] rows, no usable classifier", started=started_time)
             else:
-                moved = pl.coalesce("Category Manual", "__derived").ne_missing(pl.coalesce("Category Manual", "Category Derived"))
+                moved = pl.coalesce("Category Manual", "__derived").ne_missing(pl.coalesce("Category Manual", "Category Auto"))
                 for path, frame_df in classify_frames.items():
                     classified_df = (
                         frame_df.with_row_index("__index")
@@ -1995,7 +2035,7 @@ class Bank(plugin.Plugin):
                     moved_count += int(classified_df["__moved"].sum())
                     cleared_count += int(classified_df["__cleared"].sum())
                     classified_df = classified_df.with_columns(
-                        pl.when(pl.col("__cleared")).then(pl.lit(None, dtype=pl.Utf8)).otherwise(pl.col("Vetted")).alias("Vetted"), pl.col("__derived").alias("Category Derived")
+                        pl.when(pl.col("__cleared")).then(pl.lit(None, dtype=pl.Utf8)).otherwise(pl.col("Vetted")).alias("Vetted"), pl.col("__derived").alias("Category Auto")
                     ).drop(["__index", "__derived", "__moved", "__cleared"])
                     if not classified_df.equals(frame_df):
                         _bank_write(classified_df, path, "classified")
@@ -2075,7 +2115,7 @@ class Bank(plugin.Plugin):
                     .drop_nulls("__at")
                     .sort("__at")
                 )
-                _moments_df = _balances_df.filter(pl.col("Balance Linked").is_not_null()).select(["Date", pl.col("Time").str.zfill(8)]).unique()
+                _moments_df = _balances_df.filter(pl.col("Balance Auto").is_not_null()).select(["Date", pl.col("Time").str.zfill(8)]).unique()
                 if len(_manual_df) == 0 or len(_moments_df) == 0:
                     return _balances_df.clear().select(list(BALANCES_SCHEMA))
                 return (
@@ -2092,7 +2132,7 @@ class Bank(plugin.Plugin):
                             pl.col("Account"),
                             pl.col("Balance Manual").alias("Balance"),
                             pl.col("Balance Manual"),
-                            pl.lit(None, dtype=pl.Float64).alias("Balance Linked"),
+                            pl.lit(None, dtype=pl.Float64).alias("Balance Auto"),
                             pl.col("Account ID"),
                             pl.lit(None, dtype=pl.Utf8).alias("Balance ID"),
                         ]
@@ -2112,7 +2152,7 @@ class Bank(plugin.Plugin):
                 )
                 balances_df = bank_balances_identified(
                     pl.concat([balances_read_df, _bank_balances_carried(balances_read_df)], how="vertical_relaxed")
-                    .with_columns(pl.coalesce("Balance Manual", "Balance Linked").alias("Balance"))
+                    .with_columns(pl.coalesce("Balance Manual", "Balance Auto").alias("Balance"))
                     .unique(BALANCES_KEY_COLUMNS, keep="first", maintain_order=True)
                     .filter(pl.col("Date").dt.year().is_in(balances_committed))
                 )
@@ -2227,21 +2267,21 @@ class Bank(plugin.Plugin):
             for account_id, name in manual_accounts_df.sort("Account ID").iter_rows():
                 months = set(manual_readings_df.filter(pl.col("Account ID") == account_id)["Date"].dt.truncate("1mo").to_list())
                 if not months:
-                    _bank_error("Balances", name, "BALANCE_MANUAL_STALE", f"manual account [{account_id}] has no reading")
+                    _bank_error("Balances", name, "BALANCE_MANUAL_STALE", f"manual account [{name}] has no reading")
                     continue
                 month = min(months)
                 while month < month_start:
                     if month not in months:
-                        _bank_error("Balances", f"{name} {month:%Y-%m}", "BALANCE_MANUAL_STALE", f"manual account [{account_id}] has no reading in closed month [{month:%Y-%m}]")
+                        _bank_error("Balances", f"{name} {month:%Y-%m}", "BALANCE_MANUAL_STALE", f"manual account [{name}] has no reading in closed month [{month:%Y-%m}]")
                     month = (month + timedelta(days=32)).replace(day=1)
             reconcile_ids = _bank_accounts_current().filter(pl.col("Status") == ACCOUNT_STATUS_LINKED)["Account ID"].implode()
             reconcile_readings_df = pl.concat(
                 [
                     balances_current_df.filter(
-                        pl.col("Balance Linked").is_not_null()
+                        pl.col("Balance Auto").is_not_null()
                         & pl.col("Account ID").is_in(reconcile_ids)
                         & pl.col("Date").is_between(today - timedelta(days=BALANCES_RECONCILE_DAYS), today - timedelta(days=BALANCES_RECONCILE_SETTLE_DAYS))
-                    ).with_columns(pl.col("Balance Linked").alias("__balance"), pl.lit(False).alias("__manual")),
+                    ).with_columns(pl.col("Balance Auto").alias("__balance"), pl.lit(False).alias("__manual")),
                     manual_readings_df.filter(pl.col("Account ID").is_in(transactions_current_df["Account ID"].implode())),
                 ],
                 how="diagonal_relaxed",
@@ -2265,7 +2305,7 @@ class Bank(plugin.Plugin):
                             "Balances",
                             f"{reading['Account']} {day}",
                             "BALANCE_UNRECONCILED_CURRENT" if reading["__manual"] and day >= month_start else "BALANCE_UNRECONCILED",
-                            f"balance [{reading_before['__balance']}] at [{reading_before['Date']} {reading_before['Time']}] to [{reading['__balance']}] at [{day} {reading['Time']}] "
+                            f"balance on [{reading['Account']}] [{reading_before['__balance']}] at [{reading_before['Date']} {reading_before['Time']}] to [{reading['__balance']}] at [{day} {reading['Time']}] "
                             f"moved [{(after - before) / 100}] more than held transactions explain, fewest in flight assumed",
                         )
                         explained_before = set(explained)
@@ -2285,7 +2325,12 @@ class Bank(plugin.Plugin):
                 .unique("Transaction ID", keep="first", maintain_order=True)
                 .iter_rows(named=True)
             ):
-                _bank_error(f"Transactions_{row['Date'].year}", row["Transaction ID"], "TRANSACTION_SPREADSHEET_ERROR", f"column [{column}] holds spreadsheet error [{row[column]}]")
+                _bank_error(
+                    f"Transactions_{row['Date'].year}",
+                    row["Transaction ID"],
+                    "TRANSACTION_SPREADSHEET_ERROR",
+                    f"transaction on [{row['Account']}] column [{column}] holds spreadsheet error [{row[column]}]",
+                )
         review_df = (
             transactions_current_df.with_columns(
                 pl.col("Category").is_null().alias("__unclassified"), (pl.col("Vetted") != FLAG_YES).fill_null(True).alias("__unvetted"), (pl.col("Date") >= month_start).alias("__open")
@@ -2305,7 +2350,7 @@ class Bank(plugin.Plugin):
                 if count:
                     _bank_error(f"Transactions_{year}", str(year), f"{code}_CURRENT" if is_open else code, f"[{count}] of [{total}] {label} in {'open month' if is_open else 'closed months'}")
         for month, change in (
-            balances_current_df.filter(pl.col("Balance Linked").is_not_null())
+            balances_current_df.filter(pl.col("Balance Auto").is_not_null())
             .sort(["Date", "Time"])
             .group_by(["Account ID", pl.col("Date").dt.month_start().alias("__month")])
             .agg(pl.col("Balance").last())
@@ -2415,7 +2460,7 @@ class Bank(plugin.Plugin):
                 manual_letter = _bank_letter(list(BALANCES_SCHEMA), "Balance Manual")
                 manual_cells = [f"{manual_letter}{index + 2}" for index, manual in enumerate(balances_sheet_df["Balance ID"].is_in(manual_ids).to_list()) if manual]
                 dataframe_print(self.name, balances_sheet_df, print_label="Balances", print_verb="rendered", started=started_time)
-                tabs_status["Balances"] = _bank_tab_uploaded("Balances", balances_sheet_df, BALANCES_RAW_COLUMNS, {}, {}, manual_cells, BALANCES_SCHEMA)
+                tabs_status["Balances"] = _bank_tab_uploaded("Balances", balances_sheet_df, BALANCES_RAW_COLUMNS, {"Balance": BALANCES_BALANCE_FORMULA}, {}, manual_cells, BALANCES_SCHEMA)
 
             # 9.3 Upload Transactions Tabs
             transactions_tab_years = sorted({*_bank_years(), *(int(tab.rsplit("_", 1)[-1]) for tab in sheet_files if re.fullmatch(r"Transactions_\d{4}", tab))})
