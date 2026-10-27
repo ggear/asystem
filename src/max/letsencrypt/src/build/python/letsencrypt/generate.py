@@ -29,11 +29,16 @@ if __name__ == "__main__":
                     service_name = module_tokens[1]
                     host_pull = f"{hosts_labels[host_pull_label][0]}-{host_pull_label}"
                     host_push = f"{hosts_labels[module_tokens[0]][0]}-{module_tokens[0]}"
+                    install_path = Path(certificates_path).relative_to(join(certificates_path_tokens[0], "src", certificates_path_tokens[1], "src/main/resources"))
+                    script_path = f"/var/lib/asystem/install/{service_name}/latest/{install_path}"
                     hosts_file.write(
                         f"""
-ssh -n -q -o "StrictHostKeyChecking=no" root@{host_push} "find /var/lib/asystem/install/{service_name}/latest/config -name certificates.sh -exec {{}} pull {host_pull} {host_push} \\;"
-ssh -n -q -o "StrictHostKeyChecking=no" root@{host_push} "find /var/lib/asystem/install/{service_name}/latest/config -name certificates.sh -exec {{}} push {host_pull} {host_push} \\;"
-logger -t pushcerts "Pushed new certificates to [{host_push}]"
+if ssh -n -q -o "StrictHostKeyChecking=no" root@{host_push} "{script_path} pull {host_pull} {host_push}" &&
+  ssh -n -q -o "StrictHostKeyChecking=no" root@{host_push} "{script_path} push {host_pull} {host_push}"; then
+  logger -t pushcerts "Pushed new certificates to [{host_push}]"
+else
+  logger -t pushcerts "Failed to push new certificates to [{host_push}]"
+fi
                     """.strip()
                         + "\n"
                     )

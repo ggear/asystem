@@ -83,12 +83,16 @@ The export import, the weekly 90-day sweep, the Drive upload conflict check and 
 
 ### `TRANSACTION_GONE` today
 
-A one-off event (not standing), so on the `Logs` tab it is `Current` only in the run that raised it, then `Historic`, an error
-shown as a warning, and dropped 30 days after its `Date Raised`. It is raised only by a run that fetches transactions (every balance
+A one-off **warning** (since 27 Oct 2026; it was an error, which turned bank unhealthy on every fetch while a drop sat in the
+window, though the row is kept and nothing is lost). On the `Logs` tab it is `Current` only in the run that raised it, then
+`Historic`, and dropped 30 days after its `Date Raised`. A charge the bank reversed that a file still holds is the error case, and
+`BALANCE_UNRECONCILED` catches it. It is raised only by a run that fetches transactions (every balance
 read, three-hourly), for a held Redbark row Redbark no longer lists inside the check window: 14 days
 behind the newest held row, 90 on the weekly sweep, the window's first day excluded. So a row that stays gone is re-raised each fetch until it leaves the window,
 then weekly for about 90 days, and its detail names the window start, so each new window start is a separate entry. Two faults
-follow: a row still gone reads `Historic` between fetches, and the entries multiply.
+follow: a row still gone reads `Historic` between fetches, and the entries multiply. It also means a run straight after a fetch
+re-uploads the `Logs` tab, so the release test, which fetches live, runs once rather than with the no-change rerun the other
+plugins' release tests make.
 
 ### Proposed: graded by the balance, and standing
 
@@ -97,16 +101,13 @@ Make `TRANSACTION_GONE` a standing problem, raised every run while true, its kin
 - **Gone set.** Each fetch records the held rows it found unlisted (by Source ID) in a state file, and removes one Redbark lists
   again, relisted or under its own id, or the files no longer hold. Every run raises one entry per row in the set, keyed by Source
   ID, with a stable detail (no window start), so it never multiplies and its `State` means "still gone".
-- **Graded against the reading pair spanning the row's posting day** (`Date Posted`, else `Date`), on linked accounts only:
-  - *Confirmed*, the pair reconciles counting the row and not without it: the bank holds it and Redbark dropped it. **Warning.**
-  - *Contradicted*, the pair reconciles only without it: the bank likely reversed it. **Error**: check the statement and remove
-    the row on Drive if it agrees.
-  - *Unjudged*, no settled pair spans it (before the account's first reading, readings under 7 days old, older than the 35-day
-    window, no linked balance such as AMEX) or it reconciles either way (in-flight ambiguity): **Error**, until judged.
-- **Operator acknowledgement.** A gone row ticked `Vetted` (checked against the statement) is a **Warning** whatever its grade, so
-  the 8 October drops, all posted before the first Redbark reading (15 Oct) and never judgeable, stop being errors once ticked.
-- **Leaving.** A row stops being raised once Redbark lists it, it is removed, or it is a warning and past both the check window
-  and the 35-day reconcile window; it is then `Historic` for 30 days. An error stays `Current` until fixed or vetted.
+- **Graded against the reading pair spanning the row's posting day** (`Date Posted`, else `Date`), on linked accounts only, the
+  grade named in the warning's detail: *confirmed* (the pair reconciles counting the row and not without it, so the bank holds it),
+  *contradicted* (it reconciles only without it, so the bank likely reversed it, and `BALANCE_UNRECONCILED` is raised as the
+  error), or *unjudged* (no settled pair spans it, or in-flight ambiguity). It stays a warning whatever the grade, as decided
+  27 Oct 2026: the reconcile error, not the gone row, is what needs acting on.
+- **Leaving.** A row stops being raised once Redbark lists it, it is removed, or it is past both the check window
+  and the 35-day reconcile window; it is then `Historic` for 30 days.
 
 ### Proposed: `BALANCE_UNRECONCILED` in the same structure
 

@@ -2515,6 +2515,11 @@ class Bank(plugin.Plugin):
                         return f"Includes the {_words[0]} {_noun} this month"
                     return f"Includes {', '.join(_words[:-1])} & {_words[-1]} {_nouns} this month"
 
+                def _bank_described(_description: str) -> str:
+                    _text = _description.strip().rstrip(".")
+                    _first = _text.split()[0] if _text else ""
+                    return f"Includes {_text if len(_first) > 1 and _first.isupper() else _text[:1].lower() + _text[1:]} this month"
+
                 transactions_categories_df = (
                     transactions_month_df.group_by(["End of Month", "Bucket", "Category"])
                     .agg(pl.col("__total").sum().round(2).alias("Total"), pl.lit(2).alias("__level"))
@@ -2526,6 +2531,7 @@ class Bank(plugin.Plugin):
                         on="Category",
                         how="left",
                     )
+                    .with_columns(pl.col("Description").map_elements(_bank_described, return_dtype=pl.Utf8))
                 )
                 transactions_buckets_df = (
                     transactions_month_df.group_by(["End of Month", "Bucket"])
