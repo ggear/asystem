@@ -40,7 +40,7 @@ restore_checked() {
       restore_fault "integrity_check of [$(basename "${database}")] answered [$(printf '%s' "${result}" | head -n 1)]"
       failed=1
     else
-      restore_report "integrity_check of [$(basename "${database}")] ok"
+      restore_report "check [$(basename "${database}")] integrity_check ok"
     fi
   done
   return "${failed}"

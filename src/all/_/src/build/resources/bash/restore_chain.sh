@@ -111,7 +111,7 @@ restore_chain_resolved() {
     parent="$(restore_previous_run "${run}")"
     declared="$(restore_manifest_field "${run}" parent)"
     if [ "${RESTORE_VERBOSE:-false}" = "true" ] && [ -n "${declared}" ] && [ "${declared}" != "${parent}" ]; then
-      restore_report "manifest parent [${declared}] of [${run}] differs from the preceding run [${parent}], using the preceding run"
+      restore_report "chain manifest parent [${declared}] of [${run}] differs from the preceding run [${parent}], using the preceding run"
     fi
     [ -n "${parent}" ] || {
       restore_fault "delta run [${run}] has no run before it to hang off, so its chain has no full"

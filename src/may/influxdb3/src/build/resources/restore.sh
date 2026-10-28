@@ -147,7 +147,7 @@ restore_staged() {
     restore_fault "could not copy the home licence into scratch, a fresh licence would start email verification"
     return 1
   }
-  restore_stamped "starting scratch container [${INFLUXDB3_RESTORE_SCRATCH}]"
+  restore_stamped staging "starting scratch container [${INFLUXDB3_RESTORE_SCRATCH}]"
   influxdb3_restore_started "" || return 1
   local step=0
   for file in "${RESTORE_CHAIN_FILES[@]}"; do
@@ -165,7 +165,7 @@ restore_staged() {
       return 1
       ;;
     esac
-    restore_stamped "restoring [${name}] into scratch, step [${step}] of [${#RESTORE_CHAIN_FILES[@]}]"
+    restore_stamped staging "restoring [${name}] into scratch, step [${step}] of [${#RESTORE_CHAIN_FILES[@]}]"
     mkdir -p "${target}"
     tar --extract --gzip --directory "${target}" --file "${file}" || { restore_fault "could not extract [${file}] into scratch"; return 1; }
     output="$(docker exec "${INFLUXDB3_RESTORE_SCRATCH}" influxdb3 create restore --backup "${name}" 2>&1)" || {

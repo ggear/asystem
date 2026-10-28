@@ -92,10 +92,23 @@ restore_fault() {
   RESTORE_FAULTS=$((RESTORE_FAULTS + 1))
 }
 
-restore_report() { echo "   $*"; }
+RESTORE_INTERNAL_LABELS=" artifact taken size service integrity chain drill merge plan staging counting sealing verify short backup would extracted moved carried stopped started unzipped loaded restored check "
+
+restore_report() {
+  local text="$*" word rest
+  word="${text%% *}"
+  case "${RESTORE_INTERNAL_LABELS}" in
+  *" ${word} "*)
+    rest="${text#"${word}"}"
+    rest="${rest#"${rest%%[![:space:]]*}"}"
+    printf '   %-10s%s\n' "${word}" "${rest}"
+    ;;
+  *) printf '   %-10s%s\n' "" "${text}" ;;
+  esac
+}
 
 restore_changed() {
-  echo "   $*"
+  restore_report "$@"
   RESTORE_CHANGED=$((RESTORE_CHANGED + 1))
 }
 
@@ -197,9 +210,9 @@ restore_files() {
 }
 
 restore_backed() {
-  [ "${RESTORE_BACKUP}" = "true" ] || { restore_report "skipping the safety backup, [--no-backup] given"; return 0; }
-  [ -f "${RESTORE_INTERNAL_BACKUP}" ] || { restore_report "skipping the safety backup, no [backup.sh] beside this script"; return 0; }
-  restore_report "taking a safety backup of the current data first ..."
+  [ "${RESTORE_BACKUP}" = "true" ] || { restore_report "backup skipped, [--no-backup] given"; return 0; }
+  [ -f "${RESTORE_INTERNAL_BACKUP}" ] || { restore_report "backup skipped, no [backup.sh] beside this script"; return 0; }
+  restore_report "backup taking a safety backup of the current data first ..."
   BACKUP_PRUNE=false BACKUP_SKIP_HOURS=0 BACKUP_SERVICE_RESTART=false bash "${RESTORE_INTERNAL_BACKUP}" || {
     restore_fault "the safety backup failed, abandoning the restore"
     return 1
@@ -415,7 +428,7 @@ restore_chain_resolved() {
     parent="$(restore_previous_run "${run}")"
     declared="$(restore_manifest_field "${run}" parent)"
     if [ "${RESTORE_VERBOSE:-false}" = "true" ] && [ -n "${declared}" ] && [ "${declared}" != "${parent}" ]; then
-      restore_report "manifest parent [${declared}] of [${run}] differs from the preceding run [${parent}], using the preceding run"
+      restore_report "chain manifest parent [${declared}] of [${run}] differs from the preceding run [${parent}], using the preceding run"
     fi
     [ -n "${parent}" ] || {
       restore_fault "delta run [${run}] has no run before it to hang off, so its chain has no full"
@@ -627,7 +640,9 @@ RESTORE_LIVE_ADDRESS=""
 RESTORE_PLANNED=()
 
 restore_stamped() {
-  restore_report "$(date +%T) $*" >&2
+  local label="${1}"
+  shift
+  restore_report "${label} $(date +%T) $*" >&2
 }
 
 restore_ticked() {
@@ -644,7 +659,7 @@ restore_ticked() {
   mibs=0
   [ "${elapsed}" -gt 0 ] && mibs=$((${bytes:-0} / 1048576 / elapsed))
   load="$(cut -d' ' -f1 /proc/loadavg 2>/dev/null || echo -)"
-  restore_stamped "merged [${done}] of [${total}] units [${percent}]%, [${rows:-0}] rows, [$(awk -v b="${bytes:-0}" 'BEGIN { printf "%.2f", b / 1073741824 }')] GiB at [${mibs}] MiB/s, [${rate}] units a minute, [$((elapsed / 60))m$((elapsed % 60))s] elapsed, about [${eta}] left, load [${load}]"
+  restore_stamped merge "merged [${done}] of [${total}] units [${percent}]%, [${rows:-0}] rows, [$(awk -v b="${bytes:-0}" 'BEGIN { printf "%.2f", b / 1073741824 }')] GiB at [${mibs}] MiB/s, [${rate}] units a minute, [$((elapsed / 60))m$((elapsed % 60))s] elapsed, about [${eta}] left, load [${load}]"
 }
 
 restore_planned_units() {
@@ -671,21 +686,21 @@ restore_merge() {
     restore_fault "module [${RESTORE_MODULE_NAME}] defines no restore_merged, merge is not offered"
     return 1
   fi
-  restore_stamped "staging [${#RESTORE_CHAIN_FILES[@]}] artifact(s) into scratch"
+  restore_stamped staging "[${#RESTORE_CHAIN_FILES[@]}] artifact(s) into scratch"
   scratch="$(restore_staged)" || {
     restore_fault "could not stage [${RESTORE_RUN_TIMESTAMP}] into scratch"
     return 1
   }
   RESTORE_SCRATCH="${scratch}"
-  restore_stamped "scratch staged, fingerprinting it"
+  restore_stamped counting "fingerprinting scratch"
   staged="$(backup_fingerprinted "${scratch}")"
-  restore_stamped "sealing scratch read only"
+  restore_stamped sealing "scratch read only"
   restore_sealed "${scratch}" || {
     restore_fault "could not seal scratch [${scratch}] read only"
     restore_teardown "${scratch}"
     return 1
   }
-  restore_stamped "fingerprinting live"
+  restore_stamped counting "fingerprinting live"
   live="$(backup_fingerprinted "${RESTORE_LIVE_ADDRESS}")"
   mapfile -t RESTORE_PLANNED < <(restore_planned_units "${staged}" "${live}")
   restore_report "merge     [${#RESTORE_PLANNED[@]}] closed unit(s) differ from live"
@@ -706,7 +721,7 @@ restore_merge() {
   RESTORE_STATS_FILE="${progress}.stats"
   export RESTORE_STATS_FILE
   rm -f "${failures}" "${RESTORE_STATS_FILE}"
-  restore_stamped "merging [${total}] unit(s) with [${jobs}] job(s), progress is recorded in [${progress}]"
+  restore_stamped merge "merging [${total}] unit(s) with [${jobs}] job(s), progress is recorded in [${progress}]"
   for unit in "${RESTORE_PLANNED[@]}"; do
     grep -Fxq -- "${unit}" "${progress}" && continue
     if [ "${jobs}" -le 1 ]; then
@@ -745,7 +760,7 @@ restore_merge() {
     return 1
   fi
   [ "${jobs}" -gt 1 ] && RESTORE_CHANGED=$((RESTORE_CHANGED + $(grep -c . "${progress}")))
-  restore_stamped "merge written, restarting [${RESTORE_LIVE_ADDRESS}] and waiting for its counts to settle"
+  restore_stamped verify "merge written, restarting [${RESTORE_LIVE_ADDRESS}] and waiting for its counts to settle"
   restore_restarted
   declare -A held=() want=()
   while read -r line; do
@@ -763,12 +778,12 @@ restore_merge() {
       [ "${held["${unit}"]:-0}" -ge "${want["${unit}"]:-0}" ] || shorts+=("${unit}")
     done
     [ "${#shorts[@]}" -eq 0 ] && break
-    restore_stamped "verifying, attempt [$((attempt + 1))] of [${RESTORE_VERIFY_ATTEMPTS:-24}], [${#shorts[@]}] unit(s) still short"
+    restore_stamped verify "attempt [$((attempt + 1))] of [${RESTORE_VERIFY_ATTEMPTS:-24}], [${#shorts[@]}] unit(s) still short"
     attempt=$((attempt + 1))
     [ "${attempt}" -lt "${RESTORE_VERIFY_ATTEMPTS:-24}" ] || break
     sleep "${RESTORE_VERIFY_SLEEP:-5}"
   done
-  [ "${#shorts[@]}" -eq 0 ] && restore_stamped "verified, every merged unit holds at least the backup's count"
+  [ "${#shorts[@]}" -eq 0 ] && restore_stamped verify "every merged unit holds at least the backup's count"
   for unit in "${shorts[@]}"; do
     restore_fault "unit [${unit}] holds [${held["${unit}"]:-0}] after the merge, wants at least [${want["${unit}"]}]"
     short=$((short + 1))
@@ -824,7 +839,7 @@ restore_checked() {
       restore_fault "integrity_check of [$(basename "${database}")] answered [$(printf '%s' "${result}" | head -n 1)]"
       failed=1
     else
-      restore_report "integrity_check of [$(basename "${database}")] ok"
+      restore_report "check [$(basename "${database}")] integrity_check ok"
     fi
   done
   return "${failed}"

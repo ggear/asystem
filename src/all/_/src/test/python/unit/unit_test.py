@@ -337,7 +337,7 @@ class RestoreWrapperTest(unittest.TestCase):
         run = self.archive("2026-10-28_01-00-00", {"live/a": 100, "live/b": 50, "archive/c": 7}, verdict="success", units={"live": 150, "archive": 7})
         done = self.run_restore("--mode=drill", "--record=primary")
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
-        self.assertIn("drill passed", done.stdout)
+        self.assertIn("drill     passed", done.stdout)
         with open(join(run, ".meta", "primary", "drill.json")) as handle:
             self.assertIn('"verdict": "success"', handle.read())
         self.assertFalse(isdir(join(self.workdir, "letsencrypt", "restore", "2026-10-28_01-00-00")))
@@ -346,7 +346,7 @@ class RestoreWrapperTest(unittest.TestCase):
         run = self.archive("2026-10-28_01-00-00", {"live/a": 100}, verdict="success", units={"live": 9000})
         done = self.run_restore("--mode=drill", "--record=secondary")
         self.assertEqual(done.returncode, 1)
-        self.assertIn("short [live] wants [9000] holds [100]", done.stdout)
+        self.assertIn("short     [live] wants [9000] holds [100]", done.stdout)
         with open(join(run, ".meta", "secondary", "drill.json")) as handle:
             self.assertIn('"verdict": "failure"', handle.read())
 
@@ -367,7 +367,7 @@ class RestoreWrapperTest(unittest.TestCase):
         run = self.sql_run("2026-10-28_01-00-00", text, {"alpha": len("INSERT 1;") + 1, "beta": len("INSERT 22;") + 1})
         done = self.run_restore("--mode=drill", "--record=primary")
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
-        self.assertIn("drill passed", done.stdout)
+        self.assertIn("drill     passed", done.stdout)
         with open(join(run, ".meta", "primary", "drill.json")) as handle:
             self.assertIn('"verdict": "success"', handle.read())
 
@@ -376,7 +376,7 @@ class RestoreWrapperTest(unittest.TestCase):
         self.sql_run("2026-10-28_01-00-00", text, {"alpha": 5000})
         done = self.run_restore("--mode=drill")
         self.assertEqual(done.returncode, 1)
-        self.assertIn("short [alpha]", done.stdout)
+        self.assertIn("short     [alpha]", done.stdout)
 
     def test_a_failing_module_check_fails_the_drill_and_records_it(self):
         run = self.archive("2026-10-28_01-00-00", {"live/a": 100}, verdict="success", units={"live": 100})
@@ -566,13 +566,13 @@ class RestoreWrapperTest(unittest.TestCase):
         )
         done = self.source(body)
         self.assertIn("status=0", done.stdout)
-        self.assertIn("staging [1] artifact(s) into scratch", done.stderr)
-        self.assertIn("fingerprinting live", done.stderr)
-        self.assertIn("merging [10] unit(s) with [3] job(s)", done.stderr)
-        self.assertRegex(done.stderr, r"merged \[\d+\] of \[10\] units \[\d+\]%, \[\d+\] rows, \[\d\.\d\d\] GiB at \[\d+\] MiB/s, \[\d+\] units a minute")
-        self.assertIn("merged [10] of [10] units [100]%, [5000] rows", done.stderr)
-        self.assertIn("restarting [live]", done.stderr)
-        self.assertIn("verified, every merged unit holds at least the backup's count", done.stderr)
+        self.assertRegex(done.stderr, r"staging +\d\d:\d\d:\d\d \[1\] artifact\(s\) into scratch")
+        self.assertRegex(done.stderr, r"counting +\d\d:\d\d:\d\d fingerprinting live")
+        self.assertRegex(done.stderr, r"merge +\d\d:\d\d:\d\d merging \[10\] unit\(s\) with \[3\] job\(s\)")
+        self.assertRegex(done.stderr, r"merge +\d\d:\d\d:\d\d merged \[\d+\] of \[10\] units \[\d+\]%, \[\d+\] rows, \[\d\.\d\d\] GiB at \[\d+\] MiB/s, \[\d+\] units a minute")
+        self.assertRegex(done.stderr, r"merged \[10\] of \[10\] units \[100\]%, \[5000\] rows")
+        self.assertRegex(done.stderr, r"verify +\d\d:\d\d:\d\d merge written, restarting \[live\]")
+        self.assertRegex(done.stderr, r"verify +\d\d:\d\d:\d\d every merged unit holds at least the backup's count")
 
     def test_a_rerun_skips_units_already_merged(self):
         with open(join(self.workdir, "live.txt"), "w") as handle:

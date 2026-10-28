@@ -139,10 +139,23 @@ restore_fault() {
   RESTORE_FAULTS=$((RESTORE_FAULTS + 1))
 }
 
-restore_report() { echo "   $*"; }
+RESTORE_INTERNAL_LABELS=" artifact taken size service integrity chain drill merge plan staging counting sealing verify short backup would extracted moved carried stopped started unzipped loaded restored check "
+
+restore_report() {
+  local text="$*" word rest
+  word="${text%% *}"
+  case "${RESTORE_INTERNAL_LABELS}" in
+  *" ${word} "*)
+    rest="${text#"${word}"}"
+    rest="${rest#"${rest%%[![:space:]]*}"}"
+    printf '   %-10s%s\n' "${word}" "${rest}"
+    ;;
+  *) printf '   %-10s%s\n' "" "${text}" ;;
+  esac
+}
 
 restore_changed() {
-  echo "   $*"
+  restore_report "$@"
   RESTORE_CHANGED=$((RESTORE_CHANGED + 1))
 }
 
@@ -244,9 +257,9 @@ restore_files() {
 }
 
 restore_backed() {
-  [ "${RESTORE_BACKUP}" = "true" ] || { restore_report "skipping the safety backup, [--no-backup] given"; return 0; }
-  [ -f "${RESTORE_INTERNAL_BACKUP}" ] || { restore_report "skipping the safety backup, no [backup.sh] beside this script"; return 0; }
-  restore_report "taking a safety backup of the current data first ..."
+  [ "${RESTORE_BACKUP}" = "true" ] || { restore_report "backup skipped, [--no-backup] given"; return 0; }
+  [ -f "${RESTORE_INTERNAL_BACKUP}" ] || { restore_report "backup skipped, no [backup.sh] beside this script"; return 0; }
+  restore_report "backup taking a safety backup of the current data first ..."
   BACKUP_PRUNE=false BACKUP_SKIP_HOURS=0 BACKUP_SERVICE_RESTART=false bash "${RESTORE_INTERNAL_BACKUP}" || {
     restore_fault "the safety backup failed, abandoning the restore"
     return 1
