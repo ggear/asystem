@@ -233,3 +233,33 @@ func TestProbeUtilBackupStageSecondary_GFSThinCountsDailyInDaysNotRuns(t *testin
 		t.Errorf("survived %q, want every run on the newest seven days kept however many ran today, and the weekly and monthly heads before them", survived)
 	}
 }
+
+func TestProbeUtilBackupStageSecondary_GFSThinRefusesADirectoryHoldingAManifest(t *testing.T) {
+	dir := t.TempDir()
+	var timestamps []string
+	base := time.Date(2026, 8, 1, 1, 0, 0, 0, time.UTC)
+	for day := range 40 {
+		timestamp := base.AddDate(0, 0, day).Format(backupTimestampFormat)
+		timestamps = append(timestamps, timestamp)
+		if err := os.MkdirAll(filepath.Join(dir, timestamp), 0755); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
+	}
+	meta := filepath.Join(dir, timestamps[3], treeMetaDirectory)
+	if err := os.MkdirAll(meta, 0755); err != nil {
+		t.Fatalf("mkdir meta: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(meta, treeManifestLeaf), []byte("{}"), 0644); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+
+	gfsThin(t.Context(), scribe.SubjectNone, dir, loadedWithKeep(t, 1, 1, 1))
+
+	remaining, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("read dir: %v", err)
+	}
+	if len(remaining) != len(timestamps) {
+		t.Errorf("remaining = %d, want all %d runs kept when any run carries a manifest", len(remaining), len(timestamps))
+	}
+}

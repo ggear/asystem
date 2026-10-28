@@ -240,6 +240,13 @@ func gfsThin(ctx context.Context, subject scribe.Subject, dir string, loaded *co
 	if len(names) <= 1 {
 		return
 	}
+	for _, name := range names {
+		if _, statErr := os.Stat(filepath.Join(dir, name, treeMetaDirectory, treeManifestLeaf)); statErr == nil {
+			scribe.Log(scribe.SourceBackup, subject, scribe.ActionRemove).Warnf("excluded", time.Now(),
+				"[%s] is not thinned, run [%s] carries a manifest so only the module pruner may choose what to keep", dir, name)
+			return
+		}
+	}
 	sort.Strings(names)
 	count := len(names)
 	keep, daySeen := map[string]bool{}, map[string]bool{}
