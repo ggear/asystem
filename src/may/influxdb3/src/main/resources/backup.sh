@@ -63,6 +63,10 @@ backup_target() {
     echo "Cannot name the backup, pass the suffix and the extension to backup_target" >&2
     return 1
   fi
+  if [ "${suffix}" = "${BACKUP_DELTA_SUFFIX}" ] && [ -z "$(backup_parent "${BACKUP_RUN_TIMESTAMP}")" ]; then
+    echo "Cannot write a delta, no full backup is held locally for it to hang off" >&2
+    return 1
+  fi
   BACKUP_TARGET_PATH="${BACKUP_INTERNAL_ROOT_DIR}/${BACKUP_RUN_TIMESTAMP}/${BACKUP_MODULE_NAME}_at_${BACKUP_RUN_TIMESTAMP}_from_${BACKUP_SOURCE_VERSION}${suffix}.${extension}"
   mkdir -p "$(dirname "${BACKUP_TARGET_PATH}")"
 }
@@ -682,7 +686,8 @@ backup_written() {
   done
   if [ -n "${full}" ] &&
     [ "$(date -d "$(date -d "@$(backup_epoch "${full}")" +%F)" +%G-%V)" = "$(date +%G-%V)" ] &&
-    [ -n "${parent}" ] && [ "$(backup_status "${parent}")" = "completed" ]; then
+    [ -n "${parent}" ] && [ "$(backup_status "${parent}")" = "completed" ] &&
+    [ -n "$(backup_parent "${BACKUP_RUN_TIMESTAMP}")" ]; then
     name="delta-${BACKUP_RUN_TIMESTAMP}"
     source="${INFLUXDB3_BACKUP_STORE}/${parent}/incremental"
     backup_target "${BACKUP_DELTA_SUFFIX}" "tar.gz" || return 1

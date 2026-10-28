@@ -118,7 +118,8 @@ backup_written() {
   done
   if [ -n "${full}" ] &&
     [ "$(date -d "$(date -d "@$(backup_epoch "${full}")" +%F)" +%G-%V)" = "$(date +%G-%V)" ] &&
-    [ -n "${parent}" ] && [ "$(backup_status "${parent}")" = "completed" ]; then
+    [ -n "${parent}" ] && [ "$(backup_status "${parent}")" = "completed" ] &&
+    [ -n "$(backup_parent "${BACKUP_RUN_TIMESTAMP}")" ]; then
     name="delta-${BACKUP_RUN_TIMESTAMP}"
     source="${INFLUXDB3_BACKUP_STORE}/${parent}/incremental"
     backup_target "${BACKUP_DELTA_SUFFIX}" "tar.gz" || return 1

@@ -179,6 +179,20 @@ class BackupWrapperTest(unittest.TestCase):
         self.assertIn(f"Prune disagreement run [{old}] old [delete] new [keep]", done.stdout)
         self.assertTrue(isdir(join(self.root, old)))
 
+    def test_a_delta_is_refused_without_a_local_full_to_hang_off(self):
+        stamp = "2026-10-28_01-00-00"
+        done = self.shell(f'BACKUP_INTERNAL_ROOT_DIR="{self.root}"; BACKUP_RUN_TIMESTAMP="{stamp}"; backup_target "$BACKUP_DELTA_SUFFIX" tar.gz; echo "status=$?"')
+        self.assertIn("status=1", done.stdout)
+        self.assertIn("no full backup is held locally", done.stderr)
+        self.assertFalse(isdir(join(self.root, stamp)))
+
+    def test_a_delta_is_named_when_a_local_full_exists(self):
+        full, stamp = "2026-10-27_01-00-00", "2026-10-28_01-00-00"
+        self.run_dir(full, {self.artifact(full): b"x"})
+        done = self.shell(f'BACKUP_INTERNAL_ROOT_DIR="{self.root}"; BACKUP_RUN_TIMESTAMP="{stamp}"; backup_target "$BACKUP_DELTA_SUFFIX" tar.gz; echo "status=$?"; echo "$BACKUP_TARGET_PATH"')
+        self.assertIn("status=0", done.stdout)
+        self.assertIn("_delta.tar.gz", done.stdout)
+
     def test_the_anchor_chain_survives_when_the_newest_run_is_regressed(self):
         full, delta, bad = "2026-10-01_01-00-00", "2026-10-02_01-00-00", "2026-10-28_01-00-00"
         self.run_dir(full, {self.artifact(full): b"x"})
