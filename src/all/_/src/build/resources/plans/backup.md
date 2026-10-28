@@ -662,6 +662,18 @@ are expected, and neither matters while the pin holds.
 | 6 Release the pin | `backup.sh --full` straight after the merge. Wait for its secondary copy and tertiary snapshot. Then do the incident cleanup in *Cleanup* | That full's fingerprint covers every unit of the staged chain's. Only then delete the post-loss runs and the pin |
 | 7 Steady state | Remove the old pruner after 7 clean nights per module. The regression guard enforces (an anchor holds until `--accept`). GFS-synced weekly drills (§5a) start, and pruning requires a green `.meta/secondary/drill.json`. Every existing sparse point is drilled once to backfill it. Until then it counts for nothing and is kept, which is safe but is residue | Fold the durable rules into supervisor's `CLAUDE.md` Backup section, and delete this plan. The residue check below comes back empty |
 
+### Release windows
+
+Phases are written and gated one by one, but released in three windows. A window ends at its gate, and nothing in the next starts before it holds.
+
+| Window | Phases | Order inside | Gate before the next window |
+|---|---|---|---|
+| A | 1, 1b, 1c | `fstab` remount on each host (no release); homeassistant leftovers and stale `.storage` copies deleted on meg; every module whose generated `backup.sh` or `restore.sh` changed (plex, letsencrypt, wrangle, others after reading the diffs); homeassistant; postgres; influxdb3 | `findmnt -no OPTIONS` shows no `commit=600`; every database at `extversion = default_version`; each released module's next nightly run succeeds; homeassistant shows in primary and secondary; the influxdb3 scratch drill refuses on zero-length checkpoints |
+| B | 2, 3 | supervisor to every host first, then modules in rising cost: letsencrypt, zigbee2mqtt, wrangle, homeassistant, mariadb, postgres, plex, influxdb3 | phase 2 gate on every host; then per module a manifest on its pre-install and next nightly run, no `Prune disagreement` |
+| C | 4, then 5 and 6 as runs, then 7 | each module's release drill; the merge is a production run, not a release | release drill green per module and the truncated-artifact drill fails by name; phase 5 and 6 gates; phase 7 needs 7 clean nights per module, which no release shortens |
+
+A release is a rollback point (its pre-install backup), so the postgres extension update stays in its own release inside window A.
+
 ## Cleanup
 
 ### Residue from the incident, inventoried 2026-10-27

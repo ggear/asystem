@@ -219,13 +219,7 @@ WAL plus write-once, then-immutable parquet, which is the ideal shape for CoW.
 
 ### The two risks that are real, and neither is btrfs
 
-1. **`commit=600` on `max`/`may`/`meg`** — `/`, `/home`, `/var` and `/tmp` are all mounted with a
-   **ten-minute** journal commit interval against a 5-second default. fsync'd data is unaffected, so
-   the databases are fine, but everything not fsync'd carries up to ten minutes of exposure on a
-   power cut: docker state, logs, config, anything a script writes. That is a far larger
-   unclean-shutdown risk than the filesystem choice, it is live today on ext4, and the write
-   amplification it saves is negligible on NVMe. `mad`'s btrfs sets no `commit=` and runs the 30s
-   default. **Drop it to the default whether or not the conversion happens.**
+1. **`commit=600` was dropped** from the `fstab` sources on `max`/`may`/`meg`/`jil` after the 2026-10-22 influxdb3 loss, where PachaTree's un-fsync'd checkpoints came back zero length. Every mount now runs the 5-second ext4 default; `mad`'s btrfs runs the 30s default.
 2. **There is no UPS on any host** — no `upsc`, no `apcaccess`, nothing on USB, checked on all four.
    A small UPS with NUT triggering a clean shutdown at low battery deletes the entire class of risk
    and makes this section moot. Against nightly backups, monthly scrubs, per-metric monitoring and a
@@ -234,10 +228,10 @@ WAL plus write-once, then-immutable parquet, which is the ideal shape for CoW.
 ## Sequencing
 
 1. **Now, independent of everything else** — `lvextend` `meg`'s root from the free VG space, and
-   clear `/root` and `/media`. Drop `commit=600` on all three. Buy a UPS.
+   clear `/root` and `/media`. Buy a UPS.
 2. **At the next OS reinstall of any server** — build it to the layout above. Do not schedule three
    rebuilds; take each host as it comes up for a distro move it needs anyway.
-3. **Order when it happens** — `may`, then `meg`, then `max`. `max` holds influxdb3, so its outage
+3. **Order when it happens** — `may`, then `meg`, then `max`. `may` holds influxdb3, so its outage
    costs the estate's metrics history for the window.
 4. **`jen` stays ext4 — ruled out converting it.** It boots from a 119G USB flash drive. Btrfs
    metadata write amplification on cheap flash is a real cost with none of the benefits, there is no

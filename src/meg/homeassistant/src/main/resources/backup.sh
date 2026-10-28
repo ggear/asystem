@@ -1,0 +1,391 @@
+#!/usr/bin/env bash
+################################################################################
+# WARNING: This file is written by the build process, any manual edits will be lost!
+################################################################################
+
+# shellcheck disable=SC1090,SC2034,SC2329
+
+set -o pipefail
+
+# Usage:
+#
+#   ./backup.sh              take a backup, full or delta off an eligible parent
+#   ./backup.sh --prune      drop local runs older than BACKUP_RETAIN_DAYS, never the newest
+#   ./backup.sh --prune-gfs  apply the grandfather-father-son window
+#
+#   BACKUP_SKIP_HOURS=0 ./backup.sh            take a backup now, whatever the throttle says
+#   BACKUP_RETAIN_DAYS=0 ./backup.sh --prune   keep only the newest local run
+#
+# Both prune forms take the backup root as an optional argument, defaulting to the module's own.
+# Any variable below can be set on the command line, unless the module's .env already sets it.
+#
+# BACKUP_SOURCE_PATH      the data path backed up, defaulting to this module's own
+# BACKUP_RETAIN_DAYS      the window by which daily backups are retained before entering the pruning window
+# BACKUP_KEEP_DAILY       the daily backups kept by --prune-gfs, the module's .env overriding it as HOMEASSISTANT_BACKUP_KEEP_DAILY
+# BACKUP_KEEP_WEEKLY      the weekly backups kept by --prune-gfs, the module's .env overriding it as HOMEASSISTANT_BACKUP_KEEP_WEEKLY
+# BACKUP_KEEP_MONTHLY     the monthly backups kept by --prune-gfs, the module's .env overriding it as HOMEASSISTANT_BACKUP_KEEP_MONTHLY
+# BACKUP_SKIP_HOURS       skip the run when the newest backup is younger than this, zero to never skip
+# BACKUP_SERVICE_RESTART  start the service again after the copy, false when the caller starts it itself
+# BACKUP_TIMEOUT_HOURS    the budget a backup waiting on its service allows before abandoning the run
+
+BACKUP_INTERNAL_ENV="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.env"
+[ -f "${BACKUP_INTERNAL_ENV}" ] && . "${BACKUP_INTERNAL_ENV}"
+
+BACKUP_MODULE_NAME="homeassistant"
+BACKUP_SOURCE_PATH="${BACKUP_SOURCE_PATH:-${SERVICE_DATA_DIR:-/home/asystem/homeassistant/latest}}"
+BACKUP_INTERNAL_SOURCE_DIR="$(readlink -f "${BACKUP_SOURCE_PATH}")"
+BACKUP_SOURCE_VERSION="$(basename "${BACKUP_INTERNAL_SOURCE_DIR}")"
+BACKUP_INTERNAL_ROOT_DIR="$(dirname "${BACKUP_INTERNAL_SOURCE_DIR}")/backup"
+BACKUP_RUN_TIMESTAMP="$(date +"%Y-%m-%d_%H-%M-%S")"
+BACKUP_FULL_SUFFIX="_full"
+BACKUP_DELTA_SUFFIX="_delta"
+BACKUP_RETAIN_DAYS="${BACKUP_RETAIN_DAYS:-7}"
+BACKUP_KEEP_DAILY="${BACKUP_KEEP_DAILY:-${HOMEASSISTANT_BACKUP_KEEP_DAILY:-7}}"
+BACKUP_KEEP_WEEKLY="${BACKUP_KEEP_WEEKLY:-${HOMEASSISTANT_BACKUP_KEEP_WEEKLY:-4}}"
+BACKUP_KEEP_MONTHLY="${BACKUP_KEEP_MONTHLY:-${HOMEASSISTANT_BACKUP_KEEP_MONTHLY:-12}}"
+BACKUP_SKIP_HOURS="${BACKUP_SKIP_HOURS:-1}"
+BACKUP_SERVICE_RESTART="${BACKUP_SERVICE_RESTART:-true}"
+BACKUP_TIMEOUT_HOURS="${BACKUP_TIMEOUT_HOURS:-5}"
+BACKUP_TARGET_PATH=""
+
+BACKUP_INTERNAL_NEWEST=""
+BACKUP_INTERNAL_NEWEST_VERSION=""
+BACKUP_INTERNAL_SIZE=0
+BACKUP_INTERNAL_STARTED=0
+BACKUP_INTERNAL_STATUS=0
+BACKUP_INTERNAL_WRITTEN="false"
+BACKUP_INTERNAL_VERIFIER=""
+
+backup_target() {
+  local suffix="${1:-}" extension="${2:-}"
+  if [ -z "${suffix}" ] || [ -z "${extension}" ]; then
+    echo "Cannot name the backup, pass the suffix and the extension to backup_target" >&2
+    return 1
+  fi
+  BACKUP_TARGET_PATH="${BACKUP_INTERNAL_ROOT_DIR}/${BACKUP_RUN_TIMESTAMP}/${BACKUP_MODULE_NAME}_at_${BACKUP_RUN_TIMESTAMP}_from_${BACKUP_SOURCE_VERSION}${suffix}.${extension}"
+  mkdir -p "$(dirname "${BACKUP_TARGET_PATH}")"
+}
+
+backup_is_full() { [[ "${1}" == *"${BACKUP_FULL_SUFFIX}".* ]]; }
+
+backup_is_delta() { [[ "${1}" == *"${BACKUP_DELTA_SUFFIX}".* ]]; }
+
+backup_discarded() {
+  [ -n "${BACKUP_TARGET_PATH}" ] || return 0
+  rm -f "${BACKUP_TARGET_PATH}.tmp"
+  [ -e "${BACKUP_TARGET_PATH}" ] || rmdir "$(dirname "${BACKUP_TARGET_PATH}")" 2>/dev/null
+}
+
+backup_epoch() {
+  local stamp="${1: -19}"
+  date -d "${stamp:0:10} ${stamp:11:2}:${stamp:14:2}:${stamp:17:2}" +%s 2>/dev/null || echo 0
+}
+
+backup_listed() {
+  local dir="${1:-${BACKUP_INTERNAL_ROOT_DIR}}"
+  [ -d "${dir}" ] || return 0
+  find "${dir}" -maxdepth 1 -mindepth 1 -type d -printf '%f
+' 2>/dev/null |
+    grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}$' | sort
+}
+
+backup_versioned() {
+  local stamp="${1:-}" dir="${2:-${BACKUP_INTERNAL_ROOT_DIR}}" path name
+  [ -n "${stamp}" ] || return 0
+  for path in "${dir}/${stamp}"/*; do
+    [ -f "${path}" ] || continue
+    name="$(basename "${path}")"
+    name="${name%"${BACKUP_FULL_SUFFIX}".*}"
+    name="${name%"${BACKUP_DELTA_SUFFIX}".*}"
+    case "${name}" in
+    *_from_*) name="${name##*_from_}" ;;
+    *) name="${name#"${BACKUP_MODULE_NAME}_${stamp}_"}" ;;
+    esac
+    printf '%s
+' "${name}"
+    return 0
+  done
+}
+
+backup_healthy() {
+  local dir="${1:-${BACKUP_INTERNAL_ROOT_DIR}}" elapsed=3600 names
+  mapfile -t names < <(backup_listed "${dir}")
+  [ "${#names[@]}" -gt 0 ] || return 1
+  [ $(($(date +%s) - $(backup_epoch "${names[-1]}"))) -lt $((86400 + elapsed)) ]
+}
+
+backup_pruned() {
+  local dir="${1:-${BACKUP_INTERNAL_ROOT_DIR}}" names index cutoff
+  mapfile -t names < <(backup_listed "${dir}")
+  [ "${#names[@]}" -gt 1 ] || return 0
+  cutoff=$(($(date +%s) - BACKUP_RETAIN_DAYS * 86400))
+  for ((index = 0; index < ${#names[@]} - 1; index++)); do
+    if [ "$(backup_epoch "${names[${index}]}")" -lt "${cutoff}" ]; then
+      rm -rf "${dir:?}/${names[${index}]}"
+      echo "Deleted backup [${names[${index}]}] older than [${BACKUP_RETAIN_DAYS}] days"
+    fi
+  done
+}
+
+backup_dir_is_full() {
+  local dir="${1}" stamp="${2}" path
+  for path in "${dir}/${stamp}"/*; do
+    backup_is_full "$(basename "${path}")" && return 0
+  done
+  return 1
+}
+
+backup_pruned_gfs() {
+  local dir="${1:-${BACKUP_INTERNAL_ROOT_DIR}}" names name stamp bucket
+  mapfile -t names < <(backup_listed "${dir}")
+  [ "${#names[@]}" -gt 1 ] || return 0
+  declare -A keep=() day_seen=()
+  local count="${#names[@]}" index day chain
+  for ((index = count - 1; index >= 0; index--)); do
+    day="${names[${index}]:0:10}"
+    if [ -z "${day_seen[${day}]:-}" ]; then
+      [ "${#day_seen[@]}" -ge "${BACKUP_KEEP_DAILY}" ] && break
+      day_seen["${day}"]=1
+    fi
+    keep["${names[${index}]}"]=daily
+  done
+  declare -A week_seen=() month_seen=()
+  for ((index = count - 1; index >= 0; index--)); do
+    name="${names[${index}]}"
+    stamp="${name:0:10}"
+    backup_dir_is_full "${dir}" "${name}" || continue
+    bucket="$(date -d "${stamp}" +%G-%V 2>/dev/null)"
+    if [ -n "${bucket}" ] && [ -z "${week_seen[${bucket}]:-}" ] && [ "${#week_seen[@]}" -lt "${BACKUP_KEEP_WEEKLY}" ]; then
+      week_seen["${bucket}"]=1
+      keep["${name}"]=weekly
+    fi
+    bucket="${stamp:0:7}"
+    if [ -z "${month_seen[${bucket}]:-}" ] && [ "${#month_seen[@]}" -lt "${BACKUP_KEEP_MONTHLY}" ]; then
+      month_seen["${bucket}"]=1
+      keep["${name}"]=monthly
+    fi
+  done
+  for ((index = count - 1; index >= 0; index--)); do
+    name="${names[${index}]}"
+    [ -n "${keep[${name}]:-}" ] || continue
+    backup_dir_is_full "${dir}" "${name}" && continue
+    for ((chain = index - 1; chain >= 0; chain--)); do
+      keep["${names[${chain}]}"]="${keep[${names[${chain}]}]:-chain}"
+      backup_dir_is_full "${dir}" "${names[${chain}]}" && break
+    done
+  done
+  for name in "${names[@]}"; do
+    if [ -z "${keep[${name}]:-}" ]; then
+      rm -rf "${dir:?}/${name}"
+      echo "Pruned backup [${name}] outside the grandfather-father-son window"
+    fi
+  done
+}
+
+backup_files() {
+  local root="${1:-}" dir path entry depth deepest=1 covered live attempts attempt status paths=() excludes=() excluded=() missing=() unmatched=()
+  if [ -z "${root}" ] || [ -z "${2:-}" ]; then
+    echo "Nothing to back up, pass the root and the name of the include array to backup_files" >&2
+    return 1
+  fi
+  local -n backup_files_includes="${2}"
+  paths=("${backup_files_includes[@]}")
+  if [ -n "${3:-}" ]; then
+    local -n backup_files_excludes="${3}"
+    excludes=("${backup_files_excludes[@]}")
+  fi
+  if [ "${#paths[@]}" -eq 0 ]; then
+    echo "Nothing to back up, the include array [${2}] is empty" >&2
+    return 1
+  fi
+  dir="${BACKUP_INTERNAL_SOURCE_DIR}/${root}"
+  for path in "${paths[@]}"; do
+    [ -e "${dir}/${path}" ] || missing+=("${path}")
+  done
+  if [ "${#missing[@]}" -gt 0 ]; then
+    echo "Declared paths [${missing[*]}] are absent from [${dir}]" >&2
+    return 1
+  fi
+  for path in "${paths[@]}" "${excludes[@]}"; do
+    depth="$(printf '%s' "${path}" | tr -cd '/' | wc -c)"
+    depth=$((depth + 1))
+    [ "${depth}" -gt "${deepest}" ] && deepest="${depth}"
+  done
+  while IFS= read -r entry; do
+    [ "${entry}" = "backup" ] && continue
+    covered="false"
+    for path in "${unmatched[@]}"; do
+      case "${entry}" in "${path}/"*) covered="true" ;; esac
+    done
+    for path in "${paths[@]}"; do
+      case "${entry}" in "${path}" | "${path}/"*) covered="true" ;; esac
+      case "${path}" in "${entry}/"*) covered="true" ;; esac
+    done
+    for path in "${excludes[@]}"; do
+      # shellcheck disable=SC2254
+      case "${entry}" in ${path} | */${path} | ${path}/* | */${path}/*) covered="true" ;; esac
+      case "${path}" in "${entry}/"*) covered="true" ;; esac
+    done
+    [ "${covered}" = "true" ] || unmatched+=("${entry}")
+  done < <(find "${dir}" -mindepth 1 -maxdepth "${deepest}" -printf '%P
+' 2>/dev/null | sort)
+  backup_target "${BACKUP_FULL_SUFFIX}" "tar.gz" || return 1
+  [ "${#unmatched[@]}" -gt 0 ] && echo "Not backed up and not excluded [${unmatched[*]}]"
+  excluded=(--exclude=backup)
+  for path in "${excludes[@]}"; do
+    excluded+=("--exclude=${path}")
+  done
+  live="${BACKUP_MODULE_NAME^^}_BACKUP_LIVE"
+  attempts=1
+  [ "${!live:-}" = "atomic" ] && attempts=3
+  for ((attempt = 1; attempt <= attempts; attempt++)); do
+    status=0
+    tar --create --directory "${dir}" --numeric-owner --preserve-permissions       "${excluded[@]}" --file - -- "${paths[@]}" | gzip >"${BACKUP_TARGET_PATH}.tmp" || status="${PIPESTATUS[0]}"
+    [ "${status}" -ne 1 ] && break
+    [ "${attempt}" -lt "${attempts}" ] || break
+    echo "Archive changed while being read, retrying attempt [${attempt}] of [${attempts}]" >&2
+    sleep 10
+  done
+  return "${status}"
+}
+
+backup_written() {
+  echo "Nothing to back up, define backup_written in the module snippet" >&2
+  return 1
+}
+
+backup_interrupted() {
+  :
+}
+
+backup_completed() {
+  :
+}
+
+# The wrapper owns the run, this snippet owns the backup. The wrapper checks the throttle, calls
+# backup_written, checks the archive's integrity, renames the temporary file on success, prunes and
+# sets the exit code. Define backup_written below, naming the backup with backup_target (or letting
+# backup_files do both) and writing "${BACKUP_TARGET_PATH}.tmp". A snippet copying files passes
+# backup_files a root under BACKUP_SOURCE_PATH and the names of its include and exclude arrays, an
+# absent include fails the backup and whatever under the root neither array covers is reported. A
+# snippet leaving the estate changed while it works, such as one stopping its own container, also
+# defines backup_interrupted, called on INT, TERM or HUP but never on a backup that merely fails, and
+# backup_completed, called once the archive has been named and kept whatever the outcome, whose
+# non-zero return fails the run without discarding the archive. Never assign another wrapper
+# variable, prefix this snippet's own state with the module name, and expand a value read from .env
+# as "${VAR:?}", so a missing key fails by name rather than corrupting the backup.
+#
+# BACKUP_MODULE_NAME      this module's name
+# BACKUP_SOURCE_PATH      this module's source data path
+# BACKUP_SOURCE_VERSION   the version the backup was extracted from
+# BACKUP_TARGET_PATH      this run's backup path, empty until backup_target names it
+# BACKUP_RUN_TIMESTAMP    this run's timestamp, shared by the directory and the filename
+# BACKUP_FULL_SUFFIX      the file suffix marking a full backup
+# BACKUP_DELTA_SUFFIX     the file suffix marking a delta backup, requiring a full backup proceeding it
+# BACKUP_RETAIN_DAYS      the window by which daily backups are retained before entering the pruning window
+# BACKUP_SKIP_HOURS       skip the run when the newest backup is younger than this, zero to never skip
+# BACKUP_SERVICE_RESTART  start the service again after the copy, false when the caller starts it itself
+
+HOMEASSISTANT_BACKUP_LIVE="atomic"
+HOMEASSISTANT_BACKUP_INCLUDES=(
+  ".storage"
+  "blueprints"
+  "custom_templates"
+)
+HOMEASSISTANT_BACKUP_EXCLUDES=(
+  ".HA_VERSION"
+  ".cache"
+  ".cloud"
+  ".google_service_account.json"
+  ".ha_run.lock"
+  ".storage/*.bak-*"
+  ".storage/*.migration_backup"
+  ".storage/tmp*"
+  "automations.yaml"
+  "checkalive.sh"
+  "checkexecuting.sh"
+  "checkhealthy.sh"
+  "configuration.yaml"
+  "custom_components"
+  "custom_config"
+  "custom_packages"
+  "customise.yaml"
+  "deps"
+  "hass-entities.yaml"
+  "home-assistant.log*"
+  "ip_bans.yaml"
+  "network_devices.json"
+  "tts"
+  "ui-lovelace*"
+  "www"
+)
+
+backup_written() {
+  backup_files "." HOMEASSISTANT_BACKUP_INCLUDES HOMEASSISTANT_BACKUP_EXCLUDES
+}
+
+[ "${BASH_SOURCE[0]}" = "${0}" ] || return 0
+
+if [ "${1:-}" = "--prune" ]; then
+  backup_pruned "${2}"
+  exit 0
+fi
+
+if [ "${1:-}" = "--prune-gfs" ]; then
+  backup_pruned_gfs "${2}"
+  exit 0
+fi
+
+find "${BACKUP_INTERNAL_ROOT_DIR}" -type f -name '*.tmp' -delete 2>/dev/null
+
+mapfile -t BACKUP_INTERNAL_EXISTING < <(backup_listed)
+if [ "${#BACKUP_INTERNAL_EXISTING[@]}" -gt 0 ]; then
+  BACKUP_INTERNAL_NEWEST="${BACKUP_INTERNAL_EXISTING[-1]}"
+  BACKUP_INTERNAL_NEWEST_VERSION="$(backup_versioned "${BACKUP_INTERNAL_NEWEST}")"
+  BACKUP_INTERNAL_AGE=$(($(date +%s) - $(backup_epoch "${BACKUP_INTERNAL_NEWEST}")))
+  if [ "${BACKUP_INTERNAL_AGE}" -lt $((BACKUP_SKIP_HOURS * 3600)) ]; then
+    echo "Backup skipped, newest backup [${BACKUP_INTERNAL_NEWEST}] of version [${BACKUP_INTERNAL_NEWEST_VERSION}] is [${BACKUP_INTERNAL_AGE}] seconds old, skipping given within [${BACKUP_SKIP_HOURS}] hours"
+    exit 0
+  fi
+fi
+
+echo "Starting backup from version [${BACKUP_SOURCE_VERSION}] holding [${#BACKUP_INTERNAL_EXISTING[@]}] backups, newest [${BACKUP_INTERNAL_NEWEST:-none}] retaining [${BACKUP_RETAIN_DAYS}] days"
+
+trap backup_discarded EXIT
+trap 'backup_interrupted; exit 130' INT
+trap 'backup_interrupted; exit 143' TERM
+trap 'backup_interrupted; exit 129' HUP
+BACKUP_INTERNAL_STARTED=${SECONDS}
+if backup_written; then
+  if [ -z "${BACKUP_TARGET_PATH}" ]; then
+    echo "Nothing named the backup, call backup_target in backup_written" >&2
+  elif [ ! -s "${BACKUP_TARGET_PATH}.tmp" ]; then
+    echo "Backup [${BACKUP_TARGET_PATH}] was written empty, discarding it" >&2
+  else
+    case "${BACKUP_TARGET_PATH}" in
+    *.gz) BACKUP_INTERNAL_VERIFIER="gzip" ;;
+    *.zip) BACKUP_INTERNAL_VERIFIER="unzip" ;;
+    esac
+    if [ -n "${BACKUP_INTERNAL_VERIFIER}" ] && ! command -v "${BACKUP_INTERNAL_VERIFIER}" >/dev/null 2>&1; then
+      echo "Backup [${BACKUP_TARGET_PATH}] cannot be checked, [${BACKUP_INTERNAL_VERIFIER}] is not installed, discarding it" >&2
+    elif [ -n "${BACKUP_INTERNAL_VERIFIER}" ] && ! "${BACKUP_INTERNAL_VERIFIER}" -t "${BACKUP_TARGET_PATH}.tmp" >/dev/null 2>&1; then
+      echo "Backup [${BACKUP_TARGET_PATH}] failed its integrity check, discarding it" >&2
+    else
+      BACKUP_INTERNAL_WRITTEN="true"
+    fi
+  fi
+fi
+if [ "${BACKUP_INTERNAL_WRITTEN}" = "true" ]; then
+  mv "${BACKUP_TARGET_PATH}.tmp" "${BACKUP_TARGET_PATH}"
+  BACKUP_INTERNAL_SIZE="$(du -m "${BACKUP_TARGET_PATH}" | cut -f1)"
+  echo "Finished backup [${BACKUP_INTERNAL_SIZE}] MB in [$((SECONDS - BACKUP_INTERNAL_STARTED))] seconds to [${BACKUP_TARGET_PATH}]"
+  backup_pruned
+  rm -rf "$(dirname "${BACKUP_INTERNAL_SOURCE_DIR}")/replaced"
+else
+  echo "Failed backup in [$((SECONDS - BACKUP_INTERNAL_STARTED))] seconds" >&2
+  BACKUP_INTERNAL_STATUS=1
+fi
+backup_completed || BACKUP_INTERNAL_STATUS=1
+
+find "${BACKUP_INTERNAL_ROOT_DIR}" -depth -type d -empty -delete 2>/dev/null
+exit "${BACKUP_INTERNAL_STATUS}"

@@ -101,6 +101,7 @@ RESTORE_SERVICE_STATE="stopped"
 RESTORE_SOURCE_FILE=""
 RESTORE_SOURCE_VERSION=""
 RESTORE_RUN_TIMESTAMP=""
+RESTORE_CARRY=()
 RESTORE_INTERNAL_KIND="unknown"
 RESTORE_INTERNAL_RESTARTED="false"
 
@@ -179,8 +180,18 @@ restore_intact() {
 }
 
 restore_files() {
-  local declared="${1:-}" target="${2:-${RESTORE_SOURCE_PATH}}"
+  local declared="${1:-}" target="${2:-${RESTORE_SOURCE_PATH}}" replaced path entry relative
   [ -d "${target}" ] || { restore_fault "no restore target [${target}]"; return 1; }
+  replaced="$(dirname "${RESTORE_INTERNAL_SOURCE_DIR}")/replaced/${RESTORE_RUN_TIMESTAMP}"
+  if [ -n "${declared}" ]; then
+    IFS=: read -r -a RESTORE_INTERNAL_PATHS <<<"${declared}"
+    for path in "${RESTORE_INTERNAL_PATHS[@]}"; do
+      [ -e "${target}/${path}" ] || [ -L "${target}/${path}" ] || continue
+      mkdir -p "${replaced}/$(dirname "${path}")"
+      mv "${target}/${path}" "${replaced}/${path}" || { restore_fault "could not move [${target}/${path}] aside to [${replaced}]"; return 1; }
+    done
+    [ -d "${replaced}" ] && restore_changed "moved [${declared}] aside to [${replaced}]"
+  fi
   tar --extract --directory "${target}" --numeric-owner --preserve-permissions \
     --file - <"${RESTORE_SOURCE_FILE}" 2>/dev/null ||
     tar --extract --gzip --directory "${target}" --numeric-owner --preserve-permissions \
@@ -189,6 +200,17 @@ restore_files() {
     return 1
   }
   restore_changed "extracted [${declared:-archive}] into [${target}]"
+  if [ -d "${replaced}" ] && [ "${#RESTORE_CARRY[@]}" -gt 0 ]; then
+    for path in "${RESTORE_CARRY[@]}"; do
+      while IFS= read -r -d '' entry; do
+        relative="${entry#"${replaced}/"}"
+        case "${relative}" in *-wal | *-shm | *-journal) continue ;; esac
+        [ -e "${target}/${relative}" ] && continue
+        mkdir -p "${target}/$(dirname "${relative}")"
+        mv "${entry}" "${target}/${relative}" && restore_changed "carried [${relative}] back from [${replaced}]"
+      done < <(find "${replaced}" -name "${path}" -print0)
+    done
+  fi
 }
 
 restore_backed() {
@@ -1443,7 +1465,7 @@ backup_pruned_gfs() {{
 }}
 
 backup_files() {{
-  local root="${{1:-}}" dir path entry depth deepest=1 covered paths=() excludes=() excluded=() missing=() unmatched=()
+  local root="${{1:-}}" dir path entry depth deepest=1 covered live attempts attempt status paths=() excludes=() excluded=() missing=() unmatched=()
   if [ -z "${{root}}" ] || [ -z "${{2:-}}" ]; then
     echo "Nothing to back up, pass the root and the name of the include array to backup_files" >&2
     return 1
@@ -1494,8 +1516,19 @@ backup_files() {{
   for path in "${{excludes[@]}}"; do
     excluded+=("--exclude=${{path}}")
   done
-  tar --create --directory "${{dir}}" --numeric-owner --preserve-permissions \
-    "${{excluded[@]}}" --file - -- "${{paths[@]}}" 2>/dev/null | gzip >"${{BACKUP_TARGET_PATH}}.tmp"
+  live="${{BACKUP_MODULE_NAME^^}}_BACKUP_LIVE"
+  attempts=1
+  [ "${{!live:-}}" = "atomic" ] && attempts=3
+  for ((attempt = 1; attempt <= attempts; attempt++)); do
+    status=0
+    tar --create --directory "${{dir}}" --numeric-owner --preserve-permissions \
+      "${{excluded[@]}}" --file - -- "${{paths[@]}}" | gzip >"${{BACKUP_TARGET_PATH}}.tmp" || status="${{PIPESTATUS[0]}}"
+    [ "${{status}}" -ne 1 ] && break
+    [ "${{attempt}}" -lt "${{attempts}}" ] || break
+    echo "Archive changed while being read, retrying attempt [${{attempt}}] of [${{attempts}}]" >&2
+    sleep 10
+  done
+  return "${{status}}"
 }}
 
 backup_written() {{
@@ -1569,6 +1602,7 @@ if [ "${{BACKUP_INTERNAL_WRITTEN}}" = "true" ]; then
   BACKUP_INTERNAL_SIZE="$(du -m "${{BACKUP_TARGET_PATH}}" | cut -f1)"
   echo "Finished backup [${{BACKUP_INTERNAL_SIZE}}] MB in [$((SECONDS - BACKUP_INTERNAL_STARTED))] seconds to [${{BACKUP_TARGET_PATH}}]"
   backup_pruned
+  rm -rf "$(dirname "${{BACKUP_INTERNAL_SOURCE_DIR}}")/replaced"
 else
   echo "Failed backup in [$((SECONDS - BACKUP_INTERNAL_STARTED))] seconds" >&2
   BACKUP_INTERNAL_STATUS=1

@@ -16,6 +16,7 @@ import (
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
+	"github.com/shirou/gopsutil/v4/host"
 )
 
 type servicesProbe struct {
@@ -52,6 +53,7 @@ type servicesProbe struct {
 	listContainers   func(context.Context, *client.Client) ([]container.Summary, error)
 	statsOneShot     func(context.Context, *client.Client, string) (container.StatsResponseReader, error)
 	inspectContainer func(context.Context, *client.Client, string) (container.InspectResponse, error)
+	hostUptime       func() (uint64, error)
 }
 
 func newServicesProbe() *servicesProbe {
@@ -87,6 +89,7 @@ func newServicesProbe() *servicesProbe {
 		inspectContainer: func(ctx context.Context, dockerClient *client.Client, id string) (container.InspectResponse, error) {
 			return dockerClient.ContainerInspect(ctx, id)
 		},
+		hostUptime: host.Uptime,
 	}
 }
 
@@ -920,6 +923,11 @@ func (p *servicesProbe) upTime(name string, containerInfo container.InspectRespo
 	upTime := time.Since(startedAt).Seconds()
 	if upTime < 0 {
 		return 0, derivation{}, fmt.Errorf("no up time read, service [%s] reports a start time [%s] in the future", name, containerInfo.State.StartedAt)
+	}
+	if p.hostUptime != nil {
+		if hostSeconds, hostErr := p.hostUptime(); hostErr == nil && upTime > float64(hostSeconds) {
+			return float64(hostSeconds), derivedf(scribe.ActionSample, "computed [%d] s up capped at host up time, service [%s] started at [%s] before the clock was set", hostSeconds, name, startedAt.Format(time.RFC3339)), nil
+		}
 	}
 	return upTime, derivedf(scribe.ActionSample, "computed [%.0f] s up, service [%s] started at [%s]", upTime, name, startedAt.Format(time.RFC3339)), nil
 }

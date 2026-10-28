@@ -183,7 +183,7 @@ backup_pruned_gfs() {
 }
 
 backup_files() {
-  local root="${1:-}" dir path entry depth deepest=1 covered paths=() excludes=() excluded=() missing=() unmatched=()
+  local root="${1:-}" dir path entry depth deepest=1 covered live attempts attempt status paths=() excludes=() excluded=() missing=() unmatched=()
   if [ -z "${root}" ] || [ -z "${2:-}" ]; then
     echo "Nothing to back up, pass the root and the name of the include array to backup_files" >&2
     return 1
@@ -235,7 +235,18 @@ backup_files() {
   for path in "${excludes[@]}"; do
     excluded+=("--exclude=${path}")
   done
-  tar --create --directory "${dir}" --numeric-owner --preserve-permissions     "${excluded[@]}" --file - -- "${paths[@]}" 2>/dev/null | gzip >"${BACKUP_TARGET_PATH}.tmp"
+  live="${BACKUP_MODULE_NAME^^}_BACKUP_LIVE"
+  attempts=1
+  [ "${!live:-}" = "atomic" ] && attempts=3
+  for ((attempt = 1; attempt <= attempts; attempt++)); do
+    status=0
+    tar --create --directory "${dir}" --numeric-owner --preserve-permissions       "${excluded[@]}" --file - -- "${paths[@]}" | gzip >"${BACKUP_TARGET_PATH}.tmp" || status="${PIPESTATUS[0]}"
+    [ "${status}" -ne 1 ] && break
+    [ "${attempt}" -lt "${attempts}" ] || break
+    echo "Archive changed while being read, retrying attempt [${attempt}] of [${attempts}]" >&2
+    sleep 10
+  done
+  return "${status}"
 }
 
 backup_written() {
@@ -360,6 +371,7 @@ if [ "${BACKUP_INTERNAL_WRITTEN}" = "true" ]; then
   BACKUP_INTERNAL_SIZE="$(du -m "${BACKUP_TARGET_PATH}" | cut -f1)"
   echo "Finished backup [${BACKUP_INTERNAL_SIZE}] MB in [$((SECONDS - BACKUP_INTERNAL_STARTED))] seconds to [${BACKUP_TARGET_PATH}]"
   backup_pruned
+  rm -rf "$(dirname "${BACKUP_INTERNAL_SOURCE_DIR}")/replaced"
 else
   echo "Failed backup in [$((SECONDS - BACKUP_INTERNAL_STARTED))] seconds" >&2
   BACKUP_INTERNAL_STATUS=1

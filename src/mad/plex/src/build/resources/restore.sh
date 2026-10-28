@@ -18,11 +18,13 @@
 RESTORE_SERVICE_STATE="stopped"
 
 PLEX_RESTORE_CONFIG="config"
+PLEX_RESTORE_SERVER="Library/Application Support/Plex Media Server"
+RESTORE_CARRY=("*.db-[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]")
 
 restore_planned() {
   restore_report "would stop [${RESTORE_MODULE_NAME}], extract the Plex configuration into [${RESTORE_SOURCE_PATH}/${PLEX_RESTORE_CONFIG}] and start it again"
 }
 
 restore_applied() {
-  restore_files "Plex Media Server configuration" "${RESTORE_SOURCE_PATH}/${PLEX_RESTORE_CONFIG}"
+  restore_files "${PLEX_RESTORE_SERVER}/Plug-in Support:${PLEX_RESTORE_SERVER}/Preferences.xml" "${RESTORE_SOURCE_PATH}/${PLEX_RESTORE_CONFIG}"
 }

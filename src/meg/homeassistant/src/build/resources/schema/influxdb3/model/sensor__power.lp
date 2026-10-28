@@ -87,6 +87,8 @@
 #     kitchen_move_power,
 #     landing_festoons_plug_power,
 #     landing_lights_power,
+#     laundry_lights_power,
+#     laundry_main_bulb_1_power,
 #     lights_power,
 #     lounge_arc_power,
 #     lounge_fan_light_power,

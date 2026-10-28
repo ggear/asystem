@@ -13,6 +13,8 @@ if __name__ == "__main__":
 
     write_container_bootstrap(working_dir=join(DIR_ROOT, "src/main/resources/data"))
     write_container_healthchecks(working_dir=join(DIR_ROOT, "src/main/resources/data"))
+    write_container_backup()
+    write_container_restore()
 
     hass_document = dialects.influxdb3.Discover(label="Home Assistant").document()
     if hass_document is not None:

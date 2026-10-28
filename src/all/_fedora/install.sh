@@ -300,6 +300,7 @@ systemctl list-units --type=service --state=running
 services_to_enable=(
   docker
   chronyd
+  chrony-wait
   NetworkManager
   mute-console
   systemd-vconsole-setup
@@ -509,8 +510,8 @@ sensors-detect --auto
 mkdir -p /etc/systemd/system/docker.service.d
 tee /etc/systemd/system/docker.service.d/override.conf <<'EOF'
 [Unit]
-After=NetworkManager-wait-online.service
-Wants=NetworkManager-wait-online.service
+After=NetworkManager-wait-online.service chrony-wait.service
+Wants=NetworkManager-wait-online.service chrony-wait.service
 [Service]
 ExecStartPre=/bin/sh -c 'ls /share/* || true; sleep 1'
 EOF

@@ -38,27 +38,6 @@ echo "--------------------------------------------------------------------------
 echo "Bootstrap starting ..."
 echo "--------------------------------------------------------------------------------"
 
-bash#!/usr/bin/env bash
-################################################################################
-# WARNING: This file is written by the build process, any manual edits will be lost!
-################################################################################
-
-echo "--------------------------------------------------------------------------------"
-echo "Service is starting ..."
-echo "--------------------------------------------------------------------------------"
-
-ASYSTEM_HOME=${ASYSTEM_HOME:-"/asystem/etc"}
-
-MESSAGE="Waiting for service to come alive ... "
-echo "${MESSAGE}"
-while ! "${ASYSTEM_HOME}/checkalive.sh"; do
-  echo "${MESSAGE}" && sleep 1
-done
-
-echo "--------------------------------------------------------------------------------"
-echo "Bootstrap starting ..."
-echo "--------------------------------------------------------------------------------"
-
 psql_su() {
   PGPASSWORD="${PGPASSWORD}" psql -h "${POSTGRES_SERVICE}" -p "${POSTGRES_API_PORT}" -U "${POSTGRES_USER}" -d postgres "$@"
 }
@@ -103,6 +82,21 @@ init_user_database() {
 init_user_database "${POSTGRES_USER_HASS}" "${POSTGRES_KEY_HASS}" "${POSTGRES_DATABASE_HASS}"
 init_user_database "${POSTGRES_USER_MLFLOW}" "${POSTGRES_KEY_MLFLOW}" "${POSTGRES_DATABASE_MLFLOW}"
 init_user_database "${POSTGRES_USER_WRANGLE}" "${POSTGRES_KEY_WRANGLE}" "${POSTGRES_DATABASE_WRANGLE}"
+
+psql_su -X -tA -c "SELECT datname FROM pg_database WHERE datallowconn ORDER BY datname" | while IFS= read -r database; do
+  [ -n "${database}" ] || continue
+  versions=$(PGPASSWORD="${PGPASSWORD}" psql -X -h "${POSTGRES_SERVICE}" -p "${POSTGRES_API_PORT}" -U "${POSTGRES_USER}" -d "${database}" -tA -F ' ' \
+    -c "SELECT e.extversion, a.default_version FROM pg_extension e JOIN pg_available_extensions a ON a.name = e.extname WHERE e.extname = 'timescaledb'")
+  [ -n "${versions}" ] || continue
+  read -r installed available <<<"${versions}"
+  if [ "${installed}" != "${available}" ]; then
+    PGPASSWORD="${PGPASSWORD}" psql -X -h "${POSTGRES_SERVICE}" -p "${POSTGRES_API_PORT}" -U "${POSTGRES_USER}" -d "${database}" -v ON_ERROR_STOP=1 \
+      -c 'ALTER EXTENSION timescaledb UPDATE'
+    echo "Updated timescaledb in [${database}] from [${installed}] to [${available}]"
+  else
+    echo "Timescaledb in [${database}] already at [${installed}]"
+  fi
+done
 
 echo "--------------------------------------------------------------------------------"
 echo "Bootstrap finished"

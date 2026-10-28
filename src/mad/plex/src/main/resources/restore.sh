@@ -69,6 +69,7 @@ RESTORE_SERVICE_STATE="stopped"
 RESTORE_SOURCE_FILE=""
 RESTORE_SOURCE_VERSION=""
 RESTORE_RUN_TIMESTAMP=""
+RESTORE_CARRY=()
 RESTORE_INTERNAL_KIND="unknown"
 RESTORE_INTERNAL_RESTARTED="false"
 
@@ -147,8 +148,18 @@ restore_intact() {
 }
 
 restore_files() {
-  local declared="${1:-}" target="${2:-${RESTORE_SOURCE_PATH}}"
+  local declared="${1:-}" target="${2:-${RESTORE_SOURCE_PATH}}" replaced path entry relative
   [ -d "${target}" ] || { restore_fault "no restore target [${target}]"; return 1; }
+  replaced="$(dirname "${RESTORE_INTERNAL_SOURCE_DIR}")/replaced/${RESTORE_RUN_TIMESTAMP}"
+  if [ -n "${declared}" ]; then
+    IFS=: read -r -a RESTORE_INTERNAL_PATHS <<<"${declared}"
+    for path in "${RESTORE_INTERNAL_PATHS[@]}"; do
+      [ -e "${target}/${path}" ] || [ -L "${target}/${path}" ] || continue
+      mkdir -p "${replaced}/$(dirname "${path}")"
+      mv "${target}/${path}" "${replaced}/${path}" || { restore_fault "could not move [${target}/${path}] aside to [${replaced}]"; return 1; }
+    done
+    [ -d "${replaced}" ] && restore_changed "moved [${declared}] aside to [${replaced}]"
+  fi
   tar --extract --directory "${target}" --numeric-owner --preserve-permissions \
     --file - <"${RESTORE_SOURCE_FILE}" 2>/dev/null ||
     tar --extract --gzip --directory "${target}" --numeric-owner --preserve-permissions \
@@ -157,6 +168,17 @@ restore_files() {
     return 1
   }
   restore_changed "extracted [${declared:-archive}] into [${target}]"
+  if [ -d "${replaced}" ] && [ "${#RESTORE_CARRY[@]}" -gt 0 ]; then
+    for path in "${RESTORE_CARRY[@]}"; do
+      while IFS= read -r -d '' entry; do
+        relative="${entry#"${replaced}/"}"
+        case "${relative}" in *-wal | *-shm | *-journal) continue ;; esac
+        [ -e "${target}/${relative}" ] && continue
+        mkdir -p "${target}/$(dirname "${relative}")"
+        mv "${entry}" "${target}/${relative}" && restore_changed "carried [${relative}] back from [${replaced}]"
+      done < <(find "${replaced}" -name "${path}" -print0)
+    done
+  fi
 }
 
 restore_backed() {
@@ -218,13 +240,15 @@ restore_applied() {
 RESTORE_SERVICE_STATE="stopped"
 
 PLEX_RESTORE_CONFIG="config"
+PLEX_RESTORE_SERVER="Library/Application Support/Plex Media Server"
+RESTORE_CARRY=("*.db-[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]")
 
 restore_planned() {
   restore_report "would stop [${RESTORE_MODULE_NAME}], extract the Plex configuration into [${RESTORE_SOURCE_PATH}/${PLEX_RESTORE_CONFIG}] and start it again"
 }
 
 restore_applied() {
-  restore_files "Plex Media Server configuration" "${RESTORE_SOURCE_PATH}/${PLEX_RESTORE_CONFIG}"
+  restore_files "${PLEX_RESTORE_SERVER}/Plug-in Support:${PLEX_RESTORE_SERVER}/Preferences.xml" "${RESTORE_SOURCE_PATH}/${PLEX_RESTORE_CONFIG}"
 }
 
 [ "${BASH_SOURCE[0]}" = "${0}" ] || return 0

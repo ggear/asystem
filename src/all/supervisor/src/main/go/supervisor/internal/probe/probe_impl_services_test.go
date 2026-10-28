@@ -402,6 +402,40 @@ func TestProbeImplServices_Services(t *testing.T) {
 	}
 }
 
+func TestProbeImplServices_UpTime(t *testing.T) {
+	tests := []struct {
+		name          string
+		startedAgo    time.Duration
+		hostSeconds   uint64
+		hostErr       error
+		expectedValue float64
+		expectedError bool
+	}{
+		{name: "happy_below_host", startedAgo: time.Minute, hostSeconds: 3600, expectedValue: 60},
+		{name: "happy_capped_at_host", startedAgo: 365 * 24 * time.Hour, hostSeconds: 420, expectedValue: 420},
+		{name: "happy_host_unreadable", startedAgo: time.Hour, hostErr: errors.New("sysinfo"), expectedValue: 3600},
+		{name: "sad_no_start_time", startedAgo: 0, hostSeconds: 3600, expectedError: true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			probe := newServicesProbe()
+			probe.hostUptime = func() (uint64, error) { return tc.hostSeconds, tc.hostErr }
+			started := ""
+			if tc.startedAgo > 0 {
+				started = time.Now().Add(-tc.startedAgo).Format(time.RFC3339Nano)
+			}
+			info := container.InspectResponse{ContainerJSONBase: &container.ContainerJSONBase{State: &container.State{StartedAt: started}}}
+			value, _, err := probe.upTime("svc", info)
+			if (err != nil) != tc.expectedError {
+				t.Fatalf("error: got %v want error [%t]", err, tc.expectedError)
+			}
+			if !tc.expectedError && (value < tc.expectedValue || value > tc.expectedValue+5) {
+				t.Fatalf("value: got %v want %v", value, tc.expectedValue)
+			}
+		})
+	}
+}
+
 func TestProbeImplServices_Health(t *testing.T) {
 	tests := []struct {
 		name          string
