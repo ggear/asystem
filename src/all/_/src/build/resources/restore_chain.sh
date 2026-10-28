@@ -2,12 +2,8 @@
 # shellcheck disable=SC2034
 
 # Mirrors metric.BackupState<Name> in supervisor internal/metric/metric_schema.go, which owns the words, as BACKUP_STATE_<NAME>. A supervisor test holds the two equal.
-RESTORE_STATE_REGRESSED="regressed"
-RESTORE_STATE_SUCCESS="success"
-RESTORE_MODE="replace"
-RESTORE_SOURCE_DIR=""
-RESTORE_KEEP_SCRATCH="false"
-RESTORE_RECORD=""
+BACKUP_STATE_REGRESSED="regressed"
+BACKUP_STATE_SUCCESS="success"
 RESTORE_LIVE_ADDRESS=""
 RESTORE_CHAIN_RUNS=()
 RESTORE_CHAIN_FILES=()
@@ -83,14 +79,23 @@ restore_manifest_units() {
 restore_default_run() {
   local run
   while read -r run; do
-    [ "$(restore_manifest_field "${run}" verdict)" = "${RESTORE_STATE_REGRESSED}" ] && continue
+    [ "$(restore_manifest_field "${run}" verdict)" = "${BACKUP_STATE_REGRESSED}" ] && continue
     restore_artifact_of "$(restore_run_dir "${run}")" >/dev/null || continue
     printf '%s\n' "${run}"
   done < <(restore_runs_all | sort -r) | head -n 1
 }
 
+restore_previous_run() {
+  local run="${1}" candidate previous=""
+  while read -r candidate; do
+    [ "${candidate}" \< "${run}" ] || continue
+    restore_artifact_of "$(restore_run_dir "${candidate}")" >/dev/null 2>&1 && previous="${candidate}"
+  done < <(restore_runs_all)
+  printf '%s\n' "${previous}"
+}
+
 restore_chain_resolved() {
-  local run="${1}" dir file parent previous
+  local run="${1}" dir file parent declared
   local -a runs=() files=()
   RESTORE_CHAIN_RUNS=()
   RESTORE_CHAIN_FILES=()
@@ -106,17 +111,13 @@ restore_chain_resolved() {
     runs+=("${run}")
     files+=("${file}")
     case "${file}" in *"${RESTORE_DELTA_SUFFIX}".*) ;; *) break ;; esac
-    parent="$(restore_manifest_field "${run}" parent)"
-    if [ -z "${parent}" ]; then
-      previous=""
-      while read -r candidate; do
-        [ "${candidate}" \< "${run}" ] || continue
-        restore_artifact_of "$(restore_run_dir "${candidate}")" 2>/dev/null | grep -q "${RESTORE_FULL_SUFFIX}\." && previous="${candidate}"
-      done < <(restore_runs_all)
-      parent="${previous}"
+    parent="$(restore_previous_run "${run}")"
+    declared="$(restore_manifest_field "${run}" parent)"
+    if [ -n "${declared}" ] && [ "${declared}" != "${parent}" ]; then
+      restore_report "manifest parent [${declared}] of [${run}] differs from the preceding run [${parent}], using the preceding run"
     fi
     [ -n "${parent}" ] || {
-      restore_fault "delta run [${run}] has no full to hang off, its manifest names no parent and no earlier full exists"
+      restore_fault "delta run [${run}] has no run before it to hang off, so its chain has no full"
       return 1
     }
     run="${parent}"
@@ -236,7 +237,8 @@ restore_recorded() {
 }
 
 restore_drilled() {
-  local want have shorts scratch sealed_before sealed_after file
+  local want have shorts scratch before after file addressed="false"
+  declare -F backup_fingerprinted >/dev/null && addressed="true"
   want="$(restore_manifest_units "${RESTORE_RUN_TIMESTAMP}")"
   restore_report "drill     chain of [${#RESTORE_CHAIN_FILES[@]}] artifact(s), manifest holds [$(grep -c . <<<"${want}")] unit(s)"
   if [ -z "${want}" ]; then
@@ -244,32 +246,60 @@ restore_drilled() {
   fi
   scratch="$(restore_staged)" || {
     restore_fault "could not stage [${RESTORE_RUN_TIMESTAMP}] into scratch"
+    restore_teardown "${scratch:-}"
     restore_recorded failure "staging failed"
     return 1
   }
   RESTORE_SCRATCH="${scratch}"
-  for file in "${RESTORE_CHAIN_FILES[@]}"; do
-    have="$(restore_fingerprinted "${file}")"
-  done
-  shorts="$(restore_compared "${want}" "${have}")" || {
-    restore_fault "the artifact holds less than its manifest says"
-    printf '%s\n' "${shorts}" | while read -r line; do restore_report "${line}"; done
-    restore_teardown "${scratch}"
-    restore_recorded failure "artifact short"
-    return 1
-  }
-  sealed_before="$(restore_fingerprinted "${scratch}")"
-  shorts="$(restore_compared "${want}" "${sealed_before}")" || {
+  if [ "${addressed}" = "false" ]; then
+    for file in "${RESTORE_CHAIN_FILES[@]}"; do
+      have="$(restore_fingerprinted "${file}")"
+    done
+    shorts="$(restore_compared "${want}" "${have}")" || {
+      restore_fault "the artifact holds less than its manifest says"
+      printf '%s\n' "${shorts}" | while read -r line; do restore_report "${line}"; done
+      restore_teardown "${scratch}"
+      restore_recorded failure "artifact short"
+      return 1
+    }
+    before="$(restore_fingerprinted "${scratch}" | sort)"
+  else
+    before="$(backup_fingerprinted "${scratch}" | sort)" || {
+      restore_fault "could not fingerprint scratch [${scratch}]"
+      restore_teardown "${scratch}"
+      restore_recorded failure "fingerprint failed"
+      return 1
+    }
+  fi
+  shorts="$(restore_compared "${want}" "${before}")" || {
     restore_fault "scratch holds less than the manifest says"
     printf '%s\n' "${shorts}" | while read -r line; do restore_report "${line}"; done
     [ "${RESTORE_KEEP_SCRATCH}" = "true" ] || restore_teardown "${scratch}"
     restore_recorded failure "scratch short"
     return 1
   }
-  restore_sealed "${scratch}"
-  sealed_after="$(restore_fingerprinted "${scratch}")"
-  if [ "${sealed_before}" != "${sealed_after}" ]; then
+  if declare -F restore_checked >/dev/null; then
+    restore_checked "${scratch}" || {
+      restore_fault "the module check of scratch [${scratch}] failed"
+      [ "${RESTORE_KEEP_SCRATCH}" = "true" ] || restore_teardown "${scratch}"
+      restore_recorded failure "module check failed"
+      return 1
+    }
+  fi
+  restore_sealed "${scratch}" || {
+    restore_fault "could not seal scratch [${scratch}] read only"
+    [ "${RESTORE_KEEP_SCRATCH}" = "true" ] || restore_teardown "${scratch}"
+    restore_recorded failure "seal failed"
+    return 1
+  }
+  if [ "${addressed}" = "false" ]; then
+    after="$(restore_fingerprinted "${scratch}" | sort)"
+  else
+    after="$(backup_fingerprinted "${scratch}" | sort)"
+  fi
+  if [ "${before}" != "${after}" ]; then
     restore_fault "scratch changed after it was sealed"
+    [ "${RESTORE_KEEP_SCRATCH}" = "true" ] || restore_teardown "${scratch}"
     restore_recorded failure "scratch moved after sealing"
     return 1
   fi
@@ -293,7 +323,7 @@ restore_planned_units() {
 }
 
 restore_merged_progress() {
-  printf '%s\n' "$(restore_scratch_dir)/merged.txt"
+  printf '%s\n' "$(dirname "$(restore_scratch_dir)")/${RESTORE_RUN_TIMESTAMP}.merged"
 }
 
 restore_merge() {
@@ -308,7 +338,11 @@ restore_merge() {
   }
   RESTORE_SCRATCH="${scratch}"
   staged="$(backup_fingerprinted "${scratch}")"
-  restore_sealed "${scratch}"
+  restore_sealed "${scratch}" || {
+    restore_fault "could not seal scratch [${scratch}] read only"
+    restore_teardown "${scratch}"
+    return 1
+  }
   live="$(backup_fingerprinted "${RESTORE_LIVE_ADDRESS}")"
   mapfile -t RESTORE_PLANNED < <(restore_planned_units "${staged}" "${live}")
   restore_report "merge     [${#RESTORE_PLANNED[@]}] closed unit(s) differ from live"
@@ -324,31 +358,61 @@ restore_merge() {
   progress="$(restore_merged_progress)"
   mkdir -p "$(dirname "${progress}")"
   touch "${progress}"
+  local jobs="${RESTORE_MERGE_JOBS:-3}" running=0 failures
+  failures="${progress}.failed"
+  rm -f "${failures}"
   for unit in "${RESTORE_PLANNED[@]}"; do
     grep -Fxq -- "${unit}" "${progress}" && continue
-    restore_merged "${unit}" "${scratch}" || {
-      restore_fault "could not merge [${unit}]"
-      return 1
-    }
-    echo "${unit}" >>"${progress}"
-    RESTORE_CHANGED=$((RESTORE_CHANGED + 1))
+    if [ "${jobs}" -le 1 ]; then
+      restore_merged "${unit}" "${scratch}" || {
+        restore_fault "could not merge [${unit}]"
+        return 1
+      }
+      echo "${unit}" >>"${progress}"
+      RESTORE_CHANGED=$((RESTORE_CHANGED + 1))
+      continue
+    fi
+    (restore_merged "${unit}" "${scratch}" && echo "${unit}" >>"${progress}" || echo "${unit}" >>"${failures}") &
+    running=$((running + 1))
+    if [ "${running}" -ge "${jobs}" ]; then
+      wait -n || true
+      running=$((running - 1))
+    fi
   done
+  wait || true
+  if [ -s "${failures}" ]; then
+    while read -r unit; do
+      restore_fault "could not merge [${unit}]"
+    done <"${failures}"
+    return 1
+  fi
+  [ "${jobs}" -gt 1 ] && RESTORE_CHANGED=$((RESTORE_CHANGED + $(grep -c . "${progress}")))
   restore_restarted
-  after="$(backup_fingerprinted "${RESTORE_LIVE_ADDRESS}")"
-  local short=0
   declare -A held=() want=()
-  while read -r line; do
-    [ -n "${line}" ] && held["${line% *}"]="${line##* }"
-  done <<<"${after}"
   while read -r line; do
     [ -n "${line}" ] && want["${line% *}"]="${line##* }"
   done <<<"${staged}"
-  for unit in "${RESTORE_PLANNED[@]}"; do
-    if [ "${held["${unit}"]:-0}" -lt "${want["${unit}"]:-0}" ]; then
-      restore_fault "unit [${unit}] holds [${held["${unit}"]:-0}] after the merge, wants at least [${want["${unit}"]}]"
-      short=$((short + 1))
-    fi
+  local attempt=0 short=0 shorts=()
+  while true; do
+    after="$(backup_fingerprinted "${RESTORE_LIVE_ADDRESS}")"
+    held=()
+    while read -r line; do
+      [ -n "${line}" ] && held["${line% *}"]="${line##* }"
+    done <<<"${after}"
+    shorts=()
+    for unit in "${RESTORE_PLANNED[@]}"; do
+      [ "${held["${unit}"]:-0}" -ge "${want["${unit}"]:-0}" ] || shorts+=("${unit}")
+    done
+    [ "${#shorts[@]}" -eq 0 ] && break
+    attempt=$((attempt + 1))
+    [ "${attempt}" -lt "${RESTORE_VERIFY_ATTEMPTS:-24}" ] || break
+    sleep "${RESTORE_VERIFY_SLEEP:-5}"
   done
+  for unit in "${shorts[@]}"; do
+    restore_fault "unit [${unit}] holds [${held["${unit}"]:-0}] after the merge, wants at least [${want["${unit}"]}]"
+    short=$((short + 1))
+  done
+  [ "${short}" -eq 0 ] && rm -f "${progress}" "${failures}"
   [ "${RESTORE_KEEP_SCRATCH}" = "true" ] || restore_teardown "${scratch}"
   return "$((short > 0))"
 }

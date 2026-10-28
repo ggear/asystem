@@ -252,6 +252,7 @@ blacklist btusb
 blacklist hci_bcm4377
 EOF
 rm -f /etc/modprobe.d/brcmfmac-ignore.conf
+rm -f /etc/modprobe.d/blacklist-applesmc.conf
 tee /etc/dracut.conf.d/no-i18n.conf <<'EOF'
 omit_dracutmodules+=" i18n "
 EOF

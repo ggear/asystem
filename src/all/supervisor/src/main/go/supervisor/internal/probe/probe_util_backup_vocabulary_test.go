@@ -23,16 +23,21 @@ func TestProbeUtilBackupVocabulary_ShellStatesMirrorTheDeclaredWords(t *testing.
 	for _, match := range regexp.MustCompile(`\bBackupState([A-Za-z]+)\s*=\s*"([a-z]+)"`).FindAllStringSubmatch(read("src/all/supervisor/src/main/go/supervisor/internal/metric/metric_schema.go"), -1) {
 		declared[strings.ToUpper(match[1])] = match[2]
 	}
-	mirrored := map[string]string{}
-	for _, match := range regexp.MustCompile(`(?m)^BACKUP_STATE_([A-Z]+)="([a-z]+)"$`).FindAllStringSubmatch(read("src/all/_/src/build/resources/backup_manifest.sh"), -1) {
-		mirrored[match[1]] = match[2]
+	if len(declared) == 0 {
+		t.Fatalf("parsed no declared states")
 	}
-	if len(declared) == 0 || len(mirrored) == 0 {
-		t.Fatalf("parsed declared [%d] and mirrored [%d] states, want both non-empty", len(declared), len(mirrored))
-	}
-	for name, word := range mirrored {
-		if declared[name] != word {
-			t.Errorf("BACKUP_STATE_%s = %q, want the declared %q", name, word, declared[name])
+	for _, source := range []string{"backup_manifest.sh", "restore_chain.sh"} {
+		mirrored := map[string]string{}
+		for _, match := range regexp.MustCompile(`(?m)^BACKUP_STATE_([A-Z]+)="([a-z]+)"$`).FindAllStringSubmatch(read("src/all/_/src/build/resources/"+source), -1) {
+			mirrored[match[1]] = match[2]
+		}
+		if len(mirrored) == 0 {
+			t.Fatalf("parsed no mirrored states from [%s]", source)
+		}
+		for name, word := range mirrored {
+			if declared[name] != word {
+				t.Errorf("%s BACKUP_STATE_%s = %q, want the declared %q", source, name, word, declared[name])
+			}
 		}
 	}
 }

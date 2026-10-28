@@ -97,7 +97,7 @@ tables="$(query "SELECT table_name FROM information_schema.tables WHERE table_sc
 for table in ${tables}; do
   query "SELECT date_trunc('day', time) AS day, count(*) AS n FROM \"${table}\" WHERE time < date_trunc('day', now()) GROUP BY 1" |
     jq -r --arg table "${table}" '.[] | "\($table)/\(.day[0:10]) \(.n)"' || exit 1
-done
+done | sort
 FINGERPRINT
 }
 

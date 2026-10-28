@@ -28,3 +28,20 @@ restore_planned() {
 restore_applied() {
   restore_files "${PLEX_RESTORE_SERVER}/Plug-in Support:${PLEX_RESTORE_SERVER}/Preferences.xml" "${RESTORE_SOURCE_PATH}/${PLEX_RESTORE_CONFIG}"
 }
+
+restore_checked() {
+  local scratch="${1}" image database result failed=0
+  image="$(docker inspect "${RESTORE_MODULE_NAME}" --format '{{.Config.Image}}')" || return 1
+  for database in "${scratch}/${PLEX_RESTORE_SERVER}/Plug-in Support/Databases/"*.db; do
+    [ -f "${database}" ] || continue
+    result="$(docker run --rm --network none --volume "${scratch}:/scratch" --entrypoint "/usr/lib/plexmediaserver/Plex SQLite" \
+      "${image}" "/scratch/${database#"${scratch}/"}" "PRAGMA integrity_check" 2>&1)"
+    if [ "${result}" != "ok" ]; then
+      restore_fault "integrity_check of [$(basename "${database}")] answered [$(printf '%s' "${result}" | head -n 1)]"
+      failed=1
+    else
+      restore_report "integrity_check of [$(basename "${database}")] ok"
+    fi
+  done
+  return "${failed}"
+}

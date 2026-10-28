@@ -6,6 +6,10 @@ from os.path import abspath, basename, dirname, isdir, isfile, join, realpath
 
 from pathlib2 import Path
 
+RESOURCES_DIR = join(dirname(realpath(__file__)), "../../resources")
+BACKUP_FINGERPRINT_SHELL = Path(join(RESOURCES_DIR, "fingerprint.sh")).read_text().strip()
+BACKUP_LOCK_SHELL = Path(join(RESOURCES_DIR, "lock.sh")).read_text().strip()
+RESTORE_CHAIN_SHELL = Path(join(RESOURCES_DIR, "restore_chain.sh")).read_text().strip()
 BACKUP_MANIFEST_SHELL = Path(join(dirname(realpath(__file__)), "../../resources/backup_manifest.sh")).read_text().strip()
 BACKUP_TIMEOUT_HOURS_DEFAULT = "5"
 BACKUP_KEEP_DAILY_DEFAULT = "7"
@@ -38,13 +42,19 @@ RESTORE_WRAPPER = r"""
 
 # shellcheck disable=SC1090,SC2034,SC2329
 
-#   restore.sh [--force] [--from=<timestamp>] [--file=<path>] [--no-backup]
+#   restore.sh [--mode=replace|merge|drill] [--from=<timestamp>] [--file=<path>] [--source=<dir>]
+#              [--record=<stage>] [--keep-scratch] [--force] [--no-backup]
 #
-#   bare      read only, resolves the artifact and prints the plan, changes nothing
+#   bare      read only, resolves the chain and prints the plan, changes nothing
 #   --force   applies the plan, the only destructive form
 #
-#   from      the run to restore, a backup timestamp, defaulting to the newest run
+#   mode      replace restores wholesale, drill proves the backup restores without touching live,
+#             merge puts back history live lost, offered only to a module defining restore_merged
+#   from      the run to restore, a backup timestamp, defaulting to the newest run not regressed
 #   file      an artifact path outright, for one lifted off the share or elsewhere
+#   source    a directory of runs searched alone, for a chain pinned outside the stages
+#   record    the stage under whose .meta a drill writes its verdict, primary or secondary
+#   keep-scratch  leave the scratch directory behind for inspection
 #   no-backup skip the safety backup taken of the current data before applying
 #
 # Applying refuses unless all of these hold:
@@ -61,6 +71,10 @@ set -uo pipefail
 
 RESTORE_FORCE="${RESTORE_FORCE:-false}"
 RESTORE_BACKUP="${RESTORE_BACKUP:-true}"
+RESTORE_MODE="replace"
+RESTORE_SOURCE_DIR=""
+RESTORE_KEEP_SCRATCH="false"
+RESTORE_RECORD=""
 RESTORE_FROM=""
 RESTORE_FILE=""
 RESTORE_FAULTS=0
@@ -75,13 +89,17 @@ while [ "$#" -gt 0 ]; do
     shift
     RESTORE_FROM="${1:-}"
     ;;
+  --mode=*) RESTORE_MODE="${1#--mode=}" ;;
+  --source=*) RESTORE_SOURCE_DIR="${1#--source=}" ;;
+  --record=*) RESTORE_RECORD="${1#--record=}" ;;
+  --keep-scratch) RESTORE_KEEP_SCRATCH="true" ;;
   --file=*) RESTORE_FILE="${1#--file=}" ;;
   --file)
     shift
     RESTORE_FILE="${1:-}"
     ;;
   *)
-    echo "Usage: ${0} [--force] [--from=<timestamp>] [--file=<path>] [--no-backup]" >&2
+    echo "Usage: ${0} [--mode=replace|merge|drill] [--from=<timestamp>] [--file=<path>] [--source=<dir>] [--record=<stage>] [--keep-scratch] [--force] [--no-backup]" >&2
     exit 2
     ;;
   esac
@@ -219,7 +237,7 @@ restore_backed() {
   [ "${RESTORE_BACKUP}" = "true" ] || { restore_report "skipping the safety backup, [--no-backup] given"; return 0; }
   [ -f "${RESTORE_INTERNAL_BACKUP}" ] || { restore_report "skipping the safety backup, no [backup.sh] beside this script"; return 0; }
   restore_report "taking a safety backup of the current data first ..."
-  BACKUP_SKIP_HOURS=0 BACKUP_SERVICE_RESTART=false bash "${RESTORE_INTERNAL_BACKUP}" || {
+  BACKUP_PRUNE=false BACKUP_SKIP_HOURS=0 BACKUP_SERVICE_RESTART=false bash "${RESTORE_INTERNAL_BACKUP}" || {
     restore_fault "the safety backup failed, abandoning the restore"
     return 1
   }
@@ -254,45 +272,85 @@ restore_applied() {
   return 1
 }
 
+FINGERPRINT_TOKEN
+
+LOCK_TOKEN
+
+CHAIN_TOKEN
+
 SNIPPET_TOKEN
 
 [ "${BASH_SOURCE[0]}" = "${0}" ] || return 0
 
-echo && echo "Restore $([ "${RESTORE_FORCE}" = "true" ] && echo apply || echo plan) [${RESTORE_MODULE_NAME}] against [${RESTORE_SOURCE_PATH}] forced [${RESTORE_FORCE}]" && echo
-if ! restore_resolved; then
+restore_failed() {
   echo && echo "❌ Restore found [${RESTORE_FAULTS}] fault(s), changed [${RESTORE_CHANGED}]" && echo
   exit 1
+}
+
+asystem_locked "${RESTORE_MODULE_NAME}" "$(dirname "${RESTORE_INTERNAL_SOURCE_DIR}")" "${RESTORE_LOCK_WAIT:-300}" || exit 1
+echo && echo "Restore $([ "${RESTORE_FORCE}" = "true" ] && echo apply || echo plan) [${RESTORE_MODULE_NAME}] mode [${RESTORE_MODE}] against [${RESTORE_SOURCE_PATH}] forced [${RESTORE_FORCE}]" && echo
+case "${RESTORE_MODE}" in replace | drill | merge) ;; *)
+  restore_fault "unknown mode [${RESTORE_MODE}], taking one of [replace drill merge]"
+  restore_failed
+  ;;
+esac
+if [ -n "${RESTORE_FILE}" ]; then
+  restore_resolved || restore_failed
+  RESTORE_CHAIN_FILES=("${RESTORE_SOURCE_FILE}")
+else
+  RESTORE_RUN_TIMESTAMP="${RESTORE_FROM:-$(restore_default_run)}"
+  [ -n "${RESTORE_RUN_TIMESTAMP}" ] || { restore_fault "no accepted backup run under [$(restore_roots | tr '\n' ' ')]"; restore_failed; }
+  if [ "$(restore_manifest_field "${RESTORE_RUN_TIMESTAMP}" verdict)" = "${BACKUP_STATE_REGRESSED}" ]; then
+    restore_forced "restore the regressed run [${RESTORE_RUN_TIMESTAMP}], a regressed backup holds less than the one before it" || restore_failed
+  fi
+  restore_chain_resolved "${RESTORE_RUN_TIMESTAMP}" || restore_failed
+  RESTORE_SOURCE_FILE="${RESTORE_CHAIN_FILES[-1]}"
+  RESTORE_SOURCE_VERSION="$(restore_versioned "$(basename "${RESTORE_SOURCE_FILE}")")"
+  case "${RESTORE_SOURCE_FILE}" in
+  *"${RESTORE_DELTA_SUFFIX}".*) RESTORE_INTERNAL_KIND="delta" ;;
+  *) RESTORE_INTERNAL_KIND="full" ;;
+  esac
 fi
 restore_report "artifact  [${RESTORE_SOURCE_FILE}]"
-restore_report "taken     [${RESTORE_RUN_TIMESTAMP}] from version [${RESTORE_SOURCE_VERSION:-unknown}] kind [${RESTORE_INTERNAL_KIND}]"
+restore_report "taken     [${RESTORE_RUN_TIMESTAMP}] from version [${RESTORE_SOURCE_VERSION:-unknown}] kind [${RESTORE_INTERNAL_KIND}] chain [${#RESTORE_CHAIN_FILES[@]}]"
 restore_report "size      [$(du -m -s "${RESTORE_SOURCE_FILE}" 2>/dev/null | cut -f1)] MB"
 restore_report "service   must be [${RESTORE_SERVICE_STATE}]"
-if ! restore_intact; then
-  restore_fault "the artifact failed its integrity check [${RESTORE_SOURCE_FILE}]"
-  echo && echo "❌ Restore found [${RESTORE_FAULTS}] fault(s), changed [${RESTORE_CHANGED}]" && echo
-  exit 1
-fi
+restore_chain_intact || restore_failed
 restore_report "integrity passed"
 echo
-if [ "${RESTORE_FORCE}" != "true" ]; then
-  restore_planned
-  echo && echo "✅ Restore plan resolved, rerun with [--force] to apply, changed [${RESTORE_CHANGED}]" && echo
-  exit 0
-fi
-if restore_backed; then
-  if [ "${RESTORE_SERVICE_STATE}" = "running" ]; then
-    restore_running && restore_applied
-  else
-    restore_stopped && restore_applied
-    restore_started
+case "${RESTORE_MODE}" in
+drill)
+  restore_drilled || true
+  ;;
+merge)
+  restore_merge || true
+  if [ "${RESTORE_FORCE}" != "true" ] && [ "${RESTORE_FAULTS}" -eq 0 ]; then
+    echo && echo "✅ Merge plan resolved, rerun with [--force] to apply, changed [${RESTORE_CHANGED}]" && echo
+    exit 0
   fi
-fi
+  ;;
+*)
+  if [ "${RESTORE_FORCE}" != "true" ]; then
+    restore_planned
+    echo && echo "✅ Restore plan resolved, rerun with [--force] to apply, changed [${RESTORE_CHANGED}]" && echo
+    exit 0
+  fi
+  if restore_backed; then
+    if [ "${RESTORE_SERVICE_STATE}" = "running" ]; then
+      restore_running && restore_applied
+    else
+      restore_stopped && restore_applied
+      restore_started
+    fi
+  fi
+  ;;
+esac
 echo
 if [ "${RESTORE_FAULTS}" -ne 0 ]; then
   echo "❌ Restore found [${RESTORE_FAULTS}] fault(s), changed [${RESTORE_CHANGED}]" && echo
   exit 1
 fi
-echo "✅ Restore applied from [${RESTORE_RUN_TIMESTAMP}], changed [${RESTORE_CHANGED}]" && echo
+echo "✅ Restore $([ "${RESTORE_MODE}" = "drill" ] && echo drilled || echo applied) from [${RESTORE_RUN_TIMESTAMP}], changed [${RESTORE_CHANGED}]" && echo
 """
 
 BACKUP_CONTRACT = """# The wrapper owns the run, this snippet owns the backup. The wrapper checks the throttle, calls
@@ -1559,6 +1617,10 @@ backup_completed() {{
   :
 }}
 
+{fingerprint}
+
+{lock}
+
 {manifest}
 
 {source}
@@ -1581,6 +1643,8 @@ if [ "${{1:-}}" = "--prune-gfs" ]; then
   backup_pruned_gfs "${{2}}"
   exit 0
 fi
+
+asystem_locked "${{BACKUP_MODULE_NAME}}" "$(dirname "${{BACKUP_INTERNAL_SOURCE_DIR}}")" "${{BACKUP_LOCK_WAIT:-300}}" || exit 1
 
 find "${{BACKUP_INTERNAL_ROOT_DIR}}" -type f -name '*.tmp' -delete 2>/dev/null
 
@@ -1626,7 +1690,7 @@ if [ "${{BACKUP_INTERNAL_WRITTEN}}" = "true" ]; then
   BACKUP_INTERNAL_SIZE="$(du -m "${{BACKUP_TARGET_PATH}}" | cut -f1)"
   echo "Finished backup [${{BACKUP_INTERNAL_SIZE}}] MB in [$((SECONDS - BACKUP_INTERNAL_STARTED))] seconds to [${{BACKUP_TARGET_PATH}}]"
   backup_manifested || echo "Manifest for [${{BACKUP_RUN_TIMESTAMP}}] could not be written" >&2
-  backup_pruned
+  [ "${{BACKUP_PRUNE:-true}}" = "true" ] && backup_pruned
   rm -rf "$(dirname "${{BACKUP_INTERNAL_SOURCE_DIR}}")/replaced"
 else
   echo "Failed backup in [$((SECONDS - BACKUP_INTERNAL_STARTED))] seconds" >&2
@@ -1641,6 +1705,8 @@ exit "${{BACKUP_INTERNAL_STATUS}}"
                 prefix=prefix,
                 source=script_source,
                 manifest=BACKUP_MANIFEST_SHELL.replace("PREFIX_TOKEN", prefix),
+                fingerprint=BACKUP_FINGERPRINT_SHELL,
+                lock=BACKUP_LOCK_SHELL,
                 timeout=BACKUP_TIMEOUT_HOURS_DEFAULT,
                 keep_daily=BACKUP_KEEP_DAILY_DEFAULT,
                 keep_weekly=BACKUP_KEEP_WEEKLY_DEFAULT,
@@ -1673,10 +1739,20 @@ restore_applied() {
 """
         )
     script_source = Path(script_source_path).read_text().strip()
+    backup_source_path = join(root_dir, "src/build/resources/backup.sh")
+    if "restore_merged()" in script_source and not (isfile(backup_source_path) and "BACKUP_DELTA_SUFFIX" in Path(backup_source_path).read_text()):
+        raise ValueError("Module [{}] defines restore_merged but its backup.sh emits no deltas, merge is offered only to a module with incremental backups".format(module_name))
     if not script_source.startswith(RESTORE_CONTRACT):
         raise ValueError("Snippet contract violated in [{}], its leading comment block must match RESTORE_CONTRACT verbatim".format(script_source_path))
     script_path = abspath(join(working_dir, "restore.sh"))
     with open(script_path, "w") as script_file:
-        script_file.write(RESTORE_WRAPPER.replace("MODULE_NAME_TOKEN", module_name).replace("SNIPPET_TOKEN", script_source).strip())
+        script_file.write(
+            RESTORE_WRAPPER.replace("MODULE_NAME_TOKEN", module_name)
+            .replace("FINGERPRINT_TOKEN", BACKUP_FINGERPRINT_SHELL)
+            .replace("LOCK_TOKEN", BACKUP_LOCK_SHELL)
+            .replace("CHAIN_TOKEN", RESTORE_CHAIN_SHELL)
+            .replace("SNIPPET_TOKEN", script_source)
+            .strip()
+        )
     os.chmod(script_path, os.stat(script_path).st_mode | stat.S_IEXEC)
     print("Build generate script [{}] script persisted to [{}]".format(basename(root_dir), script_path))

@@ -22,14 +22,10 @@ run_hook() {
 }
 
 run_backup() {
-  local backup_script="${SERVICE_INSTALL}/backup.sh" backup_source
+  local backup_script="${SERVICE_INSTALL}/backup.sh" backup_source backup_root newest verdict
   [[ -f "${backup_script}" ]] || return 0
   if [[ "${COMMAND}" != "install" ]]; then
     log_info "Backup skipped, command is [${COMMAND}] not [install]"
-    return 0
-  fi
-  if ! docker ps --format '{{.Names}}' | grep -Fxq "${SERVICE_NAME}"; then
-    log_warn "Backup skipped, container is not running [${SERVICE_NAME}]"
     return 0
   fi
   backup_source="$(readlink -f "${SERVICE_PARENT}/latest")"
@@ -41,6 +37,13 @@ run_backup() {
     log_info "Backup skipped, reinstalling the current version [${SERVICE_VERSION_ABSOLUTE}]"
     return 0
   fi
+  if ! docker ps --format '{{.Names}}' | grep -Fxq "${SERVICE_NAME}"; then
+    if [[ "${INSTALL_MODE}" == "force" ]]; then
+      log_warn "Backup skipped, container is not running [${SERVICE_NAME}], forcing the install of [${SERVICE_VERSION_ABSOLUTE}] unbacked"
+      return 0
+    fi
+    log_error "Backup skipped, container is not running [${SERVICE_NAME}], abandoning the install of [${SERVICE_VERSION_ABSOLUTE}] over a state nothing judged"
+  fi
   chmod +x "${backup_script}"
   BACKUP_SOURCE_PATH="${backup_source}" BACKUP_SKIP_HOURS=0 BACKUP_SERVICE_RESTART=false \
     timeout 1800 "${backup_script}" || {
@@ -51,6 +54,28 @@ run_backup() {
     fi
     log_error "Backup failed, abandoning the install of [${SERVICE_VERSION_ABSOLUTE}] and restoring [${backup_source}] [${backup_script}]"
   }
+  backup_root="$(dirname "${backup_source}")/backup"
+  newest="$(find "${backup_root}" -maxdepth 1 -mindepth 1 -type d -name '[0-9]*' 2>/dev/null | sort | tail -n 1)"
+  PREINSTALL_RUN="$(basename "${newest}")"
+  verdict="$(sed -n 's/^  "verdict": "\(.*\)",$/\1/p' "${newest}/.meta/manifest.json" 2>/dev/null | head -n 1 || true)"
+  if [[ "${verdict}" == "regressed" ]]; then
+    docker start "${SERVICE_NAME}" >/dev/null 2>&1 || true
+    if [[ "${INSTALL_MODE}" == "force" ]]; then
+      log_warn "Backup regressed, forcing the install of [${SERVICE_VERSION_ABSOLUTE}] over [${newest}]"
+      return 0
+    fi
+    log_error "Backup regressed, abandoning the install of [${SERVICE_VERSION_ABSOLUTE}] over [${newest}], accept it with [${backup_script} --accept=$(basename "${newest}")] if the shrink is intended"
+  fi
+}
+
+PREINSTALL_RUN=""
+
+run_drill() {
+  local restore_script="${SERVICE_INSTALL}/restore.sh"
+  [[ -f "${restore_script}" && "${COMMAND}" == "install" && -n "${PREINSTALL_RUN}" ]] || return 0
+  log_info "Drilling the pre-install backup [${PREINSTALL_RUN}] against the new release of [${SERVICE_NAME}]"
+  timeout 1800 bash "${restore_script}" --mode=drill --record=primary --from="${PREINSTALL_RUN}" ||
+    log_warn "Release drill failed for [${SERVICE_NAME}] run [${PREINSTALL_RUN}], the backup taken before this install may not restore on this version"
 }
 
 SERVICE_STOP_GRACE_SECONDS=30
@@ -306,6 +331,7 @@ if [[ "${SERVICE_FORM_FACTOR:-}" == "edge" || "${SERVICE_FORM_FACTOR:-}" == "ser
       docker system prune --volumes -f -a >/dev/null 2>&1 || true
       echo "Service started successfully"
       echo "--------------------------------------------------------------------------------"
+      run_drill
     fi
   fi
 fi

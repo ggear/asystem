@@ -42,6 +42,17 @@ backup_json_text() {
   printf '%s' "${text}"
 }
 
+backup_previous() {
+  local run="${1}" names index
+  mapfile -t names < <(backup_listed)
+  for ((index = ${#names[@]} - 1; index >= 0; index--)); do
+    [ "${names[index]}" \< "${run}" ] || continue
+    [ -n "$(ls "${BACKUP_INTERNAL_ROOT_DIR}/${names[index]}"/*"${BACKUP_FULL_SUFFIX}".* "${BACKUP_INTERNAL_ROOT_DIR}/${names[index]}"/*"${BACKUP_DELTA_SUFFIX}".* 2>/dev/null)" ] || continue
+    printf '%s\n' "${names[index]}"
+    return 0
+  done
+}
+
 backup_parent() {
   local run="${1}" names index
   mapfile -t names < <(backup_listed)
@@ -106,7 +117,7 @@ backup_manifested() {
   kind="full"
   backup_is_delta "$(basename "${BACKUP_TARGET_PATH}")" && kind="delta"
   parent=""
-  [ "${kind}" = "delta" ] && parent="$(backup_parent "${run}")"
+  [ "${kind}" = "delta" ] && parent="$(backup_previous "${run}")"
   current="$(backup_fingerprinted "${BACKUP_TARGET_PATH}")" || current=""
   baseline="$(backup_baseline "${run}")"
   backup_regression "${current}" "${baseline}"

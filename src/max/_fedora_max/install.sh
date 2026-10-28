@@ -13,8 +13,12 @@ ${SERVICE_INSTALL}/volumes.sh apply || exit 1
 ################################################################################
 dnf copr enable dperson/mbpfan
 dnf install mbpfan
+echo applesmc >/etc/modules-load.d/applesmc.conf
+modprobe applesmc
 cat <<'EOF' >/etc/mbpfan.conf
 [general]
+min_fan_speed = 1800
+max_fan_speed = 4800
 low_temp = 55          # if temperature in celcius is below this, fans will run at minimum speed, default 63
 high_temp = 60         # if temperature in celcius is above this, fan speed will gradually increase, default 66
 max_temp = 80          # if temperature in celcius is above this, fans will run at maximum speed, default 86

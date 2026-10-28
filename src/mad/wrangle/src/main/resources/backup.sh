@@ -278,13 +278,7 @@ backup_completed() {
 # shellcheck shell=bash
 # shellcheck disable=SC2034
 
-# Mirrors metric.BackupState<Name> in supervisor internal/metric/metric_schema.go, which owns the words, as BACKUP_STATE_<NAME>. A supervisor test holds the two equal.
-BACKUP_STATE_SUCCESS="success"
-BACKUP_STATE_REGRESSED="regressed"
-BACKUP_SHRINK_PERCENT="${BACKUP_SHRINK_PERCENT:-${WRANGLE_BACKUP_SHRINK_PERCENT:-20}}"
 BACKUP_FINGERPRINT_INCLUDES=()
-BACKUP_EVIDENCE_LIMIT=20
-BACKUP_MANIFEST_LEAF="manifest.json"
 
 backup_fingerprinted_default() {
   local file="${1:-}" includes
@@ -340,6 +334,32 @@ backup_fingerprinted_default() {
   esac
 }
 
+# shellcheck shell=bash
+
+asystem_locked() {
+  local module="${1}" parent="${2}" wait="${3:-300}" file
+  [ "${ASYSTEM_LOCK_HELD:-}" = "${module}" ] && return 0
+  command -v flock >/dev/null 2>&1 || return 0
+  file="${parent}/.lock"
+  mkdir -p "${parent}" 2>/dev/null || return 0
+  exec 9>"${file}" || return 0
+  flock -w "${wait}" 9 || {
+    echo "Another actor holds the lock for [${module}] at [${file}], giving up after [${wait}] seconds" >&2
+    return 1
+  }
+  export ASYSTEM_LOCK_HELD="${module}"
+}
+
+# shellcheck shell=bash
+# shellcheck disable=SC2034
+
+# Mirrors metric.BackupState<Name> in supervisor internal/metric/metric_schema.go, which owns the words, as BACKUP_STATE_<NAME>. A supervisor test holds the two equal.
+BACKUP_STATE_SUCCESS="success"
+BACKUP_STATE_REGRESSED="regressed"
+BACKUP_SHRINK_PERCENT="${BACKUP_SHRINK_PERCENT:-${WRANGLE_BACKUP_SHRINK_PERCENT:-20}}"
+BACKUP_EVIDENCE_LIMIT=20
+BACKUP_MANIFEST_LEAF="manifest.json"
+
 backup_fingerprinted() {
   backup_fingerprinted_default "$@"
 }
@@ -372,6 +392,17 @@ backup_json_text() {
   text="${text//\\/\\\\}"
   text="${text//\"/\\\"}"
   printf '%s' "${text}"
+}
+
+backup_previous() {
+  local run="${1}" names index
+  mapfile -t names < <(backup_listed)
+  for ((index = ${#names[@]} - 1; index >= 0; index--)); do
+    [ "${names[index]}" \< "${run}" ] || continue
+    [ -n "$(ls "${BACKUP_INTERNAL_ROOT_DIR}/${names[index]}"/*"${BACKUP_FULL_SUFFIX}".* "${BACKUP_INTERNAL_ROOT_DIR}/${names[index]}"/*"${BACKUP_DELTA_SUFFIX}".* 2>/dev/null)" ] || continue
+    printf '%s\n' "${names[index]}"
+    return 0
+  done
 }
 
 backup_parent() {
@@ -438,7 +469,7 @@ backup_manifested() {
   kind="full"
   backup_is_delta "$(basename "${BACKUP_TARGET_PATH}")" && kind="delta"
   parent=""
-  [ "${kind}" = "delta" ] && parent="$(backup_parent "${run}")"
+  [ "${kind}" = "delta" ] && parent="$(backup_previous "${run}")"
   current="$(backup_fingerprinted "${BACKUP_TARGET_PATH}")" || current=""
   baseline="$(backup_baseline "${run}")"
   backup_regression "${current}" "${baseline}"
@@ -638,6 +669,8 @@ if [ "${1:-}" = "--prune-gfs" ]; then
   exit 0
 fi
 
+asystem_locked "${BACKUP_MODULE_NAME}" "$(dirname "${BACKUP_INTERNAL_SOURCE_DIR}")" "${BACKUP_LOCK_WAIT:-300}" || exit 1
+
 find "${BACKUP_INTERNAL_ROOT_DIR}" -type f -name '*.tmp' -delete 2>/dev/null
 
 mapfile -t BACKUP_INTERNAL_EXISTING < <(backup_listed)
@@ -682,7 +715,7 @@ if [ "${BACKUP_INTERNAL_WRITTEN}" = "true" ]; then
   BACKUP_INTERNAL_SIZE="$(du -m "${BACKUP_TARGET_PATH}" | cut -f1)"
   echo "Finished backup [${BACKUP_INTERNAL_SIZE}] MB in [$((SECONDS - BACKUP_INTERNAL_STARTED))] seconds to [${BACKUP_TARGET_PATH}]"
   backup_manifested || echo "Manifest for [${BACKUP_RUN_TIMESTAMP}] could not be written" >&2
-  backup_pruned
+  [ "${BACKUP_PRUNE:-true}" = "true" ] && backup_pruned
   rm -rf "$(dirname "${BACKUP_INTERNAL_SOURCE_DIR}")/replaced"
 else
   echo "Failed backup in [$((SECONDS - BACKUP_INTERNAL_STARTED))] seconds" >&2
