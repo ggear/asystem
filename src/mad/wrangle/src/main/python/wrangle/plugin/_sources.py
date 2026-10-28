@@ -46,16 +46,23 @@ logging.getLogger("yfinance").setLevel(logging.ERROR)
 logging.getLogger("googleapiclient.discovery_cache").setLevel(logging.ERROR)
 
 
+_timed_state = threading.local()
+
+
 def _timed(action):
     def decorator(func):
         @functools.wraps(func)
         def wrapper(self, *args, **kwargs):
+            outermost = getattr(_timed_state, "depth", 0) == 0
+            _timed_state.depth = getattr(_timed_state, "depth", 0) + 1
             start = time.perf_counter()
             try:
                 return func(self, *args, **kwargs)
             finally:
-                elapsed_ms = int((time.perf_counter() - start) * 1000)
-                self.add_counter(CTR_SRC_TIMING, action, elapsed_ms)
+                _timed_state.depth -= 1
+                if outermost:
+                    elapsed_ms = int((time.perf_counter() - start) * 1000)
+                    self.add_counter(CTR_SRC_TIMING, action, elapsed_ms)
 
         return wrapper
 
@@ -1138,6 +1145,7 @@ class SourcesMixin(ContractMixin):
         return created
 
     @_timed(CTR_ACT_MARSHALL_MILLIS)
+    @_timed(CTR_ACT_MARSHALL_MILLIS)
     def dropbox_download(self, dropbox_dir: str | None, local_dir: str, check: bool = True):
         """
         Downloads a Dropbox folder into `local_dir`, fetching files missing locally or, with `check`, whose
@@ -1493,6 +1501,7 @@ class SourcesMixin(ContractMixin):
         self.print_log(f"Directory [{basename(local_dir).title()}] synchronised [{len(statuses)}] files from [https://drive.google.com/drive/folders/{drive_dir}]", started=started_time)
         return collections.OrderedDict(sorted(statuses.items()))
 
+    @_timed(CTR_ACT_EGRESS_MILLIS)
     def drive_rename(self, drive_dir, local_dir, name, renamed):
         """
         Renames a synced file to `renamed`: on Drive by its id from the last listing, keeping its id and revisions, then the
