@@ -25,6 +25,7 @@ BACKUPS_SCHEDULED_HOUR=1
 BACKUPS_HOSTS_LABEL="*******-***"
 BACKUPS_EXIT_PARTIAL=3
 BACKUPS_RUN_HOURS=""
+BACKUPS_SKIP_HOURS="${BACKUP_SKIP_HOURS:-}"
 BACKUPS_SETTLE_SECONDS="${BACKUPS_SETTLE_SECONDS:-5}"
 BACKUPS_RUN_ID="${BACKUPS_RUN_ID:-}"
 BACKUPS_INTERRUPTED=0
@@ -127,10 +128,11 @@ backups_dispatch() {
 
 # shellcheck disable=SC2029
 backups_start_one() {
-  local host="$1" scrub="" status=0
+  local host="$1" scrub="" skip="" status=0
   [ "${BACKUPS_SCRUB}" = "1" ] && scrub=" --scrub"
+  [ -n "${BACKUPS_SKIP_HOURS}" ] && skip=" BACKUP_SKIP_HOURS=${BACKUPS_SKIP_HOURS}"
   ssh "${BACKUPS_SSH_OPTS[@]}" "${BACKUPS_SSH_USER}@${host}" \
-    "set -m; nohup env BACKUP_TIMEOUT_HOURS=${BACKUPS_RUN_HOURS} ${BACKUPS_REMOTE} start ${BACKUPS_RUN_ID}${scrub} </dev/null >/dev/null 2>&1 & disown" \
+    "set -m; nohup env BACKUP_TIMEOUT_HOURS=${BACKUPS_RUN_HOURS}${skip} ${BACKUPS_REMOTE} start ${BACKUPS_RUN_ID}${scrub} </dev/null >/dev/null 2>&1 & disown" \
     >/dev/null 2>&1 || status=$?
   [ "${status}" -eq 0 ] || return "${status}"
   backups_log INFO "host/${host}" start launched "[${BACKUPS_RUN_ID}] dispatched to [${host}] with timeout [${BACKUPS_RUN_HOURS}] hours and scrub [$([ "${BACKUPS_SCRUB}" = "1" ] && echo on || echo off)]"
@@ -231,6 +233,14 @@ if [ "${BACKUPS_SCRUB}" = "1" ] && [ "${BACKUPS_COMMAND}" != "start" ]; then
   backups_help
   exit 2
 fi
+case "${BACKUPS_SKIP_HOURS}" in
+"" | *[!0-9]*)
+  if [ -n "${BACKUPS_SKIP_HOURS}" ]; then
+    backups_log ERROR "" resolve faulting "[BACKUP_SKIP_HOURS] must be a whole number of hours, not [${BACKUPS_SKIP_HOURS}]"
+    exit 2
+  fi
+  ;;
+esac
 case "${BACKUPS_COMMAND}" in
 help)
   backups_help help

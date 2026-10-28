@@ -67,6 +67,12 @@ class BackupsShellTest(unittest.TestCase):
         with open(capture) as handle:
             self.assertIn("--scrub", handle.read())
 
+    def test_start_rejects_a_non_numeric_skip_hours(self):
+        self.hosts()
+        done = self.invoke("start", BACKUPS_CONFIG=self.config, BACKUP_SKIP_HOURS="0;reboot")
+        self.assertEqual(done.returncode, 2)
+        self.assertIn("[BACKUP_SKIP_HOURS] must be a whole number", done.stderr)
+
     def test_scrub_is_refused_against_a_command_that_cannot_scrub(self):
         self.hosts("h1")
         done = self.invoke("list", "--scrub", BACKUPS_CONFIG=self.config)
@@ -156,12 +162,17 @@ class BackupsShellTest(unittest.TestCase):
         self.assertIn("BACKUP_TIMEOUT_HOURS=9", line)
         self.assertIn("abackup start 2026-09-15_00-00-00", line)
         self.assertNotIn("--scrub", line)
+        self.assertNotIn("BACKUP_SKIP_HOURS", line)
         self.assertIn("nohup", line)
         self.assertIn("disown", line)
         os.remove(capture)
         self.shell(probe, BACKUPS_SCRUB=1)
         with open(capture) as handle:
             self.assertIn("--scrub", handle.read())
+        os.remove(capture)
+        self.shell(probe, BACKUP_SKIP_HOURS=0)
+        with open(capture) as handle:
+            self.assertIn("BACKUP_TIMEOUT_HOURS=9 BACKUP_SKIP_HOURS=0 ", handle.read())
 
     def test_start_one_names_the_host_it_dispatched_to(self):
         self.hosts()

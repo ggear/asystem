@@ -444,6 +444,7 @@ var (
 		// A peer's share unreachable, owned by the shares metric
 		regexp.MustCompile(`^CIFS: VFS: Error connecting to socket\. Aborting operation\.$`),
 		regexp.MustCompile(`^CIFS: VFS: cifs_mount failed w/return code = -(110|111|112|113|115)$`),
+		regexp.MustCompile(`^CIFS: VFS: \\\\\S+ has not responded in \d+ seconds\. Reconnecting\.\.\.$`),
 	}
 
 	logCache   = map[string]*logSet{}

@@ -225,6 +225,16 @@ func TestProbeUtilLogs_ClusterColdBootNoiseIsIgnored(t *testing.T) {
 			expectedOK: true,
 		},
 		{
+			name:       "happy_cifs_not_responded_ignored",
+			line:       `3,115,511201585525,-;CIFS: VFS: \x5c\x5cmacmini-mad has not responded in 180 seconds. Reconnecting...`,
+			expectedOK: false,
+		},
+		{
+			name:       "happy_cifs_not_responded_other_host_ignored",
+			line:       `3,116,511201585526,-;CIFS: VFS: \x5c\x5cmacmini-max.local.janeandgraham.com has not responded in 45 seconds. Reconnecting...`,
+			expectedOK: false,
+		},
+		{
 			name:       "happy_other_acpi_error_kept",
 			line:       `3,113,140000,-;ACPI Error: Aborting method \x5c_SB.PCI0.LPCB.EC._Q66 due to previous error (AE_NOT_FOUND) (20220331/psparse-529)`,
 			expectedOK: true,

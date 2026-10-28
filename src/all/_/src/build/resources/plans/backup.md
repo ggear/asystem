@@ -662,6 +662,26 @@ are expected, and neither matters while the pin holds.
 | 6 Release the pin | `backup.sh --full` straight after the merge. Wait for its secondary copy and tertiary snapshot. Then do the incident cleanup in *Cleanup* | That full's fingerprint covers every unit of the staged chain's. Only then delete the post-loss runs and the pin |
 | 7 Steady state | Remove the old pruner after 7 clean nights per module. The regression guard enforces (an anchor holds until `--accept`). GFS-synced weekly drills (§5a) start, and pruning requires a green `.meta/secondary/drill.json`. Every existing sparse point is drilled once to backfill it. Until then it counts for nothing and is kept, which is safe but is residue | Fold the durable rules into supervisor's `CLAUDE.md` Backup section, and delete this plan. The residue check below comes back empty |
 
+### Where this stands and what is next (2026-10-28)
+
+Window A (phases 1, 1b, 1c) is written, released and verified (progress table below). Nothing from phases 2 to 7 is written. Nothing is committed: the work sits unstaged in the working tree.
+
+**Next, in order**
+1. After the 01:00 run on 29 Oct, check `abackup list` on `max`, `meg`, `mad`, `may` and `raspbpi-jen`. Every stage (primary, secondary, tertiary) must read `success` and `Used BKP` must be back. That closes window A.
+2. Write phase 2 (supervisor Go) and release it to every host before anything else in window B. The work is `BackupStateRegressed` and a drill state in `internal/metric/metric_schema.go`, a shell mirror with a parity test, `BKP` and `Fail BKP` wiring, and primary reading a new run's `.meta/manifest.json` after the script exits (`probe_util_backup_stage_primary.go`). No shell mirror of the backup states exists yet, so the parity test is new.
+3. Write phase 3 in `container.py`: manifest, fingerprints, regression guard, one chain-aware pruner in shadow mode. Fix the three first-file-is-the-artifact readers before the first manifest is written. Release the modules in the order in the phases table.
+4. Window C: phase 4 (restore modes), then the phase 5 merge as a run, phase 6, then phase 7 after 7 clean nights.
+
+**Facts that are not obvious from the code**
+- Hosts: ssh as `root@macmini-{mad,meg,may,max}` and `root@raspbpi-jen`. `jil` does not resolve and is out of scope.
+- A hand-run `abackup start --stage primary|secondary` writes a run with no tertiary document, which blanks `Used BKP` until the next full run. Set `BACKUP_SKIP_HOURS=0` to defeat the throttle. A fresh release is `health: starting` for a while and primary refuses it.
+- Plex stops for about 22 s whenever its backup runs, whether by hand or by stage.
+- An entrypoint drill must set `INFLUXDB3_DATA_DIR=/asystem/mnt`, because the image defaults to another path.
+- Restoring a delta replaces the source's whole state, so never restore the post-loss runs `2026-10-22_08-11-23` and `2026-10-22_08-15-13`.
+- The pin `/share/30/tmp/influxdb3-restore-2026-10-22/` is the only protection for the incident chain besides secondary, until phase 6.
+- Each postgres release costs HA about 70 s of recorded states.
+- The hand rules from CLAUDE.md apply: read-only git, no edits to `entity_metadata.xlsx`, `shellcheck` on every script, `[$VAR]` log messages.
+
 ### Release windows
 
 Phases are written and gated one by one, but released in three windows. A window ends at its gate, and nothing in the next starts before it holds.
@@ -688,7 +708,10 @@ Phases are written and gated one by one, but released in three windows. A window
 | Postgres cost, observed | HA's recorder logged `Database connection invalidated` and a `PendingRollbackError` at 09:16, then recovered unaided. `hass.states` has a gap from 09:15:10 to 09:16:22, about 72 s, matching the release restart, and it is recorded at 1 s resolution after. The loss is the restart, not the extension update alone, and no `Catching up, dropped` line was logged. Accept for each postgres release |
 | Backups on mad by hand 09:17 (`abackup start --stage primary` then `--stage secondary`, `BACKUP_SKIP_HOURS=0`) | Passed. plex (22 s), postgres (7 s) and wrangle (1 s) all `success`, then secondary promoted plex, postgres, wrangle and supervisor to `/share/10/backup/`. The postgres dump passes `gzip -t` locally and on the share, holds 147 `COPY` lines, and has `CREATE EXTENSION IF NOT EXISTS timescaledb WITH SCHEMA public` (no pinned version). plex came back healthy 23 s after |
 | `Used BKP` blank on mad and meg after the hand-run stages | Expected, not a fault. `usedBackupSpace` reads the newest run's tertiary document, and a `--stage primary` or `--stage secondary` run has none, so the metric errors with `no tertiary stage document`. It clears at the next nightly run, or after a hand-run `--stage tertiary`, which powers the backup disk. Hand-run stages should include tertiary, or be followed by one, when the display matters |
-| influxdb3 release | Pending |
+| influxdb3 10.200.1887 released | Passed. Container healthy on the new image. `/tmp/influxdb3_floor` exists inside it and reads `1792627765927698000` ns, the post-loss floor (22 Oct), so the check only fires if the floor moves **later** and the merge in phase 5 will move it earlier, which is allowed. The entrypoint logged nothing and made no quarantine dir on a clean start. `old home 10.200.1850` is gone and `10.200.1851` remains |
+| Entrypoint scratch drill (throwaway containers on may, no network, image `influxdb3:10.200.1887`, stock entrypoint stubbed) | Passed on all three cases. All checkpoints empty: both moved to `cv2/quarantine/<ts>/`, "refusing to start" printed, exit 1, nothing deleted. One empty and one good: the empty one quarantined, the good one kept, hand-off to the stock entrypoint. No checkpoints (fresh install): straight hand-off. A first attempt used the image's default `INFLUXDB3_DATA_DIR`, not the module's `/asystem/mnt`, and so tested nothing, so a drill must set it |
+| Backups on may by hand 09:22 (`abackup start --stage primary` then `--stage secondary`) | Passed. A `delta` of version 10.200.1887 was written (1 s) and promoted to `/share/30/backup/influxdb3/`, where it passes `gzip -t`. The incident chain `2026-10-19_01-00-28` to `2026-10-22_01-00-08`, the two post-loss captures and the pin `/share/30/tmp/influxdb3-restore-2026-10-22/` (five runs) are all untouched |
+| Window A gate | Passed for everything except the supervisor's nightly run, pending the 01:00 run on 29 Oct (primary, secondary and tertiary for letsencrypt, zigbee2mqtt, wrangle, mariadb, plex, homeassistant, postgres, influxdb3), and `jil`, out of scope by decision. Window B starts once that run is green |
 
 A release is a rollback point (its pre-install backup), so the postgres extension update stays in its own release inside window A.
 
