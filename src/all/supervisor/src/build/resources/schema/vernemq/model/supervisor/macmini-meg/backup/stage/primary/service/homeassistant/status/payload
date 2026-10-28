@@ -1,0 +1,13 @@
+{
+  "run_id": "<text>",
+  "backup_id": "<text>",
+  "state": <running|success|skipped|failure>,
+  "started_ts": "<text>",
+  "finished_ts": "<text>",
+  "duration_s": <number>,
+  "success_bool": <true|false>,
+  "kind": "<text>",
+  "version": "<text>",
+  "file_count": <number>,
+  "size_mb": <number>
+}
