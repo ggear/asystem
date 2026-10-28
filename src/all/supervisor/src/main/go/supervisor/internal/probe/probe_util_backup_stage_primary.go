@@ -3,6 +3,7 @@ package probe
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -38,19 +39,24 @@ func runPrimaryStage(ctx context.Context, request stageRequest, counters *stageC
 			"[%s] holds backups at [%s] but ships no backup.sh on this host, so nothing prunes them, remove them by hand", service, serviceHomeDir(service))
 	}
 
-	failed := 0
+	failed, regressed := 0, 0
 	for index, service := range enrolled {
 		if err := ctx.Err(); err != nil {
 			return stageResult{}, err
 		}
-		if runOneService(ctx, request, loaded, service, index+1, len(enrolled), counters) != nil {
+		if err := runOneService(ctx, request, loaded, service, index+1, len(enrolled), counters); errors.Is(err, errServiceRegressed) {
+			regressed++
+		} else if err != nil {
 			failed++
 		}
 	}
 	scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStagePrimary), scribe.ActionStop).Infof("reported", time.Now(),
-		"[%d] services attempted with [%d] failed", len(enrolled), failed)
+		"[%d] services attempted with [%d] failed and [%d] regressed", len(enrolled), failed, regressed)
 	if failed > 0 {
 		return stageResult{}, fmt.Errorf("[%d] of [%d] service backups failed", failed, len(enrolled))
+	}
+	if regressed > 0 {
+		return stageResult{}, fmt.Errorf("[%d] of [%d] service backups regressed %w", regressed, len(enrolled), errStageRegressed)
 	}
 	return stageResult{}, nil
 }
@@ -156,7 +162,7 @@ func runOneService(ctx context.Context, request stageRequest, loaded *config.Con
 		return fmt.Errorf("service [%s] backup script exited non-zero", service)
 	}
 	if regressed {
-		return fmt.Errorf("service [%s] backup regressed against its last accepted run", service)
+		return fmt.Errorf("service [%s] %w", service, errServiceRegressed)
 	}
 	return nil
 }

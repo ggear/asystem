@@ -3,6 +3,7 @@ package probe
 import (
 	"cmp"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -143,16 +144,12 @@ func runBackupStart(ctx context.Context, request BackupRequest) error {
 			expires.Format(backupTimeFormat), backupScheduleMargin, backupScheduledHour)
 	}
 
-	var stageErr error
-	for _, stage := range stages {
-		staged := stageRequest{
+	stageErr := runStageSequence(stages, func(stage metric.BackupStage) error {
+		return runStage(ctx, stageRequest{
 			Stage: stage, RunID: request.RunID, RunPath: runPath, Expires: expires,
 			Trigger: request.Trigger, ConfigPath: request.Config, Scrub: request.Scrub,
-		}
-		if stageErr = runStage(ctx, staged); stageErr != nil {
-			break
-		}
-	}
+		})
+	})
 	pruneRuns(root, host, started)
 	document := finishRun(root, request.RunID, started)
 	_ = publishRunStatus(request.Config, document)
@@ -162,6 +159,21 @@ func runBackupStart(ctx context.Context, request BackupRequest) error {
 		return fmt.Errorf("run [%s] %w", request.RunID, stageErr)
 	}
 	return nil
+}
+
+func runStageSequence(stages []metric.BackupStage, run func(metric.BackupStage) error) error {
+	var regressed error
+	for _, stage := range stages {
+		err := run(stage)
+		if errors.Is(err, errStageRegressed) {
+			regressed = err
+			continue
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return regressed
 }
 
 func runBackupStop(ctx context.Context, request BackupRequest) error {

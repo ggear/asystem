@@ -2,6 +2,8 @@ package probe
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -543,5 +545,36 @@ func TestProbeUtilBackup_StopReturnsOnlyOnceTheRunHasReleasedItsLock(t *testing.
 	}
 	if _, err := os.Stat(filepath.Join(stageDir(runPath, metric.BackupStageSecondary), stageStoppedMarker)); err != nil {
 		t.Errorf("runBackupStop() left no stop marker for the live run to act on [%v]", err)
+	}
+}
+
+func TestProbeUtilBackup_RunStageSequence(t *testing.T) {
+	failure := errors.New("the stage failed")
+	regressed := fmt.Errorf("stage [primary] %w", errStageRegressed)
+	tests := []struct {
+		name          string
+		outcomes      map[metric.BackupStage]error
+		expectedRan   []metric.BackupStage
+		expectedError error
+	}{
+		{name: "every_stage_succeeds", expectedRan: backupStages},
+		{name: "a_regression_fails_the_run_but_never_halts_it", outcomes: map[metric.BackupStage]error{metric.BackupStagePrimary: regressed}, expectedRan: backupStages, expectedError: errStageRegressed},
+		{name: "a_failure_halts_the_run", outcomes: map[metric.BackupStage]error{metric.BackupStagePrimary: failure}, expectedRan: backupStages[:1], expectedError: failure},
+		{name: "a_later_failure_outranks_an_earlier_regression", outcomes: map[metric.BackupStage]error{metric.BackupStagePrimary: regressed, metric.BackupStageSecondary: failure}, expectedRan: backupStages[:2], expectedError: failure},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			var ran []metric.BackupStage
+			err := runStageSequence(backupStages, func(stage metric.BackupStage) error {
+				ran = append(ran, stage)
+				return testCase.outcomes[stage]
+			})
+			if !slices.Equal(ran, testCase.expectedRan) {
+				t.Errorf("ran = %v, want %v", ran, testCase.expectedRan)
+			}
+			if !errors.Is(err, testCase.expectedError) {
+				t.Errorf("err = %v, want %v", err, testCase.expectedError)
+			}
+		})
 	}
 }
