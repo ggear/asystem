@@ -196,11 +196,13 @@ func Payloads() []schema.Payload {
 			BackupStateSuccess,
 			BackupStateSkipped,
 			BackupStateFailure,
+			BackupStateRegressed,
 		}},
 		{Key: "started_ts", Kind: schema.KindStr},
 		{Key: "finished_ts", Kind: schema.KindStr},
 		{Key: "duration_s", Kind: schema.KindInt},
 		{Key: "success_bool", Kind: schema.KindBool},
+		{Key: "regressed_bool", Kind: schema.KindBool},
 		{Key: "kind", Kind: schema.KindStr},
 		{Key: "version", Kind: schema.KindStr},
 		{Key: "file_count", Kind: schema.KindInt},
@@ -351,13 +353,14 @@ const (
 
 	backupStagePlaceholder BackupStage = "$STAGE"
 
-	BackupStateRunning = "running"
-	BackupStateSuccess = "success"
-	BackupStateSkipped = "skipped"
-	BackupStateStopped = "stopped"
-	BackupStateTimeout = "timeout"
-	BackupStatePausing = "pausing"
-	BackupStateFailure = "failure"
+	BackupStateRunning   = "running"
+	BackupStateSuccess   = "success"
+	BackupStateSkipped   = "skipped"
+	BackupStateStopped   = "stopped"
+	BackupStateTimeout   = "timeout"
+	BackupStatePausing   = "pausing"
+	BackupStateFailure   = "failure"
+	BackupStateRegressed = "regressed"
 
 	BackupTriggerSystem = "system"
 	BackupTriggerManual = "manual"

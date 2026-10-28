@@ -64,16 +64,19 @@ func runOneService(ctx context.Context, request stageRequest, loaded *config.Con
 	host := loaded.Host()
 	subject := scribe.SubjectService(service)
 
+	refused := func(reason string) error {
+		now := time.Now().Format(time.RFC3339)
+		_ = writeAtomic(statusPath, serviceSummary{RunID: request.RunID, State: metric.BackupStateFailure, StartedTS: now, FinishedTS: now})
+		scribe.Log(scribe.SourceBackup, subject, scribe.ActionStart).Warnf("faulting", time.Now(),
+			"[%s] skipped [%d/%d], container is %s", service, index, total, reason)
+		return fmt.Errorf("container [%s] is %s", service, reason)
+	}
 	running, health := dockerServiceState(ctx, service)
 	if !running {
-		scribe.Log(scribe.SourceBackup, subject, scribe.ActionStart).Warnf("faulting", time.Now(),
-			"[%s] skipped [%d/%d], container is not running", service, index, total)
-		return fmt.Errorf("container [%s] is not running", service)
+		return refused("not running")
 	}
 	if health == "starting" {
-		scribe.Log(scribe.SourceBackup, subject, scribe.ActionStart).Warnf("faulting", time.Now(),
-			"[%s] skipped [%d/%d], container is still starting", service, index, total)
-		return fmt.Errorf("container [%s] is still starting", service)
+		return refused("still starting")
 	}
 
 	started := time.Now()
@@ -109,6 +112,13 @@ func runOneService(ctx context.Context, request stageRequest, loaded *config.Con
 
 	ok := runErr == nil
 	state, newest := backupOutcome(ok, previous, newestBackupDir(backupDir))
+	var evidence []string
+	if state == metric.BackupStateSuccess {
+		if verdict, lines := readManifestVerdict(newest); verdict == metric.BackupStateRegressed {
+			state, evidence = metric.BackupStateRegressed, lines
+		}
+	}
+	regressed := state == metric.BackupStateRegressed
 
 	sizeMB, files, kind, version := 0, 0, "unknown", "unknown"
 	if newest != "" {
@@ -124,13 +134,16 @@ func runOneService(ctx context.Context, request stageRequest, loaded *config.Con
 	_ = writeAtomic(statusPath, document)
 
 	sized := backupMoved(intReading(int64(sizeMB)), time.Since(started))
-	if state != metric.BackupStateSuccess {
+	if state != metric.BackupStateSuccess && !regressed {
 		sized = backupHeld(intReading(int64(sizeMB)), time.Since(started))
 	}
 	scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Infof(backupVerb(metric.BackupStagePrimary), started,
 		"%s from [%s] as [%s], kind [%s], version [%s]", sized, service, state, kind, version)
 
-	if state == metric.BackupStateSuccess {
+	for _, line := range evidence {
+		scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Warnf("faulting", started, "%s", line)
+	}
+	if state == metric.BackupStateSuccess || regressed {
 		counters.addTransfer(files, sizeMB, files, 0, 0, 0, 0)
 	}
 	if client, dialErr := brokerDial(request.ConfigPath, "primary"); dialErr == nil {
@@ -141,6 +154,9 @@ func runOneService(ctx context.Context, request stageRequest, loaded *config.Con
 	}
 	if !ok {
 		return fmt.Errorf("service [%s] backup script exited non-zero", service)
+	}
+	if regressed {
+		return fmt.Errorf("service [%s] backup regressed against its last accepted run", service)
 	}
 	return nil
 }
@@ -243,6 +259,21 @@ func backupIdentity(newest string) string {
 		return "none"
 	}
 	return filepath.Base(newest)
+}
+
+func readManifestVerdict(runDir string) (verdict string, evidence []string) {
+	data, err := os.ReadFile(filepath.Join(runDir, treeMetaDirectory, treeManifestLeaf))
+	if err != nil {
+		return "", nil
+	}
+	var manifest struct {
+		Verdict  string   `json:"verdict"`
+		Evidence []string `json:"evidence"`
+	}
+	if json.Unmarshal(data, &manifest) != nil {
+		return "", nil
+	}
+	return manifest.Verdict, manifest.Evidence
 }
 
 func backupOutcome(ok bool, previous, newest string) (state, artefact string) {

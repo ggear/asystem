@@ -1,6 +1,6 @@
 {
   "warning": "WARNING: This file is written by the build process, any manual edits will be lost!",
-  "source": "369482d8e2433242ac5f97e3b63cc1c97cc02a64dcf1d1b09a1658ac54c69848",
+  "source": "411dca8934f5149db24aa3e639c5de8d8475e32f9f4bc52b340c31e359f80cbf",
   "module": "supervisor",
   "discovered": false,
   "database": {
@@ -223,7 +223,7 @@
             "key": "failed_backup_stages",
             "kind": "int",
             "unit": "%",
-            "description": "backup stages failing or timing out against the stages this host runs",
+            "description": "backup stages failing, timing out, regressed or failing their drill against the stages this host runs",
             "persist": true,
             "period": "",
             "levels": null
@@ -232,7 +232,7 @@
             "key": "failed_backup_stages_trend",
             "kind": "int",
             "unit": "%",
-            "description": "backup stages failing or timing out against the stages this host runs, smoothed across the trend window",
+            "description": "backup stages failing, timing out, regressed or failing their drill against the stages this host runs, smoothed across the trend window",
             "persist": true,
             "period": "",
             "levels": null
@@ -673,7 +673,7 @@
             "key": "backup_status",
             "kind": "bool",
             "unit": "",
-            "description": "module backup completed successfully in the latest run",
+            "description": "module backup completed and accepted in the latest run",
             "persist": true,
             "period": "",
             "levels": {
@@ -688,7 +688,7 @@
             "key": "backup_status_trend",
             "kind": "bool",
             "unit": "",
-            "description": "module backup completed successfully in the latest run, smoothed across the trend window",
+            "description": "module backup completed and accepted in the latest run, smoothed across the trend window",
             "persist": true,
             "period": "",
             "levels": {

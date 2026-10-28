@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -155,6 +156,40 @@ func TestProbeUtilBackupStagePrimary_BackupIdentity(t *testing.T) {
 		if got := backupIdentity(testCase.newest); got != testCase.expected {
 			t.Errorf("backupIdentity(%q) = %q, want %q", testCase.newest, got, testCase.expected)
 		}
+	}
+}
+
+func TestProbeUtilBackupStagePrimary_ReadManifestVerdict(t *testing.T) {
+	tests := []struct {
+		name             string
+		manifest         *string
+		expectedVerdict  string
+		expectedEvidence []string
+	}{
+		{name: "no_manifest_carries_no_verdict"},
+		{name: "unreadable_manifest_carries_no_verdict", manifest: new("{")},
+		{name: "regressed_with_evidence", manifest: new(`{"verdict":"regressed","evidence":["first","second"]}`), expectedVerdict: metric.BackupStateRegressed, expectedEvidence: []string{"first", "second"}},
+		{name: "accepted_verdict_is_passed_through", manifest: new(`{"verdict":"accepted"}`), expectedVerdict: "accepted"},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			dir := t.TempDir()
+			if testCase.manifest != nil {
+				if err := os.MkdirAll(filepath.Join(dir, treeMetaDirectory), 0o755); err != nil {
+					t.Fatalf("mkdir: %v", err)
+				}
+				if err := os.WriteFile(filepath.Join(dir, treeMetaDirectory, treeManifestLeaf), []byte(*testCase.manifest), 0o644); err != nil {
+					t.Fatalf("write manifest: %v", err)
+				}
+			}
+			verdict, evidence := readManifestVerdict(dir)
+			if verdict != testCase.expectedVerdict {
+				t.Errorf("verdict = %q, want %q", verdict, testCase.expectedVerdict)
+			}
+			if !slices.Equal(evidence, testCase.expectedEvidence) {
+				t.Errorf("evidence = %v, want %v", evidence, testCase.expectedEvidence)
+			}
+		})
 	}
 }
 

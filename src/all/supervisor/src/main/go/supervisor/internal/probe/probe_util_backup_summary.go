@@ -46,6 +46,7 @@ import (
 //	    "disk_unclean_bool":     <true|false>,  STAGE             The mount replayed its log
 //	    "total_mb":              <number>,      STAGE             Expected, against which size_mb is progress
 //	    "backup_id":             "<timestamp>", SERVICE           Artefact the run points at, reused when skipped, none when a failure left none
+//	    "regressed_bool":        <true|false>,  SERVICE           The run shrank against the last accepted one, [success_bool] stays true because the archive is kept
 //	    "kind":                  "<kind>",      SERVICE           [full|delta|unknown]
 //	    "version":               "<text>",      SERVICE
 //	    "resumed_bool":          <true|false>,  SCRUB             Resumed an unfinished pass rather than starting one
@@ -67,7 +68,7 @@ import (
 //	Go writes         every RUN, STAGE, SERVICE and SCRUB document, on the scheduled trigger and on a
 //	                  hand [supervisor backup start] alike, and rewrites a STAGE when the reaper stops
 //	                  a run found past its [expires_ts] [reapLocalStale]
-//	Go reads          [state] [trigger] [expires_ts] for liveness, [success_bool] per SERVICE for
+//	Go reads          [state] [trigger] [expires_ts] for liveness, [success_bool] and [regressed_bool] per SERVICE for
 //	                  service/backup_status, [stages_*] and [disk_usage_perc] for the three host metrics
 //	A module reads    nothing here, its own [backup.sh] is execed on an environment contract instead
 //	The leader reads  every host's RUN [state] [started_ts] [success_bool] off the broker, never off
@@ -85,6 +86,7 @@ type backupSummary struct {
 	TimeoutHours    int     `json:"timeout_hours,omitempty"`
 	DurationS       int     `json:"duration_s,omitempty"`
 	SuccessBool     bool    `json:"success_bool"`
+	RegressedBool   bool    `json:"regressed_bool,omitempty"`
 	DiskUsagePerc   float64 `json:"disk_usage_perc,omitempty"`
 	DiskUsedMB      int     `json:"disk_used_mb,omitempty"`
 	DiskTotalMB     int     `json:"disk_total_mb,omitempty"`
@@ -123,17 +125,18 @@ type scrubSummary struct {
 }
 
 type serviceSummary struct {
-	RunID       string `json:"run_id"`
-	BackupID    string `json:"backup_id,omitempty"`
-	State       string `json:"state"`
-	StartedTS   string `json:"started_ts,omitempty"`
-	FinishedTS  string `json:"finished_ts,omitempty"`
-	DurationS   int    `json:"duration_s,omitempty"`
-	SuccessBool bool   `json:"success_bool"`
-	Kind        string `json:"kind,omitempty"`
-	Version     string `json:"version,omitempty"`
-	FileCount   int    `json:"file_count,omitempty"`
-	SizeMB      int    `json:"size_mb,omitempty"`
+	RunID         string `json:"run_id"`
+	BackupID      string `json:"backup_id,omitempty"`
+	State         string `json:"state"`
+	StartedTS     string `json:"started_ts,omitempty"`
+	FinishedTS    string `json:"finished_ts,omitempty"`
+	DurationS     int    `json:"duration_s,omitempty"`
+	SuccessBool   bool   `json:"success_bool"`
+	RegressedBool bool   `json:"regressed_bool,omitempty"`
+	Kind          string `json:"kind,omitempty"`
+	Version       string `json:"version,omitempty"`
+	FileCount     int    `json:"file_count,omitempty"`
+	SizeMB        int    `json:"size_mb,omitempty"`
 }
 
 type backupClusterSummary struct {

@@ -57,7 +57,7 @@ func readBackupRun(root, dir string) *backupSnapshot {
 	documents, _ := filepath.Glob(filepath.Join(serviceRoot(runPath), "*", treeStatusLeaf))
 	for _, path := range documents {
 		if document := readBackupSummary(path); document != nil {
-			snapshot.services[filepath.Base(filepath.Dir(path))] = document.SuccessBool
+			snapshot.services[filepath.Base(filepath.Dir(path))] = document.SuccessBool && !document.RegressedBool
 		}
 	}
 	return snapshot
@@ -135,12 +135,14 @@ const (
 	treeBackupDirectory  = "backup"
 	treeStageDirectory   = "stage"
 	treeServiceDirectory = "service"
+	treeMetaDirectory    = ".meta"
 
-	treeStatusLeaf = "status.json"
-	treeScrubLeaf  = "scrub.json"
-	treeLogLeaf    = "output.log"
-	treeLockLeaf   = ".lock"
-	treeRunLogLeaf = "run.log"
+	treeStatusLeaf   = "status.json"
+	treeManifestLeaf = "manifest.json"
+	treeScrubLeaf    = "scrub.json"
+	treeLogLeaf      = "output.log"
+	treeLockLeaf     = ".lock"
+	treeRunLogLeaf   = "run.log"
 )
 
 var treeRunPattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$`)

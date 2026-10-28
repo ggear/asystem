@@ -74,9 +74,13 @@ func TestProbeUtilBackupTree_ReadBackupRunAssemblesFromScatteredDocuments(t *tes
 	writeStatus(stageStatusPath(runPath, metric.BackupStageTertiary), backupSummary{RunID: runID, State: metric.BackupStateSuccess, Trigger: metric.BackupTriggerSystem})
 	writeStatus(serviceStatusPath(runPath, "plex"), backupSummary{RunID: runID, SuccessBool: true})
 	writeStatus(serviceStatusPath(runPath, "postgres"), backupSummary{RunID: runID, SuccessBool: false})
+	writeStatus(serviceStatusPath(runPath, "influxdb3"), backupSummary{RunID: runID, SuccessBool: true, RegressedBool: true})
 
 	snapshot := readBackupRun(root, runID)
 
+	if snapshot.services["influxdb3"] {
+		t.Errorf("Services[influxdb3] = true, want false for a regressed run whose success_bool stays true")
+	}
 	if snapshot.staged != 3 {
 		t.Errorf("Staged = %d, want 3", snapshot.staged)
 	}

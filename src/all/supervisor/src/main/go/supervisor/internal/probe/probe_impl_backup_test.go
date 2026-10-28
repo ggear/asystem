@@ -269,6 +269,29 @@ func TestProbeImplBackup_ServiceSuccess(t *testing.T) {
 	}
 }
 
+func TestProbeImplBackup_ServiceSuccessReadsARegressedServiceAsNotBackedUp(t *testing.T) {
+	root := t.TempDir()
+	rolled := time.Now().Add(-1 * time.Hour).Format(backupTimestampFormat)
+	writeBackupRun(t, root, rolled, &backupSummary{StagesRun: 3, StagesFailed: 1}, nil, map[string]bool{"mariadb": true})
+	regressed := serviceStatusPath(backupRunPath(root, rolled), "influxdb3")
+	if err := os.MkdirAll(filepath.Dir(regressed), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if err := writeAtomic(regressed, backupSummary{State: metric.BackupStateRegressed, SuccessBool: true, RegressedBool: true}); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	p := &backupProbe{root: root}
+	if value, found, _ := p.serviceSuccess("influxdb3"); value || !found {
+		t.Errorf("influxdb3: got (%v,%v) want (false,true)", value, found)
+	}
+	if value, found, _ := p.serviceSuccess("mariadb"); !value || !found {
+		t.Errorf("mariadb: got (%v,%v) want (true,true)", value, found)
+	}
+	if value, _, err := p.failedBackupStages(); err != nil || value != 33 {
+		t.Errorf("failedBackupStages: got (%v,%v) want (33,nil)", value, err)
+	}
+}
+
 func TestProbeImplBackup_ServiceSuccessSurvivesAHandRun(t *testing.T) {
 	root := t.TempDir()
 	rolled := time.Now().Add(-7 * time.Hour).Format(backupTimestampFormat)
