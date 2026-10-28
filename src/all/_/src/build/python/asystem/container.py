@@ -6,11 +6,21 @@ from os.path import abspath, basename, dirname, isdir, isfile, join, realpath
 
 from pathlib2 import Path
 
-RESOURCES_DIR = join(dirname(realpath(__file__)), "../../resources")
-BACKUP_FINGERPRINT_SHELL = Path(join(RESOURCES_DIR, "fingerprint.sh")).read_text().strip()
-BACKUP_LOCK_SHELL = Path(join(RESOURCES_DIR, "lock.sh")).read_text().strip()
-RESTORE_CHAIN_SHELL = Path(join(RESOURCES_DIR, "restore_chain.sh")).read_text().strip()
-BACKUP_MANIFEST_SHELL = Path(join(dirname(realpath(__file__)), "../../resources/backup_manifest.sh")).read_text().strip()
+RESOURCES_DIR = join(dirname(realpath(__file__)), "../../resources/bash")
+
+
+def _shell(*names):
+    parts = []
+    for name in names:
+        lines = Path(join(RESOURCES_DIR, name)).read_text().split("\n")
+        parts.append("\n".join(line for line in lines if not line.startswith("# shellcheck")).strip())
+    return "\n\n".join(parts)
+
+
+BACKUP_FINGERPRINT_SHELL = _shell("backup_fingerprint.sh")
+ASYSTEM_LOCK_SHELL = _shell("asystem_lock.sh")
+RESTORE_CHAIN_SHELL = _shell("restore_chain.sh", "restore_drill.sh", "restore_merge.sh")
+BACKUP_MANIFEST_SHELL = _shell("backup_hooks.sh", "backup_manifest.sh", "backup_guard.sh", "backup_prune.sh")
 BACKUP_TIMEOUT_HOURS_DEFAULT = "5"
 BACKUP_KEEP_DAILY_DEFAULT = "7"
 BACKUP_KEEP_WEEKLY_DEFAULT = "4"
@@ -65,7 +75,7 @@ RESTORE_WRAPPER = r"""
 #   4. The safety backup of the current data succeeds, unless 'no-backup' is given
 #   5. The param 'force' is given, otherwise the plan is printed and nothing changes
 #
-# It is never run by install.sh, fab or the supervisor backup stages, only by hand.
+# Only install.sh runs it unprompted, as a drill after a release, which touches nothing live. Applying is only ever by hand.
 
 set -uo pipefail
 
@@ -1714,7 +1724,7 @@ exit "${{BACKUP_INTERNAL_STATUS}}"
                 source=script_source,
                 manifest=BACKUP_MANIFEST_SHELL.replace("PREFIX_TOKEN", prefix),
                 fingerprint=BACKUP_FINGERPRINT_SHELL,
-                lock=BACKUP_LOCK_SHELL,
+                lock=ASYSTEM_LOCK_SHELL,
                 timeout=BACKUP_TIMEOUT_HOURS_DEFAULT,
                 keep_daily=BACKUP_KEEP_DAILY_DEFAULT,
                 keep_weekly=BACKUP_KEEP_WEEKLY_DEFAULT,
@@ -1757,7 +1767,7 @@ restore_applied() {
         script_file.write(
             RESTORE_WRAPPER.replace("MODULE_NAME_TOKEN", module_name)
             .replace("FINGERPRINT_TOKEN", BACKUP_FINGERPRINT_SHELL)
-            .replace("LOCK_TOKEN", BACKUP_LOCK_SHELL)
+            .replace("LOCK_TOKEN", ASYSTEM_LOCK_SHELL)
             .replace("CHAIN_TOKEN", RESTORE_CHAIN_SHELL)
             .replace("SNIPPET_TOKEN", script_source)
             .strip()

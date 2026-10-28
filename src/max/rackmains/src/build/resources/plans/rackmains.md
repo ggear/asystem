@@ -1,7 +1,8 @@
 # rackmains
 
 **Built and tested locally 2026-10-28, not released.** Phases 1 and 2 are done: the crate reads the driver socket,
-publishes to the broker, and ships with a mock driver and a mock-backed system test. What remains is the
+publishes to the broker, and ships with a mock driver and a mock-backed system test. `fab test-sys` passes the publish
+test through the real image and broker; the declared-topics check fails until the rows exist. What remains is the
 spreadsheet rows (phase 3, yours), the release and the pull-the-plug test (phase 4), and housekeeping (phase 5). The
 code and the module `CLAUDE.md` say how it works; this file holds the status, what the code cannot say, and the
 decisions still open.
@@ -97,6 +98,11 @@ cannot pass until the rows exist, because the topics come from them.
    check what an unplugged UPS looks like on the socket, since only the stale marker in a unit test covers it.
 5. **Housekeeping.** Move the host NUT setup into a module script so a rebuilt `max` reproduces it, and add the module
    to Home Assistant's diagnostics view if wanted.
+
+Found on the way, outside this module: pytest 9.2.0 rejects the `cache_dir=../../../../target/.pytest_cache` argument
+every module's `system_test.py` passes, so no system test starts. rackmains passes the same directory as an absolute
+path; the others need the same change. `tempstat`'s Dockerfile apt pins are also stale (`jq` is now `deb12u3` and
+`ca-certificates` `20250419~deb12u2`), so its image will not build until they are refreshed.
 
 ## Open decisions
 

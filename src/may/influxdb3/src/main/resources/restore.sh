@@ -28,7 +28,7 @@
 #   4. The safety backup of the current data succeeds, unless 'no-backup' is given
 #   5. The param 'force' is given, otherwise the plan is printed and nothing changes
 #
-# It is never run by install.sh, fab or the supervisor backup stages, only by hand.
+# Only install.sh runs it unprompted, as a drill after a release, which touches nothing live. Applying is only ever by hand.
 
 set -uo pipefail
 
@@ -235,9 +235,6 @@ restore_applied() {
   return 1
 }
 
-# shellcheck shell=bash
-# shellcheck disable=SC2034
-
 BACKUP_FINGERPRINT_INCLUDES=()
 
 backup_fingerprinted_default() {
@@ -294,8 +291,6 @@ backup_fingerprinted_default() {
   esac
 }
 
-# shellcheck shell=bash
-
 asystem_locked() {
   local module="${1}" parent="${2}" wait="${3:-300}" file
   [ "${ASYSTEM_LOCK_HELD:-}" = "${module}" ] && return 0
@@ -310,17 +305,11 @@ asystem_locked() {
   export ASYSTEM_LOCK_HELD="${module}"
 }
 
-# shellcheck shell=bash
-# shellcheck disable=SC2034
-
 # Mirrors metric.BackupState<Name> in supervisor internal/metric/metric_schema.go, which owns the words, as BACKUP_STATE_<NAME>. A supervisor test holds the two equal.
 BACKUP_STATE_REGRESSED="regressed"
 BACKUP_STATE_SUCCESS="success"
-RESTORE_LIVE_ADDRESS=""
 RESTORE_CHAIN_RUNS=()
 RESTORE_CHAIN_FILES=()
-RESTORE_SCRATCH=""
-RESTORE_PLANNED=()
 
 restore_roots() {
   local root
@@ -425,7 +414,7 @@ restore_chain_resolved() {
     case "${file}" in *"${RESTORE_DELTA_SUFFIX}".*) ;; *) break ;; esac
     parent="$(restore_previous_run "${run}")"
     declared="$(restore_manifest_field "${run}" parent)"
-    if [ -n "${declared}" ] && [ "${declared}" != "${parent}" ]; then
+    if [ "${RESTORE_VERBOSE:-false}" = "true" ] && [ -n "${declared}" ] && [ "${declared}" != "${parent}" ]; then
       restore_report "manifest parent [${declared}] of [${run}] differs from the preceding run [${parent}], using the preceding run"
     fi
     [ -n "${parent}" ] || {
@@ -459,6 +448,8 @@ restore_chain_intact() {
   done
   return "${bad}"
 }
+
+RESTORE_SCRATCH=""
 
 restore_compared() {
   local want="${1}" have="${2}" unit count now short=0 line
@@ -632,26 +623,11 @@ restore_drilled() {
   restore_recorded success "drilled"
 }
 
-restore_planned_units() {
-  local staged="${1}" live="${2}" line unit count
-  declare -A held=()
-  while read -r line; do
-    [ -n "${line}" ] && held["${line% *}"]="${line##* }"
-  done <<<"${live}"
-  while read -r line; do
-    [ -n "${line}" ] || continue
-    unit="${line% *}"
-    count="${line##* }"
-    [ "${held["${unit}"]:-}" = "${count}" ] || echo "${unit}"
-  done <<<"${staged}"
-}
-
-restore_merged_progress() {
-  printf '%s\n' "$(dirname "$(restore_scratch_dir)")/${RESTORE_RUN_TIMESTAMP}.merged"
-}
+RESTORE_LIVE_ADDRESS=""
+RESTORE_PLANNED=()
 
 restore_stamped() {
-  restore_report "$(date +%T) $*"
+  restore_report "$(date +%T) $*" >&2
 }
 
 restore_ticked() {
@@ -669,6 +645,24 @@ restore_ticked() {
   [ "${elapsed}" -gt 0 ] && mibs=$((${bytes:-0} / 1048576 / elapsed))
   load="$(cut -d' ' -f1 /proc/loadavg 2>/dev/null || echo -)"
   restore_stamped "merged [${done}] of [${total}] units [${percent}]%, [${rows:-0}] rows, [$(awk -v b="${bytes:-0}" 'BEGIN { printf "%.2f", b / 1073741824 }')] GiB at [${mibs}] MiB/s, [${rate}] units a minute, [$((elapsed / 60))m$((elapsed % 60))s] elapsed, about [${eta}] left, load [${load}]"
+}
+
+restore_planned_units() {
+  local staged="${1}" live="${2}" line unit count
+  declare -A held=()
+  while read -r line; do
+    [ -n "${line}" ] && held["${line% *}"]="${line##* }"
+  done <<<"${live}"
+  while read -r line; do
+    [ -n "${line}" ] || continue
+    unit="${line% *}"
+    count="${line##* }"
+    [ "${held["${unit}"]:-}" = "${count}" ] || echo "${unit}"
+  done <<<"${staged}"
+}
+
+restore_merged_progress() {
+  printf '%s\n' "$(dirname "$(restore_scratch_dir)")/${RESTORE_RUN_TIMESTAMP}.merged"
 }
 
 restore_merge() {

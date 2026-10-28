@@ -311,7 +311,14 @@ class RestoreWrapperTest(unittest.TestCase):
         done = self.run_restore()
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
         self.assertIn("chain [3]", done.stdout)
-        self.assertIn("manifest parent [2026-10-26_01-00-00] of [2026-10-28_01-00-00] differs from the preceding run [2026-10-27_01-00-00]", done.stdout)
+        self.assertNotIn("differs from the preceding run", done.stdout)
+        verbose = subprocess.run(
+            [BASH, RESTORE],
+            capture_output=True,
+            text=True,
+            env=dict(os.environ, PATH=self.bin + ":" + os.environ["PATH"], RESTORE_SOURCE_PATH=self.latest, RESTORE_VERBOSE="true"),
+        )
+        self.assertIn("manifest parent [2026-10-26_01-00-00] of [2026-10-28_01-00-00] differs from the preceding run [2026-10-27_01-00-00]", verbose.stdout)
 
     def test_a_delta_without_a_full_is_a_fault(self):
         self.archive("2026-10-28_01-00-00", {"live/a": 10}, kind="delta", verdict="success", parent="", units={"live": 10})
@@ -536,6 +543,16 @@ class RestoreWrapperTest(unittest.TestCase):
         self.assertIn("status=1", done.stdout)
         self.assertIn("could not merge [t/2026-10-04]", done.stderr)
 
+    def test_status_lines_never_leak_into_a_captured_scratch_address(self):
+        body = """
+            restore_staged() { restore_stamped "starting scratch"; echo "the-address"; }
+            captured="$(restore_staged)"
+            echo "captured=[${captured}]"
+            """
+        done = self.source(body)
+        self.assertIn("captured=[the-address]", done.stdout)
+        self.assertIn("starting scratch", done.stderr)
+
     def test_merge_reports_progress_with_volume_and_rate_at_each_pause(self):
         with open(join(self.workdir, "live.txt"), "w") as handle:
             handle.write("")
@@ -549,13 +566,13 @@ class RestoreWrapperTest(unittest.TestCase):
         )
         done = self.source(body)
         self.assertIn("status=0", done.stdout)
-        self.assertIn("staging [1] artifact(s) into scratch", done.stdout)
-        self.assertIn("fingerprinting live", done.stdout)
-        self.assertIn("merging [10] unit(s) with [3] job(s)", done.stdout)
-        self.assertRegex(done.stdout, r"merged \[\d+\] of \[10\] units \[\d+\]%, \[\d+\] rows, \[\d\.\d\d\] GiB at \[\d+\] MiB/s, \[\d+\] units a minute")
-        self.assertIn("merged [10] of [10] units [100]%, [5000] rows", done.stdout)
-        self.assertIn("restarting [live]", done.stdout)
-        self.assertIn("verified, every merged unit holds at least the backup's count", done.stdout)
+        self.assertIn("staging [1] artifact(s) into scratch", done.stderr)
+        self.assertIn("fingerprinting live", done.stderr)
+        self.assertIn("merging [10] unit(s) with [3] job(s)", done.stderr)
+        self.assertRegex(done.stderr, r"merged \[\d+\] of \[10\] units \[\d+\]%, \[\d+\] rows, \[\d\.\d\d\] GiB at \[\d+\] MiB/s, \[\d+\] units a minute")
+        self.assertIn("merged [10] of [10] units [100]%, [5000] rows", done.stderr)
+        self.assertIn("restarting [live]", done.stderr)
+        self.assertIn("verified, every merged unit holds at least the backup's count", done.stderr)
 
     def test_a_rerun_skips_units_already_merged(self):
         with open(join(self.workdir, "live.txt"), "w") as handle:

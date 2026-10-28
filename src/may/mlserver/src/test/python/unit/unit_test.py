@@ -1,11 +1,14 @@
 import sys
 import unittest
+from os.path import abspath, dirname, join, realpath
 
 import pytest
 
 sys.path.append("../../../main/python")
 
 from library import *
+
+DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
 
 class WrangleTest(unittest.TestCase):
@@ -21,7 +24,7 @@ if __name__ == "__main__":
                 "-v",
                 "--durations=50",
                 "-o",
-                "cache_dir=../../../../target/.pytest_cache",
+                f"cache_dir={join(DIR_ROOT, 'target/.pytest_cache')}",
                 __file__,
             ]
         )

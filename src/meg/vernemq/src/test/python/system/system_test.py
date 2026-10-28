@@ -2,11 +2,13 @@ import random
 import string
 import sys
 import time
+from os.path import abspath, dirname, join, realpath
 
 import paho.mqtt.client as mqtt
 import pytest
 from paho.mqtt.enums import CallbackAPIVersion
 
+DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 HOST = "127.0.0.1"
 PORT = 32404
 COUNT = 10
@@ -74,7 +76,7 @@ if __name__ == "__main__":
                 "-v",
                 "--durations=50",
                 "-o",
-                "cache_dir=../../../../target/.pytest_cache",
+                f"cache_dir={join(DIR_ROOT, 'target/.pytest_cache')}",
                 __file__,
             ]
         )

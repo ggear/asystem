@@ -278,9 +278,6 @@ backup_completed() {
   :
 }
 
-# shellcheck shell=bash
-# shellcheck disable=SC2034
-
 BACKUP_FINGERPRINT_INCLUDES=()
 
 backup_fingerprinted_default() {
@@ -337,8 +334,6 @@ backup_fingerprinted_default() {
   esac
 }
 
-# shellcheck shell=bash
-
 asystem_locked() {
   local module="${1}" parent="${2}" wait="${3:-300}" file
   [ "${ASYSTEM_LOCK_HELD:-}" = "${module}" ] && return 0
@@ -353,16 +348,6 @@ asystem_locked() {
   export ASYSTEM_LOCK_HELD="${module}"
 }
 
-# shellcheck shell=bash
-# shellcheck disable=SC2034
-
-# Mirrors metric.BackupState<Name> in supervisor internal/metric/metric_schema.go, which owns the words, as BACKUP_STATE_<NAME>. A supervisor test holds the two equal.
-BACKUP_STATE_SUCCESS="success"
-BACKUP_STATE_REGRESSED="regressed"
-BACKUP_SHRINK_PERCENT="${BACKUP_SHRINK_PERCENT:-${HOMEASSISTANT_BACKUP_SHRINK_PERCENT:-20}}"
-BACKUP_EVIDENCE_LIMIT=20
-BACKUP_MANIFEST_LEAF="manifest.json"
-
 backup_fingerprinted() {
   backup_fingerprinted_default "$@"
 }
@@ -370,6 +355,8 @@ backup_fingerprinted() {
 backup_durable() {
   return 0
 }
+
+BACKUP_MANIFEST_LEAF="manifest.json"
 
 backup_manifest_path() {
   printf '%s\n' "${BACKUP_INTERNAL_ROOT_DIR}/${1}/.meta/${BACKUP_MANIFEST_LEAF}"
@@ -420,51 +407,6 @@ backup_parent() {
   done
 }
 
-backup_baseline() {
-  local run="${1}" names index
-  mapfile -t names < <(backup_listed)
-  for ((index = ${#names[@]} - 1; index >= 0; index--)); do
-    [ "${names[index]}" \< "${run}" ] || continue
-    [ "$(backup_manifest_field "${names[index]}" verdict)" = "${BACKUP_STATE_SUCCESS}" ] || continue
-    [ -n "$(backup_manifest_fingerprint "${names[index]}")" ] || continue
-    printf '%s\n' "${names[index]}"
-    return 0
-  done
-}
-
-backup_regression() {
-  local current="${1}" baseline="${2}" unit count was now=0 base=0 absent=0 shown=0 first="" percent
-  BACKUP_INTERNAL_VERDICT="${BACKUP_STATE_SUCCESS}"
-  BACKUP_INTERNAL_EVIDENCE=()
-  [ -n "${baseline}" ] || return 0
-  declare -A have=()
-  while read -r line; do
-    [ -n "${line}" ] && have["${line% *}"]="${line##* }"
-  done <<<"${current}"
-  while read -r line; do
-    [ -n "${line}" ] || continue
-    unit="${line% *}"
-    was="${line##* }"
-    backup_durable "${unit}" || continue
-    base=$((base + was))
-    now=$((now + ${have["${unit}"]:-0}))
-    if [ -z "${have["${unit}"]:-}" ]; then
-      absent=$((absent + 1))
-      [ -n "${first}" ] || first="${unit}"
-      if [ "${shown}" -lt "${BACKUP_EVIDENCE_LIMIT}" ]; then
-        BACKUP_INTERNAL_EVIDENCE+=("missing [${unit}] was [${was}] against [${baseline}]")
-        shown=$((shown + 1))
-      fi
-    fi
-  done <<<"$(backup_manifest_fingerprint "${baseline}")"
-  percent=0
-  [ "${base}" -gt 0 ] && percent=$(((base - now) * 100 / base))
-  if [ "${absent}" -gt 0 ] || { [ "${BACKUP_SHRINK_PERCENT}" -gt 0 ] && [ "${percent}" -gt "${BACKUP_SHRINK_PERCENT}" ]; }; then
-    BACKUP_INTERNAL_VERDICT="${BACKUP_STATE_REGRESSED}"
-    BACKUP_INTERNAL_EVIDENCE+=("regressed [${absent}] closed units missing against [${baseline}], total [-${percent}]% beyond [${BACKUP_SHRINK_PERCENT}]%${first:+, first [${first}]}")
-  fi
-}
-
 backup_manifested() {
   local run="${BACKUP_RUN_TIMESTAMP}" meta kind parent baseline current count line evidence
   meta="${BACKUP_INTERNAL_ROOT_DIR}/${run}/.meta"
@@ -509,6 +451,57 @@ backup_manifested() {
     echo "Backup ${line}" >&2
   done
   echo "Manifest [${BACKUP_INTERNAL_VERDICT}] kind [${kind}] parent [${parent:-none}] units [${count}]"
+}
+
+# Mirrors metric.BackupState<Name> in supervisor internal/metric/metric_schema.go, which owns the words, as BACKUP_STATE_<NAME>. A supervisor test holds the two equal.
+BACKUP_STATE_SUCCESS="success"
+BACKUP_STATE_REGRESSED="regressed"
+BACKUP_SHRINK_PERCENT="${BACKUP_SHRINK_PERCENT:-${HOMEASSISTANT_BACKUP_SHRINK_PERCENT:-20}}"
+BACKUP_EVIDENCE_LIMIT=20
+
+backup_baseline() {
+  local run="${1}" names index
+  mapfile -t names < <(backup_listed)
+  for ((index = ${#names[@]} - 1; index >= 0; index--)); do
+    [ "${names[index]}" \< "${run}" ] || continue
+    [ "$(backup_manifest_field "${names[index]}" verdict)" = "${BACKUP_STATE_SUCCESS}" ] || continue
+    [ -n "$(backup_manifest_fingerprint "${names[index]}")" ] || continue
+    printf '%s\n' "${names[index]}"
+    return 0
+  done
+}
+
+backup_regression() {
+  local current="${1}" baseline="${2}" unit count was now=0 base=0 absent=0 shown=0 first="" percent
+  BACKUP_INTERNAL_VERDICT="${BACKUP_STATE_SUCCESS}"
+  BACKUP_INTERNAL_EVIDENCE=()
+  [ -n "${baseline}" ] || return 0
+  declare -A have=()
+  while read -r line; do
+    [ -n "${line}" ] && have["${line% *}"]="${line##* }"
+  done <<<"${current}"
+  while read -r line; do
+    [ -n "${line}" ] || continue
+    unit="${line% *}"
+    was="${line##* }"
+    backup_durable "${unit}" || continue
+    base=$((base + was))
+    now=$((now + ${have["${unit}"]:-0}))
+    if [ -z "${have["${unit}"]:-}" ]; then
+      absent=$((absent + 1))
+      [ -n "${first}" ] || first="${unit}"
+      if [ "${shown}" -lt "${BACKUP_EVIDENCE_LIMIT}" ]; then
+        BACKUP_INTERNAL_EVIDENCE+=("missing [${unit}] was [${was}] against [${baseline}]")
+        shown=$((shown + 1))
+      fi
+    fi
+  done <<<"$(backup_manifest_fingerprint "${baseline}")"
+  percent=0
+  [ "${base}" -gt 0 ] && percent=$(((base - now) * 100 / base))
+  if [ "${absent}" -gt 0 ] || { [ "${BACKUP_SHRINK_PERCENT}" -gt 0 ] && [ "${percent}" -gt "${BACKUP_SHRINK_PERCENT}" ]; }; then
+    BACKUP_INTERNAL_VERDICT="${BACKUP_STATE_REGRESSED}"
+    BACKUP_INTERNAL_EVIDENCE+=("regressed [${absent}] closed units missing against [${baseline}], total [-${percent}]% beyond [${BACKUP_SHRINK_PERCENT}]%${first:+, first [${first}]}")
+  fi
 }
 
 backup_accepted() {

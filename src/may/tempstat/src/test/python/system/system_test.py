@@ -95,7 +95,7 @@ if __name__ == "__main__":
                 "-v",
                 "--durations=50",
                 "-o",
-                "cache_dir=../../../../target/.pytest_cache",
+                f"cache_dir={join(DIR_ROOT, 'target/.pytest_cache')}",
                 __file__,
             ]
         )

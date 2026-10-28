@@ -88,7 +88,7 @@ def load_bootstrap_modules(include_disabled=True, include_infrastructure=True):
 
 
 def load_bootstrap_entities():
-    metadata_path = abspath(join(DIR_ROOT, "src/build/resources/entity_metadata.xlsx"))
+    metadata_path = abspath(join(DIR_ROOT, "src/build/resources/metadata/entity_metadata.xlsx"))
     metadata_df = pd.read_excel(metadata_path, header=2, dtype=str)
     metadata_df["index"] = metadata_df["index"].astype(int)
     metadata_df = metadata_df.set_index(metadata_df["index"]).sort_index()
