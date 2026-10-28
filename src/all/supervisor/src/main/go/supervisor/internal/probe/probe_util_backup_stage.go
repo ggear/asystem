@@ -356,8 +356,8 @@ var (
 	errStageTimedOut    = errors.New("stage timed out")
 	errStageStopped     = errors.New("stage stopped")
 	errStageDetached    = errors.New("backup disk detached mid stage")
-	errStageRegressed   = errors.New("a service backup regressed")
-	errServiceRegressed = errors.New("service backup regressed against its last accepted run")
+	errStageRegressed   = errors.New("regressed against their last accepted run")
+	errServiceRegressed = errors.New("backup regressed against its last accepted run")
 
 	errStageMirror         = errors.New("the mirror failed")
 	errStageScrub          = errors.New("the scrub failed")

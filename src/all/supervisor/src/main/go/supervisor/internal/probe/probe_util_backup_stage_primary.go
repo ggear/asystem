@@ -56,7 +56,7 @@ func runPrimaryStage(ctx context.Context, request stageRequest, counters *stageC
 		return stageResult{}, fmt.Errorf("[%d] of [%d] service backups failed", failed, len(enrolled))
 	}
 	if regressed > 0 {
-		return stageResult{}, fmt.Errorf("[%d] of [%d] service backups regressed %w", regressed, len(enrolled), errStageRegressed)
+		return stageResult{}, fmt.Errorf("[%d] of [%d] service backups %w", regressed, len(enrolled), errStageRegressed)
 	}
 	return stageResult{}, nil
 }
@@ -134,7 +134,7 @@ func runOneService(ctx context.Context, request stageRequest, loaded *config.Con
 	document := serviceSummary{
 		RunID: request.RunID, BackupID: backupIdentity(newest),
 		State: state, StartedTS: started.Format(time.RFC3339), FinishedTS: time.Now().Format(time.RFC3339),
-		DurationS: int(time.Since(started).Seconds()), SuccessBool: ok, Kind: kind, Version: version,
+		DurationS: int(time.Since(started).Seconds()), SuccessBool: ok, RegressedBool: regressed, Kind: kind, Version: version,
 		FileCount: files, SizeMB: sizeMB,
 	}
 	_ = writeAtomic(statusPath, document)
