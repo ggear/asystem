@@ -672,6 +672,18 @@ Phases are written and gated one by one, but released in three windows. A window
 | B | 2, 3 | supervisor to every host first, then modules in rising cost: letsencrypt, zigbee2mqtt, wrangle, homeassistant, mariadb, postgres, plex, influxdb3 | phase 2 gate on every host; then per module a manifest on its pre-install and next nightly run, no `Prune disagreement` |
 | C | 4, then 5 and 6 as runs, then 7 | each module's release drill; the merge is a production run, not a release | release drill green per module and the truncated-artifact drill fails by name; phase 5 and 6 gates; phase 7 needs 7 clean nights per module, which no release shortens |
 
+#### Window A progress, 2026-10-28
+
+| Step | State |
+|---|---|
+| `commit=600` removed from the `fstab` sources and `/etc/fstab`, hosts rebooted | `may`, `meg`, `max` confirmed with no `commit=` on `/`, `/home`, `/var`, `/tmp`. `jil` is out of scope for this gate by decision 2026-10-28: its `fstab` source is edited but its mounts are not checked here |
+| Code for phases 1, 1b, 1c (entrypoint quarantine-and-refuse, health floor, postgres bootstrap, `backup_files` tar retry, wholesale `restore_files`, homeassistant enrolment) | Written, `fab generate` passes for all eight enrolled modules, not yet released except as below |
+| homeassistant leftovers and the two stale `.storage` copies on meg | Deleted |
+| letsencrypt 10.200.1878, zigbee2mqtt 10.200.1879, wrangle 10.200.1881, mariadb 10.200.1882, plex 10.200.1883 | Released, containers healthy, each took its pre-install backup |
+| Manual `backup.sh` run of those five (`BACKUP_SKIP_HOURS=0`, 09:07 to 09:08) | Passed. All five exited 0 with no "Not backed up and not excluded" line and a clean archive test. letsencrypt 1 MB, zigbee2mqtt 8 entries, wrangle 79 entries and 7 MB, mariadb 3 MB with 4 databases, plex 516 MB with no `-wal` or `-shm` in the archive. plex restarted healthy in about 26 s, and a bare `restore.sh` printed its plan (stopped, extract the config, integrity passed) with nothing changed |
+| Next nightly supervisor run (primary, secondary, tertiary) succeeds for those five | Pending, first check after the 01:00 run on 29 Oct. The manual runs do not exercise supervisor's stages, so the gate has **not** passed yet |
+| homeassistant, postgres, influxdb3 releases | Pending |
+
 A release is a rollback point (its pre-install backup), so the postgres extension update stays in its own release inside window A.
 
 ## Cleanup
