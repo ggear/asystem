@@ -10,6 +10,7 @@
 #     bom_darlington_humidity,
 #     deck_festoons_plug_humidity,
 #     edwin_humidity,
+#     kitchen_deck_humidity,
 #     kitchen_humidity,
 #     laundry_humidity,
 #     office_basement_humidity,

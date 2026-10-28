@@ -32,6 +32,8 @@
     "src/max/grafana/src/test/python",
     "src/max/letsencrypt/src/build/python",
     "src/max/openra/src/build/python",
+    "src/max/rackmains/src/build/python",
+    "src/max/rackmains/src/test/python",
     "src/may/_debian_may/src/build/python",
     "src/may/influxdb3/src/build/python",
     "src/may/mlflow/src/build/python",
@@ -210,6 +212,13 @@
     },
     {
       "root": "src/max/openra/src",
+      "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/max/rackmains/src",
       "extraPaths": [
         "src/all/_/src/build/python",
         "."

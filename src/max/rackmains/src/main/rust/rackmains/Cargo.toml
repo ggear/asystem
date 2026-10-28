@@ -1,0 +1,22 @@
+[package]
+name = "rackmains"
+version = "0.0.0-SNAPSHOT"
+edition = "2021"
+publish = false
+
+[workspace]
+members = ["tools/schema"]
+
+[dependencies]
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+clap = { version = "4", features = ["derive", "env"] }
+env_logger = "0.11"
+humantime = "2"
+log = "0.4"
+rumqttc = { version = "0.25", default-features = false }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+
+[profile.release]
+strip = true
+lto = true

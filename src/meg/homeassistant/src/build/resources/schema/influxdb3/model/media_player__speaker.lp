@@ -7,6 +7,8 @@
 #   tag module [always 'homeassistant']
 #   tag entity_id* [Home Assistant entity_id:
 #     ada_home,
+#     ada_tablet_2,
+#     edwin_group,
 #     edwin_home,
 #     edwin_room,
 #     kitchen_five,
@@ -14,7 +16,10 @@
 #     lounge_arc,
 #     lounge_home,
 #     office_home,
-#     parents_move]
+#     parents_move,
+#     pixel_tablet,
+#     pixel_tablet_2,
+#     pixel_tablet_4]
 #   field state - <on-change> [Home Assistant value]
 #   field value - <on-change> [Home Assistant value]
 

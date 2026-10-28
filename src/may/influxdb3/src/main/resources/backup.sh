@@ -13,6 +13,7 @@ set -o pipefail
 #   ./backup.sh --prune      drop local runs older than BACKUP_RETAIN_DAYS, never the newest
 #   ./backup.sh --prune-gfs  apply the grandfather-father-son window
 #   ./backup.sh --accept=<run>  accept a regressed run, releasing the anchor
+#   ./backup.sh --full       take a full backup now, whatever the throttle and the module's own schedule say
 #
 #   BACKUP_SKIP_HOURS=0 ./backup.sh            take a backup now, whatever the throttle says
 #   BACKUP_RETAIN_DAYS=0 ./backup.sh --prune   keep only the newest local run
@@ -28,6 +29,7 @@ set -o pipefail
 # BACKUP_SKIP_HOURS       skip the run when the newest backup is younger than this, zero to never skip
 # BACKUP_SERVICE_RESTART  start the service again after the copy, false when the caller starts it itself
 # BACKUP_TIMEOUT_HOURS    the budget a backup waiting on its service allows before abandoning the run
+# BACKUP_FORCE_FULL       true to take a full backup where the module would take a delta, set by --full
 
 BACKUP_INTERNAL_ENV="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.env"
 [ -f "${BACKUP_INTERNAL_ENV}" ] && . "${BACKUP_INTERNAL_ENV}"
@@ -45,6 +47,7 @@ BACKUP_KEEP_DAILY="${BACKUP_KEEP_DAILY:-${INFLUXDB3_BACKUP_KEEP_DAILY:-7}}"
 BACKUP_KEEP_WEEKLY="${BACKUP_KEEP_WEEKLY:-${INFLUXDB3_BACKUP_KEEP_WEEKLY:-4}}"
 BACKUP_KEEP_MONTHLY="${BACKUP_KEEP_MONTHLY:-${INFLUXDB3_BACKUP_KEEP_MONTHLY:-12}}"
 BACKUP_SKIP_HOURS="${BACKUP_SKIP_HOURS:-1}"
+BACKUP_FORCE_FULL="${BACKUP_FORCE_FULL:-false}"
 BACKUP_SERVICE_RESTART="${BACKUP_SERVICE_RESTART:-true}"
 BACKUP_TIMEOUT_HOURS="${BACKUP_TIMEOUT_HOURS:-5}"
 BACKUP_TARGET_PATH=""
@@ -718,7 +721,7 @@ backup_written() {
   if [ -n "${full}" ] &&
     [ "$(date -d "$(date -d "@$(backup_epoch "${full}")" +%F)" +%G-%V)" = "$(date +%G-%V)" ] &&
     [ -n "${parent}" ] && [ "$(backup_status "${parent}")" = "completed" ] &&
-    [ -n "$(backup_parent "${BACKUP_RUN_TIMESTAMP}")" ]; then
+    [ -n "$(backup_parent "${BACKUP_RUN_TIMESTAMP}")" ] && [ "${BACKUP_FORCE_FULL}" != "true" ]; then
     name="delta-${BACKUP_RUN_TIMESTAMP}"
     source="${INFLUXDB3_BACKUP_STORE}/${parent}/incremental"
     backup_target "${BACKUP_DELTA_SUFFIX}" "tar.gz" || return 1
@@ -729,7 +732,11 @@ backup_written() {
     name="full-${BACKUP_RUN_TIMESTAMP}"
     source="${INFLUXDB3_BACKUP_STORE}"
     backup_target "${BACKUP_FULL_SUFFIX}" "tar.gz" || return 1
-    [ -n "${full}" ] && echo "Starting a new full backup, previous full backup [${full}] is from an earlier ISO week"
+    if [ "${BACKUP_FORCE_FULL}" = "true" ]; then
+      echo "Starting a new full backup as asked, previous full backup [${full:-none}]"
+    else
+      [ -n "${full}" ] && echo "Starting a new full backup, previous full backup [${full}] is from an earlier ISO week"
+    fi
     docker exec --user root "${BACKUP_MODULE_NAME}" \
       influxdb3 create backup --name "${name}" >/dev/null || return 1
   fi
@@ -747,6 +754,11 @@ case "${1:-}" in
 --accept=*)
   backup_accepted "${1#--accept=}"
   exit $?
+  ;;
+--full)
+  BACKUP_FORCE_FULL="true"
+  BACKUP_SKIP_HOURS=0
+  shift
   ;;
 esac
 

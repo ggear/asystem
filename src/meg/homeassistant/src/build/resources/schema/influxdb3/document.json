@@ -110,11 +110,13 @@
             "entities": [
               "dining_air_purifier_replace_filter",
               "ipad_graham_focus",
+              "iphone_graham_camera_motion",
               "iphone_graham_focus",
               "iphone_graham_kiosk_mode",
               "iphone_graham_kiosk_screensaver",
               "janes_ipad_focus",
               "janes_ipad_kiosk_mode",
+              "janes_iphone_camera_motion",
               "janes_iphone_focus",
               "janes_iphone_focus_2",
               "janes_iphone_kiosk_mode",
@@ -126,11 +128,16 @@
               "parents_air_purifier_replace_filter",
               "parents_move_microphone",
               "template_back_door_state",
+              "template_bathroom_rails_plug_proxy",
               "template_ceiling_network_switch_plug_proxy",
               "template_deck_festoons_plug_proxy",
+              "template_deck_freezer_plug_proxy",
               "template_dining_air_purifier_proxy",
+              "template_garden_sewerage_blower_plug_proxy",
               "template_kitchen_air_purifier_proxy",
               "template_kitchen_coffee_machine_plug_proxy",
+              "template_kitchen_dish_washer_plug_proxy",
+              "template_kitchen_fridge_plug_proxy",
               "template_landing_festoons_plug_proxy",
               "template_lounge_air_purifier_proxy",
               "template_lounge_tv_plug_proxy",
@@ -344,7 +351,8 @@
               "deck_east_fan_occupancy",
               "deck_west_fan_occupancy",
               "edwin_fan_occupancy",
-              "lounge_fan_occupancy"
+              "lounge_fan_occupancy",
+              "parents_fan_occupancy"
             ]
           }
         ],
@@ -431,7 +439,8 @@
               "deck_east_fan_auto_comfort",
               "deck_west_fan_auto_comfort",
               "edwin_fan_auto_comfort",
-              "lounge_fan_auto_comfort"
+              "lounge_fan_auto_comfort",
+              "parents_fan_auto_comfort"
             ]
           }
         ],
@@ -535,7 +544,8 @@
               "kitchen_fan_plug",
               "lounge_air_purifier",
               "lounge_fan",
-              "parents_air_purifier"
+              "parents_air_purifier",
+              "parents_fan"
             ]
           }
         ],
@@ -647,10 +657,16 @@
               "lounge_main_bulb_1",
               "lounge_main_bulb_2",
               "lounge_main_bulb_3",
+              "lounge_reading",
+              "lounge_reading_bulb_1",
               "office_main",
               "office_main_bulb_1",
               "pantry_main",
               "pantry_main_bulb_1",
+              "parents_graham_bedside",
+              "parents_graham_bedside_bulb_1",
+              "parents_jane_bedside",
+              "parents_jane_bedside_bulb_1",
               "parents_main",
               "parents_main_bulb_1",
               "parents_main_bulb_2",
@@ -730,10 +746,13 @@
             "subject": true,
             "entities": [
               "ada_tablet",
+              "ada_tablet_2",
               "chromecast8482",
               "kitchen_home",
               "lounge_tv",
               "nesthubfb4d",
+              "pixel_tablet",
+              "pixel_tablet_2",
               "pixel_tablet_3",
               "pixel_tablet_4"
             ]
@@ -772,6 +791,8 @@
             "subject": true,
             "entities": [
               "ada_home",
+              "ada_tablet_2",
+              "edwin_group",
               "edwin_home",
               "edwin_room",
               "kitchen_five",
@@ -779,7 +800,10 @@
               "lounge_arc",
               "lounge_home",
               "office_home",
-              "parents_move"
+              "parents_move",
+              "pixel_tablet",
+              "pixel_tablet_2",
+              "pixel_tablet_4"
             ]
           }
         ],
@@ -905,6 +929,10 @@
               "bom_darlington_uv_max_index_4",
               "bom_darlington_warnings",
               "bom_darlington_wind_direction",
+              "ceiling_water_booster_plug_energy_total_daily",
+              "ceiling_water_booster_plug_energy_total_monthly",
+              "ceiling_water_booster_plug_energy_total_weekly",
+              "ceiling_water_booster_plug_energy_total_yearly",
               "deck_fans_outlet_linkquality",
               "dining_air_purifier_air_quality",
               "dining_air_purifier_fan_speed",
@@ -915,6 +943,11 @@
               "driveway_repeater_linkquality_energy_yearly",
               "edwin_desk_outlet_linkquality",
               "front_door_lock_action_source_name",
+              "front_door_lock_action_user",
+              "garden_pool_filter_plug_energy_total_daily",
+              "garden_pool_filter_plug_energy_total_monthly",
+              "garden_pool_filter_plug_energy_total_weekly",
+              "garden_pool_filter_plug_energy_total_yearly",
               "garden_sewerage_blower_plug_energy_daily",
               "garden_sewerage_blower_plug_energy_monthly",
               "garden_sewerage_blower_plug_energy_weekly",
@@ -945,6 +978,10 @@
               "parents_air_purifier_air_quality",
               "parents_air_purifier_fan_speed",
               "parents_air_purifier_filter_age",
+              "rack_printer_plug_energy_daily",
+              "rack_printer_plug_energy_monthly",
+              "rack_printer_plug_energy_weekly",
+              "rack_printer_plug_energy_yearly",
               "roof_24hour_rain",
               "roof_cloud_base",
               "roof_daily_rain",
@@ -1124,9 +1161,11 @@
               "front_door_lock_battery",
               "ipad_graham_battery_level",
               "iphone_graham_battery_level",
+              "iphone_graham_watch_battery",
               "janes_ipad_battery_level",
               "janes_iphone_battery_level",
               "janes_iphone_battery_level_2",
+              "janes_iphone_watch_battery_level",
               "kitchen_deck_battery",
               "kitchen_move_battery",
               "office_basement_battery",
@@ -1724,10 +1763,15 @@
               "lounge_home_energy_monthly",
               "lounge_home_energy_weekly",
               "lounge_home_energy_yearly",
+              "lounge_lamp_bulb_1_energy",
               "lounge_lamp_bulb_1_energy_2",
+              "lounge_lamp_bulb_1_energy_daily",
               "lounge_lamp_bulb_1_energy_daily_2",
+              "lounge_lamp_bulb_1_energy_monthly",
               "lounge_lamp_bulb_1_energy_monthly_2",
+              "lounge_lamp_bulb_1_energy_weekly",
               "lounge_lamp_bulb_1_energy_weekly_2",
+              "lounge_lamp_bulb_1_energy_yearly",
               "lounge_lamp_bulb_1_energy_yearly_2",
               "lounge_lights_energy",
               "lounge_lights_energy_daily",
@@ -1913,6 +1957,7 @@
               "study_lamp_bulb_1_energy_monthly",
               "study_lamp_bulb_1_energy_weekly",
               "study_lamp_bulb_1_energy_yearly",
+              "study_lights_energy",
               "study_lights_energy_daily",
               "study_lights_energy_monthly",
               "study_lights_energy_weekly",
@@ -2122,6 +2167,7 @@
               "bom_darlington_humidity",
               "deck_festoons_plug_humidity",
               "edwin_humidity",
+              "kitchen_deck_humidity",
               "kitchen_humidity",
               "laundry_humidity",
               "office_basement_humidity",
@@ -2166,10 +2212,14 @@
             "description": "Home Assistant entity_id",
             "subject": true,
             "entities": [
+              "dining_air_purifier_pm25",
+              "lounge_air_purifier_pm25",
+              "parents_air_purifier_pm25",
               "template_dining_air_purifier_pm25",
               "template_kitchen_air_purifier_pm25",
               "template_lounge_air_purifier_pm25",
-              "template_parents_air_purifier_pm25"
+              "template_parents_air_purifier_pm25",
+              "template_sensor_36"
             ]
           },
           {
@@ -2177,7 +2227,8 @@
             "description": "Home Assistant unit_of_measurement",
             "subject": false,
             "entities": [
-              "µg/m³"
+              "µg/m³",
+              "μg/m³"
             ]
           }
         ],
@@ -2294,6 +2345,7 @@
               "lounge_fans_power",
               "lounge_home_devices_power",
               "lounge_home_power",
+              "lounge_lamp_bulb_1_power",
               "lounge_lamp_bulb_1_power_2",
               "lounge_lights_power",
               "lounge_main_bulb_1_power",
@@ -2307,7 +2359,10 @@
               "office_main_bulb_1_power",
               "pantry_lights_power",
               "pantry_main_bulb_1_power",
+              "parents_fan_power",
               "parents_fans_power",
+              "parents_graham_bedside_bulb_1_power",
+              "parents_jane_bedside_bulb_1_power",
               "parents_lights_power",
               "parents_main_bulb_1_power",
               "parents_main_bulb_2_power",
@@ -2401,7 +2456,8 @@
               "bom_darlington_rain_amount_min_4",
               "bom_darlington_rain_amount_min_5",
               "bom_darlington_rain_amount_min_6",
-              "bom_darlington_rain_amount_min_7"
+              "bom_darlington_rain_amount_min_7",
+              "bom_darlington_rain_since_9am"
             ]
           },
           {
@@ -2609,6 +2665,7 @@
               "host_max_temperature",
               "host_may_temperature",
               "host_meg_temperature",
+              "kitchen_deck_temperature",
               "kitchen_temperature",
               "landing_festoons_plug_temperature",
               "laundry_temperature",
@@ -2618,6 +2675,7 @@
               "office_lounge_temperature",
               "office_pantry_temperature",
               "office_temperature",
+              "parents_fan_temperature",
               "parents_temperature",
               "rack_bottom_temperature",
               "rack_dew_point",
@@ -2853,6 +2911,7 @@
               "service_mlserver",
               "service_network",
               "service_nginx",
+              "service_openra",
               "service_plex",
               "service_postgres",
               "service_sabnzbd",

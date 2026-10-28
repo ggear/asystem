@@ -16,7 +16,8 @@
 #     kitchen_fan_plug,
 #     lounge_air_purifier,
 #     lounge_fan,
-#     parents_air_purifier]
+#     parents_air_purifier,
+#     parents_fan]
 #   field direction_str - <on-change> [Home Assistant value]
 #   field percentage - <on-change> [Home Assistant value]
 #   field percentage_str - <on-change> [Home Assistant value]

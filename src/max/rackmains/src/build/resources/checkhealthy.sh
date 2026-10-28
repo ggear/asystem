@@ -1,0 +1,2 @@
+/asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" &&
+  PAYLOAD=$(mosquitto_sub -h "$BROKER_HOST" -p "$BROKER_PORT" ${BROKER_TOKEN:+-u rackmains -P $BROKER_TOKEN} -t "rackmains/data" -C 1 -W 2 2>/dev/null) && jq -e '(.mains_status | length) > 0 and (.samples | length) > 0' <<<"$PAYLOAD" >/dev/null && TIMESTAMP=$(jq -r '.timestamp' <<<"$PAYLOAD") && (($(date +%s) - $(date -d "$TIMESTAMP" +%s) < 120))

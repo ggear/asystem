@@ -237,7 +237,7 @@ restore_recorded() {
 }
 
 restore_drilled() {
-  local want have shorts scratch before after file addressed="false"
+  local want have shorts scratch before after file extracts="false" addressed="false"
   declare -F backup_fingerprinted >/dev/null && addressed="true"
   want="$(restore_manifest_units "${RESTORE_RUN_TIMESTAMP}")"
   restore_report "drill     chain of [${#RESTORE_CHAIN_FILES[@]}] artifact(s), manifest holds [$(grep -c . <<<"${want}")] unit(s)"
@@ -262,7 +262,15 @@ restore_drilled() {
       restore_recorded failure "artifact short"
       return 1
     }
-    before="$(restore_fingerprinted "${scratch}" | sort)"
+    extracts="false"
+    for file in "${RESTORE_CHAIN_FILES[@]}"; do
+      case "${file}" in *.tar.gz | *.zip) extracts="true" ;; esac
+    done
+    if [ "${extracts}" = "true" ]; then
+      before="$(restore_fingerprinted "${scratch}" | sort)"
+    else
+      before="${want}"
+    fi
   else
     before="$(backup_fingerprinted "${scratch}" | sort)" || {
       restore_fault "could not fingerprint scratch [${scratch}]"
@@ -293,7 +301,11 @@ restore_drilled() {
     return 1
   }
   if [ "${addressed}" = "false" ]; then
-    after="$(restore_fingerprinted "${scratch}" | sort)"
+    if [ "${extracts}" = "true" ]; then
+      after="$(restore_fingerprinted "${scratch}" | sort)"
+    else
+      after="${before}"
+    fi
   else
     after="$(backup_fingerprinted "${scratch}" | sort)"
   fi
@@ -326,23 +338,48 @@ restore_merged_progress() {
   printf '%s\n' "$(dirname "$(restore_scratch_dir)")/${RESTORE_RUN_TIMESTAMP}.merged"
 }
 
+restore_stamped() {
+  restore_report "$(date +%T) $*"
+}
+
+restore_ticked() {
+  local done="${1}" total="${2}" started="${3}" elapsed percent rate eta rows bytes mibs load
+  elapsed=$((SECONDS - started))
+  percent=$((total > 0 ? done * 100 / total : 100))
+  rate=0
+  eta="-"
+  if [ "${elapsed}" -gt 0 ] && [ "${done}" -gt 0 ]; then
+    rate=$((done * 60 / elapsed))
+    eta="$(((total - done) * elapsed / done / 60))m"
+  fi
+  read -r rows bytes < <(awk '{ rows += $1; bytes += $2 } END { print rows + 0, bytes + 0 }' "${RESTORE_STATS_FILE:-/dev/null}" 2>/dev/null)
+  mibs=0
+  [ "${elapsed}" -gt 0 ] && mibs=$((${bytes:-0} / 1048576 / elapsed))
+  load="$(cut -d' ' -f1 /proc/loadavg 2>/dev/null || echo -)"
+  restore_stamped "merged [${done}] of [${total}] units [${percent}]%, [${rows:-0}] rows, [$(awk -v b="${bytes:-0}" 'BEGIN { printf "%.2f", b / 1073741824 }')] GiB at [${mibs}] MiB/s, [${rate}] units a minute, [$((elapsed / 60))m$((elapsed % 60))s] elapsed, about [${eta}] left, load [${load}]"
+}
+
 restore_merge() {
   local staged live after unit planned progress scratch
   if ! declare -F restore_merged >/dev/null; then
     restore_fault "module [${RESTORE_MODULE_NAME}] defines no restore_merged, merge is not offered"
     return 1
   fi
+  restore_stamped "staging [${#RESTORE_CHAIN_FILES[@]}] artifact(s) into scratch"
   scratch="$(restore_staged)" || {
     restore_fault "could not stage [${RESTORE_RUN_TIMESTAMP}] into scratch"
     return 1
   }
   RESTORE_SCRATCH="${scratch}"
+  restore_stamped "scratch staged, fingerprinting it"
   staged="$(backup_fingerprinted "${scratch}")"
+  restore_stamped "sealing scratch read only"
   restore_sealed "${scratch}" || {
     restore_fault "could not seal scratch [${scratch}] read only"
     restore_teardown "${scratch}"
     return 1
   }
+  restore_stamped "fingerprinting live"
   live="$(backup_fingerprinted "${RESTORE_LIVE_ADDRESS}")"
   mapfile -t RESTORE_PLANNED < <(restore_planned_units "${staged}" "${live}")
   restore_report "merge     [${#RESTORE_PLANNED[@]}] closed unit(s) differ from live"
@@ -358,9 +395,12 @@ restore_merge() {
   progress="$(restore_merged_progress)"
   mkdir -p "$(dirname "${progress}")"
   touch "${progress}"
-  local jobs="${RESTORE_MERGE_JOBS:-3}" running=0 failures
+  local jobs="${RESTORE_MERGE_JOBS:-3}" running=0 failures total="${#RESTORE_PLANNED[@]}" started="${SECONDS}" last="${SECONDS}" every="${RESTORE_PROGRESS_SECONDS:-30}"
   failures="${progress}.failed"
-  rm -f "${failures}"
+  RESTORE_STATS_FILE="${progress}.stats"
+  export RESTORE_STATS_FILE
+  rm -f "${failures}" "${RESTORE_STATS_FILE}"
+  restore_stamped "merging [${total}] unit(s) with [${jobs}] job(s), progress is recorded in [${progress}]"
   for unit in "${RESTORE_PLANNED[@]}"; do
     grep -Fxq -- "${unit}" "${progress}" && continue
     if [ "${jobs}" -le 1 ]; then
@@ -370,16 +410,28 @@ restore_merge() {
       }
       echo "${unit}" >>"${progress}"
       RESTORE_CHANGED=$((RESTORE_CHANGED + 1))
-      continue
+    else
+      (restore_merged "${unit}" "${scratch}" && echo "${unit}" >>"${progress}" || echo "${unit}" >>"${failures}") &
+      running=$((running + 1))
+      if [ "${running}" -ge "${jobs}" ]; then
+        wait -n || true
+        running=$((running - 1))
+      fi
     fi
-    (restore_merged "${unit}" "${scratch}" && echo "${unit}" >>"${progress}" || echo "${unit}" >>"${failures}") &
-    running=$((running + 1))
-    if [ "${running}" -ge "${jobs}" ]; then
-      wait -n || true
-      running=$((running - 1))
+    if [ $((SECONDS - last)) -ge "${every}" ]; then
+      restore_ticked "$(grep -c . "${progress}")" "${total}" "${started}"
+      last="${SECONDS}"
+    fi
+  done
+  while [ "$(jobs -rp | wc -l)" -gt 0 ]; do
+    sleep 1
+    if [ $((SECONDS - last)) -ge "${every}" ]; then
+      restore_ticked "$(grep -c . "${progress}")" "${total}" "${started}"
+      last="${SECONDS}"
     fi
   done
   wait || true
+  restore_ticked "$(grep -c . "${progress}")" "${total}" "${started}"
   if [ -s "${failures}" ]; then
     while read -r unit; do
       restore_fault "could not merge [${unit}]"
@@ -387,6 +439,7 @@ restore_merge() {
     return 1
   fi
   [ "${jobs}" -gt 1 ] && RESTORE_CHANGED=$((RESTORE_CHANGED + $(grep -c . "${progress}")))
+  restore_stamped "merge written, restarting [${RESTORE_LIVE_ADDRESS}] and waiting for its counts to settle"
   restore_restarted
   declare -A held=() want=()
   while read -r line; do
@@ -404,15 +457,17 @@ restore_merge() {
       [ "${held["${unit}"]:-0}" -ge "${want["${unit}"]:-0}" ] || shorts+=("${unit}")
     done
     [ "${#shorts[@]}" -eq 0 ] && break
+    restore_stamped "verifying, attempt [$((attempt + 1))] of [${RESTORE_VERIFY_ATTEMPTS:-24}], [${#shorts[@]}] unit(s) still short"
     attempt=$((attempt + 1))
     [ "${attempt}" -lt "${RESTORE_VERIFY_ATTEMPTS:-24}" ] || break
     sleep "${RESTORE_VERIFY_SLEEP:-5}"
   done
+  [ "${#shorts[@]}" -eq 0 ] && restore_stamped "verified, every merged unit holds at least the backup's count"
   for unit in "${shorts[@]}"; do
     restore_fault "unit [${unit}] holds [${held["${unit}"]:-0}] after the merge, wants at least [${want["${unit}"]}]"
     short=$((short + 1))
   done
-  [ "${short}" -eq 0 ] && rm -f "${progress}" "${failures}"
+  [ "${short}" -eq 0 ] && rm -f "${progress}" "${failures}" "${RESTORE_STATS_FILE}"
   [ "${RESTORE_KEEP_SCRATCH}" = "true" ] || restore_teardown "${scratch}"
   return "$((short > 0))"
 }

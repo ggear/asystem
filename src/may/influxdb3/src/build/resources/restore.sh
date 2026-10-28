@@ -147,8 +147,11 @@ restore_staged() {
     restore_fault "could not copy the home licence into scratch, a fresh licence would start email verification"
     return 1
   }
+  restore_stamped "starting scratch container [${INFLUXDB3_RESTORE_SCRATCH}]"
   influxdb3_restore_started "" || return 1
+  local step=0
   for file in "${RESTORE_CHAIN_FILES[@]}"; do
+    step=$((step + 1))
     name="$(tar -tzf "${file}" 2>/dev/null | head -n 1)"
     name="${name%%/*}"
     case "${name}" in
@@ -162,6 +165,7 @@ restore_staged() {
       return 1
       ;;
     esac
+    restore_stamped "restoring [${name}] into scratch, step [${step}] of [${#RESTORE_CHAIN_FILES[@]}]"
     mkdir -p "${target}"
     tar --extract --gzip --directory "${target}" --file "${file}" || { restore_fault "could not extract [${file}] into scratch"; return 1; }
     output="$(docker exec "${INFLUXDB3_RESTORE_SCRATCH}" influxdb3 create restore --backup "${name}" 2>&1)" || {
@@ -231,7 +235,7 @@ for raw in sys.stdin:
 }
 
 restore_merged() {
-  local unit="${1}" scratch="${2}" table day next types columns url token chunks code chunk
+  local unit="${1}" scratch="${2}" table day next types columns url token chunks code chunk header rows bytes
   table="${unit%/*}"
   day="${unit##*/}"
   next="$(date -u -d "${day} + 1 day" +%F)"
@@ -245,12 +249,19 @@ restore_merged() {
   docker exec "${scratch}" influxdb3 query --format jsonl --database "${INFLUXDB3_RESTORE_DATABASE}" \
     "SELECT CAST(time AS BIGINT) AS time_ns, ${columns} FROM \"${table}\" WHERE time >= '${day}T00:00:00Z' AND time < '${next}T00:00:00Z'" |
     influxdb3_restore_lp "${table}" "${types}" | influxdb3_restore_niced split -C "${INFLUXDB3_RESTORE_CHUNK_BYTES}" - "${chunks}/chunk." || { rm -rf "${chunks}"; return 1; }
+  read -r rows bytes < <(cat "${chunks}"/chunk.* 2>/dev/null | wc -lc)
+  header=""
+  if [ -n "${token}" ]; then
+    header="${chunks}/header"
+    (umask 077 && printf 'Authorization: Bearer %s\n' "${token}" >"${header}")
+  fi
   for chunk in "${chunks}"/chunk.*; do
     [ -e "${chunk}" ] || continue
     code="$(influxdb3_restore_niced curl -sS -o /dev/null -w '%{http_code}' -X POST "${url}/api/v3/write_lp?db=${INFLUXDB3_RESTORE_DATABASE}&precision=nanosecond" \
-      ${token:+--header "Authorization: Bearer ${token}"} --data-binary "@${chunk}")"
+      ${header:+--header "@${header}"} --data-binary "@${chunk}")"
     [ "${code}" = "204" ] || { restore_fault "writing [${unit}] to [${url}] returned [${code}]"; rm -rf "${chunks}"; return 1; }
     [ "${INFLUXDB3_RESTORE_WRITE_PAUSE}" = "0" ] || sleep "${INFLUXDB3_RESTORE_WRITE_PAUSE}"
   done
+  [ -z "${RESTORE_STATS_FILE:-}" ] || echo "${rows:-0} ${bytes:-0}" >>"${RESTORE_STATS_FILE}"
   rm -rf "${chunks}"
 }

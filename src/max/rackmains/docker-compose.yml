@@ -1,0 +1,37 @@
+x-common: &common
+  image: rackmains:${SERVICE_VERSION_ABSOLUTE}
+  init: true
+  environment:
+    - TZ=Australia/Perth
+    - RACKMAINS_MOCK
+    - RACKMAINS_DEVICE
+    - RACKMAINS_POLL_PERIOD
+    - RACKMAINS_LOG_LEVEL
+    - SERVICE_VERSION_ABSOLUTE
+    - BROKER_HOST
+    - BROKER_PORT
+    - BROKER_TOKEN
+  volumes:
+    - ${SERVICE_DATA_DIR}:/asystem/mnt
+    - ${RACKMAINS_NUT_SOURCE}:/run/nut:ro
+  logging:
+    driver: "json-file"
+    options:
+      max-file: "5"
+      max-size: "100m"
+services:
+  rackmains:
+    container_name: rackmains
+    <<: *common
+    restart: ${SERVICE_RESTART}
+    healthcheck:
+      test: /asystem/etc/checkhealthy.sh
+      interval: 2m
+      timeout: 30s
+      retries: 3
+      start_period: 1m
+      start_interval: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 32M

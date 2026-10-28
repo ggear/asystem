@@ -119,7 +119,7 @@ backup_written() {
   if [ -n "${full}" ] &&
     [ "$(date -d "$(date -d "@$(backup_epoch "${full}")" +%F)" +%G-%V)" = "$(date +%G-%V)" ] &&
     [ -n "${parent}" ] && [ "$(backup_status "${parent}")" = "completed" ] &&
-    [ -n "$(backup_parent "${BACKUP_RUN_TIMESTAMP}")" ]; then
+    [ -n "$(backup_parent "${BACKUP_RUN_TIMESTAMP}")" ] && [ "${BACKUP_FORCE_FULL}" != "true" ]; then
     name="delta-${BACKUP_RUN_TIMESTAMP}"
     source="${INFLUXDB3_BACKUP_STORE}/${parent}/incremental"
     backup_target "${BACKUP_DELTA_SUFFIX}" "tar.gz" || return 1
@@ -130,7 +130,11 @@ backup_written() {
     name="full-${BACKUP_RUN_TIMESTAMP}"
     source="${INFLUXDB3_BACKUP_STORE}"
     backup_target "${BACKUP_FULL_SUFFIX}" "tar.gz" || return 1
-    [ -n "${full}" ] && echo "Starting a new full backup, previous full backup [${full}] is from an earlier ISO week"
+    if [ "${BACKUP_FORCE_FULL}" = "true" ]; then
+      echo "Starting a new full backup as asked, previous full backup [${full:-none}]"
+    else
+      [ -n "${full}" ] && echo "Starting a new full backup, previous full backup [${full}] is from an earlier ISO week"
+    fi
     docker exec --user root "${BACKUP_MODULE_NAME}" \
       influxdb3 create backup --name "${name}" >/dev/null || return 1
   fi

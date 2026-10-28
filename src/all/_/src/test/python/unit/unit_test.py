@@ -343,6 +343,34 @@ class RestoreWrapperTest(unittest.TestCase):
         with open(join(run, ".meta", "secondary", "drill.json")) as handle:
             self.assertIn('"verdict": "failure"', handle.read())
 
+    def sql_run(self, stamp, text, units):
+        run = join(self.root, stamp)
+        os.makedirs(join(run, ".meta"), exist_ok=True)
+        target = join(run, f"letsencrypt_at_{stamp}_from_10.200.1_full.sql.gz")
+        subprocess.run(f"gzip -c > {target}", shell=True, input=text.encode(), check=True)
+        body = ",\n".join(f'    "{unit}": {count}' for unit, count in units.items())
+        with open(join(run, ".meta", "manifest.json"), "w") as handle:
+            handle.write(
+                f'{{\n  "kind": "full",\n  "parent": "",\n  "source_version": "x",\n  "verdict": "success",\n  "accepted": false,\n  "baseline": "",\n  "evidence": [\n  ],\n  "fingerprint": {{\n{body}\n  }}\n}}\n'
+            )
+        return run
+
+    def test_a_sql_dump_drills_on_its_artifact_fingerprint_alone(self):
+        text = "-- Current Database: `alpha`\nINSERT 1;\n-- Current Database: `beta`\nINSERT 22;\n"
+        run = self.sql_run("2026-10-28_01-00-00", text, {"alpha": len("INSERT 1;") + 1, "beta": len("INSERT 22;") + 1})
+        done = self.run_restore("--mode=drill", "--record=primary")
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertIn("drill passed", done.stdout)
+        with open(join(run, ".meta", "primary", "drill.json")) as handle:
+            self.assertIn('"verdict": "success"', handle.read())
+
+    def test_a_sql_dump_holding_less_than_its_manifest_fails_the_drill(self):
+        text = "-- Current Database: `alpha`\nINSERT 1;\n"
+        self.sql_run("2026-10-28_01-00-00", text, {"alpha": 5000})
+        done = self.run_restore("--mode=drill")
+        self.assertEqual(done.returncode, 1)
+        self.assertIn("short [alpha]", done.stdout)
+
     def test_a_failing_module_check_fails_the_drill_and_records_it(self):
         run = self.archive("2026-10-28_01-00-00", {"live/a": 100}, verdict="success", units={"live": 100})
         body = f"""
@@ -508,6 +536,27 @@ class RestoreWrapperTest(unittest.TestCase):
         self.assertIn("status=1", done.stdout)
         self.assertIn("could not merge [t/2026-10-04]", done.stderr)
 
+    def test_merge_reports_progress_with_volume_and_rate_at_each_pause(self):
+        with open(join(self.workdir, "live.txt"), "w") as handle:
+            handle.write("")
+        body = (
+            self.parallel_body()
+            .replace("RESTORE_MERGE_JOBS=3", "RESTORE_MERGE_JOBS=3\n            RESTORE_PROGRESS_SECONDS=0")
+            .replace(
+                'echo "$1" >> "{self.workdir}/merged.log"'.replace("{self.workdir}", self.workdir),
+                'echo "$1" >> "' + self.workdir + '/merged.log"; echo "500 2097152" >> "$RESTORE_STATS_FILE"',
+            )
+        )
+        done = self.source(body)
+        self.assertIn("status=0", done.stdout)
+        self.assertIn("staging [1] artifact(s) into scratch", done.stdout)
+        self.assertIn("fingerprinting live", done.stdout)
+        self.assertIn("merging [10] unit(s) with [3] job(s)", done.stdout)
+        self.assertRegex(done.stdout, r"merged \[\d+\] of \[10\] units \[\d+\]%, \[\d+\] rows, \[\d\.\d\d\] GiB at \[\d+\] MiB/s, \[\d+\] units a minute")
+        self.assertIn("merged [10] of [10] units [100]%, [5000] rows", done.stdout)
+        self.assertIn("restarting [live]", done.stdout)
+        self.assertIn("verified, every merged unit holds at least the backup's count", done.stdout)
+
     def test_a_rerun_skips_units_already_merged(self):
         with open(join(self.workdir, "live.txt"), "w") as handle:
             handle.write("a/2026-10-20 5\n")
@@ -545,6 +594,46 @@ class GenerateRulesTest(unittest.TestCase):
         from asystem import container
 
         return container.RESTORE_CONTRACT + "\n\nrestore_merged() { :; }\n"
+
+    def generated_backup(self, body):
+        sys.path.insert(0, join(ROOT, "all/_/src/build/python"))
+        from asystem import container
+
+        base = tempfile.mkdtemp()
+        root = join(base, "mod")
+        os.makedirs(join(root, "src/build/resources"))
+        os.makedirs(join(root, "src/build/python/mod"))
+        with open(join(root, "src/build/resources/backup.sh"), "w") as handle:
+            handle.write(container.BACKUP_CONTRACT + "\n\n" + body)
+        original = sys.argv[0]
+        sys.argv[0] = join(root, "src/build/python/mod/generate.py")
+        try:
+            container.write_container_backup(module_name="mod", working_dir=join(root, "out"))
+        finally:
+            sys.argv[0] = original
+        return root
+
+    def run_generated(self, root, *args, **extra):
+        bin_dir = join(root, "bin")
+        os.makedirs(bin_dir, exist_ok=True)
+        for name, target in GNU.items():
+            found = subprocess.run(["which", target], capture_output=True, text=True).stdout.strip()
+            if found and not os.path.exists(join(bin_dir, name)):
+                os.symlink(found, join(bin_dir, name))
+        os.makedirs(join(root, "data", "latest"), exist_ok=True)
+        environment = dict(os.environ, PATH=bin_dir + ":" + os.environ["PATH"], BACKUP_SOURCE_PATH=join(root, "data", "latest"), **extra)
+        return subprocess.run([BASH, join(root, "out", "backup.sh"), *args], capture_output=True, text=True, env=environment)
+
+    def test_full_forces_a_full_and_skips_the_throttle(self):
+        root = self.generated_backup(f'backup_written() {{ echo "full=${{BACKUP_FORCE_FULL}} skip=${{BACKUP_SKIP_HOURS}}" > "{tempfile.gettempdir()}/full-probe"; return 1; }}\n')
+        probe = join(tempfile.gettempdir(), "full-probe")
+        self.run_generated(root)
+        with open(probe) as handle:
+            self.assertEqual(handle.read().strip(), "full=false skip=1")
+        self.run_generated(root, "--full")
+        with open(probe) as handle:
+            self.assertEqual(handle.read().strip(), "full=true skip=0")
+        os.remove(probe)
 
     def test_a_module_defining_restore_merged_without_deltas_fails_generate(self):
         sys.path.insert(0, join(ROOT, "all/_/src/build/python"))

@@ -10,7 +10,8 @@
 #     deck_east_fan_auto_comfort,
 #     deck_west_fan_auto_comfort,
 #     edwin_fan_auto_comfort,
-#     lounge_fan_auto_comfort]
+#     lounge_fan_auto_comfort,
+#     parents_fan_auto_comfort]
 #   field current_temperature - <on-change> [Home Assistant value]
 #   field hvac_action_str - <on-change> [Home Assistant value]
 #   field state - <on-change> [Home Assistant value]

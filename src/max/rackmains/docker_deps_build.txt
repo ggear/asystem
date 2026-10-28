@@ -1,0 +1,6 @@
+#######################################################################################
+# Container build packages (build stage only, not shipped in the runtime image)
+#######################################################################################
+ca-certificates
+gcc
+libc6-dev
