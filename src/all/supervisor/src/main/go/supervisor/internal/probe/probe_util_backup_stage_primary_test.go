@@ -98,7 +98,7 @@ func TestProbeUtilBackupStagePrimary_ParseBackupArtefact(t *testing.T) {
 	}{
 		{name: "full_carries_no_version", file: "myservice_full.tar.gz", expectedKind: "full", expectedVersion: "unknown"},
 		{name: "delta_version_cut_from_the_prefix", file: "myservice_2026-09-22_01-00-00_v3_delta.tar.gz", expectedKind: "delta", expectedVersion: "v3"},
-		{name: "from_marker_wins_over_prefix_cutting", file: "myservice_delta_from_v2.tar.gz", expectedKind: "unknown", expectedVersion: "v2.tar.gz"},
+		{name: "a_name_without_a_kind_suffix_is_not_the_artifact", file: "myservice_delta_from_v2.tar.gz", expectedKind: "unknown", expectedVersion: "unknown"},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -133,6 +133,22 @@ func TestProbeUtilBackupStagePrimary_ParseBackupArtefactPicksTheLexicallyFirstFi
 	kind, _ := parseBackupArtefact("myservice", dir)
 	if kind != "full" {
 		t.Errorf("kind = %q, want full picked from the lexicailly first file, ignoring the subdirectory", kind)
+	}
+}
+
+func TestProbeUtilBackupStagePrimary_ParseBackupArtefactSkipsASidecarThatSortsFirst(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "2026-09-22_01-00-00")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	for _, name := range []string{"drill.json", "manifest.json", "myservice_at_2026-09-22_01-00-00_from_v3_delta.tar.gz"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("x"), 0o644); err != nil {
+			t.Fatalf("write [%s]: %v", name, err)
+		}
+	}
+	kind, version := parseBackupArtefact("myservice", dir)
+	if kind != "delta" || version != "v3" {
+		t.Errorf("parseBackupArtefact() = (%q, %q), want (delta, v3) read from the artifact and not a sidecar", kind, version)
 	}
 }
 

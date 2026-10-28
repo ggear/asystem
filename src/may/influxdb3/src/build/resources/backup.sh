@@ -87,6 +87,20 @@ influxdb3_pruned_server() {
   done
 }
 
+backup_fingerprinted() {
+  docker exec --user root --interactive "${BACKUP_MODULE_NAME}" bash -s <<'FINGERPRINT'
+set -o pipefail
+query() {
+  influxdb3 query --format json --database "${INFLUXDB3_DATABASE_HOME:?}" --token "${INFLUXDB3_TOKEN_HOME:?}" "$1"
+}
+tables="$(query "SELECT table_name FROM information_schema.tables WHERE table_schema = 'iox' ORDER BY table_name" | jq -r '.[].table_name')" || exit 1
+for table in ${tables}; do
+  query "SELECT date_trunc('day', time) AS day, count(*) AS n FROM \"${table}\" WHERE time < date_trunc('day', now()) GROUP BY 1" |
+    jq -r --arg table "${table}" '.[] | "\($table)/\(.day[0:10]) \(.n)"' || exit 1
+done
+FINGERPRINT
+}
+
 backup_pruned() {
   influxdb3_pruned_local "$@"
   influxdb3_pruned_server
@@ -103,7 +117,7 @@ backup_written() {
     case "${name}" in full-*) full="${name}" ;; esac
   done
   if [ -n "${full}" ] &&
-    [ "$(backup_epoch "${full}")" -ge "$(($(date +%s) - BACKUP_RETAIN_DAYS * 86400))" ] &&
+    [ "$(date -d "$(date -d "@$(backup_epoch "${full}")" +%F)" +%G-%V)" = "$(date +%G-%V)" ] &&
     [ -n "${parent}" ] && [ "$(backup_status "${parent}")" = "completed" ]; then
     name="delta-${BACKUP_RUN_TIMESTAMP}"
     source="${INFLUXDB3_BACKUP_STORE}/${parent}/incremental"
@@ -115,7 +129,7 @@ backup_written() {
     name="full-${BACKUP_RUN_TIMESTAMP}"
     source="${INFLUXDB3_BACKUP_STORE}"
     backup_target "${BACKUP_FULL_SUFFIX}" "tar.gz" || return 1
-    [ -n "${full}" ] && echo "Starting a new full backup, previous full backup [${full}] is older than [${BACKUP_RETAIN_DAYS}] days"
+    [ -n "${full}" ] && echo "Starting a new full backup, previous full backup [${full}] is from an earlier ISO week"
     docker exec --user root "${BACKUP_MODULE_NAME}" \
       influxdb3 create backup --name "${name}" >/dev/null || return 1
   fi

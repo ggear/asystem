@@ -220,7 +220,7 @@ func parseBackupArtefact(service, dir string) (kind, version string) {
 	}
 	var files []string
 	for _, entry := range entries {
-		if !entry.IsDir() {
+		if !entry.IsDir() && (strings.Contains(entry.Name(), "_full.") || strings.Contains(entry.Name(), "_delta.")) {
 			files = append(files, entry.Name())
 		}
 	}

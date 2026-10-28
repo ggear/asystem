@@ -6,6 +6,7 @@ from os.path import abspath, basename, dirname, isdir, isfile, join, realpath
 
 from pathlib2 import Path
 
+BACKUP_MANIFEST_SHELL = Path(join(dirname(realpath(__file__)), "../../resources/backup_manifest.sh")).read_text().strip()
 BACKUP_TIMEOUT_HOURS_DEFAULT = "5"
 BACKUP_KEEP_DAILY_DEFAULT = "7"
 BACKUP_KEEP_WEEKLY_DEFAULT = "4"
@@ -157,6 +158,7 @@ restore_resolved() {
       { restore_fault "no backup run [${RESTORE_RUN_TIMESTAMP}] under [${RESTORE_INTERNAL_ROOT_DIR}]"; return 1; }
     for name in "${RESTORE_INTERNAL_ROOT_DIR}/${RESTORE_RUN_TIMESTAMP}"/*; do
       [ -f "${name}" ] || continue
+      case "${name}" in *"${RESTORE_FULL_SUFFIX}".* | *"${RESTORE_DELTA_SUFFIX}".*) ;; *) continue ;; esac
       RESTORE_SOURCE_FILE="${name}"
       break
     done
@@ -1296,6 +1298,7 @@ set -o pipefail
 #   ./backup.sh              take a backup, full or delta off an eligible parent
 #   ./backup.sh --prune      drop local runs older than BACKUP_RETAIN_DAYS, never the newest
 #   ./backup.sh --prune-gfs  apply the grandfather-father-son window
+#   ./backup.sh --accept=<run>  accept a regressed run, releasing the anchor
 #
 #   BACKUP_SKIP_HOURS=0 ./backup.sh            take a backup now, whatever the throttle says
 #   BACKUP_RETAIN_DAYS=0 ./backup.sh --prune   keep only the newest local run
@@ -1378,6 +1381,7 @@ backup_versioned() {{
   for path in "${{dir}}/${{stamp}}"/*; do
     [ -f "${{path}}" ] || continue
     name="$(basename "${{path}}")"
+    case "${{name}}" in *"${{BACKUP_FULL_SUFFIX}}".* | *"${{BACKUP_DELTA_SUFFIX}}".*) ;; *) continue ;; esac
     name="${{name%"${{BACKUP_FULL_SUFFIX}}".*}}"
     name="${{name%"${{BACKUP_DELTA_SUFFIX}}".*}}"
     case "${{name}}" in
@@ -1403,8 +1407,7 @@ backup_pruned() {{
   cutoff=$(($(date +%s) - BACKUP_RETAIN_DAYS * 86400))
   for ((index = 0; index < ${{#names[@]}} - 1; index++)); do
     if [ "$(backup_epoch "${{names[${{index}}]}}")" -lt "${{cutoff}}" ]; then
-      rm -rf "${{dir:?}}/${{names[${{index}}]}}"
-      echo "Deleted backup [${{names[${{index}}]}}] older than [${{BACKUP_RETAIN_DAYS}}] days"
+      backup_removed "${{dir}}" "${{names[${{index}}]}}" "older than [${{BACKUP_RETAIN_DAYS}}] days" window
     fi
   done
 }}
@@ -1417,16 +1420,16 @@ backup_dir_is_full() {{
   return 1
 }}
 
-backup_pruned_gfs() {{
-  local dir="${{1:-${{BACKUP_INTERNAL_ROOT_DIR}}}}" names name stamp bucket
+backup_gfs_kept() {{
+  local dir="${{1}}" daily="${{2}}" weekly="${{3}}" monthly="${{4}}" names name stamp bucket
   mapfile -t names < <(backup_listed "${{dir}}")
-  [ "${{#names[@]}}" -gt 1 ] || return 0
+  [ "${{#names[@]}}" -gt 0 ] || return 0
   declare -A keep=() day_seen=()
   local count="${{#names[@]}}" index day chain
   for ((index = count - 1; index >= 0; index--)); do
     day="${{names[${{index}}]:0:10}}"
     if [ -z "${{day_seen[${{day}}]:-}}" ]; then
-      [ "${{#day_seen[@]}}" -ge "${{BACKUP_KEEP_DAILY}}" ] && break
+      [ "${{#day_seen[@]}}" -ge "${{daily}}" ] && break
       day_seen["${{day}}"]=1
     fi
     keep["${{names[${{index}}]}}"]=daily
@@ -1437,12 +1440,12 @@ backup_pruned_gfs() {{
     stamp="${{name:0:10}}"
     backup_dir_is_full "${{dir}}" "${{name}}" || continue
     bucket="$(date -d "${{stamp}}" +%G-%V 2>/dev/null)"
-    if [ -n "${{bucket}}" ] && [ -z "${{week_seen[${{bucket}}]:-}}" ] && [ "${{#week_seen[@]}}" -lt "${{BACKUP_KEEP_WEEKLY}}" ]; then
+    if [ -n "${{bucket}}" ] && [ -z "${{week_seen[${{bucket}}]:-}}" ] && [ "${{#week_seen[@]}}" -lt "${{weekly}}" ]; then
       week_seen["${{bucket}}"]=1
       keep["${{name}}"]=weekly
     fi
     bucket="${{stamp:0:7}}"
-    if [ -z "${{month_seen[${{bucket}}]:-}}" ] && [ "${{#month_seen[@]}}" -lt "${{BACKUP_KEEP_MONTHLY}}" ]; then
+    if [ -z "${{month_seen[${{bucket}}]:-}}" ] && [ "${{#month_seen[@]}}" -lt "${{monthly}}" ]; then
       month_seen["${{bucket}}"]=1
       keep["${{name}}"]=monthly
     fi
@@ -1457,10 +1460,17 @@ backup_pruned_gfs() {{
     done
   done
   for name in "${{names[@]}}"; do
-    if [ -z "${{keep[${{name}}]:-}}" ]; then
-      rm -rf "${{dir:?}}/${{name}}"
-      echo "Pruned backup [${{name}}] outside the grandfather-father-son window"
-    fi
+    [ -n "${{keep[${{name}}]:-}}" ] && echo "${{name}}"
+  done
+}}
+
+backup_pruned_gfs() {{
+  local dir="${{1:-${{BACKUP_INTERNAL_ROOT_DIR}}}}" names name kept
+  mapfile -t names < <(backup_listed "${{dir}}")
+  [ "${{#names[@]}}" -gt 1 ] || return 0
+  kept="$(backup_gfs_kept "${{dir}}" "${{BACKUP_KEEP_DAILY}}" "${{BACKUP_KEEP_WEEKLY}}" "${{BACKUP_KEEP_MONTHLY}}")"
+  for name in "${{names[@]}}"; do
+    grep -Fxq -- "${{name}}" <<<"${{kept}}" || backup_removed "${{dir}}" "${{name}}" "outside the grandfather-father-son window" gfs
   done
 }}
 
@@ -1472,6 +1482,7 @@ backup_files() {{
   fi
   local -n backup_files_includes="${{2}}"
   paths=("${{backup_files_includes[@]}}")
+  BACKUP_FINGERPRINT_INCLUDES=("${{backup_files_includes[@]}}")
   if [ -n "${{3:-}}" ]; then
     local -n backup_files_excludes="${{3}}"
     excludes=("${{backup_files_excludes[@]}}")
@@ -1544,9 +1555,18 @@ backup_completed() {{
   :
 }}
 
+{manifest}
+
 {source}
 
 [ "${{BASH_SOURCE[0]}}" = "${{0}}" ] || return 0
+
+case "${{1:-}}" in
+--accept=*)
+  backup_accepted "${{1#--accept=}}"
+  exit $?
+  ;;
+esac
 
 if [ "${{1:-}}" = "--prune" ]; then
   backup_pruned "${{2}}"
@@ -1601,6 +1621,7 @@ if [ "${{BACKUP_INTERNAL_WRITTEN}}" = "true" ]; then
   mv "${{BACKUP_TARGET_PATH}}.tmp" "${{BACKUP_TARGET_PATH}}"
   BACKUP_INTERNAL_SIZE="$(du -m "${{BACKUP_TARGET_PATH}}" | cut -f1)"
   echo "Finished backup [${{BACKUP_INTERNAL_SIZE}}] MB in [$((SECONDS - BACKUP_INTERNAL_STARTED))] seconds to [${{BACKUP_TARGET_PATH}}]"
+  backup_manifested || echo "Manifest for [${{BACKUP_RUN_TIMESTAMP}}] could not be written" >&2
   backup_pruned
   rm -rf "$(dirname "${{BACKUP_INTERNAL_SOURCE_DIR}}")/replaced"
 else
@@ -1615,6 +1636,7 @@ exit "${{BACKUP_INTERNAL_STATUS}}"
                 module=module_name,
                 prefix=prefix,
                 source=script_source,
+                manifest=BACKUP_MANIFEST_SHELL.replace("PREFIX_TOKEN", prefix),
                 timeout=BACKUP_TIMEOUT_HOURS_DEFAULT,
                 keep_daily=BACKUP_KEEP_DAILY_DEFAULT,
                 keep_weekly=BACKUP_KEEP_WEEKLY_DEFAULT,

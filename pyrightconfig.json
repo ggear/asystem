@@ -5,6 +5,7 @@
   "pythonPlatform": "Linux",
   "include": [
     "src/all/_/src/build/python",
+    "src/all/_/src/test/python",
     "src/all/media/src/build/python",
     "src/all/media/src/main/python",
     "src/all/media/src/test/python",

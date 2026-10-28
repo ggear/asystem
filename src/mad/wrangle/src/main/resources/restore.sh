@@ -125,6 +125,7 @@ restore_resolved() {
       { restore_fault "no backup run [${RESTORE_RUN_TIMESTAMP}] under [${RESTORE_INTERNAL_ROOT_DIR}]"; return 1; }
     for name in "${RESTORE_INTERNAL_ROOT_DIR}/${RESTORE_RUN_TIMESTAMP}"/*; do
       [ -f "${name}" ] || continue
+      case "${name}" in *"${RESTORE_FULL_SUFFIX}".* | *"${RESTORE_DELTA_SUFFIX}".*) ;; *) continue ;; esac
       RESTORE_SOURCE_FILE="${name}"
       break
     done
