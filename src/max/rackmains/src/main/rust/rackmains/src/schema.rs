@@ -138,7 +138,7 @@ impl Member {
         Member {
             key: String::new(),
             kind: None,
-            enum_values: values.iter().map(|value| value.to_string()).collect(),
+            enum_values: values.iter().map(std::string::ToString::to_string).collect(),
             members: Vec::new(),
         }
     }

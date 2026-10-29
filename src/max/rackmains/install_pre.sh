@@ -1,13 +1,9 @@
 #!/bin/bash
 
-ROOT_DIR="$(dirname "$(readlink -f "$0")")"
+set -Eeuo pipefail
 
-# shellcheck disable=SC1091
-. "${ROOT_DIR}/.env"
+BROKER="$(dirname "$(readlink -f "$0")")/image/broker.sh"
 
-if [ "${SERVICE_VERSION_CHANGED:-true}" != "true" ]; then
-  echo "Broker publish skipped, version [${SERVICE_VERSION_ABSOLUTE:-unknown}] unchanged by command [${SERVICE_COMMAND:-unknown}]"
-  exit 0
-fi
+[[ "${SERVICE_VERSION_CHANGED:-}" == "true" && -x "${BROKER}" ]] || exit 0
 
-"${ROOT_DIR}/image/broker.sh"
+exec "${BROKER}"

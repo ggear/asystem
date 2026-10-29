@@ -18,10 +18,10 @@ use crate::broker::{MqttPublisher, Publisher};
 use crate::nut::{Nut, Reading, Source};
 use crate::schema::{AVAILABILITY_ONLINE, KEY_PERIOD_MS, KEY_SAMPLES, KEY_STATUS, KEY_TIMESTAMP};
 
-static LEVEL_NAMES: LazyLock<Vec<String>> =
+pub static LEVEL_NAMES: LazyLock<Vec<String>> =
     LazyLock::new(|| LevelFilter::iter().map(|level| level.as_str().to_lowercase()).collect());
 
-const STATE_TOPIC: &str = "rackmains/data";
+pub const STATE_TOPIC: &str = "rackmains/data";
 const STATUS_TOPIC: &str = "rackmains/status";
 const LOG_LABEL_WIDTH: usize = 48;
 const MAX_CONSECUTIVE_FAILURES: u32 = 3;
@@ -156,9 +156,9 @@ pub fn parse_duration(raw: &str) -> Result<Duration, String> {
     humantime::parse_duration(trimmed).map_err(|err| format!("invalid duration [{trimmed}] [{err}]"))
 }
 
-pub(crate) fn log_line(label: &str, value: &str) -> String {
+pub fn log_line(label: &str, value: &str) -> String {
     let leader = format!("{label} ");
-    format!("{leader:.<width$} [{value}]", width = LOG_LABEL_WIDTH)
+    format!("{leader:.<LOG_LABEL_WIDTH$} [{value}]")
 }
 
 fn reinit_delay(previous: Duration, period: Duration) -> Duration {

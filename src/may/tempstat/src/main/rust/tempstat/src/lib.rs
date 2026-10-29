@@ -1,4 +1,4 @@
-//! State topic payload (`tempstat/data`, retained, QoS 1):
+//! State topic payload (`tempstat/data`, retained, `QoS` 1):
 //! `{ "timestamp": <str>, "period_ms": <u64>, "samples": { "<unique_id>_celsius": <f64>, ... } }`
 //! Per-sensor `samples.<unique_id>_celsius` fields are absent when a sensor fails.
 
@@ -322,7 +322,7 @@ impl Cli {
 
 pub(crate) fn log_line(label: &str, value: &str) -> String {
     let leader = format!("{label} ");
-    format!("{leader:.<width$} [{value}]", width = LOG_LABEL_WIDTH)
+    format!("{leader:.<LOG_LABEL_WIDTH$} [{value}]")
 }
 
 pub fn parse_duration(raw: &str) -> Result<Duration, String> {
@@ -568,14 +568,14 @@ mod tests {
         scratchpad
     }
 
-    fn queue_match_select(uart: &mut MockUart, rom: &Rom) {
+    fn queue_match_select(uart: &mut MockUart, rom: Rom) {
         uart.queue_read(&[0xCD]);
         let mut echo = vec![0x55u8];
         echo.extend_from_slice(&rom.0);
         uart.queue_read(&echo);
     }
 
-    fn queue_sensor_read(uart: &mut MockUart, rom: &Rom, temp: [u8; 2]) {
+    fn queue_sensor_read(uart: &mut MockUart, rom: Rom, temp: [u8; 2]) {
         let scratchpad = scratchpad_for(temp);
         queue_match_select(uart, rom);
         uart.queue_read(&[0xB4]);
@@ -694,21 +694,21 @@ mod tests {
         let mut low = scratchpad_for([0x80, 0x01]);
         low[4] = 0x1F;
         low[8] = crc8(&low[..8]);
-        queue_match_select(&mut bus.uart, &rom);
+        queue_match_select(&mut bus.uart, rom);
         bus.uart.queue_read(&[0xB4, 0x97]);
-        queue_match_select(&mut bus.uart, &rom);
+        queue_match_select(&mut bus.uart, rom);
         bus.uart.queue_read(&[0xBE]);
         bus.uart.queue_read(&low);
-        queue_match_select(&mut bus.uart, &rom);
+        queue_match_select(&mut bus.uart, rom);
         bus.uart.queue_read(&[0xBE]);
         bus.uart.queue_read(&low);
-        queue_match_select(&mut bus.uart, &rom);
+        queue_match_select(&mut bus.uart, rom);
         bus.uart.queue_read(&[0x4E, 0x4B, 0x46, 0x7F]);
-        queue_match_select(&mut bus.uart, &rom);
+        queue_match_select(&mut bus.uart, rom);
         bus.uart.queue_read(&[0x48, 0x97]);
-        queue_match_select(&mut bus.uart, &rom);
+        queue_match_select(&mut bus.uart, rom);
         bus.uart.queue_read(&[0x44, 0x97]);
-        queue_match_select(&mut bus.uart, &rom);
+        queue_match_select(&mut bus.uart, rom);
         bus.uart.queue_read(&[0xBE]);
         bus.uart.queue_read(&scratchpad_for([0x91, 0x01]));
         let sensors = vec![SensorConfig {
@@ -731,7 +731,7 @@ mod tests {
     fn poll_once_skips_resolution_write_when_already_12_bits() {
         let rom = test_rom();
         let mut bus = make_bus();
-        queue_sensor_read(&mut bus.uart, &rom, [0x91, 0x01]);
+        queue_sensor_read(&mut bus.uart, rom, [0x91, 0x01]);
         let sensors = vec![SensorConfig {
             unique_id: "utility_temperature".into(),
             rom,
@@ -746,7 +746,7 @@ mod tests {
     fn poll_once_publishes_combined_json_to_state_topic() {
         let rom = test_rom();
         let mut bus = make_bus();
-        queue_sensor_read(&mut bus.uart, &rom, [0x91, 0x01]);
+        queue_sensor_read(&mut bus.uart, rom, [0x91, 0x01]);
         let sensors = vec![SensorConfig {
             unique_id: "utility_temperature".into(),
             rom,
@@ -786,7 +786,7 @@ mod tests {
         let mut bus = make_bus();
         bus.uart.queue_read(&[0xCF]);
         bus.uart.queue_read(&DETECT_READS);
-        queue_sensor_read(&mut bus.uart, &rom, [0x91, 0x01]);
+        queue_sensor_read(&mut bus.uart, rom, [0x91, 0x01]);
         let sensors = vec![SensorConfig {
             unique_id: "utility_temperature".into(),
             rom,
@@ -861,7 +861,7 @@ mod tests {
     fn poll_zero_period_runs_single_iteration() {
         let rom = test_rom();
         let mut bus = make_bus();
-        queue_sensor_read(&mut bus.uart, &rom, [0x00, 0x00]);
+        queue_sensor_read(&mut bus.uart, rom, [0x00, 0x00]);
         let sensors = vec![SensorConfig {
             unique_id: "t".into(),
             rom,

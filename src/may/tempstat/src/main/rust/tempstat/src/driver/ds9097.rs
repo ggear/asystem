@@ -123,11 +123,11 @@ impl<U: Uart> OneWire for Ds9097<U> {
                 bits[i..].fill(true);
                 return Ok((bits, discrepancies));
             }
-            let direction = if bit != complement {
-                bit
-            } else {
+            let direction = if bit == complement {
                 discrepancies[i] = true;
                 i < seed.len() && seed[i]
+            } else {
+                bit
             };
             self.touch_bit(direction)?;
             bits[i] = direction;
@@ -162,14 +162,14 @@ mod tests {
         uart.queue_read(&slots_for(bytes));
     }
 
-    fn queue_search_response(uart: &mut MockUart, rom: &Rom) {
+    fn queue_search_response(uart: &mut MockUart, rom: Rom) {
         for bit in rom.bits() {
             uart.queue_read(&[slot(bit), slot(!bit), slot(bit)]);
         }
     }
 
     fn queue_search_pass(uart: &mut MockUart, seed: &[bool], roms: &[Rom]) -> [bool; 64] {
-        let mut candidates: Vec<[bool; 64]> = roms.iter().map(|rom| rom.bits()).collect();
+        let mut candidates: Vec<[bool; 64]> = roms.iter().map(super::super::rom::Rom::bits).collect();
         let mut path = [false; 64];
         for i in 0..64 {
             let ones = candidates.iter().filter(|bits| bits[i]).count();
@@ -324,7 +324,7 @@ mod tests {
         let mut bus = Ds9097::new(MockUart::new()).unwrap();
         bus.uart.queue_read(&[0xE0]);
         queue_echo(&mut bus.uart, &[0xF0]);
-        queue_search_response(&mut bus.uart, &rom);
+        queue_search_response(&mut bus.uart, rom);
         assert_eq!(bus.get_connected_roms().unwrap(), vec![rom]);
         assert!(bus.uart.reads.is_empty());
     }

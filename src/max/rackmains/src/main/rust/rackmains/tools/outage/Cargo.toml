@@ -1,0 +1,15 @@
+[package]
+name = "outage"
+version = "0.0.0-SNAPSHOT"
+edition = "2021"
+publish = false
+
+[dependencies]
+rackmains = { path = "../.." }
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+clap = { version = "4", features = ["derive", "env"] }
+env_logger = "0.11"
+humantime = "2"
+log = "0.4"
+rumqttc = { version = "0.25", default-features = false }
+serde_json = { version = "1", features = ["preserve_order"] }

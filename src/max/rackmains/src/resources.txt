@@ -1,2 +1,1 @@
 ../install.sh
-../install_pre.sh

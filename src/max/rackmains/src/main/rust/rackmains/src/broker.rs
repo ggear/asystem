@@ -67,7 +67,7 @@ impl MqttPublisher {
         let thread_retained = Arc::clone(&retained);
         let thread_client = client.clone();
         let thread_status_topic = status_topic.to_string();
-        let address = format!("{}:{}", host, port);
+        let address = format!("{host}:{port}");
         let handle = thread::spawn(move || {
             let mut ready_sender = Some(ready_sender);
             for event in connection.iter() {
@@ -77,7 +77,7 @@ impl MqttPublisher {
                             info!("{}", log_line("connected to broker", &address));
                             let _ = sender.send(());
                         } else {
-                            info!("broker reconnected [{}]", address);
+                            info!("broker reconnected [{address}]");
                         }
                         if let Err(err) =
                             thread_client.try_publish(&thread_status_topic, QoS::AtLeastOnce, true, AVAILABILITY_ONLINE)
@@ -120,7 +120,7 @@ impl MqttPublisher {
                             break;
                         }
                         warn!("broker error [{address}] [{err}]");
-                        info!("broker reconnecting [{}] in [{:?}]", address, RECONNECT_DELAY);
+                        info!("broker reconnecting [{address}] in [{RECONNECT_DELAY:?}]");
                         thread::sleep(RECONNECT_DELAY);
                     }
                 }

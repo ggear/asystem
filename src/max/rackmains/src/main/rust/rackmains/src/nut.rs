@@ -127,7 +127,7 @@ impl Source for Nut {
         let mut stream = UnixStream::connect(&self.socket).map_err(|err| failed("connect", err))?;
         stream
             .set_read_timeout(Some(self.timeout))
-            .and_then(|_| stream.set_write_timeout(Some(self.timeout)))
+            .and_then(|()| stream.set_write_timeout(Some(self.timeout)))
             .map_err(|err| failed("set timeout", err))?;
         writeln!(stream, "{COMMAND_DUMP}").map_err(|err| failed("write", err))?;
         let mut dump = String::new();

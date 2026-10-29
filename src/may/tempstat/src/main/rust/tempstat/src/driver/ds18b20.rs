@@ -88,7 +88,7 @@ impl Ds18b20 {
         device.resolution = Resolution::from_config(scratchpad[4]);
         debug!(
             "DS18B20 ROM [{}] parasitic [{}] resolution [{:?}]",
-            device.rom.map(|rom| rom.to_string()).unwrap_or_else(|| "none".into()),
+            device.rom.map_or_else(|| "none".into(), |rom| rom.to_string()),
             device.parasitic,
             device.resolution
         );
@@ -458,7 +458,7 @@ mod tests {
         );
         assert_eq!(
             make_device_with_config(&mut bus, 0x5F).t_conv(),
-            Duration::from_micros(375_000)
+            Duration::from_millis(375)
         );
         assert_eq!(
             make_device_with_config(&mut bus, 0x7F).t_conv(),

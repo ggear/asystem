@@ -65,6 +65,13 @@ Add a host level metric for network/internet usage? maybe only later?
 Convert from influxdb to postgres?
 Add sys test?
 Impl a tab option expander for bash
+Impl a restart and backoff if not healthy - eg plex on mounts, zigbee2mqtt maybe - if vernemq reboot refuses auth otherwise it might not help, sonnar on mounts etc. add an ENV var RESTART_NOT_HEALTHY=true to enlist this service in this, eg network no
+
+
+###############################################################################################################################################################
+# Rackmains
+###############################################################################################################################################################
+
 
 
 ###############################################################################################################################################################
@@ -95,6 +102,13 @@ Have a 2-thread media transcode script, maybe do even/odd/every so can launch in
 Implement syncart.py to store artwork in /shares and save download after failure
 Formalise subtitle download and sync, add missing subtitles to common series
 Drop closed captioning [] sounds from subtitles, just have text of spoken words
+Multiple versions of files should error:
++---------------------------+-------------+------------------------------+--------------+------------+-----------+-------------+-------------+---------------+----------------+--------------------------------------------------------+
+| File Name                 | File Action | File Validity                | File Version | File State | File Size | Plex Video  | Plex Audio  | Plex Subtitle | Metadata State | File Directory                                         |
++======================================================================================================================================================================================================================================+
+| The Diplomat S04E03.mkv   | 8. Nothing  | Downscale High Size Non-HEVC | Original     | Complete   | Right     | Direct Play | Direct Play | Direct Play   | Messy          | '/share/10/media/parents/series/The Diplomat/Season 4' |
+| The Diplomat S04E03_0.mkv | 8. Nothing  | Downscale High Size Non-HEVC | Original     | Complete   | Right     | Direct Play | Direct Play | Direct Play   | Messy          | '/share/10/media/parents/series/The Diplomat/Season 4' |
++---------------------------+-------------+------------------------------+--------------+------------+-----------+-------------+-------------+---------------+----------------+--------------------------------------------------------+
 
 
 ###############################################################################################################################################################

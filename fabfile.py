@@ -882,7 +882,14 @@ def _build(context, filter_module=None, filter_host=None, is_release=False):
             module_rust_target = join(ROOT_MODULE_DIR, module, "target/rust")
             _print_line("Linting sources ...")
             _run_local(context, "cargo fmt", module_rust_main_path)
-            _run_local(context, f"CARGO_TARGET_DIR={module_rust_target} cargo clippy --workspace --all-targets -- -D warnings", module_rust_main_path)
+            _run_local(
+                context,
+                f"CARGO_TARGET_DIR={module_rust_target} cargo clippy --workspace --all-targets -- -D warnings -W clippy::pedantic "
+                "-A clippy::missing_errors_doc -A clippy::must_use_candidate "
+                "-A clippy::cast_possible_truncation -A clippy::cast_sign_loss -A clippy::cast_possible_wrap "
+                "-A clippy::float_cmp -A clippy::too_many_lines -A clippy::unused_self",
+                module_rust_main_path,
+            )
             _run_local(context, f"CARGO_TARGET_DIR={module_rust_target} cargo build", module_rust_main_path)
         _print_footer(module, "build compile", host=filter_host)
 

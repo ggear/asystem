@@ -357,7 +357,7 @@ mod tests {
     }
 
     fn search_response(seed: &[bool], roms: &[Rom]) -> ([u8; 16], [bool; 64]) {
-        let mut candidates: Vec<[bool; 64]> = roms.iter().map(|rom| rom.bits()).collect();
+        let mut candidates: Vec<[bool; 64]> = roms.iter().map(super::super::rom::Rom::bits).collect();
         let mut response = [0u8; 16];
         let mut path = [false; 64];
         for i in 0..64 {

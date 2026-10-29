@@ -70,7 +70,7 @@ impl SerialUart {
 
 impl Uart for SerialUart {
     fn write_all(&mut self, data: &[u8]) -> Result<()> {
-        debug!("uart tx [{:02X?}]", data);
+        debug!("uart tx [{data:02X?}]");
         self.port.write_all(data)?;
         self.port.flush()?;
         Ok(())
@@ -78,7 +78,7 @@ impl Uart for SerialUart {
 
     fn read_exact(&mut self, buffer: &mut [u8]) -> Result<()> {
         self.port.read_exact(buffer)?;
-        debug!("uart rx [{:02X?}]", buffer);
+        debug!("uart rx [{buffer:02X?}]");
         Ok(())
     }
 
