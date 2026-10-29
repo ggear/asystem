@@ -5,9 +5,7 @@
 
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
-# NOTES: https://github.com/grafana/gcx/releases
-VERSION=1.5.0
-pull_repo "${ROOT_DIR}" "${1}" "grafana" "gcx" "grafana/gcx" "v${VERSION}" || exit $?
+pull_repo "${ROOT_DIR}" "${1}" "grafana" "gcx" "grafana/gcx" "v${GRAFANACX_VERSION}" || exit $?
 
 # NOTES: https://github.com/grafana/business-charts/releases
 VERSION=7.2.5
