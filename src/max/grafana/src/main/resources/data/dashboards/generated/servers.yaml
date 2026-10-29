@@ -1794,7 +1794,7 @@ spec:
             queryOptions:
               interval: 6s
             transformations: []
-        description: 'Generated: backup stages failing or timing out against the stages this host runs'
+        description: 'Generated: backup stages failing, timing out, regressed or failing their drill against the stages this host runs'
         id: 27
         links: []
         title: Server Backup Stage Failures

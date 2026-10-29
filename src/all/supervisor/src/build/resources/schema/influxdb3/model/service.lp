@@ -27,6 +27,7 @@
 #     openra,
 #     plex,
 #     postgres,
+#     rackmains,
 #     sabnzbd,
 #     sonarr,
 #     supervisor,

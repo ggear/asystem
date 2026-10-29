@@ -47,6 +47,7 @@
           "grafana",
           "letsencrypt",
           "openra",
+          "rackmains",
           "supervisor"
         ]
       },

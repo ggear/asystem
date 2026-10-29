@@ -305,6 +305,7 @@ ERROR_CODES = {
     "TAB_EDIT_IGNORED": (plugin.LOG_KIND_ERROR, False, False, plugin.CTR_SRC_DATA),
     "EDIT_UNMATCHED": (plugin.LOG_KIND_ERROR, False, True, plugin.CTR_SRC_DATA),
     "ACCOUNT_NOT_MANUAL": (plugin.LOG_KIND_ERROR, False, False, plugin.CTR_SRC_DATA),
+    "ACCOUNT_UNKNOWN": (plugin.LOG_KIND_ERROR, False, False, plugin.CTR_SRC_DATA),
     "FILE_UNREADABLE": (plugin.LOG_KIND_ERROR, False, False, plugin.CTR_SRC_DATA),
     "VALUE_UNPARSED": (plugin.LOG_KIND_ERROR, False, False, plugin.CTR_SRC_DATA),
     "BALANCE_DUPLICATE": (plugin.LOG_KIND_ERROR, False, False, plugin.CTR_SRC_DATA),
@@ -978,6 +979,8 @@ class Bank(plugin.Plugin):
                     _bank_error(_tab, _key, "ACCOUNT_LINKED", f"account [{_row['Account']}] not Manual, give its account id to keep a row of it")
                 elif _row["__account_id"] is None:
                     _bank_error(_tab, _key, "ACCOUNT_NOT_MANUAL", f"account [{_row['Account']}] not one Manual account")
+                elif _row["__status"] is None:
+                    _bank_error(_tab, _key, "ACCOUNT_UNKNOWN", f"account id [{_row['__account_id']}] matches no account")
                 elif _row["__date"] > today:
                     _bank_error(_tab, _key, "DATE_FUTURE", f"date [{_row['__date']}] in the future")
                 elif _row["__from_first"] is not None and _row["__from_first"] > date(1, 1, 1) and _row["__date"] < _row["__from_first"]:

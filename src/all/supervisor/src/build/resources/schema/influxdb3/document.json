@@ -1,6 +1,6 @@
 {
   "warning": "WARNING: This file is written by the build process, any manual edits will be lost!",
-  "source": "44ca6804dd9a0b77b01e4c08c3c082340cff00c6b78dc34a23bd406514b96f86",
+  "source": "bbfd1743dfda730b9e4349305d99a6370522b705dc00919bbb05402d51ce3ccb",
   "module": "supervisor",
   "discovered": false,
   "database": {
@@ -614,6 +614,7 @@
           "openra",
           "plex",
           "postgres",
+          "rackmains",
           "sabnzbd",
           "sonarr",
           "supervisor",

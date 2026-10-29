@@ -1148,9 +1148,9 @@ SELECT
     concat(host, '/', service) AS entity,
     CASE WHEN service IN (
         'cloudflare', 'grafana', 'homeassistant', 'influxdb3', 'letsencrypt', 'mariadb',
-        'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'sabnzbd',
-        'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx', 'wrangle',
-        'zigbee2mqtt'
+        'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains',
+        'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx',
+        'wrangle', 'zigbee2mqtt'
     ) THEN 'yes' ELSE 'no' END AS declared,
     count(*)                   AS rows,
     CAST(min(time) AS VARCHAR) AS oldest,
@@ -1162,9 +1162,9 @@ WHERE
     AND service IS NOT NULL
 GROUP BY concat(host, '/', service), CASE WHEN service IN (
     'cloudflare', 'grafana', 'homeassistant', 'influxdb3', 'letsencrypt', 'mariadb',
-    'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'sabnzbd',
-    'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx', 'wrangle',
-    'zigbee2mqtt'
+    'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains',
+    'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx',
+    'wrangle', 'zigbee2mqtt'
 ) THEN 'yes' ELSE 'no' END
 ORDER BY rows DESC;
 SCHEMA_SQL

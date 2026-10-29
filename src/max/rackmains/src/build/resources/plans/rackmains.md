@@ -1,10 +1,11 @@
 # rackmains
 
-**Status, 2026-10-28.** Built and tested locally, not released. The publisher is done: it reads the NUT driver socket,
+**Status, 2026-10-29.** Built and tested locally, not released. The publisher is done: it reads the NUT driver socket,
 publishes `rackmains/{data,status}` to the broker, and ships with a mock driver and a mock-backed system test. The host setup
 (`install_prep.sh`, `install_pre.sh`) and `tools/outage`, the tool that cuts the rack's mains through its smart plug, are
-written and unit tested. Waiting on you: the nine workbook rows (phase 3), the release, and the restart tests. The shutdown
-guard is designed and not built. This file holds the status, what the code cannot say, and the open decisions; the code and the
+written and unit tested. The host side of the shutdown is built and tested on `max`, in the `system` module (`asleep`, `awake`
+and the restart-after-power-loss setting). Waiting on you: the nine workbook rows (phase 3), the release, and the
+power-on-after-cut tests. The shutdown guard is designed and not built. This file holds the status, what the code cannot say, and the open decisions; the code and the
 module `CLAUDE.md` say how the publisher works.
 
 ---
@@ -238,23 +239,25 @@ image, one health check, and no change elsewhere.
   `MacMini` (`mad`, `max`, `may`, `meg`; `jen` is a Pi in `Wardrobe`), ordered by `.hosts`, joined as `macmini-<label>`, MACs
   from the same rows. Nothing is typed twice.
 
-**Steps (first version, timers and flags only).**
+**Steps (first version, timers and flags only).** The host actions are `asleep` and `awake` from the `system` module (the
+next section). A host is never powered off.
 1. **Watch.** Polls every 2 s. Time on battery accumulates from the first `OB`, so a short blip simply never reaches
    `shed.max_seconds`, and resets to zero only after `mains_stable_seconds` of continuous `OL`, so a grid that flaps with dips under that apart cannot keep the
    servers up.
-2. **Shed.** At `shed.max_seconds` on battery, or `LB`: shut the followers down in parallel, `meg` last so Home Assistant and
-   the broker outlast the rest, each over ssh with a key whose `authorized_keys` forces
-   `command="/usr/bin/systemctl poweroff",restrict` (the same path on all four hosts, checked), confirmed down by its ssh port
-   refusing or timing out within a per-host deadline. `max` stays up. A shed is not undone by the voltage rebound when the load
-   drops, only by `mains_stable_seconds` of mains.
-3. **Halt.** At `halt.max_seconds` on battery, or on `LB`, whether or not every follower is confirmed down (a halt implies a
-   shed, so an `LB` runs both at once, with no staging): send
-   `shutdown.return` first, with `ups.delay.shutdown` raised from 30 s to cover `max`'s halt plus a margin, then ssh the
-   poweroff; if the poweroff fails send `shutdown.stop`. Sending it afterwards cannot work, because powering `max` off kills the
-   guard. The UPS then cuts and restores, and everything restarts.
-4. **Mains returns first.** After `mains_stable_seconds` of continuous `OL`, wake the followers the state file lists, but only
-   once each is confirmed down, since a `poweroff` already started cannot be cancelled. If the halt has already started there is
-   nothing to cancel.
+2. **Shed.** At `shed.max_seconds` on battery, or `LB`: run `asleep --deep` on the followers in parallel, `meg` last so Home
+   Assistant and the broker outlast the rest, each over ssh with a key whose `authorized_keys` forces the command (`restrict`,
+   no shell; see the forced-command test), done when its `RESULT asleep status=0` arrives. Any other code (1 error, 4 timeout,
+   5 unclean) is logged and alerted and the guard moves on; it never retries in a loop. On `max`, run `asleep --shallow`
+   stopping every container but rackmains (supervisor first, it binds `/`). A shed is not undone by the voltage rebound when
+   the load drops, only by `mains_stable_seconds` of mains.
+3. **Halt.** At `halt.max_seconds` on battery, or on `LB`, whether or not every follower has finished (a halt implies a shed,
+   so an `LB` runs both at once, with no staging): send `shutdown.return` first, with `ups.delay.shutdown` raised from 30 s to
+   cover `max`'s `asleep --deep` plus a margin, then start `asleep --deep` on `max` detached. It stops rackmains and the guard
+   with it, so its result is only in `/run/asleep.log` on `max`, and `shutdown.stop` cannot be sent afterwards. The UPS then
+   cuts and restores, and every host boots on AC restore (power-on-after-cut test, below).
+4. **Mains returns first.** After `mains_stable_seconds` of continuous `OL`, run `awake` on each follower the state file
+   lists once its `asleep` has returned, and on `max` to restart what was stopped. `asleep` is undone by `awake`, so unlike
+   a `poweroff` there is nothing to wait on being down. If the halt has started there is nothing to cancel.
 
 **Safety rails.** It ships in dry-run, logging the exact commands it would run, and goes live only after the trials show the
 conservative timers fit. It honours its hard override (`LB`) in dry-run too. The keys can
@@ -268,13 +271,36 @@ runners, so the timer policy is replaceable; if a better policy is ever wanted i
 the others running until the UPS is flat. A read-only `upsd` on the LAN with a dead-man timer on each follower would cover it
 and is left out for now. Root login with a password is enabled on the followers, so the guard's keys are only as safe as that.
 
-**Restart is a known unknown, decided by the restart tests.**
-- **A. Wake on LAN** while `max` stays up. Needs wake-from-off to work, and the container on the host network (a magic packet
-  does not leave a bridge) which puts the publisher there too. `max`, `may`, `meg` report `Wake-on: g`; `mad` reports `d`.
-- **B. Cycle on return** (likely the simplest). If hosts boot when power is applied, then when mains returns with followers
-  down the guard waits `mains_stable_seconds` and runs the halt on purpose; every host boots on AC restore. No wake packets, bridge
-  network. The cost is `max` and its services down for the halt, the UPS restart delay (`ups.delay.start`, 180 s) and a boot.
-- **C. Smart plug per host** (new hardware) or **D. stop containers instead of powering hosts off** (no restart needed).
+**Restart.** Decided: no wake packets and no Wake on LAN. If mains returns before the UPS is flat the guard runs `awake`; if the
+UPS cuts, every host boots on AC restore from the state `asleep` left it in. That second path is the one still to prove (the
+power-on-after-cut test).
+
+## The host side, the `system` module (built)
+
+`src/all/system` puts `asleep` and `awake` on the four servers; its `CLAUDE.md` is the reference and this is what the guard
+needs from it. Hosts are never powered off: a Mac mini restarts after a power cut only from a running state and stays off
+after a clean `poweroff`, so the guard quiesces a host and leaves it running.
+
+- **`asleep --deep`** (followers). Stops timers, automounts, containers (each given its own grace period, its exit code
+  checked), docker and the services, then unmounts every fstab mount, makes root read only, and flushes and detaches the SATA
+  and USB SSDs. Leaves ssh, the network, NUT and the fan control. Never powers off.
+- **`asleep --shallow --stop <container>`** (`max`). Leaves docker, root, `/var` and `/home` writable so rackmains keeps
+  running and writing to its home dir; stops only the named containers; unmounts what no running container holds.
+- **`awake`.** Undoes either from `/run/asleep.state`, then waits up to 60 s for containers that are starting or unhealthy to
+  turn healthy. It replaces the wake packet.
+- **What the guard reads.** The exit code and the last line, `RESULT <asleep|awake> status=… reason=…`: 0 ok, 1 error, 2 usage,
+  3 not root, 4 timeout, 5 unclean (a container was killed), 6 unhealthy (`awake` only). Log lines go to stdout and to
+  `/run/asleep.log` or `/run/awake.log`. A non-zero `asleep` leaves the host in whatever state it reached.
+- **Power on after a cut.** The module's `install_prep.sh` clears `AFTERG3_EN` (bit 0 of the register at `00:1f.0`, offset
+  `0xa4`, [the method](https://gist.github.com/coldie/072d8e97dfad89d424ba91641641511d)) on every install; `max`, `may` and
+  `meg` (Macmini7,1) read `1c08`. `mad` is a Mac mini M2 Pro under Asahi with no Linux knob on kernel 6.14: the setting lives
+  in the SMC and is set once from macOS ([AsahiLinux/docs#156](https://github.com/AsahiLinux/docs/issues/156)), which is
+  **yours to do by hand** (test 5). Whether any host boots after a cut is **not yet tested**.
+- **Tested on `max`, 2026-10-29.** Argument and precondition codes; dry runs that leave the host unchanged; a real shallow
+  cycle with supervisor left running, returning 0 and restoring the host exactly; an unclean cycle (a container that ignores
+  SIGTERM) returning 5 with exit code 137 reported; `awake` error paths returning 1 and 6; and a read-only remount round trip
+  on every filesystem type in the estate, on all four hosts. **Not yet:** a real deep run, the timeout code end to end, any
+  other host, the power-on-after-cut test.
 
 ## The model (mlserver): inputs, outputs and fit
 
@@ -433,8 +459,8 @@ pub struct Step {
     /// Percentage of battery remaining at or below which the step fires. Optional; needs the model lookup. `shed` is above `halt`.
     #[serde(default)]
     pub target_percent: Option<u8>,
-    /// Measured seconds the step takes to finish: for `shed` the slowest follower from `poweroff` to its ssh port closing, for
-    /// `halt` `max` from `poweroff` to the UPS cut. Optional; with the model the guard also fires the step when the model's
+    /// Measured seconds the step takes to finish: for `shed` the slowest follower from the start of `asleep` to its `RESULT`, for
+    /// `halt` `max` from `asleep --deep` to the UPS cut. Optional; with the model the guard also fires the step when the model's
     /// seconds remaining fall to `takes_seconds` plus `margin_seconds`, so a percentage cannot leave too little time at a high load.
     #[serde(default)]
     pub takes_seconds: Option<u64>,
@@ -555,7 +581,7 @@ Nothing is lengthened on a guess; each step is allowed only by the evidence name
 
 | Step | Thresholds | Mode | Allowed by | Evidence it produces |
 |---|---|---|---|---|
-| A, floor | `shed.max_seconds` inside the proven span (145 s at service load held with no knee), `halt.max_seconds` from the measured shed times | dry-run | per-host shutdown times (test 4); the forced-command test (3) | the guard's decisions on real mains events, logged but not acted on |
+| A, floor | `shed.max_seconds` inside the proven span (145 s at service load held with no knee), `halt.max_seconds` from the measured shed times | dry-run | per-host `asleep` times (test 4); the forced-command test (3) | the guard's decisions on real mains events, logged but not acted on |
 | B, live and cautious | the same | live | trial 1 held for the whole sequence length at worst-case load with no knee and no `LB`; trials 2 to 4 pass; the restart path chosen | real outages and `outage` cuts exercise the whole chain; each is a data point |
 | C, measured | `shed.max_seconds` set to the knee time less `takes_seconds` | live | trial 5 run to the floor once on this battery, plus any real outage, fitted offline | the knee at service load, the cutoff, whether `LB` raises |
 | reset | recomputed | live | a battery replacement, a load change over about 30%, or a time to the floor 20% below the last fit | a new trial and a release |
@@ -564,8 +590,8 @@ Nothing is lengthened on a guess; each step is allowed only by the evidence name
 - **`shed.max_seconds`.** The knee time at service load (trial 5) less `takes_seconds`. Until then only a span already survived is
   allowed: trial 1 proves it, and rollout A stays inside it. Check: the voltage at the end of trial 1 is still above the floor
   and has not begun to fall.
-- **`takes_seconds` and `margin_seconds`.** The slowest follower's `poweroff` to its ssh port closing, including the slowest container stop, and `max`'s
-  halt, each measured several times on each host (test 4), plus a margin. The margin is a fraction of the spread seen, not a guess.
+- **`takes_seconds` and `margin_seconds`.** The slowest follower's `asleep`, start to `RESULT` and including the slowest container stop, and `max`'s
+  `asleep --deep`, each measured several times on each host (test 4), plus a margin. The margin is a fraction of the spread seen, not a guess.
 - **`mains_stable_seconds`.** The shortest run of `OL` that a flapping grid has not been seen to break, from the history, and
   long enough that a battery drained by the outage has begun to recover (about 6 hours to 90% per the manual, so a longer
   value is safer; there is no measure of the recovery, so it is a judgement).
@@ -625,9 +651,9 @@ Abort on voltage, `LB`, a host down, stale readings or a cap, **never on the uni
 
 | # | Trial | What it does | Needs first | Decides |
 |---|---|---|---|---|
-| 1 | Hold at service load | `outage` held for the whole rollout A sequence length (about 10 minutes), servers up, guard in dry-run, driven from the Mac | restart tests not needed | the conservative timers fit; the knee if it appears |
+| 1 | Hold at service load | `outage` held for the whole rollout A sequence length (about 10 minutes), servers up, guard in dry-run, driven from the Mac | power-on-after-cut test not needed | the conservative timers fit; the knee if it appears |
 | 2 | Recover before the shed | live guard, mains back before `shed.max_seconds` | guard built and trial 1 | nothing is shed, the reset works |
-| 3 | Recover after the shed | followers shed then restarted, one follower first | restart tests, forced-command test, shutdown timing | the restart path |
+| 3 | Recover after the shed | followers shed (`asleep`) then `awake`, one follower first | power-on-after-cut test (5), forced-command test (3), `asleep` timing (4) | the restart path |
 | 4 | Halt and UPS cut/restore | maintenance window, someone home; `shutdown.return` tried on a lamp first; if the UPS does not restart, press its On button | trial 3, lamp test | who brings the rack back |
 | 5 | Run to failure, once per battery | servers down except `max`, **to the 11.5 V floor or `LB`, once, not to the UPS cutting out**; the events file records on the Mac with an fsync per line; network gear drains; a second point at service load because the low load runs long | device-side dead-man proven (chained `Delay`, or a Tasmota Rule/RuleTimer), trial 1 | the real knee and cutoff, whether `LB` raises, the offline fit |
 
@@ -637,24 +663,36 @@ Ordered from no risk to most; each result decides a branch.
 1. **Baseline** a day on mains with the recorder: which flags appear unprompted (`BOOST`, `TRIM`).
 2. **Quick battery test** (`test.battery.start.quick`): the test flag's name and the seconds spent in `OB`, in a quiet hour.
 3. **Forced command** on `may`: a dedicated key with `command="echo ok",restrict` (no shell, no other command, no forwarding),
-   then `command="/usr/bin/systemctl poweroff",restrict`, run from a container on `max`.
-4. **Per-host shutdown time**, `poweroff` to the ssh port closing, and the slowest container stop; order `may`, `mad`, `meg`.
-5. **Power on when power is applied**, per host: clean `poweroff`, pull its cord from the UPS for 10 s, replace it. Whether it
-   boots by itself, and how long to ssh. Decides option B. A hard cut while running is optional and risks the filesystem.
-6. **Wake from off**, per host: `poweroff`, wait 30 s, magic packet; repeat after 10 minutes and an hour; on `mad` first
-   `ethtool -s end0 wol g` and make it survive a reboot. Decides option A.
-7. **Packet from a bridge container** to the LAN broadcast address, captured with `tcpdump` on `may`: whether bridge networking
-   is enough.
-8. **`shutdown.return` on a lamp**, and `shutdown.stop` cancelling it: whether the UPS restarts by itself.
-9. **Standby**, only with the outlets empty: `ups.status` for `OFF`.
-10. **Plug dead-man**: the device-side restore of a chained `Delay`, proven by `outage` with the plug unreachable.
-11. **Mac reachability**: that it reaches the broker, the plug and all four hosts from where the trials run, stays awake for
-trials up to 15 minutes or more, and that `deploy.sh` can pass the cut and floor through (it is not on the UPS, as `jen` was
-    outside the rack), so it can drive the trials.
+   then `command="/usr/local/bin/asleep --deep --dry-run",restrict`, run from a container on `max`. A forced command takes no
+   arguments from the client, so decide here between a key per action (`asleep --deep`, `asleep --shallow …`, `awake`) and one
+   wrapper that dispatches on `SSH_ORIGINAL_COMMAND`.
+4. **Per-host `asleep` time**, from the start of the command to its `RESULT` line (the log's `took`), several runs per host and
+   the slowest container stop; order `may`, `mad`, `meg`. Measured so far: `max`, shallow, three containers, about 3 s; no deep
+   run yet.
+5. **Power on after a cut** (still to do), per host. A clean `poweroff` is not the test, the board stays off after one; a cut
+   while running, with no `asleep`, is optional and risks the filesystem. Decides whether the halt and UPS cycle brings the rack
+   back, and how long each host takes to answer ssh.
+   - **`max`, `may`, `meg`.** `AFTERG3_EN` is already cleared (`1c08`). Run `asleep --deep` (on `max`, `--shallow`), pull the
+     cord from the UPS for 10 s, replace it, and time the boot to ssh.
+   - **`mad` (Mac mini M2 Pro), a macOS step first, by hand.** Linux has no knob for it on kernel 6.14, so:
+     (a) boot macOS from the boot picker (hold the power button at startup, choose macOS);
+     (b) turn on "Start up automatically after a power failure" in System Settings, Energy Saver;
+     (c) check in Terminal that `pmset -g | grep autorestart` prints `autorestart 1`;
+     (d) boot back into Linux and run the same cut test as above.
+     The only report that the setting carries through into Linux is on a base M1 Mac mini
+     ([AsahiLinux/docs#156](https://github.com/AsahiLinux/docs/issues/156)), so the M2 Pro result is part of this test. The
+     `ac_power_mode` sysfs attribute suggested there is missing on this kernel; `install_prep.sh` writes `restore` to it
+     if a newer kernel offers it.
+6. **`shutdown.return` on a lamp**, and `shutdown.stop` cancelling it: whether the UPS restarts by itself.
+7. **Standby**, only with the outlets empty: `ups.status` for `OFF`.
+8. **Plug dead-man**: the device-side restore of a chained `Delay`, proven by `outage` with the plug unreachable.
+9. **Mac reachability**: that it reaches the broker, the plug and all four hosts from where the trials run, stays awake for
+   trials up to 15 minutes or more, and that `deploy.sh` can pass the cut and floor through (it is not on the UPS, as `jen` was
+   outside the rack), so it can drive the trials.
 
-The guard's build can begin after 3 and 4, with the restart left behind an interface until 5 to 7 are in.
+The guard's build can begin after 3 and 4, with the restart left behind an interface until 5 is in.
 
-**Acceptance.** A flag is a trigger only once it has been seen on this unit: `OB` (seen), the test flag (test 2), `OFF` (test 9).
+**Acceptance.** A flag is a trigger only once it has been seen on this unit: `OB` (seen), the test flag (test 2), `OFF` (test 7).
 `LB` and the alarm flags are overrides until observed; if `LB` never appears before the unit cuts, it is dropped from the design
 and the time cap carries that job.
 
@@ -719,7 +757,7 @@ yet, a few long lines and an inline `json!` shape to tidy), and the two install 
 | 2 | `outage` ignored the guard's mode | `--expect-guard`, reads `guard.live` |
 | 3 | trials ran at average load; the 01:00 backup and service starts raise it | take the worst-case `ups.load` over a week of history; run trial 1 at it, or add the extra load by hand; `LB` is the backstop |
 | 4 | a second dip soon after the first finds a partly drained battery (about 6 h to 90%) | the guard's clock resets after `mains_stable_seconds` of mains; the model credits the used energy back slowly over a fixed 6 hours, which covers the second dip |
-| 5 | a started `poweroff` cannot be cancelled | the restore waits for each shed host to be confirmed down before waking any |
+| 5 | `awake` must not race a running `asleep` | the restore runs `awake` only once each host's `asleep` has returned (exit code and `RESULT` line), and a non-zero `asleep` is surfaced |
 | 6 | the current battery's age and condition are unknown | not a model input (decided); the fit is of this battery, and a replacement means a new fit |
 | 7 | what else is on the UPS (switch, router, access point, the Mac) is not inventoried | **yours:** list the loads on the UPS; the plug's WiFi and the followers' ssh path both depend on them |
 | 8 | the recorder's 2 s data and independent check go | kept until after trial 1 (decided); the 10 s poll no longer applies: the publisher publishes every 2 s while on battery (decided) |
@@ -738,15 +776,15 @@ first release carrying the publisher and the guard in dry-run**, not a publisher
 
 4. **Close the data-capture gaps** and run the review above on `rackmains`, `mockdriver`, `tools/schema`, `tools/outage` and the
    hooks.
-5. **Run the forced-command test and the shutdown timing** (yours, on the hosts, tests 3 and 4), recording each result here; they
+5. **Run the forced-command test and the `asleep` timing** (yours, on the hosts, tests 3 and 4), recording each result here; they
    fix `halt.max_seconds`.
 6. **Build the guard, dry-run only**: restructure `run` so the guard starts before the broker connect, generate the host file
-   and `thresholds.json`, config and state, the ssh and wake runners, the state machine with mock sequences, the heartbeat in the
+   and `thresholds.json`, config and state, the ssh runners for `asleep` and `awake`, the state machine with mock sequences, the heartbeat in the
    health check; then review it as above.
 7. **Add the workbook rows (yours), release publisher and guard in dry-run** and confirm `rackmains/status` is `online`, the
    entities appear, and a short `outage` cut turns `rack_mains_status` OFF within one poll and back with `mains_status` `OB`.
 8. **Trial 1, then drop the recorder** (the publisher must have agreed with it through the long cut), **then the restart tests
-   (5 to 8), then trials 2 to 4 live**, recording each result here.
+   (5 and 6), then trials 2 to 4 live**, recording each result here.
 9. **Trial 5 once per battery**, fit `thresholds.json` offline, release the measured thresholds.
 
 ## Open decisions
@@ -755,7 +793,8 @@ first release carrying the publisher and the guard in dry-run**, not a publisher
   check tolerates 120 s of staleness today, which a 60 s publish leaves only one missed publish of margin; raise it to 180 s.
 - **Switch or binary sensor.** `rack_mains_status` is a read-only `binary_sensor`; revisit if a command is ever wired.
 - **Who sends the final UPS command**, the guard (read-write socket) or the host.
-- **Restart shape**, A to D above, from the restart tests.
+- **Restart shape.** Decided: `awake` when mains returns early, `AFTERG3_EN` after a cut; the power-on-after-cut test (5)
+  confirms it per host.
 - **A staleness reminder.** The file carries no expiry, so a battery replacement or a six-monthly look at the trial 1 result is
   tracked outside it (a Home Assistant reminder, or by hand).
 
@@ -785,6 +824,12 @@ first release carrying the publisher and the guard in dry-run**, not a publisher
 - **A guard sharing the publisher's broker loop.** A broker outage would stop it.
 - **Followers deciding for themselves from a LAN-readable `upsd`.** Resilient to `max` failing, but it spreads UPS logic across
   hosts, exposes `upsd`, and cannot keep `max` last.
+
+- **Powering hosts off (`systemctl poweroff`).** A Mac mini that is shut down stays off when power returns; it restarts after a
+  cut only from a running state. Replaced by `asleep`, which quiesces a host and leaves it running.
+- **Wake on LAN.** Needed only to restart hosts that `poweroff` had left off, and it wants the container on the host network. Dropped
+  without testing (`mad` also reports `Wake-on: d`).
+- **A smart plug per host** (new hardware) to restart hosts.
 
 ## Renames
 

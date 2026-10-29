@@ -1096,11 +1096,13 @@ class WrangleTest(unittest.TestCase):
             "corrupt_20",
             standing=1,
             rerun=False,
-            errored={plugin.CTR_SRC_DATA: 4},
+            errored={plugin.CTR_SRC_DATA: 5},
             file_asserts={
-                "manual_balances_2026.csv": [assert_file_size(min_rows=5, max_rows=5), assert_file_columns(["Date", "Time", "Account", "Balance Manual"])],
+                "manual_balances_2026.csv": [assert_file_size(min_rows=6, max_rows=6), assert_file_columns(["Date", "Time", "Account", "Balance Manual", "Account ID"])],
                 "__bank_balances_current.csv": [assert_file_does_not_exist()],
-                "__bank_logs.csv": [assert_file_column_values("Code", ["ACCOUNT_LINKED", "ACCOUNT_NOT_MANUAL", "BALANCE_MANUAL_STALE", "DATE_FUTURE", "VALUE_UNPARSED"], sort_by=["Code"])],
+                "__bank_logs.csv": [
+                    assert_file_column_values("Code", ["ACCOUNT_LINKED", "ACCOUNT_NOT_MANUAL", "ACCOUNT_UNKNOWN", "BALANCE_MANUAL_STALE", "DATE_FUTURE", "VALUE_UNPARSED"], sort_by=["Code"])
+                ],
             },
         )
 

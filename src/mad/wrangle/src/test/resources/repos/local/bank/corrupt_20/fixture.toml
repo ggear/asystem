@@ -1,5 +1,5 @@
 files_processed = 0
 rows_delta = 0
 end_date = ""
-expected_errors = 4
+expected_errors = 5
 cols_data = -1
