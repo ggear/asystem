@@ -7,7 +7,8 @@
 #   awake [--health-timeout SECONDS] [--quiet] [--dry-run]
 #
 # Options
-#   --health-timeout  seconds to wait for containers to turn healthy, default 180
+#   --health-timeout  seconds to wait for starting or unhealthy containers to turn healthy,
+#                     default 60, 0 to report without waiting
 #   --quiet           drop DEBUG lines
 #   --dry-run         print the steps, change nothing
 #
@@ -30,7 +31,7 @@ set -uo pipefail
 ################################################################################
 DRY_RUN=false
 QUIET=false
-HEALTH_TIMEOUT=180
+HEALTH_TIMEOUT=60
 RUN_ID="$(date +%s)-$$"
 LOG_FILE="${AWAKE_LOG:-/run/awake.log}"
 STATE="${ASLEEP_STATE:-/run/asleep.state}"
@@ -138,6 +139,18 @@ snapshot() {
   fi
   log_debug "Snapshot [${label}], services [$(units service running | wc -l)], timers [$(units timer active | wc -l)]"
   log_debug "Snapshot [${label}], automounts [$(units automount active | wc -l)], failed [$(units any failed | wc -l)]"
+}
+
+explain() {
+  local name="$1" line
+  local checks='{{range .State.Health.Log}}{{.End.Format "15:04:05"}} exit [{{.ExitCode}}] '
+  checks+='{{printf "%.100q" .Output}}{{"\n"}}{{end}}'
+  log_warn "Container [${name}] health [$(docker inspect --format '{{.State.Health.Status}}' "${name}")]"
+  log_warn "Container [${name}] failing streak [$(docker inspect --format '{{.State.Health.FailingStreak}}' "${name}")]"
+  while IFS= read -r line; do
+    log_warn "Container [${name}] check ${line}"
+  done < <(docker inspect --format "${checks}" "${name}" | grep . | tail -n 2)
+  docker logs --tail 5 "${name}" 2>&1 | log_out
 }
 
 recorded() { awk -v kind="$1" '$1 == kind {print $2}' "${STATE}" 2>/dev/null; }
@@ -310,8 +323,12 @@ try 300 systemctl start default.target
 section "Health"
 WAITED=0
 if [[ "${DRY_RUN}" != "true" ]] && has docker; then
-  while [[ -n "$(docker ps --quiet --filter health=starting)" ]] && ((WAITED < HEALTH_TIMEOUT)); do
-    log_debug "Waiting for health, waited [${WAITED}] seconds"
+  PENDING=(--filter health=starting --filter health=unhealthy)
+  while [[ -n "$(docker ps --quiet "${PENDING[@]}")" ]] && ((WAITED < HEALTH_TIMEOUT)); do
+    if ((WAITED % 15 == 0)); then
+      NAMES="$(docker ps --format '{{.Names}}' "${PENDING[@]}" | xargs)"
+      log_debug "Waiting for health, waited [${WAITED}] seconds, pending [${NAMES}]"
+    fi
     sleep 3
     WAITED=$((WAITED + 3))
   done
@@ -323,6 +340,7 @@ if has docker; then
   mapfile -t STARTING < <(docker ps --format '{{.Names}}' --filter health=starting)
 fi
 log_debug "Waited [${WAITED}] seconds, unhealthy [${UNHEALTHY[*]:-}], still starting [${STARTING[*]:-}]"
+for NAME in "${UNHEALTHY[@]}" "${STARTING[@]}"; do explain "${NAME}"; done
 
 ################################################################################
 # Verdict

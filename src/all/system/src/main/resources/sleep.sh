@@ -4,8 +4,7 @@
 # asleep, quiesce the host so a power cut lands on clean disks, never powers off
 #
 # Usage
-#   asleep [--deep | --shallow] [--keep UNIT]... [--stop CONTAINER]...
-#          [--stop-timeout SECONDS] [--quiet] [--dry-run]
+#   asleep [--deep | --shallow] [--keep UNIT]... [--stop CONTAINER]... [--stop-timeout SECONDS] [--quiet] [--dry-run]
 #
 # Options
 #   --deep            stop everything, root and every mount read only (default)
