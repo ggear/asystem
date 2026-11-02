@@ -662,8 +662,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, merge=False, transcode=Fal
         return _data.select(metadata_columns).rename(
             lambda column: (
                 (
-                    ((column.split("__")[0].replace("_", " ").title() + " (" + column.split("__")[1] + ")") if len(column.split("__")) == 2 else column.replace("_", " ").title())
-                    .replace(" Hdr ", " HDR ")
+                    ((column.split("__")[0].replace("_", " ").title() + " (" + column.split("__")[1] + ")") if len(column.split("__")) == 2 else column.replace("_", " ").title()).replace(
+                        " Hdr ", " HDR "
+                    )
                 )
                 if "_" in column
                 else column
