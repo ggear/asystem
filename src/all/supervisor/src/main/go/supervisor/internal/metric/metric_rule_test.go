@@ -216,6 +216,40 @@ func TestMetricRule_DeclaredByEveryMetric(t *testing.T) {
 	}
 }
 
+func TestMetricRule_UsedMemoryFollowsSwap(t *testing.T) {
+	tests := []struct {
+		name         string
+		rule         Rule
+		self         float64
+		swapHealthy  bool
+		swapReadable bool
+		expectedOK   bool
+	}{
+		{name: "pulse passes with memory and swap within bounds", rule: GetIDPulseRule(MetricHostUsedMemory), self: 40, swapHealthy: true, swapReadable: true, expectedOK: true},
+		{name: "pulse fails on unhealthy swap despite low memory", rule: GetIDPulseRule(MetricHostUsedMemory), self: 40, swapHealthy: false, swapReadable: true, expectedOK: false},
+		{name: "pulse fails on unreadable swap", rule: GetIDPulseRule(MetricHostUsedMemory), self: 40, swapHealthy: false, swapReadable: false, expectedOK: false},
+		{name: "pulse fails on high memory despite healthy swap", rule: GetIDPulseRule(MetricHostUsedMemory), self: 96, swapHealthy: true, swapReadable: true, expectedOK: false},
+		{name: "trend passes with memory and swap within bounds", rule: GetIDTrendRule(MetricHostUsedMemory), self: 40, swapHealthy: true, swapReadable: true, expectedOK: true},
+		{name: "trend fails on unhealthy swap despite low memory", rule: GetIDTrendRule(MetricHostUsedMemory), self: 40, swapHealthy: false, swapReadable: true, expectedOK: false},
+		{name: "trend fails on high memory despite healthy swap", rule: GetIDTrendRule(MetricHostUsedMemory), self: 91, swapHealthy: true, swapReadable: true, expectedOK: false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			resolve := func(id ID) (float64, bool, bool) {
+				if id == MetricHostUsedSwapSpace {
+					return 0, test.swapReadable, test.swapHealthy
+				}
+				return 0, false, false
+			}
+			gates := func(GateID) (bool, bool) { return false, false }
+			result := test.rule.Evaluate("pct", test.self, true, resolve, gates)
+			if result.OK != test.expectedOK {
+				t.Errorf("ok: got %v want %v", result.OK, test.expectedOK)
+			}
+		})
+	}
+}
+
 func TestMetricRule_UnitLabel(t *testing.T) {
 	tests := []struct {
 		unit     string

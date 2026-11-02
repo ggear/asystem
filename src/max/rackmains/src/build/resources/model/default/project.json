@@ -1,0 +1,31 @@
+{
+  "spec_version": 1,
+  "name": "rackmains_ups_battery",
+  "model_version": "static-1",
+  "signature_version": 1,
+  "flavor": "static",
+  "provenance": {
+    "source": "manual",
+    "trained_on": "none, the rollout A starting values",
+    "inputs": [
+      "rackmains/ups/battery/data/golden/2026-10-31_18-33-18/ups_battery_golden.csv"
+    ],
+    "notes": "a conservative default, not fitted"
+  },
+  "files": {
+    "signature": {
+      "path": "signature.json",
+      "sha256": "88182925ae6aa2ca966fa11e80ba0ece0ae3ee9ca5f2140e53add169efdb20e6"
+    },
+    "golden": {
+      "path": "golden.json",
+      "sha256": "bb72c17a5264d7bc49a154241bc585cb83221163b11ecc21518b081581a92b77"
+    }
+  },
+  "constants": {
+    "rackmains_guard_shed_max_seconds": 120,
+    "rackmains_guard_halt_max_seconds": 450,
+    "rackmains_guard_mains_stable_seconds": 300,
+    "rackmains_guard_halt_delay_seconds": 120
+  }
+}

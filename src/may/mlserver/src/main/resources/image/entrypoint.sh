@@ -4,4 +4,5 @@ set -o nounset
 set -o errexit
 
 mlserver --version
-while true; do sleep 10; done
+trap 'exit 0' TERM INT
+while true; do sleep 10 & wait $!; done

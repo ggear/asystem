@@ -5,7 +5,7 @@ edition = "2021"
 publish = false
 
 [workspace]
-members = ["tools/schema", "tools/outage"]
+members = ["tools/schema"]
 
 [dependencies]
 chrono = { version = "0.4", default-features = false, features = ["clock"] }

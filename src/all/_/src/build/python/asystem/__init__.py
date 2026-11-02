@@ -21,6 +21,7 @@ from requests import get
 
 from asystem.bootstrap import *
 from asystem.container import *
+from asystem.model import *
 from asystem.schema import (
     SchemaBrokerMember,
     SchemaBrokerPayload,

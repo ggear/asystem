@@ -98,6 +98,7 @@ Integrate Withings scale direcltly, locally, it has been done here https://didac
 ###############################################################################################################################################################
 # Media
 ###############################################################################################################################################################
+Implement a move that moves all but parents series from /share/10 to X eg find . -name *.mkv ! -path */parents/series/*
 Have a 2-thread media transcode script, maybe do even/odd/every so can launch in two windows?
 Implement syncart.py to store artwork in /shares and save download after failure
 Formalise subtitle download and sync, add missing subtitles to common series

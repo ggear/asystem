@@ -387,18 +387,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, merge=False, transcode=Fal
                                 file_probe_stream_video_codec = "HEVC"
                             file_probe_stream_filtered["codec"] = file_probe_stream_video_codec
                             file_probe_stream_filtered["profile"] = file_probe_stream["profile"].title() if "profile" in file_probe_stream else ""
-                            file_probe_stream_filtered["colour_range"] = (
-                                "HDR"
-                                if (
-                                    "color_primaries" in file_probe_stream
-                                    and file_probe_stream["color_primaries"].lower()
-                                    in {
-                                        "bt2020",
-                                        "bt2100",
-                                    }
-                                )
-                                else "SDR"
-                            )
+                            file_probe_stream_filtered["hdr_format"], file_probe_stream_filtered["hdr_profile"] = _hdr(file_probe_stream)
                             file_probe_stream_filtered["pixel_depth"] = (
                                 "10"
                                 if (
@@ -648,6 +637,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, merge=False, transcode=Fal
                     yaml.dump(file_probe_filtered, file_metadata, width=float("inf"))
                 _set_permissions(file_metadata_path)
                 metadata_files_written.add(file_metadata_path)
+            _migrate_hdr(file_metadata_path, file_path)
             with open(file_metadata_path) as file_metadata:
                 try:
                     metadata = _flatten_dicts(_unwrap_lists(yaml.safe_load(file_metadata)))
@@ -671,7 +661,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, merge=False, transcode=Fal
             metadata_columns.extend(metadata_column for metadata_column in _data.columns if metadata_column.lower().startswith(metadata_column_stream))
         return _data.select(metadata_columns).rename(
             lambda column: (
-                ((column.split("__")[0].replace("_", " ").title() + " (" + column.split("__")[1] + ")") if len(column.split("__")) == 2 else column.replace("_", " ").title())
+                (
+                    ((column.split("__")[0].replace("_", " ").title() + " (" + column.split("__")[1] + ")") if len(column.split("__")) == 2 else column.replace("_", " ").title())
+                    .replace(" Hdr ", " HDR ")
+                )
                 if "_" in column
                 else column
             )
@@ -761,7 +754,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, merge=False, transcode=Fal
                 "Metadata Loaded",
                 "Video 1 Index",
                 "Video 1 Codec",
-                "Video 1 Colour Range",
+                "Video 1 HDR Format",
+                "Video 1 HDR Profile",
                 "Video 1 Width",
                 "Video 1 Resolution",
                 "Video 1 Resolution Target",
@@ -1320,7 +1314,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, merge=False, transcode=Fal
                         .otherwise(pl.lit(""))
                     ).alias("Transcode Video Resolution"),
                     (
-                        pl.when(pl.col("Transcode Video Bitrate") == pl.col("Video 1 Bitrate Estimate (Kbps)"))
+                        pl.when((pl.col("Transcode Video Bitrate") == pl.col("Video 1 Bitrate Estimate (Kbps)")) & (pl.col("Video 1 Resolution Target Size") != "Large"))
                         .then(pl.lit("--copy-video"))
                         .when(pl.col("Target Quality").cast(pl.Int32) <= QUALITY_MIN)
                         .then(
@@ -1987,6 +1981,55 @@ done
     for metadata_summary_category in metadata_summary_pl.filter(~pl.col("File Action").is_null() & pl.col("Media Type").is_null()).select("File Action", "File Count").to_dicts():
         metadata_summary_categories[metadata_summary_category["File Action"]] = metadata_summary_category["File Count"]
     return files_analysed, metadata_summary_categories
+
+
+def _hdr(_stream):
+    _side_data = _stream.get("side_data_list") or []
+    _dovi = next((_side for _side in _side_data if "dovi" in str(_side.get("side_data_type", "")).lower() or "dolby vision" in str(_side.get("side_data_type", "")).lower()), None)
+    if _dovi is not None:
+        _profile = _dovi.get("dv_profile")
+        _compatibility = _dovi.get("dv_bl_signal_compatibility_id")
+        return "Dolby Vision", (f"{_profile}.{_compatibility}" if _profile is not None and _compatibility is not None else "")
+    _transfer = str(_stream.get("color_transfer", "")).lower()
+    if _transfer == "smpte2084":
+        return "HDR10", ""
+    if _transfer == "arib-std-b67":
+        return "HLG", ""
+    return "SDR", ""
+
+
+def _migrate_hdr(_metadata_path, _file_path):
+    with open(_metadata_path) as _metadata_file:
+        _metadata = yaml.safe_load(_metadata_file)
+    if not isinstance(_metadata, list):
+        return
+    _stale = []
+    for _section in _metadata:
+        if isinstance(_section, dict) and isinstance(_section.get("video"), list):
+            for _indexed in _section["video"]:
+                for _wrapped in _indexed.values():
+                    _keys = [_key for _entry in _wrapped for _key in _entry]
+                    if "hdr_format" not in _keys:
+                        _stale.append(_wrapped)
+    if not _stale:
+        return
+    try:
+        _probe_streams = {str(_probe_stream.get("index")): _probe_stream for _probe_stream in ffmpeg.probe(_file_path).get("streams", [])}
+    except Error:
+        _probe_streams = {}
+    for _wrapped in _stale:
+        _index = next((str(_entry["index"]) for _entry in _wrapped if "index" in _entry), "")
+        _format, _profile = _hdr(_probe_streams[_index]) if _index in _probe_streams else ("", "")
+        _replacement = [{"hdr_format": _format}, {"hdr_profile": _profile}]
+        _position = next((_i for _i, _entry in enumerate(_wrapped) if "colour_range" in _entry), None)
+        if _position is None:
+            _position = next((_i for _i, _entry in enumerate(_wrapped) if "pixel_depth" in _entry), len(_wrapped))
+            _wrapped[_position:_position] = _replacement
+        else:
+            _wrapped[_position : _position + 1] = _replacement
+    with open(_metadata_path, "w") as _metadata_file:
+        yaml.dump(_metadata, _metadata_file, width=float("inf"))
+    _set_permissions(_metadata_path)
 
 
 def _normalise_name(_name):

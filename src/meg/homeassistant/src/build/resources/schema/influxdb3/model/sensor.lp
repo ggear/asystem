@@ -96,6 +96,7 @@
 #     lounge_air_purifier_fan_speed,
 #     lounge_air_purifier_filter_age,
 #     lounge_lamp_bulb_1_energy_daily,
+#     lounge_lamp_bulb_1_energy_monthly,
 #     lounge_lamp_bulb_1_energy_weekly,
 #     parents_air_purifier_air_quality,
 #     parents_air_purifier_fan_speed,

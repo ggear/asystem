@@ -852,6 +852,20 @@ def _build(context, filter_module=None, filter_host=None, is_release=False):
             _run_local(context, f"ruff format {python_paths}", module)
             _print_line("Type checking sources ...")
             _run_local(context, f"pyright --project {ROOT_DIR} {python_paths}", module)
+        notebook_paths = " ".join(relpath(path, join(ROOT_MODULE_DIR, module)) for path in sorted(glob.glob(join(ROOT_MODULE_DIR, module, "src/main/model/*/*/*/*.ipynb"))))
+        model_paths = " ".join(relpath(path, join(ROOT_MODULE_DIR, module)) for path in sorted(glob.glob(join(ROOT_MODULE_DIR, module, "src/main/model/*/*/*/model.py"))))
+        if model_paths:
+            _print_line("Linting models ...")
+            _run_local(context, f"ruff check --fix {model_paths}", module)
+            _run_local(context, f"ruff format {model_paths}", module)
+        if notebook_paths:
+            _print_line("Linting notebooks ...")
+            _run_local(context, f"ruff check --fix {notebook_paths}", module)
+            _run_local(context, f"ruff format {notebook_paths}", module)
+            shared_python_path = glob.glob(join(ROOT_MODULE_DIR, "*", SHARED_MODULE_NAME, "src/build/python"))[0]
+            _run_local(context, f"PYTHONPATH={shared_python_path} python -W ignore -m asystem.notebook --fix {notebook_paths}", module)
+            workspace_paths = " ".join(relpath(path, join(ROOT_MODULE_DIR, module)) for path in sorted(glob.glob(join(ROOT_MODULE_DIR, module, "src/main/model/*/*/*/"))))
+            _run_local(context, f"PYTHONPATH={shared_python_path} python -W ignore -m asystem.workspace {workspace_paths}", module)
         if isfile(join(ROOT_MODULE_DIR, module, "src/setup.py")):
             _run_local(context, "python setup.py sdist", join(module, "target/package"))
         module_go_main_path = join(ROOT_MODULE_DIR, module, "src/main/go", _get_service(module))

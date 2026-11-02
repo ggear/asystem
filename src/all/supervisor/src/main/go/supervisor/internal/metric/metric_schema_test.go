@@ -131,6 +131,37 @@ func TestMetricSchema_LevelsOf(t *testing.T) {
 	}
 }
 
+func TestMetricSchema_UsedMemoryLevelsIgnoreSwap(t *testing.T) {
+	pulseLimit, trendLimit := 95.0, 90.0
+	tests := []struct {
+		name     string
+		rule     Rule
+		red      bool
+		expected schema.Levels
+	}{
+		{name: "pulse_exports_only_its_own_red_bound", rule: GetIDPulseRule(MetricHostUsedMemory), red: true, expected: schema.Levels{Better: schema.BetterLower, Red: &pulseLimit, Inclusive: true}},
+		{name: "trend_exports_only_its_own_amber_bound", rule: GetIDTrendRule(MetricHostUsedMemory), expected: schema.Levels{Better: schema.BetterLower, Amber: &trendLimit, Inclusive: true}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := levelsOf(test.rule, test.red, false)
+			if got == nil {
+				t.Fatalf("levels: got nil want %+v", test.expected)
+			}
+			if got.Better != test.expected.Better || got.Inclusive != test.expected.Inclusive ||
+				(got.Red == nil) != (test.expected.Red == nil) || (got.Amber == nil) != (test.expected.Amber == nil) {
+				t.Fatalf("levels: got %+v want %+v", got, test.expected)
+			}
+			if bound := got.Red; bound != nil && *bound != *test.expected.Red {
+				t.Errorf("red: got %v want %v", *bound, *test.expected.Red)
+			}
+			if bound := got.Amber; bound != nil && *bound != *test.expected.Amber {
+				t.Errorf("amber: got %v want %v", *bound, *test.expected.Amber)
+			}
+		})
+	}
+}
+
 func TestMetricSchema_Cadence(t *testing.T) {
 	tests := []struct {
 		name        string

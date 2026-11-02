@@ -478,7 +478,7 @@ spec:
             queryOptions:
               interval: 6s
             transformations: []
-        description: 'Generated: memory in use against the total installed'
+        description: 'Generated: memory in use against the total installed, failing whenever swap space in use fails'
         id: 14
         links: []
         title: Server RAM Usage
@@ -2728,7 +2728,7 @@ spec:
             queryOptions:
               interval: 6s
             transformations: []
-        description: 'Generated: memory in use against the total installed, smoothed across the trend window'
+        description: 'Generated: memory in use against the total installed, failing whenever swap space in use fails, smoothed across the trend window'
         id: 9
         links: []
         title: RAM Trend Max

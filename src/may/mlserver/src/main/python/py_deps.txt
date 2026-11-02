@@ -2,8 +2,4 @@ mlflow
 anyio
 fastapi
 
-scipy
-polars
 scikit-learn
-
-matplotlib

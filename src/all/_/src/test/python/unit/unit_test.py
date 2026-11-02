@@ -1,3 +1,5 @@
+import contextlib
+import json
 import os
 import subprocess
 import sys
@@ -668,3 +670,392 @@ class GenerateRulesTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ModelProjectTest(unittest.TestCase):
+    def setUp(self):
+        sys.path.insert(0, join(ROOT, "all/_/src/build/python"))
+        from asystem.model import build_signature, signature_input, signature_output, signature_state, golden_document, golden_step
+
+        self.project_dir = join(tempfile.mkdtemp(), "project")
+        self.signature = build_signature(
+            "demo_calc",
+            ["1"],
+            [signature_input("demo_clock_seconds", "seconds", "Time of the call."), signature_input("demo_state_in", "state", "Carried state.", required=False, shape=[-1])],
+            [signature_output("demo_limit_seconds", "seconds", "A limit."), signature_output("demo_state_out", "state", "Next state.", required=False, shape=[-1])],
+            state=[signature_state("last_seconds", "seconds", "The previous call.")],
+        )
+        steps = [
+            golden_step(self.signature, "1", "s-0", {"demo_clock_seconds": 10.0}, {"demo_limit_seconds": 5}),
+            golden_step(self.signature, "1", "s-1", {"demo_clock_seconds": 11.0, "demo_state_in": [10.0]}, {"demo_limit_seconds": 5}),
+            golden_step(self.signature, "1", "s-2", {"demo_state_in": [10.0]}, error="signature"),
+        ]
+        self.golden = golden_document("1", [("calls", steps)])
+
+    def write(self, **overrides):
+        from asystem.model import write_project
+
+        arguments = {
+            "project_dir": self.project_dir,
+            "name": "demo_calc",
+            "model_version": "1",
+            "flavor": "static",
+            "signature": self.signature,
+            "golden": self.golden,
+            "provenance": {"source": "manual", "inputs": []},
+            "constants": {"demo_limit_seconds": 5},
+        }
+        return write_project(**{**arguments, **overrides})
+
+    def rules(self, **overrides):
+        from asystem.model import lint_project
+
+        with contextlib.suppress(ValueError):
+            self.write(**overrides)
+        return sorted({rule for rule, _ in lint_project(self.project_dir)})
+
+    def test_valid_project_has_no_findings(self):
+        self.assertEqual("static", self.write()["flavor"])
+        self.assertEqual([], self.rules())
+
+    def test_tampered_file_is_found(self):
+        self.write()
+        with open(join(self.project_dir, "golden.json"), "a") as golden:
+            golden.write(" ")
+        from asystem.model import lint_project
+
+        self.assertEqual(["PJ003"], sorted({rule for rule, _ in lint_project(self.project_dir)}))
+
+    def test_unknown_flavor_and_source_are_found(self):
+        self.assertEqual(["PJ002"], self.rules(flavor="guess", provenance={"source": "guess", "inputs": []}))
+
+    def test_provenance_inputs_must_be_a_list(self):
+        self.assertEqual(["PJ002"], self.rules(provenance={"source": "manual"}))
+
+    def test_model_flavor_needs_its_file(self):
+        self.assertEqual(["PJ003"], self.rules(flavor="wasm", provenance={"source": "manual", "inputs": [], "implementation": "demo"}))
+
+    def test_model_flavor_needs_its_implementation(self):
+        self.assertEqual(["PJ002", "PJ003"], self.rules(flavor="wasm"))
+
+    def test_name_must_match_signature_and_style(self):
+        self.assertIn("PJ004", self.rules(name="Demo-Calc"))
+
+    def test_signature_version_and_model_version_are_checked(self):
+        self.assertEqual(["PJ005"], self.rules(model_version="2", golden={**self.golden, "model_version": "2"}))
+
+    def test_output_must_be_module_prefixed_with_a_unit_suffix(self):
+        self.signature["outputs"][0]["name"] = "other_limit"
+        self.assertIn("PJ007", self.rules(constants={"other_limit": 5}))
+
+    def test_constant_outside_signature_is_found(self):
+        self.assertIn("PJ008", self.rules(constants={"demo_limit_seconds": 5, "demo_misspelt_seconds": 1}))
+
+    def test_static_must_cover_required_outputs(self):
+        self.assertIn("PJ008", self.rules(constants={}))
+
+    def test_golden_version_mismatch_is_found(self):
+        self.assertEqual(["PJ009"], self.rules(golden={**self.golden, "model_version": "2"}))
+
+    def test_golden_step_must_have_required_inputs(self):
+        del self.golden["sequences"][0]["steps"][0]["request"]["inputs"][0]
+        self.assertIn("PJ010", self.rules())
+
+    def test_golden_needs_an_error_step_and_a_stateless_first_call(self):
+        del self.golden["sequences"][0]["steps"][2]
+        self.assertEqual(["PJ011"], self.rules())
+        del self.golden["sequences"][0]["steps"][0]
+        self.assertEqual(["PJ011"], self.rules())
+
+    def test_static_responses_must_equal_the_constants(self):
+        self.golden["sequences"][0]["steps"][0]["response"]["outputs"][0]["data"] = [6]
+        self.assertEqual(["PJ012"], self.rules())
+
+    def test_package_project_builds_golden_from_samples(self):
+        from asystem.model import lint_project, package_project
+
+        rows = [
+            {"demo_clock_seconds": 10.0, "expect": "ok"},
+            {"demo_clock_seconds": 11.0, "demo_state_in": "10.0 11.0", "expect": "ok"},
+            {"expect": "error"},
+        ]
+        manifest = package_project(self.project_dir, "demo_calc", "1", "static", self.signature, rows, {"source": "manual", "inputs": []}, constants={"demo_limit_seconds": 5})
+        self.assertEqual("static", manifest["flavor"])
+        self.assertEqual([], lint_project(self.project_dir))
+
+    def test_diff_signature_names_what_changed(self):
+        from asystem.model import diff_signature
+
+        other = json.loads(json.dumps(self.signature))
+        other["inputs"][0]["parameters"]["unit"] = "minutes"
+        del other["outputs"][1]
+        other["parameters"]["state"] = []
+        differences = diff_signature(self.signature, other)
+        self.assertTrue(any("input [demo_clock_seconds] changed" in item for item in differences))
+        self.assertTrue(any("output [demo_state_out] is missing" in item for item in differences))
+        self.assertTrue(any("state slots changed" in item for item in differences))
+        self.assertEqual([], diff_signature(self.signature, {**self.signature, "versions": ["9"]}))
+
+    def test_render_rust_and_go_name_every_tensor_with_optional_fields(self):
+        from asystem.model import render_go, render_rust
+
+        rust = render_rust(self.signature)
+        self.assertIn("pub demo_clock_seconds: f64,", rust)
+        self.assertIn("pub demo_state_in: Option<Vec<f64>>,", rust)
+        self.assertIn('pub const REQUIRED_OUTPUT_NAMES: &[&str] = &["demo_limit_seconds"];', rust)
+        go = render_go(self.signature, "model")
+        self.assertIn("DemoClockSeconds", go)
+        self.assertIn("[]float64", go)
+        self.assertIn('`json:"demo_clock_seconds"`', go)
+
+    def test_gate_must_cover_every_host_and_architecture_for_this_project(self):
+        from asystem.model import check_gate
+
+        gate = {"project_sha256": "abc", "results": [{"host": "python", "arch": "x86_64", "passed": True}, {"host": "python", "arch": "aarch64", "passed": False}]}
+        findings = check_gate(gate, "abc", ["python"], ["x86_64", "aarch64"], "graham")
+        self.assertEqual(["PM001"], [rule for rule, _ in findings])
+        self.assertEqual(["PM002", "PM003"], sorted(rule for rule, _ in check_gate({**gate, "project_sha256": "xyz"}, "abc", ["python"], ["x86_64"], "")))
+        self.assertEqual([], check_gate(gate, "abc", ["python"], ["x86_64"], "graham"))
+
+    def test_same_signature_ignores_only_the_versions(self):
+        from asystem.model import same_signature
+
+        other = {**self.signature, "versions": ["2"]}
+        self.assertTrue(same_signature(self.signature, other))
+        other["outputs"] = other["outputs"][:1]
+        self.assertFalse(same_signature(self.signature, other))
+
+    def test_registered_name_and_check_name(self):
+        from asystem.model import check_name, registered_name
+
+        self.assertEqual("rackmains_ups_battery", registered_name("rackmains", "ups", "battery"))
+        self.assertEqual("example_static_constant", registered_name("example", "static", "constant"))
+        with self.assertRaises(ValueError):
+            check_name("Bad-Name")
+
+
+class NotebookLintTest(unittest.TestCase):
+    def setUp(self):
+        sys.path.insert(0, join(ROOT, "all/_/src/build/python"))
+        self.root = tempfile.mkdtemp()
+        self.notebook_dir = join(self.root, "demo", "calc", "run")
+        os.makedirs(self.notebook_dir)
+        with open(join(self.notebook_dir, "plan.md"), "w") as plan:
+            plan.write("# run\n")
+        self.path = join(self.notebook_dir, "notebook.ipynb")
+
+    def notebook(self, **changes):
+        import json
+
+        title = "# demo / calc / run\n\nA calculation.\n\n| Term | In This Notebook |\n|---|---|\n" + "\n".join(f"| **{term}** | Value |" for term in ("Intent", "Project Flavor", "Data Splits"))
+        section = "## {}\n\n- **Stage:** {}\n- **Intent:** Do it."
+        cells = [
+            {"cell_type": "markdown", "metadata": {}, "source": title},
+            {"cell_type": "markdown", "metadata": {}, "source": section.format("Setup", "none")},
+            {"cell_type": "code", "metadata": {}, "execution_count": None, "outputs": [], "source": 'WORKSPACE = "demo/calc/run"\nMODEL_NAME = "demo_calc_run"\n'},
+            {"cell_type": "markdown", "metadata": {}, "source": section.format("Package", "5, package")},
+        ]
+        notebook = {"cells": cells, "metadata": {}, "nbformat": 4, "nbformat_minor": 5}
+        notebook.update(changes)
+        with open(self.path, "w") as notebook_file:
+            json.dump(notebook, notebook_file)
+        return notebook
+
+    def rules(self):
+        from asystem.notebook import lint_notebook
+
+        return sorted({rule for rule, _, _ in lint_notebook(self.path)})
+
+    def test_valid_notebook_has_no_findings(self):
+        self.notebook()
+        self.assertEqual([], self.rules())
+
+    def test_outputs_are_found_and_stripped(self):
+        from asystem.notebook import fix_notebook
+
+        notebook = self.notebook()
+        notebook["cells"][2]["outputs"] = [{"output_type": "stream"}]
+        notebook["cells"][2]["execution_count"] = 3
+        self.notebook(cells=notebook["cells"])
+        self.assertEqual(["NB002"], self.rules())
+        self.assertTrue(fix_notebook(self.path))
+        self.assertEqual([], self.rules())
+        self.assertFalse(fix_notebook(self.path))
+
+    def test_wrong_title_is_found(self):
+        notebook = self.notebook()
+        notebook["cells"][0]["source"] = notebook["cells"][0]["source"].replace("# demo / calc / run", "# demo / calc / other")
+        self.notebook(cells=notebook["cells"])
+        self.assertEqual(["NB003"], self.rules())
+
+    def test_section_without_stage_is_found(self):
+        notebook = self.notebook()
+        notebook["cells"][3]["source"] = "## Package\n\n- **Intent:** Do it."
+        self.notebook(cells=notebook["cells"])
+        self.assertEqual(["NB006"], self.rules())
+
+    def test_sections_out_of_order_are_found(self):
+        notebook = self.notebook()
+        notebook["cells"][1], notebook["cells"][3] = notebook["cells"][3], notebook["cells"][1]
+        self.notebook(cells=notebook["cells"])
+        self.assertIn("NB005", self.rules())
+
+    def test_magic_path_and_secret_are_found(self):
+        notebook = self.notebook()
+        notebook["cells"][2]["source"] += '%matplotlib inline\npath = "/Users/someone/file"\ntoken = "abc"\n'
+        self.notebook(cells=notebook["cells"])
+        self.assertEqual(["NB007"], self.rules())
+
+    def test_wrong_model_name_is_found(self):
+        notebook = self.notebook()
+        notebook["cells"][2]["source"] = 'WORKSPACE = "demo/calc/run"\nMODEL_NAME = "demo"\n'
+        self.notebook(cells=notebook["cells"])
+        self.assertEqual(["NB008"], self.rules())
+
+    def test_missing_plan_is_found(self):
+        self.notebook()
+        os.remove(join(self.notebook_dir, "plan.md"))
+        self.assertEqual(["NB010"], self.rules())
+
+    def test_star_import_and_sys_path_are_found(self):
+        notebook = self.notebook()
+        notebook["cells"][2]["source"] += "from library.data import *\nimport sys\nsys.path.append('x')\n"
+        self.notebook(cells=notebook["cells"])
+        self.assertEqual(["NB011", "NB012"], self.rules())
+
+    def test_command_line_accepts_new_and_lint_and_the_old_lint_form(self):
+        from asystem.notebook import main
+
+        root = tempfile.mkdtemp()
+        self.assertEqual(0, main(["new", "egcli", "calc", "run", "static", "--root", root]))
+        path = join(root, "egcli", "calc", "run", "notebook.ipynb")
+        self.assertEqual(0, main(["lint", path]))
+        self.assertEqual(0, main([path]))
+        self.assertEqual(1, main(["new", "egcli", "calc", "run", "static", "--root", root]))
+
+    def test_scaffold_passes_every_check_and_refuses_to_overwrite(self):
+        from asystem.notebook import lint_notebook, scaffold_notebook
+        from asystem.workspace import lint_workspace
+
+        root = tempfile.mkdtemp()
+        for flavor in ("static", "wasm"):
+            created = scaffold_notebook(root, "example", "calc", flavor, flavor)
+            self.assertEqual([], lint_notebook(join(root, "example", "calc", flavor, "notebook.ipynb")))
+            self.assertEqual([], lint_workspace(join(root, "example", "calc", flavor)))
+            self.assertTrue(all(os.path.exists(path) for path in created))
+        with self.assertRaises(ValueError):
+            scaffold_notebook(root, "example", "calc", "static", "static")
+        with self.assertRaises(ValueError):
+            scaffold_notebook(root, "example", "calc", "other", "guess")
+        with self.assertRaises(ValueError):
+            scaffold_notebook(root, "Bad-Name", "calc", "run", "static")
+
+
+class WorkspaceLintTest(unittest.TestCase):
+    def setUp(self):
+        sys.path.insert(0, join(ROOT, "all/_/src/build/python"))
+        self.model_dir = join(tempfile.mkdtemp(), "demo", "calc", "run")
+        os.makedirs(join(self.model_dir, "data/golden/2026-01-01_00-00-00"))
+        for path in ("notebook.ipynb", "plan.md", "data/golden/2026-01-01_00-00-00/calc_run_golden.csv", "data/golden/.gitkeep"):
+            open(join(self.model_dir, path), "w").close()
+
+    def rules(self):
+        from asystem.workspace import lint_workspace
+
+        return sorted({rule for rule, _ in lint_workspace(self.model_dir)})
+
+    def test_valid_workspace_has_no_findings(self):
+        self.assertEqual([], self.rules())
+
+    def test_stray_file_and_second_notebook_are_found(self):
+        open(join(self.model_dir, "notes.txt"), "w").close()
+        open(join(self.model_dir, "other.ipynb"), "w").close()
+        self.assertEqual(["WS002", "WS003"], self.rules())
+
+    def test_two_model_files_are_found(self):
+        open(join(self.model_dir, "model.wasm"), "w").close()
+        self.assertEqual([], self.rules())
+        open(join(self.model_dir, "model.onnx"), "w").close()
+        self.assertEqual(["WS007"], self.rules())
+
+    def test_unknown_label_is_found(self):
+        os.makedirs(join(self.model_dir, "data/testing"))
+        self.assertEqual(["WS004"], self.rules())
+
+    def test_non_timestamp_directory_is_found(self):
+        os.makedirs(join(self.model_dir, "data/golden/latest"))
+        self.assertEqual(["WS005"], self.rules())
+
+    def test_dataset_must_be_a_csv_named_for_the_model_and_notebook(self):
+        open(join(self.model_dir, "data/golden/2026-01-01_00-00-00/other_golden.csv"), "w").close()
+        open(join(self.model_dir, "data/golden/2026-01-01_00-00-00/calc_run_golden.txt"), "w").close()
+        self.assertEqual(["WS006"], self.rules())
+
+    def test_readings_must_end_with_their_date_range(self):
+        os.makedirs(join(self.model_dir, "data/training/2026-01-01_00-00-00"))
+        path = join(self.model_dir, "data/training/2026-01-01_00-00-00")
+        open(join(path, "calc_run_voltage.csv"), "w").close()
+        self.assertEqual(["WS006"], self.rules())
+        os.remove(join(path, "calc_run_voltage.csv"))
+        open(join(path, "calc_run_voltage_2026-01-01_2026-01-31.csv"), "w").close()
+        self.assertEqual([], self.rules())
+
+    def test_bad_notebook_name_is_found(self):
+        bad = join(os.path.dirname(self.model_dir), "Run-Two")
+        os.rename(self.model_dir, bad)
+        self.model_dir = bad
+        self.assertIn("WS001", self.rules())
+
+
+class SpecSyncTest(unittest.TestCase):
+    SPEC = join(ROOT, "may/mlflow/src/build/resources/doc/spec.md")
+
+    def setUp(self):
+        sys.path.insert(0, join(ROOT, "all/_/src/build/python"))
+        with open(self.SPEC) as spec:
+            self.spec = spec.read()
+
+    def section(self, heading):
+        start = self.spec.index(heading)
+        end = self.spec.find("\n#", start + len(heading))
+        return self.spec[start : end if end != -1 else len(self.spec)]
+
+    def test_check_identifiers_agree_both_ways(self):
+        import re
+
+        in_spec = set(re.findall(r"^\| ((?:PJ|NB|WS|PM)\d{3}) \|", self.spec, re.MULTILINE))
+        in_code = set()
+        for module in ("model", "notebook", "workspace"):
+            with open(join(ROOT, f"all/_/src/build/python/asystem/{module}.py")) as source:
+                in_code |= set(re.findall(r'"((?:PJ|NB|WS|PM)\d{3})"', source.read()))
+        self.assertTrue(in_spec and in_code)
+        self.assertEqual(in_spec, in_code)
+
+    def test_every_requirement_is_covered_by_a_check_or_by_review(self):
+        import re
+
+        enforced = {}
+        for identifier, requirements in re.findall(r"^\| ((?:PJ|NB|WS|PM)\d{3}) \|.*\| (R[0-9, R]+) \|$", self.spec, re.MULTILINE):
+            for requirement in re.findall(r"R\d+", requirements):
+                enforced.setdefault(requirement, set()).add(identifier)
+        coverage = {}
+        for requirement, checked_by in re.findall(r"^\| (R\d+) \| ([^|]+) \|$", self.section("### 10.3 Coverage of the requirements"), re.MULTILINE):
+            coverage[requirement] = set() if checked_by.strip() == "Review" else {item.strip() for item in checked_by.split(",")}
+        defined = set(re.findall(r"^\| (R\d+) \| (?:Standard|Parity|Delivery|Change) \|", self.spec, re.MULTILINE))
+        self.assertTrue(enforced and coverage and defined)
+        self.assertEqual(defined, set(coverage))
+        self.assertEqual({requirement: ids for requirement, ids in coverage.items() if ids}, enforced)
+
+    def test_flavors_splits_and_sections_agree(self):
+        import re
+
+        from asystem.model import PROJECT_FLAVORS, PROJECT_SPLITS
+        from asystem.notebook import NOTEBOOK_SECTIONS
+
+        flavors = re.findall(r"^\| `(\w+)` \|", self.section("### 3.2 Flavors"), re.MULTILINE)
+        splits = re.findall(r"^\| `(\w+)` \|", self.section("### 6.3 Splits"), re.MULTILINE)
+        sections = re.findall(r"^\| ([A-Z][A-Za-z ]+?) \| (?:None|\d) \|", self.section("### 6.7 Notebook style guide"), re.MULTILINE)
+        self.assertTrue(flavors and splits and sections)
+        self.assertEqual(sorted(PROJECT_FLAVORS), sorted(flavors))
+        self.assertEqual(sorted(PROJECT_SPLITS), sorted(splits))
+        self.assertEqual(list(NOTEBOOK_SECTIONS), sections)

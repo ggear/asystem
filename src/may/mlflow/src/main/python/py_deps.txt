@@ -2,3 +2,11 @@ anyio
 virtualenv
 psycopg[binary]
 psycopg2-binary
+
+jupyterlab
+requests
+python-dateutil
+scipy
+polars
+scikit-learn
+matplotlib

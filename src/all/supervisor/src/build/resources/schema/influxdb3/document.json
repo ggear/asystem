@@ -1,6 +1,6 @@
 {
   "warning": "WARNING: This file is written by the build process, any manual edits will be lost!",
-  "source": "bbfd1743dfda730b9e4349305d99a6370522b705dc00919bbb05402d51ce3ccb",
+  "source": "c2bdab021814b2c1e325da189d804bac42d3fadefde2e654d1201187a930a159",
   "module": "supervisor",
   "discovered": false,
   "database": {
@@ -121,7 +121,7 @@
             "key": "used_memory",
             "kind": "int",
             "unit": "%",
-            "description": "memory in use against the total installed",
+            "description": "memory in use against the total installed, failing whenever swap space in use fails",
             "persist": true,
             "period": "",
             "levels": {
@@ -136,7 +136,7 @@
             "key": "used_memory_trend",
             "kind": "int",
             "unit": "%",
-            "description": "memory in use against the total installed, smoothed across the trend window",
+            "description": "memory in use against the total installed, failing whenever swap space in use fails, smoothed across the trend window",
             "persist": true,
             "period": "",
             "levels": {

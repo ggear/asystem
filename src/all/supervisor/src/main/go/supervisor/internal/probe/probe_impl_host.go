@@ -136,15 +136,6 @@ func (p *hostProbe) poll(_ context.Context, isPulse bool) error {
 		),
 		newCacheMetricTask(
 			metric.ValueInt,
-			metric.MetricHostUsedMemory,
-			metric.ServiceNameUnset,
-			p.usedMemory,
-			p.usedMemoryInt,
-			func() int8 { return p.usedMemoryInt.PulseMax() },
-			func() int8 { return p.usedMemoryInt.TrendMax() },
-		),
-		newCacheMetricTask(
-			metric.ValueInt,
 			metric.MetricHostAllocatedMemory,
 			metric.ServiceNameUnset,
 			p.allocatedMemory,
@@ -232,6 +223,15 @@ func (p *hostProbe) poll(_ context.Context, isPulse bool) error {
 			p.usedSwapSpaceInt,
 			func() int8 { return p.usedSwapSpaceInt.PulseMax() },
 			func() int8 { return p.usedSwapSpaceInt.TrendMax() },
+		),
+		newCacheMetricTask(
+			metric.ValueInt,
+			metric.MetricHostUsedMemory,
+			metric.ServiceNameUnset,
+			p.usedMemory,
+			p.usedMemoryInt,
+			func() int8 { return p.usedMemoryInt.PulseMax() },
+			func() int8 { return p.usedMemoryInt.TrendMax() },
 		),
 		newCacheMetricTask(
 			metric.ValueInt,

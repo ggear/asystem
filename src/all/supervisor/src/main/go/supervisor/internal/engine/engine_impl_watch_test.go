@@ -29,7 +29,7 @@ func TestEngineImplWatch_RunListeningProbesLoop(t *testing.T) {
 		{
 			name:                 "happy_no_services",
 			hostName:             "macmini-mad",
-			metricIds:            []metric.ID{metric.MetricHostUsedProcessor, metric.MetricHostUsedMemory},
+			metricIds:            []metric.ID{metric.MetricHostUsedProcessor, metric.MetricHostUsedMemory, metric.MetricHostUsedSwapSpace},
 			serviceMetricIDs:     []metric.ID{metric.MetricServiceUsedProcessor, metric.MetricServiceUsedMemory},
 			configPath:           testutil.FindTestFile(t, "config-happy-noservices-1.json", "config"),
 			createServiceCount:   0,
@@ -38,7 +38,7 @@ func TestEngineImplWatch_RunListeningProbesLoop(t *testing.T) {
 		{
 			name:                 "happy_one_service",
 			hostName:             "macmini-mad",
-			metricIds:            []metric.ID{metric.MetricHostUsedProcessor, metric.MetricHostUsedMemory},
+			metricIds:            []metric.ID{metric.MetricHostUsedProcessor, metric.MetricHostUsedMemory, metric.MetricHostUsedSwapSpace},
 			serviceMetricIDs:     []metric.ID{metric.MetricServiceUsedProcessor, metric.MetricServiceUsedMemory},
 			configPath:           testutil.FindTestFile(t, "config-happy-noservices-1.json", "config"),
 			createServiceCount:   1,
@@ -47,7 +47,7 @@ func TestEngineImplWatch_RunListeningProbesLoop(t *testing.T) {
 		{
 			name:                 "happy_three_services_prod_like",
 			hostName:             "macmini-mad",
-			metricIds:            []metric.ID{metric.MetricHostUsedProcessor, metric.MetricHostUsedMemory},
+			metricIds:            []metric.ID{metric.MetricHostUsedProcessor, metric.MetricHostUsedMemory, metric.MetricHostUsedSwapSpace},
 			serviceMetricIDs:     []metric.ID{metric.MetricServiceUsedProcessor, metric.MetricServiceUsedMemory},
 			configPath:           testutil.FindTestFile(t, "config-happy-prodlike-1.json", "config"),
 			createServiceCount:   3,
