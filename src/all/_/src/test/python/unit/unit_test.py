@@ -690,17 +690,17 @@ class ModelProjectTest(unittest.TestCase):
         self.project_dir = join(tempfile.mkdtemp(), "project")
         self.signature = build_signature(
             "demo_calc",
-            ["1"],
+            ["static-1"],
             [signature_input("demo_clock_seconds", "seconds", "Time of the call."), signature_input("demo_state_in", "state", "Carried state.", required=False, shape=[-1])],
             [signature_output("demo_limit_seconds", "seconds", "A limit."), signature_output("demo_state_out", "state", "Next state.", required=False, shape=[-1])],
             state=[signature_state("last_seconds", "seconds", "The previous call.")],
         )
         steps = [
-            golden_step(self.signature, "1", "s-0", {"demo_clock_seconds": 10.0}, {"demo_limit_seconds": 5}),
-            golden_step(self.signature, "1", "s-1", {"demo_clock_seconds": 11.0, "demo_state_in": [10.0]}, {"demo_limit_seconds": 5}),
-            golden_step(self.signature, "1", "s-2", {"demo_state_in": [10.0]}, error="signature"),
+            golden_step(self.signature, "static-1", "s-0", {"demo_clock_seconds": 10.0}, {"demo_limit_seconds": 5}),
+            golden_step(self.signature, "static-1", "s-1", {"demo_clock_seconds": 11.0, "demo_state_in": [10.0]}, {"demo_limit_seconds": 5}),
+            golden_step(self.signature, "static-1", "s-2", {"demo_state_in": [10.0]}, error="signature"),
         ]
-        self.golden = golden_document("1", [("calls", steps)])
+        self.golden = golden_document("static-1", [("calls", steps)])
 
     def write(self, **overrides):
         from asystem.model import write_project
@@ -708,7 +708,7 @@ class ModelProjectTest(unittest.TestCase):
         arguments = {
             "project_dir": self.project_dir,
             "name": "demo_calc",
-            "model_version": "1",
+            "model_version": "static-1",
             "flavor": "static",
             "signature": self.signature,
             "golden": self.golden,
@@ -748,7 +748,12 @@ class ModelProjectTest(unittest.TestCase):
     def test_model_file_is_copied_into_the_project_and_hashed(self):
         model_path = self.model_file()
         manifest = self.write(
-            flavor="pyfunc", model_path=model_path, constants=None, evaluation=self.evaluation(), provenance={"source": "manual", "inputs": [], "implementation": "demo model.py requires pandas"}
+            **self.versioned("1"),
+            flavor="pyfunc",
+            model_path=model_path,
+            constants=None,
+            evaluation=self.evaluation(),
+            provenance={"source": "manual", "inputs": [], "implementation": "demo model.py requires pandas"},
         )
         self.assertEqual("model.py", manifest["files"]["model"]["path"])
         self.assertTrue(os.path.isfile(join(self.project_dir, "model.py")))
@@ -772,6 +777,7 @@ class ModelProjectTest(unittest.TestCase):
             )
         self.write(
             flavor="pyfunc",
+            model_version="1",
             model_path=model_path,
             signature=signature,
             golden=golden,
@@ -796,7 +802,12 @@ class ModelProjectTest(unittest.TestCase):
 
         model_path = self.model_file()
         self.write(
-            flavor="pyfunc", model_path=model_path, constants=None, evaluation=self.evaluation(), provenance={"source": "manual", "inputs": [], "implementation": "demo model.py requires pandas"}
+            **self.versioned("1"),
+            flavor="pyfunc",
+            model_path=model_path,
+            constants=None,
+            evaluation=self.evaluation(),
+            provenance={"source": "manual", "inputs": [], "implementation": "demo model.py requires pandas"},
         )
         with self.assertRaises(ValueError):
             register_project(self.project_dir, "demo_calc", f"sqlite:///{join(tempfile.mkdtemp(), 'mlflow.db')}")
@@ -932,9 +943,19 @@ class ModelProjectTest(unittest.TestCase):
         self.write(project_dir=other_dir, **overrides)
         return other_dir
 
+    def versioned(self, version):
+        golden = json.loads(json.dumps(self.golden))
+        golden["model_version"] = version
+        for sequence in golden["sequences"]:
+            for step in sequence["steps"]:
+                if "response" in step:
+                    step["response"]["model_version"] = version
+        return {"model_version": version, "signature": {**self.signature, "versions": [version]}, "golden": golden}
+
     def fitted_overrides(self, passing=True):
         model_path = self.model_file("wasm")
         return {
+            **self.versioned("1"),
             "flavor": "wasm",
             "model_path": model_path,
             "constants": None,
@@ -956,7 +977,7 @@ class ModelProjectTest(unittest.TestCase):
         self.assertEqual([], compare_project(self.other_project(**self.fitted_overrides()), self.project_dir))
         self.assertEqual(["CP003"], [rule for rule, _ in compare_project(self.other_project(**self.fitted_overrides(passing=False)), self.project_dir)])
         changed = {**self.signature, "outputs": [{**self.signature["outputs"][0], "parameters": {**self.signature["outputs"][0]["parameters"], "unit": "minutes"}}, self.signature["outputs"][1]]}
-        self.assertEqual({"CP002"}, {rule for rule, _ in compare_project(self.other_project(**self.fitted_overrides(), signature=changed), self.project_dir)})
+        self.assertEqual({"CP002"}, {rule for rule, _ in compare_project(self.other_project(**{**self.fitted_overrides(), "signature": {**changed, "versions": ["1"]}}), self.project_dir)})
 
     def test_release_check_needs_a_passing_evaluation(self):
         from asystem.model import check_release
@@ -1038,6 +1059,29 @@ class ModelProjectTest(unittest.TestCase):
         self.assertEqual("1004", restamped["model_version"])
         self.assertEqual(project_content_sha256(self.project_dir), project_content_sha256(join(os.path.dirname(self.project_dir), "project")))
 
+    def test_a_static_version_must_have_the_static_form(self):
+        self.assertEqual(["PJ014"], self.rules(**self.versioned("1")))
+        self.assertEqual(["PJ014"], self.rules(**self.versioned("1004")))
+        self.assertEqual([], self.rules(**self.versioned("static-7")))
+
+    def test_a_measured_check_needs_a_recorded_dataset(self):
+        from asystem.model import evaluate_acceptance
+
+        measured = evaluate_acceptance(lambda: [{"split": "backtest", "output": "demo_limit_seconds", "name": "rmse", "value": 0.1, "limit": 1.0, "direction": "max"}], {"backtest": []})
+        self.assertIn("AC003", self.rules(evaluation=measured))
+        unmeasured = evaluate_acceptance(lambda: [{"split": "backtest", "output": "demo_limit_seconds", "name": "rmse", "value": None, "limit": 1.0, "direction": "max"}], {"backtest": []})
+        self.assertNotIn("AC003", self.rules(evaluation=unmeasured))
+
+    def test_the_standard_verdict_line_is_printed(self):
+        import contextlib
+        import io
+
+        printed = io.StringIO()
+        with contextlib.redirect_stdout(printed):
+            self.evaluation()
+            self.evaluation(passing=False)
+        self.assertEqual(["acceptance [passed] budget [0.5]", "acceptance [failed] budget [9.0]"], printed.getvalue().splitlines())
+
     def test_static_flavor_refuses_a_model_file(self):
         with self.assertRaises(ValueError):
             self.write(model_path=join(self.project_dir, "signature.json"))
@@ -1049,7 +1093,7 @@ class ModelProjectTest(unittest.TestCase):
         self.assertIn("PJ004", self.rules(name="Demo-Calc"))
 
     def test_signature_version_and_model_version_are_checked(self):
-        self.assertEqual(["PJ005"], self.rules(model_version="2", golden={**self.golden, "model_version": "2"}))
+        self.assertEqual(["PJ005"], self.rules(model_version="static-2", golden={**self.golden, "model_version": "static-2"}))
 
     def test_output_must_be_module_prefixed_with_a_unit_suffix(self):
         self.signature["outputs"][0]["name"] = "other_limit"
@@ -1086,7 +1130,7 @@ class ModelProjectTest(unittest.TestCase):
             {"demo_clock_seconds": 11.0, "demo_state_in": "10.0 11.0", "expect": "ok"},
             {"expect": "error"},
         ]
-        manifest = package_project(self.project_dir, "demo_calc", "1", "static", self.signature, rows, {"source": "manual", "inputs": []}, constants={"demo_limit_seconds": 5})
+        manifest = package_project(self.project_dir, "demo_calc", "static-1", "static", self.signature, rows, {"source": "manual", "inputs": []}, constants={"demo_limit_seconds": 5})
         self.assertEqual("static", manifest["flavor"])
         self.assertEqual([], lint_project(self.project_dir))
 
@@ -1274,7 +1318,7 @@ class VersionRegistryTest(unittest.TestCase):
         self.workspace = join(self.workspaces, "demo", "calc", "run")
         os.makedirs(self.workspace)
 
-    def project(self, factor=2):
+    def project(self, factor=2, value=0.0):
         from asystem.model import evaluate_acceptance, golden_document, golden_step, write_project
 
         model_path = join(tempfile.mkdtemp(), "model.py")
@@ -1289,7 +1333,7 @@ class VersionRegistryTest(unittest.TestCase):
         dataset = join(dataset_dir, "demo_calc_run_2026-11-01_2026-11-02.csv")
         with open(dataset, "w") as dataset_file:
             dataset_file.write("a\n1\n")
-        evaluation = evaluate_acceptance(lambda: [{"split": "backtest", "output": "demo_out_seconds", "name": "rmse", "value": 0.0, "limit": 1.0, "direction": "max"}], {"backtest": [dataset]})
+        evaluation = evaluate_acceptance(lambda: [{"split": "backtest", "output": "demo_out_seconds", "name": "rmse", "value": value, "limit": 1.0, "direction": "max"}], {"backtest": [dataset]})
         steps = [
             golden_step(self.signature, "1000-SNAPSHOT", "s-0", {"demo_in_seconds": 1.0}, {"demo_out_seconds": float(factor)}),
             golden_step(self.signature, "1000-SNAPSHOT", "s-1", {}, error="signature"),
@@ -1362,6 +1406,18 @@ class VersionRegistryTest(unittest.TestCase):
         manifest = pull_model(self.NAME, PROJECT_ALIAS_CANDIDATE, join(tempfile.mkdtemp(), "pulled"), self.uri, unpromoted=True)
         self.assertEqual("1001", manifest["model_version"])
         self.promote()
+
+    def test_a_pull_refuses_a_release_that_never_passed_acceptance(self):
+        from asystem.model import pull_model, register_project
+        from mlflow import MlflowClient
+
+        version = register_project(self.project(value=9.0), self.NAME, self.uri)
+        MlflowClient().set_registered_model_alias(self.NAME, "release", version)
+        with self.assertRaises(ValueError) as refused:
+            pull_model(self.NAME, "release", join(tempfile.mkdtemp(), "pulled"), self.uri)
+        self.assertIn("PM004", str(refused.exception))
+        self.assertIsNone(pull_model(self.NAME, "latest", join(tempfile.mkdtemp(), "pulled"), self.uri))
+        self.assertEqual("1000", pull_model(self.NAME, "candidate", join(tempfile.mkdtemp(), "pulled"), self.uri, unpromoted=True)["model_version"])
 
     def test_a_deleted_alias_never_lets_a_number_be_reused(self):
         from asystem.model import next_model_version, register_project

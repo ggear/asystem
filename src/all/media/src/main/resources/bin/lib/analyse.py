@@ -1070,9 +1070,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, merge=False, transcode=Fal
                     ((pl.col("File Name").str.contains("__LARGE", literal=True)) | (pl.col("File Name").str.contains("__SMALL", literal=True)))
                     & (~pl.col("File Stem").str.replace_all("__LARGE", "").str.replace_all("__SMALL", "").is_duplicated())
                 )
-                .then(pl.lit("Check Missing Non-Profile File"))
+                .then(pl.lit("Check Missing Default Size"))
                 .when(((pl.col("File Name").str.contains("__LARGE", literal=True)) | (pl.col("File Name").str.contains("__SMALL", literal=True))) & (~pl.col("File Directory").is_duplicated()))
-                .then(pl.lit("Check Non-Colocated Profile File"))
+                .then(pl.lit("Check Misplaced Size Variant"))
                 #
                 # Reformat
                 #

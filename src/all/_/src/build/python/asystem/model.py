@@ -23,6 +23,7 @@ PROJECT_VERSION_HIGH_WATER = "model_version_high_water"
 PROJECT_VERSION_ALIAS = re.compile(r"^m(\d{4,})$")
 PROJECT_VERSION_PLACEHOLDER = re.compile(r"^\d{4,}-SNAPSHOT$")
 PROJECT_VERSION_PROMOTED = re.compile(r"^\d{4,}$")
+PROJECT_VERSION_STATIC = re.compile(r"^static-\d+$")
 PROJECT_RELEASE_TAG = re.compile(r"^\d+\.\d+\.\d+$")
 PROJECT_STAMP_LINE = re.compile(r'^MODEL_VERSION = "([^"]*)"$', re.MULTILINE)
 PROJECT_STAMP_SECTION = "asystem.model_version"
@@ -143,12 +144,14 @@ def evaluate_acceptance(check, datasets):
             raise ValueError(f"an acceptance check needs a direction of {list(ACCEPTANCE_DIRECTIONS)} and a limit that is positive for min [{entry.get('name')}]")
         passed, budget = _acceptance_outcome(value, limit, direction)
         checks.append({**entry, "gate": entry.get("gate", True), "passed": passed, "budget": budget})
-    return {
+    evaluation = {
         "datasets": {split: [{"path": f"{basename(dirname(path))}/{basename(path)}", "sha256": file_sha256(path)} for path in sorted(paths)] for split, paths in datasets.items()},
         "checks": checks,
         "passed": all(entry["passed"] for entry in checks if entry["gate"]),
         "budget": _acceptance_budget(checks),
     }
+    print(f"acceptance [{'passed' if evaluation['passed'] else 'failed'}] budget [{evaluation['budget']}]")
+    return evaluation
 
 
 def check_acceptance(project_dir):
@@ -228,6 +231,8 @@ def lint_project(project_dir):
             findings.append(("PJ003", f"file absent [{key}] path [{entry['path']}]"))
         elif file_sha256(file_path) != entry["sha256"]:
             findings.append(("PJ003", f"file checksum mismatch [{key}] path [{entry['path']}]"))
+    if flavor == "static" and not PROJECT_VERSION_STATIC.match(str(manifest.get("model_version"))):
+        findings.append(("PJ014", f"a static project's model version must be static-<number>, found [{manifest.get('model_version')}]"))
     if flavor in PROJECT_STAMPED and "model" in files and isfile(join(project_dir, files["model"]["path"])):
         try:
             stamp = read_stamp(join(project_dir, files["model"]["path"]), flavor)
@@ -541,6 +546,10 @@ def pull_model(name, selector, dest_dir, tracking_uri, signature_path=None, unpr
             raise ValueError(f"alias [{alias}] is for model version [{expected}] and not [{selector}]")
         if manifest["flavor"] in PROJECT_STAMPED and expected is not None and str(manifest["model_version"]) != expected:
             raise ValueError(f"pulled model version [{manifest['model_version']}] differs from the registered one [{expected}]")
+        if not unpromoted:
+            unaccepted = check_acceptance(project_dir)
+            if unaccepted:
+                raise ValueError("; ".join(f"{rule} {message}" for rule, message in unaccepted))
         if signature_path is not None and isfile(signature_path):
             with open(signature_path) as expected_file, open(join(project_dir, PROJECT_SIGNATURE)) as pulled_file:
                 differences = diff_signature(json.load(expected_file), json.load(pulled_file))
@@ -585,7 +594,6 @@ def render_rust(signature):
     required_inputs = [entry["name"] for entry in signature["inputs"] if entry["parameters"]["required"]]
     required_outputs = [entry["name"] for entry in signature["outputs"] if entry["parameters"]["required"]]
     lines = [
-        "// WARNING: This file is written by the build process, any manual edits will be lost!",
         "use serde::{Deserialize, Serialize};",
         "",
         f'pub const NAME: &str = "{signature["name"]}";',
@@ -938,7 +946,12 @@ def _lint_evaluation(project_dir, files, signature):
     gated = {entry.get("output") for entry in entries if entry.get("gate") is True}
     required = {name for name, entry in outputs.items() if entry["shape"] == [1] and entry["parameters"]["required"]}
     findings.extend(("AC001", f"no gating acceptance check for required output [{name}]") for name in sorted(required - gated))
-    findings.extend(("AC003", f"the evaluation has no dataset hashes for split [{split}]") for split in sorted({entry.get("split") for entry in entries} - set(evaluation.get("datasets", {}))))
+    datasets = evaluation.get("datasets", {})
+    findings.extend(("AC003", f"the evaluation has no dataset hashes for split [{split}]") for split in sorted({entry.get("split") for entry in entries} - set(datasets)))
+    findings.extend(
+        ("AC003", f"a check was measured on split [{split}] with no dataset recorded")
+        for split in sorted({entry.get("split") for entry in entries if entry.get("value") is not None and not datasets.get(entry.get("split"))})
+    )
     if evaluation.get("passed") is not all(entry.get("passed") is True for entry in entries if entry.get("gate") is True) or evaluation.get("budget") != _acceptance_budget(entries):
         findings.append(("AC003", "the evaluation verdict and budget do not match its checks"))
     return findings

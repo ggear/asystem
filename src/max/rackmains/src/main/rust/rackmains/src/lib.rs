@@ -1,4 +1,5 @@
 pub mod broker;
+pub mod contract;
 pub mod mock;
 pub mod nut;
 pub mod schema;

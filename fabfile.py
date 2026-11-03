@@ -978,7 +978,15 @@ def _schema(context, filter_module=None):
             _print_footer(module, "schema")
 
 
+def _test_models(context, filter_module=None):
+    for module in _get_modules(context, "src/main/resources/model.sh", filter_module=filter_module):
+        _print_header(module, "model test")
+        _run_local(context, "src/main/resources/model.sh check", module)
+        _print_footer(module, "model test")
+
+
 def _test_sys(context, filter_module=None):
+    _test_models(context, filter_module=filter_module)
     for module in _get_modules(context, "src/test/*/system", filter_module=filter_module):
         _up_module(context, module, is_test=True)
         _print_header(module, "system test")
@@ -1026,7 +1034,7 @@ def _deploy(context):
 
 def _release_models(context, module):
     model_script = join(ROOT_MODULE_DIR, module, "src/main/resources/model.sh")
-    if isfile(model_script):
+    if isfile(model_script) and FAB_SKIP_TESTS in os.environ:
         _print_line("Checking models ...")
         _run_local(context, "src/main/resources/model.sh check", module)
     shared_python_path = glob.glob(join(ROOT_MODULE_DIR, "*", SHARED_MODULE_NAME, "src/build/python"))[0]

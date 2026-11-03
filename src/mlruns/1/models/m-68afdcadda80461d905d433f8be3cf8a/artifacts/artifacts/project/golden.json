@@ -1,0 +1,51 @@
+{
+  "model_version": "1001",
+  "sequences": [
+    {
+      "name": "calls",
+      "steps": [
+        {
+          "request": {
+            "id": "s-0",
+            "inputs": [
+              {
+                "name": "demo_in_seconds",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  1.0
+                ]
+              }
+            ]
+          },
+          "response": {
+            "model_name": "demo_calc_run",
+            "model_version": "1001",
+            "id": "s-0",
+            "outputs": [
+              {
+                "name": "demo_out_seconds",
+                "datatype": "INT64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  3
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "request": {
+            "id": "s-1",
+            "inputs": []
+          },
+          "error": "signature"
+        }
+      ]
+    }
+  ]
+}

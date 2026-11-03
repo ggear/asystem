@@ -14,3 +14,5 @@ if [ "${1}" == "True" ]; then
 fi
 python -m asystem.model verify "${MODEL_DIR}/default" || exit $?
 python -m asystem.model verify "${MODEL_DIR}/release" || exit $?
+python -m asystem.model generate "${MODEL_DIR}/default" --rust "${ROOT_DIR}/src/main/rust/rackmains/src/contract.rs" || exit $?
+(cd "${ROOT_DIR}/src/main/rust/rackmains" && rustfmt --edition 2021 src/contract.rs) || exit $?

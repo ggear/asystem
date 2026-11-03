@@ -24,6 +24,19 @@ check() {
       echo "ERROR notebook failed [${target}]" >&2
       status=1
     }
+    [[ -f "${ROOT_DIR}/target/notebook/${target}/notebook.ipynb" ]] || continue
+    "${PYENV_BIN}/python" - "${ROOT_DIR}/target/notebook/${target}/notebook.ipynb" "${target}" <<'PYTHON'
+import json
+import sys
+
+with open(sys.argv[1]) as notebook_file:
+    cells = json.load(notebook_file)["cells"]
+for cell in cells:
+    for output in cell.get("outputs", []):
+        for line in "".join(output.get("text", "")).splitlines():
+            if line.startswith("acceptance ["):
+                print(f"Acceptance {sys.argv[2]} {line}")
+PYTHON
   done
   for committed_dir in "${SOURCE_DIR}"/*/*/src/build/resources/model/default; do
     [[ -f "${committed_dir}/project.json" ]] || continue
