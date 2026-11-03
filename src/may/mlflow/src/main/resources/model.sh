@@ -7,7 +7,7 @@ set -o pipefail
 ROOT_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../.." && pwd)"
 SOURCE_DIR="$(cd "${ROOT_DIR}/../.." && pwd)"
 PYENV_BIN="${HOME}/.pyenv/versions/asystem/bin"
-COMMAND="${1:?usage: model.sh <check|refresh>}"
+COMMAND="${1:?usage: model.sh <check|parity|refresh>}"
 export PYTHONPATH="${SOURCE_DIR}/all/_/src/build/python${PYTHONPATH:+:${PYTHONPATH}}"
 
 check() {
@@ -50,6 +50,33 @@ PYTHON
     echo "Checking [${release_dir#"${SOURCE_DIR}/"}]"
     "${PYENV_BIN}/python" -W ignore -m asystem.model check-release "${release_dir}" || status=1
   done
+  parity "${output_dir}/project" || status=1
+  return "${status}"
+}
+
+parity() {
+  local project_root="${1:-${ROOT_DIR}/target/model-output/project}"
+  local replay_dir="${ROOT_DIR}/src/test/replay"
+  local gate_dir="${ROOT_DIR}/target/gate"
+  local status=0
+  (
+    . "${SOURCE_DIR}/../.env_fab"
+    export CARGO_HOME="${HOME}/.rust/versions/asystem" RUSTUP_HOME="${HOME}/.rust/versions/asystem"
+    export PATH="${CARGO_HOME}/bin:${PATH}"
+    export CARGO_TARGET_DIR="${ROOT_DIR}/target/rust"
+    cd "${replay_dir}/rust" && cargo build --quiet
+    cd "${replay_dir}/go" && "${GOROOT}/bin/go" build -o "${ROOT_DIR}/target/go/modelreplay" .
+  ) || return 1
+  rm -rf "${gate_dir}"
+  mkdir -p "${gate_dir}"
+  for project_dir in "${project_root}"/*/*/*/; do
+    [[ -f "${project_dir}project.json" ]] || continue
+    local workspace="${project_dir#"${project_root}/"}"
+    workspace="${workspace%/}"
+    echo "Replaying [${workspace}]"
+    "${PYENV_BIN}/python" -W ignore -m asystem.model gate "${project_dir%/}" --out "${gate_dir}/${workspace//\//_}.json" \
+      --runner "rust=${ROOT_DIR}/target/rust/debug/modelreplay" --runner "go=${ROOT_DIR}/target/go/modelreplay" || status=1
+  done
   return "${status}"
 }
 
@@ -67,6 +94,7 @@ refresh() {
 
 case "${COMMAND}" in
   check) check ;;
+  parity) parity ;;
   refresh) refresh ;;
   *)
     echo "ERROR unknown command [${COMMAND}]" >&2

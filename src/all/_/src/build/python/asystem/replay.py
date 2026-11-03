@@ -93,8 +93,10 @@ def _wasm_predict(model_path, signature):
         store.set_fuel(WASM_FUEL)
         store.set_limits(memory_size=WASM_MEMORY_BYTES)
         instance = wasmtime.Instance(store, module, [])
-        memory = instance.exports(store)["memory"]
-        function = instance.exports(store)["predict"]
+        exports = instance.exports(store)
+        memory = exports["memory"]
+        function = exports["predict"]
+        assert isinstance(memory, wasmtime.Memory) and isinstance(function, wasmtime.Func)
         row = [float(inputs[entry["name"]][0]) if entry["name"] in inputs else float("nan") for entry in scalars_in]
         for entry in state_in:
             row.extend(float(value) for value in inputs.get(entry["name"], [0.0] * state_slots))
@@ -138,7 +140,7 @@ def _pyfunc_predict(model_path, signature):
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    instance = mlflow_model.__mlflow_model__
+    instance = getattr(mlflow_model, "__mlflow_model__")  # noqa: B009
     outputs = signature["outputs"]
 
     def predict(inputs):
