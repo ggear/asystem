@@ -2,9 +2,9 @@ import argparse
 import re
 import sys
 from os import listdir
-from os.path import basename, dirname, isdir, join, splitext
+from os.path import basename, dirname, isdir, isfile, join, splitext
 
-from asystem.model import PROJECT_ACCEPTANCE, PROJECT_MODEL_FILES, PROJECT_NAME, PROJECT_SPLITS
+from asystem.model import PROJECT_MODEL_FILES, PROJECT_NAME, PROJECT_SPLITS, PROJECT_VERSION_FILE, PROJECT_VERSION_PLACEHOLDER
 
 WORKSPACE_TIMESTAMP = re.compile(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$")
 WORKSPACE_DATE_RANGE = re.compile(r"_\d{4}-\d{2}-\d{2}_\d{4}-\d{2}-\d{2}$")
@@ -27,8 +27,14 @@ def lint_workspace(notebook_dir):
     models = [name for name in PROJECT_MODEL_FILES.values() if isdir(notebook_dir) and name in listdir(notebook_dir)]
     if len(models) > 1:
         findings.append(("WS007", f"the directory must hold at most one model file, found {models}"))
-    allowed = {WORKSPACE_NOTEBOOK, "plan.md", PROJECT_ACCEPTANCE, "data", *PROJECT_MODEL_FILES.values(), *WORKSPACE_IGNORED}
+    allowed = {WORKSPACE_NOTEBOOK, "plan.md", PROJECT_VERSION_FILE, "data", *PROJECT_MODEL_FILES.values(), *WORKSPACE_IGNORED}
     findings.extend(("WS003", f"[{name}] is not one of {sorted(allowed)}") for name in sorted(listdir(notebook_dir)) if name not in allowed) if isdir(notebook_dir) else None
+    version_path = join(notebook_dir, PROJECT_VERSION_FILE)
+    if isfile(version_path):
+        with open(version_path) as version_file:
+            version = version_file.read().strip()
+        if not PROJECT_VERSION_PLACEHOLDER.match(version):
+            findings.append(("WS008", f"[{PROJECT_VERSION_FILE}] must hold the model version in development as <number>-SNAPSHOT, found [{version}]"))
     data_dir = join(notebook_dir, "data")
     if isdir(data_dir):
         for split in sorted(listdir(data_dir)):

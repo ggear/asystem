@@ -28,9 +28,12 @@ The key words MUST, MUST NOT, SHOULD and MAY are to be read as in RFC 2119.
 | Served | Run by MLServer behind the V2 inference API |
 | Embedded | Run in the consumer's own process |
 | Split | One of `training`, `validation`, `backtest` or `golden`, naming the purpose of a dataset |
-| Acceptance | The criteria a project's measured error must meet before it is released, declared in `acceptance.json` before the fit and measured into `evaluation.json` |
+| Acceptance | The check a notebook defines and runs through the shipped runtime, whose outcome is recorded in `evaluation.json`, and which a project must pass to be released |
+| Budget | A dimensionless score for an acceptance check, being how much of its limit the measurement used. Every check passes at a budget of 1 or less, whatever the model |
 | Parity gate | Replay of golden sequences and recorded runs through every runtime in use, on x86_64 and aarch64, which MUST reproduce every response and state exactly |
-| Alias | An MLflow registry alias on a registered model: `candidate` or `release` |
+| Alias | An MLflow registry alias on a registered model: `candidate`, `release`, or `m<N>` for the promoted model version `N`. MLflow reserves `v<N>` and `latest` |
+| Model version | The identity of a promoted model, an integer of 1000 or more, per registered model. A candidate carries a placeholder `<N>-SNAPSHOT` until register stamps it |
+| Service version | The latest release tag when a model was promoted, recorded for audit and never used in a decision |
 
 ## 2. Requirements
 
@@ -42,14 +45,16 @@ The key words MUST, MUST NOT, SHOULD and MAY are to be read as in RFC 2119.
 | R4 | Parity | Every number reported or shipped for a project, the fit included, MUST come from the shipped runtime of its flavor. A faster proxy MAY choose the fit, and the runtime MUST then reproduce the result. Exploration MAY use plain Python | No gap between pre-prod and prod numbers |
 | R5 | Parity | A project MUST NOT be given the alias `release` until a person has reviewed it and the parity gate has passed on every host and both architectures | A mismatch is caught before it ships |
 | R6 | Parity | Every dataset MUST be held under exactly one split, with each run wholly in one split. Held-out data MUST NOT be used to fit | An error estimate stays honest |
-| R7 | Delivery | A serving runtime MUST pull its project at bootstrap. An embedded consumer MUST pull only when `fab pull` runs and MUST commit the result. A running container MUST NOT call MLflow | A drain works with the network gone |
-| R8 | Delivery | A consumer MUST validate a project at load and MUST NOT use an invalid one. The fallback order MUST be the chosen model, the last valid answer, the shipped `release` project, then the `static` default | The consumer always holds a full set of required outputs |
+| R7 | Delivery | A serving runtime MUST pull its project at bootstrap and MUST NOT load a model whose pull failed. An embedded consumer MUST pull only when `fab pull` runs and MUST commit the result | A served model is exactly the promoted one, and an embedded one is exactly the committed one |
+| R8 | Delivery | A consumer MUST validate a project at load and MUST NOT use an invalid one. An embedded consumer that cannot do without an answer MUST fall back from its shipped `release` project to the last valid answer and then the `static` default, and MUST NOT depend on a served model. A served model that is down is down | A critical consumer always holds a full set of required outputs |
 | R9 | Delivery | Every decision MUST record the model version and project hash that produced it | Any outcome can be traced and replayed |
 | R10 | Change | A change of behaviour, being a new WebAssembly ABI version, a runtime or engine version or a signature version, MUST be a code release of the runtime and its consumers. A refit MUST replace only the model file and the hashes that cover it | A refit changes data, a release changes behaviour |
 | R11 | Change | Every runtime library MUST be pinned, and native libraries MUST be pinned by hash per architecture. Any upgrade MUST re-run the parity gate | Parity holds only while the runtimes do not move |
 | R12 | Standard | Every name MUST follow section 6.1: lowercase `<module>_<dimension>` style with a unit suffix on numeric measures | A name tells you the owner and what is measured |
 | R13 | Standard | Every project, notebook and workspace MUST pass the checks of section 10 | The requirements are enforced by tools and not by reading |
-| R14 | Parity | A project MUST carry acceptance criteria that were declared before the fit, and the evaluation of them measured through its shipped runtime. It MUST NOT be given the alias `release` unless every gating criterion has passed | Accuracy is agreed first, measured the same way everywhere and recorded with the version |
+| R14 | Parity | A project that is not `static` MUST carry an evaluation from an acceptance check its notebook defines, run through its shipped runtime, and MUST NOT be given the alias `release` unless every gating check has passed | Every model is enforced against its own limits, and the outcome is recorded the same way for all |
+| R15 | Parity | A notebook MUST run through its Package section from committed data, and a re-run MUST reproduce a committed `static` project exactly and the signature and acceptance verdict of any other. A project whose acceptance failed MUST NOT be released | A notebook is evidence anyone can reproduce, and a failed acceptance blocks the release and not the run |
+| R16 | Standard | A promoted model MUST have a model version of 1000 or more, issued in sequence by the library and never reused, MUST carry it inside its model file, and MUST have the release version it was promoted under recorded in the registry | Any outcome traces to one model, whoever holds the file |
 
 ## 3. Project
 
@@ -62,8 +67,7 @@ A project is a directory read the same way by every environment and written and 
 | `project.json` | All | Spec version, name, model version, signature version, `flavor`, provenance, the SHA-256 of every other file, and optional constants |
 | `signature.json` | All | The MLServer V2 model metadata, which is also the MLflow model signature. It MUST be identical in the project, the consumer and the logged MLflow model, apart from its `versions` list |
 | `golden.json` | All | Named sequences of requests and exact responses, each request carrying the previous response's state |
-| `acceptance.json` | All, when the model is fitted or measured | The acceptance criteria, specified in 6.8 |
-| `evaluation.json` | All, with `acceptance.json` | The measured value of every criterion, the SHA-256 of the acceptance file and of each dataset used, and the verdict |
+| `evaluation.json` | All but `static` | Each acceptance check with its measured value, limit, outcome and budget, the SHA-256 of each dataset used, the verdict and the worst budget, specified in 6.8 |
 | `model.wasm` | `wasm` | The WebAssembly module, with its fitted attributes built in |
 | `model.py` | `pyfunc` | The Python model, in MLflow's models-from-code form |
 | `model.onnx` | `onnx` | The ONNX model at a pinned opset |
@@ -108,6 +112,16 @@ missing, and the model MUST refuse it.
 - MUST be written as `model.py` beside the notebook, in the form MLflow calls models from code (`set_model`), and logged with `mlflow.pyfunc.log_model`, with the project in `artifacts` and a signature built from `signature.json`.
 - MUST NOT be embedded in Rust or Go, or relied on without the network; a caller that needs an answer without the network MUST keep a
   `static` floor.
+
+### 3.4 Versions
+
+- The model version is `^\d{4,}$` once promoted, `<N>-SNAPSHOT` for a candidate or a notebook in development, and `static-<N>` for a `static` floor, which is never promoted and never numbered by the registry.
+- Each workspace holds `.version`, the model version in development as `<N>-SNAPSHOT`, which a notebook reads with `development_version`. `promote` writes `<N+1>-SNAPSHOT` into it, as `fab release` does to the repository `.version`.
+- A model file carries its version: `pyfunc` as the one line `MODEL_VERSION = "<version>"` in `model.py`, and `wasm` as the custom section `asystem.model_version`. `onnx` will use its `metadata_props` once its dependency is pinned. `stamp_model`, `read_stamp` and `content_sha256` write, read and hash it, and PJ013 requires the stamp to equal the manifest.
+- `register_project` takes the next model version from the registered model, being the larger of the high-water mark tag `model_version_high_water` and the highest `m<N>` alias, plus one, starting at 1000. It restamps a copy of the project with that number, rewriting the model file, manifest, signature versions and golden responses. A project whose content hash is unchanged, ignoring the stamp, reuses its version.
+- `promote_project` refuses unless the candidate is stamped with the next number (PM005) and a release tag can be read (PM006). It then sets the aliases `m<N>` and `release`, raises the high-water mark, and tags the version `model_version`, `service_version`, `acceptance`, `acceptance_budget` and `reviewed_by`. The number is therefore never reused, even if an alias is deleted.
+- `pull_model` and `resolve_model` take the selector `release`, `latest` (the highest `m<N>`), or a number. A pull checks the stamp against the registered model version, and an embedded pull accepts promoted selectors only. `python -m asystem.model pull` prints the registry tags of what it pulled.
+- A served model is loaded as `release` only, so an unversioned call reaches it. MLServer sends an unversioned call to the highest loaded version, which is why a second version may only be an older one.
 
 ## 4. WebAssembly models
 
@@ -195,6 +209,8 @@ its flavor: `static` needs none, `wasm` needs one small host per language, `onnx
 | Run a Notebook | `jupyterlab` and `nbconvert --execute` through `notebook.sh`, kernel `asystem` | The Conda Python, which lacks the dependencies |
 | Parameterise a Headless Run | `papermill`, once pinned | Editing cells to change inputs |
 | Review a Notebook Diff | Commit without outputs, or pair with `jupytext` | Committing large embedded outputs |
+| Check Every Notebook | `model.sh check`, run by `fab release` and `deploy.sh` | Trusting a committed project nobody has reproduced |
+| Refresh Served Models | `model.sh refresh`, run by `deploy.sh` | Restarting the whole `mlflow` image to change a model |
 | Register and Alias | `asystem.model.register_project` over `mlflow` | Hand-copying files between hosts |
 
 ## 6. Workspace layout and data
@@ -230,13 +246,13 @@ Every name MUST follow the module and dimension style the metrics use: `<module>
 ```
 src/may/mlflow/src/main/model/<module>/<model>/<notebook>/notebook.ipynb
 src/may/mlflow/src/main/model/<module>/<model>/<notebook>/plan.md
-src/may/mlflow/src/main/model/<module>/<model>/<notebook>/acceptance.json
+src/may/mlflow/src/main/model/<module>/<model>/<notebook>/.version
 src/may/mlflow/src/main/model/<module>/<model>/<notebook>/model.<wasm|onnx|py>
 src/may/mlflow/src/main/model/<module>/<model>/<notebook>/data/<split>/<timestamp>/<dataset>.csv
 ```
 
 - `<module>`, `<model>` and `<notebook>` MUST be named as section 6.1 requires.
-- A notebook directory MUST hold one notebook named `notebook.ipynb`, its `plan.md`, its `acceptance.json`, its `data` and at most one model file (`model.wasm`, `model.onnx` or `model.py`, as the flavor requires), and nothing else. The data belongs to
+- A notebook directory MUST hold one notebook named `notebook.ipynb`, its `plan.md`, its `.version`, its `data` and at most one model file (`model.wasm`, `model.onnx` or `model.py`, as the flavor requires), and nothing else. The data belongs to
   the notebook and MUST NOT be shared between notebooks.
 - `plan.md` MUST state the notebook's intent, signature, data, status and open decisions in the terms of this specification, and MUST NOT
   restate this specification.
@@ -339,8 +355,11 @@ A model notebook:
 - A notebook MUST import from `library.<module>` by name, never with `*`, and MUST NOT extend `sys.path`. The kernel carries the
   `PYTHONPATH`: `notebook.sh` installs it and the IDE source roots provide it.
 - Python MUST be formatted with `ruff format` at the repo line length of 200 and MUST NOT be hand-wrapped; the formatter decides the layout.
-- Constants MUST be UPPER_CASE (`WORKSPACE`, `MODEL_NAME`, `MODEL_VERSION`, `TRAINING`, `VALIDATION`, `GOLDEN`). A flag such as `USE_INFLUXDB`
-  MUST default to false.
+- Constants MUST be UPPER_CASE (`WORKSPACE`, `MODEL_NAME`, `MODEL_VERSION`, `TRAINING`, `VALIDATION`, `GOLDEN`). A notebook MUST NOT carry a flag
+  that switches the network on, since `query_influxdb3` reads the committed file when it is present (6.5).
+- MUST run through its Package section from committed data (R15). The Register section, and anything after it, writes to the registry, and a check must not write, so `notebook.sh` stops before it
+  unless `REGISTER=1`. An acceptance that fails is recorded as the verdict and does not stop the run.
+- MUST write a consumer's slot through `consumer_project_dir`, which `model.sh check` redirects to `target/model-output` with `MODEL_OUTPUT_DIR`, so a check never rewrites the tree.
 - A polars frame SHOULD be named with the suffix `_pl` and a path with the suffix `_path`.
 - Imports SHOULD sit at the top of the cell that first needs them.
 - A comment MUST NOT restate the code; narrative belongs in the section's markdown cell.
@@ -355,7 +374,7 @@ A model notebook:
 - `ruff check --fix` and `ruff format` also run on a workspace's `model.py`, which is not type checked.
 
 A finding other than NB002 fails the build. Notebooks are not type checked, since `pyright` does not check `.ipynb` files from the command
-line. Notebooks are not run by `fab build`; `notebook.sh` runs one headless.
+line. Notebooks are not run by `fab build`; `notebook.sh` runs one headless, and `model.sh check` runs them all.
 
 **Markdown**
 - Identifiers, paths, commands and values MUST be in backticks.
@@ -364,13 +383,15 @@ line. Notebooks are not run by `fab build`; `notebook.sh` runs one headless.
 
 ### 6.8 Acceptance
 
-Accuracy is agreed before the fit and measured the same way for every flavor, using the names of scikit-learn and scipy.
+Each notebook owns what its model must achieve and how it is measured, and the library enforces that it was done and records the outcome the same way for every model type. This mirrors the golden builder: the notebook defines a function with no arguments, as `golden_samples` is for `golden_data`, and the library validates and stores what it returns.
 
-- `acceptance.json` is `{"rows": [...]}`. A row is `split`, `output`, `metric`, `op`, `bound`, `gate` and `reason`. The `split` is `validation` or `backtest`, the `output` is a signature output, and the `bound` is in that output's signature unit. A `reason` MUST name the consumer need the bound serves and point at the consumer's plan.
-- The `metric` is one of `rmse`, `mae`, `max_abs_error`, `bias`, `p95_abs_error`, `r2` and `pearson_r`, computed by `measure` with numpy from the truth and the shipped runtime's prediction. The `op` is `<=`, `>=` or `==`. A metric that is undefined, such as `r2` over a constant truth, fails its row.
-- A `backtest` row SHOULD gate. A `validation` row gates only for a model that has no `backtest` run yet, and its plan MUST say so. A `training` row does not exist, since the fit is not judged on its own data. `golden` is judged by exact parity and has no row.
-- The file MUST be committed before the model is fitted, so a loosened bound is a visible diff, and the release review MUST read the acceptance diff against the previous version.
-- `evaluate_acceptance` writes `evaluation.json`, and `register_project` logs every measured value as the MLflow run metric `<split>/<output>/<metric>`, logs each dataset with `mlflow.log_input` under the split as its context, and tags the run `acceptance` with `passed` or `failed`.
+- A notebook of a non-`static` flavor MUST define `acceptance_checks()`, measure the shipped model on `validation` or `backtest` data inside it, and return a non-empty list of checks. It passes the function and the dataset paths to `evaluate_acceptance(check, datasets)`, then hands the result to `package_project` as `evaluation`. A project without one fails AC001.
+- A check is `split` (`validation` or `backtest`), `output` (a signature output), `name` (the naming style), `value` (a number, or null when it could not be measured), `limit`, `direction` (`max` for a value that must not exceed the limit, `min` for one that must not fall below it) and optionally `gate`, which defaults to true. A `training` check does not exist, since the fit is not judged on its own data, and `golden` is judged by exact parity.
+- The library, not the notebook, decides the outcome: a check passes when its value is within its limit, and a null value fails. `measure(truth, predicted)` is an optional helper with the scikit-learn names `rmse`, `mae`, `max_abs_error`, `bias`, `p95_abs_error`, `r2` and `pearson_r`. A notebook MAY compute anything else, such as a one-sided error, a recall or a worst run.
+- Every required scalar output MUST have a gating check. A `backtest` check SHOULD gate, and a `validation` check gates only for a model with no `backtest` run yet, which its plan MUST say.
+- The budget is the standard score, the same for every model type: for a `max` check it is the value divided by the limit, floored at zero, and for a `min` check it is the limit divided by the value. A check passes exactly when its budget is 1 or less. The evaluation records the worst budget of the gating checks, or null if any gating check could not be measured. A lower budget means a larger margin. It compares a model with its own limits, not one model's accuracy with another's.
+- `register_project` logs the run metrics `acceptance_passed` (1 or 0) and `acceptance_budget`, each measured value as `<split>/<output>/<name>`, each dataset with `mlflow.log_input` under the split as its context, and the tags `acceptance` and `acceptance_budget`. `promote_project` copies both tags onto the promoted version.
+- The limits live in the notebook's function, so a changed limit is a change to that notebook, and the release review reads that diff. The evaluation does not need to say what was required, only that the enforced checks passed.
 
 ## 7. Lifecycle
 
@@ -381,12 +402,12 @@ Accuracy is agreed before the fit and measured the same way for every flavor, us
 | 1 | Capture data | Notebook | `query_influxdb3(...)`, or a file saved with `data_path` | `data/<split>/<ts>/<name>.csv` | The split is right and each run is wholly in one split |
 | 2 | Explore | Notebook | Plain Python | Ideas, plots | None |
 | 3 | Fit | Notebook | A builder (`wasm`), `skl2onnx` (`onnx`), `model.py` (`pyfunc`) | Fitted attributes | Fit error on `training` is sane |
-| 4 | Evaluate | Notebook | Shipped runtime over `validation` and `backtest` | Metrics, `evaluation.json`, golden sequences | Every gating criterion of `acceptance.json` passes |
+| 4 | Evaluate | Notebook | Shipped runtime over `validation` and `backtest` | Metrics, `evaluation.json`, golden sequences | Every gating acceptance check passes |
 | 5 | Package | Notebook | `write_project`, then `verify_project` | Project directory | Manifest, hashes, signature and golden agree |
-| 6 | Register | Notebook | `register_project(...)` | Registered version, alias `candidate` | The project verifies on the server side too |
-| 7 | Review and promote | A person | Set alias `release` in MLflow | The version consumers follow | The acceptance passed and the parity gate passed on every host and both architectures |
-| 8 | Pull, embedded | The consumer's `generate.sh` | `python -m asystem.model pull <name> release <dir>/release --signature <dir>/default/signature.json` | The project in the consumer's `release` slot, unstaged | The signature is unchanged and the hashes match |
-| 8 | Pull, served | `mlserver` bootstrap | `mlflow artifacts download models:/<name>@release` | `/asystem/mnt/models/<name>` | The download succeeded, else the previous copy stays |
+| 6 | Register | Notebook | `register_project(...)` | Registered version stamped with the next model version, alias `candidate` | The project verifies on the server side too |
+| 7 | Review and promote | A person | `promote.sh` sets the aliases `m<N>` and `release` and records the service version | The version consumers follow | The acceptance passed and the parity gate passed on every host and both architectures |
+| 8 | Pull, embedded | The consumer's `generate.sh` | `python -m asystem.model pull <name> release <dir>/release --signature <dir>/default/signature.json` | The project in the consumer's `release` slot, unstaged, and its registry tags printed | The signature is unchanged, the hashes match and the stamp equals the registered model version |
+| 8 | Pull, served | `mlserver` bootstrap | `mlflow artifacts download models:/<name>@release` | `/asystem/mnt/models/<name>` | The download succeeded, else the bootstrap container fails and the model is not loaded |
 | 9 | Commit and release | A person | `git`, then the fab lifecycle | A release of the consumer | The consumer's own tests and the gate |
 
 ### 7.2 Fab lifecycle
@@ -401,13 +422,13 @@ Each task includes the ones before it.
 | `systest` | `build`, then bring the module up on a synthetic host and run its system test | The consumer runs with the committed project against its mock | No |
 | `package` | `build`, then build the image | The project, and the pinned host library, go into the image | No |
 | `execute` | `generate`, then run the module locally | For `mlserver`, the bootstrap pulls `release` into the container | Served pull only |
-| `release` | Per host: `package`, save the image, copy it, run `install.sh install` | The consumer ships whatever project is in its tree; `mlserver` pulls at bootstrap after install | Served pull only |
+| `release` | Before tagging, for a module with `model.sh`, `model.sh check`; for a module with a committed `release` slot, `check_release` on it. Then per host: `package`, save the image, copy it, run `install.sh install` | A failed notebook run or comparison, or a failed acceptance, stops the release. The consumer ships whatever project is in its tree; `mlserver` pulls at bootstrap after install | Served pull only |
 | `pull` | Backup of git-ignored files, `git pull --all`, install pinned dependencies, then `generate` for every module with the pull flag true | `generate.sh` runs `pull`, then `verify` | Embedded pull happens here and only here |
-| `deploy` | `generate`, then each module's `deploy.sh` if it has one | None; the model modules have no `deploy.sh` | No |
+| `deploy` | `generate`, then each module's `deploy.sh` if it has one | `mlflow`'s `deploy.sh` runs `model.sh check`, as `release` does, then `model.sh refresh`, which re-runs the `mlserver` bootstrap pull and restarts it, and pushes no image | Served pull only |
 
 ### 7.3 Consequences
 
-- Builds are offline. Only `fab pull` calls MLflow for an embedded model, and every other build verifies the project in the tree.
+- Builds do not call MLflow. Only `fab pull` calls MLflow for an embedded model, and every other build verifies the project in the tree.
 - `fab pull` also backs up git-ignored files and runs `git pull --all`, whose autostash unstages the index. To refresh only a project,
   run `PYTHONPATH=src/all/_/src/build/python python -m asystem.model pull <name> release <dir>/release --signature <dir>/default/signature.json` with
   `MLFLOW_TRACKING_URI` set, then review the diff.
@@ -423,13 +444,13 @@ Each task includes the ones before it.
 3. Write the signature with `build_signature`, `signature_input`, `signature_output` and `signature_state`. An input name MUST be a metric name
    from its owning service, required outputs MUST be the ones the consumer cannot act without, and state slots are numbered in order.
 4. Put data under splits, with `query_influxdb3`, `read_data`, `golden_data` or `data_path`.
-5. Write `acceptance.json` to section 6.8 and commit it, then write the notebook to sections 6.6 and 6.7, and fit on `training`.
-6. Evaluate on `validation` and `backtest` through the shipped runtime, evaluate `acceptance.json` with `evaluate_acceptance`, and generate the golden sequences from it. The sequences MUST
+5. Write the notebook to sections 6.6 and 6.7, and fit on `training`.
+6. Evaluate on `validation` and `backtest` through the shipped runtime, define `acceptance_checks` to section 6.8 and run it with `evaluate_acceptance`, and generate the golden sequences from it. The sequences MUST
    include a first call with no state, boundary values, a missing input that gives a signature error and a long gap. Build each step with
    `golden_step` and the document with `golden_document`.
-7. Package with `write_project`, which copies the workspace's model file, the acceptance and the evaluation into the project, then runs `verify_project` and so every project check of section 10. A static default is written to the
+7. Package with `write_project`, which copies the workspace's model file and the evaluation into the project, then runs `verify_project` and so every project check of section 10. A static default is written to the
    consumer with `consumer_project_dir`.
-8. Register with `register_project(project_dir, name, tracking_uri)`. It logs and registers the project and sets the alias `candidate`. A
+8. Register with `register_project(project_dir, name, tracking_uri)`. It logs and registers the project and sets the alias `candidate`, and an unchanged project, by the SHA-256 of its `project.json` in the tag `project_sha256`, reuses its version. A
    person sets `release` after review. The experiment MUST be created after the proxy is on, since older experiments keep their old
    artifact location.
 9. Ship it. For a served model, add the registered name to `MLSERVER_MODELS` in `src/may/mlserver/.env_all`. For embedded, give the consumer a
@@ -467,7 +488,7 @@ MLflow owns data and lifecycle, MLServer only serves, and nothing is shared by a
 | Project Code | `_` module, `asystem.model` | One implementation, unit tested, and also a command: `python -m asystem.model` |
 | Tracking DB, Registry, Artifact Storage | `mlflow` only | MUST run `--serve-artifacts` with `--artifacts-destination` on its own volume and `--default-artifact-root mlflow-artifacts:/`, so no client writes a path or needs a share |
 | Allowed Hosts | `mlflow` `.env_all` | MUST set `--allowed-hosts` and `--cors-allowed-origins`, since MLflow 3 rejects an unknown `Host` header |
-| Models in `mlserver` | A local volume | MUST pull by alias at bootstrap, MUST keep the previous copy on a failed pull, and MUST bound every call with a timeout |
+| Models in `mlserver` | A local volume | MUST pull by alias at bootstrap, MUST fail the bootstrap on a failed pull, and MUST bound every call with a timeout |
 | Embedded Copies | The consumer's tree | MUST be pulled by the consumer's `generate.sh`, reviewed as a diff, and never fetched at build or run time |
 | Server Start | `mlflow` entrypoint | MUST run under `exec` with `pipefail`, and a failed `mlflow db upgrade` MUST stop the start |
 | Health | Both services | MUST be real checks with every `curl` bounded; `mlflow` healthy MUST also read the registry and experiments API |
@@ -498,9 +519,13 @@ both run by `fab build`.
 | PJ010 | Every golden step has a response or an error, names only signature inputs and outputs, and gives every required input and output | R3, R4 |
 | PJ011 | The golden holds a step that expects a signature error, and a first call with no state when the signature has state | R8 |
 | PJ012 | Every golden response of a `static` project equals the constants | R4 |
-| AC001 | A project with acceptance holds `acceptance.json` and `evaluation.json` together, and every scalar output has a gating criterion | R14 |
-| AC002 | A criterion names a known split, metric and operator, a numeric bound, whether it gates, a reason, and an output in the signature | R14 |
-| AC003 | The evaluation is for this acceptance file, repeats its criteria in order and holds hashes for every split it uses | R14 |
+| PJ013 | The stamp in a `pyfunc` or `wasm` model file equals the manifest model version | R16 |
+| AC001 | A project that is not `static` holds an evaluation, and every required scalar output has a gating check in it | R14 |
+| AC002 | A check names a known split, a name in the naming style, an output in the signature, a numeric or null value, a limit and direction, and a boolean gate | R14 |
+| AC003 | The recorded outcome, budget and verdict follow from each check's value and limit, and the evaluation holds dataset hashes for every split it uses | R14 |
+| CP001 | A re-run of a `static` project writes the same manifest and file hashes as the committed one | R15 |
+| CP002 | A re-run of any other project writes a signature with no difference from the committed one | R15 |
+| CP003 | A re-run of any other project reaches the same acceptance verdict as the committed one | R15 |
 | NB001 | The notebook is format 4 | R13 |
 | NB002 | The notebook has no outputs and no execution counts | R13 |
 | NB003 | The notebook has exactly one level-one title, `# <module> / <model> / <notebook>`, matching its directories | R13 |
@@ -516,14 +541,17 @@ both run by `fab build`.
 | PM001 | Promotion needs the parity gate to have passed for every host on every architecture | R5 |
 | PM002 | The gate is for this project, by the SHA-256 of its `project.json` | R5 |
 | PM003 | A person is named as the reviewer | R5 |
-| PM004 | The project has an evaluation and every gating criterion passed | R14 |
+| PM004 | The project has an evaluation and every gating criterion passed, which `check_release` also applies to a consumer's `release` slot | R14, R15 |
+| PM005 | The candidate is stamped with the next model version, and a `static` project is not promoted | R16 |
+| PM006 | A release tag can be read to record as the service version | R16 |
 | WS001 | The module, model and notebook directories follow the naming style | R12 |
 | WS002 | A notebook directory holds exactly one notebook, named `notebook.ipynb` | R13 |
-| WS003 | A notebook directory holds only the notebook, `plan.md`, `acceptance.json`, `data` and a model file | R13 |
+| WS003 | A notebook directory holds only the notebook, `plan.md`, `.version`, `data` and a model file | R13 |
 | WS004 | The data directory holds only the four splits | R6 |
 | WS005 | A split holds only timestamp directories | R6 |
 | WS006 | A dataset is a csv named `<model>_<notebook>_...`, and one that is not `golden` ends with its date range | R12 |
 | WS007 | A notebook directory holds at most one model file of `model.wasm`, `model.onnx` and `model.py` | R13 |
+| WS008 | A `.version` file holds the model version in development as `<number>-SNAPSHOT` | R16 |
 
 The identifiers, the flavors of 3.2, the splits of 6.3 and the sections of 6.7 are mirrored in code, and a test fails if the specification
 and the code disagree in either direction.
@@ -537,16 +565,19 @@ Common operations are in two places, so a notebook states what it means and not 
 | `asystem.model` | `registered_name`, `check_name` | Derives a registered name from a model and a notebook, and checks the naming style |
 | `asystem.model` | `build_signature`, `signature_input`, `signature_output`, `signature_state` | Builds `signature.json` with every field the checks need |
 | `asystem.model` | `golden_step`, `golden_document`, `golden_from_samples` | Builds V2 requests and responses from named values or from dataset samples, with the datatype taken from the signature |
-| `asystem.model` | `package_project`, `write_project` | Builds the golden from samples and writes the project with its acceptance and evaluation, then runs every project check |
+| `asystem.model` | `package_project`, `write_project` | Builds the golden from samples and writes the project with its evaluation, then runs every project check |
 | `asystem.model` | `lint_project`, `verify_project` | Reports or raises every finding of 10.1 |
-| `asystem.model` | `register_project`, `pull_model` | Registers a project, logging its measured criteria as run metrics, and pulls one by alias |
+| `asystem.model` | `register_project`, `pull_model` | Registers a project, stamping the next model version and logging its measured criteria as run metrics, and pulls one by selector |
+| `asystem.model` | `stamp_model`, `read_stamp`, `content_sha256`, `restamp_project`, `next_model_version` | Write, read and hash the version in a model file, restamp a project copy, and issue the next number |
+| `asystem.model` | `resolve_model`, `list_models`, `service_version`, `slot_versions` | Look up a model by selector, list the registry, read the latest release tag and list the versions in the consumer slots, through `resolve`, `list` and `status` |
 | `asystem.model` | `diff_signature`, `same_signature` | Names every difference between two signatures apart from `versions`, which a failed pull reports |
 | `asystem.model` | `render_rust`, `render_go` | Generate request and response types from `signature.json`, through `python -m asystem.model generate` |
-| `asystem.model` | `acceptance_row`, `build_acceptance`, `measure`, `evaluate_acceptance` | Builds the criteria, measures a prediction against its truth with numpy, and evaluates every criterion into `evaluation.json` |
+| `asystem.model` | `measure`, `evaluate_acceptance` | Measures a prediction against its truth with numpy, and runs a notebook's acceptance check into `evaluation.json` with the outcome and budget of each check |
+| `asystem.model` | `compare_project`, `check_release` | Compare a re-run with the committed project (CP001 to CP003), and check that a `release` slot's acceptance passed |
 | `asystem.model` | `check_gate`, `check_acceptance`, `promote_project` | Check a parity gate file and the acceptance verdict, and set the alias `release` only when both pass |
 | `asystem.notebook` | `scaffold_notebook` | Writes a notebook, a plan and the data directories that already pass section 10, through `python -m asystem.notebook new <module> <model> <notebook> <flavor>` |
 | `library.data` | `data_path`, `read_data`, `golden_data`, `query_influxdb3` | Resolves a dataset path, reads one, reads or writes the golden dataset, and queries with the cache |
-| `library.project` | `consumer_project_dir`, `provenance` | Resolves a consumer's `default` or `release` slot, and builds `provenance` from data paths |
+| `library.project` | `consumer_project_dir`, `provenance`, `development_version` | Resolves a consumer's `default` or `release` slot, or the same under `MODEL_OUTPUT_DIR`, and builds `provenance` from data paths |
 | `library.env`, `library.plot` | `init_env`, `show_plot` | Loads the module environment, and plots a series |
 
 A notebook SHOULD use these helpers and MUST NOT reimplement them.
@@ -572,3 +603,5 @@ Enforces column of 10.1 disagree.
 | R12 | NB008, PJ004, PJ007, WS001, WS006 |
 | R13 | NB001, NB002, NB003, NB004, NB005, NB006, NB007, NB009, NB010, NB011, NB012, WS002, WS003, WS007 |
 | R14 | AC001, AC002, AC003, PM004 |
+| R15 | CP001, CP002, CP003, PM004 |
+| R16 | PJ013, PM005, PM006, WS008 |

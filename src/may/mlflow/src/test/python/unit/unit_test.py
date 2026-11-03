@@ -77,3 +77,25 @@ if __name__ == "__main__":
             ]
         )
     )
+
+
+class ConsumerProjectDirTest(unittest.TestCase):
+    def test_slot_resolves_into_the_tree_or_the_output_directory(self):
+        from library.project import consumer_project_dir
+
+        self.assertTrue(consumer_project_dir("max/rackmains", "default").endswith("max/rackmains/src/build/resources/model/default"))
+        with mock.patch.dict(os.environ, {"MODEL_OUTPUT_DIR": "/out"}):
+            self.assertEqual("/out/max/rackmains/default", consumer_project_dir("max/rackmains", "default"))
+        with self.assertRaises(ValueError):
+            consumer_project_dir("max/rackmains", "other")
+
+
+class DevelopmentVersionTest(unittest.TestCase):
+    def test_the_workspace_version_file_is_read(self):
+        from library.project import development_version
+
+        model_dir = tempfile.mkdtemp()
+        os.makedirs(os.path.join(model_dir, "demo/calc/run"))
+        with open(os.path.join(model_dir, "demo/calc/run/.version"), "w") as version_file:
+            version_file.write("1003-SNAPSHOT\n")
+        self.assertEqual("1003-SNAPSHOT", development_version("demo/calc/run", model_dir))

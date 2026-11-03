@@ -5,7 +5,7 @@ import re
 import sys
 from os.path import abspath, basename, dirname, isfile, join
 
-from asystem.model import PROJECT_FLAVORS, PROJECT_SPLITS, check_name, registered_name
+from asystem.model import PROJECT_FLAVORS, PROJECT_SPLITS, PROJECT_VERSION_FILE, PROJECT_VERSION_FIRST, check_name, registered_name
 
 NOTEBOOK_FORMAT = 4
 NOTEBOOK_SECTIONS = ("Setup", "Capture Data", "Explore", "Fit", "Evaluate", "Package", "Register", "Pull")
@@ -87,6 +87,10 @@ def scaffold_notebook(root, module, model, notebook, flavor):
     for split in PROJECT_SPLITS:
         os.makedirs(join(notebook_dir, "data", split), exist_ok=True)
     created = [notebook_path, join(notebook_dir, "plan.md")]
+    if flavor != "static":
+        with open(join(notebook_dir, PROJECT_VERSION_FILE), "w") as version_file:
+            version_file.write(f"{PROJECT_VERSION_FIRST}-SNAPSHOT\n")
+        created.append(join(notebook_dir, PROJECT_VERSION_FILE))
     for split in PROJECT_SPLITS:
         keep = join(notebook_dir, "data", split, ".gitkeep")
         if not isfile(keep):
@@ -143,7 +147,8 @@ def _scaffold_notebook(module, model, notebook, name, flavor):
         return markdown(f"## {title}\n\n- **Stage:** {stage}\n- **Intent:** {intent}")
 
     static = flavor == "static"
-    version = "static-1" if static else "1"
+    version_line = 'MODEL_VERSION = "static-1"' if static else "MODEL_VERSION = development_version(WORKSPACE)"
+    project_import = "from library.project import provenance" if static else "from library.project import development_version, provenance"
     cells = [
         markdown(
             f"# {module} / {model} / {notebook}\n\nState in one line what this model does.\n\n| Term | In This Notebook |\n|---|---|\n"
@@ -152,20 +157,18 @@ def _scaffold_notebook(module, model, notebook, name, flavor):
         ),
         section("Setup", "none, preparation for the stages below.", "load `env` and declare the model name, version and dataset names as constants (`spec.md` 6.6)."),
         code(
-            f"import json\nimport tempfile\nfrom os.path import join\n\nfrom library.data import golden_data\nfrom library.env import init_env\nfrom library.project import provenance\n\nenv = init_env()\n\n"
-            f'WORKSPACE = "{module}/{model}/{notebook}"\nMODEL_NAME = "{name}"\nMODEL_VERSION = "{version}"\nGOLDEN = "{model}_{notebook}_golden"\nCONSTANTS = {{"{module}_{model}_out": 1}}\n'
+            f"import json\nimport tempfile\nfrom os.path import join\n\nfrom library.data import golden_data\nfrom library.env import init_env\n{project_import}\n\nenv = init_env()\n\n"
+            f'WORKSPACE = "{module}/{model}/{notebook}"\nMODEL_NAME = "{name}"\n{version_line}\nGOLDEN = "{model}_{notebook}_golden"\nCONSTANTS = {{"{module}_{model}_out": 1}}\n'
         ),
     ]
     if not static:
         cells += [
             section("Capture Data", "1, capture data (`spec.md` 7.1).", "load the `training` and `validation` data."),
             section("Fit", "3, fit.", "fit the model on `training` only (R6)."),
-            section(
-                "Evaluate", "4, evaluate.", "check the fit on `validation` and `backtest` through the shipped runtime and measure it against `acceptance.json` with `evaluate_acceptance` (R4, R14)."
-            ),
+            section("Evaluate", "4, evaluate.", "check the fit on `validation` and `backtest` through the shipped runtime and run its acceptance check with `evaluate_acceptance` (R4, R14)."),
         ]
     cells += [
-        section("Package", "5, package.", "write the golden samples, build the signature and write the project with its acceptance and evaluation (R1, R3, R14)."),
+        section("Package", "5, package.", "write the golden samples, build the signature and write the project with its evaluation (R1, R3, R14)."),
         code(
             "from asystem.model import build_signature, signature_input, signature_output, package_project, register_project\n\n"
             f'golden_pl, golden_path = golden_data(WORKSPACE, GOLDEN, lambda: {{"{module}_{model}_in": [1.0, None], "expect": ["ok", "error"]}})\n\n'
@@ -175,7 +178,7 @@ def _scaffold_notebook(module, model, notebook, name, flavor):
                 'manifest = package_project(project_dir, MODEL_NAME, MODEL_VERSION, "static", signature, golden_pl.iter_rows(named=True), provenance("manual", "none", [golden_path], "scaffold"), constants=CONSTANTS)\n'
                 "print(json.dumps(manifest, indent=2))\n"
                 if static
-                else 'raise NotImplementedError("write the fit, then package the project with package_project")\n'
+                else 'print("no model is fitted yet, so nothing is packaged")\n'
             )
         ),
         section("Register", "6, register.", "register the verified project with the alias `candidate`. A person sets `release` after review and the parity gate (R5)."),

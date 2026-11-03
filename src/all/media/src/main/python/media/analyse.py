@@ -73,7 +73,7 @@ MEDIA_EPISODE_NAME_REGEXP = r".*" + MEDIA_EPISODE_NUMBER_REGEXP + r"\..*"
 MEDIA_PROFILE_REGEXP = r"(" + TOKEN_SMALL + r"|" + TOKEN_LARGE + r")$"
 MEDIA_FILE_EXTENSIONS = {"avi", "m2ts", "mkv", "mov", "mp4", "wmv", "ts"}
 MEDIA_FILE_EXTENSIONS_IGNORE = {"yaml", "sh", "srt", "png", "jpg", "jpeg", "log", "sonarr", "rpu"}
-DOLBY_VISION_PROFILES_STRIPPABLE = ["8.1", "8.4"]
+DOLBY_VISION_PROFILES_STRIPPABLE = r"^(7\.[0-9]+|8\.1|8\.4)$"
 MEDIA_FILE_SCRIPTS = [_file_action.name.lower() for _file_action in FileAction if _file_action.has_script]
 
 BASH_EXIT_HANDLER = (
@@ -642,22 +642,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, merge=False, transcode=Fal
             with open(file_metadata_path) as file_metadata:
                 try:
                     metadata = _flatten_dicts(_unwrap_lists(yaml.safe_load(file_metadata)))
-                    file_target_dolby_vision = "False"
-                    file_defaults_dolby_vision_dir = os.path.join(file_path_media, file_media_scope, file_media_type, file_base_dir)
-                    file_defaults_dolby_vision_paths = []
-                    while file_defaults_dolby_vision_dir != file_path_media_parent:
-                        file_defaults_dolby_vision_path = os.path.join(file_defaults_dolby_vision_dir, "._defaults.yaml")
-                        if os.path.isfile(file_defaults_dolby_vision_path):
-                            file_defaults_dolby_vision_paths.append(file_defaults_dolby_vision_path)
-                        file_defaults_dolby_vision_dir = os.path.dirname(file_defaults_dolby_vision_dir)
-                    for file_defaults_dolby_vision_path in reversed(file_defaults_dolby_vision_paths):
-                        with open(file_defaults_dolby_vision_path) as file_defaults_dolby_vision:
-                            file_defaults_dolby_vision_dict = _unwrap_lists(yaml.safe_load(file_defaults_dolby_vision))
-                        if "target_dolby_vision" in file_defaults_dolby_vision_dict:
-                            file_target_dolby_vision = str(file_defaults_dolby_vision_dict["target_dolby_vision"]).replace(" ", "").title()
-                            if file_target_dolby_vision not in {"True", "False"}:
-                                raise Exception(f"Invalid target_dolby_vision: {file_target_dolby_vision}")
-                    metadata["target_dolby_vision"] = file_target_dolby_vision
                     metadata["metadata_loaded"] = str(file_metadata_path in metadata_files_written)
                     metadata_list.append(metadata)
                     if verbose:
@@ -773,7 +757,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, merge=False, transcode=Fal
                 "Video 1 Index",
                 "Video 1 Codec",
                 "Video 1 Label",
-                "Target Dolby Vision",
                 "Video 1 HDR Format",
                 "Video 1 HDR Profile",
                 "Video 1 Width",
@@ -1043,8 +1026,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, merge=False, transcode=Fal
                 .then(pl.lit("Check Missing Streams"))
                 .when(
                     (pl.col("Video 1 HDR Format") == "Dolby Vision")
-                    & (pl.col("Target Dolby Vision") == "False")
-                    & (~pl.col("Video 1 HDR Profile").fill_null("").is_in(DOLBY_VISION_PROFILES_STRIPPABLE))
+                    & (~pl.col("Video 1 HDR Profile").fill_null("").str.contains(DOLBY_VISION_PROFILES_STRIPPABLE))
                 )
                 .then(pl.lit("Check Unsupported Dolby Vision Profile"))
                 .when((pl.col("Target Lang") != pl.col("Audio 1 Lang")))
@@ -1128,8 +1110,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, merge=False, transcode=Fal
                 #
                 .when(
                     (pl.col("Video 1 HDR Format") == "Dolby Vision")
-                    & (pl.col("Target Dolby Vision") == "False")
-                    & (pl.col("Video 1 HDR Profile").fill_null("").is_in(DOLBY_VISION_PROFILES_STRIPPABLE))
+                    & (pl.col("Video 1 HDR Profile").fill_null("").str.contains(DOLBY_VISION_PROFILES_STRIPPABLE))
                 )
                 .then(pl.lit("Reformat Dolby Vision"))
                 .when((pl.col("Metadata State") == "Messy"))
@@ -1379,8 +1360,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, merge=False, transcode=Fal
                     (
                         pl.when(
                             (pl.col("Video 1 HDR Format") == "Dolby Vision")
-                            & (pl.col("Target Dolby Vision") == "False")
-                            & (pl.col("Video 1 HDR Profile").fill_null("").is_in(DOLBY_VISION_PROFILES_STRIPPABLE))
+                            & (pl.col("Video 1 HDR Profile").fill_null("").str.contains(DOLBY_VISION_PROFILES_STRIPPABLE))
                         )
                         .then(pl.lit("True"))
                         .otherwise(pl.lit("False"))
@@ -1388,8 +1368,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, merge=False, transcode=Fal
                     (
                         pl.when(
                             (pl.col("Video 1 HDR Format") == "Dolby Vision")
-                            & (pl.col("Target Dolby Vision") == "False")
-                            & (pl.col("Video 1 HDR Profile").fill_null("").is_in(DOLBY_VISION_PROFILES_STRIPPABLE))
+                            & (pl.col("Video 1 HDR Profile").fill_null("").str.contains(DOLBY_VISION_PROFILES_STRIPPABLE))
                             & (pl.col("Video 1 Label") == "UHD")
                             & (pl.col("File Name").str.contains(TOKEN_LARGE, literal=True))
                         )

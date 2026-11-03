@@ -26,8 +26,10 @@ open decisions, and MUST NOT restate the specification. Each notebook's own plan
   types from `signature.json`. The Rust output compiles and the Go output passes `go vet` and `gofmt`; neither is wired into a consumer yet.
 - `check_gate` and `python -m asystem.model promote`, run by `src/main/resources/promote.sh`, which set the alias `release` only when a parity
   gate file passes for this project (R5).
-- Acceptance (`spec.md` 6.8, R14): `acceptance.json` and `evaluation.json` in the workspace and the project, `measure` and `evaluate_acceptance` over numpy, checks AC001 to AC003 and PM004, and `register_project` logging `<split>/<output>/<metric>` run metrics, the datasets and an `acceptance` tag. It is unit tested, and `weewx/console/battery` uses it and fails at Evaluate until a labelled `backtest` run exists.
+- Acceptance (`spec.md` 6.8, R14): a notebook-defined `acceptance_checks` function run by `evaluate_acceptance`, which computes each check's outcome and budget from its value, limit and direction, writes `evaluation.json` into the project (AC001 to AC003, PM004), and has `register_project` log `acceptance_passed`, `acceptance_budget` and each measured value. `weewx/console/battery` uses it and records a failed verdict until a labelled `backtest` run exists.
 - `register_project` registers a non-`pyfunc` project through `create_model_version` on the run's artifact path, since MLflow 3 refuses `register_model` for plain artifacts.
+- `model.sh check` (R15), run by `fab release` and by `mlflow`'s `deploy.sh`: it runs every notebook through Package into `target/model-output`, compares each committed consumer `default` slot with `compare_project` (CP001 to CP003) and checks each `release` slot with `check_release`. `fab release` also runs `check_release` on a module's own `release` slot and cannot skip it with `FAB_SKIP_TESTS`. `deploy.sh` then runs `model.sh refresh`, which re-runs the `mlserver` bootstrap pull on the `may` host without pushing an image. `notebook.sh` stops before Register unless `REGISTER=1`, and `register_project` reuses a version for an unchanged project.
+- Versions (`spec.md` 3.4, R16): the model version stamped into `model.py` and `wasm` modules, `.version` per workspace, `restamp_project`, the next number from the registered model's high-water mark and `m<N>` aliases, `promote_project` recording `service_version` from the latest release tag and writing the next `.version`, `resolve`, `list` and `status` commands, and `pull` printing the registry tags. MLflow reserves the alias form `v<N>`, hence `m<N>`.
 - A test that fails when the requirements and their checks (`spec.md` 10.1 and 10.3) disagree.
 - Notebook lint in `fab build`: `ruff` on the code cells, then `asystem.notebook` and `asystem.workspace` (`spec.md` 6.7).
 - The `mlflow` and `mlserver` modules, with the artifact mount removed, `--serve-artifacts`, allowed hosts, real health checks, `exec`
@@ -57,7 +59,9 @@ open decisions, and MUST NOT restate the specification. Each notebook's own plan
 
 In order. Each item is done when its worked example (4) runs and passes.
 
-0. Give a model its first passing acceptance. `weewx/console/battery` has a provisional `backtest` row and fails, since: its `validation` run only falls to 55 % and rises again, so a time-normalised truth like the `training` run's is false, and no row can be set without a labelled run or a reference gauge. A bound set after seeing a measurement, with a `reason`, is provisional.
+00. Serve a model: `mlserver` is a stub that prints its version and sleeps, with no `mlserver start`, model repository or settings. It needs per-model `model-settings.json` with `version` read from the `MODEL_VERSION` line, a real health check, `mlserver` depending on the bootstrap, and only `pyfunc` through MLServer's MLflow runtime. Serve `release` only, so the unversioned URL reaches it: MLServer sends an unversioned call to the highest loaded version.
+00. `onnx` stamping (`metadata_props`) waits for the `onnx` pin, and a `wasm` host that reads the `asystem.model_version` section is not built.
+0. Give a model its first passing acceptance. `weewx/console/battery` has a provisional `backtest` check and records a failed verdict, since: its `validation` run only falls to 55 % and rises again, so a time-normalised truth like the `training` run's is false, and no row can be set without a labelled run or a reference gauge. A bound set after seeing a measurement, with a `reason`, is provisional.
 1. Worked examples for every flow in section 4, built first where they need nothing new and then alongside each feature below, so the code
    describes the spec and implements it.
 2. The `wasm` flavor: a builder for the first project that needs one (a module satisfying the ABI of `spec.md` 4.1), the `predict`
@@ -87,7 +91,7 @@ model and not a snippet, so it proves the spec by passing its own golden and rep
 | Learned model | `onnx` | `example/onnx/regression`: a scikit-learn regression; candidate `weewx/forecast/roof` (4.1) | Served (`onnxruntime`), Python, Rust (`ort`) | R4, R11: the converter, the pinned library and the same golden results across engines |
 | Python-only model | `pyfunc` | `weewx/console/battery`: the arctan fit as `model.py`; a statsmodels-style `example/pyfunc/forecast` for a library with no converter | Served and Python, with a `static` floor | R2, R8: a served-only model and a consumer that survives losing it |
 | Embedded pull | Any | Any registered model | A consumer `generate.sh` | R7: pull only on `fab pull`, commit the result, verify on every other build |
-| Served pull | Any | Any registered model | `mlserver` bootstrap | R7: pull by alias at start, keep the previous copy when MLflow is down |
+| Served pull | Any | Any registered model | `mlserver` bootstrap | R7: pull by alias at start, and do not start when a pull fails |
 | Promotion | Any | Any registered model | The registry | R5: `candidate` to `release` only after review and the parity gate |
 | Data splits and cache | Any | Any notebook | `query_influxdb3`, `data_path` | R6: one split per dataset, a re-query is a diff, `force` overwrites |
 | Failure paths | Any | A deliberately bad project | Each consumer | R8, R9, R10: an invalid project is refused, a signature change fails the pull, every decision records the version and hash |

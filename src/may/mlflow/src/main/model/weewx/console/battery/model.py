@@ -4,6 +4,7 @@ import pandas as pd
 from mlflow.models import set_model
 from mlflow.pyfunc import PythonModel
 
+MODEL_VERSION = "1000-SNAPSHOT"
 INPUT = "weatherstation_console_battery_voltage"
 OUTPUT = "weewx_console_battery_capacity_pct"
 X_MIN = 3.002000093460083

@@ -8,6 +8,8 @@ import textwrap
 import unittest
 import zipfile
 from os.path import dirname, isdir, join, realpath
+from pathlib import Path
+from unittest import mock
 
 ROOT = realpath(join(dirname(__file__), "../../../../../.."))
 SCRIPT = join(ROOT, "mad/postgres/src/main/resources/backup.sh")
@@ -741,19 +743,19 @@ class ModelProjectTest(unittest.TestCase):
         self.assertEqual(["PJ002"], self.rules(provenance={"source": "manual"}))
 
     def test_model_flavor_needs_its_file(self):
-        self.assertEqual(["PJ003"], self.rules(flavor="wasm", provenance={"source": "manual", "inputs": [], "implementation": "demo model.py requires pandas"}))
+        self.assertEqual(["PJ003"], self.rules(flavor="wasm", evaluation=self.evaluation(), provenance={"source": "manual", "inputs": [], "implementation": "demo model.py requires pandas"}))
 
     def test_model_file_is_copied_into_the_project_and_hashed(self):
-        model_path = join(tempfile.mkdtemp(), "model.py")
-        with open(model_path, "w") as model_file:
-            model_file.write("VALUE = 1\n")
-        manifest = self.write(flavor="pyfunc", model_path=model_path, constants=None, provenance={"source": "manual", "inputs": [], "implementation": "demo model.py requires pandas"})
+        model_path = self.model_file()
+        manifest = self.write(
+            flavor="pyfunc", model_path=model_path, constants=None, evaluation=self.evaluation(), provenance={"source": "manual", "inputs": [], "implementation": "demo model.py requires pandas"}
+        )
         self.assertEqual("model.py", manifest["files"]["model"]["path"])
         self.assertTrue(os.path.isfile(join(self.project_dir, "model.py")))
 
     def test_implementation_must_say_something(self):
         for implementation in ("demo", "TBD", "to be determined", "", None):
-            self.assertEqual(["PJ002", "PJ003"], self.rules(flavor="wasm", provenance={"source": "manual", "inputs": [], "implementation": implementation}))
+            self.assertEqual(["PJ002", "PJ003"], self.rules(flavor="wasm", evaluation=self.evaluation(), provenance={"source": "manual", "inputs": [], "implementation": implementation}))
 
     def test_pyfunc_project_is_registered_as_a_pyfunc_model(self):
         from asystem.model import build_signature, golden_document, golden_step, pull_model, register_project, signature_input, signature_output
@@ -763,12 +765,19 @@ class ModelProjectTest(unittest.TestCase):
         model_path = join(tempfile.mkdtemp(), "model.py")
         with open(model_path, "w") as model_file:
             model_file.write(
+                'MODEL_VERSION = "1"\n'
                 "import pandas as pd\nfrom mlflow.models import set_model\nfrom mlflow.pyfunc import PythonModel\n\n\n"
                 "class Demo(PythonModel):\n    def predict(self, context, model_input, params=None):\n"
                 '        return pd.DataFrame({"demo_out_seconds": model_input["demo_in_seconds"] * 2})\n\n\nset_model(Demo())\n'
             )
         self.write(
-            flavor="pyfunc", model_path=model_path, signature=signature, golden=golden, constants=None, provenance={"source": "manual", "inputs": [], "implementation": "demo model.py requires pandas"}
+            flavor="pyfunc",
+            model_path=model_path,
+            signature=signature,
+            golden=golden,
+            constants=None,
+            evaluation=self.evaluation(output="demo_out_seconds"),
+            provenance={"source": "manual", "inputs": [], "implementation": "demo model.py requires pandas"},
         )
         root_dir = tempfile.mkdtemp()
         uri = f"sqlite:///{join(root_dir, 'mlflow.db')}"
@@ -778,31 +787,45 @@ class ModelProjectTest(unittest.TestCase):
         mlflow.set_tracking_uri(uri)
         loaded = mlflow.pyfunc.load_model("models:/demo_calc@candidate")
         self.assertEqual([2.0], list(loaded.predict({"demo_in_seconds": [1.0]})["demo_out_seconds"]))
-        self.assertEqual("pyfunc", pull_model("demo_calc", "candidate", join(root_dir, "pulled"), uri)["flavor"])
+        self.assertEqual("pyfunc", pull_model("demo_calc", "candidate", join(root_dir, "pulled"), uri, unpromoted=True)["flavor"])
+        self.assertEqual("1000", pull_model("demo_calc", "candidate", join(root_dir, "pulled"), uri, unpromoted=True)["model_version"])
         self.assertEqual("1", str(version))
 
     def test_pyfunc_registration_refuses_a_state_vector_signature(self):
         from asystem.model import register_project
 
-        model_path = join(tempfile.mkdtemp(), "model.py")
-        with open(model_path, "w") as model_file:
-            model_file.write("VALUE = 1\n")
-        self.write(flavor="pyfunc", model_path=model_path, constants=None, provenance={"source": "manual", "inputs": [], "implementation": "demo model.py requires pandas"})
+        model_path = self.model_file()
+        self.write(
+            flavor="pyfunc", model_path=model_path, constants=None, evaluation=self.evaluation(), provenance={"source": "manual", "inputs": [], "implementation": "demo model.py requires pandas"}
+        )
         with self.assertRaises(ValueError):
             register_project(self.project_dir, "demo_calc", f"sqlite:///{join(tempfile.mkdtemp(), 'mlflow.db')}")
 
-    def acceptance(self, rows=None, passing=True):
-        from asystem.model import acceptance_row, build_acceptance, evaluate_acceptance
+    def model_file(self, flavor="pyfunc", version="1"):
+        from asystem.model import stamp_model
+
+        path = join(tempfile.mkdtemp(), "model.wasm" if flavor == "wasm" else "model.py")
+        if flavor == "wasm":
+            with open(path, "wb") as model_file:
+                model_file.write(b"\0asm\x01\x00\x00\x00")
+        else:
+            with open(path, "w") as model_file:
+                model_file.write("VALUE = 1\n")
+            with open(path, "a") as model_file:
+                model_file.write('MODEL_VERSION = "placeholder"\n')
+        stamp_model(path, flavor, version)
+        return path
+
+    def evaluation(self, passing=True, output="demo_limit_seconds", checks=None):
+        from asystem.model import evaluate_acceptance
 
         dataset_dir = join(tempfile.mkdtemp(), "2026-11-03_10-00-00")
         os.makedirs(dataset_dir)
         dataset = join(dataset_dir, "demo_calc_limit_2026-11-01_2026-11-02.csv")
         with open(dataset, "w") as dataset_file:
             dataset_file.write("a,b\n1,2\n")
-        acceptance = build_acceptance(rows or [acceptance_row("backtest", "demo_limit_seconds", "rmse", "<=", 1.0, "the guard tolerates one second")])
-        predicted = [5.0, 5.5] if passing else [5.0, 9.0]
-        evaluation = evaluate_acceptance(acceptance, {"backtest": {"demo_limit_seconds": ([5.0, 5.0], predicted)}}, {"backtest": [dataset]})
-        return acceptance, evaluation
+        value = 0.5 if passing else 9.0
+        return evaluate_acceptance(lambda: checks or [{"split": "backtest", "output": output, "name": "rmse", "value": value, "limit": 1.0, "direction": "max"}], {"backtest": [dataset]})
 
     def test_measure_matches_the_definitions(self):
         from asystem.model import measure
@@ -820,97 +843,207 @@ class ModelProjectTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             measure([1.0], [1.0, 2.0])
 
-    def test_acceptance_is_evaluated_and_a_missing_measure_fails(self):
-        _, evaluation = self.acceptance()
-        self.assertTrue(evaluation["passed"])
+    def test_outcome_and_budget_follow_the_value_limit_and_direction(self):
+        evaluation = self.evaluation()
+        self.assertEqual((True, 0.5, 0.5), (evaluation["passed"], evaluation["budget"], evaluation["checks"][0]["budget"]))
         self.assertEqual("2026-11-03_10-00-00/demo_calc_limit_2026-11-01_2026-11-02.csv", evaluation["datasets"]["backtest"][0]["path"])
-        _, evaluation = self.acceptance(passing=False)
-        self.assertFalse(evaluation["passed"])
-        from asystem.model import acceptance_row
+        failing = self.evaluation(passing=False)
+        self.assertEqual((False, 9.0), (failing["passed"], failing["budget"]))
+        checks = [
+            {"split": "backtest", "output": "demo_limit_seconds", "name": "recall", "value": 0.8, "limit": 0.5, "direction": "min"},
+            {"split": "backtest", "output": "demo_limit_seconds", "name": "over", "value": -2.0, "limit": 0.0, "direction": "max"},
+            {"split": "validation", "output": "demo_limit_seconds", "name": "mae", "value": 99.0, "limit": 1.0, "direction": "max", "gate": False},
+        ]
+        mixed = self.evaluation(checks=checks)
+        self.assertEqual([True, True, False], [entry["passed"] for entry in mixed["checks"]])
+        self.assertEqual([0.625, 0.0, 99.0], [entry["budget"] for entry in mixed["checks"]])
+        self.assertEqual((True, 0.625), (mixed["passed"], mixed["budget"]))
+        unmeasured = self.evaluation(checks=[{"split": "backtest", "output": "demo_limit_seconds", "name": "rmse", "value": None, "limit": 1.0, "direction": "max"}])
+        self.assertEqual((False, None), (unmeasured["passed"], unmeasured["budget"]))
 
-        _, evaluation = self.acceptance(
-            rows=[acceptance_row("backtest", "demo_limit_seconds", "rmse", "<=", 1.0, "x"), acceptance_row("validation", "demo_limit_seconds", "mae", "<=", 1.0, "x", gate=False)]
-        )
-        self.assertFalse(evaluation["passed"] and evaluation["results"][1]["passed"])
-        self.assertTrue(evaluation["passed"])
+    def test_a_malformed_check_is_refused(self):
+        base = {"split": "backtest", "output": "demo_limit_seconds", "name": "rmse", "value": 1.0, "limit": 1.0, "direction": "max"}
+        for checks in ([], None, [{**base, "direction": "avg"}], [{**base, "limit": -1.0}], [{**base, "direction": "min", "limit": 0}], [{**base, "limit": "1"}]):
+            with self.assertRaises(ValueError, msg=checks):
+                self.evaluation(checks=checks) if checks else __import__("asystem.model", fromlist=["x"]).evaluate_acceptance(lambda checks=checks: checks, {})
 
-    def test_project_with_acceptance_has_no_findings(self):
-        acceptance, evaluation = self.acceptance()
-        manifest = self.write(acceptance=acceptance, evaluation=evaluation)
-        self.assertEqual(["acceptance", "evaluation", "golden", "signature"], sorted(manifest["files"]))
-        self.assertEqual([], self.rules(acceptance=acceptance, evaluation=evaluation))
+    def test_project_with_an_evaluation_has_no_findings(self):
+        manifest = self.write(evaluation=self.evaluation())
+        self.assertEqual(["evaluation", "golden", "signature"], sorted(manifest["files"]))
+        self.assertEqual([], self.rules(evaluation=self.evaluation()))
 
-    def test_acceptance_and_evaluation_come_together(self):
-        acceptance, _ = self.acceptance()
-        with self.assertRaises(ValueError):
-            self.write(acceptance=acceptance)
+    def test_a_model_project_without_an_evaluation_is_refused(self):
+        self.assertEqual(["AC001"], self.rules(**{**self.fitted_overrides(), "evaluation": None}))
 
-    def test_every_output_needs_a_gating_row(self):
-        from asystem.model import acceptance_row
+    def test_every_required_output_needs_a_gating_check(self):
+        checks = [{"split": "backtest", "output": "demo_limit_seconds", "name": "rmse", "value": 0.5, "limit": 1.0, "direction": "max", "gate": False}]
+        self.assertEqual(["AC001"], self.rules(evaluation=self.evaluation(checks=checks)))
 
-        acceptance, evaluation = self.acceptance(rows=[acceptance_row("backtest", "demo_limit_seconds", "rmse", "<=", 1.0, "x", gate=False)])
-        self.assertEqual(["AC001"], self.rules(acceptance=acceptance, evaluation=evaluation))
+    def test_checks_are_validated(self):
+        base = {"split": "backtest", "output": "demo_limit_seconds", "name": "rmse", "value": 0.5, "limit": 1.0, "direction": "max"}
+        for entry in ({**base, "split": "training"}, {**base, "name": "Bad-Name"}, {**base, "output": "demo_other_seconds"}):
+            self.assertIn("AC002", self.rules(evaluation=self.evaluation(checks=[entry, {**base, "name": "mae"}])), entry)
+        evaluation = self.evaluation()
+        evaluation["checks"][0]["gate"] = "yes"
+        self.assertIn("AC002", self.rules(evaluation=evaluation))
+        evaluation = self.evaluation()
+        evaluation["checks"][0]["value"] = "0.5"
+        self.assertIn("AC002", self.rules(evaluation=evaluation))
 
-    def test_acceptance_rows_are_checked(self):
-        from asystem.model import acceptance_row
-
-        for row in (
-            acceptance_row("training", "demo_limit_seconds", "rmse", "<=", 1.0, "x"),
-            acceptance_row("backtest", "demo_limit_seconds", "median", "<=", 1.0, "x"),
-            acceptance_row("backtest", "demo_limit_seconds", "rmse", "<", 1.0, "x"),
-            acceptance_row("backtest", "demo_limit_seconds", "rmse", "<=", "1", "x"),
-            acceptance_row("backtest", "demo_limit_seconds", "rmse", "<=", 1.0, " "),
-            acceptance_row("backtest", "demo_other_seconds", "rmse", "<=", 1.0, "x"),
-        ):
-            acceptance, evaluation = (
-                self.acceptance(rows=[row, acceptance_row("backtest", "demo_limit_seconds", "mae", "<=", 1.0, "x")])
-                if row["metric"] != "median" and row["op"] != "<" and row["bound"] == 1.0
-                else (None, None)
-            )
-            if acceptance is None:
-                acceptance = {"rows": [row, acceptance_row("backtest", "demo_limit_seconds", "mae", "<=", 1.0, "x")]}
-                evaluation = {"acceptance_sha256": "", "datasets": {"backtest": []}, "results": [], "passed": True}
-            self.assertIn("AC002", self.rules(acceptance=acceptance, evaluation=evaluation), row)
-
-    def test_evaluation_must_belong_to_the_acceptance(self):
-        acceptance, evaluation = self.acceptance()
-        other, _ = self.acceptance(rows=[__import__("asystem.model", fromlist=["x"]).acceptance_row("backtest", "demo_limit_seconds", "rmse", "<=", 2.0, "x")])
-        self.assertIn("AC003", self.rules(acceptance=other, evaluation=evaluation))
+    def test_a_tampered_evaluation_is_found(self):
+        evaluation = self.evaluation(passing=False)
+        evaluation["checks"][0]["passed"] = True
+        self.assertIn("AC003", self.rules(evaluation=evaluation))
+        evaluation = self.evaluation(passing=False)
+        evaluation["passed"] = True
+        self.assertIn("AC003", self.rules(evaluation=evaluation))
+        evaluation = self.evaluation()
+        evaluation["budget"] = 0.1
+        self.assertIn("AC003", self.rules(evaluation=evaluation))
+        evaluation = self.evaluation()
         del evaluation["datasets"]["backtest"]
-        self.assertIn("AC003", self.rules(acceptance=acceptance, evaluation=evaluation))
+        self.assertIn("AC003", self.rules(evaluation=evaluation))
 
     def test_promotion_needs_acceptance_passed(self):
         from asystem.model import check_acceptance
 
         self.write()
         self.assertEqual(["PM004"], [rule for rule, _ in check_acceptance(self.project_dir)])
-        acceptance, evaluation = self.acceptance(passing=False)
-        self.write(acceptance=acceptance, evaluation=evaluation)
+        self.write(evaluation=self.evaluation(passing=False))
         self.assertEqual(["PM004"], [rule for rule, _ in check_acceptance(self.project_dir)])
-        acceptance, evaluation = self.acceptance()
-        self.write(acceptance=acceptance, evaluation=evaluation)
+        self.write(evaluation=self.evaluation())
         self.assertEqual([], check_acceptance(self.project_dir))
 
     def test_registration_logs_metrics_datasets_and_the_verdict(self):
         import mlflow
         from asystem.model import register_project
 
-        acceptance, evaluation = self.acceptance()
-        self.write(acceptance=acceptance, evaluation=evaluation)
+        self.write(evaluation=self.evaluation())
         uri = f"sqlite:///{join(tempfile.mkdtemp(), 'mlflow.db')}"
         register_project(self.project_dir, "demo_calc", uri)
         mlflow.set_tracking_uri(uri)
         run = mlflow.search_runs(experiment_names=["demo_calc"], output_format="list")[0]
-        self.assertEqual("passed", run.data.tags["acceptance"])
-        self.assertAlmostEqual(0.5 / 2**0.5, run.data.metrics["backtest/demo_limit_seconds/rmse"])
+        self.assertEqual(("passed", "0.5"), (run.data.tags["acceptance"], run.data.tags["acceptance_budget"]))
+        self.assertEqual((1.0, 0.5, 0.5), (run.data.metrics["acceptance_passed"], run.data.metrics["acceptance_budget"], run.data.metrics["backtest/demo_limit_seconds/rmse"]))
         self.assertEqual("backtest", run.inputs.dataset_inputs[0].tags[0].value)
+
+    def other_project(self, **overrides):
+        other_dir = join(tempfile.mkdtemp(), "project")
+        self.write(project_dir=other_dir, **overrides)
+        return other_dir
+
+    def fitted_overrides(self, passing=True):
+        model_path = self.model_file("wasm")
+        return {
+            "flavor": "wasm",
+            "model_path": model_path,
+            "constants": None,
+            "evaluation": self.evaluation(passing=passing),
+            "provenance": {"source": "manual", "inputs": [], "implementation": "demo module built by hand"},
+        }
+
+    def test_static_project_must_reproduce_exactly(self):
+        from asystem.model import compare_project
+
+        self.write()
+        self.assertEqual([], compare_project(self.other_project(), self.project_dir))
+        self.assertEqual(["CP001"], [rule for rule, _ in compare_project(self.other_project(provenance={"source": "manual", "inputs": [], "notes": "edited by hand"}), self.project_dir)])
+
+    def test_fitted_project_is_compared_by_signature_and_verdict_not_bytes(self):
+        from asystem.model import compare_project
+
+        self.write(**self.fitted_overrides())
+        self.assertEqual([], compare_project(self.other_project(**self.fitted_overrides()), self.project_dir))
+        self.assertEqual(["CP003"], [rule for rule, _ in compare_project(self.other_project(**self.fitted_overrides(passing=False)), self.project_dir)])
+        changed = {**self.signature, "outputs": [{**self.signature["outputs"][0], "parameters": {**self.signature["outputs"][0]["parameters"], "unit": "minutes"}}, self.signature["outputs"][1]]}
+        self.assertEqual({"CP002"}, {rule for rule, _ in compare_project(self.other_project(**self.fitted_overrides(), signature=changed), self.project_dir)})
+
+    def test_release_check_needs_a_passing_evaluation(self):
+        from asystem.model import check_release
+
+        self.write()
+        self.assertEqual(["PM004"], [rule for rule, _ in check_release(self.project_dir)])
+        self.write(**self.fitted_overrides(passing=False))
+        self.assertEqual(["PM004"], [rule for rule, _ in check_release(self.project_dir)])
+        self.write(**self.fitted_overrides())
+        self.assertEqual([], check_release(self.project_dir))
+
+    def test_registering_an_unchanged_project_creates_nothing_new(self):
+        import mlflow
+        from asystem.model import register_project
+
+        self.write()
+        uri = f"sqlite:///{join(tempfile.mkdtemp(), 'mlflow.db')}"
+        first = register_project(self.project_dir, "demo_calc", uri)
+        second = register_project(self.project_dir, "demo_calc", uri, aliases=("candidate", "release"))
+        self.assertEqual(first, second)
+        mlflow.set_tracking_uri(uri)
+        self.assertEqual(1, len(mlflow.search_runs(experiment_names=["demo_calc"])))
+        self.assertEqual(second, mlflow.MlflowClient().get_model_version_by_alias("demo_calc", "release").version)
+        self.write(provenance={"source": "manual", "inputs": [], "notes": "changed"})
+        self.assertNotEqual(first, register_project(self.project_dir, "demo_calc", uri))
+
+    def test_stamp_is_written_read_and_ignored_by_the_content_hash(self):
+        from asystem.model import content_sha256, read_stamp, stamp_model
+
+        for flavor in ("pyfunc", "wasm"):
+            path = self.model_file(flavor, "1000-SNAPSHOT")
+            self.assertEqual("1000-SNAPSHOT", read_stamp(path, flavor))
+            before = content_sha256(path, flavor)
+            stamp_model(path, flavor, "1004")
+            self.assertEqual("1004", read_stamp(path, flavor))
+            self.assertEqual(before, content_sha256(path, flavor))
+            stamp_model(path, flavor, "1004")
+            self.assertEqual("1004", read_stamp(path, flavor))
+        for flavor in ("onnx", "static"):
+            with self.assertRaises(ValueError):
+                read_stamp(join(tempfile.mkdtemp(), "model"), flavor)
+
+    def test_content_hash_changes_with_the_model_but_not_the_stamp(self):
+        from asystem.model import content_sha256, stamp_model
+
+        first, second = self.model_file(), self.model_file()
+        with open(second, "a") as model_file:
+            model_file.write("OTHER = 2\n")
+        stamp_model(first, "pyfunc", "1001")
+        self.assertNotEqual(content_sha256(first, "pyfunc"), content_sha256(second, "pyfunc"))
+
+    def test_wasm_stamp_keeps_the_other_sections(self):
+        from asystem.model import read_stamp, stamp_model
+
+        path = join(tempfile.mkdtemp(), "model.wasm")
+        with open(path, "wb") as model_file:
+            model_file.write(b"\0asm\x01\x00\x00\x00" + b"\x01\x04\x01\x60\x00\x00" + b"\x00\x06\x04name\x01")
+        stamp_model(path, "wasm", "1000")
+        with open(path, "rb") as model_file:
+            data = model_file.read()
+        self.assertIn(b"\x01\x04\x01\x60\x00\x00", data)
+        self.assertIn(b"\x00\x06\x04name\x01", data)
+        self.assertEqual("1000", read_stamp(path, "wasm"))
+        with open(path, "wb") as model_file:
+            model_file.write(b"not wasm")
+        with self.assertRaises(ValueError):
+            read_stamp(path, "wasm")
+
+    def test_stamp_must_equal_the_manifest(self):
+        self.assertEqual([], self.rules(**self.fitted_overrides()))
+        self.assertIn("PJ013", self.rules(**{**self.fitted_overrides(), "model_path": self.model_file("wasm", "2")}))
+        self.assertIn("PJ013", self.rules(**{**self.fitted_overrides(), "flavor": "pyfunc", "model_path": self.model_file("wasm", "1")}))
+
+    def test_restamp_rewrites_every_version_and_still_verifies(self):
+        from asystem.model import project_content_sha256, restamp_project
+
+        self.write(**self.fitted_overrides())
+        restamped = restamp_project(self.project_dir, "1004", join(tempfile.mkdtemp(), "project"))
+        self.assertEqual("1004", restamped["model_version"])
+        self.assertEqual(project_content_sha256(self.project_dir), project_content_sha256(join(os.path.dirname(self.project_dir), "project")))
 
     def test_static_flavor_refuses_a_model_file(self):
         with self.assertRaises(ValueError):
             self.write(model_path=join(self.project_dir, "signature.json"))
 
     def test_model_flavor_needs_its_implementation(self):
-        self.assertEqual(["PJ002", "PJ003"], self.rules(flavor="wasm"))
+        self.assertEqual(["PJ002", "PJ003"], self.rules(flavor="wasm", evaluation=self.evaluation()))
 
     def test_name_must_match_signature_and_style(self):
         self.assertIn("PJ004", self.rules(name="Demo-Calc"))
@@ -1125,6 +1258,158 @@ class NotebookLintTest(unittest.TestCase):
             scaffold_notebook(root, "Bad-Name", "calc", "run", "static")
 
 
+class VersionRegistryTest(unittest.TestCase):
+    NAME = "demo_calc_run"
+
+    def setUp(self):
+        sys.path.insert(0, join(ROOT, "all/_/src/build/python"))
+        import mlflow
+        from asystem.model import build_signature, signature_input, signature_output
+
+        self.root = tempfile.mkdtemp()
+        self.uri = f"sqlite:///{join(self.root, 'mlflow.db')}"
+        mlflow.set_tracking_uri(self.uri)
+        self.signature = build_signature(self.NAME, ["1000-SNAPSHOT"], [signature_input("demo_in_seconds", "seconds", "Input.")], [signature_output("demo_out_seconds", "seconds", "Output.")])
+        self.workspaces = join(self.root, "workspaces")
+        self.workspace = join(self.workspaces, "demo", "calc", "run")
+        os.makedirs(self.workspace)
+
+    def project(self, factor=2):
+        from asystem.model import evaluate_acceptance, golden_document, golden_step, write_project
+
+        model_path = join(tempfile.mkdtemp(), "model.py")
+        with open(model_path, "w") as model_file:
+            model_file.write(
+                'MODEL_VERSION = "1000-SNAPSHOT"\nimport pandas as pd\nfrom mlflow.models import set_model\nfrom mlflow.pyfunc import PythonModel\n\n\n'
+                f"class Demo(PythonModel):\n    def predict(self, context, model_input, params=None):\n"
+                f'        return pd.DataFrame({{"demo_out_seconds": model_input["demo_in_seconds"] * {factor}}})\n\n\nset_model(Demo())\n'
+            )
+        dataset_dir = join(tempfile.mkdtemp(), "2026-11-03_10-00-00")
+        os.makedirs(dataset_dir)
+        dataset = join(dataset_dir, "demo_calc_run_2026-11-01_2026-11-02.csv")
+        with open(dataset, "w") as dataset_file:
+            dataset_file.write("a\n1\n")
+        evaluation = evaluate_acceptance(lambda: [{"split": "backtest", "output": "demo_out_seconds", "name": "rmse", "value": 0.0, "limit": 1.0, "direction": "max"}], {"backtest": [dataset]})
+        steps = [
+            golden_step(self.signature, "1000-SNAPSHOT", "s-0", {"demo_in_seconds": 1.0}, {"demo_out_seconds": float(factor)}),
+            golden_step(self.signature, "1000-SNAPSHOT", "s-1", {}, error="signature"),
+        ]
+        project_dir = join(tempfile.mkdtemp(), "project")
+        write_project(
+            project_dir,
+            self.NAME,
+            "1000-SNAPSHOT",
+            "pyfunc",
+            self.signature,
+            golden_document("1000-SNAPSHOT", [("calls", steps)]),
+            {"source": "manual", "inputs": [], "implementation": "demo model.py requires pandas"},
+            model_path=model_path,
+            evaluation=evaluation,
+        )
+        return project_dir
+
+    def gate(self, hosts=("python",), archs=("x86_64",)):
+        from asystem.model import PROJECT_ALIAS_CANDIDATE, PROJECT_MANIFEST, file_sha256, pull_model
+
+        pulled = join(tempfile.mkdtemp(), "pulled")
+        pull_model(self.NAME, PROJECT_ALIAS_CANDIDATE, pulled, self.uri, unpromoted=True)
+        path = join(tempfile.mkdtemp(), "gate.json")
+        with open(path, "w") as gate_file:
+            json.dump({"project_sha256": file_sha256(join(pulled, PROJECT_MANIFEST)), "results": [{"host": host, "arch": arch, "passed": True} for host in hosts for arch in archs]}, gate_file)
+        return path
+
+    def promote(self, **overrides):
+        from asystem.model import promote_project
+
+        arguments = {"released": "10.200.1926", "workspaces_dir": self.workspaces}
+        return promote_project(self.NAME, self.uri, self.gate(), ["python"], ["x86_64"], "graham", **{**arguments, **overrides})
+
+    def test_first_candidate_is_stamped_with_the_first_number_and_reregistering_reuses_it(self):
+        from asystem.model import PROJECT_ALIAS_CANDIDATE, pull_model, register_project
+
+        project = self.project()
+        first = register_project(project, self.NAME, self.uri)
+        self.assertEqual(first, register_project(project, self.NAME, self.uri))
+        pulled = join(tempfile.mkdtemp(), "pulled")
+        manifest = pull_model(self.NAME, PROJECT_ALIAS_CANDIDATE, pulled, self.uri, unpromoted=True)
+        self.assertEqual("1000", manifest["model_version"])
+        self.assertEqual("1000-SNAPSHOT", json.loads(Path(project, "project.json").read_text())["model_version"])
+
+    def test_promotion_records_the_version_and_advances_the_development_version(self):
+        from asystem.model import list_models, pull_model, register_project, resolve_model
+
+        register_project(self.project(), self.NAME, self.uri)
+        self.promote()
+        for selector in ("release", "latest", "1000"):
+            resolved = resolve_model(self.NAME, selector, self.uri)
+            self.assertEqual(("1000", "10.200.1926", "graham", "passed"), (resolved["model_version"], resolved["service_version"], resolved["reviewed_by"], resolved["acceptance"]))
+        self.assertEqual("1001-SNAPSHOT", Path(self.workspace, ".version").read_text().strip())
+        self.assertEqual({"name": self.NAME, "release": "1000", "latest": "1000", "service_version": "10.200.1926", "flavor": "pyfunc"}, list_models(self.uri)[0])
+        self.assertEqual("1000", pull_model(self.NAME, "1000", join(tempfile.mkdtemp(), "pulled"), self.uri)["model_version"])
+        with self.assertRaises(ValueError):
+            pull_model(self.NAME, "candidate", join(tempfile.mkdtemp(), "pulled"), self.uri)
+        self.assertIsNone(resolve_model(self.NAME, "1009", self.uri))
+
+    def test_a_stale_candidate_is_refused_and_a_new_one_gets_the_next_number(self):
+        from asystem.model import PROJECT_ALIAS_CANDIDATE, pull_model, register_project
+
+        register_project(self.project(), self.NAME, self.uri)
+        self.promote()
+        with self.assertRaises(ValueError) as stale:
+            self.promote()
+        self.assertIn("PM005", str(stale.exception))
+        register_project(self.project(factor=3), self.NAME, self.uri)
+        manifest = pull_model(self.NAME, PROJECT_ALIAS_CANDIDATE, join(tempfile.mkdtemp(), "pulled"), self.uri, unpromoted=True)
+        self.assertEqual("1001", manifest["model_version"])
+        self.promote()
+
+    def test_a_deleted_alias_never_lets_a_number_be_reused(self):
+        from asystem.model import next_model_version, register_project
+        from mlflow import MlflowClient
+
+        register_project(self.project(), self.NAME, self.uri)
+        self.promote()
+        client = MlflowClient()
+        client.delete_registered_model_alias(self.NAME, "m1000")
+        client.delete_registered_model_alias(self.NAME, "release")
+        self.assertEqual(1001, next_model_version(client, self.NAME))
+
+    def test_promotion_needs_a_release_version(self):
+        from asystem.model import register_project
+
+        register_project(self.project(), self.NAME, self.uri)
+        with mock.patch("asystem.model.service_version", side_effect=ValueError("no tag")), self.assertRaises(ValueError) as refused:
+            self.promote(released=None)
+        self.assertIn("PM006", str(refused.exception))
+
+    def test_service_version_is_the_latest_release_tag(self):
+        import subprocess
+
+        from asystem.model import service_version
+
+        repo = tempfile.mkdtemp()
+        with self.assertRaises(ValueError):
+            service_version(repo)
+        subprocess.run(["git", "init", "-q", repo], check=True)
+        subprocess.run(["git", "-C", repo, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "x"], check=True)
+        with self.assertRaises(ValueError):
+            service_version(repo)
+        for tag in ("10.200.1925", "10.200.1927", "10.200.1926", "weekly"):
+            subprocess.run(["git", "-C", repo, "tag", tag], check=True)
+        self.assertEqual("10.200.1927", service_version(repo))
+
+    def test_slot_versions_lists_default_and_release(self):
+        from asystem.model import slot_versions
+
+        source = tempfile.mkdtemp()
+        for slot, version in (("default", "static-1"), ("release", "1004")):
+            slot_dir = join(source, "max", "demo", "src/build/resources/model", slot)
+            os.makedirs(slot_dir)
+            with open(join(slot_dir, "project.json"), "w") as manifest_file:
+                json.dump({"name": "demo_calc_run", "flavor": "static", "model_version": version}, manifest_file)
+        self.assertEqual(["static-1", "1004"], [row["model_version"] for row in slot_versions(source)])
+
+
 class WorkspaceLintTest(unittest.TestCase):
     def setUp(self):
         sys.path.insert(0, join(ROOT, "all/_/src/build/python"))
@@ -1145,6 +1430,15 @@ class WorkspaceLintTest(unittest.TestCase):
         open(join(self.model_dir, "notes.txt"), "w").close()
         open(join(self.model_dir, "other.ipynb"), "w").close()
         self.assertEqual(["WS002", "WS003"], self.rules())
+
+    def test_development_version_file_is_checked(self):
+        with open(join(self.model_dir, ".version"), "w") as version_file:
+            version_file.write("1003-SNAPSHOT\n")
+        self.assertEqual([], self.rules())
+        for text in ("1003\n", "static-1\n", "100-SNAPSHOT\n", "\n"):
+            with open(join(self.model_dir, ".version"), "w") as version_file:
+                version_file.write(text)
+            self.assertEqual(["WS008"], self.rules(), text)
 
     def test_two_model_files_are_found(self):
         open(join(self.model_dir, "model.wasm"), "w").close()
@@ -1197,11 +1491,11 @@ class SpecSyncTest(unittest.TestCase):
     def test_check_identifiers_agree_both_ways(self):
         import re
 
-        in_spec = set(re.findall(r"^\| ((?:PJ|NB|WS|PM|AC)\d{3}) \|", self.spec, re.MULTILINE))
+        in_spec = set(re.findall(r"^\| ((?:PJ|NB|WS|PM|AC|CP)\d{3}) \|", self.spec, re.MULTILINE))
         in_code = set()
         for module in ("model", "notebook", "workspace"):
             with open(join(ROOT, f"all/_/src/build/python/asystem/{module}.py")) as source:
-                in_code |= set(re.findall(r'"((?:PJ|NB|WS|PM|AC)\d{3})"', source.read()))
+                in_code |= set(re.findall(r'"((?:PJ|NB|WS|PM|AC|CP)\d{3})"', source.read()))
         self.assertTrue(in_spec and in_code)
         self.assertEqual(in_spec, in_code)
 
@@ -1209,7 +1503,7 @@ class SpecSyncTest(unittest.TestCase):
         import re
 
         enforced = {}
-        for identifier, requirements in re.findall(r"^\| ((?:PJ|NB|WS|PM|AC)\d{3}) \|.*\| (R[0-9, R]+) \|$", self.spec, re.MULTILINE):
+        for identifier, requirements in re.findall(r"^\| ((?:PJ|NB|WS|PM|AC|CP)\d{3}) \|.*\| (R[0-9, R]+) \|$", self.spec, re.MULTILINE):
             for requirement in re.findall(r"R\d+", requirements):
                 enforced.setdefault(requirement, set()).add(identifier)
         coverage = {}

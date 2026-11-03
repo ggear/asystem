@@ -1,0 +1,32 @@
+{
+  "spec_version": 1,
+  "name": "demo_calc",
+  "model_version": "1",
+  "signature_version": 1,
+  "flavor": "static",
+  "provenance": {
+    "source": "manual",
+    "inputs": []
+  },
+  "files": {
+    "signature": {
+      "path": "signature.json",
+      "sha256": "ec118b5272692f3be5ce1aecb1807d12d39fbb5f69e75106278e97658ebe9522"
+    },
+    "golden": {
+      "path": "golden.json",
+      "sha256": "1ed8e0f5ba03febffaff2d1c19dd1f3208671224cc2d8fe8637553dee42845ff"
+    },
+    "acceptance": {
+      "path": "acceptance.json",
+      "sha256": "092db6683130ca5e27b91f1007225edf9e481d64f96f31ebdcd9e2645149692d"
+    },
+    "evaluation": {
+      "path": "evaluation.json",
+      "sha256": "f5032ef14a1e89a814814fb4c33db23e1ec6bfba9a1ecc8068ca759cb0028046"
+    }
+  },
+  "constants": {
+    "demo_limit_seconds": 5
+  }
+}

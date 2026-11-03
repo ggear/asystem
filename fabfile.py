@@ -1024,6 +1024,17 @@ def _deploy(context):
         _print_footer(module, "deploy")
 
 
+def _release_models(context, module):
+    model_script = join(ROOT_MODULE_DIR, module, "src/main/resources/model.sh")
+    if isfile(model_script):
+        _print_line("Checking models ...")
+        _run_local(context, "src/main/resources/model.sh check", module)
+    shared_python_path = glob.glob(join(ROOT_MODULE_DIR, "*", SHARED_MODULE_NAME, "src/build/python"))[0]
+    if isfile(join(ROOT_MODULE_DIR, module, "src/build/resources/model/release/project.json")):
+        _print_line("Checking release model ...")
+        _run_local(context, f"PYTHONPATH={shared_python_path} python -W ignore -m asystem.model check-release src/build/resources/model/release", module)
+
+
 def _release(context):
     modules = _get_modules(context)
     for release_module in modules:
@@ -1032,6 +1043,8 @@ def _release(context):
             _build(context, filter_module=release_module)
             _test_unit(context, filter_module=release_module)
             _test_sys(context, filter_module=release_module)
+    for release_module in modules:
+        _release_models(context, release_module)
     _get_versions_next_release()
     if FAB_SKIP_GIT not in os.environ:
         print("Tagging repository ...")

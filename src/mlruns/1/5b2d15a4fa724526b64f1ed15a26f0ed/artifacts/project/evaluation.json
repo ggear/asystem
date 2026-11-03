@@ -1,0 +1,25 @@
+{
+  "acceptance_sha256": "36a0231c1f30a0df165518f4307d2aed8698c9695c5cb3da9f90d0b55c0c38b7",
+  "datasets": {
+    "backtest": [
+      {
+        "path": "2026-11-03_10-00-00/demo_calc_limit_2026-11-01_2026-11-02.csv",
+        "sha256": "492d5ea496056f1a6a6592241032fab764c321596317930b4fa0e1e8bc3b7470"
+      }
+    ]
+  },
+  "results": [
+    {
+      "split": "backtest",
+      "output": "demo_limit_seconds",
+      "metric": "rmse",
+      "op": "<=",
+      "bound": 1.0,
+      "gate": true,
+      "reason": "the guard tolerates one second",
+      "value": 0.3535533905932738,
+      "passed": true
+    }
+  ],
+  "passed": true
+}

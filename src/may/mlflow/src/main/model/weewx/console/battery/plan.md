@@ -13,8 +13,8 @@ holds only what is specific to this model.
 | **Consumer** | Home Assistant, calling `mlserver` when the voltage changes; embedding in Home Assistant later |
 | **Worked Example** | The Python-only model flow (`plans/mlflow.md` 4) |
 
-**Status, 2026-11-03.** The notebook fits and writes `model.py` with the fitted attributes built in, then stops at Evaluate because the acceptance criteria
-have no labelled `backtest` run to measure. Package and Register are wired to run once it passes: golden steps from the shipped `model.py`, the `pyfunc` project and its registration. Nothing consumes the project yet, and the weewx module still carries the old hand-copied snippet in
+**Status, 2026-11-03.** The notebook fits and writes `model.py` with the fitted attributes built in, then records a failed acceptance because the acceptance check
+has no labelled `backtest` run to measure. It still packages the `pyfunc` project with the golden steps from the shipped `model.py`, and registering it is a separate step. `fab release` is blocked by the failed verdict. Nothing consumes the project yet, and the weewx module still carries the old hand-copied snippet in
 Home Assistant.
 
 **Why `pyfunc`.** The consumers are Home Assistant calling `mlserver` and Python, and none needs to run offline or embedded. `pyfunc` keeps the exact
@@ -75,7 +75,7 @@ steps.
 
 ## To do
 
-0. The notebook now fails at Evaluate on purpose. `acceptance.json` holds one provisional `backtest` row, `rmse <= 5`, which is one 5 point step and is yours to confirm, and no `backtest` data exists so it measures nothing. Capture a run with a known capacity, from a reference gauge or a full discharge, as `backtest`, then write `acceptance.json` (`spec.md` 6.8) and evaluate it in the Evaluate section. The `validation` run cannot serve, since it only falls to 55 % and then rises, so its time-normalised capacity is not true.
+0. The notebook records a failed acceptance, which blocks release but not the run. The `acceptance_checks` function in the Evaluate section holds one provisional `backtest` check, `rmse` at most 5, which is one 5 point step and is yours to confirm, and no `backtest` data exists so it measures nothing. Capture a run with a known capacity, from a reference gauge or a full discharge, as `backtest`, then measure the shipped model on it in `acceptance_checks` (`spec.md` 6.8). The `validation` run cannot serve, since it only falls to 55 % and then rises, so its time-normalised capacity is not true.
 1. Add the `static` floor, a constant capacity the consumer can act on without the network (`spec.md` R8).
 2. Check that MLServer's MLflow runtime loads the registered model (`plans/mlflow.md` 3); `register_project` already logs it with `mlflow.pyfunc.log_model`.
 3. Add smoothing or hysteresis in the carried state.
