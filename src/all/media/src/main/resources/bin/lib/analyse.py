@@ -776,6 +776,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, merge=False, transcode=Fal
                 "Metadata Loaded",
                 "Video 1 Index",
                 "Video 1 Codec",
+                "Video 1 Label",
                 "Target Dolby Vision",
                 "Video 1 HDR Format",
                 "Video 1 HDR Profile",
@@ -1388,6 +1389,17 @@ def _analyse(file_path_root, sheet_guid, clean=False, merge=False, transcode=Fal
                         .then(pl.lit("True"))
                         .otherwise(pl.lit("False"))
                     ).alias("Transcode Dolby Vision Strip"),
+                    (
+                        pl.when(
+                            (pl.col("Video 1 HDR Format") == "Dolby Vision")
+                            & (pl.col("Target Dolby Vision") == "False")
+                            & (pl.col("Video 1 HDR Profile").fill_null("").is_in(DOLBY_VISION_PROFILES_STRIPPABLE))
+                            & (pl.col("Video 1 Label") == "UHD")
+                            & (pl.col("File Name").str.contains(TOKEN_LARGE, literal=True))
+                        )
+                        .then(pl.lit("True"))
+                        .otherwise(pl.lit("False"))
+                    ).alias("Transcode Dolby Vision Save"),
                 ]
             )
             .with_columns(
@@ -1658,7 +1670,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, merge=False, transcode=Fal
                             pl.lit('DOVI_STRIP="'),
                             pl.col("Transcode Dolby Vision Strip"),
                             pl.lit('"\n'),
-                            pl.lit('if [ "${DOVI_STRIP}" == "True" ]; then\n'),
+                            pl.lit('DOVI_SAVE="'),
+                            pl.col("Transcode Dolby Vision Save"),
+                            pl.lit('"\n'),
+                            pl.lit('if [ "${DOVI_SAVE}" == "True" ]; then\n'),
                             pl.lit('  DOVI_RPU_FILE="${ROOT_DIR_BASE}/._dovi_${ROOT_FILE_NAME%.*}_${ROOT_FILE_NAME##*.}.rpu"\n'),
                             pl.lit('  if [ ! -s "${DOVI_RPU_FILE}" ]; then\n'),
                             pl.lit("    echo ${SCRIPT_VERB}' with Dolby Vision RPU extract to ['\"${DOVI_RPU_FILE}\"']'\n"),
@@ -1670,8 +1685,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, merge=False, transcode=Fal
                             pl.lit("    fi\n"),
                             pl.lit('    mv -f "${DOVI_RPU_FILE}.tmp" "${DOVI_RPU_FILE}"\n'),
                             pl.lit("  fi\n"),
-                            pl.lit('  TRANSCODE_VIDEO="${TRANSCODE_VIDEO} --strip-dovi"\n'),
                             pl.lit("fi\n"),
+                            pl.lit('[ "${DOVI_STRIP}" == "True" ] && TRANSCODE_VIDEO="${TRANSCODE_VIDEO} --strip-dovi"\n'),
                             pl.lit('other-transcode "${ROOT_DIR}/../${ROOT_FILE_NAME}" \\\n'),
                             pl.lit("  ${TRANSCODE_VIDEO} \\\n"),
                             pl.lit("  "),
