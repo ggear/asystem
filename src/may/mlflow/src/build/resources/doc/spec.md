@@ -367,7 +367,7 @@ line. Notebooks are not run by `fab build`; `notebook.sh` runs one headless.
 Accuracy is agreed before the fit and measured the same way for every flavor, using the names of scikit-learn and scipy.
 
 - `acceptance.json` is `{"rows": [...]}`. A row is `split`, `output`, `metric`, `op`, `bound`, `gate` and `reason`. The `split` is `validation` or `backtest`, the `output` is a signature output, and the `bound` is in that output's signature unit. A `reason` MUST name the consumer need the bound serves and point at the consumer's plan.
-- The `metric` is one of `rmse`, `mae`, `max_abs_error`, `bias`, `p95_abs_error`, `r2` and `pearson_r`, computed by `measure` from the truth and the shipped runtime's prediction. The `op` is `<=`, `>=` or `==`. A metric that is undefined, such as `r2` over a constant truth, fails its row.
+- The `metric` is one of `rmse`, `mae`, `max_abs_error`, `bias`, `p95_abs_error`, `r2` and `pearson_r`, computed by `measure` with numpy from the truth and the shipped runtime's prediction. The `op` is `<=`, `>=` or `==`. A metric that is undefined, such as `r2` over a constant truth, fails its row.
 - A `backtest` row SHOULD gate. A `validation` row gates only for a model that has no `backtest` run yet, and its plan MUST say so. A `training` row does not exist, since the fit is not judged on its own data. `golden` is judged by exact parity and has no row.
 - The file MUST be committed before the model is fitted, so a loosened bound is a visible diff, and the release review MUST read the acceptance diff against the previous version.
 - `evaluate_acceptance` writes `evaluation.json`, and `register_project` logs every measured value as the MLflow run metric `<split>/<output>/<metric>`, logs each dataset with `mlflow.log_input` under the split as its context, and tags the run `acceptance` with `passed` or `failed`.
@@ -542,7 +542,7 @@ Common operations are in two places, so a notebook states what it means and not 
 | `asystem.model` | `register_project`, `pull_model` | Registers a project, logging its measured criteria as run metrics, and pulls one by alias |
 | `asystem.model` | `diff_signature`, `same_signature` | Names every difference between two signatures apart from `versions`, which a failed pull reports |
 | `asystem.model` | `render_rust`, `render_go` | Generate request and response types from `signature.json`, through `python -m asystem.model generate` |
-| `asystem.model` | `acceptance_row`, `build_acceptance`, `measure`, `evaluate_acceptance` | Builds the criteria, measures a prediction against its truth with numpy and scipy, and evaluates every criterion into `evaluation.json` |
+| `asystem.model` | `acceptance_row`, `build_acceptance`, `measure`, `evaluate_acceptance` | Builds the criteria, measures a prediction against its truth with numpy, and evaluates every criterion into `evaluation.json` |
 | `asystem.model` | `check_gate`, `check_acceptance`, `promote_project` | Check a parity gate file and the acceptance verdict, and set the alias `release` only when both pass |
 | `asystem.notebook` | `scaffold_notebook` | Writes a notebook, a plan and the data directories that already pass section 10, through `python -m asystem.notebook new <module> <model> <notebook> <flavor>` |
 | `library.data` | `data_path`, `read_data`, `golden_data`, `query_influxdb3` | Resolves a dataset path, reads one, reads or writes the golden dataset, and queries with the cache |

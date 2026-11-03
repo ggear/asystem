@@ -106,7 +106,6 @@ def build_acceptance(rows):
 
 def measure(y_true, y_pred):
     import numpy
-    from scipy import stats
 
     truth = numpy.asarray(y_true, dtype=float)
     predicted = numpy.asarray(y_pred, dtype=float)
@@ -122,7 +121,7 @@ def measure(y_true, y_pred):
         "bias": float(numpy.mean(error)),
         "p95_abs_error": float(numpy.percentile(numpy.abs(error), 95)),
         "r2": None if spread == 0.0 else float(1.0 - numpy.sum(error**2) / spread),
-        "pearson_r": None if constant else float(stats.pearsonr(truth, predicted).statistic),
+        "pearson_r": None if constant else float(numpy.corrcoef(truth, predicted)[0, 1]),
     }
 
 
@@ -244,7 +243,6 @@ def verify_project(project_dir):
 
 
 def register_project(project_dir, name, tracking_uri, aliases=(PROJECT_ALIAS_CANDIDATE,)):
-    import mlflow.data
     import mlflow.pyfunc
 
     import mlflow
@@ -258,6 +256,7 @@ def register_project(project_dir, name, tracking_uri, aliases=(PROJECT_ALIAS_CAN
         mlflow.set_tags({"project_flavor": manifest["flavor"], "project_model_version": str(manifest["model_version"])})
         if "evaluation" in manifest["files"]:
             import pandas
+            from mlflow.data.pandas_dataset import from_pandas
 
             with open(join(project_dir, PROJECT_EVALUATION)) as evaluation_file:
                 evaluation = json.load(evaluation_file)
@@ -265,7 +264,7 @@ def register_project(project_dir, name, tracking_uri, aliases=(PROJECT_ALIAS_CAN
             mlflow.log_metrics({f"{result['split']}/{result['output']}/{result['metric']}": result["value"] for result in evaluation["results"] if result["value"] is not None})
             for split, entries in evaluation["datasets"].items():
                 for entry in entries:
-                    dataset = mlflow.data.from_pandas(pandas.DataFrame(), name=os.path.splitext(basename(entry["path"]))[0], digest=entry["sha256"][:16])
+                    dataset = from_pandas(pandas.DataFrame(), name=os.path.splitext(basename(entry["path"]))[0], digest=entry["sha256"][:16])
                     mlflow.log_input(dataset, context=split)
         if manifest["flavor"] == "pyfunc":
             from mlflow.models import ModelSignature
@@ -536,10 +535,12 @@ def _compare(value, op, bound):
 
 
 def _lint_acceptance(project_dir, files, signature):
-    paths = [join(project_dir, files[key]["path"]) if key in files else None for key in ("acceptance", "evaluation")]
-    if not all(path is not None and isfile(path) for path in paths):
+    if "acceptance" not in files or "evaluation" not in files:
         return [("AC001", "acceptance and evaluation must both be in the project")]
-    with open(paths[0]) as acceptance_file, open(paths[1]) as evaluation_file:
+    acceptance_path, evaluation_path = join(project_dir, files["acceptance"]["path"]), join(project_dir, files["evaluation"]["path"])
+    if not isfile(acceptance_path) or not isfile(evaluation_path):
+        return [("AC001", "acceptance and evaluation must both be in the project")]
+    with open(acceptance_path) as acceptance_file, open(evaluation_path) as evaluation_file:
         acceptance, evaluation = json.load(acceptance_file), json.load(evaluation_file)
     findings = []
     scalar_outputs = {entry["name"] for entry in signature["outputs"] if entry["shape"] == [1]}
