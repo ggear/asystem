@@ -76,7 +76,8 @@ MEDIA_EPISODE_NUMBER_REGEXP = r"([sS])([0-9]?[0-9]+)([-_\. ]*)([eE])([0-9]?[-]*[
 MEDIA_EPISODE_NAME_REGEXP = r".*" + MEDIA_EPISODE_NUMBER_REGEXP + r"\..*"
 MEDIA_PROFILE_REGEXP = r"(" + TOKEN_SMALL + r"|" + TOKEN_LARGE + r")$"
 MEDIA_FILE_EXTENSIONS = {"avi", "m2ts", "mkv", "mov", "mp4", "wmv", "ts"}
-MEDIA_FILE_EXTENSIONS_IGNORE = {"yaml", "sh", "srt", "png", "jpg", "jpeg", "log", "sonarr"}
+MEDIA_FILE_EXTENSIONS_IGNORE = {"yaml", "sh", "srt", "png", "jpg", "jpeg", "log", "sonarr", "rpu"}
+DOLBY_VISION_PROFILES_STRIPPABLE = ["8.1", "8.4"]
 MEDIA_FILE_SCRIPTS = [_file_action.name.lower() for _file_action in FileAction if _file_action.has_script]
 
 BASH_EXIT_HANDLER = (
@@ -645,6 +646,22 @@ def _analyse(file_path_root, sheet_guid, clean=False, merge=False, transcode=Fal
             with open(file_metadata_path) as file_metadata:
                 try:
                     metadata = _flatten_dicts(_unwrap_lists(yaml.safe_load(file_metadata)))
+                    file_target_dolby_vision = "False"
+                    file_defaults_dolby_vision_dir = os.path.join(file_path_media, file_media_scope, file_media_type, file_base_dir)
+                    file_defaults_dolby_vision_paths = []
+                    while file_defaults_dolby_vision_dir != file_path_media_parent:
+                        file_defaults_dolby_vision_path = os.path.join(file_defaults_dolby_vision_dir, "._defaults.yaml")
+                        if os.path.isfile(file_defaults_dolby_vision_path):
+                            file_defaults_dolby_vision_paths.append(file_defaults_dolby_vision_path)
+                        file_defaults_dolby_vision_dir = os.path.dirname(file_defaults_dolby_vision_dir)
+                    for file_defaults_dolby_vision_path in reversed(file_defaults_dolby_vision_paths):
+                        with open(file_defaults_dolby_vision_path) as file_defaults_dolby_vision:
+                            file_defaults_dolby_vision_dict = _unwrap_lists(yaml.safe_load(file_defaults_dolby_vision))
+                        if "target_dolby_vision" in file_defaults_dolby_vision_dict:
+                            file_target_dolby_vision = str(file_defaults_dolby_vision_dict["target_dolby_vision"]).replace(" ", "").title()
+                            if file_target_dolby_vision not in {"True", "False"}:
+                                raise Exception(f"Invalid target_dolby_vision: {file_target_dolby_vision}")
+                    metadata["target_dolby_vision"] = file_target_dolby_vision
                     metadata["metadata_loaded"] = str(file_metadata_path in metadata_files_written)
                     metadata_list.append(metadata)
                     if verbose:
@@ -759,6 +776,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, merge=False, transcode=Fal
                 "Metadata Loaded",
                 "Video 1 Index",
                 "Video 1 Codec",
+                "Target Dolby Vision",
                 "Video 1 HDR Format",
                 "Video 1 HDR Profile",
                 "Video 1 Width",
@@ -1026,6 +1044,12 @@ def _analyse(file_path_root, sheet_guid, clean=False, merge=False, transcode=Fal
                 .then(pl.lit("Check Corrupt Metadata"))
                 .when((pl.col("File State") == "Incomplete"))
                 .then(pl.lit("Check Missing Streams"))
+                .when(
+                    (pl.col("Video 1 HDR Format") == "Dolby Vision")
+                    & (pl.col("Target Dolby Vision") == "False")
+                    & (~pl.col("Video 1 HDR Profile").fill_null("").is_in(DOLBY_VISION_PROFILES_STRIPPABLE))
+                )
+                .then(pl.lit("Check Unsupported Dolby Vision Profile"))
                 .when((pl.col("Target Lang") != pl.col("Audio 1 Lang")))
                 .then(pl.lit("Check Missing Target Language"))
                 .when((pl.col("Target Lang") != "eng") & ((pl.col("Subtitle Count") == "0") | (pl.col("Subtitle Count") == "Subtitle Non-Eng Count")))
@@ -1105,6 +1129,12 @@ def _analyse(file_path_root, sheet_guid, clean=False, merge=False, transcode=Fal
                 #
                 # Reformat
                 #
+                .when(
+                    (pl.col("Video 1 HDR Format") == "Dolby Vision")
+                    & (pl.col("Target Dolby Vision") == "False")
+                    & (pl.col("Video 1 HDR Profile").fill_null("").is_in(DOLBY_VISION_PROFILES_STRIPPABLE))
+                )
+                .then(pl.lit("Reformat Dolby Vision"))
                 .when((pl.col("Metadata State") == "Messy"))
                 .then(pl.lit("Reformat Messy Metadata"))
                 .when((pl.col("Audio 1 Codec") == "EAC3") & (pl.col("Audio 1 Surround") != "Atmos"))
@@ -1349,6 +1379,15 @@ def _analyse(file_path_root, sheet_guid, clean=False, merge=False, transcode=Fal
                         )
                     ).alias("Transcode Video"),
                     (pl.col("Audio 1 Index Audio")).alias("Transcode Audio Index"),
+                    (
+                        pl.when(
+                            (pl.col("Video 1 HDR Format") == "Dolby Vision")
+                            & (pl.col("Target Dolby Vision") == "False")
+                            & (pl.col("Video 1 HDR Profile").fill_null("").is_in(DOLBY_VISION_PROFILES_STRIPPABLE))
+                        )
+                        .then(pl.lit("True"))
+                        .otherwise(pl.lit("False"))
+                    ).alias("Transcode Dolby Vision Strip"),
                 ]
             )
             .with_columns(
@@ -1616,6 +1655,23 @@ def _analyse(file_path_root, sheet_guid, clean=False, merge=False, transcode=Fal
                             pl.col("Transcode Video"),
                             pl.lit("'\n"),
                             pl.lit('[[ "$(basename "$0")" == "reformat.sh" ]] && TRANSCODE_VIDEO=\'--copy-video\'\n'),
+                            pl.lit('DOVI_STRIP="'),
+                            pl.col("Transcode Dolby Vision Strip"),
+                            pl.lit('"\n'),
+                            pl.lit('if [ "${DOVI_STRIP}" == "True" ]; then\n'),
+                            pl.lit('  DOVI_RPU_FILE="${ROOT_DIR_BASE}/._dovi_${ROOT_FILE_NAME%.*}_${ROOT_FILE_NAME##*.}.rpu"\n'),
+                            pl.lit('  if [ ! -s "${DOVI_RPU_FILE}" ]; then\n'),
+                            pl.lit("    echo ${SCRIPT_VERB}' with Dolby Vision RPU extract to ['\"${DOVI_RPU_FILE}\"']'\n"),
+                            pl.lit('    rm -f "${DOVI_RPU_FILE}.tmp"\n'),
+                            pl.lit('    if ! ( set -o pipefail; ffmpeg -v error -i "${ROOT_DIR}/../${ROOT_FILE_NAME}" -map 0:v:0 -c copy -bsf:v hevc_mp4toannexb -f hevc - | '),
+                            pl.lit('dovi_tool extract-rpu -i - -o "${DOVI_RPU_FILE}.tmp" >/dev/null ) || [ ! -s "${DOVI_RPU_FILE}.tmp" ]; then\n'),
+                            pl.lit('      rm -f "${DOVI_RPU_FILE}.tmp"\n'),
+                            pl.lit("      echo '' && echo 'Failed (dovi_tool) ['$(date '+%H:%M:%S %y:%m:%d')']' && exit 5\n"),
+                            pl.lit("    fi\n"),
+                            pl.lit('    mv -f "${DOVI_RPU_FILE}.tmp" "${DOVI_RPU_FILE}"\n'),
+                            pl.lit("  fi\n"),
+                            pl.lit('  TRANSCODE_VIDEO="${TRANSCODE_VIDEO} --strip-dovi"\n'),
+                            pl.lit("fi\n"),
                             pl.lit('other-transcode "${ROOT_DIR}/../${ROOT_FILE_NAME}" \\\n'),
                             pl.lit("  ${TRANSCODE_VIDEO} \\\n"),
                             pl.lit("  "),
