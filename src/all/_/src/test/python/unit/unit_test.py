@@ -380,6 +380,14 @@ class RestoreWrapperTest(unittest.TestCase):
         self.assertEqual(done.returncode, 1)
         self.assertIn("short     [alpha]", done.stdout)
 
+    def test_settling_drops_dated_units_from_the_day_before_the_run_onwards(self):
+        body = """
+            printf '%s\\n' "t/2026-10-26 5" "t/2026-10-27 6" "t/2026-10-28 7" "live 9" | restore_settled
+            """
+        done = self.source(body)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertEqual(done.stdout, "t/2026-10-26 5\nlive 9\n")
+
     def test_a_failing_module_check_fails_the_drill_and_records_it(self):
         run = self.archive("2026-10-28_01-00-00", {"live/a": 100}, verdict="success", units={"live": 100})
         body = f"""
@@ -675,7 +683,7 @@ if __name__ == "__main__":
 class ModelProjectTest(unittest.TestCase):
     def setUp(self):
         sys.path.insert(0, join(ROOT, "all/_/src/build/python"))
-        from asystem.model import build_signature, signature_input, signature_output, signature_state, golden_document, golden_step
+        from asystem.model import build_signature, golden_document, golden_step, signature_input, signature_output, signature_state
 
         self.project_dir = join(tempfile.mkdtemp(), "project")
         self.signature = build_signature(
@@ -733,15 +741,169 @@ class ModelProjectTest(unittest.TestCase):
         self.assertEqual(["PJ002"], self.rules(provenance={"source": "manual"}))
 
     def test_model_flavor_needs_its_file(self):
-        self.assertEqual(["PJ003"], self.rules(flavor="wasm", provenance={"source": "manual", "inputs": [], "implementation": "demo"}))
+        self.assertEqual(["PJ003"], self.rules(flavor="wasm", provenance={"source": "manual", "inputs": [], "implementation": "demo model.py requires pandas"}))
 
     def test_model_file_is_copied_into_the_project_and_hashed(self):
         model_path = join(tempfile.mkdtemp(), "model.py")
         with open(model_path, "w") as model_file:
             model_file.write("VALUE = 1\n")
-        manifest = self.write(flavor="pyfunc", model_path=model_path, constants=None, provenance={"source": "manual", "inputs": [], "implementation": "demo"})
+        manifest = self.write(flavor="pyfunc", model_path=model_path, constants=None, provenance={"source": "manual", "inputs": [], "implementation": "demo model.py requires pandas"})
         self.assertEqual("model.py", manifest["files"]["model"]["path"])
         self.assertTrue(os.path.isfile(join(self.project_dir, "model.py")))
+
+    def test_implementation_must_say_something(self):
+        for implementation in ("demo", "TBD", "to be determined", "", None):
+            self.assertEqual(["PJ002", "PJ003"], self.rules(flavor="wasm", provenance={"source": "manual", "inputs": [], "implementation": implementation}))
+
+    def test_pyfunc_project_is_registered_as_a_pyfunc_model(self):
+        from asystem.model import build_signature, golden_document, golden_step, pull_model, register_project, signature_input, signature_output
+
+        signature = build_signature("demo_calc", ["1"], [signature_input("demo_in_seconds", "seconds", "Input.")], [signature_output("demo_out_seconds", "seconds", "Output.")])
+        golden = golden_document("1", [("calls", [golden_step(signature, "1", "s-0", {"demo_in_seconds": 1.0}, {"demo_out_seconds": 2.0}), golden_step(signature, "1", "s-1", {}, error="signature")])])
+        model_path = join(tempfile.mkdtemp(), "model.py")
+        with open(model_path, "w") as model_file:
+            model_file.write(
+                "import pandas as pd\nfrom mlflow.models import set_model\nfrom mlflow.pyfunc import PythonModel\n\n\n"
+                "class Demo(PythonModel):\n    def predict(self, context, model_input, params=None):\n"
+                '        return pd.DataFrame({"demo_out_seconds": model_input["demo_in_seconds"] * 2})\n\n\nset_model(Demo())\n'
+            )
+        self.write(
+            flavor="pyfunc", model_path=model_path, signature=signature, golden=golden, constants=None, provenance={"source": "manual", "inputs": [], "implementation": "demo model.py requires pandas"}
+        )
+        root_dir = tempfile.mkdtemp()
+        uri = f"sqlite:///{join(root_dir, 'mlflow.db')}"
+        import mlflow.pyfunc
+
+        version = register_project(self.project_dir, "demo_calc", uri)
+        mlflow.set_tracking_uri(uri)
+        loaded = mlflow.pyfunc.load_model("models:/demo_calc@candidate")
+        self.assertEqual([2.0], list(loaded.predict({"demo_in_seconds": [1.0]})["demo_out_seconds"]))
+        self.assertEqual("pyfunc", pull_model("demo_calc", "candidate", join(root_dir, "pulled"), uri)["flavor"])
+        self.assertEqual("1", str(version))
+
+    def test_pyfunc_registration_refuses_a_state_vector_signature(self):
+        from asystem.model import register_project
+
+        model_path = join(tempfile.mkdtemp(), "model.py")
+        with open(model_path, "w") as model_file:
+            model_file.write("VALUE = 1\n")
+        self.write(flavor="pyfunc", model_path=model_path, constants=None, provenance={"source": "manual", "inputs": [], "implementation": "demo model.py requires pandas"})
+        with self.assertRaises(ValueError):
+            register_project(self.project_dir, "demo_calc", f"sqlite:///{join(tempfile.mkdtemp(), 'mlflow.db')}")
+
+    def acceptance(self, rows=None, passing=True):
+        from asystem.model import acceptance_row, build_acceptance, evaluate_acceptance
+
+        dataset_dir = join(tempfile.mkdtemp(), "2026-11-03_10-00-00")
+        os.makedirs(dataset_dir)
+        dataset = join(dataset_dir, "demo_calc_limit_2026-11-01_2026-11-02.csv")
+        with open(dataset, "w") as dataset_file:
+            dataset_file.write("a,b\n1,2\n")
+        acceptance = build_acceptance(rows or [acceptance_row("backtest", "demo_limit_seconds", "rmse", "<=", 1.0, "the guard tolerates one second")])
+        predicted = [5.0, 5.5] if passing else [5.0, 9.0]
+        evaluation = evaluate_acceptance(acceptance, {"backtest": {"demo_limit_seconds": ([5.0, 5.0], predicted)}}, {"backtest": [dataset]})
+        return acceptance, evaluation
+
+    def test_measure_matches_the_definitions(self):
+        from asystem.model import measure
+
+        measures = measure([1.0, 2.0, 3.0, 4.0], [1.0, 2.0, 3.0, 6.0])
+        self.assertAlmostEqual(1.0, measures["rmse"])
+        self.assertAlmostEqual(0.5, measures["mae"])
+        self.assertAlmostEqual(2.0, measures["max_abs_error"])
+        self.assertAlmostEqual(0.5, measures["bias"])
+        self.assertAlmostEqual(1.0 - 4.0 / 5.0, measures["r2"])
+        self.assertAlmostEqual(8.0 / 70.0**0.5, measures["pearson_r"])
+        constant = measure([2.0, 2.0], [2.0, 3.0])
+        self.assertIsNone(constant["r2"])
+        self.assertIsNone(constant["pearson_r"])
+        with self.assertRaises(ValueError):
+            measure([1.0], [1.0, 2.0])
+
+    def test_acceptance_is_evaluated_and_a_missing_measure_fails(self):
+        _, evaluation = self.acceptance()
+        self.assertTrue(evaluation["passed"])
+        self.assertEqual("2026-11-03_10-00-00/demo_calc_limit_2026-11-01_2026-11-02.csv", evaluation["datasets"]["backtest"][0]["path"])
+        _, evaluation = self.acceptance(passing=False)
+        self.assertFalse(evaluation["passed"])
+        from asystem.model import acceptance_row
+
+        _, evaluation = self.acceptance(
+            rows=[acceptance_row("backtest", "demo_limit_seconds", "rmse", "<=", 1.0, "x"), acceptance_row("validation", "demo_limit_seconds", "mae", "<=", 1.0, "x", gate=False)]
+        )
+        self.assertFalse(evaluation["passed"] and evaluation["results"][1]["passed"])
+        self.assertTrue(evaluation["passed"])
+
+    def test_project_with_acceptance_has_no_findings(self):
+        acceptance, evaluation = self.acceptance()
+        manifest = self.write(acceptance=acceptance, evaluation=evaluation)
+        self.assertEqual(["acceptance", "evaluation", "golden", "signature"], sorted(manifest["files"]))
+        self.assertEqual([], self.rules(acceptance=acceptance, evaluation=evaluation))
+
+    def test_acceptance_and_evaluation_come_together(self):
+        acceptance, _ = self.acceptance()
+        with self.assertRaises(ValueError):
+            self.write(acceptance=acceptance)
+
+    def test_every_output_needs_a_gating_row(self):
+        from asystem.model import acceptance_row
+
+        acceptance, evaluation = self.acceptance(rows=[acceptance_row("backtest", "demo_limit_seconds", "rmse", "<=", 1.0, "x", gate=False)])
+        self.assertEqual(["AC001"], self.rules(acceptance=acceptance, evaluation=evaluation))
+
+    def test_acceptance_rows_are_checked(self):
+        from asystem.model import acceptance_row
+
+        for row in (
+            acceptance_row("training", "demo_limit_seconds", "rmse", "<=", 1.0, "x"),
+            acceptance_row("backtest", "demo_limit_seconds", "median", "<=", 1.0, "x"),
+            acceptance_row("backtest", "demo_limit_seconds", "rmse", "<", 1.0, "x"),
+            acceptance_row("backtest", "demo_limit_seconds", "rmse", "<=", "1", "x"),
+            acceptance_row("backtest", "demo_limit_seconds", "rmse", "<=", 1.0, " "),
+            acceptance_row("backtest", "demo_other_seconds", "rmse", "<=", 1.0, "x"),
+        ):
+            acceptance, evaluation = (
+                self.acceptance(rows=[row, acceptance_row("backtest", "demo_limit_seconds", "mae", "<=", 1.0, "x")])
+                if row["metric"] != "median" and row["op"] != "<" and row["bound"] == 1.0
+                else (None, None)
+            )
+            if acceptance is None:
+                acceptance = {"rows": [row, acceptance_row("backtest", "demo_limit_seconds", "mae", "<=", 1.0, "x")]}
+                evaluation = {"acceptance_sha256": "", "datasets": {"backtest": []}, "results": [], "passed": True}
+            self.assertIn("AC002", self.rules(acceptance=acceptance, evaluation=evaluation), row)
+
+    def test_evaluation_must_belong_to_the_acceptance(self):
+        acceptance, evaluation = self.acceptance()
+        other, _ = self.acceptance(rows=[__import__("asystem.model", fromlist=["x"]).acceptance_row("backtest", "demo_limit_seconds", "rmse", "<=", 2.0, "x")])
+        self.assertIn("AC003", self.rules(acceptance=other, evaluation=evaluation))
+        del evaluation["datasets"]["backtest"]
+        self.assertIn("AC003", self.rules(acceptance=acceptance, evaluation=evaluation))
+
+    def test_promotion_needs_acceptance_passed(self):
+        from asystem.model import check_acceptance
+
+        self.write()
+        self.assertEqual(["PM004"], [rule for rule, _ in check_acceptance(self.project_dir)])
+        acceptance, evaluation = self.acceptance(passing=False)
+        self.write(acceptance=acceptance, evaluation=evaluation)
+        self.assertEqual(["PM004"], [rule for rule, _ in check_acceptance(self.project_dir)])
+        acceptance, evaluation = self.acceptance()
+        self.write(acceptance=acceptance, evaluation=evaluation)
+        self.assertEqual([], check_acceptance(self.project_dir))
+
+    def test_registration_logs_metrics_datasets_and_the_verdict(self):
+        import mlflow
+        from asystem.model import register_project
+
+        acceptance, evaluation = self.acceptance()
+        self.write(acceptance=acceptance, evaluation=evaluation)
+        uri = f"sqlite:///{join(tempfile.mkdtemp(), 'mlflow.db')}"
+        register_project(self.project_dir, "demo_calc", uri)
+        mlflow.set_tracking_uri(uri)
+        run = mlflow.search_runs(experiment_names=["demo_calc"], output_format="list")[0]
+        self.assertEqual("passed", run.data.tags["acceptance"])
+        self.assertAlmostEqual(0.5 / 2**0.5, run.data.metrics["backtest/demo_limit_seconds/rmse"])
+        self.assertEqual("backtest", run.inputs.dataset_inputs[0].tags[0].value)
 
     def test_static_flavor_refuses_a_model_file(self):
         with self.assertRaises(ValueError):
@@ -1035,11 +1197,11 @@ class SpecSyncTest(unittest.TestCase):
     def test_check_identifiers_agree_both_ways(self):
         import re
 
-        in_spec = set(re.findall(r"^\| ((?:PJ|NB|WS|PM)\d{3}) \|", self.spec, re.MULTILINE))
+        in_spec = set(re.findall(r"^\| ((?:PJ|NB|WS|PM|AC)\d{3}) \|", self.spec, re.MULTILINE))
         in_code = set()
         for module in ("model", "notebook", "workspace"):
             with open(join(ROOT, f"all/_/src/build/python/asystem/{module}.py")) as source:
-                in_code |= set(re.findall(r'"((?:PJ|NB|WS|PM)\d{3})"', source.read()))
+                in_code |= set(re.findall(r'"((?:PJ|NB|WS|PM|AC)\d{3})"', source.read()))
         self.assertTrue(in_spec and in_code)
         self.assertEqual(in_spec, in_code)
 
@@ -1047,7 +1209,7 @@ class SpecSyncTest(unittest.TestCase):
         import re
 
         enforced = {}
-        for identifier, requirements in re.findall(r"^\| ((?:PJ|NB|WS|PM)\d{3}) \|.*\| (R[0-9, R]+) \|$", self.spec, re.MULTILINE):
+        for identifier, requirements in re.findall(r"^\| ((?:PJ|NB|WS|PM|AC)\d{3}) \|.*\| (R[0-9, R]+) \|$", self.spec, re.MULTILINE):
             for requirement in re.findall(r"R\d+", requirements):
                 enforced.setdefault(requirement, set()).add(identifier)
         coverage = {}

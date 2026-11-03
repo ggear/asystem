@@ -160,10 +160,12 @@ def _scaffold_notebook(module, model, notebook, name, flavor):
         cells += [
             section("Capture Data", "1, capture data (`spec.md` 7.1).", "load the `training` and `validation` data."),
             section("Fit", "3, fit.", "fit the model on `training` only (R6)."),
-            section("Evaluate", "4, evaluate.", "check the fit on `validation` and `backtest` through the shipped runtime (R4)."),
+            section(
+                "Evaluate", "4, evaluate.", "check the fit on `validation` and `backtest` through the shipped runtime and measure it against `acceptance.json` with `evaluate_acceptance` (R4, R14)."
+            ),
         ]
     cells += [
-        section("Package", "5, package.", "write the golden samples, build the signature and write the project (R1, R3)."),
+        section("Package", "5, package.", "write the golden samples, build the signature and write the project with its acceptance and evaluation (R1, R3, R14)."),
         code(
             "from asystem.model import build_signature, signature_input, signature_output, package_project, register_project\n\n"
             f'golden_pl, golden_path = golden_data(WORKSPACE, GOLDEN, lambda: {{"{module}_{model}_in": [1.0, None], "expect": ["ok", "error"]}})\n\n'

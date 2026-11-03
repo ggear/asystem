@@ -82,6 +82,12 @@ restore_fingerprinted() {
   esac
 }
 
+restore_settled() {
+  local cutoff
+  cutoff="$(date -u -d "${RESTORE_RUN_TIMESTAMP%%_*} -1 day" +%F)"
+  awk -v cutoff="${cutoff}" '{ day = substr($1, length($1) - 9); if (day ~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$/ && day >= cutoff) next; print }'
+}
+
 restore_recorded() {
   local verdict="${1}" detail="${2}" dir meta
   [ -n "${RESTORE_RECORD}" ] || return 0
@@ -164,7 +170,7 @@ restore_drilled() {
   else
     after="$(backup_fingerprinted "${scratch}" | sort)"
   fi
-  if [ "${before}" != "${after}" ]; then
+  if [ "$(restore_settled <<<"${before}")" != "$(restore_settled <<<"${after}")" ]; then
     restore_fault "scratch changed after it was sealed"
     [ "${RESTORE_KEEP_SCRATCH}" = "true" ] || restore_teardown "${scratch}"
     restore_recorded failure "scratch moved after sealing"

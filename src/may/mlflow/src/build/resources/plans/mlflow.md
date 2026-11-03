@@ -26,6 +26,8 @@ open decisions, and MUST NOT restate the specification. Each notebook's own plan
   types from `signature.json`. The Rust output compiles and the Go output passes `go vet` and `gofmt`; neither is wired into a consumer yet.
 - `check_gate` and `python -m asystem.model promote`, run by `src/main/resources/promote.sh`, which set the alias `release` only when a parity
   gate file passes for this project (R5).
+- Acceptance (`spec.md` 6.8, R14): `acceptance.json` and `evaluation.json` in the workspace and the project, `measure` and `evaluate_acceptance` over numpy and scipy, checks AC001 to AC003 and PM004, and `register_project` logging `<split>/<output>/<metric>` run metrics, the datasets and an `acceptance` tag. It is unit tested and no notebook uses it yet.
+- `register_project` registers a non-`pyfunc` project through `create_model_version` on the run's artifact path, since MLflow 3 refuses `register_model` for plain artifacts.
 - A test that fails when the requirements and their checks (`spec.md` 10.1 and 10.3) disagree.
 - Notebook lint in `fab build`: `ruff` on the code cells, then `asystem.notebook` and `asystem.workspace` (`spec.md` 6.7).
 - The `mlflow` and `mlserver` modules, with the artifact mount removed, `--serve-artifacts`, allowed hosts, real health checks, `exec`
@@ -55,6 +57,7 @@ open decisions, and MUST NOT restate the specification. Each notebook's own plan
 
 In order. Each item is done when its worked example (4) runs and passes.
 
+0. Give a model its first acceptance criteria. `weewx/console/battery` cannot yet: its `validation` run only falls to 55 % and rises again, so a time-normalised truth like the `training` run's is false, and no row can be set without a labelled run or a reference gauge. A bound set after seeing a measurement, with a `reason`, is provisional.
 1. Worked examples for every flow in section 4, built first where they need nothing new and then alongside each feature below, so the code
    describes the spec and implements it.
 2. The `wasm` flavor: a builder for the first project that needs one (a module satisfying the ABI of `spec.md` 4.1), the `predict`
@@ -65,7 +68,7 @@ In order. Each item is done when its worked example (4) runs and passes.
    `/v2/health/ready`. Until then those checks are trivially true.
 4. Pins for `onnx`, `onnxruntime`, `skl2onnx` and `wasmtime` in `py_deps_prod.txt`, added when their flavors are built.
 5. `fab generate` in `mlflow`, `mlserver` and each consumer, so the generated `.env`, health scripts and compose inputs match.
-6. `register_project` logs the project directory as plain artifacts. A `pyfunc` project also needs `mlflow.pyfunc.log_model` so MLServer's MLflow runtime can load it; `weewx/console/battery` is the first.
+6. `register_project` logs a `pyfunc` project with `mlflow.pyfunc.log_model` (the project in `artifacts`, a column signature from `signature.json`) and every other flavor as plain artifacts. It refuses a `pyfunc` signature with a state vector, since MLflow's column signature has no vector. MLServer's MLflow runtime loading it is untested.
 7. Existing experiments keep their pre-proxy artifact location, the laptop path of the share, so their artifacts are not reachable
    through `--serve-artifacts`; they are to be migrated or left read-only.
 8. A release of `mlflow`, since the running server predates the allowed-hosts setting.

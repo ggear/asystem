@@ -28,6 +28,7 @@ The key words MUST, MUST NOT, SHOULD and MAY are to be read as in RFC 2119.
 | Served | Run by MLServer behind the V2 inference API |
 | Embedded | Run in the consumer's own process |
 | Split | One of `training`, `validation`, `backtest` or `golden`, naming the purpose of a dataset |
+| Acceptance | The criteria a project's measured error must meet before it is released, declared in `acceptance.json` before the fit and measured into `evaluation.json` |
 | Parity gate | Replay of golden sequences and recorded runs through every runtime in use, on x86_64 and aarch64, which MUST reproduce every response and state exactly |
 | Alias | An MLflow registry alias on a registered model: `candidate` or `release` |
 
@@ -48,6 +49,7 @@ The key words MUST, MUST NOT, SHOULD and MAY are to be read as in RFC 2119.
 | R11 | Change | Every runtime library MUST be pinned, and native libraries MUST be pinned by hash per architecture. Any upgrade MUST re-run the parity gate | Parity holds only while the runtimes do not move |
 | R12 | Standard | Every name MUST follow section 6.1: lowercase `<module>_<dimension>` style with a unit suffix on numeric measures | A name tells you the owner and what is measured |
 | R13 | Standard | Every project, notebook and workspace MUST pass the checks of section 10 | The requirements are enforced by tools and not by reading |
+| R14 | Parity | A project MUST carry acceptance criteria that were declared before the fit, and the evaluation of them measured through its shipped runtime. It MUST NOT be given the alias `release` unless every gating criterion has passed | Accuracy is agreed first, measured the same way everywhere and recorded with the version |
 
 ## 3. Project
 
@@ -60,6 +62,8 @@ A project is a directory read the same way by every environment and written and 
 | `project.json` | All | Spec version, name, model version, signature version, `flavor`, provenance, the SHA-256 of every other file, and optional constants |
 | `signature.json` | All | The MLServer V2 model metadata, which is also the MLflow model signature. It MUST be identical in the project, the consumer and the logged MLflow model, apart from its `versions` list |
 | `golden.json` | All | Named sequences of requests and exact responses, each request carrying the previous response's state |
+| `acceptance.json` | All, when the model is fitted or measured | The acceptance criteria, specified in 6.8 |
+| `evaluation.json` | All, with `acceptance.json` | The measured value of every criterion, the SHA-256 of the acceptance file and of each dataset used, and the verdict |
 | `model.wasm` | `wasm` | The WebAssembly module, with its fitted attributes built in |
 | `model.py` | `pyfunc` | The Python model, in MLflow's models-from-code form |
 | `model.onnx` | `onnx` | The ONNX model at a pinned opset |
@@ -226,12 +230,13 @@ Every name MUST follow the module and dimension style the metrics use: `<module>
 ```
 src/may/mlflow/src/main/model/<module>/<model>/<notebook>/notebook.ipynb
 src/may/mlflow/src/main/model/<module>/<model>/<notebook>/plan.md
+src/may/mlflow/src/main/model/<module>/<model>/<notebook>/acceptance.json
 src/may/mlflow/src/main/model/<module>/<model>/<notebook>/model.<wasm|onnx|py>
 src/may/mlflow/src/main/model/<module>/<model>/<notebook>/data/<split>/<timestamp>/<dataset>.csv
 ```
 
 - `<module>`, `<model>` and `<notebook>` MUST be named as section 6.1 requires.
-- A notebook directory MUST hold one notebook named `notebook.ipynb`, its `plan.md`, its `data` and at most one model file (`model.wasm`, `model.onnx` or `model.py`, as the flavor requires), and nothing else. The data belongs to
+- A notebook directory MUST hold one notebook named `notebook.ipynb`, its `plan.md`, its `acceptance.json`, its `data` and at most one model file (`model.wasm`, `model.onnx` or `model.py`, as the flavor requires), and nothing else. The data belongs to
   the notebook and MUST NOT be shared between notebooks.
 - `plan.md` MUST state the notebook's intent, signature, data, status and open decisions in the terms of this specification, and MUST NOT
   restate this specification.
@@ -357,6 +362,16 @@ line. Notebooks are not run by `fab build`; `notebook.sh` runs one headless.
 - A table MUST have a Title Case header and Title Case first-column labels, and each other cell MUST begin with a capital.
 - A table MUST NOT bold a cell, except as the title cell requires.
 
+### 6.8 Acceptance
+
+Accuracy is agreed before the fit and measured the same way for every flavor, using the names of scikit-learn and scipy.
+
+- `acceptance.json` is `{"rows": [...]}`. A row is `split`, `output`, `metric`, `op`, `bound`, `gate` and `reason`. The `split` is `validation` or `backtest`, the `output` is a signature output, and the `bound` is in that output's signature unit. A `reason` MUST name the consumer need the bound serves and point at the consumer's plan.
+- The `metric` is one of `rmse`, `mae`, `max_abs_error`, `bias`, `p95_abs_error`, `r2` and `pearson_r`, computed by `measure` from the truth and the shipped runtime's prediction. The `op` is `<=`, `>=` or `==`. A metric that is undefined, such as `r2` over a constant truth, fails its row.
+- A `backtest` row SHOULD gate. A `validation` row gates only for a model that has no `backtest` run yet, and its plan MUST say so. A `training` row does not exist, since the fit is not judged on its own data. `golden` is judged by exact parity and has no row.
+- The file MUST be committed before the model is fitted, so a loosened bound is a visible diff, and the release review MUST read the acceptance diff against the previous version.
+- `evaluate_acceptance` writes `evaluation.json`, and `register_project` logs every measured value as the MLflow run metric `<split>/<output>/<metric>`, logs each dataset with `mlflow.log_input` under the split as its context, and tags the run `acceptance` with `passed` or `failed`.
+
 ## 7. Lifecycle
 
 ### 7.1 Model lifecycle
@@ -366,10 +381,10 @@ line. Notebooks are not run by `fab build`; `notebook.sh` runs one headless.
 | 1 | Capture data | Notebook | `query_influxdb3(...)`, or a file saved with `data_path` | `data/<split>/<ts>/<name>.csv` | The split is right and each run is wholly in one split |
 | 2 | Explore | Notebook | Plain Python | Ideas, plots | None |
 | 3 | Fit | Notebook | A builder (`wasm`), `skl2onnx` (`onnx`), `model.py` (`pyfunc`) | Fitted attributes | Fit error on `training` is sane |
-| 4 | Evaluate | Notebook | Shipped runtime over `validation` and `backtest` | Metrics, golden sequences | Error inside the margins in the consumer's plan |
+| 4 | Evaluate | Notebook | Shipped runtime over `validation` and `backtest` | Metrics, `evaluation.json`, golden sequences | Every gating criterion of `acceptance.json` passes |
 | 5 | Package | Notebook | `write_project`, then `verify_project` | Project directory | Manifest, hashes, signature and golden agree |
 | 6 | Register | Notebook | `register_project(...)` | Registered version, alias `candidate` | The project verifies on the server side too |
-| 7 | Review and promote | A person | Set alias `release` in MLflow | The version consumers follow | The parity gate passed on every host and both architectures |
+| 7 | Review and promote | A person | Set alias `release` in MLflow | The version consumers follow | The acceptance passed and the parity gate passed on every host and both architectures |
 | 8 | Pull, embedded | The consumer's `generate.sh` | `python -m asystem.model pull <name> release <dir>/release --signature <dir>/default/signature.json` | The project in the consumer's `release` slot, unstaged | The signature is unchanged and the hashes match |
 | 8 | Pull, served | `mlserver` bootstrap | `mlflow artifacts download models:/<name>@release` | `/asystem/mnt/models/<name>` | The download succeeded, else the previous copy stays |
 | 9 | Commit and release | A person | `git`, then the fab lifecycle | A release of the consumer | The consumer's own tests and the gate |
@@ -408,11 +423,11 @@ Each task includes the ones before it.
 3. Write the signature with `build_signature`, `signature_input`, `signature_output` and `signature_state`. An input name MUST be a metric name
    from its owning service, required outputs MUST be the ones the consumer cannot act without, and state slots are numbered in order.
 4. Put data under splits, with `query_influxdb3`, `read_data`, `golden_data` or `data_path`.
-5. Write the notebook to sections 6.6 and 6.7, and fit on `training`.
-6. Evaluate on `validation` and `backtest` through the shipped runtime, and generate the golden sequences from it. The sequences MUST
+5. Write `acceptance.json` to section 6.8 and commit it, then write the notebook to sections 6.6 and 6.7, and fit on `training`.
+6. Evaluate on `validation` and `backtest` through the shipped runtime, evaluate `acceptance.json` with `evaluate_acceptance`, and generate the golden sequences from it. The sequences MUST
    include a first call with no state, boundary values, a missing input that gives a signature error and a long gap. Build each step with
    `golden_step` and the document with `golden_document`.
-7. Package with `write_project`, which copies the workspace's model file into the project, then runs `verify_project` and so every project check of section 10. A static default is written to the
+7. Package with `write_project`, which copies the workspace's model file, the acceptance and the evaluation into the project, then runs `verify_project` and so every project check of section 10. A static default is written to the
    consumer with `consumer_project_dir`.
 8. Register with `register_project(project_dir, name, tracking_uri)`. It logs and registers the project and sets the alias `candidate`. A
    person sets `release` after review. The experiment MUST be created after the proxy is on, since older experiments keep their old
@@ -463,7 +478,7 @@ MLflow owns data and lifecycle, MLServer only serves, and nothing is shared by a
 A project, a notebook and a workspace MUST pass the checks below (R13). Each check has an identifier, which the tool prints with its
 finding. A project is checked by `verify_project`, which `write_project`, `package_project`, `register_project` and `pull_model` call, and by
 `python -m asystem.model verify` and `python -m asystem.model lint`, which prints every finding. Promotion is checked by
-`check_gate`, which `python -m asystem.model promote` calls. It is run with `src/main/resources/promote.sh` in the `mlflow` module, since `fab`
+`check_gate` and `check_acceptance`, which `python -m asystem.model promote` calls. It is run with `src/main/resources/promote.sh` in the `mlflow` module, since `fab`
 is for commands every module shares and promotion is specific to MLflow. A notebook is checked by `python -m asystem.notebook` and a workspace by `python -m asystem.workspace`,
 both run by `fab build`.
 
@@ -472,7 +487,7 @@ both run by `fab build`.
 | Id | Invariant | Enforces |
 |---|---|---|
 | PJ001 | A project has a manifest with a supported spec version | R1 |
-| PJ002 | The flavor and the provenance source are known, the provenance inputs are a list, and a flavor but `static` names its implementation | R1 |
+| PJ002 | The flavor and the provenance source are known, the provenance inputs are a list, and a flavor but `static` states its implementation as more than one word and not a placeholder | R1 |
 | PJ003 | Every file the flavor requires is in the manifest, exists, and matches its SHA-256 | R1 |
 | PJ004 | The project name follows the naming style and equals the signature name | R12 |
 | PJ005 | The signature version equals the manifest's, and the model version is among the signature's versions | R1, R10 |
@@ -483,6 +498,9 @@ both run by `fab build`.
 | PJ010 | Every golden step has a response or an error, names only signature inputs and outputs, and gives every required input and output | R3, R4 |
 | PJ011 | The golden holds a step that expects a signature error, and a first call with no state when the signature has state | R8 |
 | PJ012 | Every golden response of a `static` project equals the constants | R4 |
+| AC001 | A project with acceptance holds `acceptance.json` and `evaluation.json` together, and every scalar output has a gating criterion | R14 |
+| AC002 | A criterion names a known split, metric and operator, a numeric bound, whether it gates, a reason, and an output in the signature | R14 |
+| AC003 | The evaluation is for this acceptance file, repeats its criteria in order and holds hashes for every split it uses | R14 |
 | NB001 | The notebook is format 4 | R13 |
 | NB002 | The notebook has no outputs and no execution counts | R13 |
 | NB003 | The notebook has exactly one level-one title, `# <module> / <model> / <notebook>`, matching its directories | R13 |
@@ -498,9 +516,10 @@ both run by `fab build`.
 | PM001 | Promotion needs the parity gate to have passed for every host on every architecture | R5 |
 | PM002 | The gate is for this project, by the SHA-256 of its `project.json` | R5 |
 | PM003 | A person is named as the reviewer | R5 |
+| PM004 | The project has an evaluation and every gating criterion passed | R14 |
 | WS001 | The module, model and notebook directories follow the naming style | R12 |
 | WS002 | A notebook directory holds exactly one notebook, named `notebook.ipynb` | R13 |
-| WS003 | A notebook directory holds only the notebook, `plan.md`, `data` and a model file | R13 |
+| WS003 | A notebook directory holds only the notebook, `plan.md`, `acceptance.json`, `data` and a model file | R13 |
 | WS004 | The data directory holds only the four splits | R6 |
 | WS005 | A split holds only timestamp directories | R6 |
 | WS006 | A dataset is a csv named `<model>_<notebook>_...`, and one that is not `golden` ends with its date range | R12 |
@@ -518,12 +537,13 @@ Common operations are in two places, so a notebook states what it means and not 
 | `asystem.model` | `registered_name`, `check_name` | Derives a registered name from a model and a notebook, and checks the naming style |
 | `asystem.model` | `build_signature`, `signature_input`, `signature_output`, `signature_state` | Builds `signature.json` with every field the checks need |
 | `asystem.model` | `golden_step`, `golden_document`, `golden_from_samples` | Builds V2 requests and responses from named values or from dataset samples, with the datatype taken from the signature |
-| `asystem.model` | `package_project`, `write_project` | Builds the golden from samples and writes the project, then runs every project check |
+| `asystem.model` | `package_project`, `write_project` | Builds the golden from samples and writes the project with its acceptance and evaluation, then runs every project check |
 | `asystem.model` | `lint_project`, `verify_project` | Reports or raises every finding of 10.1 |
-| `asystem.model` | `register_project`, `pull_model` | Registers a project, and pulls one by alias |
+| `asystem.model` | `register_project`, `pull_model` | Registers a project, logging its measured criteria as run metrics, and pulls one by alias |
 | `asystem.model` | `diff_signature`, `same_signature` | Names every difference between two signatures apart from `versions`, which a failed pull reports |
 | `asystem.model` | `render_rust`, `render_go` | Generate request and response types from `signature.json`, through `python -m asystem.model generate` |
-| `asystem.model` | `check_gate`, `promote_project` | Check a parity gate file and set the alias `release` only when it passes |
+| `asystem.model` | `acceptance_row`, `build_acceptance`, `measure`, `evaluate_acceptance` | Builds the criteria, measures a prediction against its truth with numpy and scipy, and evaluates every criterion into `evaluation.json` |
+| `asystem.model` | `check_gate`, `check_acceptance`, `promote_project` | Check a parity gate file and the acceptance verdict, and set the alias `release` only when both pass |
 | `asystem.notebook` | `scaffold_notebook` | Writes a notebook, a plan and the data directories that already pass section 10, through `python -m asystem.notebook new <module> <model> <notebook> <flavor>` |
 | `library.data` | `data_path`, `read_data`, `golden_data`, `query_influxdb3` | Resolves a dataset path, reads one, reads or writes the golden dataset, and queries with the cache |
 | `library.project` | `consumer_project_dir`, `provenance` | Resolves a consumer's `default` or `release` slot, and builds `provenance` from data paths |
@@ -551,3 +571,4 @@ Enforces column of 10.1 disagree.
 | R11 | Review |
 | R12 | NB008, PJ004, PJ007, WS001, WS006 |
 | R13 | NB001, NB002, NB003, NB004, NB005, NB006, NB007, NB009, NB010, NB011, NB012, WS002, WS003, WS007 |
+| R14 | AC001, AC002, AC003, PM004 |

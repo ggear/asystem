@@ -1,0 +1,13 @@
+{
+  "rows": [
+    {
+      "split": "backtest",
+      "output": "demo_limit_seconds",
+      "metric": "rmse",
+      "op": "<=",
+      "bound": 1.0,
+      "gate": true,
+      "reason": "the guard tolerates one second"
+    }
+  ]
+}

@@ -75,7 +75,8 @@ steps.
 
 ## To do
 
+0. Capture a run with a known capacity, from a reference gauge or a full discharge, as `backtest`, then write `acceptance.json` (`spec.md` 6.8) and evaluate it in the Evaluate section. The `validation` run cannot serve, since it only falls to 55 % and then rises, so its time-normalised capacity is not true.
 1. Add the `static` floor, a constant capacity the consumer can act on without the network (`spec.md` R8).
-2. Log the project with `mlflow.pyfunc.log_model` so MLServer's MLflow runtime can load it (`plans/mlflow.md` 3).
+2. Check that MLServer's MLflow runtime loads the registered model (`plans/mlflow.md` 3); `register_project` already logs it with `mlflow.pyfunc.log_model`.
 3. Add smoothing or hysteresis in the carried state.
 4. Wire Home Assistant to the served model, and remove the hand-copied snippet.

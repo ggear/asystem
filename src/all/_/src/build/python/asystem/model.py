@@ -6,13 +6,19 @@ import re
 import shutil
 import sys
 import tempfile
-from os.path import isdir, isfile, join
+from os.path import basename, dirname, isdir, isfile, join
 
 PROJECT_SPEC_VERSION = 1
 PROJECT_MANIFEST = "project.json"
 PROJECT_SIGNATURE = "signature.json"
 PROJECT_GOLDEN = "golden.json"
+PROJECT_ACCEPTANCE = "acceptance.json"
+PROJECT_EVALUATION = "evaluation.json"
+ACCEPTANCE_SPLITS = ("validation", "backtest")
+ACCEPTANCE_METRICS = ("rmse", "mae", "max_abs_error", "bias", "p95_abs_error", "r2", "pearson_r")
+ACCEPTANCE_OPS = ("<=", ">=", "==")
 PROJECT_FLAVORS = ("static", "wasm", "onnx", "pyfunc")
+PROJECT_PLACEHOLDERS = ("tbd", "todo", "unknown", "none", "n/a", "not applicable", "to be determined")
 PROJECT_MODEL_FILES = {"wasm": "model.wasm", "onnx": "model.onnx", "pyfunc": "model.py"}
 PROJECT_SOURCES = ("static", "manual", "mlflow")
 PROJECT_ALIAS_CANDIDATE = "candidate"
@@ -90,14 +96,78 @@ def golden_from_samples(signature, model_version, samples, sequence="golden", co
     return golden_document(model_version, [(sequence, steps)])
 
 
-def package_project(project_dir, name, model_version, flavor, signature, samples, provenance, constants=None, model_path=None, sequence="golden"):
+def acceptance_row(split, output, metric, op, bound, reason, gate=True):
+    return {"split": split, "output": output, "metric": metric, "op": op, "bound": bound, "gate": gate, "reason": reason}
+
+
+def build_acceptance(rows):
+    return {"rows": list(rows)}
+
+
+def measure(y_true, y_pred):
+    import numpy
+    from scipy import stats
+
+    truth = numpy.asarray(y_true, dtype=float)
+    predicted = numpy.asarray(y_pred, dtype=float)
+    if truth.size == 0 or truth.shape != predicted.shape:
+        raise ValueError(f"measure needs equal non-empty samples [{truth.shape}] [{predicted.shape}]")
+    error = predicted - truth
+    spread = float(numpy.sum((truth - truth.mean()) ** 2))
+    constant = truth.size < 2 or float(truth.std()) == 0.0 or float(predicted.std()) == 0.0
+    return {
+        "rmse": float(numpy.sqrt(numpy.mean(error**2))),
+        "mae": float(numpy.mean(numpy.abs(error))),
+        "max_abs_error": float(numpy.max(numpy.abs(error))),
+        "bias": float(numpy.mean(error)),
+        "p95_abs_error": float(numpy.percentile(numpy.abs(error), 95)),
+        "r2": None if spread == 0.0 else float(1.0 - numpy.sum(error**2) / spread),
+        "pearson_r": None if constant else float(stats.pearsonr(truth, predicted).statistic),
+    }
+
+
+def evaluate_acceptance(acceptance, samples, datasets):
+    measured = {split: {output: measure(*pair) for output, pair in outputs.items()} for split, outputs in samples.items()}
+    results = []
+    for row in acceptance["rows"]:
+        value = measured.get(row["split"], {}).get(row["output"], {}).get(row["metric"])
+        results.append({**row, "value": value, "passed": value is not None and _compare(value, row["op"], row["bound"])})
+    return {
+        "acceptance_sha256": _acceptance_sha256(acceptance),
+        "datasets": {split: [{"path": f"{basename(dirname(path))}/{basename(path)}", "sha256": file_sha256(path)} for path in sorted(paths)] for split, paths in datasets.items()},
+        "results": results,
+        "passed": all(result["passed"] for result in results if result["gate"]),
+    }
+
+
+def check_acceptance(project_dir):
+    evaluation_path = join(project_dir, PROJECT_EVALUATION)
+    if not isfile(evaluation_path):
+        return [("PM004", "the project has no evaluation against acceptance criteria")]
+    with open(evaluation_path) as evaluation_file:
+        evaluation = json.load(evaluation_file)
+    return [
+        ("PM004", f"acceptance failed split [{result['split']}] output [{result['output']}] metric [{result['metric']}] value [{result['value']}]")
+        for result in evaluation["results"]
+        if result["gate"] and not result["passed"]
+    ]
+
+
+def package_project(project_dir, name, model_version, flavor, signature, samples, provenance, constants=None, model_path=None, sequence="golden", acceptance=None, evaluation=None):
     golden = golden_from_samples(signature, model_version, samples, sequence, constants)
-    return write_project(project_dir, name, model_version, flavor, signature, golden, provenance, constants, model_path)
+    return write_project(project_dir, name, model_version, flavor, signature, golden, provenance, constants, model_path, acceptance=acceptance, evaluation=evaluation)
 
 
-def write_project(project_dir, name, model_version, flavor, signature, golden, provenance, constants=None, model_path=None, onnx=None):
+def write_project(project_dir, name, model_version, flavor, signature, golden, provenance, constants=None, model_path=None, onnx=None, acceptance=None, evaluation=None):
+    if (acceptance is None) != (evaluation is None):
+        raise ValueError("acceptance and evaluation must be given together")
     os.makedirs(project_dir, exist_ok=True)
     files = {"signature": PROJECT_SIGNATURE, "golden": PROJECT_GOLDEN}
+    if acceptance is not None:
+        _write_json(join(project_dir, PROJECT_ACCEPTANCE), acceptance)
+        _write_json(join(project_dir, PROJECT_EVALUATION), evaluation)
+        files["acceptance"] = PROJECT_ACCEPTANCE
+        files["evaluation"] = PROJECT_EVALUATION
     if model_path is not None:
         if flavor not in PROJECT_MODEL_FILES:
             raise ValueError(f"flavor [{flavor}] has no model file")
@@ -139,8 +209,10 @@ def lint_project(project_dir):
         findings.append(("PJ002", f"provenance source unknown [{provenance.get('source')}]"))
     if not isinstance(provenance.get("inputs"), list):
         findings.append(("PJ002", "provenance inputs must be a list of the data files used"))
-    if flavor in PROJECT_FLAVORS and flavor != "static" and not provenance.get("implementation"):
-        findings.append(("PJ002", f"provenance implementation is needed for flavor [{flavor}]"))
+    if flavor in PROJECT_FLAVORS and flavor != "static":
+        implementation = provenance.get("implementation")
+        if not isinstance(implementation, str) or len(implementation.split()) < 2 or implementation.strip().lower() in PROJECT_PLACEHOLDERS:
+            findings.append(("PJ002", f"provenance implementation must say what is inside the model for flavor [{flavor}]"))
     files = manifest.get("files", {})
     findings.extend(("PJ003", f"file missing from manifest [{key}]") for key in ("signature", "golden", *PROJECT_REQUIRED_FILES.get(flavor, ())) if key not in files)
     for key, entry in files.items():
@@ -154,6 +226,8 @@ def lint_project(project_dir):
     with open(join(project_dir, files["signature"]["path"])) as signature_file:
         signature = json.load(signature_file)
     findings.extend(_lint_signature(manifest, signature))
+    if "acceptance" in files or "evaluation" in files:
+        findings.extend(_lint_acceptance(project_dir, files, signature))
     if "golden" in files and isfile(join(project_dir, files["golden"]["path"])):
         with open(join(project_dir, files["golden"]["path"])) as golden_file:
             golden = json.load(golden_file)
@@ -170,6 +244,9 @@ def verify_project(project_dir):
 
 
 def register_project(project_dir, name, tracking_uri, aliases=(PROJECT_ALIAS_CANDIDATE,)):
+    import mlflow.data
+    import mlflow.pyfunc
+
     import mlflow
     from mlflow import MlflowClient
 
@@ -179,9 +256,46 @@ def register_project(project_dir, name, tracking_uri, aliases=(PROJECT_ALIAS_CAN
     mlflow.set_experiment(name)
     with mlflow.start_run() as run:
         mlflow.set_tags({"project_flavor": manifest["flavor"], "project_model_version": str(manifest["model_version"])})
-        mlflow.log_artifacts(project_dir, artifact_path="project")
-    version = mlflow.register_model(f"runs:/{run.info.run_id}/project", name)
+        if "evaluation" in manifest["files"]:
+            import pandas
+
+            with open(join(project_dir, PROJECT_EVALUATION)) as evaluation_file:
+                evaluation = json.load(evaluation_file)
+            mlflow.set_tag("acceptance", "passed" if evaluation["passed"] else "failed")
+            mlflow.log_metrics({f"{result['split']}/{result['output']}/{result['metric']}": result["value"] for result in evaluation["results"] if result["value"] is not None})
+            for split, entries in evaluation["datasets"].items():
+                for entry in entries:
+                    dataset = mlflow.data.from_pandas(pandas.DataFrame(), name=os.path.splitext(basename(entry["path"]))[0], digest=entry["sha256"][:16])
+                    mlflow.log_input(dataset, context=split)
+        if manifest["flavor"] == "pyfunc":
+            from mlflow.models import ModelSignature
+            from mlflow.types import ColSpec, Schema
+
+            with open(join(project_dir, manifest["files"]["signature"]["path"])) as signature_file:
+                signature = json.load(signature_file)
+            column_types = {"FP64": "double", "INT64": "long"}
+
+            def schema(entries):
+                for entry in entries:
+                    if entry["datatype"] not in column_types or entry["shape"] != [1]:
+                        raise ValueError(f"pyfunc signature supports scalar FP64 and INT64 only [{entry['name']}]")
+                return Schema([ColSpec(column_types[entry["datatype"]], entry["name"]) for entry in entries])
+
+            mlflow.pyfunc.log_model(
+                name="project",
+                python_model=join(project_dir, manifest["files"]["model"]["path"]),
+                artifacts={"project": project_dir},
+                signature=ModelSignature(inputs=schema(signature["inputs"]), outputs=schema(signature["outputs"])),
+            )
+        else:
+            mlflow.log_artifacts(project_dir, artifact_path="project")
     client = MlflowClient()
+    if manifest["flavor"] == "pyfunc":
+        version = mlflow.register_model(f"runs:/{run.info.run_id}/project", name)
+    else:
+        if not client.search_registered_models(filter_string=f"name = '{name}'"):
+            client.create_registered_model(name)
+        version = client.create_model_version(name, f"{run.info.artifact_uri}/project", run_id=run.info.run_id)
     for alias in aliases:
         client.set_registered_model_alias(name, alias, version.version)
     return version.version
@@ -322,6 +436,7 @@ def promote_project(name, tracking_uri, gate_path, hosts, archs, reviewed_by):
         with open(gate_path) as gate_file:
             gate = json.load(gate_file)
         findings = check_gate(gate, file_sha256(join(staging_dir, "project", PROJECT_MANIFEST)), hosts, archs, reviewed_by)
+        findings.extend(check_acceptance(join(staging_dir, "project")))
         if findings:
             raise ValueError("; ".join(f"{rule} {message}" for rule, message in findings))
         client = MlflowClient()
@@ -410,6 +525,51 @@ def _cell(spec, value):
 
 def _quoted(text):
     return f'"{text}"'
+
+
+def _acceptance_sha256(acceptance):
+    return hashlib.sha256(json.dumps(acceptance, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def _compare(value, op, bound):
+    return {"<=": value <= bound, ">=": value >= bound, "==": value == bound}[op]
+
+
+def _lint_acceptance(project_dir, files, signature):
+    paths = [join(project_dir, files[key]["path"]) if key in files else None for key in ("acceptance", "evaluation")]
+    if not all(path is not None and isfile(path) for path in paths):
+        return [("AC001", "acceptance and evaluation must both be in the project")]
+    with open(paths[0]) as acceptance_file, open(paths[1]) as evaluation_file:
+        acceptance, evaluation = json.load(acceptance_file), json.load(evaluation_file)
+    findings = []
+    scalar_outputs = {entry["name"] for entry in signature["outputs"] if entry["shape"] == [1]}
+    all_outputs = {entry["name"] for entry in signature["outputs"]}
+    rows = acceptance.get("rows", [])
+    for row in rows:
+        label = f"split [{row.get('split')}] output [{row.get('output')}] metric [{row.get('metric')}]"
+        if row.get("split") not in ACCEPTANCE_SPLITS:
+            findings.append(("AC002", f"acceptance split is not one of {list(ACCEPTANCE_SPLITS)} {label}"))
+        if row.get("metric") not in ACCEPTANCE_METRICS:
+            findings.append(("AC002", f"acceptance metric is not one of {list(ACCEPTANCE_METRICS)} {label}"))
+        if row.get("op") not in ACCEPTANCE_OPS:
+            findings.append(("AC002", f"acceptance operator is not one of {list(ACCEPTANCE_OPS)} {label}"))
+        if isinstance(row.get("bound"), bool) or not isinstance(row.get("bound"), (int, float)):
+            findings.append(("AC002", f"acceptance bound must be a number {label}"))
+        if not isinstance(row.get("gate"), bool):
+            findings.append(("AC002", f"acceptance gate must be true or false {label}"))
+        if not isinstance(row.get("reason"), str) or not row["reason"].strip():
+            findings.append(("AC002", f"acceptance reason must name the consumer need {label}"))
+        if row.get("output") not in all_outputs:
+            findings.append(("AC002", f"acceptance output is not in the signature {label}"))
+    gated = {row.get("output") for row in rows if row.get("gate") is True}
+    findings.extend(("AC001", f"no gating acceptance row for output [{output}]") for output in sorted(scalar_outputs - gated))
+    if evaluation.get("acceptance_sha256") != _acceptance_sha256(acceptance):
+        findings.append(("AC003", "the evaluation is not for this acceptance file"))
+    keys = ("split", "output", "metric", "op", "bound", "gate", "reason")
+    if [{key: result.get(key) for key in keys} for result in evaluation.get("results", [])] != [{key: row.get(key) for key in keys} for row in rows]:
+        findings.append(("AC003", "the evaluation results do not match the acceptance rows"))
+    findings.extend(("AC003", f"the evaluation has no dataset hashes for split [{split}]") for split in sorted({row.get("split") for row in rows} - set(evaluation.get("datasets", {}))))
+    return findings
 
 
 def _brief(entry):
