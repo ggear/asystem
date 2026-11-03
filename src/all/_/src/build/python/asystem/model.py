@@ -90,14 +90,19 @@ def golden_from_samples(signature, model_version, samples, sequence="golden", co
     return golden_document(model_version, [(sequence, steps)])
 
 
-def package_project(project_dir, name, model_version, flavor, signature, samples, provenance, constants=None, model_files=None, sequence="golden"):
+def package_project(project_dir, name, model_version, flavor, signature, samples, provenance, constants=None, model_path=None, sequence="golden"):
     golden = golden_from_samples(signature, model_version, samples, sequence, constants)
-    return write_project(project_dir, name, model_version, flavor, signature, golden, provenance, constants, model_files)
+    return write_project(project_dir, name, model_version, flavor, signature, golden, provenance, constants, model_path)
 
 
-def write_project(project_dir, name, model_version, flavor, signature, golden, provenance, constants=None, model_files=None, onnx=None):
+def write_project(project_dir, name, model_version, flavor, signature, golden, provenance, constants=None, model_path=None, onnx=None):
     os.makedirs(project_dir, exist_ok=True)
-    files = {"signature": PROJECT_SIGNATURE, "golden": PROJECT_GOLDEN, **(model_files or {})}
+    files = {"signature": PROJECT_SIGNATURE, "golden": PROJECT_GOLDEN}
+    if model_path is not None:
+        if flavor not in PROJECT_MODEL_FILES:
+            raise ValueError(f"flavor [{flavor}] has no model file")
+        shutil.copy(model_path, join(project_dir, PROJECT_MODEL_FILES[flavor]))
+        files["model"] = PROJECT_MODEL_FILES[flavor]
     _write_json(join(project_dir, PROJECT_SIGNATURE), signature)
     _write_json(join(project_dir, PROJECT_GOLDEN), golden)
     manifest = {

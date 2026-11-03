@@ -35,6 +35,13 @@ if [[ "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
       done
     )
   fi
+  if ! command -v dovi_tool >/dev/null 2>&1 || [ "$(dovi_tool --version 2>&1 | grep -c "${MEDIA_DOVI_TOOL_VERSION}")" -eq 0 ]; then
+    DOVI_TOOL_DIR="$(mktemp -d)"
+    curl -fsSL "https://github.com/quietvoid/dovi_tool/releases/download/${MEDIA_DOVI_TOOL_VERSION}/dovi_tool-${MEDIA_DOVI_TOOL_VERSION}-$(uname -m)-unknown-linux-musl.tar.gz" -o "${DOVI_TOOL_DIR}/dovi_tool.tar.gz"
+    tar -xzf "${DOVI_TOOL_DIR}/dovi_tool.tar.gz" -C "${DOVI_TOOL_DIR}"
+    install -m 0755 "${DOVI_TOOL_DIR}/dovi_tool" "/usr/local/bin/dovi_tool"
+    rm -rf "${DOVI_TOOL_DIR}"
+  fi
   mapfile -t SHARE_DIRS < <(grep -v '^#' "/etc/fstab" | grep '/share' | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}')
   for SHARE_DIR in "${SHARE_DIRS[@]}"; do
     rm -rf "${SHARE_DIR}/tmp/scripts"

@@ -145,6 +145,7 @@ Video options:
                     set ratecontrol maximum rate and/or buffer size
                       as multiple of video bitrate target or specific bitrate
     --copy-video    disable transcoding and copy original video track
+    --strip-dovi    remove Dolby Vision RPU metadata when copying video track
 
 Apple Video Toolbox encoder options:
     --vt-allow-sw   allow software encoding
@@ -341,6 +342,7 @@ Requires `ffprobe`, `ffmpeg` and `mkvpropedit`.
       @copy_track_names = false
       @max_muxing_queue_size = nil
       @dry_run = false
+      @strip_dovi = false
       @hevc = false
       @encoder = nil
       @ten_bit = nil
@@ -692,6 +694,10 @@ Requires `ffprobe`, `ffmpeg` and `mkvpropedit`.
       opts.on '--rc-bufsize ARG', Float do |arg|
         @bufsize = arg
         @encoder = nil if @encoder == 'copy'
+      end
+
+      opts.on '--strip-dovi' do
+        @strip_dovi = true
       end
 
       opts.on '--copy-video' do
@@ -1903,6 +1909,7 @@ Requires `ffprobe`, `ffmpeg` and `mkvpropedit`.
       Kernel.warn text
       encode_options += ['-c:v', @encoder]
       encode_options += ['-bsf:v', 'mpeg4_unpack_bframes'] if @encoder == 'copy' and video['codec_name'] == 'mpeg4'
+      encode_options += ['-bsf:v', 'dovi_rpu=strip=1'] if @encoder == 'copy' and @strip_dovi
       encode_options += ['-pix_fmt:v', (@encoder =~ /(videotoolbox|nvenc|qsv)$/ ? 'p010le' : 'yuv420p10le')] if ten_bit and pix_fmt
       encode_options += (@nvenc_cq.nil? ? ['-b:v', "#{bitrate}k"] : ['-cq:v', @nvenc_cq]) unless @encoder == 'copy'
       encode_options += ['-maxrate:v', "#{maxrate}k"] if maxrate > 0

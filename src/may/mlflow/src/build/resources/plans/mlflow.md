@@ -9,7 +9,8 @@ open decisions, and MUST NOT restate the specification. Each notebook's own plan
 - The vocabulary is scikit-learn's, mapped onto MLServer's and MLflow's (`spec.md` 4.1): a project has a flavor and a signature (`signature.json`,
   the V2 model metadata), and `asystem.model`, `asystem.notebook`, the notebooks, the plans and the committed rackmains default project use those
   words. The `wasm` flavor's module ABI is `predict(X) -> y`, with state carried as the `state_in` and `state_out` vectors.
-- A workspace holds `notebook.ipynb`, `plan.md`, `data` and at most one model file (WS007).
+- A workspace holds `notebook.ipynb`, `plan.md`, `data` and at most one model file (WS007), and `write_project` copies that file into the project
+  and hashes it. Every non-`static` project names its `provenance.implementation` (PJ002).
 - The checks of `spec.md` section 10: `lint_project` and `verify_project` (PJ001 to PJ012), `asystem.notebook` (NB001 to NB010) and
   `asystem.workspace` (WS001 to WS007), with unit tests that plant each fault, run in `fab build`, and a test that fails when the
   specification and the code disagree on the identifiers, flavors, splits or sections.
@@ -57,8 +58,8 @@ In order. Each item is done when its worked example (4) runs and passes.
 1. Worked examples for every flow in section 4, built first where they need nothing new and then alongside each feature below, so the code
    describes the spec and implements it.
 2. The `wasm` flavor: a builder for the first project that needs one (a module satisfying the ABI of `spec.md` 4.1), the `predict`
-   export, `wasmtime-py` as a pinned dependency of the `mlflow` image, and the workspace's `model.wasm` copied into the project
-   by `write_project`. `asystem.model` already accepts the flavor.
+   export, and `wasmtime-py` as a pinned dependency of the `mlflow` image. `asystem.model` already accepts the flavor and `write_project`
+   copies a workspace's model file into the project.
 3. The serving runtime in `mlserver`: `model-settings.json` generated from each pulled project's signature, a `ProjectRuntime` that verifies
    hashes at load and merges constants, `mlserver start` under `exec` once a model exists, and health checks on `/v2/health/live` and
    `/v2/health/ready`. Until then those checks are trivially true.
@@ -159,6 +160,5 @@ Rust through `ort`.
 
 - Where a `wasm` builder lives. The first project that needs one owns it, and a second project is the point to share it; the `_` module has no Rust today.
 - Whether the first builder emits a compiled module per model or a shared interpreter with the graph in a data section.
-- `write_project` copying the workspace's model file into the project is not built.
 - The tolerance for narrowing float64 where an engine lacks a kernel (`Atan` in `onnxruntime`), to be set when the first `onnx` graph is
   built.

@@ -1,6 +1,6 @@
 # MLflow Model Delivery Specification
 
-Status: Draft, 2026-10-31. What is implemented, what is not and what is open is in `plans/mlflow.md`.
+Status: Draft, 2026-11-02. What is implemented, what is not and what is open is in `plans/mlflow.md`.
 
 ## 1. Scope
 
@@ -36,11 +36,11 @@ The key words MUST, MUST NOT, SHOULD and MAY are to be read as in RFC 2119.
 | # | Area | Requirement | Rationale |
 |---|---|---|---|
 | R1 | Standard | Every model MUST have one signature, one project layout and one manifest of SHA-256 hashes, whatever its flavor | A consumer moves between served and embedded without change |
-| R2 | Standard | The flavor MUST follow the model and MUST NOT follow the environment. The flavors are `static` (constants), `wasm` (formula or stateful, as a WebAssembly module), `onnx` (learned) and `pyfunc` (Python-only libraries, served only) | The environment does not dictate the maths |
-| R3 | Standard | Features MUST live in the project. A request MUST be one sample of numbers plus the state the caller carries. A consumer MUST NOT hold model logic | Recorded once at source, replayable |
+| R2 | Standard | The flavor MUST follow the model and MUST NOT follow the environment. The flavors are `static` (constants), `wasm` (formula or stateful, as a WebAssembly module), `onnx` (learned) and `pyfunc` (Python-only libraries, served or in Python, never embedded in Rust or Go) | The environment does not dictate the maths |
+| R3 | Standard | Feature engineering MUST live in the project. A request MUST be one sample of numbers plus the state the caller carries. A consumer MUST NOT hold model logic | Recorded once at source, replayable |
 | R4 | Parity | Every number reported or shipped for a project, the fit included, MUST come from the shipped runtime of its flavor. A faster proxy MAY choose the fit, and the runtime MUST then reproduce the result. Exploration MAY use plain Python | No gap between pre-prod and prod numbers |
 | R5 | Parity | A project MUST NOT be given the alias `release` until a person has reviewed it and the parity gate has passed on every host and both architectures | A mismatch is caught before it ships |
-| R6 | Parity | Every dataset MUST be held under exactly one split and split by run. Held-out data MUST NOT be used to fit | An error estimate stays honest |
+| R6 | Parity | Every dataset MUST be held under exactly one split, with each run wholly in one split. Held-out data MUST NOT be used to fit | An error estimate stays honest |
 | R7 | Delivery | A serving runtime MUST pull its project at bootstrap. An embedded consumer MUST pull only when `fab pull` runs and MUST commit the result. A running container MUST NOT call MLflow | A drain works with the network gone |
 | R8 | Delivery | A consumer MUST validate a project at load and MUST NOT use an invalid one. The fallback order MUST be the chosen model, the last valid answer, the shipped `release` project, then the `static` default | The consumer always holds a full set of required outputs |
 | R9 | Delivery | Every decision MUST record the model version and project hash that produced it | Any outcome can be traced and replayed |
@@ -78,7 +78,7 @@ missing, and the model MUST refuse it.
 | `static` | Constants and nothing else | The manifest's `constants` | No | No | Everywhere, with a plain loader | A default, a floor, or tunables that are reviewed and versioned |
 | `wasm` | A WebAssembly module | `model.wasm` | Fitted offline, attributes built in | Yes, a fixed-length vector | Python, Rust, Go and served, through a WebAssembly host | A formula, curve, lookup, integrator, decay or latch |
 | `onnx` | An ONNX model file | `model.onnx` | Yes | Optional | Python and served (`onnxruntime`), Rust (`ort`), Go (`onnxruntime_go`) | A tree, regression or small network from scikit-learn, XGBoost and the like |
-| `pyfunc` | An MLflow Python model | A Python class and its libraries | Yes | Optional | Served only, in MLServer | A library with no converter, or arbitrary Python |
+| `pyfunc` | An MLflow Python model | A Python class and its libraries | Yes | Optional | Served in MLServer, or in Python; never Rust or Go | A library with no converter, or arbitrary Python |
 
 ### 3.3 Requirements per flavor
 
@@ -121,6 +121,8 @@ manifest's `provenance.implementation` names what made it, and no implementation
 - A module is a fitted estimator. `fit` is not part of the ABI: fitting is offline, and the fitted attributes are built into the module.
 - A call MUST be bounded in time and memory. A host MUST meter fuel and cap memory.
 - A module MUST import nothing from its host.
+- The signature's tensors are named columns, so column `j` of `X` is the `j`-th feature in signature order, and a V2 request is stacked into `X` in that order.
+- A signature tensor of datatype `INT64` travels as float64, exact to 2^53, and the runtime casts it back by the signature. A larger value is invalid.
 
 The vocabulary is scikit-learn's, mapped onto MLServer's and MLflow's:
 
@@ -176,8 +178,8 @@ libraries here fit the numbers that go into it.
 | XGBoost, LightGBM, CatBoost | No | Yes: `onnxmltools` | Maybe: any use | CPU training on the laptop is enough at this scale |
 | PyTorch | Maybe: linear models and small nets only, by exporting weights as for JAX and MLX; prefer `onnx` | Maybe: `torch.onnx` | Maybe: any use | Only if a network is ever needed; the MPS backend is beta on Apple Silicon |
 | TensorFlow, Keras | Maybe: linear models and small nets only, by exporting weights as for JAX and MLX; prefer `onnx` | Maybe: `tf2onnx` | Maybe: any use | Nothing that needs `tensorflow-metal` ships, since it is weakly maintained |
-| statsmodels, Prophet | No | No | Yes: served only | No ONNX converter is known; keep a `static` floor |
-| JAX, MLX | Maybe: train with it, then export the weights of a small net (linear layers, an MLP) into a module's matrix and activation code, using lookup tables or polynomials for `tanh` and `exp` or a stated golden tolerance | No | Maybe: a custom `pyfunc`, served only, with a `static` floor | JAX converters are fragile and MLX has no exporter, so neither ships as `onnx`; bigger models are retrained in PyTorch or scikit-learn; nothing Metal-specific ships |
+| statsmodels, Prophet | No | No | Yes: served or in Python | No ONNX converter is known; keep a `static` floor |
+| JAX, MLX | Maybe: train with it, then export the weights of a small net (linear layers, an MLP) into a module's matrix and activation code, using lookup tables or polynomials for `tanh` and `exp` or a stated golden tolerance | No | Maybe: a custom `pyfunc`, served or in Python, with a `static` floor | JAX converters are fragile and MLX has no exporter, so neither ships as `onnx`; bigger models are retrained in PyTorch or scikit-learn; nothing Metal-specific ships |
 
 A library marked No under a flavor MUST NOT ship in that flavor; training in it is permitted. A runtime SHOULD be the smallest that runs
 its flavor: `static` needs none, `wasm` needs one small host per language, `onnx` needs an engine.
@@ -341,18 +343,18 @@ A model notebook:
 **Lint**
 
 `fab build` lints every notebook under `src/main/model/*/*/*/` the way it lints Python, and rewrites the source:
-- `ruff check --fix` and `ruff format` run on the code cells, with the repo `ruff.toml`. E402 is ignored in notebooks, because the Setup
-  cell must extend the path before it imports `library`.
+- `ruff check --fix` and `ruff format` run on the code cells, with the repo `ruff.toml`. E402 is ignored in notebooks, because an import sits at the top of the cell that first needs it, not of the notebook.
 - `python -m asystem.notebook --fix` strips outputs and execution counts and checks the notebook rules of section 10. The executed copy
   is kept under `target/notebook`, never in the tree.
 - `python -m asystem.workspace` checks each workspace against the rules of section 10.
+- `ruff check --fix` and `ruff format` also run on a workspace's `model.py`, which is not type checked.
 
 A finding other than NB002 fails the build. Notebooks are not type checked, since `pyright` does not check `.ipynb` files from the command
 line. Notebooks are not run by `fab build`; `notebook.sh` runs one headless.
 
 **Markdown**
 - Identifiers, paths, commands and values MUST be in backticks.
-- A table MUST have a Title Case header and Title Case first-column splits, and each other cell MUST begin with a capital.
+- A table MUST have a Title Case header and Title Case first-column labels, and each other cell MUST begin with a capital.
 - A table MUST NOT bold a cell, except as the title cell requires.
 
 ## 7. Lifecycle
@@ -361,7 +363,7 @@ line. Notebooks are not run by `fab build`; `notebook.sh` runs one headless.
 
 | # | Stage | Who Runs It | Command or Hook | Output | Gate to the Next Stage |
 |---|---|---|---|---|---|
-| 1 | Capture data | Notebook | `query_influxdb3(...)`, or a file saved with `data_path` | `data/<split>/<ts>/<name>.csv` | The split is right and the split is by run |
+| 1 | Capture data | Notebook | `query_influxdb3(...)`, or a file saved with `data_path` | `data/<split>/<ts>/<name>.csv` | The split is right and each run is wholly in one split |
 | 2 | Explore | Notebook | Plain Python | Ideas, plots | None |
 | 3 | Fit | Notebook | A builder (`wasm`), `skl2onnx` (`onnx`), `model.py` (`pyfunc`) | Fitted attributes | Fit error on `training` is sane |
 | 4 | Evaluate | Notebook | Shipped runtime over `validation` and `backtest` | Metrics, golden sequences | Error inside the margins in the consumer's plan |
@@ -410,7 +412,7 @@ Each task includes the ones before it.
 6. Evaluate on `validation` and `backtest` through the shipped runtime, and generate the golden sequences from it. The sequences MUST
    include a first call with no state, boundary values, a missing input that gives a signature error and a long gap. Build each step with
    `golden_step` and the document with `golden_document`.
-7. Package with `write_project`, which runs `verify_project` and so every project check of section 10. A static default is written to the
+7. Package with `write_project`, which copies the workspace's model file into the project, then runs `verify_project` and so every project check of section 10. A static default is written to the
    consumer with `consumer_project_dir`.
 8. Register with `register_project(project_dir, name, tracking_uri)`. It logs and registers the project and sets the alias `candidate`. A
    person sets `release` after review. The experiment MUST be created after the proxy is on, since older experiments keep their old

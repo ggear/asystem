@@ -735,6 +735,18 @@ class ModelProjectTest(unittest.TestCase):
     def test_model_flavor_needs_its_file(self):
         self.assertEqual(["PJ003"], self.rules(flavor="wasm", provenance={"source": "manual", "inputs": [], "implementation": "demo"}))
 
+    def test_model_file_is_copied_into_the_project_and_hashed(self):
+        model_path = join(tempfile.mkdtemp(), "model.py")
+        with open(model_path, "w") as model_file:
+            model_file.write("VALUE = 1\n")
+        manifest = self.write(flavor="pyfunc", model_path=model_path, constants=None, provenance={"source": "manual", "inputs": [], "implementation": "demo"})
+        self.assertEqual("model.py", manifest["files"]["model"]["path"])
+        self.assertTrue(os.path.isfile(join(self.project_dir, "model.py")))
+
+    def test_static_flavor_refuses_a_model_file(self):
+        with self.assertRaises(ValueError):
+            self.write(model_path=join(self.project_dir, "signature.json"))
+
     def test_model_flavor_needs_its_implementation(self):
         self.assertEqual(["PJ002", "PJ003"], self.rules(flavor="wasm"))
 

@@ -19,7 +19,7 @@ def lint_workspace(notebook_dir):
     module = basename(dirname(dirname(notebook_dir)))
     findings = []
     findings.extend(
-        ("WS001", f"{kind} directory [{name}] does not follow the naming style") for kind, name in (("module", module), ("model", model), ("notebook", notebook)) if not PROJECT_NAME.match(name)
+        ("WS001", f"{level} directory [{name}] does not follow the naming style") for level, name in (("module", module), ("model", model), ("notebook", notebook)) if not PROJECT_NAME.match(name)
     )
     notebooks = _names(notebook_dir, ".ipynb")
     if notebooks != [WORKSPACE_NOTEBOOK]:

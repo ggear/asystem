@@ -9,7 +9,7 @@ The plan for the `weewx_forecast_roof` model. It follows `spec.md`, the specific
 | **Notebook** | `src/may/mlflow/src/main/model/weewx/forecast/roof/notebook.ipynb` |
 | **Registered Model** | `weewx_forecast_roof` (`spec.md` 6.1) |
 | **Project Flavor** | `onnx` (`spec.md` 3.2) |
-| **Worked Example** | The learned model flow, replacing `eg/onnx` as the example (`plans/mlflow.md` 4.1) |
+| **Worked Example** | The learned model flow, replacing `example/onnx` as the example (`plans/mlflow.md` 4.1) |
 
 **Status, 2026-10-31.** A placeholder. The notebook, the directories and this plan are scaffolded; nothing is fitted or built.
 
