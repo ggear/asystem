@@ -1028,10 +1028,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, merge=False, transcode=Fal
                 .then(pl.lit("Check Corrupt Metadata"))
                 .when((pl.col("File State") == "Incomplete"))
                 .then(pl.lit("Check Missing Streams"))
-                .when(
-                    (pl.col("Video 1 HDR Format") == "Dolby Vision")
-                    & (~pl.col("Video 1 HDR Profile").fill_null("").str.contains(DOLBY_VISION_PROFILES_STRIPPABLE))
-                )
+                .when((pl.col("Video 1 HDR Format") == "Dolby Vision") & (~pl.col("Video 1 HDR Profile").fill_null("").str.contains(DOLBY_VISION_PROFILES_STRIPPABLE)))
                 .then(pl.lit("Check Unsupported Dolby Vision Profile"))
                 .when((pl.col("Target Lang") != pl.col("Audio 1 Lang")))
                 .then(pl.lit("Check Missing Target Language"))
@@ -1112,10 +1109,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, merge=False, transcode=Fal
                 #
                 # Reformat
                 #
-                .when(
-                    (pl.col("Video 1 HDR Format") == "Dolby Vision")
-                    & (pl.col("Video 1 HDR Profile").fill_null("").str.contains(DOLBY_VISION_PROFILES_STRIPPABLE))
-                )
+                .when((pl.col("Video 1 HDR Format") == "Dolby Vision") & (pl.col("Video 1 HDR Profile").fill_null("").str.contains(DOLBY_VISION_PROFILES_STRIPPABLE)))
                 .then(pl.lit("Reformat Dolby Vision"))
                 .when((pl.col("Metadata State") == "Messy"))
                 .then(pl.lit("Reformat Messy Metadata"))
@@ -1362,10 +1356,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, merge=False, transcode=Fal
                     ).alias("Transcode Video"),
                     (pl.col("Audio 1 Index Audio")).alias("Transcode Audio Index"),
                     (
-                        pl.when(
-                            (pl.col("Video 1 HDR Format") == "Dolby Vision")
-                            & (pl.col("Video 1 HDR Profile").fill_null("").str.contains(DOLBY_VISION_PROFILES_STRIPPABLE))
-                        )
+                        pl.when((pl.col("Video 1 HDR Format") == "Dolby Vision") & (pl.col("Video 1 HDR Profile").fill_null("").str.contains(DOLBY_VISION_PROFILES_STRIPPABLE)))
                         .then(pl.lit("True"))
                         .otherwise(pl.lit("False"))
                     ).alias("Transcode Dolby Vision Strip"),
