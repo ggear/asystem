@@ -595,6 +595,16 @@ class RestoreWrapperTest(unittest.TestCase):
             self.assertNotIn("a/2026-10-21", handle.read())
         self.assertIn("status=0", done.stdout)
 
+    def test_a_sweep_removes_stale_scratch_and_keeps_merge_progress(self):
+        restore = join(self.workdir, "letsencrypt", "restore")
+        for name in ("2026-10-29_01-00-38", "2026-10-30_01-00-38"):
+            os.makedirs(join(restore, name))
+        with open(join(restore, "2026-10-29_01-00-38.merged"), "w") as handle:
+            handle.write("a/2026-10-21\n")
+        done = self.source(f'RESTORE_INTERNAL_SOURCE_DIR="{self.latest}"\nrestore_swept\necho "status=$?"')
+        self.assertIn("status=0", done.stdout)
+        self.assertEqual(sorted(os.listdir(restore)), ["2026-10-29_01-00-38.merged"])
+
 
 class GenerateRulesTest(unittest.TestCase):
     def module(self, restore, backup):

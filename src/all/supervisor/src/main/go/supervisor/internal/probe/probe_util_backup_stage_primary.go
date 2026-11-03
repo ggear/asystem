@@ -113,10 +113,15 @@ func runOneService(ctx context.Context, request stageRequest, loaded *config.Con
 	command.Env = append(os.Environ(),
 		moduleSkipHoursVariable+"="+strconv.Itoa(moduleSkipHours()),
 		moduleRestartVariable+"=true",
+		modulePruneVariable+"=false",
 		backupTimeoutVariable+"="+strconv.Itoa(moduleTimeoutHours(loaded, request)))
 	runErr := command.Run()
 
 	ok := runErr == nil
+	var pruneErr error
+	if ok {
+		pruneErr = pruneBackupRuns(ctx, subject, backupDir, keepPolicy{window: time.Duration(loaded.BackupWindowOf(service).RetainDays) * 24 * time.Hour})
+	}
 	state, newest := backupOutcome(ok, previous, newestBackupDir(backupDir))
 	var evidence []string
 	if state == metric.BackupStateSuccess {
@@ -160,6 +165,9 @@ func runOneService(ctx context.Context, request stageRequest, loaded *config.Con
 	}
 	if !ok {
 		return fmt.Errorf("service [%s] backup script exited non-zero", service)
+	}
+	if pruneErr != nil {
+		return fmt.Errorf("service [%s] %w", service, pruneErr)
 	}
 	if regressed {
 		return fmt.Errorf("service [%s] %w", service, errServiceRegressed)

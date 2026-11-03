@@ -722,6 +722,10 @@ def main(arguments=None):
     status = commands.add_parser("status")
     status.add_argument("source_dir")
     commands.add_parser("verify").add_argument("project_dir")
+    commands.add_parser("replay").add_argument("project_dir")
+    gate = commands.add_parser("gate")
+    gate.add_argument("project_dir")
+    gate.add_argument("--out", required=True)
     commands.add_parser("lint").add_argument("project_dir")
     generate = commands.add_parser("generate")
     generate.add_argument("project_dir")
@@ -770,6 +774,17 @@ def main(arguments=None):
             for rule, message in findings:
                 print(f"{options.committed_dir if options.command == 'compare' else options.project_dir} {rule} {message}", file=sys.stderr)
             return 1 if findings else 0
+        elif options.command in ("replay", "gate"):
+            from asystem.replay import gate_project
+
+            document, findings = gate_project(options.project_dir)
+            for rule, message in findings:
+                print(f"ERROR {rule} {message}", file=sys.stderr)
+            if options.command == "gate":
+                _write_json(options.out, document)
+            if findings:
+                return 1
+            print(f"replayed project [{options.project_dir}]")
         elif options.command == "generate":
             with open(join(options.project_dir, PROJECT_SIGNATURE)) as signature_file:
                 signature = json.load(signature_file)

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -115,22 +114,15 @@ func promoteOneService(ctx context.Context, request stageRequest, share, host, s
 	scribe.Log(scribe.SourceBackup, scribe.SubjectService(service), scribe.ActionStop).Infof(backupVerb(metric.BackupStageSecondary), started,
 		"%s from [%s]", backupMoved(intReading(int64(stats.totalTransferredBytes/bytesPerMebibyte)), time.Since(started)), service)
 
-	pruner := moduleBackupScript(service)
-	if info, statErr := os.Stat(pruner); statErr == nil && info.Mode()&0o111 != 0 {
-		scribe.Log(scribe.SourceBackup, scribe.SubjectService(service), scribe.ActionCompute).Infof("thinning", time.Now(),
-			"[%s] thinning with the module pruner", target)
-		command := exec.CommandContext(ctx, "bash", pruner, moduleBackupPruneFlag, target)
-		command.Stdin = nil
-		if pruneErr := command.Run(); pruneErr != nil {
-			scribe.Log(scribe.SourceBackup, scribe.SubjectService(service), scribe.ActionCompute).Warnf("faulting", time.Now(),
-				"[%s] module pruner exited with [%v], its history is unthinned", target, pruneErr)
-		}
-	} else {
-		scribe.Log(scribe.SourceBackup, scribe.SubjectService(service), scribe.ActionCompute).Infof("thinning", time.Now(),
-			"[%s] thinning with the generic pruner, the module ships none", target)
-		gfsThin(ctx, scribe.SubjectStage(metric.BackupStageSecondary), target, config.Load(request.ConfigPath))
+	window := config.Load(request.ConfigPath).BackupWindowOf(service)
+	scribe.Log(scribe.SourceBackup, scribe.SubjectService(service), scribe.ActionCompute).Infof("thinning", time.Now(),
+		"[%s] thinning with the keep set", target)
+	pruneErr := pruneBackupRuns(ctx, scribe.SubjectStage(metric.BackupStageSecondary), target,
+		keepPolicy{daily: window.KeepDaily, weekly: window.KeepWeekly, monthly: window.KeepMonthly})
+	if rsyncErr != nil {
+		return rsyncErr
 	}
-	return rsyncErr
+	return pruneErr
 }
 
 func stopSecondaryStage(ctx context.Context, _ stageRequest) error {
@@ -217,82 +209,6 @@ func clearDirectory(dir string) {
 	}
 	for _, entry := range entries {
 		_ = os.RemoveAll(filepath.Join(dir, entry.Name()))
-	}
-}
-
-func gfsThin(ctx context.Context, subject scribe.Subject, dir string, loaded *config.Config) {
-	keepDaily, keepWeekly, keepMonthly := loaded.BackupKeepDaily(), loaded.BackupKeepWeekly(), loaded.BackupKeepMonthly()
-	if keepDaily+keepWeekly+keepMonthly <= 0 {
-		scribe.Log(scribe.SourceBackup, subject, scribe.ActionRemove).Warnf("excluded", time.Now(),
-			"[%s] is not thinned, the config declares no grandfather father son window so every dated directory would be pruned", dir)
-		return
-	}
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return
-	}
-	var names []string
-	for _, entry := range entries {
-		if entry.IsDir() && treeRunPattern.MatchString(entry.Name()) {
-			names = append(names, entry.Name())
-		}
-	}
-	if len(names) <= 1 {
-		return
-	}
-	for _, name := range names {
-		if _, statErr := os.Stat(filepath.Join(dir, name, treeMetaDirectory, treeManifestLeaf)); statErr == nil {
-			scribe.Log(scribe.SourceBackup, subject, scribe.ActionRemove).Warnf("excluded", time.Now(),
-				"[%s] is not thinned, run [%s] carries a manifest so only the module pruner may choose what to keep", dir, name)
-			return
-		}
-	}
-	sort.Strings(names)
-	count := len(names)
-	keep, daySeen := map[string]bool{}, map[string]bool{}
-	for index := count - 1; index >= 0; index-- {
-		day := names[index][:10]
-		if !daySeen[day] {
-			if len(daySeen) >= keepDaily {
-				break
-			}
-			daySeen[day] = true
-		}
-		keep[names[index]] = true
-	}
-	weekSeen, monthSeen := map[string]bool{}, map[string]bool{}
-	for index := count - 1; index >= 0; index-- {
-		name := names[index]
-		timestamp := name[:10]
-		if parsed, err := time.Parse(backupDateFormat, timestamp); err == nil {
-			year, week := parsed.ISOWeek()
-			bucket := fmt.Sprintf("%04d-%02d", year, week)
-			if !weekSeen[bucket] && len(weekSeen) < keepWeekly {
-				weekSeen[bucket] = true
-				keep[name] = true
-			}
-		}
-		monthBucket := timestamp[:7]
-		if !monthSeen[monthBucket] && len(monthSeen) < keepMonthly {
-			monthSeen[monthBucket] = true
-			keep[name] = true
-		}
-	}
-	for _, name := range names {
-		if keep[name] {
-			continue
-		}
-		path := filepath.Join(dir, name)
-		_, code, abandoned := bounded(ctx, stageBoundedWait, "btrfs", "subvolume", "delete", path)
-		if abandoned || code != 0 {
-			if err := os.RemoveAll(path); err != nil {
-				scribe.Log(scribe.SourceBackup, subject, scribe.ActionRemove).Warnf("faulting", time.Now(),
-					"[%s] could not be pruned from [%s] with [%v]", name, dir, err)
-				continue
-			}
-		}
-		scribe.Log(scribe.SourceBackup, subject, scribe.ActionRemove).Infof("expunged", time.Now(),
-			"[%s] pruned from [%s] outside the grandfather father son window", name, dir)
 	}
 }
 

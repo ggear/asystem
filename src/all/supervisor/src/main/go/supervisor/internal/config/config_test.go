@@ -42,6 +42,32 @@ func TestConfig_TrendWindow(t *testing.T) {
 	}
 }
 
+func TestConfig_BackupWindowOf(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	body := `{"asystem":{"backup":{"keep_daily":7,"keep_weekly":4,"keep_monthly":12,"retain_days":7,"modules":{"influxdb3":{"retain_days":14,"keep_daily":7,"keep_weekly":8,"keep_monthly":12}}}}}`
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	loaded := Load(path)
+	tests := []struct {
+		name     string
+		loaded   *Config
+		service  string
+		expected BackupWindow
+	}{
+		{"happy_declared_module", loaded, "influxdb3", BackupWindow{RetainDays: 14, KeepDaily: 7, KeepWeekly: 8, KeepMonthly: 12}},
+		{"happy_undeclared_module_falls_back_to_the_global_window", loaded, "plex", BackupWindow{RetainDays: 7, KeepDaily: 7, KeepWeekly: 4, KeepMonthly: 12}},
+		{"sad_no_config", nil, "plex", BackupWindow{}},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if actual := testCase.loaded.BackupWindowOf(testCase.service); actual != testCase.expected {
+				t.Fatalf("BackupWindowOf: got %v want %v", actual, testCase.expected)
+			}
+		})
+	}
+}
+
 func TestConfig_CacheWindow(t *testing.T) {
 	tests := []struct {
 		name           string

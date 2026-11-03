@@ -65,6 +65,23 @@ if __name__ == "__main__":
         database_entities={"supervisor/host": sorted(modules_server.keys()) + ["all"], "supervisor/service": sorted({service for services in modules_server.values() for service in services})},
         database_archive_measures=["warn_temperature_of_max", "spin_fan_speed_of_max", "used_system_space", "failed_backups", "used_disk_ops", "life_used_drives"],
     )
+    backup_modules = {}
+    for module in enrolled:
+        env_all = {}
+        for path in glob.glob(join(DIR_ROOT, "../../*", module, ".env_all")):
+            for line in Path(path).read_text().splitlines():
+                name, _, value = line.partition("=")
+                env_all[name.strip()] = value.strip()
+        prefix = module.upper()
+        window = {}
+        for key, default in (
+            ("RETAIN_DAYS", BACKUP_RETAIN_DAYS_DEFAULT),
+            ("KEEP_DAILY", BACKUP_KEEP_DAILY_DEFAULT),
+            ("KEEP_WEEKLY", BACKUP_KEEP_WEEKLY_DEFAULT),
+            ("KEEP_MONTHLY", BACKUP_KEEP_MONTHLY_DEFAULT),
+        ):
+            window[key.lower()] = int(env_all.get(f"{prefix}_BACKUP_NEXT_{key}", env_all.get(f"{prefix}_BACKUP_{key}", default)))
+        backup_modules[module] = window
     metadata_supervisor_schema = []
     for host, services in sorted(modules_server.items(), key=itemgetter(0)):
         host_index = get_host_index(get_host_label(host))
@@ -94,6 +111,8 @@ if __name__ == "__main__":
                             "keep_daily": int(BACKUP_KEEP_DAILY_DEFAULT),
                             "keep_weekly": int(BACKUP_KEEP_WEEKLY_DEFAULT),
                             "keep_monthly": int(BACKUP_KEEP_MONTHLY_DEFAULT),
+                            "retain_days": int(BACKUP_RETAIN_DAYS_DEFAULT),
+                            "modules": backup_modules,
                         },
                     },
                 },

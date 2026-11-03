@@ -369,7 +369,7 @@ const (
 	moduleSkipHoursVariable = "BACKUP_SKIP_HOURS"
 	moduleStopGrace         = time.Minute
 	moduleRestartVariable   = "BACKUP_SERVICE_RESTART"
-	moduleBackupPruneFlag   = "--prune-gfs"
+	modulePruneVariable     = "BACKUP_PRUNE"
 	moduleBackupLeaf        = "backup.sh"
 
 	moduleBackupScriptPattern = config.DirInstall + `/[a-z0-9_-]*/` + config.DirInstallLatestLink + `/` + moduleBackupLeaf

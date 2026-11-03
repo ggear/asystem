@@ -400,7 +400,8 @@ func snapshotShares(ctx context.Context, request stageRequest, loaded *config.Co
 		}
 		scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStageTertiary), scribe.ActionCompute).Infof("snapshot", time.Now(),
 			"[%s] snapshotted to [%s]", subvolume, target)
-		gfsThin(ctx, scribe.SubjectStage(metric.BackupStageTertiary), snapshots, loaded)
+		_ = pruneBackupRuns(ctx, scribe.SubjectStage(metric.BackupStageTertiary), snapshots,
+			keepPolicy{daily: loaded.BackupKeepDaily(), weekly: loaded.BackupKeepWeekly(), monthly: loaded.BackupKeepMonthly()})
 	}
 }
 

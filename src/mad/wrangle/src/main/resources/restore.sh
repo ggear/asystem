@@ -506,6 +506,19 @@ restore_sealed() {
   chmod -R a-w "${1}" 2>/dev/null || true
 }
 
+restore_swept() {
+  local dir stale
+  dir="$(dirname "$(restore_scratch_dir)")"
+  [ -d "${dir}" ] || return 0
+  for stale in "${dir}"/*/; do
+    [ -d "${stale}" ] || continue
+    stale="${stale%/}"
+    [ "${stale}" = "$(restore_scratch_dir)" ] && continue
+    restore_report "sweeping stale scratch [${stale}]"
+    restore_teardown "${stale}"
+  done
+}
+
 restore_teardown() {
   [ -n "${1:-}" ] && [ -d "${1}" ] || return 0
   chmod -R u+w "${1}" 2>/dev/null || true
@@ -566,6 +579,7 @@ restore_drilled() {
   if [ -z "${want}" ]; then
     restore_report "the run has no manifest fingerprint, so only integrity and staging are proven"
   fi
+  restore_swept
   scratch="$(restore_staged)" || {
     restore_fault "could not stage [${RESTORE_RUN_TIMESTAMP}] into scratch"
     restore_teardown "${scratch:-}"
@@ -692,6 +706,7 @@ restore_merge() {
     restore_fault "module [${RESTORE_MODULE_NAME}] defines no restore_merged, merge is not offered"
     return 1
   fi
+  restore_swept
   restore_stamped staging "[${#RESTORE_CHAIN_FILES[@]}] artifact(s) into scratch"
   scratch="$(restore_staged)" || {
     restore_fault "could not stage [${RESTORE_RUN_TIMESTAMP}] into scratch"

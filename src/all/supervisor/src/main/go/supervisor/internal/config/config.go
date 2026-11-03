@@ -12,6 +12,13 @@ import (
 	"time"
 )
 
+type BackupWindow struct {
+	RetainDays  int `json:"retain_days"`
+	KeepDaily   int `json:"keep_daily"`
+	KeepWeekly  int `json:"keep_weekly"`
+	KeepMonthly int `json:"keep_monthly"`
+}
+
 type Periods struct {
 	PollMillis    int
 	PulseMillis   int
@@ -210,6 +217,17 @@ func (c *Config) BackupKeepMonthly() int {
 	return c.asystem.Backup.KeepMonthly
 }
 
+func (c *Config) BackupWindowOf(service string) BackupWindow {
+	if c == nil {
+		return BackupWindow{}
+	}
+	if window, present := c.asystem.Backup.Modules[service]; present {
+		return window
+	}
+	backup := c.asystem.Backup
+	return BackupWindow{RetainDays: backup.RetainDays, KeepDaily: backup.KeepDaily, KeepWeekly: backup.KeepWeekly, KeepMonthly: backup.KeepMonthly}
+}
+
 func (c *Config) Services(host string) []string {
 	if c == nil {
 		return []string{}
@@ -393,12 +411,14 @@ type configData struct {
 }
 
 type configBackup struct {
-	CommandTopic string `json:"command_topic"`
-	StateTopic   string `json:"state_topic"`
-	TimeoutHours int    `json:"timeout_hours"`
-	KeepDaily    int    `json:"keep_daily"`
-	KeepWeekly   int    `json:"keep_weekly"`
-	KeepMonthly  int    `json:"keep_monthly"`
+	CommandTopic string                  `json:"command_topic"`
+	StateTopic   string                  `json:"state_topic"`
+	TimeoutHours int                     `json:"timeout_hours"`
+	KeepDaily    int                     `json:"keep_daily"`
+	KeepWeekly   int                     `json:"keep_weekly"`
+	KeepMonthly  int                     `json:"keep_monthly"`
+	RetainDays   int                     `json:"retain_days"`
+	Modules      map[string]BackupWindow `json:"modules"`
 }
 
 type configServices struct {

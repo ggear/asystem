@@ -118,7 +118,58 @@
       "timeout_hours": 5,
       "keep_daily": 7,
       "keep_weekly": 4,
-      "keep_monthly": 12
+      "keep_monthly": 12,
+      "retain_days": 7,
+      "modules": {
+        "homeassistant": {
+          "retain_days": 7,
+          "keep_daily": 7,
+          "keep_weekly": 4,
+          "keep_monthly": 1200
+        },
+        "influxdb3": {
+          "retain_days": 14,
+          "keep_daily": 7,
+          "keep_weekly": 8,
+          "keep_monthly": 12
+        },
+        "letsencrypt": {
+          "retain_days": 7,
+          "keep_daily": 7,
+          "keep_weekly": 4,
+          "keep_monthly": 1200
+        },
+        "mariadb": {
+          "retain_days": 7,
+          "keep_daily": 7,
+          "keep_weekly": 4,
+          "keep_monthly": 1200
+        },
+        "plex": {
+          "retain_days": 7,
+          "keep_daily": 7,
+          "keep_weekly": 4,
+          "keep_monthly": 2
+        },
+        "postgres": {
+          "retain_days": 7,
+          "keep_daily": 7,
+          "keep_weekly": 4,
+          "keep_monthly": 12
+        },
+        "wrangle": {
+          "retain_days": 7,
+          "keep_daily": 7,
+          "keep_weekly": 13,
+          "keep_monthly": 1200
+        },
+        "zigbee2mqtt": {
+          "retain_days": 7,
+          "keep_daily": 7,
+          "keep_weekly": 4,
+          "keep_monthly": 1200
+        }
+      }
     }
   }
 }
