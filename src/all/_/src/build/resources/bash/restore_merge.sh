@@ -51,6 +51,7 @@ restore_merge() {
     restore_fault "module [${RESTORE_MODULE_NAME}] defines no restore_merged, merge is not offered"
     return 1
   fi
+  restore_swept
   restore_stamped staging "[${#RESTORE_CHAIN_FILES[@]}] artifact(s) into scratch"
   scratch="$(restore_staged)" || {
     restore_fault "could not stage [${RESTORE_RUN_TIMESTAMP}] into scratch"
