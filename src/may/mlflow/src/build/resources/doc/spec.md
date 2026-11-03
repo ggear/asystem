@@ -120,7 +120,7 @@ missing, and the model MUST refuse it.
 
 - The model version is `^\d{4,}$` once promoted, `<N>-SNAPSHOT` for a candidate or a notebook in development, and `static-<N>` for a `static` floor, which is never promoted and never numbered by the registry. PJ014 requires the `static` form.
 - Each workspace holds `.version`, the model version in development as `<N>-SNAPSHOT`, which a notebook reads with `development_version`. `promote` writes `<N+1>-SNAPSHOT` into it, as `fab release` does to the repository `.version`.
-- A model file carries its version: `pyfunc` as the one line `MODEL_VERSION = "<version>"` in `model.py`, and `wasm` as the custom section `asystem.model_version`. `onnx` will use its `metadata_props` once its dependency is pinned. `stamp_model`, `read_stamp` and `content_sha256` write, read and hash it, and PJ013 requires the stamp to equal the manifest.
+- A model file carries its version: `pyfunc` as the one line `MODEL_VERSION = "<version>"` in `model.py`, and `wasm` as the custom section `asystem.model_version`. `onnx` as the `metadata_props` entry `asystem.model_version`. `stamp_model`, `read_stamp` and `content_sha256` write, read and hash it, and PJ013 requires the stamp to equal the manifest.
 - `register_project` takes the next model version from the registered model, being the larger of the high-water mark tag `model_version_high_water` and the highest `m<N>` alias, plus one, starting at 1000. It restamps a copy of the project with that number, rewriting the model file, manifest, signature versions and golden responses. A project whose content hash is unchanged, ignoring the stamp, reuses its version.
 - `promote_project` refuses unless the candidate is stamped with the next number (PM005) and a release tag can be read (PM006). It then sets the aliases `m<N>` and `release`, raises the high-water mark, and tags the version `model_version`, `service_version`, `acceptance`, `acceptance_budget` and `reviewed_by`. The number is therefore never reused, even if an alias is deleted.
 - `pull_model` and `resolve_model` take the selector `release`, `latest` (the highest `m<N>`), or a number. A pull checks the stamp against the registered model version, and an embedded pull accepts promoted selectors only and refuses a project whose acceptance failed or is missing (PM004), so an alias moved by hand cannot bring one in. `python -m asystem.model pull` prints the registry tags of what it pulled.
@@ -142,6 +142,7 @@ manifest's `provenance.implementation` names what made it, and no implementation
 - A module is a fitted estimator. `fit` is not part of the ABI: fitting is offline, and the fitted attributes are built into the module.
 - A call MUST be bounded in time and memory. A host MUST meter fuel and cap memory.
 - A module MUST import nothing from its host.
+- A module MUST export its linear memory as `memory` and `predict` as `predict(x: i32, n: i32, y: i32)`. The host writes `n` rows of float64 features, row-major, at byte offset `x`, calls `predict`, and reads `n` rows of float64 outputs from byte offset `y`. A host puts `x` at 0 and `y` immediately after the features.
 - The signature's tensors are named columns, so column `j` of `X` is the `j`-th feature in signature order, and a V2 request is stacked into `X` in that order.
 - A signature tensor of datatype `INT64` travels as float64, exact to 2^53, and the runtime casts it back by the signature. A larger value is invalid.
 
@@ -399,6 +400,24 @@ Each notebook owns what its model must achieve and how it is measured, and the l
 - `evaluate_acceptance` prints the standard line `acceptance [passed|failed] budget [<worst budget>]`, which `model.sh check` repeats for every notebook so a failed verdict is visible in a release or deploy log.
 - The limits live in the notebook's function, so a changed limit is a change to that notebook, and the release review reads that diff. A notebook owns its limits, and a limit loosened there is accepted unless a review catches it: no tool compares limits between versions. The evaluation does not need to say what was required, only that the enforced checks passed.
 
+### 6.9 Worked examples
+
+The module `example` holds one hello-world project for each flavor. Each is fully worked, with a notebook, a plan, data under every split,
+an acceptance check and a golden file, and each is replayed in every runtime that supports its flavor. A new flavor, runtime or runner SHOULD be
+tried on these first.
+
+| Notebook | Flavor | Shows | Python | Rust | Go |
+|---|---|---|---|---|---|
+| `example/static/constant` | `static` | A constant and the register and pull path | Yes | Yes | Yes |
+| `example/wasm/accumulate` | `wasm` | A fitted line built into a module, with a state vector | `wasmtime` | `wasmi` | `wazero` |
+| `example/onnx/linear` | `onnx` | A fitted line as a graph at a pinned opset | `onnxruntime` | No | No |
+| `example/pyfunc/linear` | `pyfunc` | A fitted line as a `PythonModel` | `mlflow.pyfunc` | No | No |
+
+The Rust and Go runners are `src/test/replay/rust` and `src/test/replay/go` in the `mlflow` module. Each takes a project directory, replays its golden
+exactly, prints one result row and exits 0, exits 1 on a difference, or exits 2 for a flavor it does not support. `model.sh parity` builds them and writes a
+gate file for every project under `target/model-output/project`, and `model.sh check` runs it after the notebooks. A host that cannot run a flavor is
+absent from that project's gate file, so promotion passes `--hosts` for the runtimes the flavor supports.
+
 ## 7. Lifecycle
 
 ### 7.1 Model lifecycle
@@ -551,6 +570,11 @@ both run by `fab build`.
 | PM004 | The project has an evaluation and every gating criterion passed, which `check_release` also applies to a consumer's `release` slot | R14, R15 |
 | PM005 | The candidate is stamped with the next model version, and a `static` project is not promoted | R16 |
 | PM006 | A release tag can be read to record as the service version | R16 |
+| RP001 | A replayed step that expects a signature error does not supply every required input | R8 |
+| RP002 | A replayed step supplies every required input | R8 |
+| RP003 | A runtime reproduces every golden response exactly | R5 |
+| RP004 | A runner gives a result row for a project it supports | R5 |
+| RP005 | A runner reports no error replaying the golden | R5 |
 | WS001 | The module, model and notebook directories follow the naming style | R12 |
 | WS002 | A notebook directory holds exactly one notebook, named `notebook.ipynb` | R13 |
 | WS003 | A notebook directory holds only the notebook, `plan.md`, `.version`, `data` and a model file | R13 |
@@ -581,10 +605,11 @@ Common operations are in two places, so a notebook states what it means and not 
 | `asystem.model` | `render_rust`, `render_go` | Generate request and response types from `signature.json`, through `python -m asystem.model generate` |
 | `asystem.model` | `measure`, `evaluate_acceptance` | Measures a prediction against its truth with numpy, and runs a notebook's acceptance check into `evaluation.json` with the outcome and budget of each check |
 | `asystem.model` | `compare_project`, `check_release` | Compare a re-run with the committed project (CP001 to CP003), and check that a `release` slot's acceptance passed |
+| `asystem.replay` | `replay_project`, `gate_project`, `model_predict` | Replay a project's golden through its runtime and compare every response exactly, write the gate file from the Python result and the Rust and Go runners (RP001 to RP005), and load a model file as a predict function, through `python -m asystem.model replay` and `gate` |
 | `asystem.model` | `check_gate`, `check_acceptance`, `promote_project` | Check a parity gate file and the acceptance verdict, and set the alias `release` only when both pass |
 | `asystem.notebook` | `scaffold_notebook` | Writes a notebook, a plan and the data directories that already pass section 10, through `python -m asystem.notebook new <module> <model> <notebook> <flavor>` |
-| `library.data` | `data_path`, `read_data`, `golden_data`, `query_influxdb3` | Resolves a dataset path, reads one, reads or writes the golden dataset, and queries with the cache |
-| `library.project` | `consumer_project_dir`, `provenance`, `development_version` | Resolves a consumer's `default` or `release` slot, or the same under `MODEL_OUTPUT_DIR`, and builds `provenance` from data paths |
+| `library.data` | `data_path`, `read_data`, `ensure_data`, `golden_data`, `query_influxdb3` | Resolves a dataset path, reads one, reads or writes a dataset when it is absent, and queries with the cache |
+| `library.project` | `consumer_project_dir`, `scratch_project_dir`, `provenance`, `development_version` | Resolves a consumer's `default` or `release` slot, or the same under `MODEL_OUTPUT_DIR`, and builds `provenance` from data paths |
 | `library.env`, `library.plot` | `init_env`, `show_plot` | Loads the module environment, and plots a series |
 
 A notebook SHOULD use these helpers and MUST NOT reimplement them.
@@ -600,10 +625,10 @@ Enforces column of 10.1 disagree.
 | R2 | Review |
 | R3 | PJ010 |
 | R4 | PJ010, PJ012 |
-| R5 | PM001, PM002, PM003 |
+| R5 | PM001, PM002, PM003, RP003, RP004, RP005 |
 | R6 | WS004, WS005 |
 | R7 | Review |
-| R8 | PJ008, PJ011 |
+| R8 | PJ008, PJ011, RP001, RP002 |
 | R9 | Review |
 | R10 | PJ005 |
 | R11 | Review |

@@ -1663,11 +1663,11 @@ class SpecSyncTest(unittest.TestCase):
     def test_check_identifiers_agree_both_ways(self):
         import re
 
-        in_spec = set(re.findall(r"^\| ((?:PJ|NB|WS|PM|AC|CP)\d{3}) \|", self.spec, re.MULTILINE))
+        in_spec = set(re.findall(r"^\| ((?:PJ|NB|WS|PM|AC|CP|RP)\d{3}) \|", self.spec, re.MULTILINE))
         in_code = set()
-        for module in ("model", "notebook", "workspace"):
+        for module in ("model", "notebook", "replay", "workspace"):
             with open(join(ROOT, f"all/_/src/build/python/asystem/{module}.py")) as source:
-                in_code |= set(re.findall(r'"((?:PJ|NB|WS|PM|AC|CP)\d{3})"', source.read()))
+                in_code |= set(re.findall(r'"((?:PJ|NB|WS|PM|AC|CP|RP)\d{3})"', source.read()))
         self.assertTrue(in_spec and in_code)
         self.assertEqual(in_spec, in_code)
 
@@ -1675,7 +1675,7 @@ class SpecSyncTest(unittest.TestCase):
         import re
 
         enforced = {}
-        for identifier, requirements in re.findall(r"^\| ((?:PJ|NB|WS|PM|AC|CP)\d{3}) \|.*\| (R[0-9, R]+) \|$", self.spec, re.MULTILINE):
+        for identifier, requirements in re.findall(r"^\| ((?:PJ|NB|WS|PM|AC|CP|RP)\d{3}) \|.*\| (R[0-9, R]+) \|$", self.spec, re.MULTILINE):
             for requirement in re.findall(r"R\d+", requirements):
                 enforced.setdefault(requirement, set()).add(identifier)
         coverage = {}
