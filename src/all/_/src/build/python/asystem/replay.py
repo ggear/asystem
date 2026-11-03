@@ -48,17 +48,19 @@ def gate_project(project_dir, hosts=("python",)):
     }, findings
 
 
-def _loader(project_dir, manifest, signature):
-    flavor = manifest["flavor"]
-    if flavor == "static":
-        constants = {name: [value] for name, value in manifest["constants"].items()}
-        return lambda _inputs: dict(constants)
-    model_path = join(project_dir, manifest["files"]["model"]["path"])
+def model_predict(model_path, flavor, signature):
     if flavor == "wasm":
         return _wasm_predict(model_path, signature)
     if flavor == "onnx":
         return _onnx_predict(model_path, signature)
     return _pyfunc_predict(model_path, signature)
+
+
+def _loader(project_dir, manifest, signature):
+    if manifest["flavor"] == "static":
+        constants = {name: [value] for name, value in manifest["constants"].items()}
+        return lambda _inputs: dict(constants)
+    return model_predict(join(project_dir, manifest["files"]["model"]["path"]), manifest["flavor"], signature)
 
 
 def _wasm_predict(model_path, signature):
@@ -127,9 +129,8 @@ def _pyfunc_predict(model_path, signature):
     outputs = signature["outputs"]
 
     def predict(inputs):
-        frame = pandas.DataFrame({name: values for name, values in inputs.items()})
+        frame = pandas.DataFrame(dict(inputs))
         result = instance.predict(None, frame)
         return {entry["name"]: [int(item) if entry["datatype"] == "INT64" else float(item) for item in result[entry["name"]]] for entry in outputs}
 
     return predict
-

@@ -17,7 +17,7 @@ The plan for the `example_static_constant` worked example. It follows `spec.md`,
 ## Intent
 
 The smallest complete model: one constant, to prove the register and pull path end to end with no fitting. It is the reference for what a
-project looks like, and the first of the worked examples, under the module `example`, whose models are `static`, then `onnx` and `pyfunc`.
+project looks like, and the first of the worked examples, under the module `example`, whose models are `static`, `wasm`, `onnx` and `pyfunc`.
 
 ## Signature
 
@@ -36,5 +36,4 @@ Every other split is unused.
 
 ## To do
 
-1. A Python, a Rust and a Go loader that validate the project at load and replay the golden sequence (`spec.md` R8).
-2. The `example/onnx` and `example/pyfunc` models (`plans/mlflow.md` 4).
+1. A Rust and a Go loader that validate the project at load and replay the golden sequence (`spec.md` R8). The Python replay is built (`python -m asystem.model replay`).

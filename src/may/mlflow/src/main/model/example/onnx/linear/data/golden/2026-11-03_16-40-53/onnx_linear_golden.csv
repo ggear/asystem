@@ -1,0 +1,8 @@
+example_onnx_in,example_onnx_out,expect
+-1.0,-1.5,ok
+0.0,1.0,ok
+0.25,1.625,ok
+1.0,3.5,ok
+2.5,7.25,ok
+10.0,26.0,ok
+,,error

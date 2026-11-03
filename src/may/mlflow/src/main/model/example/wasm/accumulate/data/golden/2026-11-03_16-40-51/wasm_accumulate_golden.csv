@@ -1,0 +1,5 @@
+example_wasm_in,example_wasm_state_in,example_wasm_out,example_wasm_state_out,expect
+1.0,,3.5,3.5,ok
+2.0,3.5,6.0,9.5,ok
+3.0,9.5,8.5,18.0,ok
+,,,,error
