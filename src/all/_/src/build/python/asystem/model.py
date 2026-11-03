@@ -733,6 +733,7 @@ def main(arguments=None):
     gate = commands.add_parser("gate")
     gate.add_argument("project_dir")
     gate.add_argument("--out", required=True)
+    gate.add_argument("--runner", action="append", default=[])
     commands.add_parser("lint").add_argument("project_dir")
     generate = commands.add_parser("generate")
     generate.add_argument("project_dir")
@@ -784,7 +785,11 @@ def main(arguments=None):
         elif options.command in ("replay", "gate"):
             from asystem.replay import gate_project
 
-            document, findings = gate_project(options.project_dir)
+            runners = {}
+            for runner in getattr(options, "runner", []):
+                host, _, command = runner.partition("=")
+                runners[host] = command.split()
+            document, findings = gate_project(options.project_dir, runners)
             for rule, message in findings:
                 print(f"ERROR {rule} {message}", file=sys.stderr)
             if options.command == "gate":

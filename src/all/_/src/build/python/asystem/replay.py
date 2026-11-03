@@ -2,10 +2,13 @@ import importlib.util
 import json
 import platform
 import struct
+import subprocess
 from os.path import join
 
 from asystem.model import PROJECT_GOLDEN, PROJECT_MANIFEST, PROJECT_SIGNATURE, file_sha256, verify_project
 
+RUNNER_TIMEOUT_SECONDS = 120
+RUNNER_UNSUPPORTED = 2
 WASM_FUEL = 1_000_000
 WASM_MEMORY_BYTES = 1 << 20
 ARCHITECTURES = {"x86_64": "x86_64", "amd64": "x86_64", "aarch64": "aarch64", "arm64": "aarch64"}
@@ -39,13 +42,23 @@ def replay_project(project_dir):
     return findings
 
 
-def gate_project(project_dir, hosts=("python",)):
+def gate_project(project_dir, runners=None):
     findings = replay_project(project_dir)
-    architecture = ARCHITECTURES[platform.machine().lower()]
-    return {
-        "project_sha256": file_sha256(join(project_dir, PROJECT_MANIFEST)),
-        "results": [{"host": host, "arch": architecture, "passed": not findings} for host in hosts],
-    }, findings
+    results = [{"host": "python", "arch": ARCHITECTURES[platform.machine().lower()], "passed": not findings}]
+    skipped = []
+    for host, command in (runners or {}).items():
+        completed = subprocess.run([*command, project_dir], capture_output=True, text=True, timeout=RUNNER_TIMEOUT_SECONDS, check=False)
+        if completed.returncode == RUNNER_UNSUPPORTED:
+            skipped.append(host)
+            continue
+        try:
+            row = json.loads(completed.stdout)
+        except ValueError:
+            findings.append(("RP004", f"runner [{host}] gave no result [{completed.stderr.strip()}]"))
+            continue
+        results.append(row)
+        findings.extend(("RP005", f"runner [{host}] {line.removeprefix('ERROR ')}") for line in completed.stderr.splitlines() if line.startswith("ERROR "))
+    return {"project_sha256": file_sha256(join(project_dir, PROJECT_MANIFEST)), "results": results, "skipped": skipped}, findings
 
 
 def model_predict(model_path, flavor, signature):

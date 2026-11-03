@@ -53,6 +53,9 @@ matplotlib==3.11.2
 virtualenv==21.15.1
 matplotlib-inline==0.2.2
 mlflow==$MLFLOW_VERSION
+onnx==1.23.2
+onnxruntime==1.31.1
+wasmtime==50.0.1
 # HELD: not stale, mlserver requires fastapi<0.116.0, unblocks with MLSERVER_VERSION
 fastapi==0.115.14
 

@@ -1,0 +1,8 @@
+[package]
+name = "modelreplay"
+version = "0.0.0-SNAPSHOT"
+edition = "2021"
+
+[dependencies]
+serde_json = "1.0.154"
+wasmi = "2.0.0"

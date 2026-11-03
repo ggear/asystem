@@ -1,4 +1,6 @@
 import os.path
+import shutil
+import tempfile
 
 from asystem.model import PROJECT_VERSION_FILE
 from library.config import CONSUMER_MODEL_PATH, CONSUMER_SLOTS, MODEL_DIR, SOURCE_DIR
@@ -11,6 +13,15 @@ def consumer_project_dir(consumer, slot, source_dir=SOURCE_DIR, output_dir=None)
     if output_dir:
         return os.path.join(output_dir, consumer, slot)
     return os.path.join(source_dir, consumer, CONSUMER_MODEL_PATH, slot)
+
+
+def scratch_project_dir(workspace, output_dir=None):
+    output_dir = output_dir if output_dir is not None else os.environ.get("MODEL_OUTPUT_DIR")
+    if not output_dir:
+        return os.path.join(tempfile.mkdtemp(), "project")
+    project_dir = os.path.join(output_dir, "project", workspace)
+    shutil.rmtree(project_dir, ignore_errors=True)
+    return project_dir
 
 
 def provenance(source, trained_on, paths, notes="", implementation=None, model_dir=MODEL_DIR):

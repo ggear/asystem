@@ -10,3 +10,6 @@ scipy
 polars
 scikit-learn
 matplotlib
+onnx
+onnxruntime
+wasmtime
