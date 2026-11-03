@@ -1,0 +1,13 @@
+{
+  "rows": [
+    {
+      "split": "backtest",
+      "output": "weewx_console_battery_capacity_pct",
+      "metric": "rmse",
+      "op": "<=",
+      "bound": 5,
+      "gate": true,
+      "reason": "the console battery is tracked to within one 5 point step, provisional until a labelled run exists, see plan.md"
+    }
+  ]
+}

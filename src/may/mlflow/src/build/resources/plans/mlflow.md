@@ -26,7 +26,7 @@ open decisions, and MUST NOT restate the specification. Each notebook's own plan
   types from `signature.json`. The Rust output compiles and the Go output passes `go vet` and `gofmt`; neither is wired into a consumer yet.
 - `check_gate` and `python -m asystem.model promote`, run by `src/main/resources/promote.sh`, which set the alias `release` only when a parity
   gate file passes for this project (R5).
-- Acceptance (`spec.md` 6.8, R14): `acceptance.json` and `evaluation.json` in the workspace and the project, `measure` and `evaluate_acceptance` over numpy, checks AC001 to AC003 and PM004, and `register_project` logging `<split>/<output>/<metric>` run metrics, the datasets and an `acceptance` tag. It is unit tested and no notebook uses it yet.
+- Acceptance (`spec.md` 6.8, R14): `acceptance.json` and `evaluation.json` in the workspace and the project, `measure` and `evaluate_acceptance` over numpy, checks AC001 to AC003 and PM004, and `register_project` logging `<split>/<output>/<metric>` run metrics, the datasets and an `acceptance` tag. It is unit tested, and `weewx/console/battery` uses it and fails at Evaluate until a labelled `backtest` run exists.
 - `register_project` registers a non-`pyfunc` project through `create_model_version` on the run's artifact path, since MLflow 3 refuses `register_model` for plain artifacts.
 - A test that fails when the requirements and their checks (`spec.md` 10.1 and 10.3) disagree.
 - Notebook lint in `fab build`: `ruff` on the code cells, then `asystem.notebook` and `asystem.workspace` (`spec.md` 6.7).
@@ -57,7 +57,7 @@ open decisions, and MUST NOT restate the specification. Each notebook's own plan
 
 In order. Each item is done when its worked example (4) runs and passes.
 
-0. Give a model its first acceptance criteria. `weewx/console/battery` cannot yet: its `validation` run only falls to 55 % and rises again, so a time-normalised truth like the `training` run's is false, and no row can be set without a labelled run or a reference gauge. A bound set after seeing a measurement, with a `reason`, is provisional.
+0. Give a model its first passing acceptance. `weewx/console/battery` has a provisional `backtest` row and fails, since: its `validation` run only falls to 55 % and rises again, so a time-normalised truth like the `training` run's is false, and no row can be set without a labelled run or a reference gauge. A bound set after seeing a measurement, with a `reason`, is provisional.
 1. Worked examples for every flow in section 4, built first where they need nothing new and then alongside each feature below, so the code
    describes the spec and implements it.
 2. The `wasm` flavor: a builder for the first project that needs one (a module satisfying the ABI of `spec.md` 4.1), the `predict`
