@@ -27,7 +27,7 @@ PROJECT_VERSION_STATIC = re.compile(r"^static-\d+$")
 PROJECT_RELEASE_TAG = re.compile(r"^\d+\.\d+\.\d+$")
 PROJECT_STAMP_LINE = re.compile(r'^MODEL_VERSION = "([^"]*)"$', re.MULTILINE)
 PROJECT_STAMP_SECTION = "asystem.model_version"
-PROJECT_STAMPED = ("wasm", "pyfunc")
+PROJECT_STAMPED = ("wasm", "onnx", "pyfunc")
 PROJECT_REGISTRY_TAGS = ("model_version", "service_version", "project_sha256", "project_flavor", "acceptance", "acceptance_budget", "reviewed_by")
 WASM_HEADER = b"\0asm\x01\x00\x00\x00"
 ACCEPTANCE_SPLITS = ("validation", "backtest")
@@ -360,6 +360,13 @@ def read_stamp(path, flavor):
         if len(stamps) != 1:
             raise ValueError(f"model file needs exactly one custom section [{PROJECT_STAMP_SECTION}] [{path}]")
         return stamps[0].decode()
+    if flavor == "onnx":
+        import onnx
+
+        stamps = [entry.value for entry in onnx.load(path).metadata_props if entry.key == PROJECT_STAMP_SECTION]
+        if len(stamps) != 1:
+            raise ValueError(f"model file needs exactly one metadata property [{PROJECT_STAMP_SECTION}] [{path}]")
+        return stamps[0]
     raise ValueError(f"stamping is not built for flavor [{flavor}]")
 
 
@@ -916,6 +923,15 @@ def _stamped_bytes(path, flavor, version):
         name = PROJECT_STAMP_SECTION.encode()
         payload = _leb128_write(len(name)) + name + version.encode()
         return bytes(kept) + b"\x00" + _leb128_write(len(payload)) + payload
+    if flavor == "onnx":
+        import onnx
+
+        graph = onnx.load(path)
+        kept = [entry for entry in graph.metadata_props if entry.key != PROJECT_STAMP_SECTION]
+        del graph.metadata_props[:]
+        graph.metadata_props.extend(kept)
+        graph.metadata_props.add(key=PROJECT_STAMP_SECTION, value=version)
+        return graph.SerializeToString(deterministic=True)
     raise ValueError(f"stamping is not built for flavor [{flavor}]")
 
 

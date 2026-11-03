@@ -24,14 +24,18 @@ def read_data(workspace, split, name, timestamp=None, model_dir=MODEL_DIR):
     return pl.read_csv(data_path(workspace, split, name, timestamp, model_dir), try_parse_dates=True)
 
 
-def golden_data(workspace, name, build=None, timestamp=None, model_dir=MODEL_DIR):
-    path = data_path(workspace, "golden", name, timestamp, model_dir)
+def ensure_data(workspace, split, name, build=None, timestamp=None, model_dir=MODEL_DIR):
+    path = data_path(workspace, split, name, timestamp, model_dir)
     if not os.path.isfile(path):
         if build is None:
-            raise FileNotFoundError(f"golden data absent and no builder given [{path}]")
+            raise FileNotFoundError(f"{split} data absent and no builder given [{path}]")
         os.makedirs(os.path.dirname(path), exist_ok=True)
         pl.DataFrame(build()).write_csv(path)
     return pl.read_csv(path), path
+
+
+def golden_data(workspace, name, build=None, timestamp=None, model_dir=MODEL_DIR):
+    return ensure_data(workspace, "golden", name, build, timestamp, model_dir)
 
 
 def query_influxdb3(env, query, workspace, split, name, timestamp=None, database=None, force=False, model_dir=MODEL_DIR):

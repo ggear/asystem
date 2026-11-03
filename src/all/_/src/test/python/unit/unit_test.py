@@ -825,10 +825,17 @@ class ModelProjectTest(unittest.TestCase):
     def model_file(self, flavor="pyfunc", version="1"):
         from asystem.model import stamp_model
 
-        path = join(tempfile.mkdtemp(), "model.wasm" if flavor == "wasm" else "model.py")
+        path = join(tempfile.mkdtemp(), {"wasm": "model.wasm", "onnx": "model.onnx"}.get(flavor, "model.py"))
         if flavor == "wasm":
             with open(path, "wb") as model_file:
                 model_file.write(b"\0asm\x01\x00\x00\x00")
+        elif flavor == "onnx":
+            import onnx
+            from onnx import TensorProto, helper
+
+            node = helper.make_node("Identity", ["x"], ["y"])
+            graph = helper.make_graph([node], "demo", [helper.make_tensor_value_info("x", TensorProto.DOUBLE, [1])], [helper.make_tensor_value_info("y", TensorProto.DOUBLE, [1])])
+            onnx.save(helper.make_model(graph), path)
         else:
             with open(path, "w") as model_file:
                 model_file.write("VALUE = 1\n")
@@ -1017,7 +1024,7 @@ class ModelProjectTest(unittest.TestCase):
     def test_stamp_is_written_read_and_ignored_by_the_content_hash(self):
         from asystem.model import content_sha256, read_stamp, stamp_model
 
-        for flavor in ("pyfunc", "wasm"):
+        for flavor in ("pyfunc", "wasm", "onnx"):
             path = self.model_file(flavor, "1000-SNAPSHOT")
             self.assertEqual("1000-SNAPSHOT", read_stamp(path, flavor))
             before = content_sha256(path, flavor)
@@ -1026,9 +1033,8 @@ class ModelProjectTest(unittest.TestCase):
             self.assertEqual(before, content_sha256(path, flavor))
             stamp_model(path, flavor, "1004")
             self.assertEqual("1004", read_stamp(path, flavor))
-        for flavor in ("onnx", "static"):
-            with self.assertRaises(ValueError):
-                read_stamp(join(tempfile.mkdtemp(), "model"), flavor)
+        with self.assertRaises(ValueError):
+            read_stamp(join(tempfile.mkdtemp(), "model"), "static")
 
     def test_content_hash_changes_with_the_model_but_not_the_stamp(self):
         from asystem.model import content_sha256, stamp_model
