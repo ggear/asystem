@@ -1,12 +1,15 @@
+import json
 import os
 import shutil
 import sys
 import tempfile
 from os.path import isdir, join
 
-from project_runtime.project import load_project, write_server_settings, write_settings
+from serving.project import load_project
 
 ALIAS = "release"
+RUNTIME = "serving.runtime.ProjectRuntime"
+SERVER_SETTINGS = {"host": "0.0.0.0", "http_port": 8080, "grpc_port": 8081, "parallel_workers": 0}
 
 
 def main():
@@ -34,19 +37,30 @@ def main():
         try:
             try:
                 download_artifacts(artifact_uri=f"models:/{name}@{ALIAS}", dst_path=staging_dir)
-                project_dir = next(root for root, _, files in os.walk(staging_dir) if "project.json" in files)
+                project_dir = next((root for root, _, files in os.walk(staging_dir) if "project.json" in files), None)
+                if project_dir is None:
+                    raise ValueError("no project in the pulled model")
                 project = load_project(project_dir)
-            except (OSError, ValueError, StopIteration, MlflowException) as error:
+            except (OSError, ValueError, MlflowException) as error:
                 print(f"ERROR Pull failed model [{name}] alias [{ALIAS}] [{error}]", file=sys.stderr)
                 return 1
-            write_settings(project_dir, project)
+            settings = {
+                "name": project.name,
+                "implementation": RUNTIME,
+                "parameters": {"version": project.version},
+                "inputs": [{key: entry[key] for key in ("name", "datatype", "shape")} for entry in project.signature["inputs"]],
+                "outputs": [{key: entry[key] for key in ("name", "datatype", "shape")} for entry in project.signature["outputs"]],
+            }
+            with open(join(project_dir, "model-settings.json"), "w") as settings_file:
+                json.dump(settings, settings_file, indent=2, sort_keys=True)
             target_dir = join(models_dir, name)
             shutil.rmtree(target_dir, ignore_errors=True)
             shutil.copytree(project_dir, target_dir)
             print(f"Pulled model [{name}] alias [{ALIAS}] version [{project.version}]")
         finally:
             shutil.rmtree(staging_dir, ignore_errors=True)
-    write_server_settings(models_dir)
+    with open(join(models_dir, "settings.json"), "w") as settings_file:
+        json.dump(SERVER_SETTINGS, settings_file, indent=2, sort_keys=True)
     print(f"Serving [{len(names)}] models")
     return 0
 

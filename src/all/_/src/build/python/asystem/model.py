@@ -1,5 +1,4 @@
 import argparse
-import contextlib
 import glob
 import hashlib
 import json
@@ -10,7 +9,6 @@ import subprocess
 import sys
 import tempfile
 from os.path import abspath, basename, dirname, isdir, isfile, join, relpath
-from unittest import mock
 
 PROJECT_SPEC_VERSION = 1
 CONSUMER_MODEL_PATH = "src/build/resources/model"
@@ -512,28 +510,8 @@ def registry_address(uri):
     return uri
 
 
-@contextlib.contextmanager
-def quiet_mlflow():
-    from mlflow.pyfunc.utils import data_validation
-
-    with mock.patch.object(data_validation, "color_warning"):
-        yield
-
-
-def served_models(mlserver_url):
-    import urllib.request
-
-    request = urllib.request.Request(f"{mlserver_url}/v2/repository/index", data=b"{}", headers={"Content-Type": "application/json"}, method="POST")
-    try:
-        with urllib.request.urlopen(request, timeout=10) as response:
-            return {entry["name"]: {"version": entry.get("version"), "state": entry.get("state")} for entry in json.load(response)}
-    except (OSError, ValueError):
-        return None
-
-
-def status_rows(tracking_uri, mlserver_url, source_dir):
-    registry = {row["name"]: row for row in list_models(tracking_uri)}
-    served = served_models(mlserver_url) if mlserver_url else None
+def status_rows(registry_rows, served, source_dir):
+    registry = {row["name"]: row for row in registry_rows}
     rows = [{**row, "registry_release": registry.get(row["name"], {}).get("release"), "registry_latest": registry.get(row["name"], {}).get("latest")} for row in slot_versions(source_dir)]
     for name, row in registry.items():
         shipped = None if served is None else served.get(name)
@@ -853,6 +831,11 @@ def main(arguments=None):
     promote.add_argument("--reviewed-by", default=os.environ.get("USER"))
     promote.add_argument("--workspaces")
     options = parser.parse_args(arguments)
+
+    def hints(rules):
+        for hint in fix_hints(rules):
+            print(f"HINT {hint}", file=sys.stderr)
+
     try:
         tracking_uri = (
             registry_address(os.environ.get("MLFLOW_TRACKING_URI"))
@@ -872,12 +855,18 @@ def main(arguments=None):
             for row in list_models(tracking_uri):
                 print(json.dumps(row, sort_keys=True))
         elif options.command == "status":
-            if os.environ.get("MLFLOW_TRACKING_URI"):
-                for row in status_rows(tracking_uri, options.mlserver, options.source_dir):
-                    print(json.dumps(row, sort_keys=True))
-            else:
-                for row in slot_versions(options.source_dir):
-                    print(json.dumps(row, sort_keys=True))
+            import urllib.request
+
+            served = None
+            if tracking_uri and options.mlserver:
+                request = urllib.request.Request(f"{options.mlserver}/v2/repository/index", data=b"{}", headers={"Content-Type": "application/json"}, method="POST")
+                try:
+                    with urllib.request.urlopen(request, timeout=10) as response:
+                        served = {entry["name"]: {"version": entry.get("version"), "state": entry.get("state")} for entry in json.load(response)}
+                except (OSError, ValueError):
+                    pass
+            for row in status_rows(list_models(tracking_uri) if tracking_uri else [], served, options.source_dir):
+                print(json.dumps(row, sort_keys=True))
         elif options.command == "verify" and isdir(options.project_dir):
             manifest = verify_project(options.project_dir)
             print(f"verified model [{manifest['name']}] version [{manifest['model_version']}]")
@@ -885,15 +874,13 @@ def main(arguments=None):
             findings = lint_project(options.project_dir)
             for rule, message in findings:
                 print(f"{options.project_dir}: {rule} {message}", file=sys.stderr)
-            for hint in fix_hints(rule for rule, _ in findings):
-                print(f"HINT {hint}", file=sys.stderr)
+            hints(rule for rule, _ in findings)
             return 1 if findings else 0
         elif options.command in ("compare", "check-release"):
             findings = compare_project(options.output_dir, options.committed_dir) if options.command == "compare" else check_release(options.project_dir)
             for rule, message in findings:
                 print(f"{options.committed_dir if options.command == 'compare' else options.project_dir} {rule} {message}", file=sys.stderr)
-            for hint in fix_hints(rule for rule, _ in findings):
-                print(f"HINT {hint}", file=sys.stderr)
+            hints(rule for rule, _ in findings)
             return 1 if findings else 0
         elif options.command == "gate-merge":
             from asystem.replay import merge_gates
@@ -914,8 +901,7 @@ def main(arguments=None):
             document, findings = gate_project(options.project_dir, runners)
             for rule, message in findings:
                 print(f"ERROR {rule} {message}", file=sys.stderr)
-            for hint in fix_hints(rule for rule, _ in findings):
-                print(f"HINT {hint}", file=sys.stderr)
+            hints(rule for rule, _ in findings)
             if options.command == "gate":
                 _write_json(options.out, document)
             if findings:
@@ -936,8 +922,7 @@ def main(arguments=None):
             print(f"promoted model [{options.name}] version [{version}] to alias [{PROJECT_ALIAS_RELEASE}]")
     except (ValueError, KeyError, OSError) as error:
         print(f"ERROR model command failed [{options.command}] [{error}]", file=sys.stderr)
-        for hint in fix_hints(re.findall(r"\b((?:PJ|NB|WS|PM|AC|CP|RP)\d{3})\b", str(error))):
-            print(f"HINT {hint}", file=sys.stderr)
+        hints(re.findall(r"\b((?:PJ|NB|WS|PM|AC|CP|RP)\d{3})\b", str(error)))
         return 1
     return 0
 

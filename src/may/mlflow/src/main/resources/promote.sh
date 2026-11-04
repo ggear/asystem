@@ -3,6 +3,8 @@
 set -o nounset
 set -o errexit
 
+export MLFLOW_DISABLE_TELEMETRY=true
+export MLFLOW_DISABLE_AGENT_HINT=1
 ROOT_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../.." && pwd)"
 PYENV_BIN="${HOME}/.pyenv/versions/asystem/bin"
 NAME="${1:?usage: promote.sh <registered model> --gate <file> --reviewed-by <name> [--hosts <runtimes of the flavor>] [--archs x86_64,aarch64]}"

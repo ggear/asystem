@@ -1,7 +1,7 @@
 from mlserver.types import InferenceRequest, InferenceResponse, ResponseOutput, TensorData
 
 from mlserver import MLModel
-from project_runtime.project import load_project
+from serving.project import load_project
 
 
 class ProjectRuntime(MLModel):

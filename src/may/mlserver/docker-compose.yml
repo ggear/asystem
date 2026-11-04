@@ -9,6 +9,7 @@ x-common: &common
     - MLSERVER_HTTP_PORT
     - MLFLOW_TRACKING_URI
     - MLFLOW_REPOSITORY_URI
+    - MLFLOW_DISABLE_TELEMETRY
   volumes:
     - ${SERVICE_DATA_DIR}:/asystem/mnt
   logging:

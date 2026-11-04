@@ -4,6 +4,8 @@ set -o nounset
 set -o errexit
 set -o pipefail
 
+export MLFLOW_DISABLE_TELEMETRY=true
+export MLFLOW_DISABLE_AGENT_HINT=1
 ROOT_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../.." && pwd)"
 SOURCE_DIR="$(cd "${ROOT_DIR}/../.." && pwd)"
 PYENV_BIN="${HOME}/.pyenv/versions/asystem/bin"
@@ -200,6 +202,11 @@ ship() {
     echo "ERROR no parity gate for [${name}], the notebook produced no project" >&2
     return 1
   }
+  local evaluation="${ROOT_DIR}/target/model-output/project/${target}/evaluation.json"
+  if [[ -f "${evaluation}" ]] && ! "${PYENV_BIN}/python" -c 'import json, sys; sys.exit(0 if json.load(open(sys.argv[1]))["passed"] is True else 1)' "${evaluation}"; then
+    echo "ERROR acceptance failed for [${target}], fix the notebook or its data before shipping" >&2
+    return 1
+  fi
   if ((dry_run)); then
     echo "Ship dry run, would register [${target}] as candidate, promote [${name}] reviewed by [${reviewer}] and restart mlserver"
     return 0

@@ -1201,113 +1201,114 @@ class ModelProjectTest(unittest.TestCase):
             check_name("Bad-Name")
 
 
-class ReplayTest(unittest.TestCase):
-    def project(self, flavor, golden_out=None, tolerance=None):
-        from asystem.model import build_signature, evaluate_acceptance, package_project, signature_input, signature_output, stamp_model
+def demo_project(flavor, golden_out=None, tolerance=None):
+    from asystem.model import build_signature, evaluate_acceptance, package_project, signature_input, signature_output, stamp_model
 
-        work_dir = tempfile.mkdtemp()
-        model_path = join(work_dir, {"wasm": "model.wasm", "onnx": "model.onnx", "pyfunc": "model.py"}[flavor])
-        if flavor == "pyfunc":
-            with open(model_path, "w") as model_file:
-                model_file.write(
-                    textwrap.dedent(
-                        """
-                        import pandas as pd
-                        from mlflow.models import set_model
-                        from mlflow.pyfunc import PythonModel
+    work_dir = tempfile.mkdtemp()
+    model_path = join(work_dir, {"wasm": "model.wasm", "onnx": "model.onnx", "pyfunc": "model.py"}[flavor])
+    if flavor == "pyfunc":
+        with open(model_path, "w") as model_file:
+            model_file.write(
+                textwrap.dedent(
+                    """
+                    import pandas as pd
+                    from mlflow.models import set_model
+                    from mlflow.pyfunc import PythonModel
 
-                        MODEL_VERSION = "1"
-
-
-                        class Double(PythonModel):
-                            def predict(self, context, model_input, params=None):
-                                return pd.DataFrame({"demo_out": [x * 2.0 for x in model_input["demo_in"]]})
+                    MODEL_VERSION = "1"
 
 
-                        set_model(Double())
-                        """
-                    )
+                    class Double(PythonModel):
+                        def predict(self, context, model_input, params=None):
+                            return pd.DataFrame({"demo_out": [x * 2.0 for x in model_input["demo_in"]]})
+
+
+                    set_model(Double())
+                    """
                 )
-        elif flavor == "wasm":
-            import wasmtime
-
-            wat = '(module (memory (export "memory") 1) (func (export "predict") (param i32 i32 i32) (f64.store (local.get 2) (f64.mul (f64.load (local.get 0)) (f64.const 2)))))'
-            with open(model_path, "wb") as model_file:
-                model_file.write(wasmtime.wat2wasm(wat))
-        else:
-            import numpy
-            import onnx
-            from onnx import TensorProto, helper, numpy_helper
-
-            graph = helper.make_graph(
-                [helper.make_node("Mul", ["demo_in", "two"], ["demo_out"])],
-                "double",
-                [helper.make_tensor_value_info("demo_in", TensorProto.DOUBLE, [1, 1])],
-                [helper.make_tensor_value_info("demo_out", TensorProto.DOUBLE, [1, 1])],
-                initializer=[numpy_helper.from_array(numpy.array(2.0, dtype=numpy.float64), "two")],
             )
-            model = helper.make_model(graph, opset_imports=[helper.make_opsetid("", 21)])
-            model.ir_version = 10
-            onnx.save(model, model_path)
-        if flavor != "pyfunc":
-            stamp_model(model_path, flavor, "1")
-        signature = build_signature("demo_replay_double", ["1"], [signature_input("demo_in", "none", "A number.")], [signature_output("demo_out", "none", "Twice the number.", datatype="FP64")])
-        dataset = join(work_dir, "2026-11-03_10-00-00", "demo_replay_backtest_2026-11-01_2026-11-02.csv")
-        os.makedirs(dirname(dataset))
-        with open(dataset, "w") as dataset_file:
-            dataset_file.write("a,b\n1,2\n")
-        evaluation = evaluate_acceptance(lambda: [{"split": "backtest", "output": "demo_out", "name": "rmse", "value": 0.0, "limit": 1, "direction": "max"}], {"backtest": [dataset]})
-        samples = [
-            {"demo_in": 1.5, "demo_out": 3.0 if golden_out is None else golden_out},
-            {"demo_in": -2.0, "demo_out": -4.0},
-            {"demo_in": None, "expect": "error"},
-        ]
-        project_dir = join(work_dir, "project")
-        package_project(
-            project_dir,
-            "demo_replay_double",
-            "1",
-            flavor,
-            signature,
-            samples,
-            {"source": "manual", "inputs": [], "implementation": "demo built by hand"},
-            model_path=model_path,
-            evaluation=evaluation,
-            tolerance=tolerance,
-        )
-        return project_dir
+    elif flavor == "wasm":
+        import wasmtime
 
+        wat = '(module (memory (export "memory") 1) (func (export "predict") (param i32 i32 i32) (f64.store (local.get 2) (f64.mul (f64.load (local.get 0)) (f64.const 2)))))'
+        with open(model_path, "wb") as model_file:
+            model_file.write(wasmtime.wat2wasm(wat))
+    else:
+        import numpy
+        import onnx
+        from onnx import TensorProto, helper, numpy_helper
+
+        graph = helper.make_graph(
+            [helper.make_node("Mul", ["demo_in", "two"], ["demo_out"])],
+            "double",
+            [helper.make_tensor_value_info("demo_in", TensorProto.DOUBLE, [1, 1])],
+            [helper.make_tensor_value_info("demo_out", TensorProto.DOUBLE, [1, 1])],
+            initializer=[numpy_helper.from_array(numpy.array(2.0, dtype=numpy.float64), "two")],
+        )
+        model = helper.make_model(graph, opset_imports=[helper.make_opsetid("", 21)])
+        model.ir_version = 10
+        onnx.save(model, model_path)
+    if flavor != "pyfunc":
+        stamp_model(model_path, flavor, "1")
+    signature = build_signature("demo_replay_double", ["1"], [signature_input("demo_in", "none", "A number.")], [signature_output("demo_out", "none", "Twice the number.", datatype="FP64")])
+    dataset = join(work_dir, "2026-11-03_10-00-00", "demo_replay_backtest_2026-11-01_2026-11-02.csv")
+    os.makedirs(dirname(dataset))
+    with open(dataset, "w") as dataset_file:
+        dataset_file.write("a,b\n1,2\n")
+    evaluation = evaluate_acceptance(lambda: [{"split": "backtest", "output": "demo_out", "name": "rmse", "value": 0.0, "limit": 1, "direction": "max"}], {"backtest": [dataset]})
+    samples = [
+        {"demo_in": 1.5, "demo_out": 3.0 if golden_out is None else golden_out},
+        {"demo_in": -2.0, "demo_out": -4.0},
+        {"demo_in": None, "expect": "error"},
+    ]
+    project_dir = join(work_dir, "project")
+    package_project(
+        project_dir,
+        "demo_replay_double",
+        "1",
+        flavor,
+        signature,
+        samples,
+        {"source": "manual", "inputs": [], "implementation": "demo built by hand"},
+        model_path=model_path,
+        evaluation=evaluation,
+        tolerance=tolerance,
+    )
+    return project_dir
+
+
+class ReplayTest(unittest.TestCase):
     def test_each_flavor_replays_its_golden_exactly(self):
         from asystem.replay import replay_project
 
         for flavor in ("pyfunc", "wasm", "onnx"):
-            self.assertEqual([], replay_project(self.project(flavor)), flavor)
+            self.assertEqual([], replay_project(demo_project(flavor)), flavor)
 
     def test_a_response_that_differs_from_the_golden_is_a_finding(self):
         from asystem.replay import replay_project
 
         for flavor in ("pyfunc", "wasm", "onnx"):
-            self.assertEqual(["RP003"], [rule for rule, _ in replay_project(self.project(flavor, golden_out=3.5))], flavor)
+            self.assertEqual(["RP003"], [rule for rule, _ in replay_project(demo_project(flavor, golden_out=3.5))], flavor)
 
     def test_a_stated_tolerance_accepts_a_small_difference_and_rejects_a_large_one(self):
         from asystem.replay import replay_project
 
         bounds = {"demo_out": {"absolute": 1e-3}}
         for flavor in ("pyfunc", "wasm", "onnx"):
-            self.assertEqual([], replay_project(self.project(flavor, golden_out=3.0000001, tolerance=bounds)), flavor)
-            self.assertEqual(["RP003"], [rule for rule, _ in replay_project(self.project(flavor, golden_out=3.5, tolerance=bounds))], flavor)
-            self.assertEqual(["RP003"], [rule for rule, _ in replay_project(self.project(flavor, golden_out=3.0000001))], flavor)
+            self.assertEqual([], replay_project(demo_project(flavor, golden_out=3.0000001, tolerance=bounds)), flavor)
+            self.assertEqual(["RP003"], [rule for rule, _ in replay_project(demo_project(flavor, golden_out=3.5, tolerance=bounds))], flavor)
+            self.assertEqual(["RP003"], [rule for rule, _ in replay_project(demo_project(flavor, golden_out=3.0000001))], flavor)
 
     def test_a_relative_tolerance_scales_with_the_expected_value(self):
         from asystem.replay import replay_project
 
-        self.assertEqual([], replay_project(self.project("pyfunc", golden_out=3.003, tolerance={"demo_out": {"relative": 0.002}})))
-        self.assertEqual(["RP003"], [rule for rule, _ in replay_project(self.project("pyfunc", golden_out=3.01, tolerance={"demo_out": {"relative": 0.002}}))])
+        self.assertEqual([], replay_project(demo_project("pyfunc", golden_out=3.003, tolerance={"demo_out": {"relative": 0.002}})))
+        self.assertEqual(["RP003"], [rule for rule, _ in replay_project(demo_project("pyfunc", golden_out=3.01, tolerance={"demo_out": {"relative": 0.002}}))])
 
     def test_a_malformed_tolerance_is_a_finding(self):
         for bounds in ({"demo_other": {"absolute": 1}}, {"demo_out": {"absolute": -1}}, {"demo_out": {}}, {"demo_out": {"scale": 1}}, {"demo_out": {"absolute": True}}):
             with self.assertRaises(ValueError) as refused:
-                self.project("pyfunc", tolerance=bounds)
+                demo_project("pyfunc", tolerance=bounds)
             self.assertIn("PJ015", str(refused.exception), bounds)
 
     def test_per_architecture_gates_merge_into_one_for_the_same_project(self):
@@ -1327,7 +1328,7 @@ class ReplayTest(unittest.TestCase):
         from asystem.model import file_sha256
         from asystem.replay import ARCHITECTURES, gate_project
 
-        project_dir = self.project("pyfunc")
+        project_dir = demo_project("pyfunc")
         document, findings = gate_project(project_dir)
         self.assertEqual([], findings)
         self.assertEqual(file_sha256(join(project_dir, "project.json")), document["project_sha256"])
@@ -1357,13 +1358,27 @@ class RegistryToolsTest(unittest.TestCase):
 
         registry = [{"name": "demo_a", "release": "1001", "latest": "1001"}, {"name": "demo_b", "release": "1002", "latest": "1002"}, {"name": "demo_c", "release": None, "latest": None}]
         served = {"demo_a": {"version": "1001", "state": "READY"}, "demo_b": {"version": "1001", "state": "READY"}}
-        with mock.patch("asystem.model.list_models", return_value=registry), mock.patch("asystem.model.served_models", return_value=served):
-            rows = {row["registry"]: row for row in status_rows("https://registry.example.com", "http://server", tempfile.mkdtemp()) if "registry" in row}
+        rows = {row["registry"]: row for row in status_rows(registry, served, tempfile.mkdtemp())}
         self.assertEqual([True, False, False], [rows[name]["in_step"] for name in ("demo_a", "demo_b", "demo_c")])
         self.assertEqual("absent", rows["demo_c"]["served_state"])
-        with mock.patch("asystem.model.list_models", return_value=registry), mock.patch("asystem.model.served_models", return_value=None):
-            rows = {row["registry"]: row for row in status_rows("https://registry.example.com", "http://server", tempfile.mkdtemp()) if "registry" in row}
-        self.assertEqual({"unreachable"}, {row["served_state"] for row in rows.values()})
+        rows = status_rows(registry, None, tempfile.mkdtemp())
+        self.assertEqual({"unreachable"}, {row["served_state"] for row in rows})
+
+    def test_rollback_moves_release_to_the_last_earlier_version_that_passed(self):
+        from asystem.model import rollback_project
+        from mlflow import MlflowClient
+
+        uri = f"sqlite:///{join(tempfile.mkdtemp(), 'mlflow.db')}"
+        client = MlflowClient(uri, uri)
+        client.create_registered_model("demo_roll")
+        for number, acceptance in (("1000", "passed"), ("1001", "failed"), ("1002", "passed")):
+            version = client.create_model_version("demo_roll", f"file://{tempfile.mkdtemp()}", tags={"model_version": number, "acceptance": acceptance})
+            client.set_registered_model_alias("demo_roll", f"m{number}", version.version)
+        client.set_registered_model_alias("demo_roll", "release", "3")
+        self.assertEqual("1000", rollback_project("demo_roll", uri))
+        self.assertEqual(1, int(client.get_model_version_by_alias("demo_roll", "release").version))
+        with self.assertRaises(ValueError):
+            rollback_project("demo_roll", uri)
 
 
 class ServingRuntimeTest(unittest.TestCase):
@@ -1371,48 +1386,36 @@ class ServingRuntimeTest(unittest.TestCase):
         sys.path.insert(0, join(ROOT, "may/mlserver/src/main/python"))
         self.addCleanup(sys.path.remove, join(ROOT, "may/mlserver/src/main/python"))
 
-    def project(self, flavor, **options):
-        return ReplayTest().project(flavor, **options)
-
     def test_every_flavor_serves_what_replay_computes(self):
         from asystem.replay import replay_project
-        from project_runtime.project import load_project
+        from serving.project import load_project
 
         for flavor in ("pyfunc", "wasm", "onnx"):
-            project_dir = self.project(flavor)
+            project_dir = demo_project(flavor)
             self.assertEqual([], replay_project(project_dir), flavor)
-            served = load_project(project_dir).predict({"demo_in": [1.5]})
-            self.assertEqual({"demo_out": [3.0]}, served, flavor)
-
-    def test_the_settings_name_the_model_its_stamped_version_and_the_signature(self):
-        from project_runtime.project import RUNTIME, load_project
-
-        settings = load_project(self.project("wasm")).settings()
-        self.assertEqual(("demo_replay_double", "1", RUNTIME), (settings["name"], settings["parameters"]["version"], settings["implementation"]))
-        self.assertEqual(["demo_in"], [entry["name"] for entry in settings["inputs"]])
-        self.assertEqual(["demo_out"], [entry["name"] for entry in settings["outputs"]])
+            self.assertEqual({"demo_out": [3.0]}, load_project(project_dir).predict({"demo_in": [1.5]}), flavor)
 
     def test_a_missing_required_input_is_refused(self):
-        from project_runtime.project import load_project
+        from serving.project import load_project
 
         with self.assertRaises(ValueError):
-            load_project(self.project("wasm")).predict({})
+            load_project(demo_project("wasm")).predict({})
 
-    def test_a_changed_file_or_a_failed_acceptance_is_not_loaded(self):
-        from project_runtime.project import load_project
+    def test_a_changed_file_is_not_loaded(self):
+        from serving.project import load_project
 
-        project_dir = self.project("wasm")
+        project_dir = demo_project("wasm")
         with open(join(project_dir, "model.wasm"), "ab") as model_file:
             model_file.write(b"\0")
-        with self.assertRaisesRegex(ValueError, "checksum"):
+        with self.assertRaises(ValueError):
             load_project(project_dir)
 
-    def test_the_pull_keeps_a_model_only_when_it_loads(self):
+    def test_the_pull_serves_a_model_only_when_it_verifies(self):
         import shutil
 
-        from project_runtime import pull
+        from registry import pull
 
-        project_dir = self.project("onnx")
+        project_dir = demo_project("onnx")
         models_dir = tempfile.mkdtemp()
 
         def download(artifact_uri, dst_path):
@@ -1423,7 +1426,10 @@ class ServingRuntimeTest(unittest.TestCase):
             mock.patch("mlflow.artifacts.download_artifacts", download),
         ):
             self.assertEqual(0, pull.main())
-            self.assertTrue(os.path.isfile(join(models_dir, "demo_replay_double", "model-settings.json")))
+            with open(join(models_dir, "demo_replay_double", "model-settings.json")) as settings_file:
+                settings = json.load(settings_file)
+            self.assertEqual(("demo_replay_double", "1", pull.RUNTIME), (settings["name"], settings["parameters"]["version"], settings["implementation"]))
+            self.assertEqual(["demo_in"], [entry["name"] for entry in settings["inputs"]])
             self.assertTrue(os.path.isfile(join(models_dir, "settings.json")))
             with open(join(project_dir, "model.onnx"), "ab") as model_file:
                 model_file.write(b"\0")

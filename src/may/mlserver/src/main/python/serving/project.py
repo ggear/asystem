@@ -7,9 +7,6 @@ from unittest import mock
 
 WASM_FUEL = 1_000_000
 WASM_MEMORY_BYTES = 1 << 20
-RUNTIME = "project_runtime.runtime.ProjectRuntime"
-SETTINGS_FILE = "model-settings.json"
-SERVER_SETTINGS = {"host": "0.0.0.0", "http_port": 8080, "grpc_port": 8081, "parallel_workers": 0}
 
 
 class Project:
@@ -22,21 +19,18 @@ class Project:
         self._predict = None
 
     def predict(self, inputs):
-        if self._predict is None:
-            self._predict = _loader(self)
         required = {entry["name"] for entry in self.signature["inputs"] if entry["parameters"]["required"]}
         if not required <= inputs.keys():
-            raise ValueError(f"missing required inputs {sorted(required - inputs.keys())}")
+            raise ValueError(f"missing required inputs [{sorted(required - inputs.keys())}]")
+        if self._predict is None:
+            if self.manifest["flavor"] == "static":
+                constants = {name: [value] for name, value in self.manifest["constants"].items()}
+                self._predict = lambda _inputs: dict(constants)
+            else:
+                path = join(self.directory, self.manifest["files"]["model"]["path"])
+                loaders = {"wasm": _wasm_predict, "onnx": _onnx_predict, "pyfunc": _pyfunc_predict}
+                self._predict = loaders[self.manifest["flavor"]](path, self.signature)
         return self._predict(inputs)
-
-    def settings(self):
-        return {
-            "name": self.name,
-            "implementation": RUNTIME,
-            "parameters": {"version": self.version},
-            "inputs": [_metadata(entry) for entry in self.signature["inputs"]],
-            "outputs": [_metadata(entry) for entry in self.signature["outputs"]],
-        }
 
 
 def load_project(directory):
@@ -49,7 +43,11 @@ def load_project(directory):
         path = join(directory, entry["path"])
         if not isfile(path):
             raise ValueError(f"file absent [{key}] path [{entry['path']}]")
-        if _sha256(path) != entry["sha256"]:
+        digest = hashlib.sha256()
+        with open(path, "rb") as file:
+            for chunk in iter(lambda: file.read(1 << 20), b""):
+                digest.update(chunk)
+        if digest.hexdigest() != entry["sha256"]:
             raise ValueError(f"file checksum mismatch [{key}] path [{entry['path']}]")
     if manifest["flavor"] != "static" and "evaluation" not in manifest["files"]:
         raise ValueError(f"no acceptance evaluation for flavor [{manifest['flavor']}]")
@@ -60,31 +58,6 @@ def load_project(directory):
     with open(join(directory, manifest["files"]["signature"]["path"])) as signature_file:
         signature = json.load(signature_file)
     return Project(directory, manifest, signature)
-
-
-def write_settings(directory, project):
-    with open(join(directory, SETTINGS_FILE), "w") as settings_file:
-        json.dump(project.settings(), settings_file, indent=2, sort_keys=True)
-        settings_file.write("\n")
-
-
-def write_server_settings(models_dir):
-    with open(join(models_dir, "settings.json"), "w") as settings_file:
-        json.dump(SERVER_SETTINGS, settings_file, indent=2, sort_keys=True)
-        settings_file.write("\n")
-
-
-def _loader(project):
-    manifest = project.manifest
-    if manifest["flavor"] == "static":
-        constants = {name: [value] for name, value in manifest["constants"].items()}
-        return lambda _inputs: dict(constants)
-    path = join(project.directory, manifest["files"]["model"]["path"])
-    if manifest["flavor"] == "wasm":
-        return _wasm_predict(path, project.signature)
-    if manifest["flavor"] == "onnx":
-        return _onnx_predict(path, project.signature)
-    return _pyfunc_predict(path, project.signature)
 
 
 def _wasm_predict(path, signature):
@@ -161,15 +134,3 @@ def _pyfunc_predict(path, signature):
         return {entry["name"]: [int(item) if entry["datatype"] == "INT64" else float(item) for item in result[entry["name"]]] for entry in outputs}
 
     return predict
-
-
-def _metadata(entry):
-    return {"name": entry["name"], "datatype": entry["datatype"], "shape": entry["shape"]}
-
-
-def _sha256(path):
-    digest = hashlib.sha256()
-    with open(path, "rb") as file:
-        for chunk in iter(lambda: file.read(1 << 20), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
