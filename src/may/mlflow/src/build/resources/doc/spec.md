@@ -542,6 +542,9 @@ MLflow owns data and lifecycle, MLServer only serves, and nothing is shared by a
 | Models in `mlserver` | A local volume | MUST pull by alias at bootstrap, MUST fail the bootstrap on a failed pull or on a pulled `evaluation.json` whose `passed` is not true, and MUST bound every call with a timeout |
 | Embedded Copies | The consumer's tree | MUST be pulled by the consumer's `generate.sh`, reviewed as a diff, and never fetched at build or run time |
 | Server Start | `mlflow` entrypoint | MUST run under `exec` with `pipefail`, and a failed `mlflow db upgrade` MUST stop the start |
+| Bootstrap and Checks | `mlflow`, `mlserver` | `bootstrap.sh` runs in a separate `<name>_bootstrap` container, so any probe in `checkalive.sh` MUST address the service by `${<NAME>_SERVICE}:${<NAME>_HTTP_PORT}` and never `localhost`, which `checkexecuting.sh` and `checkhealthy.sh` may use only for checks that run inside the service container |
+| Serving Start | `mlserver` | MUST NOT report healthy until `/v2/health/ready` passes and every name in `MLSERVER_MODELS` is ready; a stub that only runs the process MUST NOT pass `checkhealthy.sh` as `true` once a model is listed |
+| Refresh | `model.sh refresh` | MUST re-run the pull without assuming a stopped `mlserver_bootstrap` container still exists, and MUST fail when `mlserver` does not report every listed model ready afterwards |
 | Health | Both services | MUST be real checks with every `curl` bounded; `mlflow` healthy MUST also read the registry and experiments API |
 | Shutdown | Both services | MUST have a stop grace period |
 

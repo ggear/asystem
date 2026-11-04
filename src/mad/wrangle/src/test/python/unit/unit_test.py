@@ -3330,6 +3330,25 @@ class WrangleTest(unittest.TestCase):
         print(f"\nDashboard preview written to [file://{output_path}]")
         self.assertTrue(isfile(output_path))
 
+    def test_health_adhoc_run_updates_only_the_plugins_it_ran(self):
+        def _counters(errored):
+            return {plugin.CTR_SRC_FILES: {plugin.CTR_ACT_PROCESSED: 1, plugin.CTR_ACT_ERRORED: errored}, plugin.CTR_SRC_TIMING: {plugin.CTR_ACT_PROCESS_MILLIS: 10, plugin.CTR_ACT_TOTAL_MILLIS: 10}}
+
+        with tempfile.TemporaryDirectory() as tmp:
+            history = RunHistory(plugins=["bank", "equity"], cache_dir=tmp, poll_period_minutes=30, raw_label="1d")
+            now = datetime.datetime.now(tz=CTR_TZ)
+            history.add_run(now, {"bank": _counters(1), "equity": _counters(1)})
+            self.assertTrue(history.is_errored("bank"))
+            history.add_adhoc_run(now + datetime.timedelta(seconds=1), {"bank": _counters(0)})
+            self.assertFalse(history.is_errored("bank"))
+            self.assertTrue(history.is_errored("equity"))
+            self.assertTrue(history.is_errored())
+            history.add_adhoc_run(now + datetime.timedelta(seconds=2), {"bank": _counters(0), "equity": _counters(0)})
+            self.assertFalse(history.is_errored())
+            history.add_run(now + datetime.timedelta(seconds=3), {"bank": _counters(1), "equity": _counters(0)})
+            self.assertTrue(history.is_errored("bank"))
+            self.assertTrue(history.is_errored())
+
     def test_dashboard_history_ignores_different_plugin_scope(self):
         counters = {
             plugin.CTR_SRC_FILES: {

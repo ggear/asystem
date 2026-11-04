@@ -79,7 +79,31 @@ In order. Each item is done when its worked example (4) runs and passes.
 8. `register_project` logs a `pyfunc` project with `mlflow.pyfunc.log_model` (the project in `artifacts`, a column signature from `signature.json`) and every other flavor as plain artifacts. It refuses a `pyfunc` signature with a state vector, since MLflow's column signature has no vector. MLServer's MLflow runtime loading it is untested.
 9. Existing experiments keep their pre-proxy artifact location, the laptop path of the share, so their artifacts are not reachable
    through `--serve-artifacts`; they are to be migrated or left read-only.
-10. A release of `mlflow`, since the running server predates the allowed-hosts setting.
+## 3a. Serving path as verified (2026-11-04, after the `mlflow` release)
+
+- `mlflow` 10.200.1937 is up and healthy on `may`. The first release hung because `mlflow_bootstrap` is its own container and `checkalive.sh` probed `localhost:5000`, which is that container; it now probes `${MLFLOW_SERVICE}:${MLFLOW_HTTP_PORT}`, the published address `checkexecuting.sh` already used. `/health` answers 200 from outside the host.
+- `mlserver` on `may` is still 10.200.1732, up 7 days, and has not been released since the bootstrap pull work. Its environment has no `MLSERVER_MODELS` or `MLFLOW_MODEL_DIR`, it mounts the old `mlflow` artifact share and carries `mlflow`'s backend store settings, and nothing listens on `:32414` (`/v2/health/live` refuses the connection). It reports healthy because `checkhealthy.sh` is `true`. So today healthy means only that the container is running.
+- The checked-in `mlserver` is the stub: `entrypoint.sh` prints `mlserver --version` and sleeps. `MLSERVER_MODELS` is empty in `.env_all`, so the bootstrap loop pulls nothing and the acceptance gate in it has never run against a real model.
+- Interaction as built: `mlserver_bootstrap` shares the `SERVICE_DATA_DIR` volume with `mlserver`, pulls `models:/<name>@release` through `MLFLOW_TRACKING_URI` (the `mlflow.proxy` nginx name, not the `may` port) and checks `evaluation.json`. `mlserver` `depends_on` nothing but itself, so it can start before or without the pull, and a failed pull does not stop it.
+- `model.sh refresh` runs `docker start -a mlserver_bootstrap && docker restart mlserver`. After a release neither `mlflow_bootstrap` nor `mlserver_bootstrap` is present on the host (`docker start` of a missing container fails), so `refresh` is expected to fail until the container is kept or recreated with `docker compose run --rm`. Untested, since `mlserver` has not been released.
+- A credential (the `mlflow` Postgres password) sits in the `mlserver` container environment as `MLFLOW_BACKEND_STORE_URI`. It is the old image's leak, and the `mlserver` compose file no longer passes it; the next release removes it, and the password should be rotated.
+
+## 3b. Simplifications and ergonomic additions
+
+Workflow:
+1. Fold `mlserver` into the `mlflow` release. Today the server, the pull and the restart are three steps in two modules (`release`, then `model.sh refresh`, with a bootstrap container in between). One `mlserver` release that always runs its bootstrap, with `depends_on: service_completed_successfully` on it, removes `refresh` and the missing-container problem. `deploy.sh` then only runs `model.sh check`.
+2. One command for a model's whole path. `notebook.sh` runs to Package, `REGISTER=1` goes on to Register, and `promote.sh` and `refresh` are separate. A `model.sh ship <name>` (check, register, gate, promote, release) with a `--dry-run` that stops before any write would replace reading five usage strings.
+3. Derive `MLSERVER_MODELS` instead of hand-listing it. It is the registered names whose `release` alias exists; the notebook directories already name them, so a generated list (or the registry listing at bootstrap) removes one of the two places a served model is declared (spec 6.9 step 9).
+4. Make `check` incremental. `model.sh check` re-runs every notebook, and a hash of each notebook's inputs (notebook, data splits, library) against `target/model-output` lets unchanged ones be skipped, with `--all` to force. Parity is already cached; notebooks are the remaining cost.
+5. Collapse the three health scripts for models. `checkalive` (port answers), `checkexecuting` (V2 ready) and `checkhealthy` (every pulled model `ready`) are one loop over `/v2/models/<name>/ready`; the generated chain only needs the one new line each.
+6. Do not hand-write `evaluation.json` checks in shell. The bootstrap embeds a `python3 -c` JSON test; `asystem.model check-release <dir>` already does that and more (hash, signature, acceptance), so the bootstrap should call it and stop having a second definition of "passed".
+
+Library:
+7. `asystem.model pull <name> [--alias release] --out <dir>` doing download, `check-release` and the atomic swap (download beside, then rename), replacing the bootstrap loop and `generate.sh`'s pull. The two readers of `@release` then share code and a failed pull cannot leave a half-deleted `${model_dir}` (the loop does `rm -rf` first).
+8. `asystem.model settings <project> > model-settings.json`, generating MLServer's per-model settings (name, version from the stamp, signature, runtime) so item 5 of the to-do list is a pure function with a table test.
+9. A `Project` object (`Project.open(dir)` giving manifest, signature, golden, flavor, `predict`, `replay`, `gate`) over the current module-level functions that each re-read the manifest. `replay_project`, `gate_project` and `verify_project` all call `verify_project` and open the same three files.
+10. Quiet MLflow in one place. The pyfunc "add type hints" warning is raised while the model class is defined, so it is stubbed in `replay` only; the notebook run, `register_project` and the server loader each print it again. One context manager in `asystem.model` (`quiet_mlflow()`) used by all of them, or `_skip_type_hint_validation` in the pyfunc scaffold.
+11. A scaffold test that fails when `checkalive.sh` probes `localhost` in a module whose compose file has a separate `*_bootstrap` service. This is the bug that hung the release, and it recurs for every module that fills in `checkalive.sh` from `true`.
 
 ## 4. Worked examples
 

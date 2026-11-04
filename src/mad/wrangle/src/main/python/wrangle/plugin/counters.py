@@ -679,7 +679,15 @@ class RunHistory:
                 raise KeyError(f"unknown plugin: {plugin}")
             if not self._raw:
                 return None
-            return self._raw[-1]["errored"].get(plugin, False)
+            latest = self._raw[-1]
+            adhoc = self._adhoc if self._adhoc is not None and self._adhoc["ts"] > latest["ts"] else None
+            if adhoc is None:
+                return latest["errored"].get(plugin, False)
+
+            def _errored(name: str) -> bool:
+                return adhoc["errored"][name] if name in adhoc["errored"] else latest["errored"].get(name, False)
+
+            return any(_errored(name) for name in self._plugins) if plugin == "summary" else _errored(plugin)
 
     def _fill_raw_slot(self, series: dict, errored: dict, slot_index: int, entry: dict) -> None:
         entry_plugins: dict[str, Any] = entry.get("plugins") or {}
