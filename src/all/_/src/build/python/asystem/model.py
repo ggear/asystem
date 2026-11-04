@@ -34,6 +34,7 @@ ACCEPTANCE_SPLITS = ("validation", "backtest")
 ACCEPTANCE_DIRECTIONS = ("max", "min")
 ACCEPTANCE_BUDGET = 1.0
 PROJECT_FLAVORS = ("static", "wasm", "onnx", "pyfunc")
+PROJECT_RUNTIMES = {"static": ("python", "rust", "go"), "wasm": ("python", "rust", "go"), "onnx": ("python",), "pyfunc": ("python",)}
 PROJECT_PLACEHOLDERS = ("tbd", "todo", "unknown", "none", "n/a", "not applicable", "to be determined")
 PROJECT_MODEL_FILES = {"wasm": "model.wasm", "onnx": "model.onnx", "pyfunc": "model.py"}
 PROJECT_SOURCES = ("static", "manual", "mlflow")
@@ -93,11 +94,14 @@ def golden_step(signature, model_version, step_id, inputs, outputs=None, error=N
     return {"request": request, "response": response}
 
 
-def golden_document(model_version, sequences):
-    return {"model_version": model_version, "sequences": [{"name": name, "steps": steps} for name, steps in sequences]}
+def golden_document(model_version, sequences, tolerance=None):
+    document = {"model_version": model_version, "sequences": [{"name": name, "steps": steps} for name, steps in sequences]}
+    if tolerance:
+        document["tolerance"] = tolerance
+    return document
 
 
-def golden_from_samples(signature, model_version, samples, sequence="golden", constants=None):
+def golden_from_samples(signature, model_version, samples, sequence="golden", constants=None, tolerance=None):
     input_specs = {entry["name"]: entry for entry in signature["inputs"]}
     output_names = [entry["name"] for entry in signature["outputs"]]
     steps = []
@@ -109,7 +113,7 @@ def golden_from_samples(signature, model_version, samples, sequence="golden", co
         else:
             outputs = dict(constants) if constants is not None else {name: sample[name] for name in output_names if sample.get(name) is not None}
             steps.append(golden_step(signature, model_version, step_id, inputs, outputs))
-    return golden_document(model_version, [(sequence, steps)])
+    return golden_document(model_version, [(sequence, steps)], tolerance)
 
 
 def measure(y_true, y_pred):
@@ -167,8 +171,8 @@ def check_acceptance(project_dir):
     ]
 
 
-def package_project(project_dir, name, model_version, flavor, signature, samples, provenance, constants=None, model_path=None, sequence="golden", evaluation=None):
-    golden = golden_from_samples(signature, model_version, samples, sequence, constants)
+def package_project(project_dir, name, model_version, flavor, signature, samples, provenance, constants=None, model_path=None, sequence="golden", evaluation=None, tolerance=None):
+    golden = golden_from_samples(signature, model_version, samples, sequence, constants, tolerance)
     return write_project(project_dir, name, model_version, flavor, signature, golden, provenance, constants, model_path, evaluation=evaluation)
 
 
@@ -674,7 +678,7 @@ def promote_project(name, tracking_uri, gate_path, hosts, archs, reviewed_by, wo
         with open(gate_path) as gate_file:
             gate = json.load(gate_file)
         client = MlflowClient()
-        findings = check_gate(gate, file_sha256(join(project_dir, PROJECT_MANIFEST)), hosts, archs, reviewed_by)
+        findings = check_gate(gate, file_sha256(join(project_dir, PROJECT_MANIFEST)), hosts or PROJECT_RUNTIMES[manifest["flavor"]], archs, reviewed_by)
         findings.extend(check_acceptance(project_dir))
         number = str(manifest["model_version"])
         evaluation = {"budget": None}
@@ -734,6 +738,9 @@ def main(arguments=None):
     gate.add_argument("project_dir")
     gate.add_argument("--out", required=True)
     gate.add_argument("--runner", action="append", default=[])
+    merge = commands.add_parser("gate-merge")
+    merge.add_argument("--out", required=True)
+    merge.add_argument("gates", nargs="+")
     commands.add_parser("lint").add_argument("project_dir")
     generate = commands.add_parser("generate")
     generate.add_argument("project_dir")
@@ -747,7 +754,7 @@ def main(arguments=None):
     promote = commands.add_parser("promote")
     promote.add_argument("name")
     promote.add_argument("--gate", required=True)
-    promote.add_argument("--hosts", default="python,rust,go")
+    promote.add_argument("--hosts")
     promote.add_argument("--archs", default="x86_64,aarch64")
     promote.add_argument("--reviewed-by", required=True)
     promote.add_argument("--workspaces")
@@ -782,6 +789,15 @@ def main(arguments=None):
             for rule, message in findings:
                 print(f"{options.committed_dir if options.command == 'compare' else options.project_dir} {rule} {message}", file=sys.stderr)
             return 1 if findings else 0
+        elif options.command == "gate-merge":
+            from asystem.replay import merge_gates
+
+            documents = []
+            for gate_path in options.gates:
+                with open(gate_path) as gate_file:
+                    documents.append(json.load(gate_file))
+            _write_json(options.out, merge_gates(documents))
+            print(f"merged [{len(documents)}] gate files into [{options.out}]")
         elif options.command in ("replay", "gate"):
             from asystem.replay import gate_project
 
@@ -805,7 +821,9 @@ def main(arguments=None):
             if options.go:
                 _write_text(options.go, render_go(signature, options.go_package))
         elif options.command == "promote":
-            version = promote_project(options.name, os.environ["MLFLOW_TRACKING_URI"], options.gate, options.hosts.split(","), options.archs.split(","), options.reviewed_by, options.workspaces)
+            version = promote_project(
+                options.name, os.environ["MLFLOW_TRACKING_URI"], options.gate, options.hosts.split(",") if options.hosts else None, options.archs.split(","), options.reviewed_by, options.workspaces
+            )
             print(f"promoted model [{options.name}] version [{version}] to alias [{PROJECT_ALIAS_RELEASE}]")
     except (ValueError, KeyError, OSError) as error:
         print(f"ERROR model command failed [{options.command}] [{error}]", file=sys.stderr)
@@ -1076,6 +1094,17 @@ def _lint_golden(manifest, signature, golden):
     required_outputs = {name for name, entry in output_specs.items() if entry["parameters"]["required"]}
     state_inputs = {name for name, entry in input_specs.items() if entry["shape"] == [-1]}
     constants = manifest.get("constants", {})
+    for name, bounds in golden.get("tolerance", {}).items():
+        spec = output_specs.get(name)
+        if spec is None or spec["datatype"] != "FP64":
+            findings.append(("PJ015", f"tolerance names an output that is not an FP64 signature output [{name}]"))
+        elif (
+            not isinstance(bounds, dict)
+            or not bounds
+            or set(bounds) - {"absolute", "relative"}
+            or any(isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0 for value in bounds.values())
+        ):
+            findings.append(("PJ015", f"tolerance for output [{name}] must give a non-negative absolute or relative bound"))
     sequences = golden.get("sequences", [])
     if not sequences:
         findings.append(("PJ010", "golden needs at least one sequence"))

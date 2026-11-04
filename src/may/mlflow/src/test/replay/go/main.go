@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -57,7 +59,13 @@ type step struct {
 	Error string `json:"error"`
 }
 
+type bounds struct {
+	Absolute float64 `json:"absolute"`
+	Relative float64 `json:"relative"`
+}
+
 type golden struct {
+	Tolerance map[string]bounds `json:"tolerance"`
 	Sequences []struct {
 		Steps []step `json:"steps"`
 	} `json:"sequences"`
@@ -67,7 +75,8 @@ type manifest struct {
 	Flavor    string             `json:"flavor"`
 	Constants map[string]float64 `json:"constants"`
 	Files     map[string]struct {
-		Path string `json:"path"`
+		Path   string `json:"path"`
+		Sha256 string `json:"sha256"`
 	} `json:"files"`
 }
 
@@ -114,6 +123,20 @@ func replay(projectDir string) ([]string, error) {
 		if err := json.Unmarshal(content, target); err != nil {
 			return nil, fmt.Errorf("json invalid [%s] [%w]", name, err)
 		}
+	}
+	var mismatches []string
+	for key, entry := range project.Files {
+		content, err := os.ReadFile(filepath.Join(projectDir, entry.Path))
+		if err != nil {
+			mismatches = append(mismatches, fmt.Sprintf("PJ003 file absent [%s]", key))
+			continue
+		}
+		if sum := sha256.Sum256(content); hex.EncodeToString(sum[:]) != entry.Sha256 {
+			mismatches = append(mismatches, fmt.Sprintf("PJ003 file checksum mismatch [%s]", key))
+		}
+	}
+	if len(mismatches) > 0 {
+		return mismatches, nil
 	}
 	var predict predictor
 	switch project.Flavor {
@@ -164,13 +187,29 @@ func replay(projectDir string) ([]string, error) {
 				return nil, err
 			}
 			for _, entry := range s.Response.Outputs {
-				if !reflect.DeepEqual(outputs[entry.Name], entry.Data) {
+				if !within(outputs[entry.Name], entry.Data, doc.Tolerance, entry.Name) {
 					findings = append(findings, fmt.Sprintf("RP003 step [%s] output [%s] is [%v] and the golden is [%v]", s.Request.ID, entry.Name, outputs[entry.Name], entry.Data))
 				}
 			}
 		}
 	}
 	return findings, nil
+}
+
+func within(actual, expected []float64, tolerance map[string]bounds, name string) bool {
+	if len(actual) != len(expected) {
+		return false
+	}
+	limit, tolerated := tolerance[name]
+	if !tolerated {
+		return reflect.DeepEqual(actual, expected)
+	}
+	for index, value := range actual {
+		if math.Abs(value-expected[index]) > limit.Absolute+limit.Relative*math.Abs(expected[index]) {
+			return false
+		}
+	}
+	return true
 }
 
 func wasmPredict(bytes []byte, sig signature, inputs map[string][]float64) (map[string][]float64, error) {

@@ -1,0 +1,30 @@
+{
+  "spec_version": 1,
+  "name": "demo_calc_run",
+  "model_version": "1000",
+  "signature_version": 1,
+  "flavor": "pyfunc",
+  "provenance": {
+    "source": "manual",
+    "inputs": [],
+    "implementation": "demo model.py requires pandas"
+  },
+  "files": {
+    "signature": {
+      "path": "signature.json",
+      "sha256": "6e1a2c37307f4488585ef05f18214a2cf73bc882083429ade692742203cfae0d"
+    },
+    "golden": {
+      "path": "golden.json",
+      "sha256": "19551516860ee8144fa9b82ae4d9ec56f46f9a7146041a9ce25b5cad2ac0de5a"
+    },
+    "evaluation": {
+      "path": "evaluation.json",
+      "sha256": "a19fd5d95b727aabc2b59355197a432ccfc5475e132eedb3db7d033060e7231f"
+    },
+    "model": {
+      "path": "model.py",
+      "sha256": "862232a5b0d9d025a78ee7e46839f7c25b39fbc90aa50fcb1496026d5ae656b0"
+    }
+  }
+}

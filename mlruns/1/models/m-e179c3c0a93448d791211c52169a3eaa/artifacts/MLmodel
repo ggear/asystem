@@ -1,0 +1,29 @@
+artifact_path: /Users/graham/Code/asystem/mlruns/1/models/m-e179c3c0a93448d791211c52169a3eaa/artifacts
+flavors:
+  python_function:
+    artifacts:
+      project:
+        path: artifacts/project
+        uri: /var/folders/ss/_df2wkq54v1fpvlvqxv0369w0000gn/T/demo_calc_run-register-zh4uynzt/project
+    cloudpickle_version: 3.1.2
+    code: null
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.pyfunc.loaders.code_model
+    model_code_path: /private/var/folders/ss/_df2wkq54v1fpvlvqxv0369w0000gn/T/demo_calc_run-register-zh4uynzt/project/model.py
+    python_version: 3.12.14
+    streamable: false
+is_signature_from_type_hint: false
+mlflow_version: 3.17.2
+model_id: m-e179c3c0a93448d791211c52169a3eaa
+model_size_bytes: 3611
+model_uuid: m-e179c3c0a93448d791211c52169a3eaa
+prompts: null
+run_id: 78d12f9fb9d54b3db26be5dc65f875ce
+signature:
+  inputs: '[{"type": "double", "name": "demo_in_seconds", "required": true}]'
+  outputs: '[{"type": "long", "name": "demo_out_seconds", "required": true}]'
+  params: null
+type_hint_from_example: false
+utc_time_created: '2026-11-03 09:45:14.429263'

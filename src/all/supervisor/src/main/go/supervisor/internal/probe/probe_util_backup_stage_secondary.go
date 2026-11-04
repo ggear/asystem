@@ -106,19 +106,29 @@ func promoteOneService(ctx context.Context, request stageRequest, share, host, s
 	scribe.Log(scribe.SourceBackup, scribe.SubjectService(service), scribe.ActionStart).Infof("promoted", started,
 		"[%s] promoting [%d/%d] from [%s] to [%s]", service, index, total, source, target)
 
-	stats, rsyncErr := runRsync(ctx, nil, "-a", "--stats", "--out-format=%t %o %f %l",
-		"--exclude", "/.lock", "--exclude", ".rsync/", "--exclude", ".rsync-*",
-		"--temp-dir="+rsyncTemp, "--", source, target+"/")
+	window := config.Load(request.ConfigPath).BackupWindowOf(service)
+	policy := keepPolicy{daily: window.KeepDaily, weekly: window.KeepWeekly, monthly: window.KeepMonthly}
+
+	rsyncArgs := []string{"-a", "--stats", "--out-format=%t %o %f %l", "--exclude", "/.lock", "--exclude", ".rsync/", "--exclude", ".rsync-*"}
+	if policy.window > 0 || policy.daily+policy.weekly+policy.monthly > 0 {
+		sourceRuns := readKeepRuns(strings.TrimSuffix(source, "/"))
+		kept := backupKeepSet(sourceRuns, policy, time.Now())
+		for _, run := range sourceRuns {
+			if !kept[run.name] {
+				rsyncArgs = append(rsyncArgs, "--exclude", "/"+run.name+"/")
+			}
+		}
+	}
+	rsyncArgs = append(rsyncArgs, "--temp-dir="+rsyncTemp, "--", source, target+"/")
+	stats, rsyncErr := runRsync(ctx, nil, rsyncArgs...)
 	counters.addTransfer(stats.filesTransferred, stats.totalTransferredBytes/bytesPerMebibyte, stats.filesCreated,
 		stats.filesDeleted, stats.filesListed, stats.totalFileSizeBytes/bytesPerMebibyte, stats.totalBytesSent/bytesPerMebibyte)
 	scribe.Log(scribe.SourceBackup, scribe.SubjectService(service), scribe.ActionStop).Infof(backupVerb(metric.BackupStageSecondary), started,
 		"%s from [%s]", backupMoved(intReading(int64(stats.totalTransferredBytes/bytesPerMebibyte)), time.Since(started)), service)
 
-	window := config.Load(request.ConfigPath).BackupWindowOf(service)
 	scribe.Log(scribe.SourceBackup, scribe.SubjectService(service), scribe.ActionCompute).Infof("thinning", time.Now(),
 		"[%s] thinning with the keep set", target)
-	pruneErr := pruneBackupRuns(ctx, scribe.SubjectStage(metric.BackupStageSecondary), target,
-		keepPolicy{daily: window.KeepDaily, weekly: window.KeepWeekly, monthly: window.KeepMonthly})
+	pruneErr := pruneBackupRuns(ctx, scribe.SubjectStage(metric.BackupStageSecondary), target, policy)
 	if rsyncErr != nil {
 		return rsyncErr
 	}

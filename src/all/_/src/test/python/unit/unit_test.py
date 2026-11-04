@@ -1202,7 +1202,7 @@ class ModelProjectTest(unittest.TestCase):
 
 
 class ReplayTest(unittest.TestCase):
-    def project(self, flavor, golden_out=None):
+    def project(self, flavor, golden_out=None, tolerance=None):
         from asystem.model import build_signature, evaluate_acceptance, package_project, signature_input, signature_output, stamp_model
 
         work_dir = tempfile.mkdtemp()
@@ -1273,6 +1273,7 @@ class ReplayTest(unittest.TestCase):
             {"source": "manual", "inputs": [], "implementation": "demo built by hand"},
             model_path=model_path,
             evaluation=evaluation,
+            tolerance=tolerance,
         )
         return project_dir
 
@@ -1287,6 +1288,40 @@ class ReplayTest(unittest.TestCase):
 
         for flavor in ("pyfunc", "wasm", "onnx"):
             self.assertEqual(["RP003"], [rule for rule, _ in replay_project(self.project(flavor, golden_out=3.5))], flavor)
+
+    def test_a_stated_tolerance_accepts_a_small_difference_and_rejects_a_large_one(self):
+        from asystem.replay import replay_project
+
+        bounds = {"demo_out": {"absolute": 1e-3}}
+        for flavor in ("pyfunc", "wasm", "onnx"):
+            self.assertEqual([], replay_project(self.project(flavor, golden_out=3.0000001, tolerance=bounds)), flavor)
+            self.assertEqual(["RP003"], [rule for rule, _ in replay_project(self.project(flavor, golden_out=3.5, tolerance=bounds))], flavor)
+            self.assertEqual(["RP003"], [rule for rule, _ in replay_project(self.project(flavor, golden_out=3.0000001))], flavor)
+
+    def test_a_relative_tolerance_scales_with_the_expected_value(self):
+        from asystem.replay import replay_project
+
+        self.assertEqual([], replay_project(self.project("pyfunc", golden_out=3.003, tolerance={"demo_out": {"relative": 0.002}})))
+        self.assertEqual(["RP003"], [rule for rule, _ in replay_project(self.project("pyfunc", golden_out=3.01, tolerance={"demo_out": {"relative": 0.002}}))])
+
+    def test_a_malformed_tolerance_is_a_finding(self):
+        for bounds in ({"demo_other": {"absolute": 1}}, {"demo_out": {"absolute": -1}}, {"demo_out": {}}, {"demo_out": {"scale": 1}}, {"demo_out": {"absolute": True}}):
+            with self.assertRaises(ValueError) as refused:
+                self.project("pyfunc", tolerance=bounds)
+            self.assertIn("PJ015", str(refused.exception), bounds)
+
+    def test_per_architecture_gates_merge_into_one_for_the_same_project(self):
+        from asystem.replay import merge_gates
+
+        first = {"project_sha256": "abc", "results": [{"host": "python", "arch": "x86_64", "passed": True}], "skipped": ["go"]}
+        second = {"project_sha256": "abc", "results": [{"host": "python", "arch": "aarch64", "passed": True}, {"host": "go", "arch": "aarch64", "passed": True}], "skipped": []}
+        merged = merge_gates([first, second])
+        self.assertEqual({("python", "x86_64"), ("python", "aarch64"), ("go", "aarch64")}, {(row["host"], row["arch"]) for row in merged["results"]})
+        self.assertEqual([], merged["skipped"])
+        failing = {"project_sha256": "abc", "results": [{"host": "python", "arch": "x86_64", "passed": False}], "skipped": []}
+        self.assertFalse(next(row for row in merge_gates([first, failing])["results"] if row["arch"] == "x86_64")["passed"])
+        with self.assertRaises(ValueError):
+            merge_gates([first, {**second, "project_sha256": "other"}])
 
     def test_gate_names_the_project_hash_and_this_architecture(self):
         from asystem.model import file_sha256
@@ -1494,6 +1529,16 @@ class VersionRegistryTest(unittest.TestCase):
         manifest = pull_model(self.NAME, PROJECT_ALIAS_CANDIDATE, pulled, self.uri, unpromoted=True)
         self.assertEqual("1000", manifest["model_version"])
         self.assertEqual("1000-SNAPSHOT", json.loads(Path(project, "project.json").read_text())["model_version"])
+
+    def test_promotion_takes_its_hosts_from_the_flavor_and_needs_both_architectures(self):
+        from asystem.model import promote_project, register_project
+
+        register_project(self.project(), self.NAME, self.uri)
+        arguments = {"released": "10.200.1926", "workspaces_dir": self.workspaces}
+        with self.assertRaises(ValueError) as refused:
+            promote_project(self.NAME, self.uri, self.gate(), None, ["x86_64", "aarch64"], "graham", **arguments)
+        self.assertIn("PM001", str(refused.exception))
+        self.assertTrue(promote_project(self.NAME, self.uri, self.gate(archs=("x86_64", "aarch64")), None, ["x86_64", "aarch64"], "graham", **arguments))
 
     def test_promotion_records_the_version_and_advances_the_development_version(self):
         from asystem.model import list_models, pull_model, register_project, resolve_model

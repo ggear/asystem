@@ -67,7 +67,7 @@ A project is a directory read the same way by every environment and written and 
 |---|---|---|
 | `project.json` | All | Spec version, name, model version, signature version, `flavor`, provenance, the SHA-256 of every other file, and optional constants |
 | `signature.json` | All | The MLServer V2 model metadata, which is also the MLflow model signature. It MUST be identical in the project, the consumer and the logged MLflow model, apart from its `versions` list |
-| `golden.json` | All | Named sequences of requests and exact responses, each request carrying the previous response's state |
+| `golden.json` | All | Named sequences of requests and responses, each request carrying the previous response's state. A response is exact unless the file states a tolerance for an `FP64` output |
 | `evaluation.json` | All but `static` | Each acceptance check with its measured value, limit, outcome and budget, the SHA-256 of each dataset used, the verdict and the worst budget, specified in 6.8 |
 | `model.wasm` | `wasm` | The WebAssembly module, with its fitted attributes built in |
 | `model.py` | `pyfunc` | The Python model, in MLflow's models-from-code form |
@@ -164,7 +164,11 @@ The vocabulary is scikit-learn's, mapped onto MLServer's and MLflow's:
 - A function with no exact cross-platform result, such as `tanh`, `exp` or `atan`, MUST be replaced by a lookup table or a polynomial, or a golden
   tolerance MUST be stated.
 - The golden sequences and the parity gate prove it: the module MUST reproduce every response and state exactly on every host and both
-  architectures.
+  architectures, except for an output with a stated tolerance.
+- A tolerance is stated in `golden.json` as `"tolerance": {"<output>": {"absolute": <a>, "relative": <r>}}`, for an `FP64` output only, with either bound or both. A value
+  matches when it differs from the golden value by no more than `absolute + relative * |golden value|`, and an `INT64` output and any output without a tolerance match exactly.
+  A learned `onnx` graph, whose float32 kernels differ between CPUs, MUST state one, and a notebook SHOULD choose the smallest bound its own error on `validation` allows
+  and say why in its plan. The same rule applies to every runtime of the gate, so it cannot be loosened for one host.
 
 ### 4.3 Requirements
 
@@ -413,10 +417,10 @@ tried on these first.
 | `example/onnx/linear` | `onnx` | A fitted line as a graph at a pinned opset | `onnxruntime` | No | No |
 | `example/pyfunc/linear` | `pyfunc` | A fitted line as a `PythonModel` | `mlflow.pyfunc` | No | No |
 
-The Rust and Go runners are `src/test/replay/rust` and `src/test/replay/go` in the `mlflow` module. Each takes a project directory, replays its golden
-exactly, prints one result row and exits 0, exits 1 on a difference, or exits 2 for a flavor it does not support. `model.sh parity` builds them and writes a
-gate file for every project under `target/model-output/project`, and `model.sh check` runs it after the notebooks. A host that cannot run a flavor is
-absent from that project's gate file, so promotion passes `--hosts` for the runtimes the flavor supports.
+The Rust and Go runners are `src/test/replay/rust` and `src/test/replay/go` in the `mlflow` module. Each takes a project directory, checks each file against the hash in `project.json` (PJ003), replays its golden
+exactly, prints one result row and exits 0, exits 1 on a difference, or exits 2 for a flavor it does not support. `model.sh build` builds them, and `model.sh parity` writes a
+gate file for every project under `target/model-output/project`, and `model.sh check` runs it after the notebooks. A runtime that cannot run a flavor is
+absent from that project's gate file, and promotion requires only the runtimes the flavor supports (7.4).
 
 ## 7. Lifecycle
 
@@ -430,7 +434,7 @@ absent from that project's gate file, so promotion passes `--hosts` for the runt
 | 4 | Evaluate | Notebook | Shipped runtime over `validation` and `backtest` | Metrics, `evaluation.json`, golden sequences | Every gating acceptance check passes |
 | 5 | Package | Notebook | `write_project`, then `verify_project` | Project directory | Manifest, hashes, signature and golden agree |
 | 6 | Register | Notebook | `register_project(...)` | Registered version stamped with the next model version, alias `candidate` | The project verifies on the server side too |
-| 7 | Review and promote | A person | `promote.sh` sets the aliases `m<N>` and `release` and records the service version | The version consumers follow | The acceptance passed and the parity gate passed on every host and both architectures |
+| 7 | Review and promote | A person | `promote.sh` sets the aliases `m<N>` and `release` and records the service version | The version consumers follow | The acceptance passed and the merged parity gate (7.4) passed on every host the flavor supports and both architectures |
 | 8 | Pull, embedded | The consumer's `generate.sh` | `python -m asystem.model pull <name> release <dir>/release --signature <dir>/default/signature.json` | The project in the consumer's `release` slot, unstaged, and its registry tags printed | The signature is unchanged, the hashes match and the stamp equals the registered model version |
 | 8 | Pull, served | `mlserver` bootstrap | `mlflow artifacts download models:/<name>@release` | `/asystem/mnt/models/<name>` | The download succeeded and its `evaluation.json` passed, else the bootstrap container fails and the model is not loaded |
 | 9 | Commit and release | A person | `git`, then the fab lifecycle | A release of the consumer | The consumer's own tests and the gate |
@@ -444,10 +448,10 @@ Each task includes the ones before it.
 | `generate` | Each module's `generate.py`, then its `generate.sh` with the pull flag false | `generate.sh` runs `verify` on the committed project and does nothing if there is none | No |
 | `build` (Default) | `setup`, `clean`, `generate`, then lint, format, type check and compile | The loader compiles against the signature | No |
 | `unittest` | `build`, then each module's unit tests (`unit_test.py`, `cargo test`, Go) | Project library tests in `_` and `mlflow`; the consumer's loader, golden and replay tests | No |
-| `systest` | `build`, then, for a module with `model.sh`, `model.sh check`, then bring the module up on a synthetic host and run its system test | The consumer runs with the committed project against its mock. `mlflow` runs every notebook and compares the committed slots | No |
+| `systest` | `build`, then, for a module with `model.sh`, `model.sh check`, then bring the module up on a synthetic host and run its system test | The consumer runs with the committed project against its mock. `mlflow` runs every notebook, compares the committed slots and replays every project in each runtime on each architecture (7.4) | No |
 | `package` | `build`, then build the image | The project, and the pinned host library, go into the image | No |
 | `execute` | `generate`, then run the module locally | For `mlserver`, the bootstrap pulls `release` into the container | Served pull only |
-| `release` | Before tagging, for a module with `model.sh`, `model.sh check`; for a module with a committed `release` slot, `check_release` on it. Then per host: `package`, save the image, copy it, run `install.sh install` | A failed notebook run or comparison, or a failed acceptance, stops the release. The consumer ships whatever project is in its tree; `mlserver` pulls at bootstrap after install | Served pull only |
+| `release` | Before tagging, for a module with `model.sh`, `model.sh check`; for a module with a committed `release` slot, `check_release` on it. Then per host: `package`, save the image, copy it, run `install.sh install` | A failed notebook run, comparison or replay, or a failed acceptance, stops the release. The consumer ships whatever project is in its tree; `mlserver` pulls at bootstrap after install | Served pull only |
 | `pull` | Backup of git-ignored files, `git pull --all`, install pinned dependencies, then `generate` for every module with the pull flag true | `generate.sh` runs `pull`, then `verify` | Embedded pull happens here and only here |
 | `deploy` | `generate`, then each module's `deploy.sh` if it has one | `mlflow`'s `deploy.sh` runs `model.sh check`, as `release` does, then `model.sh refresh`, which re-runs the `mlserver` bootstrap pull and restarts it, and pushes no image | Served pull only |
 
@@ -461,6 +465,28 @@ Each task includes the ones before it.
   bootstrap pulls and a served refit needs no consumer release. An embedded consumer needs the pull, a commit and a release.
 - A signature change fails the pull's signature comparison by design. It is a new `signature_version`, a release of the consumer, and a
   new model name or version served side by side while consumers move.
+
+### 7.4 The parity gate
+
+The gate file is the evidence for R5. It is one JSON document for one project:
+
+```
+{"project_sha256": "<SHA-256 of project.json>",
+ "results": [{"host": "python", "arch": "x86_64", "passed": true}],
+ "skipped": ["go"]}
+```
+
+- `host` is the runtime (`python`, `rust` or `go`) and `arch` is `x86_64` or `aarch64`. `skipped` names a runtime that does not support the flavor.
+- `model.sh parity` writes `target/gate/<arch>/<workspace>.json` for each architecture it runs and the merged `target/gate/<workspace>.json`. `model.sh check` runs it.
+  `SERVICE_LOCAL_RUNTIME`, which a system test uses too, chooses the architectures. `emulated`, the default, runs this machine's architecture natively and every other
+  architecture of `.hosts` in a container for that platform, built from `src/test/replay/Dockerfile`, which installs the pinned Python libraries and builds the Rust and Go
+  runners for it. `native` runs this machine's architecture only, and a promotion then needs `--archs` for that architecture.
+- A gate file from a real host of another architecture is merged by hand with `python -m asystem.model gate-merge --out <file> <gate> <gate>`. It refuses files for
+  different projects, keeps a failure if either file has one, and drops a skipped runtime that ran in any file. Emulation runs the real instruction set but not the real
+  hardware, so a result that depends on the CPU, as a transcendental function can, needs a run on a real host.
+- `promote.sh --gate <file> --reviewed-by <name>` requires a passed row for each runtime the flavor supports, `PROJECT_RUNTIMES`, on each architecture of `--archs`. A
+  `static` or `wasm` project needs `python`, `rust` and `go`; an `onnx` or `pyfunc` project needs `python`. `--hosts` overrides it.
+- The gate is bound to the project by hash, so a change to the project, including a restamp, needs a new gate.
 
 ## 8. Procedure: adding a model
 
@@ -546,6 +572,7 @@ both run by `fab build`.
 | PJ012 | Every golden response of a `static` project equals the constants | R4 |
 | PJ013 | The stamp in a `pyfunc` or `wasm` model file equals the manifest model version | R16 |
 | PJ014 | A `static` project's model version is `static-<number>` | R16 |
+| PJ015 | A golden tolerance names an `FP64` signature output and gives a non-negative `absolute` or `relative` bound, or both | R5 |
 | AC001 | A project that is not `static` holds an evaluation, and every required scalar output has a gating check in it | R14 |
 | AC002 | A check names a known split, a name in the naming style, an output in the signature, a numeric or null value, a limit and direction, and a boolean gate | R14 |
 | AC003 | The recorded outcome, budget and verdict follow from each check's value and limit, the evaluation holds dataset hashes for every split it uses, and a check with a measured value has at least one dataset recorded for its split | R14 |
@@ -597,6 +624,7 @@ Common operations are in two places, so a notebook states what it means and not 
 | `asystem.model` | `build_signature`, `signature_input`, `signature_output`, `signature_state` | Builds `signature.json` with every field the checks need |
 | `asystem.model` | `golden_step`, `golden_document`, `golden_from_samples` | Builds V2 requests and responses from named values or from dataset samples, with the datatype taken from the signature |
 | `asystem.model` | `package_project`, `write_project` | Builds the golden from samples and writes the project with its evaluation, then runs every project check |
+| `asystem.model` | `file_sha256`, `project_content_sha256` | Hash a file, and hash a project's content with the version stamp neutralised, so two registrations of the same content match |
 | `asystem.model` | `lint_project`, `verify_project` | Reports or raises every finding of 10.1 |
 | `asystem.model` | `register_project`, `pull_model` | Registers a project, stamping the next model version and logging its measured criteria as run metrics, and pulls one by selector |
 | `asystem.model` | `stamp_model`, `read_stamp`, `content_sha256`, `restamp_project`, `next_model_version` | Write, read and hash the version in a model file, restamp a project copy, and issue the next number |
@@ -605,8 +633,9 @@ Common operations are in two places, so a notebook states what it means and not 
 | `asystem.model` | `render_rust`, `render_go` | Generate request and response types from `signature.json`, through `python -m asystem.model generate` |
 | `asystem.model` | `measure`, `evaluate_acceptance` | Measures a prediction against its truth with numpy, and runs a notebook's acceptance check into `evaluation.json` with the outcome and budget of each check |
 | `asystem.model` | `compare_project`, `check_release` | Compare a re-run with the committed project (CP001 to CP003), and check that a `release` slot's acceptance passed |
-| `asystem.replay` | `replay_project`, `gate_project`, `model_predict` | Replay a project's golden through its runtime and compare every response exactly, write the gate file from the Python result and the Rust and Go runners (RP001 to RP005), and load a model file as a predict function, through `python -m asystem.model replay` and `gate` |
+| `asystem.replay` | `replay_project`, `gate_project`, `merge_gates`, `model_predict` | Replay a project's golden through its runtime and compare every response exactly, write the gate file from the Python result and the Rust and Go runners (RP001 to RP005), merge the files of several architectures, and load a model file as a predict function, through `python -m asystem.model replay`, `gate` and `gate-merge` |
 | `asystem.model` | `check_gate`, `check_acceptance`, `promote_project` | Check a parity gate file and the acceptance verdict, and set the alias `release` only when both pass |
+| `asystem.notebook`, `asystem.workspace` | `lint_notebook`, `fix_notebook`, `lint_workspace` | Report the findings of 10.1 for a notebook or a workspace, and strip a notebook's outputs |
 | `asystem.notebook` | `scaffold_notebook` | Writes a notebook, a plan and the data directories that already pass section 10, through `python -m asystem.notebook new <module> <model> <notebook> <flavor>` |
 | `library.data` | `data_path`, `read_data`, `ensure_data`, `golden_data`, `query_influxdb3` | Resolves a dataset path, reads one, reads or writes a dataset when it is absent, and queries with the cache |
 | `library.project` | `consumer_project_dir`, `scratch_project_dir`, `provenance`, `development_version` | Resolves a consumer's `default` or `release` slot, or the same under `MODEL_OUTPUT_DIR`, and builds `provenance` from data paths |
@@ -625,7 +654,7 @@ Enforces column of 10.1 disagree.
 | R2 | Review |
 | R3 | PJ010 |
 | R4 | PJ010, PJ012 |
-| R5 | PM001, PM002, PM003, RP003, RP004, RP005 |
+| R5 | PJ015, PM001, PM002, PM003, RP003, RP004, RP005 |
 | R6 | WS004, WS005 |
 | R7 | Review |
 | R8 | PJ008, PJ011, RP001, RP002 |

@@ -1,0 +1,25 @@
+{
+  "datasets": {
+    "backtest": [
+      {
+        "path": "2026-11-03_10-00-00/demo_calc_limit_2026-11-01_2026-11-02.csv",
+        "sha256": "492d5ea496056f1a6a6592241032fab764c321596317930b4fa0e1e8bc3b7470"
+      }
+    ]
+  },
+  "checks": [
+    {
+      "split": "backtest",
+      "output": "demo_limit_seconds",
+      "name": "rmse",
+      "value": 0.5,
+      "limit": 1.0,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 0.5
+    }
+  ],
+  "passed": true,
+  "budget": 0.5
+}

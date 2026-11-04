@@ -5,6 +5,7 @@ use std::path::Path;
 use std::process::ExitCode;
 
 use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
 use wasmi::{Config, Engine, Linker, Module, Store, StoreLimits, StoreLimitsBuilder};
 
 const FUEL: u64 = 1_000_000;
@@ -54,6 +55,10 @@ fn replay(project_dir: &Path) -> Result<Vec<String>, Failure> {
     let manifest = read_json(&project_dir.join("project.json"))?;
     let signature = read_json(&project_dir.join("signature.json"))?;
     let golden = read_json(&project_dir.join("golden.json"))?;
+    let mismatches = checksum_findings(project_dir, &manifest);
+    if !mismatches.is_empty() {
+        return Ok(mismatches);
+    }
     let flavor = text(&manifest["flavor"]);
     let predict: Predict = match flavor.as_str() {
         "static" => {
@@ -108,7 +113,7 @@ fn replay(project_dir: &Path) -> Result<Vec<String>, Failure> {
             for entry in step["response"]["outputs"].as_array().into_iter().flatten() {
                 let name = text(&entry["name"]);
                 let expected = numbers(&entry["data"]);
-                if outputs.get(&name) != Some(&expected) {
+                if !within(outputs.get(&name), &expected, &golden["tolerance"][&name]) {
                     findings.push(format!(
                         "RP003 step [{step_id}] output [{name}] is [{:?}] and the golden is [{expected:?}]",
                         outputs.get(&name)
@@ -118,6 +123,43 @@ fn replay(project_dir: &Path) -> Result<Vec<String>, Failure> {
         }
     }
     Ok(findings)
+}
+
+fn within(actual: Option<&Vec<f64>>, expected: &[f64], bounds: &Value) -> bool {
+    let Some(actual) = actual else { return false };
+    if actual.len() != expected.len() {
+        return false;
+    }
+    if bounds.is_null() {
+        return actual == expected;
+    }
+    let absolute = bounds["absolute"].as_f64().unwrap_or(0.0);
+    let relative = bounds["relative"].as_f64().unwrap_or(0.0);
+    actual
+        .iter()
+        .zip(expected)
+        .all(|(value, truth)| (value - truth).abs() <= absolute + relative * truth.abs())
+}
+
+fn checksum_findings(project_dir: &Path, manifest: &Value) -> Vec<String> {
+    manifest["files"]
+        .as_object()
+        .into_iter()
+        .flatten()
+        .filter_map(|(key, entry)| match fs::read(project_dir.join(text(&entry["path"]))) {
+            Ok(bytes) if hex(&Sha256::digest(&bytes)) == text(&entry["sha256"]) => None,
+            Ok(_) => Some(format!("PJ003 file checksum mismatch [{key}]")),
+            Err(_) => Some(format!("PJ003 file absent [{key}]")),
+        })
+        .collect()
+}
+
+fn hex(bytes: &[u8]) -> String {
+    use std::fmt::Write;
+    bytes.iter().fold(String::new(), |mut out, byte| {
+        let _ = write!(out, "{byte:02x}");
+        out
+    })
 }
 
 fn wasm_predict(bytes: &[u8], signature: &Value, inputs: &Tensors) -> Result<Tensors, String> {

@@ -148,7 +148,7 @@ def _scaffold_notebook(module, model, notebook, name, flavor):
 
     static = flavor == "static"
     version_line = 'MODEL_VERSION = "static-1"' if static else "MODEL_VERSION = development_version(WORKSPACE)"
-    project_import = "from library.project import provenance" if static else "from library.project import development_version, provenance"
+    project_import = "from library.project import provenance, scratch_project_dir" if static else "from library.project import development_version, provenance, scratch_project_dir"
     cells = [
         markdown(
             f"# {module} / {model} / {notebook}\n\nState in one line what this model does.\n\n| Term | In This Notebook |\n|---|---|\n"
@@ -157,7 +157,7 @@ def _scaffold_notebook(module, model, notebook, name, flavor):
         ),
         section("Setup", "none, preparation for the stages below.", "load `env` and declare the model name, version and dataset names as constants (`spec.md` 6.6)."),
         code(
-            f"import json\nimport tempfile\nfrom os.path import join\n\nfrom library.data import golden_data\nfrom library.env import init_env\n{project_import}\n\nenv = init_env()\n\n"
+            f"import json\n\nfrom library.data import golden_data\nfrom library.env import init_env\n{project_import}\n\nenv = init_env()\n\n"
             f'WORKSPACE = "{module}/{model}/{notebook}"\nMODEL_NAME = "{name}"\n{version_line}\nGOLDEN = "{model}_{notebook}_golden"\nCONSTANTS = {{"{module}_{model}_out": 1}}\n'
         ),
     ]
@@ -170,13 +170,16 @@ def _scaffold_notebook(module, model, notebook, name, flavor):
     cells += [
         section("Package", "5, package.", "write the golden samples, build the signature and write the project with its evaluation (R1, R3, R14)."),
         code(
-            "from asystem.model import build_signature, signature_input, signature_output, package_project, register_project\n\n"
+            "from asystem.model import build_signature, signature_input, signature_output, package_project, register_project\n"
+            + ("from asystem.replay import replay_project\n" if static else "")
+            + "\n"
             f'golden_pl, golden_path = golden_data(WORKSPACE, GOLDEN, lambda: {{"{module}_{model}_in": [1.0, None], "expect": ["ok", "error"]}})\n\n'
             f'signature = build_signature(MODEL_NAME, [MODEL_VERSION], [signature_input("{module}_{model}_in", "none", "An input.")], [signature_output("{module}_{model}_out", "none", "An output.")])\n'
-            'project_dir = join(tempfile.mkdtemp(), "project")\n'
+            "project_dir = scratch_project_dir(WORKSPACE)\n"
             + (
                 'manifest = package_project(project_dir, MODEL_NAME, MODEL_VERSION, "static", signature, golden_pl.iter_rows(named=True), provenance("manual", "none", [golden_path], "scaffold"), constants=CONSTANTS)\n'
                 "print(json.dumps(manifest, indent=2))\n"
+                "findings = replay_project(project_dir)\nassert not findings, findings\n"
                 if static
                 else 'print("no model is fitted yet, so nothing is packaged")\n'
             )

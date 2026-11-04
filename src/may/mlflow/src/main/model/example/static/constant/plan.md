@@ -12,7 +12,7 @@ The plan for the `example_static_constant` worked example. It follows `spec.md`,
 | **Consumers** | A Python, a Rust and a Go loader |
 | **Worked Example** | The constants flow (`plans/mlflow.md` 4) |
 
-**Status, 2026-10-31.** The notebook writes, registers, pulls back and verifies the project. No consumer exists yet.
+**Status, 2026-11-03.** The notebook writes, verifies and replays the project through the Python, Rust and Go runners, and registers and pulls it back. No production consumer loads it yet.
 
 ## Intent
 

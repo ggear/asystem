@@ -25,7 +25,7 @@ Scale each input by a fitted gain and add a fitted offset, as an ONNX graph of a
 | Input | `example_onnx_in` | FP64 | The number to scale |
 | Output | `example_onnx_out` | FP64 | Gain times input plus offset |
 
-The graph is opset 21 at IR version 10, and its version is the metadata property `asystem.model_version`.
+The graph is opset 21 at IR version 10, and its version is the metadata property `asystem.model_version`. The golden states an absolute tolerance of 1e-9 on `example_onnx_out`, to show the form a learned graph needs, though this graph's float64 arithmetic is exact.
 
 ## Data
 

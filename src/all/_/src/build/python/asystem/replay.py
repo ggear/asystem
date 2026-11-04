@@ -21,6 +21,7 @@ def replay_project(project_dir):
     with open(join(project_dir, PROJECT_GOLDEN)) as golden_file:
         golden = json.load(golden_file)
     predict = _loader(project_dir, manifest, signature)
+    tolerance = golden.get("tolerance", {})
     required = {entry["name"] for entry in signature["inputs"] if entry["parameters"]["required"]}
     findings = []
     for sequence in golden["sequences"]:
@@ -37,9 +38,18 @@ def replay_project(project_dir):
             outputs = predict(inputs)
             for entry in step["response"]["outputs"]:
                 actual = outputs.get(entry["name"])
-                if actual != entry["data"]:
+                if not _within(actual, entry["data"], tolerance.get(entry["name"])):
                     findings.append(("RP003", f"step [{step_id}] output [{entry['name']}] is [{actual}] and the golden is [{entry['data']}]"))
     return findings
+
+
+def _within(actual, expected, bounds):
+    if actual is None or len(actual) != len(expected):
+        return False
+    if not bounds:
+        return actual == expected
+    absolute, relative = bounds.get("absolute", 0.0), bounds.get("relative", 0.0)
+    return all(abs(value - truth) <= absolute + relative * abs(truth) for value, truth in zip(actual, expected, strict=True))
 
 
 def gate_project(project_dir, runners=None):
@@ -67,6 +77,19 @@ def model_predict(model_path, flavor, signature):
     if flavor == "onnx":
         return _onnx_predict(model_path, signature)
     return _pyfunc_predict(model_path, signature)
+
+
+def merge_gates(documents):
+    if len({document["project_sha256"] for document in documents}) != 1:
+        raise ValueError("gate files are for different projects")
+    rows = {}
+    for document in documents:
+        for row in document["results"]:
+            key = (row["host"], row["arch"])
+            rows[key] = {**row, "passed": row["passed"] and rows.get(key, row)["passed"]}
+    ran = {host for host, _ in rows}
+    skipped = sorted({host for document in documents for host in document.get("skipped", [])} - ran)
+    return {"project_sha256": documents[0]["project_sha256"], "results": list(rows.values()), "skipped": skipped}
 
 
 def _loader(project_dir, manifest, signature):

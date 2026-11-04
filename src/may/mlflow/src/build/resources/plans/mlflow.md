@@ -47,7 +47,7 @@ open decisions, and MUST NOT restate the specification. Each notebook's own plan
   data under every split, a passing acceptance check and a golden file. `onnx` stamping (`metadata_props`) and the `wasm` ABI (`memory`, `predict(x, n, y)`) are built, and
   `onnx`, `onnxruntime` and `wasmtime` are pinned in `py_deps_prod.txt`.
 - Replay and the parity gate: `python -m asystem.model replay` and `gate` (Python, `wasmtime`, `onnxruntime`, `mlflow.pyfunc`), a Rust runner (`wasmi`) and a Go runner
-  (`wazero`) under `src/test/replay`, and `model.sh parity`, run by `model.sh check`, which writes a gate file per project on this host's architecture. A planted wrong
+  (`wazero`) under `src/test/replay`, and `model.sh parity`, run by `model.sh check`, which writes a gate file for every project the notebooks produce (the examples, `weewx/console/battery` and the `rackmains` default) for this machine's architecture and, with `SERVICE_LOCAL_RUNTIME=emulated` (the default), every other architecture in `.hosts` in a container, then merges them. The runners check file hashes too, and unit tests build them and replay a passing, an unsupported, a mismatched and a tampered project. A planted wrong
   golden value fails all three runtimes.
 - `src/max/rackmains/src/main/rust/rackmains/src/contract.rs` is generated from the `default` slot's `signature.json` by `generate.sh`.
 - `mlflow` has `influxdb3` as a run dependency for the notebooks' query, and the data libraries and `jupyterlab` are in its image.
@@ -66,22 +66,20 @@ open decisions, and MUST NOT restate the specification. Each notebook's own plan
 
 In order. Each item is done when its worked example (4) runs and passes.
 
-00. Serve a model: the `mlserver` bootstrap already refuses a pulled model whose `evaluation.json` did not pass, but `mlserver` is a stub that prints its version and sleeps, with no `mlserver start`, model repository or settings. It needs per-model `model-settings.json` with `version` read from the `MODEL_VERSION` line, a real health check, `mlserver` depending on the bootstrap, and only `pyfunc` through MLServer's MLflow runtime. Serve `release` only, so the unversioned URL reaches it: MLServer sends an unversioned call to the highest loaded version.
-0. Give a model its first passing acceptance. `weewx/console/battery` has a provisional `backtest` check and records a failed verdict, since: its `validation` run only falls to 55 % and rises again, so a time-normalised truth like the `training` run's is false, and no row can be set without a labelled run or a reference gauge. A bound set after seeing a measurement, with a `reason`, is provisional.
-1. Worked examples for every flow in section 4, built first where they need nothing new and then alongside each feature below, so the code
+1. Serve a model: the `mlserver` bootstrap already refuses a pulled model whose `evaluation.json` did not pass, but `mlserver` is a stub that prints its version and sleeps, with no `mlserver start`, model repository or settings. It needs per-model `model-settings.json` with `version` read from the `MODEL_VERSION` line, a real health check, `mlserver` depending on the bootstrap, and only `pyfunc` through MLServer's MLflow runtime. Serve `release` only, so the unversioned URL reaches it: MLServer sends an unversioned call to the highest loaded version.
+2. Give a model its first passing acceptance. `weewx/console/battery` has a provisional `backtest` check and records a failed verdict, since: its `validation` run only falls to 55 % and rises again, so a time-normalised truth like the `training` run's is false, and no row can be set without a labelled run or a reference gauge. A bound set after seeing a measurement, with a `reason`, is provisional.
+3. Worked examples for every flow in section 4, built first where they need nothing new and then alongside each feature below, so the code
    describes the spec and implements it.
-2. The `wasm` flavor: a builder for the first project that needs one (a module satisfying the ABI of `spec.md` 4.1), the `predict`
-   export, and `wasmtime-py` as a pinned dependency of the `mlflow` image. `asystem.model` already accepts the flavor and `write_project`
-   copies a workspace's model file into the project.
-3. The serving runtime in `mlserver`: `model-settings.json` generated from each pulled project's signature, a `ProjectRuntime` that verifies
+4. A builder for the first `wasm` project that needs one. The ABI (`spec.md` 4.1), the `wasmtime`, `wasmi` and `wazero` hosts and the `wasmtime` pin are built, and `example/wasm/accumulate` is hand-written WebAssembly text.
+5. The serving runtime in `mlserver`: `model-settings.json` generated from each pulled project's signature, a `ProjectRuntime` that verifies
    hashes at load and merges constants, `mlserver start` under `exec` once a model exists, and health checks on `/v2/health/live` and
    `/v2/health/ready`. Until then those checks are trivially true.
-4. A pin for `skl2onnx`, added when a fitted `scikit-learn` model is converted.
-5. `fab generate` in `mlflow`, `mlserver` and each consumer, so the generated `.env`, health scripts and compose inputs match.
-6. `register_project` logs a `pyfunc` project with `mlflow.pyfunc.log_model` (the project in `artifacts`, a column signature from `signature.json`) and every other flavor as plain artifacts. It refuses a `pyfunc` signature with a state vector, since MLflow's column signature has no vector. MLServer's MLflow runtime loading it is untested.
-7. Existing experiments keep their pre-proxy artifact location, the laptop path of the share, so their artifacts are not reachable
+6. A pin for `skl2onnx`, added when a fitted `scikit-learn` model is converted.
+7. `fab generate` in `mlflow`, `mlserver` and each consumer, so the generated `.env`, health scripts and compose inputs match.
+8. `register_project` logs a `pyfunc` project with `mlflow.pyfunc.log_model` (the project in `artifacts`, a column signature from `signature.json`) and every other flavor as plain artifacts. It refuses a `pyfunc` signature with a state vector, since MLflow's column signature has no vector. MLServer's MLflow runtime loading it is untested.
+9. Existing experiments keep their pre-proxy artifact location, the laptop path of the share, so their artifacts are not reachable
    through `--serve-artifacts`; they are to be migrated or left read-only.
-8. A release of `mlflow`, since the running server predates the allowed-hosts setting.
+10. A release of `mlflow`, since the running server predates the allowed-hosts setting.
 
 ## 4. Worked examples
 
@@ -163,7 +161,7 @@ Rust through `ort`.
 ## 6. Further tooling
 
 1. Use the generated types in `rackmains` once its Rust loader is built, and generate the Go types into the first Go consumer.
-2. Run the parity gate on both architectures: `model.sh parity` covers this host's architecture only, so the other needs ssh to a host of that architecture, and the Rust `ort` and Go `onnxruntime_go` runtimes for `onnx` are not built.
+2. A real-host run of the parity gate. `model.sh parity` covers both architectures, the second by emulation (`spec.md` 7.4), which cannot show a result that depends on the CPU. A learned `onnx` model needs a golden tolerance first, since the replay compares exactly, and the Rust `ort` and Go `onnxruntime_go` runtimes for `onnx` are not built. Native libraries are not yet pinned by hash per architecture (R11).
 3. Scaffolds that run: the scaffold writes a runnable `static` notebook, and the other flavors a notebook that stops at Package until the fit
    is written.
 
