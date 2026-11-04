@@ -1,5 +1,9 @@
 mlflow
 anyio
 fastapi
+numpy
+pandas
+onnxruntime
+wasmtime
 
 scikit-learn

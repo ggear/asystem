@@ -43,7 +43,7 @@ fi
 shopt -s expand_aliases
 
 if
-  /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && true # TODO: Provide implementation
+  /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && curl -sf --max-time 5 "http://${MLSERVER_SERVICE}:${MLSERVER_HTTP_PORT}/v2/health/ready" >/dev/null
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && exec {HEALTHCHECK_TRACE}>&- && wait "${HEALTHCHECK_TRACER}"

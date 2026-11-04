@@ -6,7 +6,15 @@ set -o errexit
 ROOT_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../.." && pwd)"
 PYENV_BIN="${HOME}/.pyenv/versions/asystem/bin"
 KERNEL_PATH="${ROOT_DIR}/src/main/python:${ROOT_DIR}/../../all/_/src/build/python"
-TARGET="${1:?usage: notebook.sh <module>/<model>/<notebook>, with REGISTER=1 to run the Register section}"
+if [[ "${1:-}" == "new" ]]; then
+  SCAFFOLD="${2:?usage: notebook.sh new <module>/<model>/<notebook> <static|wasm|onnx|pyfunc>}"
+  FLAVOR="${3:?usage: notebook.sh new <module>/<model>/<notebook> <static|wasm|onnx|pyfunc>}"
+  IFS=/ read -r SCAFFOLD_MODULE SCAFFOLD_MODEL SCAFFOLD_NOTEBOOK <<<"${SCAFFOLD}"
+  PYTHONPATH="${ROOT_DIR}/../../all/_/src/build/python" "${PYENV_BIN}/python" -m asystem.notebook new "${SCAFFOLD_MODULE}" "${SCAFFOLD_MODEL}" "${SCAFFOLD_NOTEBOOK}" "${FLAVOR}" --root "${ROOT_DIR}/src/main/model"
+  exit 0
+fi
+TARGET="${1:?usage: notebook.sh <module>/<model>/<notebook> [--register], or notebook.sh new <module>/<model>/<notebook> <flavor>}"
+[[ "${2:-}" == "--register" ]] && REGISTER=1
 OUTPUT_DIR="${ROOT_DIR}/target/notebook/${TARGET}"
 
 "${PYENV_BIN}/python" -m ipykernel install --user --name asystem --display-name "asystem (Python 3.12)" --env PYTHONPATH "${KERNEL_PATH}" >/dev/null

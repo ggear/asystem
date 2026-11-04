@@ -13,9 +13,7 @@ holds only what is specific to this model.
 | **Consumer** | Home Assistant, calling `mlserver` when the voltage changes; embedding in Home Assistant later |
 | **Worked Example** | The Python-only model flow (`plans/mlflow.md` 4) |
 
-**Status, 2026-11-03.** The notebook fits and writes `model.py` with the fitted attributes built in, then records a failed acceptance because the acceptance check
-has no labelled `backtest` run to measure. It still packages the `pyfunc` project with the golden steps from the shipped `model.py`, and registering it is a separate step. `fab release` is blocked by the failed verdict. Nothing consumes the project yet, and the weewx module still carries the old hand-copied snippet in
-Home Assistant.
+**Status, 2026-11-04.** The notebook fits, writes `model.py`, measures the shipped model against the incumbent curve on the `backtest` run and packages the `pyfunc` project. The rmse is 6.54 percent against a limit of 5, so acceptance is recorded as failed and the model cannot be promoted or served. The shipped steps of 5 floor the capacity (a bias of about -2 on their own) and the arctan reads about 5.6 points above the incumbent over the six-week plateau at 3.76 to 3.80 V, where the incumbent's cubic falls through 50 to 65 percent. Hosting it in `mlserver` needs either a limit the owner accepts (the arctan is a deliberate refit, so some disagreement is expected) or a refit that tracks the plateau.
 
 **Why `pyfunc`.** The consumers are Home Assistant calling `mlserver` and Python, and none needs to run offline or embedded. `pyfunc` keeps the exact
 arctan, where a `wasm` module could not, because `atan` has no exact cross-platform result (`spec.md` 4.2) and would need a piecewise-linear lookup. It
@@ -42,7 +40,7 @@ The model is stateless: the signature has no state slots.
 |---|---|---|
 | `training` | `console_battery_voltage_2024-06-06_2024-10-25` | The 2024 run, 1,137 samples, UTC, 3 hour steps |
 | `validation` | `console_battery_voltage_2026-08-13_2026-10-30` | The 2026 run, 813 on-change readings from InfluxDB |
-| `backtest` | None | |
+| `backtest` | `console_battery_incumbent_2026-08-13_2026-10-30` | The 2026 readings labelled by the incumbent Home Assistant curve: `compensation` degree 3 through the 36 data points in `custom_packages/diagnostics.yaml`, clamped to 0 to 100, rounded. Agreement with what runs today, not battery truth |
 | `golden` | `console_battery_voltage_golden` | The fixed voltages and expected percentages that become `golden.json` |
 
 **The 2024 run** runs from 3.965 V on 2024-06-06 through a plateau (3.80 to 3.55 V) and a knee from about 12 October to the 3.000 V

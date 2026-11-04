@@ -66,20 +66,18 @@ open decisions, and MUST NOT restate the specification. Each notebook's own plan
 
 In order. Each item is done when its worked example (4) runs and passes.
 
-1. Serve a model: the `mlserver` bootstrap already refuses a pulled model whose `evaluation.json` did not pass, but `mlserver` is a stub that prints its version and sleeps, with no `mlserver start`, model repository or settings. It needs per-model `model-settings.json` with `version` read from the `MODEL_VERSION` line, a real health check, `mlserver` depending on the bootstrap, and only `pyfunc` through MLServer's MLflow runtime. Serve `release` only, so the unversioned URL reaches it: MLServer sends an unversioned call to the highest loaded version.
-2. Give a model its first passing acceptance. `weewx/console/battery` has a provisional `backtest` check and records a failed verdict, since: its `validation` run only falls to 55 % and rises again, so a time-normalised truth like the `training` run's is false, and no row can be set without a labelled run or a reference gauge. A bound set after seeing a measurement, with a `reason`, is provisional.
+1. Serve a model: built and run locally against MLServer 1.7.1 (section 3b), not yet released. Open: the `release` of `mlserver`, then `model.sh ship` for an `example` model, which is the first real run of register, promote and pull in production.
+2. Give `weewx/console/battery` a passing acceptance so it can be served. Its `backtest` run is now the 2026 readings labelled by the incumbent Home Assistant curve (a degree 3 `compensation` through 36 points), which measures agreement with what runs today. The shipped arctan scores an rmse of 6.54 percent against the limit of 5 and fails: it reads about 5.6 points above the incumbent on the six-week plateau. The owner decides between a looser limit (the arctan is a deliberate refit) and a refit that tracks the plateau.
 3. Worked examples for every flow in section 4, built first where they need nothing new and then alongside each feature below, so the code
    describes the spec and implements it.
 4. A builder for the first `wasm` project that needs one. The ABI (`spec.md` 4.1), the `wasmtime`, `wasmi` and `wazero` hosts and the `wasmtime` pin are built, and `example/wasm/accumulate` is hand-written WebAssembly text.
-5. The serving runtime in `mlserver`: `model-settings.json` generated from each pulled project's signature, a `ProjectRuntime` that verifies
-   hashes at load and merges constants, `mlserver start` under `exec` once a model exists, and health checks on `/v2/health/live` and
-   `/v2/health/ready`. Until then those checks are trivially true.
+5. The serving runtime in `mlserver`: built (section 3b). Open: the `ProjectRuntime` serves one row per request, as the signature has no batch dimension, and gRPC is untested.
 6. A pin for `skl2onnx`, added when a fitted `scikit-learn` model is converted.
 7. `fab generate` in `mlflow`, `mlserver` and each consumer, so the generated `.env`, health scripts and compose inputs match.
 8. `register_project` logs a `pyfunc` project with `mlflow.pyfunc.log_model` (the project in `artifacts`, a column signature from `signature.json`) and every other flavor as plain artifacts. It refuses a `pyfunc` signature with a state vector, since MLflow's column signature has no vector. MLServer's MLflow runtime loading it is untested.
 9. Existing experiments keep their pre-proxy artifact location, the laptop path of the share, so their artifacts are not reachable
    through `--serve-artifacts`; they are to be migrated or left read-only.
-## 3a. Serving path as verified (2026-11-04, after releasing `mlflow` 10.200.1937 and `mlserver` 10.200.1939)
+## 3a. Serving path as found (2026-11-04, `mlflow` 10.200.1937 and `mlserver` 10.200.1939, before the runtime below was built)
 
 Both releases installed and report healthy. That is all they prove.
 
@@ -93,33 +91,31 @@ What this changes: the delivery path is proven only up to the registry. Pushing 
 
 ## 3b. Simplifications and additions
 
-Ordered by friction removed. Each one is a change to a tool, so each ships with its worked example (section 4).
+Built on 2026-11-04 unless marked open. Each ships with a unit test or the local MLServer run noted.
 
-Model workflow, from notebook to served:
-1. One command for the path, `model.sh ship <name>`: `check`, register as `candidate`, gate, promote to `release`, pull on `mlserver`, and wait until the model is `ready`. It takes `--dry-run` (stops before the first write) and `--to candidate|release`, and prints one line per stage with the version it produced. Today a model needs `notebook.sh REGISTER=1`, `promote.sh` with its hosts and architectures, a release, and `refresh`, each with its own usage.
-2. A model is declared once. `MLSERVER_MODELS` is generated from the registry's `release` aliases (or from the notebook directories whose latest `evaluation.json` passed), so adding a served model is the notebook plus a promotion and never an edit to `.env_all` (spec 6.9 step 9).
-3. A new-model scaffold, `notebook.sh new <module>/<model> --flavor static|wasm|onnx|pyfunc`: the notebook from `notebook.py`, `plan.md`, `.version`, a splits skeleton and the acceptance stub, copied from the matching `example/` so a first run passes.
-4. A notebook is runnable alone and fast: `notebook.sh <name> --only package` (no data query, no registry) for the inner loop, `--register` for the registry step, `--diff` to show what the project would change in the consumer's `default` slot. `REGISTER=1` as an environment switch is easy to forget and silent when missing.
-5. The registry client is the proxy, always. One `registry_uri()` in the library reads `MLFLOW_TRACKING_URI` and refuses a `host:port` URL, so the `403 Invalid Host header` surfaces as a named finding and not as a failed Register cell.
+Serving runtime (replaces the stub):
+- `mlserver` now runs MLServer. `entrypoint.sh` runs `python3 -m project_runtime.pull` and then `exec mlserver start` on the model directory. The pull is the only definition of "a pulled model passed" in the image: it downloads `models:/<name>@release`, checks every manifest hash and the acceptance verdict, writes `model-settings.json` (name, stamped version, signature) and a `settings.json` fixing the container ports, and replaces a model only after its new copy verified. It exits non-zero otherwise, so nothing serves. Models no longer declared are removed.
+- `project_runtime` is self-contained, since the image has no `asystem` library: `project.py` (load, verify, predict for static, wasm, onnx and pyfunc), `runtime.py` (the MLServer `MLModel`) and `pull.py`. `ServingRuntimeTest` compares it with `replay` for every flavor, so the two cannot drift, and a local MLServer 1.7.1 loaded the four `example` models and answered every golden step exactly through `/v2/models/<name>/infer`.
+- An empty `MLSERVER_MODELS` serves every registered model with a `release` alias, so promoting is what declares a model served. A list restricts it.
+- Health is real: `checkalive` is `/v2/health/live`, `checkexecuting` adds `/v2/health/ready` and `checkhealthy` adds that every model in `/v2/repository/index` is `READY`, all through `${MLSERVER_SERVICE}:${MLSERVER_HTTP_PORT}` so the bootstrap container can run them. The bootstrap now only prints what is served.
+- The `mlserver` systest checks live, ready, every model `READY`, and that every served model answers its golden file as pulled from the registry.
 
-Release and promotion:
-6. `refresh` goes away. `mlserver`'s release MUST run its bootstrap to completion and `mlserver` MUST `depends_on` it with `condition: service_completed_successfully`; a promotion then needs only `mlserver` redeployed (`fab deploy`), which `ship` does. If a restart without an image is wanted, it is `docker compose run --rm mlserver_bootstrap && docker restart mlserver`, which does not assume the container still exists.
-7. Promotion states its target, not its mechanics. `promote.sh` takes a model and returns the gate (project hash, hosts by flavor, architectures) from the project itself; `--hosts` and `--archs` remain overrides. A promotion writes the alias, a `promotion.json` into the model version (who, when, gate hash) and refuses a version whose `evaluation.json` is older than its project.
-8. Roll back by name: `model.sh rollback <name>` moves `release` to the previous version that passed, re-pulls and waits for `ready`. Rollback is today a manual alias edit followed by `refresh`.
-9. `model.sh status` prints one table per registered model: versions, aliases, the `candidate` and `release` project hashes, whether the consumer's `default` slot matches, whether `mlserver` has the `release` copy and whether it is `ready`. It reads the registry and `/v2/models` and writes nothing. It is also the answer to "is it served" when the container is merely `healthy`.
-
-Testing:
-10. A serving smoke test in `fab systest` for `mlserver`: start it with the `example/*` models in `MLSERVER_MODELS`, then replay each project's `golden.json` against `POST /v2/models/<name>/infer`, assert `ready`, and assert the served version equals the stamp. A real health check and this test are the gate the stub currently passes by being `true`.
-11. A scaffold lint that fails the build when a module with a `*_bootstrap` service has a `checkalive.sh` addressing `localhost` (the release hang), or any of `checkalive`, `checkexecuting` or `checkhealthy` is still `true` while the module's `MLSERVER_MODELS` is non-empty.
-12. `model.sh check` is incremental. A hash of each notebook's inputs (notebook, splits, `library`, `asystem.model`) against the last `target/model-output` skips an unchanged notebook, with `--all` to force. Parity is already cached; notebook runs are what remains of the minutes.
-13. A fixture project builder in `asystem.model` (`make_example_project(flavor, **overrides)`), used by the unit tests' per-flavor fixtures and by `notebook.sh new`, so a test no longer rebuilds a pyfunc, wasm and onnx project by hand.
+Workflow and release:
+- `model.sh ship <module>/<model>/<notebook> [--dry-run] [--reviewed-by <name>]` runs check, register, promote, the `mlserver` restart (waiting for `healthy`) and status. `--dry-run` stops after check.
+- `model.sh refresh` restarts `mlserver` and waits for `healthy`; there is no bootstrap container to rely on. `deploy.sh` is unchanged and calls it.
+- `model.sh status` joins slots, the registry and `/v2/repository/index` (`in_step` is true when the registry `release` is `READY` on the server). `model.sh rollback <name>` moves `release` to the previous promoted version whose acceptance passed, then restarts.
+- `promote.sh` finds the gate (`target/gate/<name>.json`) and the reviewer (`$USER`) itself; both remain overridable.
+- `notebook.sh new <module>/<model>/<notebook> <flavor>` scaffolds from `asystem.notebook new`, and `notebook.sh <target> --register` replaces `REGISTER=1`.
 
 Library:
-14. `asystem.model pull <name> [--alias release] --out <dir>` downloads beside the target, runs `check-release`, then renames into place, replacing the bootstrap's `rm -rf` then download then inline `python3 -c` test. It is the one definition of "a pulled model passed", used by the bootstrap, the consumer `generate.sh` pull and `ship`.
-15. `asystem.model settings <project>` writes MLServer's `model-settings.json` (name, version from the stamp, signature, runtime) as a pure function with a table test. This is the first half of the serving runtime (to do 5).
-16. A `Project` object, `Project.open(dir)`, giving manifest, signature, golden, flavor, `predict`, `replay` and `gate`, instead of module functions that each call `verify_project` and re-read the same three files.
-17. One `quiet_mlflow()` context manager for the pyfunc "add type hints" warning, which is raised while a model class is defined; today only `replay` stubs it, and the notebook run, `register_project` and the server loader still print it. The alternative is `_skip_type_hint_validation = True` in the pyfunc scaffold.
-18. Findings carry a fix hint. A rule id such as PJ003 or CP002 maps to one sentence of the command to run (`rerun the notebook`, `fab generate`), printed once at the end of `check` and `ship`, so a failure ends with the next step.
+- `registry_address` refuses a `host:port` registry URL (the 403 case). `quiet_mlflow()` is shared by `replay`. `fix_hints` prints one `HINT` line per class of finding after `lint`, `compare`, `check-release`, `replay` and `gate`, and for a failed command that names a rule.
+
+Open:
+- A `Project` object over the module functions, and a shared fixture builder replacing the per-flavor fixture in the unit tests.
+- An incremental `model.sh check` (skip a notebook whose inputs hash is unchanged).
+- A scaffold lint failing a module whose `checkalive.sh` addresses `localhost` while it has a `*_bootstrap` service.
+- `asystem.model pull` and the image's `project_runtime.pull` are two definitions of the same pull. They share the hash and acceptance rules by test only; merging needs the shared library in the image.
+- The first model through the real path: register, promote and serve in production. `example/*` pass acceptance and can go; `weewx/console/battery` fails it (below).
 
 ## 4. Worked examples
 

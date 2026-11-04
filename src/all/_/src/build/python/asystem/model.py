@@ -1,4 +1,5 @@
 import argparse
+import contextlib
 import glob
 import hashlib
 import json
@@ -9,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 from os.path import abspath, basename, dirname, isdir, isfile, join, relpath
+from unittest import mock
 
 PROJECT_SPEC_VERSION = 1
 CONSUMER_MODEL_PATH = "src/build/resources/model"
@@ -46,6 +48,18 @@ PROJECT_DATATYPES = ("FP64", "INT64")
 PROJECT_UNIT_SUFFIXES = {"seconds": "_seconds", "percent": "_pct", "volts": "_volts", "hertz": "_hertz", "watt hours": "_wh", "celsius": "_celsius"}
 PROJECT_REQUIRED_FILES = {"static": (), "wasm": ("model",), "onnx": ("model",), "pyfunc": ("model",)}
 PROJECT_SIGNATURE_ERROR = "signature"
+PROJECT_FIX_HINTS = {
+    "PJ": "rerun the notebook, since the committed or pulled project is not the one its manifest describes",
+    "NB": "fix the notebook structure, then run fab build in mlflow to restyle it",
+    "WS": "fix the workspace layout under src/main/model",
+    "AC": "fix the acceptance check or its data in the notebook and rerun it",
+    "CP": "rerun the notebook, read the diff and commit the new default slot, or fix the notebook if the diff is unwanted",
+    "RP": "the model no longer returns its golden file, fix the model or regenerate the golden file in the notebook",
+    "PM001": "run model.sh check so the parity gate covers every host and architecture",
+    "PM002": "register the project again, since the gate was run on a different one",
+    "PM004": "fix the acceptance failure and register again",
+    "PM005": "register the candidate again so it takes the next model version",
+}
 
 
 def registered_name(module, model, notebook):
@@ -488,6 +502,75 @@ def list_models(tracking_uri):
     return sorted(rows, key=lambda row: row["name"])
 
 
+def registry_address(uri):
+    from urllib.parse import urlparse
+
+    if not uri:
+        raise ValueError("MLFLOW_TRACKING_URI is not set")
+    if urlparse(uri).port is not None:
+        raise ValueError(f"registry address [{uri}] names a published port, use the proxy name, since the published port refuses every call but /health with an invalid host header")
+    return uri
+
+
+@contextlib.contextmanager
+def quiet_mlflow():
+    from mlflow.pyfunc.utils import data_validation
+
+    with mock.patch.object(data_validation, "color_warning"):
+        yield
+
+
+def served_models(mlserver_url):
+    import urllib.request
+
+    request = urllib.request.Request(f"{mlserver_url}/v2/repository/index", data=b"{}", headers={"Content-Type": "application/json"}, method="POST")
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            return {entry["name"]: {"version": entry.get("version"), "state": entry.get("state")} for entry in json.load(response)}
+    except (OSError, ValueError):
+        return None
+
+
+def status_rows(tracking_uri, mlserver_url, source_dir):
+    registry = {row["name"]: row for row in list_models(tracking_uri)}
+    served = served_models(mlserver_url) if mlserver_url else None
+    rows = [{**row, "registry_release": registry.get(row["name"], {}).get("release"), "registry_latest": registry.get(row["name"], {}).get("latest")} for row in slot_versions(source_dir)]
+    for name, row in registry.items():
+        shipped = None if served is None else served.get(name)
+        rows.append(
+            {
+                "registry": name,
+                "release": row["release"],
+                "latest": row["latest"],
+                "served_version": shipped["version"] if shipped else None,
+                "served_state": shipped["state"] if shipped else ("unreachable" if served is None else "absent"),
+                "in_step": row["release"] is not None and shipped is not None and shipped["version"] == row["release"] and shipped["state"] == "READY",
+            }
+        )
+    return rows
+
+
+def rollback_project(name, tracking_uri):
+    import mlflow
+    from mlflow import MlflowClient
+
+    mlflow.set_tracking_uri(tracking_uri)
+    mlflow.set_registry_uri(tracking_uri)
+    client = MlflowClient()
+    aliases = client.get_registered_model(name).aliases
+    if PROJECT_ALIAS_RELEASE not in aliases:
+        raise ValueError(f"model [{name}] has no [{PROJECT_ALIAS_RELEASE}] alias to roll back")
+    current = client.get_model_version(name, aliases[PROJECT_ALIAS_RELEASE]).tags.get("model_version")
+    earlier = sorted(
+        (int(match.group(1)), version) for alias, version in aliases.items() if (match := PROJECT_VERSION_ALIAS.match(alias)) and current is not None and int(match.group(1)) < int(current)
+    )
+    for number, version in reversed(earlier):
+        if client.get_model_version(name, version).tags.get("acceptance") == "passed":
+            client.set_registered_model_alias(name, PROJECT_ALIAS_RELEASE, version)
+            return str(number)
+    raise ValueError(f"model [{name}] has no earlier promoted version that passed acceptance than [{current}]")
+
+
 def slot_versions(source_dir):
     rows = []
     for slot in ("default", "release"):
@@ -718,6 +801,15 @@ def file_sha256(path):
     return digest.hexdigest()
 
 
+def fix_hints(rules):
+    hints = []
+    for rule in rules:
+        hint = PROJECT_FIX_HINTS.get(rule) or PROJECT_FIX_HINTS.get(rule[:2])
+        if hint and hint not in hints:
+            hints.append(hint)
+    return hints
+
+
 def main(arguments=None):
     parser = argparse.ArgumentParser(prog="asystem.model")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -732,6 +824,8 @@ def main(arguments=None):
     commands.add_parser("list")
     status = commands.add_parser("status")
     status.add_argument("source_dir")
+    status.add_argument("--mlserver")
+    commands.add_parser("rollback").add_argument("name")
     commands.add_parser("verify").add_argument("project_dir")
     commands.add_parser("replay").add_argument("project_dir")
     gate = commands.add_parser("gate")
@@ -753,29 +847,37 @@ def main(arguments=None):
     commands.add_parser("check-release").add_argument("project_dir")
     promote = commands.add_parser("promote")
     promote.add_argument("name")
-    promote.add_argument("--gate", required=True)
+    promote.add_argument("--gate")
     promote.add_argument("--hosts")
     promote.add_argument("--archs", default="x86_64,aarch64")
-    promote.add_argument("--reviewed-by", required=True)
+    promote.add_argument("--reviewed-by", default=os.environ.get("USER"))
     promote.add_argument("--workspaces")
     options = parser.parse_args(arguments)
     try:
+        tracking_uri = (
+            registry_address(os.environ.get("MLFLOW_TRACKING_URI"))
+            if options.command in ("pull", "resolve", "list", "rollback", "promote") or (options.command == "status" and os.environ.get("MLFLOW_TRACKING_URI"))
+            else None
+        )
         if options.command == "pull":
-            manifest = pull_model(options.name, options.selector, options.dest_dir, os.environ["MLFLOW_TRACKING_URI"], options.signature)
+            manifest = pull_model(options.name, options.selector, options.dest_dir, tracking_uri, options.signature)
             if manifest is None:
                 print(f"no registered model [{options.name}] selector [{options.selector}], nothing pulled")
             else:
                 print(f"pulled model [{options.name}] selector [{options.selector}] version [{manifest['model_version']}]")
-                print(json.dumps(resolve_model(options.name, options.selector, os.environ["MLFLOW_TRACKING_URI"]), sort_keys=True))
+                print(json.dumps(resolve_model(options.name, options.selector, tracking_uri), sort_keys=True))
         elif options.command == "resolve":
-            print(json.dumps(resolve_model(options.name, options.selector, os.environ["MLFLOW_TRACKING_URI"]), sort_keys=True))
+            print(json.dumps(resolve_model(options.name, options.selector, tracking_uri), sort_keys=True))
         elif options.command == "list":
-            for row in list_models(os.environ["MLFLOW_TRACKING_URI"]):
+            for row in list_models(tracking_uri):
                 print(json.dumps(row, sort_keys=True))
         elif options.command == "status":
-            registry = {row["name"]: row for row in list_models(os.environ["MLFLOW_TRACKING_URI"])} if os.environ.get("MLFLOW_TRACKING_URI") else {}
-            for row in slot_versions(options.source_dir):
-                print(json.dumps({**row, "registry_release": registry.get(row["name"], {}).get("release"), "registry_latest": registry.get(row["name"], {}).get("latest")}, sort_keys=True))
+            if os.environ.get("MLFLOW_TRACKING_URI"):
+                for row in status_rows(tracking_uri, options.mlserver, options.source_dir):
+                    print(json.dumps(row, sort_keys=True))
+            else:
+                for row in slot_versions(options.source_dir):
+                    print(json.dumps(row, sort_keys=True))
         elif options.command == "verify" and isdir(options.project_dir):
             manifest = verify_project(options.project_dir)
             print(f"verified model [{manifest['name']}] version [{manifest['model_version']}]")
@@ -783,11 +885,15 @@ def main(arguments=None):
             findings = lint_project(options.project_dir)
             for rule, message in findings:
                 print(f"{options.project_dir}: {rule} {message}", file=sys.stderr)
+            for hint in fix_hints(rule for rule, _ in findings):
+                print(f"HINT {hint}", file=sys.stderr)
             return 1 if findings else 0
         elif options.command in ("compare", "check-release"):
             findings = compare_project(options.output_dir, options.committed_dir) if options.command == "compare" else check_release(options.project_dir)
             for rule, message in findings:
                 print(f"{options.committed_dir if options.command == 'compare' else options.project_dir} {rule} {message}", file=sys.stderr)
+            for hint in fix_hints(rule for rule, _ in findings):
+                print(f"HINT {hint}", file=sys.stderr)
             return 1 if findings else 0
         elif options.command == "gate-merge":
             from asystem.replay import merge_gates
@@ -808,6 +914,8 @@ def main(arguments=None):
             document, findings = gate_project(options.project_dir, runners)
             for rule, message in findings:
                 print(f"ERROR {rule} {message}", file=sys.stderr)
+            for hint in fix_hints(rule for rule, _ in findings):
+                print(f"HINT {hint}", file=sys.stderr)
             if options.command == "gate":
                 _write_json(options.out, document)
             if findings:
@@ -820,13 +928,16 @@ def main(arguments=None):
                 _write_text(options.rust, render_rust(signature))
             if options.go:
                 _write_text(options.go, render_go(signature, options.go_package))
+        elif options.command == "rollback":
+            print(f"rolled model [{options.name}] alias [{PROJECT_ALIAS_RELEASE}] back to model version [{rollback_project(options.name, tracking_uri)}]")
         elif options.command == "promote":
-            version = promote_project(
-                options.name, os.environ["MLFLOW_TRACKING_URI"], options.gate, options.hosts.split(",") if options.hosts else None, options.archs.split(","), options.reviewed_by, options.workspaces
-            )
+            gate_path = options.gate or join(dirname(dirname(dirname(options.workspaces))), "target", "gate", f"{options.name}.json") if options.workspaces else options.gate
+            version = promote_project(options.name, tracking_uri, gate_path, options.hosts.split(",") if options.hosts else None, options.archs.split(","), options.reviewed_by, options.workspaces)
             print(f"promoted model [{options.name}] version [{version}] to alias [{PROJECT_ALIAS_RELEASE}]")
     except (ValueError, KeyError, OSError) as error:
         print(f"ERROR model command failed [{options.command}] [{error}]", file=sys.stderr)
+        for hint in fix_hints(re.findall(r"\b((?:PJ|NB|WS|PM|AC|CP|RP)\d{3})\b", str(error))):
+            print(f"HINT {hint}", file=sys.stderr)
         return 1
     return 0
 

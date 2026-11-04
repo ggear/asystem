@@ -1,8 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -o nounset
 set -o errexit
+set -o pipefail
 
-mlserver --version
-trap 'exit 0' TERM INT
-while true; do sleep 10 & wait $!; done
+export PYTHONPATH="/asystem/bin/python${PYTHONPATH:+:${PYTHONPATH}}"
+
+timeout 600 python3 -m project_runtime.pull
+exec mlserver start "${MLFLOW_MODEL_DIR}"

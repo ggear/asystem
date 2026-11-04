@@ -7,7 +7,7 @@ set -o pipefail
 ROOT_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../.." && pwd)"
 SOURCE_DIR="$(cd "${ROOT_DIR}/../.." && pwd)"
 PYENV_BIN="${HOME}/.pyenv/versions/asystem/bin"
-COMMAND="${1:?usage: model.sh <check|build|parity|refresh>}"
+COMMAND="${1:?usage: model.sh <check|build|parity|refresh|status|rollback|ship>}"
 export PYTHONPATH="${SOURCE_DIR}/all/_/src/build/python${PYTHONPATH:+:${PYTHONPATH}}"
 
 check() {
@@ -154,8 +154,64 @@ refresh() {
     echo "ERROR no host for label [${label}]" >&2
     return 1
   }
-  echo "Refreshing served models on [${host}]"
-  timeout 300 ssh -o ConnectTimeout=10 "root@${host}" "docker start -a mlserver_bootstrap && docker restart mlserver"
+  echo "Restarting mlserver on [${host}], which pulls every release model at start and is healthy only once each is ready"
+  # shellcheck disable=SC2016
+  timeout 900 ssh -o ConnectTimeout=10 "root@${host}" 'docker restart mlserver >/dev/null && until [ "$(docker inspect -f "{{.State.Health.Status}}" mlserver)" = healthy ]; do sleep 5; done' || {
+    echo "ERROR mlserver did not become healthy, see docker logs mlserver on [${host}]" >&2
+    return 1
+  }
+  echo "mlserver healthy"
+}
+
+env_value() {
+  sed -n "s/^$1=//p" "${ROOT_DIR}/.env" | tail -1 | tr -d '\r"'
+}
+
+status() {
+  local mlserver
+  mlserver="http://$(env_value MLSERVER_SERVICE_PROD):$(env_value MLSERVER_HTTP_PORT)"
+  MLFLOW_TRACKING_URI="$(sed -n 's/^MLFLOW_TRACKING_URI=//p' "${ROOT_DIR}/.env_all")" "${PYENV_BIN}/python" -W ignore -m asystem.model status "${SOURCE_DIR}" --mlserver "${mlserver}"
+}
+
+rollback() {
+  local name="${1:?usage: model.sh rollback <registered model>}"
+  MLFLOW_TRACKING_URI="$(sed -n 's/^MLFLOW_TRACKING_URI=//p' "${ROOT_DIR}/.env_all")" "${PYENV_BIN}/python" -W ignore -m asystem.model rollback "${name}"
+  refresh
+}
+
+ship() {
+  local target="${1:?usage: model.sh ship <module>/<model>/<notebook> [--dry-run] [--reviewed-by <name>]}" dry_run=0 reviewer="${USER}"
+  shift
+  while (($#)); do
+    case "$1" in
+      --dry-run) dry_run=1 ;;
+      --reviewed-by) reviewer="${2:?--reviewed-by needs a name}" && shift ;;
+      *)
+        echo "ERROR unknown option [$1]" >&2
+        return 1
+        ;;
+    esac
+    shift
+  done
+  local name="${target//\//_}"
+  echo "Ship [1/5] check"
+  check || return 1
+  [[ -f "${ROOT_DIR}/target/gate/${name}.json" ]] || {
+    echo "ERROR no parity gate for [${name}], the notebook produced no project" >&2
+    return 1
+  }
+  if ((dry_run)); then
+    echo "Ship dry run, would register [${target}] as candidate, promote [${name}] reviewed by [${reviewer}] and restart mlserver"
+    return 0
+  fi
+  echo "Ship [2/5] register"
+  "${ROOT_DIR}/src/main/resources/notebook.sh" "${target}" --register || return 1
+  echo "Ship [3/5] promote"
+  "${ROOT_DIR}/src/main/resources/promote.sh" "${name}" --reviewed-by "${reviewer}" || return 1
+  echo "Ship [4/5] serve"
+  refresh || return 1
+  echo "Ship [5/5] status"
+  status | grep -F "\"registry\": \"${name}\""
 }
 
 case "${COMMAND}" in
@@ -163,6 +219,9 @@ case "${COMMAND}" in
   build) build ;;
   parity) parity ;;
   refresh) refresh ;;
+  status) status ;;
+  rollback) rollback "${2:-}" ;;
+  ship) shift && ship "$@" ;;
   *)
     echo "ERROR unknown command [${COMMAND}]" >&2
     exit 1

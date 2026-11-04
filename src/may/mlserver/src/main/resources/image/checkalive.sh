@@ -43,7 +43,7 @@ fi
 shopt -s expand_aliases
 
 if
-  true # TODO: Provide implementation
+  curl -sf --max-time 5 "http://${MLSERVER_SERVICE}:${MLSERVER_HTTP_PORT}/v2/health/live" >/dev/null
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && exec {HEALTHCHECK_TRACE}>&- && wait "${HEALTHCHECK_TRACER}"

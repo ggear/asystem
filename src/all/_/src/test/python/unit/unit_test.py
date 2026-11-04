@@ -1336,6 +1336,100 @@ class ReplayTest(unittest.TestCase):
         self.assertTrue(document["results"][0]["passed"])
 
 
+class RegistryToolsTest(unittest.TestCase):
+    def test_the_registry_address_must_be_the_proxy_name_and_not_a_published_port(self):
+        from asystem.model import registry_address
+
+        self.assertEqual("https://mlflow.proxy.example.com", registry_address("https://mlflow.proxy.example.com"))
+        for uri in ("http://macmini-may.local:32413", "", None):
+            with self.assertRaises(ValueError):
+                registry_address(uri)
+
+    def test_a_finding_maps_to_one_hint_and_a_repeat_is_not_repeated(self):
+        from asystem.model import fix_hints
+
+        self.assertEqual(1, len(fix_hints(["PJ003", "PJ013", "PJ015"])))
+        self.assertEqual(2, len(fix_hints(["PJ003", "CP002"])))
+        self.assertEqual([], fix_hints(["ZZ999"]))
+
+    def test_status_joins_the_registry_with_what_the_server_has_ready(self):
+        from asystem.model import status_rows
+
+        registry = [{"name": "demo_a", "release": "1001", "latest": "1001"}, {"name": "demo_b", "release": "1002", "latest": "1002"}, {"name": "demo_c", "release": None, "latest": None}]
+        served = {"demo_a": {"version": "1001", "state": "READY"}, "demo_b": {"version": "1001", "state": "READY"}}
+        with mock.patch("asystem.model.list_models", return_value=registry), mock.patch("asystem.model.served_models", return_value=served):
+            rows = {row["registry"]: row for row in status_rows("https://registry.example.com", "http://server", tempfile.mkdtemp()) if "registry" in row}
+        self.assertEqual([True, False, False], [rows[name]["in_step"] for name in ("demo_a", "demo_b", "demo_c")])
+        self.assertEqual("absent", rows["demo_c"]["served_state"])
+        with mock.patch("asystem.model.list_models", return_value=registry), mock.patch("asystem.model.served_models", return_value=None):
+            rows = {row["registry"]: row for row in status_rows("https://registry.example.com", "http://server", tempfile.mkdtemp()) if "registry" in row}
+        self.assertEqual({"unreachable"}, {row["served_state"] for row in rows.values()})
+
+
+class ServingRuntimeTest(unittest.TestCase):
+    def setUp(self):
+        sys.path.insert(0, join(ROOT, "may/mlserver/src/main/python"))
+        self.addCleanup(sys.path.remove, join(ROOT, "may/mlserver/src/main/python"))
+
+    def project(self, flavor, **options):
+        return ReplayTest().project(flavor, **options)
+
+    def test_every_flavor_serves_what_replay_computes(self):
+        from asystem.replay import replay_project
+        from project_runtime.project import load_project
+
+        for flavor in ("pyfunc", "wasm", "onnx"):
+            project_dir = self.project(flavor)
+            self.assertEqual([], replay_project(project_dir), flavor)
+            served = load_project(project_dir).predict({"demo_in": [1.5]})
+            self.assertEqual({"demo_out": [3.0]}, served, flavor)
+
+    def test_the_settings_name_the_model_its_stamped_version_and_the_signature(self):
+        from project_runtime.project import RUNTIME, load_project
+
+        settings = load_project(self.project("wasm")).settings()
+        self.assertEqual(("demo_replay_double", "1", RUNTIME), (settings["name"], settings["parameters"]["version"], settings["implementation"]))
+        self.assertEqual(["demo_in"], [entry["name"] for entry in settings["inputs"]])
+        self.assertEqual(["demo_out"], [entry["name"] for entry in settings["outputs"]])
+
+    def test_a_missing_required_input_is_refused(self):
+        from project_runtime.project import load_project
+
+        with self.assertRaises(ValueError):
+            load_project(self.project("wasm")).predict({})
+
+    def test_a_changed_file_or_a_failed_acceptance_is_not_loaded(self):
+        from project_runtime.project import load_project
+
+        project_dir = self.project("wasm")
+        with open(join(project_dir, "model.wasm"), "ab") as model_file:
+            model_file.write(b"\0")
+        with self.assertRaisesRegex(ValueError, "checksum"):
+            load_project(project_dir)
+
+    def test_the_pull_keeps_a_model_only_when_it_loads(self):
+        import shutil
+
+        from project_runtime import pull
+
+        project_dir = self.project("onnx")
+        models_dir = tempfile.mkdtemp()
+
+        def download(artifact_uri, dst_path):
+            shutil.copytree(project_dir, join(dst_path, "model"))
+
+        with (
+            mock.patch.dict(os.environ, {"MLFLOW_TRACKING_URI": "http://registry.invalid", "MLFLOW_MODEL_DIR": models_dir, "MLSERVER_MODELS": "demo_replay_double"}),
+            mock.patch("mlflow.artifacts.download_artifacts", download),
+        ):
+            self.assertEqual(0, pull.main())
+            self.assertTrue(os.path.isfile(join(models_dir, "demo_replay_double", "model-settings.json")))
+            self.assertTrue(os.path.isfile(join(models_dir, "settings.json")))
+            with open(join(project_dir, "model.onnx"), "ab") as model_file:
+                model_file.write(b"\0")
+            self.assertEqual(1, pull.main())
+
+
 class NotebookLintTest(unittest.TestCase):
     def setUp(self):
         sys.path.insert(0, join(ROOT, "all/_/src/build/python"))

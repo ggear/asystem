@@ -40,6 +40,7 @@
     "src/may/mlflow/src/main/python",
     "src/may/mlflow/src/test/python",
     "src/may/mlserver/src/build/python",
+    "src/may/mlserver/src/main/python",
     "src/may/mlserver/src/test/python",
     "src/may/sonarr/src/build/python",
     "src/may/tempstat/src/build/python",

@@ -45,7 +45,7 @@ The key words MUST, MUST NOT, SHOULD and MAY are to be read as in RFC 2119.
 | R4 | Parity | Every number reported or shipped for a project, the fit included, MUST come from the shipped runtime of its flavor. A faster proxy MAY choose the fit, and the runtime MUST then reproduce the result. Exploration MAY use plain Python | No gap between pre-prod and prod numbers |
 | R5 | Parity | A project MUST NOT be given the alias `release` until a person has reviewed it and the parity gate has passed on every host and both architectures | A mismatch is caught before it ships |
 | R6 | Parity | Every dataset MUST be held under exactly one split, with each run wholly in one split. Held-out data MUST NOT be used to fit | An error estimate stays honest |
-| R7 | Delivery | A serving runtime MUST pull its project at bootstrap and MUST NOT load a model whose pull failed. An embedded consumer MUST pull only when `fab pull` runs and MUST commit the result | A served model is exactly the promoted one, and an embedded one is exactly the committed one |
+| R7 | Delivery | A serving runtime MUST pull its project when it starts and MUST NOT start serving, or load a model, whose pull failed. An embedded consumer MUST pull only when `fab pull` runs and MUST commit the result | A served model is exactly the promoted one, and an embedded one is exactly the committed one |
 | R8 | Delivery | A consumer MUST validate a project at load and MUST NOT use an invalid one. An embedded consumer that cannot do without an answer MUST fall back from its shipped `release` project to the last valid answer and then the `static` default, and MUST NOT depend on a served model. A served model that is down is down | A critical consumer always holds a full set of required outputs |
 | R9 | Delivery | Every decision MUST record the model version and project hash that produced it | Any outcome can be traced and replayed |
 | R10 | Change | A change of behaviour, being a new WebAssembly ABI version, a runtime or engine version or a signature version, MUST be a code release of the runtime and its consumers. A refit MUST replace only the model file and the hashes that cover it | A refit changes data, a release changes behaviour |
@@ -242,7 +242,7 @@ Every name MUST follow the module and dimension style the metrics use: `<module>
 | Module Directory | `<module>`, or `example` for a worked example | `rackmains`, `weewx`, `homeassistant`, `example` |
 | Model Directory | `<model>`, a group of related notebooks | `ups`, `console`, `forecast`, `hotwater`, `static` |
 | Notebook Directory | `<notebook>`, one notebook per directory, the notebook itself being `notebook.ipynb` | `battery`, `roof`, `temp`, `constant` |
-| Registered Model | `<module>_<model>_<notebook>`, also the name used in `MLSERVER_MODELS` | `rackmains_ups_battery`, `weewx_console_battery`, `weewx_forecast_roof`, `homeassistant_hotwater_temp`, `example_static_constant` |
+| Registered Model | `<module>_<model>_<notebook>`, also the name `mlserver` serves it under | `rackmains_ups_battery`, `weewx_console_battery`, `weewx_forecast_roof`, `homeassistant_hotwater_temp`, `example_static_constant` |
 | Dataset | `<model>_<notebook>_<dimension>...`, ending `_<start>_<end>` with the first and last date it covers unless it is `golden` | `console_battery_voltage_2024-06-06_2024-10-25`, `ups_battery_golden` |
 | Signature Input | The owning service's metric name, unchanged | `weatherstation_console_battery_voltage` |
 | Signature Output, State Slot or Constant | `<module>_<dimension>...` with a unit suffix | `weewx_console_battery_capacity_pct`, `rackmains_battery_remaining_seconds` |
@@ -293,10 +293,10 @@ A run held out for `validation` or `backtest` MUST NOT be moved into `training` 
 | `<module>/<model>/<notebook>/data/backtest/<ts>/<dataset>.csv` | Whole recorded runs | Copied from the consumer, or a query | The evaluate and replay cells, and the consumer's replay test |
 | `<module>/<model>/<notebook>/data/golden/<ts>/<dataset>.csv` | Fixed inputs with exact expected outputs | Generated from the shipped runtime, then committed | `write_project` (becomes `golden.json`) and the consumer's golden test |
 | `src/may/mlflow/target/notebook/<module>/<model>/<notebook>/notebook.ipynb` | An executed notebook | `notebook.sh`; not committed | A person reading the run |
-| MLflow Run and Registered Model `<name>` | The logged project and the aliases `candidate` and `release` | `register_project` | `pull_model`, the `mlserver` bootstrap |
+| MLflow Run and Registered Model `<name>` | The logged project and the aliases `candidate` and `release` | `register_project` | `pull_model`, the `mlserver` start-up pull |
 | `<consumer>/src/build/resources/model/default/` | The `static` default project, committed | The model's notebook, through `write_project` | The consumer's build, tests and image |
 | `<consumer>/src/build/resources/model/release/` | The embedded copy of the `release` project, committed | The consumer's `generate.sh` with the pull flag | The consumer's build, tests and image |
-| `/asystem/mnt/models/<name>/` in `mlserver` | The served copy of the `release` project | `mlserver`'s bootstrap | The serving runtime |
+| `/asystem/mnt/models/<name>/` in `mlserver` | The served copy of the `release` project | `mlserver`'s start-up pull | The serving runtime |
 
 ### 6.5 The data cache
 
@@ -436,7 +436,7 @@ absent from that project's gate file, and promotion requires only the runtimes t
 | 6 | Register | Notebook | `register_project(...)` | Registered version stamped with the next model version, alias `candidate` | The project verifies on the server side too |
 | 7 | Review and promote | A person | `promote.sh` sets the aliases `m<N>` and `release` and records the service version | The version consumers follow | The acceptance passed and the merged parity gate (7.4) passed on every host the flavor supports and both architectures |
 | 8 | Pull, embedded | The consumer's `generate.sh` | `python -m asystem.model pull <name> release <dir>/release --signature <dir>/default/signature.json` | The project in the consumer's `release` slot, unstaged, and its registry tags printed | The signature is unchanged, the hashes match and the stamp equals the registered model version |
-| 8 | Pull, served | `mlserver` bootstrap | `mlflow artifacts download models:/<name>@release` | `/asystem/mnt/models/<name>` | The download succeeded and its `evaluation.json` passed, else the bootstrap container fails and the model is not loaded |
+| 8 | Pull, served | `mlserver` entrypoint (`project_runtime.pull`) | `mlflow.artifacts.download_artifacts models:/<name>@release` | `/asystem/mnt/models/<name>` | The download succeeded, every file matches its manifest hash and its `evaluation.json` passed, else the entrypoint exits non-zero and nothing is served. The previous copy is replaced only after the new one verified |
 | 9 | Commit and release | A person | `git`, then the fab lifecycle | A release of the consumer | The consumer's own tests and the gate |
 
 ### 7.2 Fab lifecycle
@@ -450,10 +450,10 @@ Each task includes the ones before it.
 | `unittest` | `build`, then each module's unit tests (`unit_test.py`, `cargo test`, Go) | Project library tests in `_` and `mlflow`; the consumer's loader, golden and replay tests | No |
 | `systest` | `build`, then, for a module with `model.sh`, `model.sh check`, then bring the module up on a synthetic host and run its system test | The consumer runs with the committed project against its mock. `mlflow` runs every notebook, compares the committed slots and replays every project in each runtime on each architecture (7.4) | No |
 | `package` | `build`, then build the image | The project, and the pinned host library, go into the image | No |
-| `execute` | `generate`, then run the module locally | For `mlserver`, the bootstrap pulls `release` into the container | Served pull only |
+| `execute` | `generate`, then run the module locally | For `mlserver`, the entrypoint pulls `release` into the container | Served pull only |
 | `release` | Before tagging, for a module with `model.sh`, `model.sh check`; for a module with a committed `release` slot, `check_release` on it. Then per host: `package`, save the image, copy it, run `install.sh install` | A failed notebook run, comparison or replay, or a failed acceptance, stops the release. The consumer ships whatever project is in its tree; `mlserver` pulls at bootstrap after install | Served pull only |
 | `pull` | Backup of git-ignored files, `git pull --all`, install pinned dependencies, then `generate` for every module with the pull flag true | `generate.sh` runs `pull`, then `verify` | Embedded pull happens here and only here |
-| `deploy` | `generate`, then each module's `deploy.sh` if it has one | `mlflow`'s `deploy.sh` runs `model.sh check`, as `release` does, then `model.sh refresh`, which re-runs the `mlserver` bootstrap pull and restarts it, and pushes no image | Served pull only |
+| `deploy` | `generate`, then each module's `deploy.sh` if it has one | `mlflow`'s `deploy.sh` runs `model.sh check`, as `release` does, then `model.sh refresh`, which restarts `mlserver` (its entrypoint pulls again) and waits until it is healthy, and pushes no image | Served pull only |
 
 ### 7.3 Consequences
 
@@ -461,8 +461,8 @@ Each task includes the ones before it.
 - `fab pull` also backs up git-ignored files and runs `git pull --all`, whose autostash unstages the index. To refresh only a project,
   run `PYTHONPATH=src/all/_/src/build/python python -m asystem.model pull <name> release <dir>/release --signature <dir>/default/signature.json` with
   `MLFLOW_TRACKING_URI` set, then review the diff.
-- A served runtime takes `release` at bootstrap, which runs when its container starts, so moving the alias changes what the next
-  bootstrap pulls and a served refit needs no consumer release. An embedded consumer needs the pull, a commit and a release.
+- A served runtime takes `release` when its container starts, so moving the alias changes what the next
+  start pulls and a served refit needs no consumer release. An embedded consumer needs the pull, a commit and a release.
 - A signature change fails the pull's signature comparison by design. It is a new `signature_version`, a release of the consumer, and a
   new model name or version served side by side while consumers move.
 
@@ -504,7 +504,7 @@ The gate file is the evidence for R5. It is one JSON document for one project:
 8. Register with `register_project(project_dir, name, tracking_uri)`. It logs and registers the project and sets the alias `candidate`, and an unchanged project, by the SHA-256 of its `project.json` in the tag `project_sha256`, reuses its version. A
    person sets `release` after review. The experiment MUST be created after the proxy is on, since older experiments keep their old
    artifact location.
-9. Ship it. For a served model, add the registered name to `MLSERVER_MODELS` in `src/may/mlserver/.env_all`. For embedded, give the consumer a
+9. Ship it. For a served model, run `model.sh ship <module>/<model>/<notebook>` (check, register, promote, restart `mlserver`, status); an empty `MLSERVER_MODELS` serves every `release` model, so nothing is edited. For embedded, give the consumer a
    `generate.sh` as in section 8.1.
 10. Consume it through a loader that validates the project at start, applies the fallback order, carries the state between calls and
     records the model version and project hash wherever a decision is logged.
@@ -539,14 +539,15 @@ MLflow owns data and lifecycle, MLServer only serves, and nothing is shared by a
 | Project Code | `_` module, `asystem.model` | One implementation, unit tested, and also a command: `python -m asystem.model` |
 | Tracking DB, Registry, Artifact Storage | `mlflow` only | MUST run `--serve-artifacts` with `--artifacts-destination` on its own volume and `--default-artifact-root mlflow-artifacts:/`, so no client writes a path or needs a share |
 | Allowed Hosts | `mlflow` `.env_all` | MUST set `--allowed-hosts` and `--cors-allowed-origins`, since MLflow 3 rejects an unknown `Host` header |
-| Models in `mlserver` | A local volume | MUST pull by alias at bootstrap, MUST fail the bootstrap on a failed pull or on a pulled `evaluation.json` whose `passed` is not true, and MUST bound every call with a timeout |
+| Models in `mlserver` | A local volume | MUST pull by alias in the entrypoint before `mlserver start`, MUST exit non-zero on a failed pull, a hash mismatch or a pulled `evaluation.json` whose `passed` is not true, MUST replace a model only after its new copy verified, and MUST bound every call with a timeout |
 | Embedded Copies | The consumer's tree | MUST be pulled by the consumer's `generate.sh`, reviewed as a diff, and never fetched at build or run time |
 | Server Start | `mlflow` entrypoint | MUST run under `exec` with `pipefail`, and a failed `mlflow db upgrade` MUST stop the start |
 | Bootstrap and Checks | `mlflow`, `mlserver` | `bootstrap.sh` runs in a separate `<name>_bootstrap` container, so any probe in `checkalive.sh` MUST address the service by `${<NAME>_SERVICE}:${<NAME>_HTTP_PORT}` and never `localhost`, which `checkexecuting.sh` and `checkhealthy.sh` may use only for checks that run inside the service container |
-| Serving Start | `mlserver` | MUST NOT report healthy until `/v2/health/ready` passes and every name in `MLSERVER_MODELS` is ready; a stub that only runs the process MUST NOT pass `checkhealthy.sh` as `true` once a model is listed |
-| Serving Release | `mlserver` | A release MUST run the bootstrap to completion and `mlserver` MUST wait for it (`service_completed_successfully`), so a failed pull or a failed acceptance stops the start. A restart for a promotion MUST NOT depend on a stopped `*_bootstrap` container still existing, because none remains after an install |
+| Serving Start | `mlserver` | `checkalive` MUST be `/v2/health/live`, `checkexecuting` MUST add `/v2/health/ready`, and `checkhealthy` MUST add that every model in `/v2/repository/index` is `READY`, each through `${MLSERVER_SERVICE}:${MLSERVER_HTTP_PORT}` |
+| Serving Runtime | `mlserver`, `project_runtime` | MUST load a project only after every file matches its manifest hash and its acceptance passed; MUST write `model-settings.json` (name, the stamped model version, signature) and a `settings.json` fixing the container ports; MUST answer `/v2/models/<name>/infer` for every flavor with the same outputs as `replay`; MUST refuse a request missing a required input. It is self-contained, since the image carries no `asystem` library, so a unit test MUST compare it with `replay` per flavor |
+| Serving Release | `mlserver` | A release or a restart MUST pull in the entrypoint, so a promotion needs only a restart, which waits for `healthy`. `healthy` MUST mean every model in the repository index is `READY`. The `<name>_bootstrap` container only reports what is served and MUST NOT be needed by a restart |
 | Registry Address | Every client | MUST use the proxy name from `MLFLOW_TRACKING_URI`; the published `host:port` answers `/health` only and returns `403 Invalid Host header` elsewhere, and a client MUST report that as a finding |
-| Declared Models | `MLSERVER_MODELS` | SHOULD be generated from the registry's `release` aliases and not hand-listed, so a served model is declared once |
+| Declared Models | `MLSERVER_MODELS` | An empty value MUST serve every registered model that has a `release` alias, and a list MUST restrict serving to those names, so promoting a model is what declares it to be served |
 | Serving Smoke Test | `fab systest` in `mlserver` | MUST start with the `example` models, replay each project's `golden.json` through `/v2/models/<name>/infer` and fail on a model that is not `ready` or whose served version differs from its stamp |
 | Status and Rollback | `model.sh` | `status` MUST read without writing and show each model's versions, aliases, hashes and whether it is `ready` on `mlserver`; `rollback` MUST move `release` only to a version whose acceptance passed and wait for `ready` |
 | Health | Both services | MUST be real checks with every `curl` bounded; `mlflow` healthy MUST also read the registry and experiments API |
