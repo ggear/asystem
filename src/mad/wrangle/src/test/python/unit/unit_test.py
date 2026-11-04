@@ -311,7 +311,7 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
-    # A moved balance appends a reading and sweeps seven years of transactions into their year files
+    # A moved balance appends a reading and sweeps transactions back to the 2021-05-01 epoch into their year files, leaving older ones out
     def test_bank_local_partial_7(self):
         self._bank_run(
             "partial_7",
@@ -329,7 +329,8 @@ class WrangleTest(unittest.TestCase):
                     assert_file_column_values("Merchant Code", ["5812"]),
                     assert_file_column_values("Bank Code", ["FOOD_AND_DRINK"]),
                 ],
-                "redbark_transactions_2020.csv": [assert_file_column_values("Source ID", ["t0"])],
+                "redbark_transactions_2021.csv": [assert_file_column_values("Source ID", ["t0"])],
+                "redbark_transactions_2020.csv": [assert_file_does_not_exist()],
                 "redbark_transactions_2018.csv": [assert_file_does_not_exist()],
                 "__bank_balances_current.csv": [assert_file_size(min_rows=3, max_rows=3)],
                 "__bank_transactions_current.csv": [assert_file_size(min_rows=2, max_rows=2)],

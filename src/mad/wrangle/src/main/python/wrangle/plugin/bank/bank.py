@@ -523,6 +523,9 @@ class Bank(plugin.Plugin):
         def _bank_years() -> list[int]:
             return sorted({_bank_file(_path)[1] for _path in _bank_paths("redbark_transactions", "manual_transactions")})
 
+        def _bank_tab_years() -> list[int]:
+            return [_year for _year in _bank_years() if _year >= TRANSACTIONS_EPOCH.year]
+
         def _bank_held() -> pl.DataFrame:
             if not held_cache:
                 held_cache.append(
@@ -580,7 +583,7 @@ class Bank(plugin.Plugin):
 
         # 1.2 Download Sheet
         started_time = time.time()
-        sheet_years = sorted({*_bank_years(), today.year})
+        sheet_years = sorted({*_bank_tab_years(), today.year})
         sheet_tabs = ["Accounts", "Classifier", "Balances", *(f"Transactions_{year}" for year in sheet_years)]
         sheet_results = self.sheet_download(sheet_key, "Bank", sheet_tabs, schema=TABS_SCHEMA)
         sheet_files: dict[str, str] = {tab: result.file_paths[0] for tab, result in sheet_results.items() if result.file_status != plugin.DownloadStatus.FAILED}
@@ -2516,7 +2519,7 @@ class Bank(plugin.Plugin):
                 tabs_status["Balances"] = _bank_tab_uploaded("Balances", balances_sheet_df, BALANCES_RAW_COLUMNS, {"Balance": BALANCES_BALANCE_FORMULA}, {}, manual_cells, BALANCES_SCHEMA)
 
             # 9.3 Upload Transactions Tabs
-            transactions_tab_years = sorted({*_bank_years(), *(int(tab.rsplit("_", 1)[-1]) for tab in sheet_files if re.fullmatch(r"Transactions_\d{4}", tab))})
+            transactions_tab_years = sorted({*_bank_tab_years(), *(int(tab.rsplit("_", 1)[-1]) for tab in sheet_files if re.fullmatch(r"Transactions_\d{4}", tab))})
             sheet_columns = list(TRANSACTIONS_YEAR_TAB_SCHEMA)
             for year in transactions_tab_years:
                 tab = f"Transactions_{year}"
