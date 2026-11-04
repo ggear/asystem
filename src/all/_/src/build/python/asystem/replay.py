@@ -4,6 +4,7 @@ import platform
 import struct
 import subprocess
 from os.path import join
+from unittest import mock
 
 from asystem.model import PROJECT_GOLDEN, PROJECT_MANIFEST, PROJECT_SIGNATURE, file_sha256, verify_project
 
@@ -158,11 +159,13 @@ def _onnx_predict(model_path, signature):
 def _pyfunc_predict(model_path, signature):
     import pandas
     from mlflow.models import model as mlflow_model
+    from mlflow.pyfunc.utils import data_validation
 
     spec = importlib.util.spec_from_file_location("project_model", model_path)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    with mock.patch.object(data_validation, "color_warning"):
+        spec.loader.exec_module(module)
     instance = getattr(mlflow_model, "__mlflow_model__")  # noqa: B009
     outputs = signature["outputs"]
 

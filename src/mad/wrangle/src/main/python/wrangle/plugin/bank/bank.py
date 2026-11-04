@@ -8,7 +8,7 @@
 #        1.2  Download Sheet: read the input tabs, versioning changed ones
 #     2. Load: parse the operator's dimension tabs
 #        2.1  Load Classifier: parse the rules, holding an edit in error
-#        2.2  Load Accounts: parse them, filling Redbark ids weekly or on edit
+#        2.2  Load Accounts: parse them, filling Redbark ids weekly or on edit  [F] refetch the list
 #     3. Merge: apply operator edits to the golden files
 #        3.1  Normalise Files: fill and check manual files changed on Drive     [R] every manual file
 #        3.2  Merge Transactions Tabs: take cells edited since the base
@@ -838,6 +838,8 @@ class Bank(plugin.Plugin):
                 accounts_call_reason = "tab edit"
             elif accounts_age_days is None or accounts_age_days >= ACCOUNTS_CHECK_DAYS:
                 accounts_call_reason = "weekly"
+            elif plugin.config.force_downloads:
+                accounts_call_reason = "force"
             if accounts_call_reason is not None and _bank_accounts_fetched(accounts_call_reason):
                 _bank_accounts_filled(pl.col("Status").is_null() | pl.col("Status").is_in([ACCOUNT_STATUS_LINKED, ACCOUNT_STATUS_MISSING, ACCOUNT_STATUS_DUPLICATE]), False)
         self.print_log(
