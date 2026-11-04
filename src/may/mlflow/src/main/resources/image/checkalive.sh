@@ -43,7 +43,7 @@ fi
 shopt -s expand_aliases
 
 if
-  curl -sf --max-time 5 "http://localhost:5000/health" >/dev/null
+  curl -sf --max-time 5 "http://${MLFLOW_SERVICE}:${MLFLOW_HTTP_PORT}/health" >/dev/null
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && exec {HEALTHCHECK_TRACE}>&- && wait "${HEALTHCHECK_TRACER}"
