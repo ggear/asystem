@@ -2,8 +2,8 @@ import os.path
 import shutil
 import tempfile
 
-from asystem.model import PROJECT_VERSION_FILE
-from library.config import CONSUMER_MODEL_PATH, CONSUMER_SLOTS, MODEL_DIR, SOURCE_DIR
+from asystem.model import CONSUMER_MODEL_PATH, PROJECT_VERSION_FILE
+from library.config import CONSUMER_SLOTS, MODEL_DIR, SOURCE_DIR
 
 
 def consumer_project_dir(consumer, slot, source_dir=SOURCE_DIR, output_dir=None):

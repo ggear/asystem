@@ -49,7 +49,7 @@ The key words MUST, MUST NOT, SHOULD and MAY are to be read as in RFC 2119.
 | R8 | Delivery | A consumer MUST validate a project at load and MUST NOT use an invalid one. An embedded consumer that cannot do without an answer MUST fall back from its shipped `release` project to the last valid answer and then the `static` default, and MUST NOT depend on a served model. A served model that is down is down | A critical consumer always holds a full set of required outputs |
 | R9 | Delivery | Every decision MUST record the model version and project hash that produced it | Any outcome can be traced and replayed |
 | R10 | Change | A change of behaviour, being a new WebAssembly ABI version, a runtime or engine version or a signature version, MUST be a code release of the runtime and its consumers. A refit MUST replace only the model file and the hashes that cover it | A refit changes data, a release changes behaviour |
-| R11 | Change | Every runtime library MUST be pinned, and native libraries MUST be pinned by hash per architecture. Any upgrade MUST re-run the parity gate | Parity holds only while the runtimes do not move |
+| R11 | Change | Every runtime library MUST be pinned, and a native library SHOULD be pinned by hash. Any upgrade MUST re-run the parity gate | Parity holds only while the runtimes do not move |
 | R12 | Standard | Every name MUST follow section 6.1: lowercase `<module>_<dimension>` style with a unit suffix on numeric measures | A name tells you the owner and what is measured |
 | R13 | Standard | Every project, notebook and workspace MUST pass the checks of section 10 | The requirements are enforced by tools and not by reading |
 | R14 | Parity | A project that is not `static` MUST carry an evaluation from an acceptance check its notebook defines, run through its shipped runtime, and MUST NOT be given the alias `release` unless every gating check has passed | Every model is enforced against its own limits, and the outcome is recorded the same way for all |
@@ -434,7 +434,7 @@ absent from that project's gate file, and promotion requires only the runtimes t
 | 4 | Evaluate | Notebook | Shipped runtime over `validation` and `backtest` | Metrics, `evaluation.json`, golden sequences | Every gating acceptance check passes |
 | 5 | Package | Notebook | `write_project`, then `verify_project` | Project directory | Manifest, hashes, signature and golden agree |
 | 6 | Register | Notebook | `register_project(...)` | Registered version stamped with the next model version, alias `candidate` | The project verifies on the server side too |
-| 7 | Review and promote | A person | `promote.sh` sets the aliases `m<N>` and `release` and records the service version | The version consumers follow | The acceptance passed and the merged parity gate (7.4) passed on every host the flavor supports and both architectures |
+| 7 | Review and promote | A person | `model.sh promote` sets the aliases `m<N>` and `release` and records the service version | The version consumers follow | The acceptance passed and the merged parity gate (7.4) passed on every host the flavor supports and both architectures |
 | 8 | Pull, embedded | The consumer's `generate.sh` | `python -m asystem.model pull <name> release <dir>/release --signature <dir>/default/signature.json` | The project in the consumer's `release` slot, unstaged, and its registry tags printed | The signature is unchanged, the hashes match and the stamp equals the registered model version |
 | 8 | Pull, served | `mlserver` entrypoint (`registry.pull`) | `mlflow.artifacts.download_artifacts models:/<name>@release` | `/asystem/mnt/models/<name>` | The download succeeded, every file matches its manifest hash and its `evaluation.json` passed, else the entrypoint exits non-zero and nothing is served. The previous copy is replaced only after the new one verified |
 | 9 | Commit and release | A person | `git`, then the fab lifecycle | A release of the consumer | The consumer's own tests and the gate |
@@ -484,7 +484,7 @@ The gate file is the evidence for R5. It is one JSON document for one project:
 - A gate file from a real host of another architecture is merged by hand with `python -m asystem.model gate-merge --out <file> <gate> <gate>`. It refuses files for
   different projects, keeps a failure if either file has one, and drops a skipped runtime that ran in any file. Emulation runs the real instruction set but not the real
   hardware, so a result that depends on the CPU, as a transcendental function can, needs a run on a real host.
-- `promote.sh --gate <file> --reviewed-by <name>` requires a passed row for each runtime the flavor supports, `PROJECT_RUNTIMES`, on each architecture of `--archs`. A
+- `model.sh promote <name> [--gate <file>] [--reviewed-by <name>]`, whose gate defaults to `target/gate/<name>.json` and reviewer to `$USER`, requires a passed row for each runtime the flavor supports, `PROJECT_RUNTIMES`, on each architecture of `--archs`. A
   `static` or `wasm` project needs `python`, `rust` and `go`; an `onnx` or `pyfunc` project needs `python`. `--hosts` overrides it.
 - The gate is bound to the project by hash, so a change to the project, including a restamp, needs a new gate.
 
@@ -546,7 +546,7 @@ MLflow owns data and lifecycle, MLServer only serves, and nothing is shared by a
 | Serving Start | `mlserver` | `checkalive` MUST be `/v2/health/live`, `checkexecuting` MUST add `/v2/health/ready`, and `checkhealthy` MUST add that every model in `/v2/repository/index` is `READY`, each through `${MLSERVER_SERVICE}:${MLSERVER_HTTP_PORT}` |
 | Serving Runtime | `mlserver`, `serving` | MUST load a project only after every file matches its manifest hash and its acceptance passed; MUST write `model-settings.json` (name, the stamped model version, signature) and a `settings.json` fixing the container ports; MUST answer `/v2/models/<name>/infer` for every flavor with the same outputs as `replay`; MUST refuse a request missing a required input. It is self-contained, since the image carries no `asystem` library, so a unit test MUST compare it with `replay` per flavor |
 | Serving Release | `mlserver` | A release or a restart MUST pull in the entrypoint, so a promotion needs only a restart, which waits for `healthy`. `healthy` MUST mean every model in the repository index is `READY`. The `<name>_bootstrap` container only reports what is served and MUST NOT be needed by a restart |
-| Telemetry | `mlflow`, `mlserver`, scripts | MUST be off: `MLFLOW_DISABLE_TELEMETRY=true` in `mlflow`'s `.env_all`, which every dependent inherits, passed through each compose file and exported by `model.sh`, `notebook.sh` and `promote.sh` |
+| Telemetry | `mlflow`, `mlserver`, scripts | MUST be off: `MLFLOW_DISABLE_TELEMETRY=true` in `mlflow`'s `.env_all`, which every dependent inherits, passed through each compose file and exported by `model.sh` and `notebook.sh` |
 | Registry Address | Every client | MUST use the proxy name from `MLFLOW_TRACKING_URI`; the published `host:port` answers `/health` only and returns `403 Invalid Host header` elsewhere, and a client MUST report that as a finding |
 | Declared Models | `MLSERVER_MODELS` | An empty value MUST serve every registered model that has a `release` alias, and a list MUST restrict serving to those names, so promoting a model is what declares it to be served |
 | Serving Smoke Test | `fab test-sys` in `mlserver` | MUST wait on `mlserver_bootstrap` like the other modules, read the port and registry address from the generated `.env`, and, once models are registered, MUST start with the `example` models, replay each project's `golden.json` through `/v2/models/<name>/infer` and fail on a model that is not `ready` or whose served version differs from its stamp |
@@ -559,7 +559,7 @@ MLflow owns data and lifecycle, MLServer only serves, and nothing is shared by a
 A project, a notebook and a workspace MUST pass the checks below (R13). Each check has an identifier, which the tool prints with its
 finding. A project is checked by `verify_project`, which `write_project`, `package_project`, `register_project` and `pull_model` call, and by
 `python -m asystem.model verify` and `python -m asystem.model lint`, which prints every finding. Promotion is checked by
-`check_gate` and `check_acceptance`, which `python -m asystem.model promote` calls. It is run with `src/main/resources/promote.sh` in the `mlflow` module, since `fab`
+`check_gate` and `check_acceptance`, which `python -m asystem.model promote` calls. It is run with `model.sh promote` in the `mlflow` module, since `fab`
 is for commands every module shares and promotion is specific to MLflow. A notebook is checked by `python -m asystem.notebook` and a workspace by `python -m asystem.workspace`,
 both run by `fab build`.
 
@@ -638,8 +638,8 @@ Common operations are in two places, so a notebook states what it means and not 
 | `asystem.model` | `register_project`, `pull_model` | Registers a project, stamping the next model version and logging its measured criteria as run metrics, and pulls one by selector |
 | `asystem.model` | `stamp_model`, `read_stamp`, `content_sha256`, `restamp_project`, `next_model_version` | Write, read and hash the version in a model file, restamp a project copy, and issue the next number |
 | `asystem.model` | `resolve_model`, `list_models`, `service_version`, `slot_versions` | Look up a model by selector, list the registry, read the latest release tag and list the versions in the consumer slots, through `resolve`, `list` and `status` |
-| `asystem.model` | `diff_signature`, `same_signature` | Names every difference between two signatures apart from `versions`, which a failed pull reports |
-| `asystem.model` | `render_rust`, `render_go` | Generate request and response types from `signature.json`, through `python -m asystem.model generate` |
+| `asystem.model` | `diff_signature` | Names every difference between two signatures apart from `versions`, which a failed pull reports |
+| `asystem.model` | `render_rust` | Generate Rust request and response types from `signature.json`, through `python -m asystem.model generate` |
 | `asystem.model` | `measure`, `evaluate_acceptance` | Measures a prediction against its truth with numpy, and runs a notebook's acceptance check into `evaluation.json` with the outcome and budget of each check |
 | `asystem.model` | `compare_project`, `check_release` | Compare a re-run with the committed project (CP001 to CP003), and check that a `release` slot's acceptance passed |
 | `asystem.replay` | `replay_project`, `gate_project`, `merge_gates`, `model_predict` | Replay a project's golden through its runtime and compare every response exactly, write the gate file from the Python result and the Rust and Go runners (RP001 to RP005), merge the files of several architectures, and load a model file as a predict function, through `python -m asystem.model replay`, `gate` and `gate-merge` |

@@ -55,7 +55,7 @@ def main():
                 json.dump(settings, settings_file, indent=2, sort_keys=True)
             target_dir = join(models_dir, name)
             shutil.rmtree(target_dir, ignore_errors=True)
-            shutil.copytree(project_dir, target_dir)
+            os.rename(project_dir, target_dir)
             print(f"Pulled model [{name}] alias [{ALIAS}] version [{project.version}]")
         finally:
             shutil.rmtree(staging_dir, ignore_errors=True)

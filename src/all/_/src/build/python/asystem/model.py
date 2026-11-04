@@ -32,7 +32,6 @@ PROJECT_REGISTRY_TAGS = ("model_version", "service_version", "project_sha256", "
 WASM_HEADER = b"\0asm\x01\x00\x00\x00"
 ACCEPTANCE_SPLITS = ("validation", "backtest")
 ACCEPTANCE_DIRECTIONS = ("max", "min")
-ACCEPTANCE_BUDGET = 1.0
 PROJECT_FLAVORS = ("static", "wasm", "onnx", "pyfunc")
 PROJECT_RUNTIMES = {"static": ("python", "rust", "go"), "wasm": ("python", "rust", "go"), "onnx": ("python",), "pyfunc": ("python",)}
 PROJECT_PLACEHOLDERS = ("tbd", "todo", "unknown", "none", "n/a", "not applicable", "to be determined")
@@ -658,10 +657,6 @@ def diff_signature(expected, actual):
     return findings
 
 
-def same_signature(expected, actual):
-    return not diff_signature(expected, actual)
-
-
 def render_rust(signature):
     required_inputs = [entry["name"] for entry in signature["inputs"] if entry["parameters"]["required"]]
     required_outputs = [entry["name"] for entry in signature["outputs"] if entry["parameters"]["required"]]
@@ -683,35 +678,6 @@ def render_rust(signature):
                 lines.append(f"    pub {entry['name']}: {rust_type},")
             else:
                 lines += ['    #[serde(default, skip_serializing_if = "Option::is_none")]', f"    pub {entry['name']}: Option<{rust_type}>,"]
-        lines.append("}")
-    return "\n".join(lines) + "\n"
-
-
-def render_go(signature, package):
-    required_inputs = [entry["name"] for entry in signature["inputs"] if entry["parameters"]["required"]]
-    required_outputs = [entry["name"] for entry in signature["outputs"] if entry["parameters"]["required"]]
-    lines = [
-        "// WARNING: This file is written by the build process, any manual edits will be lost!",
-        f"package {package}",
-        "",
-        f'const Name = "{signature["name"]}"',
-        f"const StateSlots = {len(signature['parameters'].get('state', []))}",
-        "",
-        f"var InputNames = []string{{{', '.join(_quoted(entry['name']) for entry in signature['inputs'])}}}",
-        f"var OutputNames = []string{{{', '.join(_quoted(entry['name']) for entry in signature['outputs'])}}}",
-        f"var RequiredInputNames = []string{{{', '.join(_quoted(name) for name in required_inputs)}}}",
-        f"var RequiredOutputNames = []string{{{', '.join(_quoted(name) for name in required_outputs)}}}",
-    ]
-    for struct, section in (("Request", "inputs"), ("Response", "outputs")):
-        fields = []
-        for entry in signature[section]:
-            go_type = _go_type(entry)
-            required = entry["parameters"]["required"]
-            fields.append((_camel(entry["name"]), go_type if required or go_type.startswith("[]") else f"*{go_type}", f'`json:"{entry["name"]}{"" if required else ",omitempty"}"`'))
-        name_width = max(len(name) for name, _, _ in fields)
-        type_width = max(len(go_type) for _, go_type, _ in fields)
-        lines += ["", f"type {struct} struct {{"]
-        lines += [f"\t{name.ljust(name_width)} {go_type.ljust(type_width)} {tag}" for name, go_type, tag in fields]
         lines.append("}")
     return "\n".join(lines) + "\n"
 
@@ -817,8 +783,6 @@ def main(arguments=None):
     generate = commands.add_parser("generate")
     generate.add_argument("project_dir")
     generate.add_argument("--rust")
-    generate.add_argument("--go")
-    generate.add_argument("--go-package", default="model")
     compare = commands.add_parser("compare")
     compare.add_argument("output_dir")
     compare.add_argument("committed_dir")
@@ -912,8 +876,6 @@ def main(arguments=None):
                 signature = json.load(signature_file)
             if options.rust:
                 _write_text(options.rust, render_rust(signature))
-            if options.go:
-                _write_text(options.go, render_go(signature, options.go_package))
         elif options.command == "rollback":
             print(f"rolled model [{options.name}] alias [{PROJECT_ALIAS_RELEASE}] back to model version [{rollback_project(options.name, tracking_uri)}]")
         elif options.command == "promote":
@@ -1118,15 +1080,6 @@ def _without_versions(signature):
 def _rust_type(entry):
     base = {"FP64": "f64", "INT64": "i64"}[entry["datatype"]]
     return f"Vec<{base}>" if entry["shape"] == [-1] else base
-
-
-def _go_type(entry):
-    base = {"FP64": "float64", "INT64": "int64"}[entry["datatype"]]
-    return f"[]{base}" if entry["shape"] == [-1] else base
-
-
-def _camel(name):
-    return "".join(part.capitalize() for part in name.split("_"))
 
 
 def _tensor(specs, name, value):

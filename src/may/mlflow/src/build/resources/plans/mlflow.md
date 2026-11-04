@@ -22,9 +22,9 @@ open decisions, and MUST NOT restate the specification. Each notebook's own plan
   finding with its identifier.
 - `python -m asystem.notebook new <module> <model> <notebook> <flavor>`, which scaffolds a notebook, a plan and the data directories that already pass
   `spec.md` section 10.
-- `diff_signature`, which a failed pull now reports, and `python -m asystem.model generate`, which writes Rust and Go request and response
-  types from `signature.json`. The Rust output compiles and the Go output passes `go vet` and `gofmt`; neither is wired into a consumer yet.
-- `check_gate` and `python -m asystem.model promote`, run by `src/main/resources/promote.sh`, which set the alias `release` only when a parity
+- `diff_signature`, which a failed pull now reports, and `python -m asystem.model generate`, which writes Rust request and response
+  types from `signature.json` (rackmains' `contract.rs`). A Go generator was removed, since no Go consumer exists.
+- `check_gate` and `python -m asystem.model promote`, run by `model.sh promote`, which set the alias `release` only when a parity
   gate file passes for this project (R5).
 - Acceptance (`spec.md` 6.8, R14): a notebook-defined `acceptance_checks` function run by `evaluate_acceptance`, which computes each check's outcome and budget from its value, limit and direction, writes `evaluation.json` into the project (AC001 to AC003, PM004), and has `register_project` log `acceptance_passed`, `acceptance_budget` and each measured value. `weewx/console/battery` uses it and records a failed verdict until a labelled `backtest` run exists.
 - `register_project` registers a non-`pyfunc` project through `create_model_version` on the run's artifact path, since MLflow 3 refuses `register_model` for plain artifacts.
@@ -110,13 +110,15 @@ Workflow and release:
 - `model.sh ship <module>/<model>/<notebook> [--dry-run] [--reviewed-by <name>]` runs check, register, promote, the `mlserver` restart (waiting for `healthy`) and status. It stops after check when that notebook's acceptance failed, since `check` itself records a failed verdict without failing, and `--dry-run` stops after check. The dry run was run for `example/static/constant`.
 - `model.sh refresh` restarts `mlserver` and waits for `healthy`; there is no bootstrap container to rely on. `deploy.sh` is unchanged and calls it.
 - `model.sh status` joins slots, the registry and `/v2/repository/index` (`in_step` is true when the registry `release` is `READY` on the server). `model.sh rollback <name>` moves `release` to the previous promoted version whose acceptance passed, then restarts.
-- `promote.sh` finds the gate (`target/gate/<name>.json`) and the reviewer (`$USER`) itself; both remain overridable.
+- `model.sh promote` replaces `promote.sh`, so `model.sh` is the one command for check, build, parity, refresh, status, promote, rollback and ship. It finds the gate (`target/gate/<name>.json`) and the reviewer (`$USER`) itself; both remain overridable.
 - `notebook.sh new <module>/<model>/<notebook> <flavor>` scaffolds from `asystem.notebook new`, and `notebook.sh <target> --register` replaces `REGISTER=1`.
 
 Library:
 - `registry_address` refuses a `host:port` registry URL (the 403 case). `fix_hints` prints one `HINT` line per class of finding after `lint`, `compare`, `check-release`, `replay` and `gate`, and for a failed command that names a rule. `status_rows` is a pure join of the registry rows, the server's index and the committed slots, tested without mocks, and `rollback_project` is tested against a real sqlite registry. The unit tests share one `demo_project` fixture for replay and serving.
 
-Review of this module against the project guidelines (2026-11-04) removed the single-call-site helpers it had added (`quiet_mlflow`, `served_models`, `write_settings`, `write_server_settings`, `_loader`, `_sha256`, `Project.settings`), bracketed every interpolated value in the new messages, dropped a test that asserted message wording, and made the pull report a missing project as an error. MLflow telemetry is off in `mlflow`'s `.env_all` (inherited by `mlserver`), in both compose files and in the scripts.
+Review against the project guidelines (2026-11-04) removed the single-call-site helpers it had added (`quiet_mlflow`, `served_models`, `write_settings`, `write_server_settings`, `_loader`, `_sha256`, `Project.settings`), bracketed every interpolated value in the new messages, dropped a test that asserted message wording, and made the pull report a missing project as an error. MLflow telemetry is off in `mlflow`'s `.env_all` (inherited by `mlserver`), in both compose files and in the scripts.
+
+A second full review removed `render_go` and its flags (no Go consumer exists), the unused `same_signature` and `ACCEPTANCE_BUDGET`, and the duplicate `CONSUMER_MODEL_PATH` in `library.config` (the owner is `asystem.model`). It merged `promote.sh` into `model.sh promote`, so one script now covers check, build, parity, refresh, status, promote, rollback and ship, made the pull move the verified project into place with a rename instead of a copy, and moved the serving code into `serving` and `registry`. It loosened R11 from "native libraries MUST be pinned by hash per architecture" to a SHOULD, since the pinned wheels already differ by architecture and nothing checked the rule.
 
 Open:
 - A `Project` object over the module functions, and a shared fixture builder replacing the per-flavor fixture in the unit tests.
@@ -126,6 +128,15 @@ Open:
 - A scaffold lint failing a module whose `checkalive.sh` addresses `localhost` while it has a `*_bootstrap` service.
 - `asystem.model pull` and the image's `registry.pull` are two definitions of the same pull. They share the hash and acceptance rules by test only; merging needs the shared library in the image.
 - The first model through the real path: register, promote and serve in production. `example/*` pass acceptance and can go; `weewx/console/battery` fails it (below).
+
+## 3c. Candidates to loosen, for a decision
+
+Each costs something every run and buys little. None is changed yet.
+
+1. **Cross-architecture parity by emulation (R5, spec 7.4).** `model.sh check` builds a container per architecture and replays under emulation, about five minutes cold and thirteen seconds cached. Emulation cannot show a CPU-specific result, and a `wasm` module is deterministic by the ABI, so the second architecture adds time and no evidence. Proposal: the gate requires the host's own architecture, and a second architecture only for `onnx` and only on a real host. Effect: `--archs` defaults to the local one, `SERVICE_LOCAL_RUNTIME` stays as the opt-in, the parity Dockerfile and `docker buildx` become optional.
+2. **The Go replay runner (`src/test/replay/go`, 304 lines).** No Go consumer of any model exists. It proves the ABI on a third engine (`wazero`), and costs a Go toolchain in the parity image and a runner to keep in step. Proposal: keep Python and Rust, add Go when the first Go consumer appears.
+3. **Two sources for "a pulled model passed".** `asystem.model pull_model` and the image's `registry.pull` implement the same checks. They are kept in step only by a test, because the image has no `asystem` library. Proposal: ship `asystem/model.py` and `asystem/replay.py` in the image as a build step and delete the copy, at the cost of importing the heavier library at start.
+4. **The `mlruns` folder from the registry unit tests.** Point their artifact location at the temporary directory. A fix, not a loosening, listed here so it is not forgotten.
 
 ## 4. Worked examples
 
@@ -193,7 +204,7 @@ Rust through `ort`.
    specification now says so (`spec.md` 6.4, 8.1).
 2. **A signature error had no representation in the golden.** A step now has a `response` or an `error` of `signature` (`spec.md` 3.1).
 3. **The signature differs by `versions` between a default and a fitted project,** so equality of signatures had to ignore that list
-   (`same_signature`, 3.1).
+   (`diff_signature`, 3.1).
 4. **Nothing checked a `static` project against its signature.** Constants had to cover every required output, and every golden
    response had to equal them (PJ008, PJ012).
 5. **Nothing checked the golden against the signature:** step inputs and outputs, required fields, an error step, a first call with no

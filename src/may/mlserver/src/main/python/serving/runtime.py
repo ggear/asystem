@@ -13,7 +13,7 @@ class ProjectRuntime(MLModel):
         return self.ready
 
     async def predict(self, payload: InferenceRequest) -> InferenceResponse:
-        inputs = {entry.name: list(getattr(entry.data, "root", entry.data)) for entry in payload.inputs}
+        inputs = {entry.name: list(entry.data.root) for entry in payload.inputs}
         result = self._project.predict(inputs)
         datatypes = {entry["name"]: entry["datatype"] for entry in self._project.signature["outputs"]}
         outputs = [ResponseOutput(name=name, shape=[len(values)], datatype=datatypes[name], data=TensorData(root=values)) for name, values in result.items()]

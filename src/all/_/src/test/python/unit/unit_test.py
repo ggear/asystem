@@ -1163,17 +1163,13 @@ class ModelProjectTest(unittest.TestCase):
         self.assertTrue(any("state slots changed" in item for item in differences))
         self.assertEqual([], diff_signature(self.signature, {**self.signature, "versions": ["9"]}))
 
-    def test_render_rust_and_go_name_every_tensor_with_optional_fields(self):
-        from asystem.model import render_go, render_rust
+    def test_render_rust_names_every_tensor_with_optional_fields(self):
+        from asystem.model import render_rust
 
         rust = render_rust(self.signature)
         self.assertIn("pub demo_clock_seconds: f64,", rust)
         self.assertIn("pub demo_state_in: Option<Vec<f64>>,", rust)
         self.assertIn('pub const REQUIRED_OUTPUT_NAMES: &[&str] = &["demo_limit_seconds"];', rust)
-        go = render_go(self.signature, "model")
-        self.assertIn("DemoClockSeconds", go)
-        self.assertIn("[]float64", go)
-        self.assertIn('`json:"demo_clock_seconds"`', go)
 
     def test_gate_must_cover_every_host_and_architecture_for_this_project(self):
         from asystem.model import check_gate
@@ -1184,13 +1180,13 @@ class ModelProjectTest(unittest.TestCase):
         self.assertEqual(["PM002", "PM003"], sorted(rule for rule, _ in check_gate({**gate, "project_sha256": "xyz"}, "abc", ["python"], ["x86_64"], "")))
         self.assertEqual([], check_gate(gate, "abc", ["python"], ["x86_64"], "graham"))
 
-    def test_same_signature_ignores_only_the_versions(self):
-        from asystem.model import same_signature
+    def test_a_signature_differs_in_everything_but_its_versions(self):
+        from asystem.model import diff_signature
 
         other = {**self.signature, "versions": ["2"]}
-        self.assertTrue(same_signature(self.signature, other))
+        self.assertEqual([], diff_signature(self.signature, other))
         other["outputs"] = other["outputs"][:1]
-        self.assertFalse(same_signature(self.signature, other))
+        self.assertTrue(diff_signature(self.signature, other))
 
     def test_registered_name_and_check_name(self):
         from asystem.model import check_name, registered_name

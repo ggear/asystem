@@ -9,7 +9,7 @@ export MLFLOW_DISABLE_AGENT_HINT=1
 ROOT_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../.." && pwd)"
 SOURCE_DIR="$(cd "${ROOT_DIR}/../.." && pwd)"
 PYENV_BIN="${HOME}/.pyenv/versions/asystem/bin"
-COMMAND="${1:?usage: model.sh <check|build|parity|refresh|status|rollback|ship>}"
+COMMAND="${1:?usage: model.sh <check|build|parity|refresh|status|promote|rollback|ship>}"
 export PYTHONPATH="${SOURCE_DIR}/all/_/src/build/python${PYTHONPATH:+:${PYTHONPATH}}"
 
 check() {
@@ -165,6 +165,10 @@ refresh() {
   echo "mlserver healthy"
 }
 
+tracking_uri() {
+  sed -n 's/^MLFLOW_TRACKING_URI=//p' "${ROOT_DIR}/.env_all"
+}
+
 env_value() {
   sed -n "s/^$1=//p" "${ROOT_DIR}/.env" | tail -1 | tr -d '\r"'
 }
@@ -172,12 +176,18 @@ env_value() {
 status() {
   local mlserver
   mlserver="http://$(env_value MLSERVER_SERVICE_PROD):$(env_value MLSERVER_HTTP_PORT)"
-  MLFLOW_TRACKING_URI="$(sed -n 's/^MLFLOW_TRACKING_URI=//p' "${ROOT_DIR}/.env_all")" "${PYENV_BIN}/python" -W ignore -m asystem.model status "${SOURCE_DIR}" --mlserver "${mlserver}"
+  MLFLOW_TRACKING_URI="$(tracking_uri)" "${PYENV_BIN}/python" -W ignore -m asystem.model status "${SOURCE_DIR}" --mlserver "${mlserver}"
+}
+
+promote() {
+  local name="${1:?usage: model.sh promote <registered model> [--gate <file>] [--reviewed-by <name>] [--hosts <runtimes of the flavor>] [--archs x86_64,aarch64]}"
+  shift
+  MLFLOW_TRACKING_URI="$(tracking_uri)" "${PYENV_BIN}/python" -W ignore -m asystem.model promote "${name}" --workspaces "${ROOT_DIR}/src/main/model" "$@"
 }
 
 rollback() {
   local name="${1:?usage: model.sh rollback <registered model>}"
-  MLFLOW_TRACKING_URI="$(sed -n 's/^MLFLOW_TRACKING_URI=//p' "${ROOT_DIR}/.env_all")" "${PYENV_BIN}/python" -W ignore -m asystem.model rollback "${name}"
+  MLFLOW_TRACKING_URI="$(tracking_uri)" "${PYENV_BIN}/python" -W ignore -m asystem.model rollback "${name}"
   refresh
 }
 
@@ -214,7 +224,7 @@ ship() {
   echo "Ship [2/5] register"
   "${ROOT_DIR}/src/main/resources/notebook.sh" "${target}" --register || return 1
   echo "Ship [3/5] promote"
-  "${ROOT_DIR}/src/main/resources/promote.sh" "${name}" --reviewed-by "${reviewer}" || return 1
+  promote "${name}" --reviewed-by "${reviewer}" || return 1
   echo "Ship [4/5] serve"
   refresh || return 1
   echo "Ship [5/5] status"
@@ -227,6 +237,7 @@ case "${COMMAND}" in
   parity) parity ;;
   refresh) refresh ;;
   status) status ;;
+  promote) shift && promote "$@" ;;
   rollback) rollback "${2:-}" ;;
   ship) shift && ship "$@" ;;
   *)

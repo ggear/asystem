@@ -10,4 +10,3 @@ DATA_SPLITS = PROJECT_SPLITS
 DATA_TIMESTAMP_FORMAT = "%Y-%m-%d_%H-%M-%S"
 DATA_TIMEZONE = ZoneInfo("Australia/Perth")
 CONSUMER_SLOTS = ("default", "release")
-CONSUMER_MODEL_PATH = "src/build/resources/model"
