@@ -323,12 +323,16 @@ def register_project(project_dir, name, tracking_uri, aliases=(PROJECT_ALIAS_CAN
                             dataset = from_pandas(pandas.DataFrame(), name=os.path.splitext(basename(entry["path"]))[0], digest=entry["sha256"][:16])
                             mlflow.log_input(dataset, context=split)
                 if manifest["flavor"] == "pyfunc":
+                    import pandas
                     from mlflow.models import ModelSignature
                     from mlflow.types import ColSpec, Schema
 
                     with open(join(staged_dir, manifest["files"]["signature"]["path"])) as signature_file:
                         signature = json.load(signature_file)
                     column_types = {"FP64": "double", "INT64": "long"}
+                    with open(join(staged_dir, manifest["files"]["golden"]["path"])) as golden_file:
+                        golden = json.load(golden_file)
+                    first_step = next(step for sequence in golden["sequences"] for step in sequence["steps"] if "error" not in step)
 
                     def schema(entries):
                         for entry in entries:
@@ -341,6 +345,7 @@ def register_project(project_dir, name, tracking_uri, aliases=(PROJECT_ALIAS_CAN
                         python_model=join(staged_dir, manifest["files"]["model"]["path"]),
                         artifacts={"project": staged_dir},
                         signature=ModelSignature(inputs=schema(signature["inputs"]), outputs=schema(signature["outputs"])),
+                        input_example=pandas.DataFrame({entry["name"]: entry["data"] for entry in first_step["request"]["inputs"]}),
                     )
                 else:
                     mlflow.log_artifacts(staged_dir, artifact_path="project")

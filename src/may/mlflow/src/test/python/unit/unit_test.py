@@ -172,7 +172,7 @@ class ReplayRunnerTest(unittest.TestCase):
             with open(model_path, "w") as model_file:
                 model_file.write(
                     'import pandas as pd\nfrom mlflow.models import set_model\nfrom mlflow.pyfunc import PythonModel\n\nMODEL_VERSION = "1"\n\n\n'
-                    'class Double(PythonModel):\n    def predict(self, context, model_input, params=None):\n        return pd.DataFrame({"demo_out": [x * 2.0 for x in model_input["demo_in"]]})\n\n\nset_model(Double())\n'
+                    'class Double(PythonModel):\n    def predict(self, context, model_input: pd.DataFrame, params=None):\n        return pd.DataFrame({"demo_out": [x * 2.0 for x in model_input["demo_in"]]})\n\n\nset_model(Double())\n'
                 )
         else:
             constants = {"demo_out": 4.0}

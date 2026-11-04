@@ -12,10 +12,10 @@ X_MAX = 3.9649999141693115
 Y_MIN = 0.0
 Y_MAX = 100.0
 STEP = 5
-K = 39.87174257912327
-W = 10.941069778356798
-X0 = 3.767393230449122
-Y0 = 59.80309805316503
+K = 40.68866819068917
+W = 9.507014011286998
+X0 = 3.7629938319692826
+Y0 = 56.74132585468961
 
 
 def capacity_pct(voltage):
@@ -32,7 +32,7 @@ def capacity_pct(voltage):
 
 
 class ConsoleBattery(PythonModel):
-    def predict(self, context, model_input, params=None):
+    def predict(self, context, model_input: pd.DataFrame, params=None):
         return pd.DataFrame({OUTPUT: [capacity_pct(voltage) for voltage in model_input[INPUT]]})
 
 

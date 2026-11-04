@@ -188,6 +188,8 @@ http {
             scheme_value = modules[name][1].get(scheme_key, "http://")
             console_context_key = f"{name.upper()}_HTTP_CONSOLE_CONTEXT"
             console_context_value = modules[name][1].get(console_context_key, "")
+            max_body_value = modules[name][1].get(f"{name.upper()}_HTTP_MAX_BODY", "")
+            max_body_directives = f"\n    client_max_body_size {max_body_value};\n    proxy_request_buffering off;" if max_body_value else ""
             nginx_port_key = "NGINX_PORT_INTERNAL_HTTPS"
             nginx_port_value = modules["nginx"][1][nginx_port_key]
             if port_key in modules[name][1] and name != "nginx":
@@ -210,7 +212,7 @@ http {
     add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS" always;
     add_header Access-Control-Allow-Headers "Authorization, Content-Type" always;
     add_header Access-Control-Allow-Credentials "true" always;
-    proxy_buffering off;
+    proxy_buffering off;{}
     location / {{
       proxy_pass ${}_url{};
     }}
@@ -227,6 +229,7 @@ http {
                             "    allow all;" if name != server_name else ACCESS_PRIVATE,
                             HEADERS_SECURITY,
                             host_name,
+                            max_body_directives,
                             name,
                             console_context_value,
                         ).strip()

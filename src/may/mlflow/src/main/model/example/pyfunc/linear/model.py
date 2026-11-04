@@ -10,7 +10,7 @@ OFFSET = 1.0
 
 
 class Linear(PythonModel):
-    def predict(self, context, model_input, params=None):
+    def predict(self, context, model_input: pd.DataFrame, params=None):
         return pd.DataFrame({OUTPUT: [GAIN * x + OFFSET for x in model_input[INPUT]]})
 
 

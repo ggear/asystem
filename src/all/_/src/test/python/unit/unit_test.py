@@ -782,7 +782,7 @@ class ModelProjectTest(unittest.TestCase):
             model_file.write(
                 'MODEL_VERSION = "1"\n'
                 "import pandas as pd\nfrom mlflow.models import set_model\nfrom mlflow.pyfunc import PythonModel\n\n\n"
-                "class Demo(PythonModel):\n    def predict(self, context, model_input, params=None):\n"
+                "class Demo(PythonModel):\n    def predict(self, context, model_input: pd.DataFrame, params=None):\n"
                 '        return pd.DataFrame({"demo_out_seconds": model_input["demo_in_seconds"] * 2})\n\n\nset_model(Demo())\n'
             )
         self.write(
@@ -1215,7 +1215,7 @@ def demo_project(flavor, golden_out=None, tolerance=None):
 
 
                     class Double(PythonModel):
-                        def predict(self, context, model_input, params=None):
+                        def predict(self, context, model_input: pd.DataFrame, params=None):
                             return pd.DataFrame({"demo_out": [x * 2.0 for x in model_input["demo_in"]]})
 
 
@@ -1572,7 +1572,7 @@ class VersionRegistryTest(unittest.TestCase):
         with open(model_path, "w") as model_file:
             model_file.write(
                 'MODEL_VERSION = "1000-SNAPSHOT"\nimport pandas as pd\nfrom mlflow.models import set_model\nfrom mlflow.pyfunc import PythonModel\n\n\n'
-                f"class Demo(PythonModel):\n    def predict(self, context, model_input, params=None):\n"
+                f"class Demo(PythonModel):\n    def predict(self, context, model_input: pd.DataFrame, params=None):\n"
                 f'        return pd.DataFrame({{"demo_out_seconds": model_input["demo_in_seconds"] * {factor}}})\n\n\nset_model(Demo())\n'
             )
         dataset_dir = join(tempfile.mkdtemp(), "2026-11-03_10-00-00")
