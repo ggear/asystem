@@ -1,9 +1,8 @@
 import json
 import os
+import subprocess
 import sys
 import tempfile
-import time
-import urllib.error
 import urllib.request
 from os.path import abspath, dirname, join, realpath
 
@@ -12,19 +11,14 @@ sys.path.append("../../../main/python")
 import pytest
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
+TIMEOUT_WARMUP = 300
+BOOTSTRAP = "mlserver_bootstrap"
 
 
-@pytest.fixture(autouse=True, scope="session")
-def _server_is_up():
-    deadline = time.monotonic() + 300
-    while True:
-        try:
-            _call("/v2/health/ready")
-            return
-        except (OSError, urllib.error.URLError):
-            if time.monotonic() > deadline:
-                raise
-            time.sleep(2)
+@pytest.fixture(scope="module", autouse=True)
+def bootstrapped():
+    waited = subprocess.run(["docker", "wait", BOOTSTRAP], capture_output=True, text=True, timeout=TIMEOUT_WARMUP, check=False)
+    assert waited.stdout.strip() == "0", f"{BOOTSTRAP}: exit got [{waited.stdout.strip()}] want 0 [{waited.stderr.strip()}]"
 
 
 def test_the_server_is_alive_and_ready():
