@@ -169,6 +169,7 @@ TRANSACTIONS_MATCH_DAYS = 3
 TRANSACTIONS_LEEWAY_DAYS = 14
 TRANSACTIONS_POSTING_DAYS = 7
 TRANSACTIONS_HISTORY_DAYS = 7 * 365 - 7
+TRANSACTIONS_EPOCH = date(2021, 5, 1)
 TRANSACTIONS_SWEEP_DAYS = 90
 TRANSACTIONS_SWEEP_EVERY_DAYS = 7
 TRANSACTION_ID_NAMESPACE = uuid.uuid5(uuid.NAMESPACE_URL, "wrangle/transaction/v1")
@@ -1492,7 +1493,7 @@ class Bank(plugin.Plugin):
                 def _bank_transactions_fetched(_accounts):
                     _paths = {}
                     for _account in _accounts:
-                        _history = max(_account["From First"] or date(1, 1, 1), today - timedelta(days=TRANSACTIONS_HISTORY_DAYS))
+                        _history = max(_account["From First"] or date(1, 1, 1), TRANSACTIONS_EPOCH, today - timedelta(days=TRANSACTIONS_HISTORY_DAYS))
                         _from = held_latest[_account["Account ID"]] - timedelta(days=TRANSACTIONS_LEEWAY_DAYS) if _account["Account ID"] in held_latest else _history
                         _check = max(min(_from, today - timedelta(days=TRANSACTIONS_SWEEP_DAYS)), _history) if sweep_due else _from
                         if plugin.config.force_downloads:
