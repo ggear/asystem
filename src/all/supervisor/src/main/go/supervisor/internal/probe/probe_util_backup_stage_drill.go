@@ -15,7 +15,7 @@ import (
 	"supervisor/internal/scribe"
 )
 
-func drillSecondaryServices(ctx context.Context, loaded *config.Config, share, host string, services []string) (drilled, failed int) {
+func drillSecondaryServices(ctx context.Context, loaded *config.Config, share, host, servicePath string, services []string) (drilled, failed int) {
 	subject := scribe.SubjectStage(metric.BackupStageSecondary)
 	for _, service := range services {
 		script := filepath.Join(config.DirInstall, service, config.DirInstallLatestLink, restoreScriptLeaf)
@@ -37,6 +37,8 @@ func drillSecondaryServices(ctx context.Context, loaded *config.Config, share, h
 			state := metric.BackupStateSuccess
 			if code != 0 {
 				state = metric.BackupStateFailure
+			} else if drill, found := readBackupDrill(backupDrillPath(filepath.Join(target, run), string(metric.BackupStageSecondary))); found {
+				state = drill.Verdict
 			}
 			drilled++
 			scribe.Log(scribe.SourceBackup, scribe.SubjectService(service), scribe.ActionStop).Infof("verified", started,
@@ -44,6 +46,9 @@ func drillSecondaryServices(ctx context.Context, loaded *config.Config, share, h
 			if code != 0 {
 				scribe.Log(scribe.SourceBackup, scribe.SubjectService(service), scribe.ActionStop).Warnf("faulting", started, "%s", firstDrillFault(output.String()))
 			}
+		}
+		if backupDrillRetained(target) {
+			demoteBackupService(filepath.Join(servicePath, service, treeStatusLeaf))
 		}
 		if backupDrillFailing(target) {
 			failed++
@@ -58,15 +63,19 @@ func reportReleaseDrills(service string) (failed int) {
 	for _, run := range backupRuns(dir) {
 		path := backupDrillPath(filepath.Join(dir, run), string(metric.BackupStagePrimary))
 		drill, found := readBackupDrill(path)
-		if _, reported := os.Stat(path + drillReportedSuffix); !found || reported == nil {
+		if !found {
+			continue
+		}
+		failed = 0
+		if drill.Verdict == metric.BackupStateFailure {
+			failed = 1
+		}
+		if _, reported := os.Stat(path + drillReportedSuffix); reported == nil {
 			continue
 		}
 		scribe.Log(scribe.SourceBackup, scribe.SubjectService(service), scribe.ActionStop).Infof("verified", time.Now(),
 			"[%s] point [%s] release drill as [%s]", service, run, drill.Verdict)
 		_ = os.WriteFile(path+drillReportedSuffix, nil, 0o644)
-		if drill.Verdict != metric.BackupStateSuccess {
-			failed++
-		}
 	}
 	return failed
 }
@@ -87,6 +96,16 @@ func backupDrillDue(runs []backupKeepRun, policy backupKeepPolicy, now time.Time
 		{map[string]bool{}, policy.monthly, currentMonth, func(run backupKeepRun) string { return run.name[:7] }},
 	}
 	var due []string
+	generations := map[string]bool{}
+	for _, run := range runs {
+		if run.software == "" || generations[run.software] {
+			continue
+		}
+		generations[run.software] = true
+		if run.full && !run.judged {
+			due = append(due, run.name)
+		}
+	}
 	for _, run := range slices.Backward(runs) {
 		if !run.full {
 			continue
@@ -109,10 +128,28 @@ func backupDrillDue(runs []backupKeepRun, policy backupKeepPolicy, now time.Time
 func backupDrillFailing(target string) bool {
 	for _, run := range slices.Backward(backupRuns(target)) {
 		if drill, found := readBackupDrill(backupDrillPath(filepath.Join(target, run), string(metric.BackupStageSecondary))); found {
-			return drill.Verdict != metric.BackupStateSuccess
+			return drill.Verdict == metric.BackupStateFailure
 		}
 	}
 	return false
+}
+
+func backupDrillRetained(target string) bool {
+	for _, run := range backupRuns(target) {
+		if drill, found := readBackupDrill(backupDrillPath(filepath.Join(target, run), string(metric.BackupStageSecondary))); found && drill.Verdict == metric.BackupStateFailure {
+			return true
+		}
+	}
+	return false
+}
+
+func demoteBackupService(path string) {
+	document := readBackupSummary(path)
+	if document == nil || !document.SuccessBool {
+		return
+	}
+	document.SuccessBool = false
+	_ = writeAtomic(path, *document)
 }
 
 func firstDrillFault(output string) string {

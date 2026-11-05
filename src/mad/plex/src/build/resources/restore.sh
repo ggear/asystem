@@ -37,7 +37,7 @@ restore_checked() {
   image="$(docker inspect "${RESTORE_MODULE_NAME}" --format '{{.Config.Image}}')" || return 1
   for database in "${scratch}/${PLEX_RESTORE_SERVER}/Plug-in Support/Databases/"*.db; do
     [ -f "${database}" ] || continue
-    result="$(docker run --rm --network none --volume "${scratch}:/scratch" --entrypoint "/usr/lib/plexmediaserver/Plex SQLite" \
+    result="$(docker run --rm --name "${RESTORE_MODULE_NAME}_restore" --network none --volume "${scratch}:/scratch" --entrypoint "/usr/lib/plexmediaserver/Plex SQLite" \
       "${image}" "/scratch/${database#"${scratch}/"}" "PRAGMA integrity_check" 2>&1)"
     if [ "${result}" != "ok" ]; then
       restore_fault "integrity_check of [$(basename "${database}")] answered [$(printf '%s' "${result}" | head -n 1)]"

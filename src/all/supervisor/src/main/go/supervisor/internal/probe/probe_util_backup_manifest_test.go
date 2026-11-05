@@ -26,6 +26,11 @@ func TestProbeUtilBackupManifest_Render(t *testing.T) {
 			"{\n  \"kind\": \"full\",\n  \"parent\": \"\",\n  \"source_version\": \"10.200.1\",\n  \"verdict\": \"success\",\n  \"accepted\": false,\n  \"baseline\": \"\",\n  \"evidence\": [\n  ],\n  \"fingerprint\": {\n  }\n}\n",
 		},
 		{
+			"software_recorded",
+			backupManifest{Kind: "full", Verdict: "success", SourceVersion: "10.200.1", SourceSoftware: "18-2.30.2"},
+			"{\n  \"kind\": \"full\",\n  \"parent\": \"\",\n  \"source_version\": \"10.200.1\",\n  \"source_software\": \"18-2.30.2\",\n  \"verdict\": \"success\",\n  \"accepted\": false,\n  \"baseline\": \"\",\n  \"evidence\": [\n  ],\n  \"fingerprint\": {\n  }\n}\n",
+		},
+		{
 			"evidence_and_units_escaped",
 			backupManifest{
 				Kind: "delta", Parent: "p", Verdict: "regressed", Baseline: "b", Evidence: []string{`a "q"`, "b"},

@@ -167,6 +167,15 @@ func TestProbeImplServices_Services(t *testing.T) {
 			expectedError:        false,
 		},
 		{
+			name:            "happy_restore_scratch_ignored",
+			newDockerClient: func() (*client.Client, error) { return &client.Client{}, nil },
+			listContainers: func(_ context.Context, _ *client.Client) ([]container.Summary, error) {
+				return []container.Summary{{ID: "s1", Names: []string{"/postgres_restore"}}}, nil
+			},
+			expectedServiceCount: 0,
+			expectedError:        false,
+		},
+		{
 			name:            "happy_empty_name_ignored",
 			newDockerClient: func() (*client.Client, error) { return &client.Client{}, nil },
 			listContainers: func(_ context.Context, _ *client.Client) ([]container.Summary, error) {

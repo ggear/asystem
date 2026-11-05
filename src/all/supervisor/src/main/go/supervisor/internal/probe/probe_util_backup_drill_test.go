@@ -44,7 +44,7 @@ func TestProbeUtilBackupDrill_Drill(t *testing.T) {
 			if err := os.WriteFile(filepath.Join(root, run, "mod_full.tar.gz"), tarGzipped(t, "data/a.txt", "hello"), 0o644); err != nil {
 				t.Fatal(err)
 			}
-			plantBackupManifest(t, root, run, backupManifest{Kind: "full", Verdict: metric.BackupStateSuccess, Fingerprint: []backupFingerprintUnit{{name: "data", count: test.manifestBytes}}})
+			plantBackupManifest(t, root, run, backupManifest{Kind: "full", Verdict: metric.BackupStateSuccess, SourceSoftware: "1.0", Fingerprint: []backupFingerprintUnit{{name: "data", count: test.manifestBytes}}})
 			script := filepath.Join(t.TempDir(), "restore.sh")
 			if err := os.WriteFile(script, []byte(test.script+"\n"), 0o644); err != nil {
 				t.Fatal(err)
@@ -68,6 +68,56 @@ func TestProbeUtilBackupDrill_Drill(t *testing.T) {
 	}
 }
 
+func TestProbeUtilBackupDrill_Compatible(t *testing.T) {
+	tests := []struct {
+		name     string
+		point    backupManifest
+		expected bool
+	}{
+		{"same software", backupManifest{SourceSoftware: "18-2.30"}, true},
+		{"software differs", backupManifest{SourceSoftware: "18-2.20"}, false},
+		{"a manifest naming no software is skipped", backupManifest{SourceVersion: "1"}, false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if actual := backupCompatible(test.point, "18-2.30"); actual != test.expected {
+				t.Errorf("compatible: got [%t] want [%t]", actual, test.expected)
+			}
+		})
+	}
+}
+
+func TestProbeUtilBackupDrill_SkipsAnIncompatiblePoint(t *testing.T) {
+	work := t.TempDir()
+	home := filepath.Join(work, "mod")
+	source := filepath.Join(home, "2.0")
+	root := filepath.Join(home, treeBackupDirectory)
+	run := "2026-11-01_01-00-00"
+	if err := os.MkdirAll(filepath.Join(root, run), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(source, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, run, "mod_full.tar.gz"), tarGzipped(t, "data/a.txt", "hello"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	plantBackupManifest(t, root, run, backupManifest{Kind: "full", Verdict: metric.BackupStateSuccess, SourceSoftware: "old", Fingerprint: []backupFingerprintUnit{{name: "data", count: 5}}})
+	scripts := t.TempDir()
+	if err := os.WriteFile(filepath.Join(scripts, "restore.sh"), []byte("restore_staged() { return 1; }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(scripts, "backup.sh"), []byte("backup_versioned() { echo new; }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	code := BackupModuleDrill(context.Background(), BackupModuleRequest{Arguments: []string{"mod"}, Source: source, Script: filepath.Join(scripts, "restore.sh"), Record: "secondary", LockPeriod: time.Second}, &stdout, &stderr)
+	drill, found := readBackupDrill(backupDrillPath(filepath.Join(root, run), "secondary"))
+	if code != 0 || !found || drill.Verdict != metric.BackupStateSkipped {
+		t.Errorf("drill: got code [%d] verdict [%s] found [%t] stderr [%s] want code [0] verdict [%s]", code, drill.Verdict, found, stderr.String(), metric.BackupStateSkipped)
+	}
+}
+
 func TestProbeUtilBackupDrill_StagingFailureTearsScratchDown(t *testing.T) {
 	work := t.TempDir()
 	home := filepath.Join(work, "mod")
@@ -82,7 +132,7 @@ func TestProbeUtilBackupDrill_StagingFailureTearsScratchDown(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, run, "mod_full.tar.gz"), tarGzipped(t, "x", "y"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	plantBackupManifest(t, root, run, backupManifest{Kind: "full", Verdict: metric.BackupStateSuccess})
+	plantBackupManifest(t, root, run, backupManifest{Kind: "full", Verdict: metric.BackupStateSuccess, SourceSoftware: "1.0"})
 	torn := filepath.Join(work, "torn")
 	script := filepath.Join(work, "restore.sh")
 	hooks := fmt.Sprintf("restore_staged() { return 1; }\nrestore_teardown() { echo \"$1\" > %q; }\n", torn)
@@ -156,6 +206,16 @@ func TestProbeUtilBackupDrill_BackupDrillDue(t *testing.T) {
 			backupKeepPolicy{weekly: 4}, nil,
 		},
 		{
+			"the first full of a new software generation is due inside the current week",
+			[]backupKeepRun{softwareFixture(keepFixture("2026-11-03_01-00-00", true, "", ""), "old", true), softwareFixture(keepFixture("2026-11-04_01-00-00", true, "", ""), "new", false), softwareFixture(keepFixture("2026-11-05_01-00-00", true, "", ""), "new", false)},
+			backupKeepPolicy{weekly: 4}, []string{"2026-11-04_01-00-00"},
+		},
+		{
+			"a manifest naming no software starts no generation",
+			[]backupKeepRun{keepFixture("2026-11-04_01-00-00", true, "", "")},
+			backupKeepPolicy{weekly: 4}, nil,
+		},
+		{
 			"points past the quota are left alone",
 			[]backupKeepRun{keepFixture("2026-09-01_01-00-00", true, "", ""), keepFixture("2026-10-28_01-00-00", true, "", "")},
 			backupKeepPolicy{weekly: 1}, []string{"2026-10-28_01-00-00"},
@@ -188,26 +248,60 @@ func tarGzipped(t *testing.T, name, content string) []byte {
 	return buffer.Bytes()
 }
 
+func softwareFixture(run backupKeepRun, software string, judged bool) backupKeepRun {
+	run.software, run.judged = software, judged
+	return run
+}
+
 func judgedFixture(run backupKeepRun) backupKeepRun {
 	run.judged = true
 	return run
 }
 
 func TestProbeUtilBackupDrill_ReportReleaseDrills(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv(config.BackupHomeEnvVar, home)
-	for run, verdict := range map[string]string{"2026-11-01_01-00-00": metric.BackupStateFailure, "2026-11-02_01-00-00": metric.BackupStateSuccess} {
-		dir := filepath.Join(serviceHomeDir("mod"), run)
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			t.Fatal(err)
-		}
-		if err := writeAtomicDrill(backupDrillPath(dir, "primary"), verdict); err != nil {
-			t.Fatal(err)
-		}
+	tests := []struct {
+		name     string
+		verdicts map[string]string
+		expected int
+	}{
+		{"failure superseded by a pass", map[string]string{"2026-11-01_01-00-00": metric.BackupStateFailure, "2026-11-02_01-00-00": metric.BackupStateSuccess}, 0},
+		{"newest failed", map[string]string{"2026-11-01_01-00-00": metric.BackupStateSuccess, "2026-11-02_01-00-00": metric.BackupStateFailure}, 1},
+		{"none", map[string]string{}, 0},
 	}
-	first, second := reportReleaseDrills("mod"), reportReleaseDrills("mod")
-	if first != 1 || second != 0 {
-		t.Errorf("release drills: got first [%d] second [%d] want 1 then 0, a verdict is reported once", first, second)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv(config.BackupHomeEnvVar, t.TempDir())
+			for run, verdict := range test.verdicts {
+				if err := writeAtomicDrill(backupDrillPath(filepath.Join(serviceHomeDir("mod"), run), "primary"), verdict); err != nil {
+					t.Fatal(err)
+				}
+			}
+			first, second := reportReleaseDrills("mod"), reportReleaseDrills("mod")
+			if first != test.expected || second != test.expected {
+				t.Errorf("release drills: got first [%d] second [%d] want [%d] both, a failure stands until a later pass", first, second, test.expected)
+			}
+		})
+	}
+}
+
+func TestProbeUtilBackupDrill_DemoteBackupService(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "status.json")
+	if err := writeAtomic(path, backupSummary{SuccessBool: true}); err != nil {
+		t.Fatal(err)
+	}
+	target := t.TempDir()
+	if err := writeAtomicDrill(backupDrillPath(filepath.Join(target, "2026-11-01_01-00-00"), "secondary"), metric.BackupStateFailure); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeAtomicDrill(backupDrillPath(filepath.Join(target, "2026-11-02_01-00-00"), "secondary"), metric.BackupStateSuccess); err != nil {
+		t.Fatal(err)
+	}
+	if !backupDrillRetained(target) || backupDrillFailing(target) {
+		t.Fatal("retained failure not seen behind a newer pass")
+	}
+	demoteBackupService(path)
+	if document := readBackupSummary(path); document == nil || document.SuccessBool {
+		t.Errorf("status: got %+v want success false", document)
 	}
 }
 

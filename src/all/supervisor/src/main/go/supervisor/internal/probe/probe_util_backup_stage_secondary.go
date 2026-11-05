@@ -77,7 +77,7 @@ func runSecondaryStage(ctx context.Context, request stageRequest, counters *stag
 		}
 	}
 
-	_, drillFailed := drillSecondaryServices(ctx, loaded, share, host, promote)
+	_, drillFailed := drillSecondaryServices(ctx, loaded, share, host, servicePath, promote)
 
 	percent, usedMB, totalMB, ok := measureUsage(ctx, scribe.SubjectStage(metric.BackupStageSecondary), share)
 	result := stageResult{}

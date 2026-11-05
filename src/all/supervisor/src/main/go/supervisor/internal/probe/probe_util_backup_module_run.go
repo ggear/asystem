@@ -190,7 +190,7 @@ func BackupModuleRun(ctx context.Context, request BackupModuleRequest, stdout, s
 			return err
 		}
 		manifest := backupManifest{
-			Kind: kind, Parent: parent, SourceVersion: version, Verdict: verdict.verdict, Baseline: baselineRun, Evidence: verdict.evidence, Fingerprint: current,
+			Kind: kind, Parent: parent, SourceVersion: version, SourceSoftware: versionedModule(ctx, hooks, stderr, version), Verdict: verdict.verdict, Baseline: baselineRun, Evidence: verdict.evidence, Fingerprint: current,
 		}
 		if err := os.WriteFile(path+".tmp", []byte(renderBackupManifest(manifest)), 0o644); err != nil {
 			return err
@@ -276,6 +276,7 @@ const (
 	moduleHookInterrupted  = "backup_interrupted"
 	moduleHookCompleted    = "backup_completed"
 	moduleHookFingerprint  = "backup_fingerprinted"
+	moduleHookVersioned    = "backup_versioned"
 	moduleHookPrunedStore  = "backup_pruned_store"
 	moduleHookWritten      = "backup_written"
 	moduleHookGrace        = 30 * time.Second

@@ -404,9 +404,10 @@ func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot)
 				break
 			}
 		}
-		if strings.HasPrefix(name, servicesDockerContainerIgnorePattern) {
+		if strings.HasPrefix(name, servicesDockerContainerIgnorePattern) || strings.HasSuffix(name, servicesDockerContainerIgnoreSuffix) {
 			continue
 		}
+
 		if name == "" {
 			scribe.Log(scribe.SourceProbeServices, p.subject(), scribe.ActionDiscover).Errorf("rejected", servicesStart, "[container] empty name, excluding from the service list")
 			continue
@@ -971,6 +972,7 @@ func containerServiceName(containerInfo container.InspectResponse) string {
 const (
 	servicesDockerTimeoutSecs            = 2
 	servicesDockerContainerIgnorePattern = "reaper_"
+	servicesDockerContainerIgnoreSuffix  = "_restore"
 	servicesVersionUnknown               = "-"
 
 	bitsPerByte = 8.0

@@ -56,10 +56,10 @@ func readBackupKeepRuns(dir string) []backupKeepRun {
 		runDir := filepath.Join(dir, name)
 		run := backupKeepRun{name: name, at: at, full: backupRunHolds(runDir, backupFullSuffix+".") || !backupRunHolds(runDir, backupDeltaSuffix+".")}
 		if manifest, found := readBackupManifest(dir, name); found {
-			run.parent, run.verdict, run.accepted = manifest.Parent, manifest.Verdict, manifest.Accepted
+			run.parent, run.verdict, run.accepted, run.software = manifest.Parent, manifest.Verdict, manifest.Accepted, manifest.SourceSoftware
 		}
 		if drill, found := readBackupDrill(backupDrillPath(runDir, string(metric.BackupStageSecondary))); found {
-			run.drilled, run.judged = drill.Verdict == metric.BackupStateSuccess, true
+			run.drilled, run.judged = drill.Verdict != metric.BackupStateFailure, true
 		}
 		runs = append(runs, run)
 	}
@@ -179,4 +179,5 @@ type backupKeepRun struct {
 	accepted bool
 	drilled  bool
 	judged   bool
+	software string
 }

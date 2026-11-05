@@ -8,7 +8,10 @@
 # defines backup_interrupted, called on INT, TERM or HUP but never on a backup that merely fails, and
 # backup_completed, called once the archive has been named and kept whatever the outcome, whose
 # non-zero return fails the run without discarding the archive. A snippet whose service keeps its own
-# store of backups defines backup_pruned_store, called after every kept backup. Never assign another wrapper
+# store of backups defines backup_pruned_store, called after every kept backup. A snippet whose restore depends
+# on its software defines backup_versioned, printing that software's version on one line, recorded with the
+# backup so a drill skips a point the running software cannot restore, and one whose restore never does
+# prints "${BACKUP_VERSIONED_NONE}". Never assign another wrapper
 # variable, prefix this snippet's own state with the module name, and expand a value read from .env
 # as "${VAR:?}", so a missing key fails by name rather than corrupting the backup.
 #
@@ -19,6 +22,7 @@
 # BACKUP_RUN_TIMESTAMP    this run's timestamp, shared by the directory and the filename
 # BACKUP_FULL_SUFFIX      the file suffix marking a full backup
 # BACKUP_DELTA_SUFFIX     the file suffix marking a delta backup, requiring a full backup proceeding it
+# BACKUP_VERSIONED_NONE   the version backup_versioned prints when the restore does not depend on the software
 # BACKUP_SKIP_HOURS       skip the run when the newest backup is younger than this, zero to never skip
 # BACKUP_SERVICE_RESTART  start the service again after the copy, false when the caller starts it itself
 
@@ -32,6 +36,11 @@ POSTGRES_BACKUP_TRANSIENT=(
   "hass:public.states"
   "hass:public.statistics_short_term"
 )
+
+backup_versioned() {
+  docker exec --user root "${BACKUP_MODULE_NAME}" psql -U postgres -Atc \
+    "SELECT current_setting('server_version_num')::int / 10000 || '-' || extversion FROM pg_extension WHERE extname = 'timescaledb'"
+}
 
 backup_written() {
   local databases database skipped table excluded

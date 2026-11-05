@@ -125,20 +125,21 @@ func runBackupModuleRestore(ctx context.Context, request BackupModuleRequest, mo
 }
 
 type restoreSession struct {
-	ctx     context.Context
-	request BackupModuleRequest
-	mode    string
-	module  string
-	source  string
-	roots   []string
-	chain   []restoreLink
-	run     string
-	hooks   moduleHooks
-	defined map[string]bool
-	stdout  io.Writer
-	stderr  io.Writer
-	faults  int
-	changed int
+	ctx      context.Context
+	request  BackupModuleRequest
+	mode     string
+	module   string
+	source   string
+	roots    []string
+	chain    []restoreLink
+	run      string
+	hooks    moduleHooks
+	defined  map[string]bool
+	software string
+	stdout   io.Writer
+	stderr   io.Writer
+	faults   int
+	changed  int
 }
 
 func (s *restoreSession) report(text string) { fmt.Fprintln(s.stdout, reportedRestoreLine(text)) }
@@ -402,6 +403,9 @@ func (s *restoreSession) execute() int {
 }
 
 func (s *restoreSession) replace() bool {
+	if manifest, read := s.manifest(); read && manifest.SourceSoftware != "" && !s.compatible(manifest) {
+		s.report(fmt.Sprintf("warning   [%s] was taken from software [%s], now [%s], restore it under the release that took it if this fails", s.run, manifest.SourceSoftware, s.software))
+	}
 	if !s.request.Force {
 		if s.defined[restoreHookPlanned] {
 			_, _ = s.hooked(restoreHookPlanned, "")

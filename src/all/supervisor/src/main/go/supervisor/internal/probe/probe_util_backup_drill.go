@@ -13,10 +13,13 @@ import (
 
 func (s *restoreSession) drill() {
 	var want []backupFingerprintUnit
-	if dir, found := restoreRunDir(s.roots, s.run); found {
-		if manifest, read := readBackupManifest(filepath.Dir(dir), s.run); read {
-			want = manifest.Fingerprint
-		}
+	if manifest, read := s.manifest(); read {
+		want = manifest.Fingerprint
+	}
+	if manifest, read := s.manifest(); read && !s.compatible(manifest) {
+		s.report(fmt.Sprintf("drill     skipped, taken from software [%s] version [%s], now [%s] version [%s], integrity passed", manifest.SourceSoftware, manifest.SourceVersion, s.software, filepath.Base(s.source)))
+		s.record(metric.BackupStateSkipped, "software differs")
+		return
 	}
 	s.report(fmt.Sprintf("drill     chain of [%d] artifact(s), manifest holds [%d] unit(s)", len(s.chain), len(want)))
 	if len(want) == 0 {
@@ -92,6 +95,22 @@ func (s *restoreSession) drill() {
 	}
 	s.report("drill passed, every manifest unit is held and scratch is read only")
 	s.record(metric.BackupStateSuccess, "drilled")
+}
+
+func (s *restoreSession) manifest() (backupManifest, bool) {
+	dir, found := restoreRunDir(s.roots, s.run)
+	if !found {
+		return backupManifest{}, false
+	}
+	return readBackupManifest(filepath.Dir(dir), s.run)
+}
+
+func (s *restoreSession) compatible(manifest backupManifest) bool {
+	if s.software == "" {
+		sibling := moduleHooks{script: filepath.Join(filepath.Dir(s.request.Script), scriptLeaf), env: []string{"BACKUP_SOURCE_PATH=" + s.source}}
+		s.software = versionedModule(s.ctx, sibling, s.stderr, filepath.Base(s.source))
+	}
+	return backupCompatible(manifest, s.software)
 }
 
 func fingerprintBackupScratch(scratch string, want []backupFingerprintUnit) []backupFingerprintUnit {

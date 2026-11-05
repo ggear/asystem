@@ -4,7 +4,9 @@ import (
 	"archive/tar"
 	"archive/zip"
 	"bufio"
+	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -65,6 +67,9 @@ func renderBackupManifest(manifest backupManifest) string {
 	fmt.Fprintf(&out, "  \"kind\": \"%s\",\n", manifest.Kind)
 	fmt.Fprintf(&out, "  \"parent\": \"%s\",\n", manifest.Parent)
 	fmt.Fprintf(&out, "  \"source_version\": \"%s\",\n", escaped(manifest.SourceVersion))
+	if manifest.SourceSoftware != "" {
+		fmt.Fprintf(&out, "  \"source_software\": \"%s\",\n", escaped(manifest.SourceSoftware))
+	}
 	fmt.Fprintf(&out, "  \"verdict\": \"%s\",\n", manifest.Verdict)
 	fmt.Fprintf(&out, "  \"accepted\": %t,\n", manifest.Accepted)
 	fmt.Fprintf(&out, "  \"baseline\": \"%s\",\n", manifest.Baseline)
@@ -98,20 +103,21 @@ func readBackupManifest(root, run string) (backupManifest, bool) {
 		return backupManifest{}, false
 	}
 	var decoded struct {
-		Kind          string           `json:"kind"`
-		Parent        string           `json:"parent"`
-		SourceVersion string           `json:"source_version"`
-		Verdict       string           `json:"verdict"`
-		Accepted      bool             `json:"accepted"`
-		Baseline      string           `json:"baseline"`
-		Evidence      []string         `json:"evidence"`
-		Fingerprint   map[string]int64 `json:"fingerprint"`
+		Kind           string           `json:"kind"`
+		Parent         string           `json:"parent"`
+		SourceVersion  string           `json:"source_version"`
+		SourceSoftware string           `json:"source_software"`
+		Verdict        string           `json:"verdict"`
+		Accepted       bool             `json:"accepted"`
+		Baseline       string           `json:"baseline"`
+		Evidence       []string         `json:"evidence"`
+		Fingerprint    map[string]int64 `json:"fingerprint"`
 	}
 	if json.Unmarshal(data, &decoded) != nil {
 		return backupManifest{}, false
 	}
 	return backupManifest{
-		Kind: decoded.Kind, Parent: decoded.Parent, SourceVersion: decoded.SourceVersion, Verdict: decoded.Verdict,
+		Kind: decoded.Kind, Parent: decoded.Parent, SourceVersion: decoded.SourceVersion, SourceSoftware: decoded.SourceSoftware, Verdict: decoded.Verdict,
 		Accepted: decoded.Accepted, Baseline: decoded.Baseline, Evidence: decoded.Evidence, Fingerprint: sortBackupFingerprint(decoded.Fingerprint),
 	}, true
 }
@@ -268,14 +274,15 @@ func backupManifestPath(root, run string) string {
 }
 
 type backupManifest struct {
-	Kind          string
-	Parent        string
-	SourceVersion string
-	Verdict       string
-	Accepted      bool
-	Baseline      string
-	Evidence      []string
-	Fingerprint   []backupFingerprintUnit
+	Kind           string
+	Parent         string
+	SourceVersion  string
+	SourceSoftware string
+	Verdict        string
+	Accepted       bool
+	Baseline       string
+	Evidence       []string
+	Fingerprint    []backupFingerprintUnit
 }
 
 type backupFingerprintUnit struct {
@@ -289,3 +296,25 @@ type backupRegressionVerdict struct {
 }
 
 const backupEvidenceLimit = 20
+
+func backupCompatible(point backupManifest, software string) bool {
+	return point.SourceSoftware != "" && point.SourceSoftware == software
+}
+
+func versionedModule(ctx context.Context, hooks moduleHooks, stderr io.Writer, version string) string {
+	declared, _ := hooks.command(ctx, "declare", "-F", moduleHookVersioned).Output()
+	if !strings.Contains(string(declared), moduleHookVersioned) {
+		return version
+	}
+	versionCtx, cancel := context.WithTimeout(ctx, moduleToolWait)
+	defer cancel()
+	command := hooks.command(versionCtx, moduleHookVersioned)
+	var output bytes.Buffer
+	command.Stdout, command.Stderr = &output, stderr
+	software := strings.TrimSpace(output.String())
+	if err := command.Run(); err != nil || software == "" {
+		fmt.Fprintf(stderr, "Backup hook [%s] gave no software version [%v], falling back to the module version\n", moduleHookVersioned, err)
+		return version
+	}
+	return strings.SplitN(software, "\n", 2)[0]
+}
