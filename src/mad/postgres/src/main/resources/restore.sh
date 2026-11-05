@@ -874,11 +874,11 @@ postgres_restore_databases() {
 postgres_restore_loaded() {
   local container="${1}" user="${2}" database
   for database in postgres template1; do
-    docker exec --user root "${container}" psql -U "${user}" -d "${database}" -v ON_ERROR_STOP=1 -qc "DROP EXTENSION IF EXISTS timescaledb CASCADE" >/dev/null || return 1
+    docker exec --user root --env PGOPTIONS="-c client_min_messages=warning" "${container}" psql -U "${user}" -d "${database}" -v ON_ERROR_STOP=1 -qc "DROP EXTENSION IF EXISTS timescaledb CASCADE" >/dev/null || return 1
   done
   while read -r database; do
     [ -n "${database}" ] || continue
-    docker exec --user root "${container}" psql -U "${user}" -d postgres -v ON_ERROR_STOP=1 -qc "DROP DATABASE IF EXISTS \"${database}\" WITH (FORCE)" >/dev/null || return 1
+    docker exec --user root --env PGOPTIONS="-c client_min_messages=warning" "${container}" psql -U "${user}" -d postgres -v ON_ERROR_STOP=1 -qc "DROP DATABASE IF EXISTS \"${database}\" WITH (FORCE)" >/dev/null || return 1
   done < <(postgres_restore_databases)
   postgres_restore_stream | docker exec --interactive --user root "${container}" psql -U "${user}" -d postgres -v ON_ERROR_STOP=1 -q >/dev/null
 }
