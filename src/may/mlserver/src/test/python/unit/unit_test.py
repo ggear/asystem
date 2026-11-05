@@ -9,7 +9,7 @@ from os.path import abspath, dirname, isdir, join, realpath
 import pytest
 
 sys.path.append("../../../main/python")
-sys.path.append("../../../../../../rue/datascience/src/main/python")
+sys.path.append("../../../../../../rue/mlmodels/src/main/python")
 
 from registry.sync import ALIAS_PREVIEW, ALIAS_RELEASE, sync
 from serving.project import load_project
@@ -44,7 +44,7 @@ class SyncTest(unittest.TestCase):
         self.assertFalse(isdir(join(self.models_dir, NAME + "_preview")))
         self.assertIn(("unload", NAME + "_preview"), self.calls)
 
-    def test_a_model_without_the_datascience_tags_is_ignored(self):
+    def test_a_model_without_the_mlmodels_tags_is_ignored(self):
         self.registry.add(1, "1.0.0", released=True, tagged=False)
         self.sync()
         self.assertEqual([], os.listdir(self.models_dir))

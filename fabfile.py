@@ -1578,7 +1578,7 @@ INSTALL_DIR = "/var/lib/asystem/install"
 ROOT_DIR = dirname(abspath(__file__))
 ROOT_MODULE_DIR = join(ROOT_DIR, "src")
 SHARED_MODULE_NAME = "_"
-MODEL_MODULE = "rue/datascience"
+MODEL_MODULE = "rue/mlmodels"
 PYTHON_SOURCE_KINDS = ("build", "main", "test")
 
 GLOBAL_ENV_PATH = join(dirname(abspath(__file__)), ".env_fab")

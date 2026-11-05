@@ -6,7 +6,7 @@
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 MODEL_DIR="${ROOT_DIR}/src/build/resources/model"
 
-export PYTHONPATH="${ROOT_DIR}/../../rue/datascience/src/main/python${PYTHONPATH:+:${PYTHONPATH}}"
+export PYTHONPATH="${ROOT_DIR}/../../rue/mlmodels/src/main/python${PYTHONPATH:+:${PYTHONPATH}}"
 python -m workbench.model embed "${ROOT_DIR}" "${ROOT_DIR}/../.." rackmains_ups_battery || exit $?
 if [ -f "${MODEL_DIR}/project.json" ]; then
   python -m workbench.model verify "${MODEL_DIR}" || exit $?

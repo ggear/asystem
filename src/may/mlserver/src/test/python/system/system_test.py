@@ -8,7 +8,7 @@ from os.path import abspath, dirname, join, realpath
 
 import pytest
 
-sys.path.append("../../../../../../rue/datascience/src/main/python")
+sys.path.append("../../../../../../rue/mlmodels/src/main/python")
 
 from workbench.demo import demo_project
 from workbench.model import register_project

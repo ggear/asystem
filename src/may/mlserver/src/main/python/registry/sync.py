@@ -85,19 +85,19 @@ def _wanted(models):
     for model in models:
         versions, aliases = model["versions"], model["aliases"]
         released = aliases.get(ALIAS_RELEASE)
-        if released is not None and _is_datascience(versions.get(str(released))):
+        if released is not None and _is_mlmodels(versions.get(str(released))):
             tags = versions[str(released)]
             older = sorted((int(version) for version, other in versions.items() if "release_version" in other and int(version) < int(released)), reverse=True)
             wanted[model["name"]] = [(str(released), tags, tags.get("release_version") or f"release-{tags['content_sha256'][:8]}")]
             wanted[model["name"]] += [(str(number), versions[str(number)], versions[str(number)]["release_version"]) for number in older]
         previewed = aliases.get(ALIAS_PREVIEW)
-        if previewed is not None and str(previewed) != str(released) and _is_datascience(versions.get(str(previewed))):
+        if previewed is not None and str(previewed) != str(released) and _is_mlmodels(versions.get(str(previewed))):
             tags = versions[str(previewed)]
             wanted[model["name"] + PREVIEW_SUFFIX] = [(str(previewed), tags, f"preview-{tags['content_sha256'][:8]}")]
     return wanted
 
 
-def _is_datascience(tags):
+def _is_mlmodels(tags):
     return tags is not None and "content_sha256" in tags and "project_flavour" in tags
 
 

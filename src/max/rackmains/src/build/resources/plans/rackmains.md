@@ -6,8 +6,8 @@ publishes `rackmains/{data,status}` to the broker, and ships with a mock driver 
 (`tools/outage`) was deleted on 2026-10-30; a test cut is made by hand at the plug. The host side of the shutdown is built and tested
 on `max`, in the `system` module (`asleep`, `awake` and the restart-after-power-loss setting). Waiting on you: the 25 metric rows
 and the service switch row ("Workbook rows to add"), the release, and the power-on-after-cut tests. The shutdown guard is designed and not built.
-The battery model is designed and not released (the model plan, `src/rue/datascience/src/main/notebook/rackmains/ups/battery/plan.md`):
-the `static` project `rackmains_ups_battery` is written by the `ups_battery` notebook in `datascience` from the guard thresholds, with four golden steps,
+The battery model is designed and not released (the model plan, `src/rue/mlmodels/src/main/notebook/rackmains/ups/battery/plan.md`):
+the `static` project `rackmains_ups_battery` is written by the `ups_battery` notebook in `mlmodels` from the guard thresholds, with four golden steps,
 and `generate.sh` embeds it into `src/build/resources/model/` once released. There is no default, floor or second copy. The Rust loader that reads it,
 its place in the image and the guard's validation at start are not built.
 

@@ -6,7 +6,7 @@
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
 for FLAVOUR in static wasm onnx pyfunc; do
-  cp "${ROOT_DIR}/../../rue/datascience/src/main/python/consumer/run_${FLAVOUR}.py" "${ROOT_DIR}/src/main/python/serving/run_${FLAVOUR}.py" || exit $?
+  cp "${ROOT_DIR}/../../rue/mlmodels/src/main/python/consumer/run_${FLAVOUR}.py" "${ROOT_DIR}/src/main/python/serving/run_${FLAVOUR}.py" || exit $?
 done
 
 # DEFINED: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
