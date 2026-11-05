@@ -1,0 +1,37 @@
+{
+  "spec_version": 1,
+  "name": "finance_portfolio_mix",
+  "signature_version": 1,
+  "flavour": "pyfunc",
+  "provenance": {
+    "source": "manual",
+    "trained_on": "synthetic two asset blend, training split",
+    "inputs": [
+      "finance/portfolio/mix/data/training/2026-11-05_16-34-07/portfolio_mix_training_2026-11-05_2026-11-05.csv",
+      "finance/portfolio/mix/data/golden/2026-11-05_16-34-07/portfolio_mix_golden.csv"
+    ],
+    "notes": "line for return and quadratic for variance",
+    "implementation": "mlflow.pyfunc model.py, requires mlflow, pandas and the standard library"
+  },
+  "files": {
+    "signature": {
+      "path": "signature.json",
+      "sha256": "008e63e6d53c735f78ac29eaeec7b8849cebbd5dc638f4356ec5062220ebea4a"
+    },
+    "golden": {
+      "path": "golden.json",
+      "sha256": "d769d890bec24a0995ced8f90d6cfb730982df0f9d241f0f5a428016cea33bae"
+    },
+    "evaluation": {
+      "path": "evaluation.json",
+      "sha256": "d3ce1455131fa4eb4a3c3bd082473a7f96e324978ce5a7184a20e412feeac425"
+    },
+    "model": {
+      "path": "model.py",
+      "sha256": "fbd9d9e4363df9b338bfd68a632e3d5c0c0b3b118e6f48631cabb3d0fd794f00"
+    }
+  },
+  "runtime": {
+    "python": []
+  }
+}

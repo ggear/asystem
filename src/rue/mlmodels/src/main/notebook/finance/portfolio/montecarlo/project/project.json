@@ -1,0 +1,37 @@
+{
+  "spec_version": 1,
+  "name": "finance_portfolio_montecarlo",
+  "signature_version": 1,
+  "flavour": "pyfunc",
+  "provenance": {
+    "source": "manual",
+    "trained_on": "seeded Monte Carlo ruin probabilities, training split",
+    "inputs": [
+      "finance/portfolio/montecarlo/data/training/2026-11-05_16-34-02/portfolio_montecarlo_training_2026-11-05_2026-11-05.csv",
+      "finance/portfolio/montecarlo/data/golden/2026-11-05_16-34-03/portfolio_montecarlo_golden.csv"
+    ],
+    "notes": "logistic curve over a seeded simulation",
+    "implementation": "mlflow.pyfunc model.py, requires mlflow and pandas"
+  },
+  "files": {
+    "signature": {
+      "path": "signature.json",
+      "sha256": "42f41c31613ac2985377ad9a644566a7c9301e9e5395b0787a4e413078c3722a"
+    },
+    "golden": {
+      "path": "golden.json",
+      "sha256": "6dfa776e99917c2f487d19caac022a4ab62a4d07f72b804ed512e7220c171847"
+    },
+    "evaluation": {
+      "path": "evaluation.json",
+      "sha256": "fd65d0df9c45ef571005f8d6c254b70202c08aeed083684518975f4005f15c4a"
+    },
+    "model": {
+      "path": "model.py",
+      "sha256": "45dfd80d986bf70e5c205afdeb8b6833ddf0a8e52a3b2183c8b89e20e7597c9e"
+    }
+  },
+  "runtime": {
+    "python": []
+  }
+}

@@ -1,0 +1,8 @@
+finance_portfolio_montecarlo_spending_rate_pct,finance_portfolio_montecarlo_ruin_pct,expect
+0.0,0.386065324717274,ok
+2.0,3.3039598440194955,ok
+4.0,23.1501768310325,ok
+6.0,72.64627205029147,ok
+8.0,95.9040488928129,ok
+12.0,99.94508278376615,ok
+,,error

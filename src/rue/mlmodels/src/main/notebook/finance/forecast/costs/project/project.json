@@ -1,0 +1,37 @@
+{
+  "spec_version": 1,
+  "name": "finance_forecast_costs",
+  "signature_version": 1,
+  "flavour": "pyfunc",
+  "provenance": {
+    "source": "manual",
+    "trained_on": "synthetic annual series around the long run inflation and cost growth means, training split",
+    "inputs": [
+      "finance/forecast/costs/data/training/2026-11-05_16-33-45/forecast_costs_training_2026-11-05_2026-11-05.csv",
+      "finance/forecast/costs/data/golden/2026-11-05_16-33-46/forecast_costs_golden.csv"
+    ],
+    "notes": "mean inflation and mean cost growth per scenario",
+    "implementation": "mlflow.pyfunc model.py, requires mlflow and pandas"
+  },
+  "files": {
+    "signature": {
+      "path": "signature.json",
+      "sha256": "fb721678254c08799846a261250069420a6e407026f2d2b611b247cceab68cb8"
+    },
+    "golden": {
+      "path": "golden.json",
+      "sha256": "4aab3c4b25d1896bc52311fc951e34c039fb5536e9b35699679f05663762df6a"
+    },
+    "evaluation": {
+      "path": "evaluation.json",
+      "sha256": "6bfac3db44c2a444d0d70f1f9250d04aef91646931cf9364ccd45da984333bde"
+    },
+    "model": {
+      "path": "model.py",
+      "sha256": "a83df4abb033d0515a43c7f071bb78e8826a4764c1baa17da53b624f8e5792b0"
+    }
+  },
+  "runtime": {
+    "python": []
+  }
+}

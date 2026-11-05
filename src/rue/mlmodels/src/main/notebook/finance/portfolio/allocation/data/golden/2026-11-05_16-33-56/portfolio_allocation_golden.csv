@@ -1,0 +1,9 @@
+finance_portfolio_allocation_volatility_pct,finance_portfolio_allocation_risky_pct,expect
+5.0,100.0,ok
+10.0,100.0,ok
+12.2,100.0,ok
+15.0,66.66666666666667,ok
+20.0,37.49999999999999,ok
+30.0,16.666666666666668,ok
+60.0,4.166666666666667,ok
+,,error

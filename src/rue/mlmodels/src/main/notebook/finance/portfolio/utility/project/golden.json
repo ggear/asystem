@@ -1,0 +1,214 @@
+{
+  "sequences": [
+    {
+      "name": "across losses, today's wealth and large gains",
+      "steps": [
+        {
+          "request": {
+            "id": "s1-0",
+            "inputs": [
+              {
+                "name": "finance_portfolio_utility_wealth",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  0.5
+                ]
+              }
+            ]
+          },
+          "response": {
+            "model_name": "finance_portfolio_utility",
+            "id": "s1-0",
+            "outputs": [
+              {
+                "name": "finance_portfolio_utility_value",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  -2.0
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "request": {
+            "id": "s1-1",
+            "inputs": [
+              {
+                "name": "finance_portfolio_utility_wealth",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  1.0
+                ]
+              }
+            ]
+          },
+          "response": {
+            "model_name": "finance_portfolio_utility",
+            "id": "s1-1",
+            "outputs": [
+              {
+                "name": "finance_portfolio_utility_value",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  -0.5
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "request": {
+            "id": "s1-2",
+            "inputs": [
+              {
+                "name": "finance_portfolio_utility_wealth",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  1.5
+                ]
+              }
+            ]
+          },
+          "response": {
+            "model_name": "finance_portfolio_utility",
+            "id": "s1-2",
+            "outputs": [
+              {
+                "name": "finance_portfolio_utility_value",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  -0.2222222222222222
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "request": {
+            "id": "s1-3",
+            "inputs": [
+              {
+                "name": "finance_portfolio_utility_wealth",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  2.0
+                ]
+              }
+            ]
+          },
+          "response": {
+            "model_name": "finance_portfolio_utility",
+            "id": "s1-3",
+            "outputs": [
+              {
+                "name": "finance_portfolio_utility_value",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  -0.125
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "request": {
+            "id": "s1-4",
+            "inputs": [
+              {
+                "name": "finance_portfolio_utility_wealth",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  5.0
+                ]
+              }
+            ]
+          },
+          "response": {
+            "model_name": "finance_portfolio_utility",
+            "id": "s1-4",
+            "outputs": [
+              {
+                "name": "finance_portfolio_utility_value",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  -0.02
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "request": {
+            "id": "s1-5",
+            "inputs": [
+              {
+                "name": "finance_portfolio_utility_wealth",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  10.0
+                ]
+              }
+            ]
+          },
+          "response": {
+            "model_name": "finance_portfolio_utility",
+            "id": "s1-5",
+            "outputs": [
+              {
+                "name": "finance_portfolio_utility_value",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  -0.005
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "request": {
+            "id": "s1-6",
+            "inputs": []
+          },
+          "error": "signature"
+        }
+      ]
+    }
+  ]
+}

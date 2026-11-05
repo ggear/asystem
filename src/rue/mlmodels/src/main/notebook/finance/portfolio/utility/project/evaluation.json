@@ -1,0 +1,42 @@
+{
+  "datasets": {
+    "validation": [
+      {
+        "path": "2026-11-05_16-33-50/portfolio_utility_validation_2026-11-05_2026-11-05.csv",
+        "sha256": "f646dd527b898c5d2218b1cfd307d154c0f30921db39e90e8de1908bcd3f92e0"
+      }
+    ],
+    "backtest": [
+      {
+        "path": "2026-11-05_16-33-50/portfolio_utility_backtest_2026-11-05_2026-11-05.csv",
+        "sha256": "93584ae878b91d8c1ada2ef3a7a400ba9735f51bd228422d462ea9535bb3d1e5"
+      }
+    ]
+  },
+  "checks": [
+    {
+      "split": "validation",
+      "output": "finance_portfolio_utility_value",
+      "name": "rmse",
+      "value": 2.4280355747583327e-07,
+      "limit": 0.001,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 0.00024280355747583325
+    },
+    {
+      "split": "backtest",
+      "output": "finance_portfolio_utility_value",
+      "name": "rmse",
+      "value": 2.5600892834279646e-07,
+      "limit": 0.001,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 0.00025600892834279647
+    }
+  ],
+  "passed": true,
+  "budget": 0.00025600892834279647
+}

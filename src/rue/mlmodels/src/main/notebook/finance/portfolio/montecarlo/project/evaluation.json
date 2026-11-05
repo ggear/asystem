@@ -1,0 +1,42 @@
+{
+  "datasets": {
+    "validation": [
+      {
+        "path": "2026-11-05_16-34-02/portfolio_montecarlo_validation_2026-11-05_2026-11-05.csv",
+        "sha256": "31a7f321295b59166ab29ccf1e0126d9de36d70c7559b564d6755e58fd8eb31b"
+      }
+    ],
+    "backtest": [
+      {
+        "path": "2026-11-05_16-34-02/portfolio_montecarlo_backtest_2026-11-05_2026-11-05.csv",
+        "sha256": "ed3c24e997cd2712511f7e2e8f6bb65fa58bbec68cb83bef36a80d8d193cc439"
+      }
+    ]
+  },
+  "checks": [
+    {
+      "split": "validation",
+      "output": "finance_portfolio_montecarlo_ruin_pct",
+      "name": "rmse",
+      "value": 2.212244658375518,
+      "limit": 8.0,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 0.2765305822969398
+    },
+    {
+      "split": "backtest",
+      "output": "finance_portfolio_montecarlo_ruin_pct",
+      "name": "rmse",
+      "value": 1.828157570451138,
+      "limit": 8.0,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 0.22851969630639224
+    }
+  ],
+  "passed": true,
+  "budget": 0.2765305822969398
+}

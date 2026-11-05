@@ -1,0 +1,8 @@
+finance_portfolio_utility_wealth,finance_portfolio_utility_value,expect
+0.5,-2.0,ok
+1.0,-0.5,ok
+1.5,-0.2222222222222222,ok
+2.0,-0.125,ok
+5.0,-0.02,ok
+10.0,-0.005,ok
+,,error

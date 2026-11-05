@@ -1,0 +1,42 @@
+{
+  "datasets": {
+    "validation": [
+      {
+        "path": "2026-11-05_16-33-45/forecast_costs_validation_2026-11-05_2026-11-05.csv",
+        "sha256": "73ad19b1622746a7accf06ddc407a3aa8d2ea20a4d93dd9697d542ad780f131f"
+      }
+    ],
+    "backtest": [
+      {
+        "path": "2026-11-05_16-33-45/forecast_costs_backtest_2026-11-05_2026-11-05.csv",
+        "sha256": "5b5fb7d5623701c5f1c44bd0079b5636cb97320138e7a34affe807c4336e8c73"
+      }
+    ]
+  },
+  "checks": [
+    {
+      "split": "validation",
+      "output": "finance_forecast_costs_growth_pct",
+      "name": "rmse",
+      "value": 0.2828427124746193,
+      "limit": 1.0,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 0.2828427124746193
+    },
+    {
+      "split": "backtest",
+      "output": "finance_forecast_costs_growth_pct",
+      "name": "rmse",
+      "value": 0.5495452665613635,
+      "limit": 1.0,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 0.5495452665613635
+    }
+  ],
+  "passed": true,
+  "budget": 0.5495452665613635
+}

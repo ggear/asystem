@@ -1,0 +1,42 @@
+{
+  "datasets": {
+    "validation": [
+      {
+        "path": "2026-11-05_16-33-48/forecast_returns_validation_2026-11-05_2026-11-05.csv",
+        "sha256": "e3441a000811aa4334145f3c4bd31a5a1b6ab1d6075e6875e1b412a92a5ba98b"
+      }
+    ],
+    "backtest": [
+      {
+        "path": "2026-11-05_16-33-48/forecast_returns_backtest_2026-11-05_2026-11-05.csv",
+        "sha256": "bea154cb1b86a041317055771fb9da2590ba163e32d4123dfa1ec871761502e1"
+      }
+    ]
+  },
+  "checks": [
+    {
+      "split": "validation",
+      "output": "finance_forecast_returns_nominal_pct",
+      "name": "rmse",
+      "value": 0.7071067811865476,
+      "limit": 3.0,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 0.23570226039551587
+    },
+    {
+      "split": "backtest",
+      "output": "finance_forecast_returns_nominal_pct",
+      "name": "rmse",
+      "value": 2.449489742783178,
+      "limit": 3.0,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 0.8164965809277259
+    }
+  ],
+  "passed": true,
+  "budget": 0.8164965809277259
+}

@@ -1,0 +1,64 @@
+{
+  "datasets": {
+    "validation": [
+      {
+        "path": "2026-11-05_16-34-07/portfolio_mix_validation_2026-11-05_2026-11-05.csv",
+        "sha256": "258f531403c3668f3a19e289e70f5348a140e295c8cca67d83f6c36d2377d9eb"
+      }
+    ],
+    "backtest": [
+      {
+        "path": "2026-11-05_16-34-07/portfolio_mix_backtest_2026-11-05_2026-11-05.csv",
+        "sha256": "48d0b2a55ade73448610aacc8f2ef65c98938bc5b79901132daae461ab5fc947"
+      }
+    ]
+  },
+  "checks": [
+    {
+      "split": "validation",
+      "output": "finance_portfolio_mix_return_pct",
+      "name": "rmse",
+      "value": 0.0,
+      "limit": 0.05,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 0.0
+    },
+    {
+      "split": "validation",
+      "output": "finance_portfolio_mix_volatility_pct",
+      "name": "rmse",
+      "value": 2.344853208335163e-07,
+      "limit": 0.05,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 4.6897064166703255e-06
+    },
+    {
+      "split": "backtest",
+      "output": "finance_portfolio_mix_return_pct",
+      "name": "rmse",
+      "value": 0.0,
+      "limit": 0.05,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 0.0
+    },
+    {
+      "split": "backtest",
+      "output": "finance_portfolio_mix_volatility_pct",
+      "name": "rmse",
+      "value": 2.342193611390295e-07,
+      "limit": 0.05,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 4.68438722278059e-06
+    }
+  ],
+  "passed": true,
+  "budget": 4.6897064166703255e-06
+}

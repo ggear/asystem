@@ -1,0 +1,19 @@
+{
+  "content_sha256": "6d7eab2237acf812e508f78a13eec978327c981997f77fae58b814691204a387",
+  "inputs_sha256": "6532a6f017a6fae16bab9f629de454be4c73df1d11ad137745ef9ffdef0a153e",
+  "passed": [],
+  "released_at": null,
+  "released_by": null,
+  "released_signature": null,
+  "released_version": null,
+  "runtime": {
+    "python": []
+  },
+  "schema": 1,
+  "snapshot_version": null,
+  "targets": [
+    {
+      "kind": "served"
+    }
+  ]
+}

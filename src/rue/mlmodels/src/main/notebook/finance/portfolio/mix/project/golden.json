@@ -1,0 +1,231 @@
+{
+  "sequences": [
+    {
+      "name": "from all defensive to all risky",
+      "steps": [
+        {
+          "request": {
+            "id": "s1-0",
+            "inputs": [
+              {
+                "name": "finance_portfolio_mix_risky_share_pct",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  0.0
+                ]
+              }
+            ]
+          },
+          "response": {
+            "model_name": "finance_portfolio_mix",
+            "id": "s1-0",
+            "outputs": [
+              {
+                "name": "finance_portfolio_mix_return_pct",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  2.0
+                ]
+              },
+              {
+                "name": "finance_portfolio_mix_volatility_pct",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  5.0
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "request": {
+            "id": "s1-1",
+            "inputs": [
+              {
+                "name": "finance_portfolio_mix_risky_share_pct",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  25.0
+                ]
+              }
+            ]
+          },
+          "response": {
+            "model_name": "finance_portfolio_mix",
+            "id": "s1-1",
+            "outputs": [
+              {
+                "name": "finance_portfolio_mix_return_pct",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  3.0
+                ]
+              },
+              {
+                "name": "finance_portfolio_mix_volatility_pct",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  5.809475019311125
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "request": {
+            "id": "s1-2",
+            "inputs": [
+              {
+                "name": "finance_portfolio_mix_risky_share_pct",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  50.0
+                ]
+              }
+            ]
+          },
+          "response": {
+            "model_name": "finance_portfolio_mix",
+            "id": "s1-2",
+            "outputs": [
+              {
+                "name": "finance_portfolio_mix_return_pct",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  4.0
+                ]
+              },
+              {
+                "name": "finance_portfolio_mix_volatility_pct",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  8.366600265340756
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "request": {
+            "id": "s1-3",
+            "inputs": [
+              {
+                "name": "finance_portfolio_mix_risky_share_pct",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  75.0
+                ]
+              }
+            ]
+          },
+          "response": {
+            "model_name": "finance_portfolio_mix",
+            "id": "s1-3",
+            "outputs": [
+              {
+                "name": "finance_portfolio_mix_return_pct",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  5.0
+                ]
+              },
+              {
+                "name": "finance_portfolio_mix_volatility_pct",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  11.565033506220377
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "request": {
+            "id": "s1-4",
+            "inputs": [
+              {
+                "name": "finance_portfolio_mix_risky_share_pct",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  100.0
+                ]
+              }
+            ]
+          },
+          "response": {
+            "model_name": "finance_portfolio_mix",
+            "id": "s1-4",
+            "outputs": [
+              {
+                "name": "finance_portfolio_mix_return_pct",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  6.0
+                ]
+              },
+              {
+                "name": "finance_portfolio_mix_volatility_pct",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  15.0
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "request": {
+            "id": "s1-5",
+            "inputs": []
+          },
+          "error": "signature"
+        }
+      ]
+    }
+  ]
+}

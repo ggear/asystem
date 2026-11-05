@@ -1,0 +1,37 @@
+{
+  "spec_version": 1,
+  "name": "finance_portfolio_allocation",
+  "signature_version": 1,
+  "flavour": "pyfunc",
+  "provenance": {
+    "source": "manual",
+    "trained_on": "synthetic Merton shares, training split",
+    "inputs": [
+      "finance/portfolio/allocation/data/training/2026-11-05_16-33-56/portfolio_allocation_training_2026-11-05_2026-11-05.csv",
+      "finance/portfolio/allocation/data/golden/2026-11-05_16-33-56/portfolio_allocation_golden.csv"
+    ],
+    "notes": "least squares coefficient through the origin",
+    "implementation": "mlflow.pyfunc model.py, requires mlflow and pandas"
+  },
+  "files": {
+    "signature": {
+      "path": "signature.json",
+      "sha256": "e653d1d6379cf076ce62ab23bc0cbc49d317006349f4cb3f53314208980425dc"
+    },
+    "golden": {
+      "path": "golden.json",
+      "sha256": "c359545d6cd22c1e789bb099ffe9467a2379856481c9dcd89e03ce4de6989919"
+    },
+    "evaluation": {
+      "path": "evaluation.json",
+      "sha256": "4d1e720316d927010a76379e260ce044d4037f25dcb83b64b5c358868dbe535c"
+    },
+    "model": {
+      "path": "model.py",
+      "sha256": "004f2b8d488b12561d7965f3ebfd31f0c6e713df5dd3fdbdfba265435cf8e951"
+    }
+  },
+  "runtime": {
+    "python": []
+  }
+}

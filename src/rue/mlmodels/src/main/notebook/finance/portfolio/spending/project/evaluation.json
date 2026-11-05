@@ -1,0 +1,42 @@
+{
+  "datasets": {
+    "validation": [
+      {
+        "path": "2026-11-05_16-33-59/portfolio_spending_validation_2026-11-05_2026-11-05.csv",
+        "sha256": "3ff56cd425c90eae7c1a1b538cdfb498c5ee69080828f0a54e3f18de29927865"
+      }
+    ],
+    "backtest": [
+      {
+        "path": "2026-11-05_16-33-59/portfolio_spending_backtest_2026-11-05_2026-11-05.csv",
+        "sha256": "ee1b5652f6e008418a2615594dda8fec8c57579baf6dc219758fcdfba4cbeaf1"
+      }
+    ]
+  },
+  "checks": [
+    {
+      "split": "validation",
+      "output": "finance_portfolio_spending_rate_pct",
+      "name": "rmse",
+      "value": 2.8775980407629587e-07,
+      "limit": 0.01,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 2.8775980407629587e-05
+    },
+    {
+      "split": "backtest",
+      "output": "finance_portfolio_spending_rate_pct",
+      "name": "rmse",
+      "value": 2.4524413881402743e-07,
+      "limit": 0.01,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 2.4524413881402743e-05
+    }
+  ],
+  "passed": true,
+  "budget": 2.8775980407629587e-05
+}

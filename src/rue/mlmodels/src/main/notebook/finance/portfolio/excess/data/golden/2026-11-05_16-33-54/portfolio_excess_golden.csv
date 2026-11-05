@@ -1,0 +1,8 @@
+finance_portfolio_excess_volatility_pct,finance_portfolio_excess_risk_adjusted_pct,expect
+0.0,4.0,ok
+5.0,3.625,ok
+10.0,2.5,ok
+15.0,0.625,ok
+20.0,-2.000000000000001,ok
+30.0,-9.5,ok
+,,error

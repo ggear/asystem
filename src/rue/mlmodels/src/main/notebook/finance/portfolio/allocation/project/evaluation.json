@@ -1,0 +1,42 @@
+{
+  "datasets": {
+    "validation": [
+      {
+        "path": "2026-11-05_16-33-56/portfolio_allocation_validation_2026-11-05_2026-11-05.csv",
+        "sha256": "1308d604dd62371f78fd4a2bae73258aa92ca2817d415fae7d046c7b6d16aee2"
+      }
+    ],
+    "backtest": [
+      {
+        "path": "2026-11-05_16-33-56/portfolio_allocation_backtest_2026-11-05_2026-11-05.csv",
+        "sha256": "054dc6a41ae7b9198597f4e2d54e501542b061f23d276f2437beaac86d5d1292"
+      }
+    ]
+  },
+  "checks": [
+    {
+      "split": "validation",
+      "output": "finance_portfolio_allocation_risky_pct",
+      "name": "rmse",
+      "value": 2.97308351301413e-07,
+      "limit": 0.01,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 2.9730835130141295e-05
+    },
+    {
+      "split": "backtest",
+      "output": "finance_portfolio_allocation_risky_pct",
+      "name": "rmse",
+      "value": 1.6696043793187693e-07,
+      "limit": 0.01,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 1.669604379318769e-05
+    }
+  ],
+  "passed": true,
+  "budget": 2.9730835130141295e-05
+}
