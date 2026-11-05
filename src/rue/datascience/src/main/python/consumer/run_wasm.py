@@ -12,14 +12,18 @@ def load_wasm(path, signature_json):
     def math_function(name):
         function = getattr(math, name)
 
-        def call(value):
-            if name == "log" and value == 0.0:
-                return -math.inf
+        def call(*values):
             try:
-                return function(value)
+                return function(*values)
             except OverflowError:
-                return math.inf
+                if name == "pow":
+                    return -math.inf if values[0] < 0 and values[1] % 2 == 1 else math.inf
+                return math.copysign(math.inf, values[0]) if name == "sinh" else math.inf
             except ValueError:
+                if name in ("log", "log2", "log10") and values[0] == 0.0:
+                    return -math.inf
+                if name == "pow" and values[0] == 0.0 and values[1] < 0:
+                    return -math.inf if math.copysign(1.0, values[0]) < 0 and values[1] % 2 == 1 else math.inf
                 return math.nan
 
         return call
@@ -34,8 +38,9 @@ def load_wasm(path, signature_json):
     engine = wasmtime.Engine(config)
     module = wasmtime.Module.from_file(engine, path)
     linker = wasmtime.Linker(engine)
-    for name in ("atan", "cos", "exp", "log", "sin", "tanh"):
-        linker.define_func("asystem_math", name, wasmtime.FuncType([wasmtime.ValType.f64()], [wasmtime.ValType.f64()]), math_function(name))
+    arities = {"acos": 1, "asin": 1, "atan": 1, "atan2": 2, "cos": 1, "cosh": 1, "exp": 1, "log": 1, "log10": 1, "log2": 1, "pow": 2, "sin": 1, "sinh": 1, "tan": 1, "tanh": 1}
+    for name, arity in arities.items():
+        linker.define_func("asystem_math", name, wasmtime.FuncType([wasmtime.ValType.f64()] * arity, [wasmtime.ValType.f64()]), math_function(name))
 
     def predict(inputs):
         store = wasmtime.Store(engine)

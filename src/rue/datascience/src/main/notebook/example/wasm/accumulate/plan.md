@@ -16,7 +16,7 @@ The plan for the `example_wasm_accumulate` worked example. It follows `model.md`
 
 ## Intent
 
-Scale each input by a fitted gain, add a fitted offset and carry a running total of the outputs as state, in a hand-written WebAssembly module with the gain and offset built in. It is a hello world: the data is a synthetic line with fixed noise, so every number is reproducible and nothing queries a database.
+Scale each input by a fitted gain, add a fitted offset and carry a running total of the outputs as state, in a WebAssembly module with the gain and offset built in. The line and the running total are one Python function, `accumulate(x, total, gain, offset)`, which `workbench.wasm.trace` turns into the module (`model.md` 4.4), and the golden file is computed by calling the same function. It is a hello world: the data is a synthetic line with fixed noise, so every number is reproducible and nothing queries a database.
 
 The module imports nothing or only the `asystem_math` functions, and `write_project` records them as `runtime.wasm` in the project (`model.md` 3.5). A notebook declares nothing.
 

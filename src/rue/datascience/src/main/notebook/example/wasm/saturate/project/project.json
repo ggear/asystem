@@ -11,7 +11,7 @@
       "example/wasm/saturate/data/golden/2026-11-04_19-52-47/wasm_saturate_golden.csv"
     ],
     "notes": "least squares tanh curve, height and rate built into the module",
-    "implementation": "WebAssembly built by workbench.wasm.build_wasm, importing tanh from asystem_math"
+    "implementation": "WebAssembly traced from the fitted Python function by workbench.wasm.trace and built by build_wasm, importing tanh from asystem_math"
   },
   "files": {
     "signature": {

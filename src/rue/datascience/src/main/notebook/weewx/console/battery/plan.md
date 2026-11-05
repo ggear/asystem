@@ -16,8 +16,7 @@ holds only what is specific to this model.
 **Status, 2026-11-04.** The notebook fits the arctan to the 2024 training run and the 36 control points of the incumbent Home Assistant curve (the two weighted equally in total), writes `model.py`, scores the shipped model against the incumbent curve on the held-out `backtest` run and packages the `pyfunc` project. The rmse is 4.04 percent against a limit of 5 (budget 0.81), so acceptance passes. The shipped steps of 5 floor the capacity, and the model still reads up to 6 points above the incumbent between 3.80 and 3.88 V; the two Evaluate plots show the curves and the error at each backtest voltage. Before the control points were added the rmse was 6.54 and acceptance failed. The golden file was regenerated for the refit.
 
 **Why `pyfunc`.** The consumers are Home Assistant calling `mlserver` and Python, and none needs to run offline or embedded. `pyfunc` keeps the exact
-arctan, where a `wasm` module could not, because `atan` has no exact cross-platform result (`model.md` 4.2) and would need a piecewise-linear lookup. It
-also needs no builder. The project MUST carry a `static` floor for when the network is gone (`model.md` 3.3). A `wasm` version is the move only if
+arctan. A `wasm` module imports `atan` from the host and states a golden tolerance on the output (`model.md` 4.1, 4.2), and the fitted function can be traced into it (`model.md` 4.4); the steps of 5 are a discontinuity, so the tolerance must be set where a last-bit difference cannot cross a step, or `atan` written into the module (`model.md` 4.5). `pyfunc` also needs no builder. The project MUST carry a `static` floor for when the network is gone (`model.md` 3.3). A `wasm` version is the move only if
 an embedded consumer appears.
 
 ## Intent

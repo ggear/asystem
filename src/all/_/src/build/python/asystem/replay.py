@@ -82,8 +82,8 @@ def _wasm_predict(model_path, signature):
     engine = wasmtime.Engine(config)
     module = wasmtime.Module.from_file(engine, model_path)
     linker = wasmtime.Linker(engine)
-    for name in WASM_MATH_FUNCTIONS:
-        linker.define_func(WASM_MATH_MODULE, name, wasmtime.FuncType([wasmtime.ValType.f64()], [wasmtime.ValType.f64()]), _math_function(name))
+    for name, arity in WASM_MATH_FUNCTIONS.items():
+        linker.define_func(WASM_MATH_MODULE, name, wasmtime.FuncType([wasmtime.ValType.f64()] * arity, [wasmtime.ValType.f64()]), _math_function(name))
 
     def predict(inputs):
         store = wasmtime.Store(engine)
@@ -153,14 +153,18 @@ def _pyfunc_predict(model_path, signature):
 def _math_function(name):
     function = getattr(math, name)
 
-    def call(value):
-        if name == "log" and value == 0.0:
-            return -math.inf
+    def call(*values):
         try:
-            return function(value)
+            return function(*values)
         except OverflowError:
-            return math.inf
+            if name == "pow":
+                return -math.inf if values[0] < 0 and values[1] % 2 == 1 else math.inf
+            return math.copysign(math.inf, values[0]) if name == "sinh" else math.inf
         except ValueError:
+            if name in ("log", "log2", "log10") and values[0] == 0.0:
+                return -math.inf
+            if name == "pow" and values[0] == 0.0 and values[1] < 0:
+                return -math.inf if math.copysign(1.0, values[0]) < 0 and values[1] % 2 == 1 else math.inf
             return math.nan
 
     return call

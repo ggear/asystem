@@ -120,19 +120,19 @@ A project states what a runtime must provide beyond the base, so a missing depen
 | Flavour | `runtime` | Source | Runtime provides |
 |---|---|---|---|
 | `static`, `onnx` | None, and a manifest that carries one is a finding | | `static` needs only the loader, and `onnx` needs `onnxruntime` and its allow-listed operators, which a graph cannot extend |
-| `wasm` | `{"wasm": [<import name>, ...]}` | Derived from the module's imports by `write_project`, never written by a notebook | The six `asystem_math` functions of 4.1, which every host provides, so the list is a record and a check that equals the module and is never installed |
+| `wasm` | `{"wasm": [<import name>, ...]}` | Derived from the module's imports by `write_project`, never written by a notebook | The `asystem_math` functions of 4.1, which every host provides, so the list is a record and a check that equals the module and is never installed |
 | `pyfunc` | `{"python": [<package>, ...]}` | `PYTHON_DEPS` in the notebook's Setup cell, passed to `package_project` as `python_deps` | The base packages `mlflow`, `numpy` and `pandas`, plus the declared packages |
 
 - A `python` entry is a package name and never a version. Its version is the one global pin in the root `py_deps_prod.txt`, the same pin `fab` gives every module that lists the name in its `py_deps.txt` (R11), and a name with no pin fails the Package stage. Names are matched ignoring case and `-`, `_` and `.`.
 - A `python` list is sorted and unique, and excludes the standard library and the base packages. Lint (PJ017) reads the imports of `model.py` and fails in both directions: an import with no entry, and an entry nothing imports. A package whose import name differs from its package name (`scikit-learn` and `sklearn`) is matched through a short table in `asystem.model`.
 - `fab systest` installs the base pins and every workspace's declared packages at their global pins into the test image, so an embedded Python target fails if the list is incomplete. For a `served` target, MD005 requires every declared package to be named in `mlserver`'s own `py_deps.txt`, from which `fab generate` writes its pins from the same global file, so the served image carries exactly the version the notebook was tested against.
-- Adding a dependency is a change of behaviour (R10), made in this order: add the package to the project wide pins, add its name to `mlserver`'s `py_deps.txt` (no version, since `fab generate` pins it), then release `mlserver`, add the name to `PYTHON_DEPS`, and rerun the notebook, which changes the content hash. A consumer that embeds the project in Python adds the same names to its own `py_deps.txt`. A Rust or Go consumer never embeds a `pyfunc`, and needs for a `wasm` project only the six functions of 4.1.
+- Adding a dependency is a change of behaviour (R10), made in this order: add the package to the project wide pins, add its name to `mlserver`'s `py_deps.txt` (no version, since `fab generate` pins it), then release `mlserver`, add the name to `PYTHON_DEPS`, and rerun the notebook, which changes the content hash. A consumer that embeds the project in Python adds the same names to its own `py_deps.txt`. A Rust or Go consumer never embeds a `pyfunc`, and needs for a `wasm` project only the maths functions of 4.1.
 
 ## 4. WebAssembly models
 
 A `wasm` project is a WebAssembly module, `model.wasm`, that satisfies one ABI. Python, Rust and Go run the same bytes in a WebAssembly
 host and produce the same numbers. The specification fixes the ABI and the determinism rules; how a module is made is the choice of the
-project that needs it. A module is hand-written, or produced by `build_wasm` in `workbench`, which writes a compiled module per model from a small expression tree (constants, features, named intermediate values, arithmetic, `min`, `max` and a select on a comparison) and compiles it with `wasmtime`. A notebook builds the tree with the helpers of `workbench.wasm`, such as `add`, `mul`, `lt` and `select`. The
+project that needs it. A module is hand-written, or produced by `build_wasm` in `workbench`, which writes a compiled module per model from a small expression tree (constants, features, named intermediate values, arithmetic, `min`, `max` and a select on a comparison) and compiles it with `wasmtime`. A notebook builds the tree with the helpers of `workbench.wasm`, such as `add`, `mul`, `lt` and `select`, or traces it from an ordinary Python function (4.4). The
 manifest's `provenance.implementation` names what made it, and no implementation has a name in this specification.
 
 ### 4.1 ABI
@@ -143,7 +143,14 @@ manifest's `provenance.implementation` names what made it, and no implementation
 - Samples are independent, so `predict` holds no state between calls and the caller carries state from each response to the next request (R3).
 - A module is a fitted estimator. `fit` is not part of the ABI: fitting is offline, and the fitted attributes are built into the module.
 - A call MUST be bounded in time and memory. A host MUST meter fuel and cap memory.
-- A module MUST import nothing from its host except the maths functions `atan`, `cos`, `exp`, `log`, `sin` and `tanh`, each imported from the module `asystem_math` with the type `(f64) -> f64`. A host that runs a module MUST provide all of them, and they MUST give IEEE results for a value outside the domain: `log(0)` is negative infinity, `log` of a negative value and `sin` of an infinity are NaN, and an overflowing `exp` is positive infinity. The Python host (`wasmtime`, in `asystem.replay` and the `run_wasm` files, which `mlserver` carries), the Go host (`wazero`) and the Rust host (`wasmi`) provide them from their standard libraries, and a module that imports any of them can be run only by a host that does.
+- A module MUST import nothing from its host except the maths functions of the table below, each imported from the module `asystem_math` with the type `(f64, ...) -> f64` of its arity. A host that runs a module MUST provide all of them, and they MUST give IEEE (C99) results for a value outside the domain: `log(0)` is negative infinity, `log` of a negative value, `asin` of a value above one and `sin` of an infinity are NaN, an overflowing `exp` or `cosh` is positive infinity, an overflowing `sinh` takes the sign of its argument, and `pow(0, y)` is infinity for a negative `y`. The Python host (`wasmtime`, in `asystem.replay` and the `run_wasm` files, which `mlserver` carries), the Go host (`wazero`) and the Rust host (`wasmi`) provide them from their standard libraries, and a module that imports any of them can be run only by a host that does.
+
+  | Arity | Functions |
+  |---|---|
+  | 1 | `acos`, `asin`, `atan`, `cos`, `cosh`, `exp`, `log` (natural), `log10`, `log2`, `sin`, `sinh`, `tan`, `tanh` |
+  | 2 | `atan2(y, x)`, `pow(base, exponent)` |
+
+  `sqrt`, `abs`, `floor`, `ceil`, `trunc`, `nearest`, `min` and `max` are WebAssembly instructions, exact on every host, and are never imported. The set is closed and owned by `WASM_MATH_FUNCTIONS` in `asystem.model`, which gives each name's arity; the Python `run_wasm` files, the Go host and the Rust host mirror it, and a test asserts the sets and arities are equal. Adding a function is an ABI change and a release of every consumer (R10): add it to the owner, to all three hosts and to this table, and bump the ABI version. Prefer 4.5 for a simple function the table lacks.
 - A module MUST export its linear memory as `memory` and `predict` as `predict(x: i32, n: i32, y: i32)`. The host writes `n` rows of float64 features, row-major, at byte offset `x`, calls `predict`, and reads `n` rows of float64 outputs from byte offset `y`. A host puts `x` at 0 and `y` immediately after the features.
 - The signature's tensors are named columns, so column `j` of `X` is the `j`-th feature in signature order, and a V2 request is stacked into `X` in that order.
 - A signature tensor of datatype `INT64` travels as float64, exact to 2^53, and the runtime casts it back by the signature. A larger value is invalid.
@@ -164,6 +171,7 @@ The vocabulary is scikit-learn's, mapped onto MLServer's and MLflow's:
 
 - A module MUST use float64 (`FP64`) only, and MUST NOT use relaxed SIMD, threads or any operation with a result that differs between CPUs.
 - A function with no exact cross-platform result is imported from `asystem_math` (4.1), and each host calls its own maths library, so its result MAY differ between hosts in the last bits. A golden tolerance MUST be stated for every output that depends on one. A model MUST NOT branch on the result of such a function where a difference in the last bits would change the branch taken, or MUST use a lookup table or a polynomial built from basic operations in its place.
+- A host's result for a maths function is stable to a few units in the last place, not bit-identical, and the tolerance is the stated remedy. Where the differences become significant, because a tolerance wide enough to hold them hides a real fault, or a branch or a step in the model amplifies them, put the algorithm in the module (4.5) instead of importing it.
 - The golden sequences and the parity gate prove it: the module MUST reproduce every response and state exactly in every reference consumer a target names,
   except for an output with a stated tolerance.
 - A tolerance is stated in `golden.json` as `"tolerance": {"<output>": {"absolute": <a>, "relative": <r>}}`, for an `FP64` output only, with either bound or both. A value
@@ -171,11 +179,26 @@ The vocabulary is scikit-learn's, mapped onto MLServer's and MLflow's:
   A learned `onnx` graph, whose float32 kernels differ between CPUs, MUST state one, and a notebook SHOULD choose the smallest bound its own error on `validation` allows
   and say why in its plan. The same rule applies to every runtime of the gate, so it cannot be loosened for one host.
 
+
 ### 4.3 Requirements
 
 - Each project MUST record the hash of its `model.wasm`, so every host runs the same bytes.
 - A new ABI version or a new host runtime version MUST be a code release of the runtime and every consumer (R10). A refit replaces `model.wasm` only.
 - The builder is `workbench.wasm.build_wasm` in the `datascience` module. Third-party libraries fit the numbers that go into the module, and the fitted values are built in as constants.
+
+### 4.4 Tracing a function into a module
+
+`workbench.wasm.trace(function, features)` calls an ordinary Python function with one symbolic value per feature and returns the output expressions for `build_wasm`, so a formula is written once and serves the fit, the plots, the golden samples and the module.
+
+- The helpers of `workbench.wasm` (`add`, `atan`, `exp`, `select`, `clip`, `minimum`, `floor` and the rest) take either symbolic values or numbers and arrays. On a symbolic value they build the expression; on a number or a numpy array they compute with numpy and return IEEE results, which is the result a host gives, so `curve_fit` and the plots can call the same function.
+- A symbolic value supports `+`, `-`, `*`, `/`, unary `-`, `abs`, `**` and the comparisons `<`, `<=`, `>` and `>=`. A `**` by an integer from 2 to 8 is written as multiplications, and any other power imports `pow`. A comparison is valid only as the condition of `select`.
+- A function MUST NOT use Python control flow on a symbolic value (`if`, `and`, `or`, `while`): converting one to a truth value raises, and a branch is `select(condition, taken, otherwise)`, which evaluates both arms. A function MUST NOT call numpy or `math` functions on a symbolic value, but the same-named helper of `workbench.wasm`. Fitted values are bound before tracing, as `trace(lambda x: curve(x, *fitted), 1)`.
+- A function is traced to a tree with no shared subexpressions: a subexpression used twice is emitted twice, and `build_wasm`'s `lets` name one that matters. Floor division is not supported, and a step is written `floor(x / step) * step`, which is identical in the traced and the plain call.
+- A traced function MUST be checked against the module: the golden samples replayed through the module, or a plain call compared with the module over a sweep that includes the bounds, is the check. The plain call differs from a host only at the tolerance of 4.2, and numpy's `pow` differs from C99 for a base of negative zero or negative infinity.
+
+### 4.5 A maths function in the module
+
+A function of 4.1 is imported so that each host uses its own library, which is cheap and sufficient while the last-bit differences are inside the stated tolerance. Where they are not, or where the table lacks the function, a builder MAY write the algorithm into the module with `f64` arithmetic only: a polynomial or rational approximation after range reduction, `sqrt` and the rounding instructions, and no import. Every host runs the same bytes through the same IEEE operations, so the result is identical on every host with no tolerance and no ABI change, at the cost of a larger module and an approximation to validate once against a reference over the whole domain. It suits a simple function (`atan`, `exp`, `log`, a sigmoid) and a short expression, not a function with a long special-case table. No builder does this yet.
 
 ## 5. Libraries
 
@@ -542,7 +565,7 @@ both run by `fab build`.
 | PJ011 | The golden holds a step that expects a signature error, and a first call with no state when the signature has state | R8 |
 | PJ012 | Every golden response of a `static` project equals the constants | R4 |
 | PJ015 | A golden tolerance names an `FP64` signature output and gives a non-negative `absolute` or `relative` bound, or both | R5 |
-| PJ016 | A `wasm` module imports only the maths functions of 4.1, each as `(f64) -> f64` | R4 |
+| PJ016 | A `wasm` module imports only the maths functions of 4.1, each as `(f64, ...) -> f64` of its arity | R4 |
 | PJ017 | A `wasm` project's `runtime` equals its module's imports, a `pyfunc` project's `runtime` lists exactly the packages its `model.py` imports beyond the standard library and the base, and no other flavour has a `runtime` | R11 |
 | AC001 | A project that is not `static` holds an evaluation, and every required scalar output has a gating check in it | R14 |
 | AC002 | A check names a known split, a name in the naming style, an output in the signature, a numeric or null value, a limit and direction, and a boolean gate | R14 |

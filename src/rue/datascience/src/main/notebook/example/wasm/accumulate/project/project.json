@@ -11,7 +11,7 @@
       "example/wasm/accumulate/data/golden/2026-11-03_16-40-51/wasm_accumulate_golden.csv"
     ],
     "notes": "least squares line, gain and offset built into the module",
-    "implementation": "hand-written WebAssembly text compiled with wasmtime.wat2wasm"
+    "implementation": "WebAssembly traced from a Python function by workbench.wasm.trace and built by build_wasm"
   },
   "files": {
     "signature": {
@@ -28,7 +28,7 @@
     },
     "model": {
       "path": "model.wasm",
-      "sha256": "9c019ced5a2b5dea927a83486eca770d3fbbb4047ae6445eb60233753ae7950e"
+      "sha256": "c1df69a6b31d76dea929fcdbc3378efc329d3a4ba749ced3920e51dce37931af"
     }
   },
   "runtime": {

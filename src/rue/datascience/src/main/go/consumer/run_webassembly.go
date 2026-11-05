@@ -42,7 +42,11 @@ func loadWasm(path string, signatureJSON string) (func(map[string][]float64) (ma
 	ctx := context.Background()
 	engine := wazero.NewRuntimeWithConfig(ctx, wazero.NewRuntimeConfig().WithMemoryLimitPages(memoryPages).WithCloseOnContextDone(true))
 	maths := engine.NewHostModuleBuilder(mathModule)
-	for name, function := range map[string]func(float64) float64{"atan": math.Atan, "cos": math.Cos, "exp": math.Exp, "log": math.Log, "sin": math.Sin, "tanh": math.Tanh} {
+	functions := map[string]any{
+		"acos": math.Acos, "asin": math.Asin, "atan": math.Atan, "atan2": math.Atan2, "cos": math.Cos, "cosh": math.Cosh, "exp": math.Exp, "log": math.Log,
+		"log10": math.Log10, "log2": math.Log2, "pow": math.Pow, "sin": math.Sin, "sinh": math.Sinh, "tan": math.Tan, "tanh": math.Tanh,
+	}
+	for name, function := range functions {
 		maths.NewFunctionBuilder().WithFunc(function).Export(name)
 	}
 	if _, err := maths.Instantiate(ctx); err != nil {

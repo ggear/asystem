@@ -10,7 +10,8 @@ pub fn load_wasm(path: &str, signature_json: &str) -> Result<Predict, String> {
     const FUEL: u64 = 1_000_000;
     const MEMORY_BYTES: usize = 1 << 20;
     const MATH_MODULE: &str = "asystem_math";
-    type MathFunction = fn(f64) -> f64;
+    type Unary = fn(f64) -> f64;
+    type Binary = fn(f64, f64) -> f64;
 
     let signature: Value =
         serde_json::from_str(signature_json).map_err(|error| format!("signature invalid [{error}]"))?;
@@ -20,15 +21,28 @@ pub fn load_wasm(path: &str, signature_json: &str) -> Result<Predict, String> {
     let engine = Engine::new(&config);
     let module = Module::new(&engine, &bytes[..]).map_err(|error| format!("module invalid [{error}]"))?;
     let mut linker = <Linker<StoreLimits>>::new(&engine);
-    let functions: [(&str, MathFunction); 6] = [
+    let unary: [(&str, Unary); 13] = [
+        ("acos", f64::acos),
+        ("asin", f64::asin),
         ("atan", f64::atan),
         ("cos", f64::cos),
+        ("cosh", f64::cosh),
         ("exp", f64::exp),
         ("log", f64::ln),
+        ("log10", f64::log10),
+        ("log2", f64::log2),
         ("sin", f64::sin),
+        ("sinh", f64::sinh),
+        ("tan", f64::tan),
         ("tanh", f64::tanh),
     ];
-    for (name, function) in functions {
+    let binary: [(&str, Binary); 2] = [("atan2", f64::atan2), ("pow", f64::powf)];
+    for (name, function) in unary {
+        linker
+            .func_wrap(MATH_MODULE, name, function)
+            .map_err(|error| format!("maths function did not link [{name}] [{error}]"))?;
+    }
+    for (name, function) in binary {
         linker
             .func_wrap(MATH_MODULE, name, function)
             .map_err(|error| format!("maths function did not link [{name}] [{error}]"))?;

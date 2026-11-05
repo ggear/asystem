@@ -1,5 +1,7 @@
 import math
+from numbers import Real
 
+import numpy
 import wasmtime
 
 from asystem.model import WASM_MATH_FUNCTIONS, WASM_MATH_MODULE
@@ -13,6 +15,8 @@ def build_wasm(features, outputs, lets=()):
     names = [name for name, _ in lets]
     if len(set(names)) != len(names):
         raise ValueError(f"duplicate let name in [{names}]")
+    outputs = [_node(expression) for expression in outputs]
+    lets = [(name, _node(expression)) for name, expression in lets]
     if features < 1 or not outputs:
         raise ValueError(f"a module needs features and outputs, got features [{features}] outputs [{len(outputs)}]")
     scope = []
@@ -23,7 +27,7 @@ def build_wasm(features, outputs, lets=()):
         scope.append(name)
     output_text = [f"(f64.store (i32.add (local.get $row_out) (i32.const {8 * index})) {_emit(expression, features, scope, used)})" for index, expression in enumerate(outputs)]
     declared = "".join(f"(local ${name} f64)" for name in names)
-    imported = "\n  ".join(f'(import "{WASM_MATH_MODULE}" "{name}" (func $asystem_math_{name} (param f64) (result f64)))' for name in sorted(used))
+    imported = "\n  ".join(f'(import "{WASM_MATH_MODULE}" "{name}" (func $asystem_math_{name} (param{" f64" * WASM_MATH_FUNCTIONS[name]}) (result f64)))' for name in sorted(used))
     text = f"""
 (module
   {imported}
@@ -46,120 +50,264 @@ def build_wasm(features, outputs, lets=()):
     return wasmtime.wat2wasm(text)
 
 
+class Sym:
+    __array_ufunc__ = None
+
+    def __init__(self, node):
+        self.node = node
+
+    def __repr__(self):
+        return f"Sym({self.node!r})"
+
+    def __bool__(self):
+        raise TypeError("an expression has no truth value, use select(condition, taken, otherwise)")
+
+    def __add__(self, other):
+        return add(self, other)
+
+    def __radd__(self, other):
+        return add(other, self)
+
+    def __sub__(self, other):
+        return sub(self, other)
+
+    def __rsub__(self, other):
+        return sub(other, self)
+
+    def __mul__(self, other):
+        return mul(self, other)
+
+    def __rmul__(self, other):
+        return mul(other, self)
+
+    def __truediv__(self, other):
+        return div(self, other)
+
+    def __rtruediv__(self, other):
+        return div(other, self)
+
+    def __neg__(self):
+        return neg(self)
+
+    def __abs__(self):
+        return absolute(self)
+
+    def __pow__(self, other):
+        if isinstance(other, int | float) and float(other).is_integer() and 2 <= other <= 8:
+            result = self
+            for _ in range(int(other) - 1):
+                result = mul(result, self)
+            return result
+        return power(self, other)
+
+    def __rpow__(self, other):
+        return power(other, self)
+
+    def __lt__(self, other):
+        return lt(self, other)
+
+    def __le__(self, other):
+        return le(self, other)
+
+    def __gt__(self, other):
+        return gt(self, other)
+
+    def __ge__(self, other):
+        return ge(self, other)
+
+
+def trace(function, features):
+    result = function(*[feature(index) for index in range(features)])
+    outputs = list(result) if isinstance(result, list | tuple) else [result]
+    return [Sym(_node(output)) for output in outputs]
+
+
 def const(value):
-    return ("const", value)
+    return Sym(("const", value))
 
 
 def feature(index):
-    return ("x", index)
+    return Sym(("x", index))
 
 
 def var(name):
-    return ("var", name)
+    return Sym(("var", name))
 
 
 def add(left, right):
-    return ("add", left, right)
+    return _apply("add", numpy.add, left, right)
 
 
 def sub(left, right):
-    return ("sub", left, right)
+    return _apply("sub", numpy.subtract, left, right)
 
 
 def mul(left, right):
-    return ("mul", left, right)
+    return _apply("mul", numpy.multiply, left, right)
 
 
 def div(left, right):
-    return ("div", left, right)
+    return _apply("div", numpy.divide, left, right)
 
 
 def minimum(left, right):
-    return ("min", left, right)
+    return _apply("min", numpy.minimum, left, right)
 
 
 def maximum(left, right):
-    return ("max", left, right)
+    return _apply("max", numpy.maximum, left, right)
+
+
+def clip(operand, low, high):
+    return minimum(maximum(operand, low), high)
 
 
 def neg(operand):
-    return ("neg", operand)
+    return _apply("neg", numpy.negative, operand)
 
 
 def absolute(operand):
-    return ("abs", operand)
+    return _apply("abs", numpy.abs, operand)
 
 
 def sqrt(operand):
-    return ("sqrt", operand)
+    return _apply("sqrt", numpy.sqrt, operand)
 
 
 def floor(operand):
-    return ("floor", operand)
+    return _apply("floor", numpy.floor, operand)
 
 
 def ceil(operand):
-    return ("ceil", operand)
+    return _apply("ceil", numpy.ceil, operand)
 
 
 def trunc(operand):
-    return ("trunc", operand)
+    return _apply("trunc", numpy.trunc, operand)
 
 
 def nearest(operand):
-    return ("nearest", operand)
+    return _apply("nearest", numpy.rint, operand)
 
 
 def lt(left, right):
-    return ("lt", left, right)
+    return _compare("lt", numpy.less, left, right)
 
 
 def le(left, right):
-    return ("le", left, right)
+    return _compare("le", numpy.less_equal, left, right)
 
 
 def gt(left, right):
-    return ("gt", left, right)
+    return _compare("gt", numpy.greater, left, right)
 
 
 def ge(left, right):
-    return ("ge", left, right)
+    return _compare("ge", numpy.greater_equal, left, right)
 
 
 def eq(left, right):
-    return ("eq", left, right)
+    return _compare("eq", numpy.equal, left, right)
 
 
 def ne(left, right):
-    return ("ne", left, right)
+    return _compare("ne", numpy.not_equal, left, right)
+
+
+def acos(operand):
+    return _apply("acos", numpy.arccos, operand)
+
+
+def asin(operand):
+    return _apply("asin", numpy.arcsin, operand)
 
 
 def atan(operand):
-    return ("atan", operand)
+    return _apply("atan", numpy.arctan, operand)
+
+
+def atan2(left, right):
+    return _apply("atan2", numpy.arctan2, left, right)
 
 
 def cos(operand):
-    return ("cos", operand)
+    return _apply("cos", numpy.cos, operand)
+
+
+def cosh(operand):
+    return _apply("cosh", numpy.cosh, operand)
 
 
 def exp(operand):
-    return ("exp", operand)
+    return _apply("exp", numpy.exp, operand)
 
 
 def log(operand):
-    return ("log", operand)
+    return _apply("log", numpy.log, operand)
+
+
+def log10(operand):
+    return _apply("log10", numpy.log10, operand)
+
+
+def log2(operand):
+    return _apply("log2", numpy.log2, operand)
+
+
+def power(left, right):
+    return _apply("pow", numpy.power, left, right)
 
 
 def sin(operand):
-    return ("sin", operand)
+    return _apply("sin", numpy.sin, operand)
+
+
+def sinh(operand):
+    return _apply("sinh", numpy.sinh, operand)
+
+
+def tan(operand):
+    return _apply("tan", numpy.tan, operand)
 
 
 def tanh(operand):
-    return ("tanh", operand)
+    return _apply("tanh", numpy.tanh, operand)
 
 
 def select(condition, taken, otherwise):
-    return ("select", condition, taken, otherwise)
+    if _is_node(condition):
+        return Sym(("select", _node(condition), _node(taken), _node(otherwise)))
+    result = numpy.where(condition, numpy.asarray(taken, dtype=float), numpy.asarray(otherwise, dtype=float))
+    return float(result) if result.ndim == 0 else result
+
+
+def _apply(kind, function, *operands):
+    if any(_is_node(operand) for operand in operands):
+        return Sym((kind, *[_node(operand) for operand in operands]))
+    with numpy.errstate(all="ignore"):
+        result = function(*[numpy.asarray(operand, dtype=float) for operand in operands])
+    return float(result) if result.ndim == 0 else result
+
+
+def _compare(kind, function, left, right):
+    if _is_node(left) or _is_node(right):
+        return Sym((kind, _node(left), _node(right)))
+    result = function(numpy.asarray(left, dtype=float), numpy.asarray(right, dtype=float))
+    return bool(result) if result.ndim == 0 else result
+
+
+def _is_node(value):
+    return isinstance(value, Sym | tuple)
+
+
+def _node(value):
+    if isinstance(value, Sym):
+        return value.node
+    if isinstance(value, tuple):
+        return value
+    if isinstance(value, Real):
+        return ("const", float(value))
+    raise TypeError(f"not a number or an expression [{type(value).__name__}]")
 
 
 def _emit(node, features, scope, used):
@@ -179,8 +327,10 @@ def _emit(node, features, scope, used):
     if kind in BINARY:
         return f"({BINARY[kind]} {_emit(node[1], features, scope, used)} {_emit(node[2], features, scope, used)})"
     if kind in WASM_MATH_FUNCTIONS:
+        if len(node) - 1 != WASM_MATH_FUNCTIONS[kind]:
+            raise ValueError(f"maths function [{kind}] takes [{WASM_MATH_FUNCTIONS[kind]}] arguments, got [{len(node) - 1}]")
         used.add(kind)
-        return f"(call $asystem_math_{kind} {_emit(node[1], features, scope, used)})"
+        return f"(call $asystem_math_{kind} {' '.join(_emit(child, features, scope, used) for child in node[1:])})"
     if kind in UNARY:
         return f"({UNARY[kind]} {_emit(node[1], features, scope, used)})"
     if kind == "select":

@@ -16,7 +16,7 @@ The plan for the `example_wasm_saturate` worked example. It follows `model.md`, 
 
 ## Intent
 
-Squash each input through a fitted `tanh` curve, height times `tanh` of rate times input, in a module built by `workbench.wasm.build_wasm` with the height and rate built in. It is the worked example of a module that binds a host function: it imports `tanh` from `asystem_math` (`model.md` 4.1), so `write_project` records `runtime.wasm` as `["tanh"]` (3.5) and every host must provide `tanh`. The data is a synthetic curve with fixed noise, so every number is reproducible and nothing queries a database.
+Squash each input through a fitted `tanh` curve, height times `tanh` of rate times input, in a module traced from one Python function, `saturate(x, height, rate)`, by `workbench.wasm.trace` and built by `build_wasm` with the height and rate built in (`model.md` 4.4). `curve_fit` calls the same function on arrays, and the golden file is computed by calling it on floats. It is the worked example of a module that binds a host function: it imports `tanh` from `asystem_math` (`model.md` 4.1), so `write_project` records `runtime.wasm` as `["tanh"]` (3.5) and every host must provide `tanh`. The data is a synthetic curve with fixed noise, so every number is reproducible and nothing queries a database.
 
 Each host calls its own `tanh`, so its result may differ in the last bits and the golden file states a tolerance for the output (`model.md` 4.2).
 

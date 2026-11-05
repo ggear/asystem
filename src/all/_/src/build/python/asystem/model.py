@@ -25,7 +25,7 @@ PROJECT_PLACEHOLDERS = ("tbd", "todo", "unknown", "none", "n/a", "not applicable
 PROJECT_MODEL_FILES = {"wasm": "model.wasm", "onnx": "model.onnx", "pyfunc": "model.py"}
 PROJECT_SOURCES = ("static", "manual", "mlflow")
 WASM_MATH_MODULE = "asystem_math"
-WASM_MATH_FUNCTIONS = ("atan", "cos", "exp", "log", "sin", "tanh")
+WASM_MATH_FUNCTIONS = {"acos": 1, "asin": 1, "atan": 1, "atan2": 2, "cos": 1, "cosh": 1, "exp": 1, "log": 1, "log10": 1, "log2": 1, "pow": 2, "sin": 1, "sinh": 1, "tan": 1, "tanh": 1}
 PYFUNC_BASE_IMPORTS = ("mlflow", "numpy", "pandas")
 PYFUNC_IMPORT_NAMES = {"scikit_learn": "sklearn", "python_dateutil": "dateutil", "pyyaml": "yaml", "pillow": "PIL"}
 PROJECT_ALIAS_PREVIEW = "preview"
@@ -247,7 +247,13 @@ def lint_project(project_dir):
         f64 = wasmtime.ValType.f64()
         for entry in _wasm_module_imports(join(project_dir, files["model"]["path"])):
             kind = entry.type
-            if entry.module != WASM_MATH_MODULE or entry.name not in WASM_MATH_FUNCTIONS or not isinstance(kind, wasmtime.FuncType) or list(kind.params) != [f64] or list(kind.results) != [f64]:
+            if (
+                entry.module != WASM_MATH_MODULE
+                or entry.name not in WASM_MATH_FUNCTIONS
+                or not isinstance(kind, wasmtime.FuncType)
+                or list(kind.params) != [f64] * WASM_MATH_FUNCTIONS[entry.name]
+                or list(kind.results) != [f64]
+            ):
                 findings.append(("PJ016", f"wasm module imports something other than a maths function [{entry.module}] [{entry.name}]"))
     runtime = manifest.get("runtime")
     if flavour == "pyfunc" or (flavour == "wasm" and "model" in files):
