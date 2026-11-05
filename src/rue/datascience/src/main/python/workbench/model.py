@@ -501,6 +501,9 @@ def main(arguments=None):
     status = commands.add_parser("status")
     status.add_argument("source_dir")
     status.add_argument("--mlserver")
+    docker_args = commands.add_parser("docker-args")
+    docker_args.add_argument("source_dir")
+    docker_args.add_argument("pins_path")
     embed = commands.add_parser("embed")
     embed.add_argument("consumer_dir")
     embed.add_argument("source_dir")
@@ -563,6 +566,24 @@ def main(arguments=None):
 
             for level, message in status_lines(options.source_dir, os.environ.get("MLFLOW_TRACKING_URI") and registry_address(os.environ["MLFLOW_TRACKING_URI"]), options.mlserver):
                 print(f"{level} {message}", file=sys.stderr)
+        elif options.command == "docker-args":
+            from workbench.metadata import CONSUMER_PINS, package_key, read_metadata, read_pins
+            from workbench.release import workspaces
+
+            pins = {package_key(name): (name, version) for name, version in read_pins(options.pins_path, None).items()}
+            declared = sorted(
+                {
+                    package_key(name)
+                    for directory in workspaces(options.source_dir).values()
+                    if isfile(join(directory, "metadata.json"))
+                    for name in read_metadata(directory)["runtime"].get("python", ())
+                }
+            )
+            unpinned = [name for name in declared if name not in pins]
+            if unpinned:
+                raise GateError("Image", "runtime", f"python dependencies with no project wide pin {unpinned}")
+            wanted = dict.fromkeys((*(package_key(pin) for pin in CONSUMER_PINS if package_key(pin) in pins), *declared))
+            print(f'--build-arg "PINS={" ".join(f"{pins[key][0]}=={pins[key][1]}" for key in wanted)}"')
         elif options.command == "embed":
             from workbench.release import embed_consumer
 

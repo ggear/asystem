@@ -1,7 +1,12 @@
 {
   "content_sha256": "8004dbdd18946d2606c5d9773676bb626c29ab24eff633ac1895dace88ce7a60",
   "inputs_sha256": "8b389470de68547fb512635e0c533f2c87d9beb1c7a49fea65d128a0f6946ae3",
-  "passed": [],
+  "passed": [
+    {
+      "kind": "embedded",
+      "language": "python"
+    }
+  ],
   "released_at": null,
   "released_by": null,
   "released_signature": null,

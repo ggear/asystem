@@ -955,6 +955,8 @@ def _package(context, filter_module=None, filter_host=None, is_release=False):
         for env_global_key, env_global_value in GLOBAL_ENV.items():
             if env_global_key.endswith(("_VERSION", "_LABEL")):
                 build_args += "\\\n    --build-arg ASYSTEM_{}={} ".format(env_global_key, env_global_value.removeprefix('"').removesuffix('"'))
+        if isfile(join(ROOT_MODULE_DIR, module, "src/build/resources/model.sh")):
+            build_args += _run_local(context, "src/build/resources/model.sh docker-args", module, hide="out").stdout.strip()
         docker_image_build_start_time = time.time()
         _run_local(context, f"docker buildx build . --progress=plain --platform linux/{host_arch} --output type=docker --tag {_name(module)}:{_get_versions()[0]} {build_args}", module)
         docker_image_build_time = int((time.time() - docker_image_build_start_time) / 60)
@@ -993,6 +995,8 @@ def _test_sys(context, filter_module=None):
     _test_models(context, "systest", filter_module=filter_module)
     for module in _get_modules(context, "src/test/*/system", filter_module=filter_module):
         _up_module(context, module, is_test=True)
+        if isfile(join(ROOT_MODULE_DIR, module, "Dockerfile")) and not isfile(join(ROOT_MODULE_DIR, module, "docker-compose.yml")):
+            _package(context, filter_module=module)
         _print_header(module, "system test")
         install_local_path = join(ROOT_MODULE_DIR, module, "install_local.sh")
         if isfile(install_local_path):

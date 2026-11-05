@@ -8,17 +8,15 @@ sys.path.append("../../../main/python")
 sys.path.append("../../../../../../all/_/src/build/python")
 
 from asystem.report import run_pytest, stage
+from workbench.config import VERSION_PATH
 from workbench.errors import GateError
-from workbench.metadata import METADATA_FILE, PROJECT_DIR, package_key, read_metadata, read_pins, record_passed
+from workbench.metadata import METADATA_FILE, PROJECT_DIR, read_metadata, record_passed
 from workbench.model import PROJECT_ALIAS_PREVIEW
 from workbench.release import clear_preview, wait_served, workspaces
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 DIR_SOURCE = abspath(join(DIR_ROOT, "../.."))
-TIMEOUT_BUILD = 3000
 TIMEOUT_RUN = 300
-IMAGE = "datascience-consumers:test"
-CONSUMER_PINS = ("numpy", "pandas", "onnxruntime", "wasmtime", "mlflow")
 
 
 def _label(target):
@@ -45,19 +43,14 @@ def env():
 
 
 @pytest.fixture(scope="session")
-def image(env):
-    pins = {package_key(name): (name, version) for name, version in read_pins(join(DIR_SOURCE, "../.py_deps_prod.txt"), None).items()}
-    declared = sorted({package_key(name) for directory in workspaces(DIR_SOURCE).values() if isfile(join(directory, METADATA_FILE)) for name in read_metadata(directory)["runtime"].get("python", ())})
-    unpinned = [name for name in declared if name not in pins]
-    if unpinned:
-        raise GateError("image", "runtime", f"python dependencies with no project wide pin {unpinned}")
-    pinned = " ".join(f"{pins[key][0]}=={pins[key][1]}" for key in dict.fromkeys((*(package_key(pin) for pin in CONSUMER_PINS if package_key(pin) in pins), *declared)))
-    build_args = [f"--build-arg={key}={value}" for key, value in env.items() if key.startswith("ASYSTEM_") and key.endswith(("_VERSION", "_LABEL"))]
+def image():
+    with open(VERSION_PATH) as version_file:
+        tag = f"datascience:{version_file.read().strip()}"
     with stage("image") as entry:
-        built = subprocess.run(["docker", "build", "--quiet", "--tag", IMAGE, f"--build-arg=PINS={pinned}", *build_args, DIR_ROOT], capture_output=True, text=True, timeout=TIMEOUT_BUILD, check=False)
-        if built.returncode != 0:
-            raise GateError("image", "build", f"output [{built.stderr.strip()}]")
-        entry.detail = IMAGE
+        if subprocess.run(["docker", "image", "inspect", tag], capture_output=True, check=False).returncode != 0:
+            raise GateError("image", "missing", f"image [{tag}] was not built, run fab test_sys, which packages it first")
+        entry.detail = tag
+    return tag
 
 
 @pytest.fixture(scope="session")
@@ -83,11 +76,11 @@ def test_a_declared_target_runs_its_project(name, directory, target, env, image,
         with stage("serve") as entry:
             wait_served(server, f"{name}_preview", f"preview-{metadata['content_sha256'][:8]}")
             entry.detail = f"{name}_preview"
-        output = _run("python", ["-m", "consumer.main", "/project", server, f"{name}_preview"], project_dir)
+        output = _run(image, "python", ["-m", "consumer.main", "/project", server, f"{name}_preview"], project_dir)
     else:
         with stage("compile") as entry:
             entry.detail = "interpreted" if target["language"] == "python" else "prebuilt"
-        output = _run(target["language"], ["-m", "consumer.main", "/project"] if target["language"] == "python" else ["/project"], project_dir)
+        output = _run(image, target["language"], ["-m", "consumer.main", "/project"] if target["language"] == "python" else ["/project"], project_dir)
     print(output.stdout, end="", flush=True)
     if output.returncode != 0:
         raise GateError("target", _label(target), f"workspace [{name}] output [{(output.stderr or output.stdout).strip()}]")
@@ -116,9 +109,9 @@ def _wait_registry(name, content_sha256, tracking_uri):
     raise GateError("mlflow", "preview", f"model [{name}] alias [{PROJECT_ALIAS_PREVIEW}] with content [{content_sha256[:8]}] not visible within [{TIMEOUT_RUN}] seconds")
 
 
-def _run(language, arguments, project_dir):
+def _run(image, language, arguments, project_dir):
     command = ["python", *arguments] if language == "python" else [f"/asystem/bin/{language}", *arguments]
-    return subprocess.run(["docker", "run", "--rm", "--volume", f"{project_dir}:/project:ro", IMAGE, *command], capture_output=True, text=True, timeout=TIMEOUT_RUN, check=False)
+    return subprocess.run(["docker", "run", "--rm", "--volume", f"{project_dir}:/project:ro", image, *command], capture_output=True, text=True, timeout=TIMEOUT_RUN, check=False)
 
 
 if __name__ == "__main__":

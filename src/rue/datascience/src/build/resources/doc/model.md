@@ -472,8 +472,8 @@ Each task includes the ones before it.
 | `generate` | Each consumer's `generate.sh` embeds the released project and verifies it. No notebook runs |
 | `build` (Default) | The loader compiles against the signature |
 | `unittest` | `model.sh unittest` runs the notebooks to Package and writes `project/` and the hashes (11.5), then the unit tests of every module |
-| `systest` | `model.sh systest` registers the previews, then the system tests run, `datascience`'s against the production services (11.5) |
-| `package`, `execute` | None for `datascience`, whose `Dockerfile` is a test environment |
+| `systest` | `model.sh systest` registers the previews, `fab` packages the `datascience` image, then the system tests run, `datascience`'s against the production services (11.5) |
+| `package` | Builds the `datascience` image through the shared packaging step, with the `PINS` build argument from `model.sh docker-args`. `execute` has nothing to run for `datascience`, whose `Dockerfile` is a test environment |
 | `release` | `check-release` on a consumer's embedded project, then `model.sh release <version>` for `datascience` (11.6) |
 | `pull` | Backs up git-ignored files, `git pull --all` and installs the pinned dependencies. It does not pull models |
 | `deploy` | `datascience`'s `deploy.sh` runs `model.sh publish` and `status` |
@@ -772,4 +772,4 @@ Every run of a notebook, a unit test or a system test, in any flavour and langua
 | Go | Yes | `wazero` | `onnxruntime_go` | Never | Yes |
 | Rust | Yes | `wasmi` | `ort` | Never | Yes |
 
-- The module MUST have one `Dockerfile` that builds every reference consumer into one image on the local architecture, the Python reference consumer installed with the pinned runtime packages and the Go and Rust reference consumers compiled, under `/asystem/bin/<language>`, with the pinned ONNX Runtime shared library for the Go and Rust `onnx` files at `ONNXRUNTIME_LIB`. `fab systest` MUST build it once and run each embedded target in a container of it with the project mounted read-only. The module's `Dockerfile` is a test environment and MUST NOT be released to a host. The Python reference consumer and the `serving` loader of `mlserver` MUST agree, and a test MUST compare them.
+- The module MUST have one `Dockerfile` that builds every reference consumer into one image on the local architecture, the Python reference consumer installed with the pinned runtime packages and the Go and Rust reference consumers compiled, under `/asystem/bin/<language>`, with the pinned ONNX Runtime shared library for the Go and Rust `onnx` files at `ONNXRUNTIME_LIB`. `fab` MUST build it, with the shared packaging step and the `PINS` build argument, before `systest` runs, and the system test MUST only check that the image exists and run each embedded target in a container of it with the project mounted read-only. `PINS` is the consumer base packages plus every Python package a workspace declares in its `runtime`, each at its project wide pin, and a declared package with no pin MUST fail the build. The module's `Dockerfile` is a test environment and MUST NOT be released to a host. `mlserver` MUST get its Python flavour files from the reference consumer when it is generated, and never hold its own.

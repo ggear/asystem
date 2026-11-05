@@ -10,7 +10,7 @@ ROOT_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../.." && pwd)"
 SOURCE_DIR="$(cd "${ROOT_DIR}/../.." && pwd)"
 PYENV_BIN="${HOME}/.pyenv/versions/asystem/bin"
 OUTPUT_DIR="${ROOT_DIR}/target/model-output"
-COMMAND="${1:?usage: model.sh <unittest|systest|release|publish|status>}"
+COMMAND="${1:?usage: model.sh <unittest|systest|release|publish|status|docker-args>}"
 export PYTHONPATH="${ROOT_DIR}/src/main/python${PYTHONPATH:+:${PYTHONPATH}}"
 
 unittest() {
@@ -33,6 +33,10 @@ release() {
 
 publish() {
   MLFLOW_TRACKING_URI="$(env_value MLFLOW_TRACKING_URI)" "${PYENV_BIN}/python" -W ignore -m workbench.model publish "${SOURCE_DIR}" --mlserver "$(mlserver_url)"
+}
+
+docker_args() {
+  "${PYENV_BIN}/python" -W ignore -m workbench.model docker-args "${SOURCE_DIR}" "${SOURCE_DIR}/../.py_deps_prod.txt"
 }
 
 status() {
@@ -79,6 +83,7 @@ case "${COMMAND}" in
   release) shift && release "$@" ;;
   publish) publish ;;
   status) status ;;
+  docker-args) docker_args ;;
   *)
     echo "ERROR unknown command [${COMMAND}]" >&2
     exit 1

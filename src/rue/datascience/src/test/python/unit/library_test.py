@@ -689,6 +689,25 @@ class ReleaseTest(unittest.TestCase):
             self.record(project_dir)
         self.assertFalse(os.path.exists(join(self.workspace, "project")))
 
+    def test_the_image_pins_are_the_consumer_base_plus_the_declared_runtime_and_an_unpinned_one_is_refused(self):
+        import io
+
+        from workbench.metadata import read_metadata, write_metadata
+        from workbench.model import main
+
+        self.record()
+        metadata = read_metadata(self.workspace)
+        write_metadata(self.workspace, {**metadata, "runtime": {"python": ["numpy"]}})
+        printed = io.StringIO()
+        with contextlib.redirect_stdout(printed):
+            self.assertEqual(0, main(["docker-args", self.source, self.pins]))
+        self.assertEqual('--build-arg "PINS=numpy==2.0"', printed.getvalue().strip())
+        write_metadata(self.workspace, {**metadata, "runtime": {"python": ["scikit-learn"]}})
+        printed = io.StringIO()
+        with contextlib.redirect_stdout(printed), contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(1, main(["docker-args", self.source, self.pins]))
+        self.assertEqual("", printed.getvalue())
+
     def test_a_release_needs_every_target_to_have_passed_and_keeps_the_version_while_content_is_unchanged(self):
         from workbench.errors import GateError
         from workbench.metadata import read_metadata

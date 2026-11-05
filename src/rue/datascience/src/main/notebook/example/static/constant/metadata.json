@@ -1,7 +1,12 @@
 {
   "content_sha256": "f2f2fa7e01de468bf083bbda6b9c8517a5fd39dda5c991fff86c4a6ec8940b92",
   "inputs_sha256": "80732ee6fec3305cb623575c6fa1a46269b6ce4f591e41fd8f4c40433325e076",
-  "passed": [],
+  "passed": [
+    {
+      "kind": "embedded",
+      "language": "go"
+    }
+  ],
   "released_at": null,
   "released_by": null,
   "released_signature": null,

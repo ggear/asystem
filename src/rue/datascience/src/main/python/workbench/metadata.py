@@ -12,6 +12,7 @@ METADATA_FILE = "metadata.json"
 PROJECT_DIR = "project"
 METADATA_SCHEMA = 1
 RUNTIME_PINS = ("numpy", "scipy", "pandas", "polars", "onnx", "onnxruntime", "wasmtime", "scikit-learn", "mlflow")
+CONSUMER_PINS = ("numpy", "pandas", "onnxruntime", "wasmtime", "mlflow")
 TARGET_KINDS = ("served", "embedded")
 TARGET_LANGUAGES = ("python", "go", "rust")
 TARGET_MATRIX = {"python": ("static", "wasm", "onnx", "pyfunc"), "go": ("static", "wasm", "onnx"), "rust": ("static", "wasm", "onnx")}
