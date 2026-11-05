@@ -571,6 +571,27 @@ class MetadataTest(unittest.TestCase):
             served_file.write("polars\n")
         self.assertEqual([], lint_metadata(self.workspace, "wasm", pins_path, source_dir))
 
+    def test_requirement_lines_name_what_a_host_still_needs(self):
+        from workbench.metadata import requirement_lines
+
+        self.place(self.metadata(runtime={"python": ["polars"], "wasm": ["tanh"]}, targets=[{"kind": "served"}]))
+        pins_path = join(self.workspace, "py_deps.txt")
+        source_dir = join(self.workspace, "source")
+        served_dir = join(source_dir, "host", "mlserver", "src", "main", "python")
+        os.makedirs(served_dir)
+        with open(pins_path, "w") as pins_file:
+            pins_file.write("wasmtime==1.0.0\n")
+        with open(join(served_dir, "py_deps.txt"), "w") as served_file:
+            served_file.write("wasmtime\n")
+        lines = requirement_lines(self.workspace, "wasm", pins_path, source_dir)
+        self.assertIn("  + polars", lines)
+        self.assertEqual(1, len([line for line in lines if line.startswith("  ! polars")]))
+        self.assertIn("  = wasmtime", lines)
+        self.assertTrue(lines[0].startswith("wasm bindings"))
+        with open(join(served_dir, "py_deps.txt"), "a") as served_file:
+            served_file.write("polars\n")
+        self.assertNotIn("  + polars", requirement_lines(self.workspace, "wasm", pins_path, source_dir))
+
     def test_the_changed_command_reports_a_notebook_that_packages_nothing(self):
         import contextlib
         import io

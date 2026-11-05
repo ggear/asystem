@@ -10,7 +10,7 @@ from nbclient import NotebookClient
 
 from asystem.report import stage, subject
 from workbench.errors import GateError
-from workbench.metadata import PROJECT_DIR, lint_metadata
+from workbench.metadata import PROJECT_DIR, lint_metadata, requirement_lines
 from workbench.model import PROJECT_MANIFEST
 
 KERNEL = "asystem"
@@ -39,9 +39,14 @@ def run_notebook(workspace_dir, output_dir, register, pins_path, source_dir):
         finally:
             nbformat.write(notebook, join(output_dir, "notebook.ipynb"))
         if isfile(join(workspace_dir, PROJECT_DIR, PROJECT_MANIFEST)):
+            with open(join(workspace_dir, PROJECT_DIR, PROJECT_MANIFEST)) as manifest_file:
+                flavour = json.load(manifest_file)["flavour"]
+            with stage("requirements") as entry:
+                lines = requirement_lines(workspace_dir, flavour, pins_path, source_dir)
+                entry.detail = f"{sum(line.startswith('  +') for line in lines)} to add"
+            for line in lines:
+                print(f"    {line}", flush=True)
             with stage("metadata") as entry:
-                with open(join(workspace_dir, PROJECT_DIR, PROJECT_MANIFEST)) as manifest_file:
-                    flavour = json.load(manifest_file)["flavour"]
                 findings = lint_metadata(workspace_dir, flavour, pins_path, source_dir)
                 if findings:
                     raise GateError("Metadata", "check", "; ".join(f"{rule} {message}" for rule, message in findings))

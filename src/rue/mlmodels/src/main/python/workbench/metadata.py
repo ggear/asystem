@@ -4,7 +4,7 @@ import os
 import re
 import shutil
 from glob import glob
-from os.path import isfile, join, relpath
+from os.path import dirname, isfile, join, relpath
 
 from workbench.errors import GateError
 
@@ -15,6 +15,8 @@ RUNTIME_PINS = ("numpy", "scipy", "pandas", "polars", "onnx", "onnxruntime", "wa
 CONSUMER_PINS = ("numpy", "pandas", "onnxruntime", "wasmtime", "mlflow")
 TARGET_KINDS = ("served", "embedded")
 TARGET_LANGUAGES = ("python", "go", "rust")
+HOST_LIBRARIES = {("python", "wasm"): "wasmtime", ("python", "onnx"): "onnxruntime", ("rust", "wasm"): "wasmi", ("rust", "onnx"): "ort", ("go", "wasm"): "wazero"}
+HOST_FILES = {"python": "src/main/python/py_deps.txt", "rust": "src/main/rust/{host}/Cargo.toml", "go": "src/main/go/{host}/go.mod"}
 TARGET_MATRIX = {"python": ("static", "wasm", "onnx", "pyfunc"), "go": ("static", "wasm", "onnx"), "rust": ("static", "wasm", "onnx")}
 METADATA_FIELDS = {
     "schema": int,
@@ -188,6 +190,37 @@ def lint_metadata(workspace_dir, flavour, pins_path=None, source_dir=None):
                 served = {package_key(line) for line in served_file if line.strip()}
             findings.extend(("MD005", f"served python dependency is not in [{served_paths[0]}] [{name}]") for name in metadata["runtime"].get("python", ()) if package_key(name) not in served)
     return findings
+
+
+def requirement_lines(workspace_dir, flavour, pins_path, source_dir):
+    metadata = read_metadata(workspace_dir)
+    runtime = metadata["runtime"]
+    pinned = {package_key(name) for name in read_pins(pins_path, None)}
+    module = workspace_dir.rstrip("/").split("/")[-3]
+    lines = []
+    if runtime.get("wasm"):
+        lines.append(f"wasm bindings asystem_math [{' '.join(runtime['wasm'])}] provided by every host, nothing to install")
+    for target in metadata["targets"]:
+        served = target["kind"] == "served"
+        language = "python" if served else target["language"]
+        host = "mlserver" if served else "mlmodels" if module == "example" else module
+        crate = "consumer" if host == "mlmodels" else host
+        needed: list[str] = sorted({*runtime.get("python", ()), *HOST_LIBRARIES.get((language, flavour), "").split()})
+        if not needed:
+            continue
+        paths = glob(join(source_dir, "*", host, HOST_FILES[language].format(host=crate)))
+        if len(paths) != 1:
+            lines.append(f"{target['kind']} {language} no unique {host} file for [{', '.join(needed)}] under [{source_dir}] found {paths}")
+            continue
+        with open(paths[0]) as host_file:
+            declared = host_file.read()
+        lines.append(f"{target['kind']} {language} host [{host}] file [{relpath(paths[0], dirname(source_dir))}]")
+        for name in needed:
+            present = package_key(name) in {package_key(line) for line in declared.splitlines()} if language == "python" else re.search(rf"\b{re.escape(name)}\b", declared)
+            lines.append(f"  {'=' if present else '+'} {name}")
+            if language == "python" and package_key(name) not in pinned:
+                lines.append(f"  ! {name} has no project wide pin, add {name}==<version> to [{pins_path}]")
+    return lines
 
 
 def content_sha256(project_dir):
