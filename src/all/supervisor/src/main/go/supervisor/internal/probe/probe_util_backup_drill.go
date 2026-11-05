@@ -35,6 +35,7 @@ func (s *restoreSession) drill() {
 		s.record(metric.BackupStateFailure, detail)
 	}
 	if err != nil {
+		scratch = s.scratchDir()
 		failed(fmt.Sprintf("could not stage [%s] into scratch [%v]", s.run, err), nil)
 		return
 	}

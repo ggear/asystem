@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -64,6 +65,35 @@ func TestProbeUtilBackupDrill_Drill(t *testing.T) {
 				t.Errorf("drill: got code [%d] verdict [%s] found [%t] stdout [%s] stderr [%s] want code [%d] verdict [%s]", code, drill.Verdict, found, stdout.String(), stderr.String(), test.expectedCode, test.expectedVerdict)
 			}
 		})
+	}
+}
+
+func TestProbeUtilBackupDrill_StagingFailureTearsScratchDown(t *testing.T) {
+	work := t.TempDir()
+	home := filepath.Join(work, "mod")
+	source := filepath.Join(home, "1.0")
+	root := filepath.Join(home, treeBackupDirectory)
+	run := "2026-11-01_01-00-00"
+	for _, dir := range []string{source, filepath.Join(root, run)} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(root, run, "mod_full.tar.gz"), tarGzipped(t, "x", "y"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	plantBackupManifest(t, root, run, backupManifest{Kind: "full", Verdict: metric.BackupStateSuccess})
+	torn := filepath.Join(work, "torn")
+	script := filepath.Join(work, "restore.sh")
+	hooks := fmt.Sprintf("restore_staged() { return 1; }\nrestore_teardown() { echo \"$1\" > %q; }\n", torn)
+	if err := os.WriteFile(script, []byte(hooks), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	code := BackupModuleDrill(context.Background(), BackupModuleRequest{Arguments: []string{"mod"}, Source: source, Script: script, LockPeriod: time.Second}, &stdout, &stderr)
+	data, _ := os.ReadFile(torn)
+	if code != 1 || len(data) == 0 {
+		t.Errorf("staging failure: got code [%d] teardown arg [%q] want code 1 and the scratch directory handed to restore_teardown", code, data)
 	}
 }
 

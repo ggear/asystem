@@ -87,7 +87,6 @@ restore_applied() {
 
 INFLUXDB3_RESTORE_DATABASE="${INFLUXDB3_DATABASE_HOME:-home}"
 INFLUXDB3_RESTORE_SCRATCH="${RESTORE_MODULE_NAME}_restore"
-INFLUXDB3_RESTORE_PORT="${INFLUXDB3_RESTORE_PORT:-18182}"
 INFLUXDB3_RESTORE_CHUNK_BYTES="${INFLUXDB3_RESTORE_CHUNK_BYTES:-4194304}"
 INFLUXDB3_RESTORE_WRITE_PAUSE="${INFLUXDB3_RESTORE_WRITE_PAUSE:-0}"
 RESTORE_LIVE_ADDRESS="${RESTORE_MODULE_NAME}"
@@ -110,12 +109,11 @@ influxdb3_restore_started() {
   local mode="${1:-}" image
   image="$(docker inspect "${RESTORE_MODULE_NAME}" --format '{{.Config.Image}}')" || return 1
   docker rm -f "${INFLUXDB3_RESTORE_SCRATCH}" >/dev/null 2>&1
-  docker run --detach --name "${INFLUXDB3_RESTORE_SCRATCH}" --publish "127.0.0.1:${INFLUXDB3_RESTORE_PORT}:8181" \
-    --volume "$(restore_scratch_dir):/asystem/mnt" --env "INFLUXDB3_DATABASE_HOME=${INFLUXDB3_RESTORE_DATABASE}" \
+  docker run --detach --name "${INFLUXDB3_RESTORE_SCRATCH}" --volume "$(restore_scratch_dir):/asystem/mnt" --env "INFLUXDB3_DATABASE_HOME=${INFLUXDB3_RESTORE_DATABASE}" \
     --entrypoint influxdb3 "${image}" serve --node-id node_1 --cluster-id "${INFLUXDB3_RESTORE_CLUSTER}" --object-store file \
     --data-dir /asystem/mnt --license-type home --without-auth --disable-telemetry-upload ${mode:+--mode "${mode}"} >/dev/null || return 1
   local waited=0
-  until curl -sf "http://127.0.0.1:${INFLUXDB3_RESTORE_PORT}/health" >/dev/null 2>&1; do
+  until docker exec "${INFLUXDB3_RESTORE_SCRATCH}" curl -sf http://127.0.0.1:8181/health >/dev/null 2>&1; do
     waited=$((waited + 1))
     [ "${waited}" -le 120 ] || { restore_fault "scratch [${INFLUXDB3_RESTORE_SCRATCH}] did not answer health within [120] seconds"; return 1; }
     sleep 1
@@ -244,6 +242,10 @@ for raw in sys.stdin:
 }
 
 restore_merged() {
+  command -v python3 >/dev/null || {
+    restore_fault "python3 is not installed where the engine runs, the merge of [${1}] needs it to convert rows to line protocol"
+    return 1
+  }
   local unit="${1}" scratch="${2}" RESTORE_STATS_FILE="${3:-}" table day next types columns url token chunks code chunk header rows bytes
   table="${unit%/*}"
   day="${unit##*/}"

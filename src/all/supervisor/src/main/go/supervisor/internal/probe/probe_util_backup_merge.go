@@ -20,7 +20,7 @@ func (s *restoreSession) merge() {
 	scratch, err := s.staged()
 	if err != nil {
 		s.fault(fmt.Sprintf("could not stage [%s] into scratch [%v]", s.run, err))
-		s.tornDown(scratch)
+		s.tornDown(s.scratchDir())
 		return
 	}
 	defer func() {
