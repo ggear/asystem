@@ -1,11 +1,11 @@
 # NOTES: https://github.com/Koenkk/zigbee2mqtt/releases
-FROM koenkk/zigbee2mqtt:2.14.2 AS image_upstream
+FROM koenkk/zigbee2mqtt:2.14.3 AS image_upstream
 USER root
 RUN apk update && \
     apk add --upgrade --no-cache bash=5.3.9-r1 && \
     apk add --upgrade --no-cache coreutils=9.11-r0 && \
     apk add --upgrade --no-cache less=702-r0 && \
-    apk add --upgrade --no-cache curl=8.22.0-r0 && \
+    apk add --upgrade --no-cache curl=8.23.0-r0 && \
     apk add --upgrade --no-cache vim=9.2.1202-r0 && \
     apk add --upgrade --no-cache jq=1.8.2-r0 && \
     apk add --upgrade --no-cache mosquitto-clients=2.1.2-r1 && \

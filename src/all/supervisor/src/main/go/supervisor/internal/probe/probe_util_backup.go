@@ -419,7 +419,6 @@ const (
 
 const (
 	backupTimestampFormat = "2006-01-02_15-04-05"
-	backupDateFormat      = "2006-01-02"
 	backupTimeFormat      = "15:04:05"
 )
 

@@ -107,11 +107,11 @@ func promoteOneService(ctx context.Context, request stageRequest, share, host, s
 		"[%s] promoting [%d/%d] from [%s] to [%s]", service, index, total, source, target)
 
 	window := config.Load(request.ConfigPath).BackupWindowOf(service)
-	policy := keepPolicy{daily: window.KeepDaily, weekly: window.KeepWeekly, monthly: window.KeepMonthly}
+	policy := backupKeepPolicy{daily: window.KeepDaily, weekly: window.KeepWeekly, monthly: window.KeepMonthly}
 
 	rsyncArgs := []string{"-a", "--stats", "--out-format=%t %o %f %l", "--exclude", "/.lock", "--exclude", ".rsync/", "--exclude", ".rsync-*"}
 	if policy.window > 0 || policy.daily+policy.weekly+policy.monthly > 0 {
-		sourceRuns := readKeepRuns(strings.TrimSuffix(source, "/"))
+		sourceRuns := readBackupKeepRuns(strings.TrimSuffix(source, "/"))
 		kept := backupKeepSet(sourceRuns, policy, time.Now())
 		for _, run := range sourceRuns {
 			if !kept[run.name] {

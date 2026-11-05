@@ -15,7 +15,7 @@ set -o pipefail
 #
 #   BACKUP_SKIP_HOURS=0 ./backup.sh   take a backup now, whatever the throttle says
 #
-# The run is the supervisor binary's backup engine, this script holds only the module's own hooks. Pruning belongs
+# The run is `supervisor backup run`, this script holds only the module's own hooks. Pruning belongs
 # to supervisor's stages, windows are read from its config.json.
 # Any variable below can be set on the command line, unless the module's .env already sets it.
 #
@@ -45,12 +45,12 @@ BACKUP_SHRINK_PERCENT="${BACKUP_SHRINK_PERCENT:-${LETSENCRYPT_BACKUP_SHRINK_PERC
 BACKUP_TARGET_PATH=""
 BACKUP_NO_EXCLUDES=()
 
-backup_engine() {
-  "${BACKUP_ENGINE:-/asystem/bin/supervisor}" backup-engine "${1}" --module "${BACKUP_MODULE_NAME}" --source "${BACKUP_INTERNAL_SOURCE_DIR}" --run "${BACKUP_RUN_TIMESTAMP}" --state "${BACKUP_STATE_DIR:-}" "${@:2}"
+backup_module() {
+  "${BACKUP_SUPERVISOR:-/asystem/bin/supervisor}" backup "${1}" "${BACKUP_MODULE_NAME}" --source "${BACKUP_INTERNAL_SOURCE_DIR}" --run "${BACKUP_RUN_TIMESTAMP}" --state "${BACKUP_STATE_DIR:-}" "${@:2}"
 }
 
 backup_target() {
-  BACKUP_TARGET_PATH="$(backup_engine target "${1:-}" "${2:-}")" || return 1
+  BACKUP_TARGET_PATH="$(backup_module target "${1:-}" "${2:-}")" || return 1
 }
 
 backup_files() {
@@ -59,13 +59,13 @@ backup_files() {
   local arguments=() entry live="LETSENCRYPT_BACKUP_LIVE"
   for entry in "${backup_files_includes[@]}"; do arguments+=("--include=${entry}"); done
   for entry in "${backup_files_excludes[@]}"; do arguments+=("--exclude=${entry}"); done
-  backup_engine files --root "${1:-}" --live "${!live:-}" "${arguments[@]}" || return 1
+  backup_module files --root "${1:-}" --live "${!live:-}" "${arguments[@]}" || return 1
   BACKUP_TARGET_PATH="$(cat "${BACKUP_STATE_DIR}/target")"
 }
 
-backup_parent() { backup_engine parent --run "${1:-${BACKUP_RUN_TIMESTAMP}}"; }
+backup_parent() { backup_module parent --run "${1:-${BACKUP_RUN_TIMESTAMP}}"; }
 
-backup_epoch() { backup_engine epoch "${1:-}"; }
+backup_epoch() { "${BACKUP_SUPERVISOR:-/asystem/bin/supervisor}" backup epoch "${1:-}"; }
 
 backup_written() {
   echo "Nothing to back up, define backup_written in the module snippet" >&2
@@ -126,33 +126,26 @@ backup_written() {
 [ "${BASH_SOURCE[0]}" = "${0}" ] || return 0
 
 BACKUP_INTERNAL_SCRIPT="$(readlink -f "${BASH_SOURCE[0]}")"
-BACKUP_INTERNAL_VARIABLES=(BACKUP_MODULE_NAME BACKUP_SOURCE_PATH BACKUP_INTERNAL_SOURCE_DIR BACKUP_SKIP_HOURS BACKUP_FORCE_FULL BACKUP_SERVICE_RESTART BACKUP_TIMEOUT_HOURS BACKUP_SHRINK_PERCENT BACKUP_LOCK_WAIT)
 
-backup_engine_executed() {
-  local verb="${1}" variable arguments=() container image
-  shift
-  BACKUP_SCRIPT="${BACKUP_INTERNAL_SCRIPT}"
+backup_supervised() {
+  local container image seconds=$((BACKUP_TIMEOUT_HOURS * 3600 + 7200))
   if [ -x /asystem/bin/supervisor ]; then
-    for variable in "${BACKUP_INTERNAL_VARIABLES[@]}" BACKUP_SCRIPT; do [ -n "${!variable+x}" ] && export "${variable?}"; done
-    exec /asystem/bin/supervisor backup-engine "${verb}" "$@"
+    exec /asystem/bin/supervisor backup "$@"
   fi
-  for variable in "${BACKUP_INTERNAL_VARIABLES[@]}" BACKUP_SCRIPT; do
-    [ -n "${!variable+x}" ] && arguments+=(--env "${variable}=${!variable}")
-  done
   container="$(timeout 30 docker ps --filter name=^/supervisor$ --filter status=running --format '{{.Names}}')"
   if [ -n "${container}" ]; then
-    exec timeout "$((BACKUP_TIMEOUT_HOURS * 3600 + 7200))" docker exec "${arguments[@]}" supervisor /asystem/bin/supervisor backup-engine "${verb}" "$@"
+    exec timeout "${seconds}" docker exec supervisor /asystem/bin/supervisor backup "$@"
   fi
   image="$(timeout 30 docker image ls --format '{{.Repository}}:{{.Tag}}' | grep '^supervisor:' | sort -V | tail -n 1)"
-  [ -n "${image}" ] || { echo "No supervisor container is running and no supervisor image is installed, cannot run the backup engine" >&2; exit 1; }
-  exec timeout "$((BACKUP_TIMEOUT_HOURS * 3600 + 7200))" docker run --rm --init --entrypoint /asystem/bin/supervisor "${arguments[@]}" \
+  [ -n "${image}" ] || { echo "No supervisor container is running and no supervisor image is installed, cannot run the backup" >&2; exit 1; }
+  exec timeout "${seconds}" docker run --rm --init --entrypoint /asystem/bin/supervisor \
     --volume /home/asystem:/home/asystem --volume /var/lib/asystem/install:/var/lib/asystem/install:ro --volume /var/run/docker.sock:/var/run/docker.sock \
-    "${image}" backup-engine "${verb}" "$@"
+    "${image}" backup "$@"
 }
 
 case "${1:-}" in
 --accept=*)
-  backup_engine_executed accept "${BACKUP_INTERNAL_SOURCE_DIR}" "${1#--accept=}"
+  backup_supervised accept "${BACKUP_MODULE_NAME}" "${1#--accept=}" --source "${BACKUP_INTERNAL_SOURCE_DIR}"
   ;;
 --full)
   BACKUP_FORCE_FULL="true"
@@ -161,4 +154,8 @@ case "${1:-}" in
   ;;
 esac
 
-backup_engine_executed run
+BACKUP_INTERNAL_ARGUMENTS=(--source "${BACKUP_INTERNAL_SOURCE_DIR}" --script "${BACKUP_INTERNAL_SCRIPT}" --skip-hours "${BACKUP_SKIP_HOURS}" --timeout-hours "${BACKUP_TIMEOUT_HOURS}" --shrink-percent "${BACKUP_SHRINK_PERCENT}" "--restart=${BACKUP_SERVICE_RESTART}")
+[ "${BACKUP_FORCE_FULL}" = "true" ] && BACKUP_INTERNAL_ARGUMENTS+=(--force-full)
+[ -n "${BACKUP_LOCK_WAIT:-}" ] && BACKUP_INTERNAL_ARGUMENTS+=(--lock-wait "${BACKUP_LOCK_WAIT}")
+
+backup_supervised run "${BACKUP_MODULE_NAME}" "${BACKUP_INTERNAL_ARGUMENTS[@]}"

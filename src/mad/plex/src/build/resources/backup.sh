@@ -48,7 +48,6 @@ PLEX_BACKUP_EXCLUDES=(
   "${PLEX_BACKUP_SERVER}/plexmediaserver.pid"
 )
 
-PLEX_BACKUP_FAULT=0
 PLEX_BACKUP_RESTART_TRIES=5
 PLEX_BACKUP_RESTART_WAIT=10
 
@@ -66,7 +65,6 @@ plex_backup_started() {
   local reported attempt=1
   while :; do
     if reported="$(docker start "${PLEX_BACKUP_CONTAINER}" 2>&1)"; then
-      PLEX_BACKUP_FAULT=0
       [ "${attempt}" -gt 1 ] && echo "Started [${PLEX_BACKUP_CONTAINER}] on attempt [${attempt}]" >&2
       return 0
     fi
@@ -75,7 +73,6 @@ plex_backup_started() {
     attempt=$(( attempt + 1 ))
     sleep "${PLEX_BACKUP_RESTART_WAIT}"
   done
-  PLEX_BACKUP_FAULT=1
   return 1
 }
 
@@ -84,7 +81,8 @@ backup_interrupted() {
 }
 
 backup_completed() {
-  return "${PLEX_BACKUP_FAULT}"
+  [ "${BACKUP_SERVICE_RESTART}" = "true" ] || return 0
+  [ "$(docker inspect --format '{{.State.Running}}' "${PLEX_BACKUP_CONTAINER}")" = "true" ]
 }
 
 backup_written() {

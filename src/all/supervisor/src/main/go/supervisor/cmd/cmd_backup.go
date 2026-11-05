@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
+	"io"
+	"os"
 	"time"
 
 	"supervisor/internal/config"
@@ -10,6 +13,7 @@ import (
 	"supervisor/internal/scribe"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 func init() {
@@ -33,6 +37,26 @@ func newBackupCmd() *cobra.Command {
 	for _, verb := range backupVerbs {
 		cmd.AddCommand(newBackupVerbCmd(verb, opts))
 	}
+	for _, verb := range backupModuleVerbs {
+		cmd.AddCommand(newBackupModuleCmd(verb))
+	}
+	return cmd
+}
+
+func newBackupModuleCmd(verb backupModuleVerb) *cobra.Command {
+	request := &engine.BackupModuleRequest{}
+	cmd := &cobra.Command{
+		Use:    verb.use,
+		Short:  verb.short,
+		Hidden: verb.hidden,
+		Args:   cobra.ExactArgs(verb.arguments),
+		Run: func(_ *cobra.Command, args []string) {
+			request.Arguments = args
+			os.Exit(verb.run(context.Background(), *request, os.Stdout, os.Stderr))
+		},
+	}
+	verb.flags(cmd.Flags(), request)
+	cmd.Flags().SortFlags = false
 	return cmd
 }
 
@@ -118,6 +142,49 @@ var backupVerbs = []backupVerb{
 	{command: engine.BackupCommandList, use: "list", short: "show the recent runs and their result"},
 	{command: engine.BackupCommandAuto, use: "auto [on|off]", short: "query or set the reaper's power-management switch", arguments: 1},
 	{command: engine.BackupCommandClean, use: "clean", short: "remove every run from the history and any unfinished scrub"},
+}
+
+type backupModuleVerb struct {
+	run       func(context.Context, engine.BackupModuleRequest, io.Writer, io.Writer) int
+	use       string
+	short     string
+	hidden    bool
+	arguments int
+	flags     func(*pflag.FlagSet, *engine.BackupModuleRequest)
+}
+
+var backupModuleVerbs = []backupModuleVerb{
+	{run: engine.BackupModuleRun, use: "run <module>", short: "run one module's backup, the module's hooks supplied by --script", arguments: 1, flags: addBackupModuleRunFlags},
+	{run: engine.BackupModuleAccept, use: "accept <module> <run>", short: "accept a regressed run, releasing its anchor", arguments: 2, flags: func(flags *pflag.FlagSet, request *engine.BackupModuleRequest) {
+		flags.StringVar(&request.Source, "source", "", "the module's source path, defaulting to its latest")
+	}},
+	{run: engine.BackupModuleTarget, use: "target <module> <suffix> <extension>", short: "name this run's backup file for a module hook", hidden: true, arguments: 3, flags: addBackupModuleHookFlags},
+	{run: engine.BackupModuleFiles, use: "files <module>", short: "archive declared paths for a module hook", hidden: true, arguments: 1, flags: func(flags *pflag.FlagSet, request *engine.BackupModuleRequest) {
+		addBackupModuleHookFlags(flags, request)
+		flags.StringVar(&request.Root, "root", "", "the directory under the source holding the includes")
+		flags.StringVar(&request.Live, "live", "", "atomic when the source may change while it is read")
+		flags.StringArrayVar(&request.Includes, "include", nil, "a path to back up")
+		flags.StringArrayVar(&request.Excludes, "exclude", nil, "a path or pattern deliberately not backed up")
+	}},
+	{run: engine.BackupModuleParent, use: "parent <module>", short: "print the full backup before this run for a module hook", hidden: true, arguments: 1, flags: addBackupModuleHookFlags},
+	{run: engine.BackupModuleEpoch, use: "epoch <run>", short: "print the unix time of a run for a module hook", hidden: true, arguments: 1, flags: func(*pflag.FlagSet, *engine.BackupModuleRequest) {}},
+}
+
+func addBackupModuleRunFlags(flags *pflag.FlagSet, request *engine.BackupModuleRequest) {
+	flags.StringVar(&request.Source, "source", "", "the module's source path, defaulting to its latest")
+	flags.StringVar(&request.Script, "script", "", "the module's backup.sh, sourced for its hooks")
+	flags.IntVar(&request.SkipHours, "skip-hours", 1, "skip the run when the newest backup is younger than this, zero to never skip")
+	flags.IntVar(&request.TimeoutHours, "timeout-hours", 5, "the budget a backup waiting on its service allows before abandoning the run")
+	flags.IntVar(&request.ShrinkPercent, "shrink-percent", 20, "the fall in a module's total that marks a run regressed, zero to disable")
+	flags.IntVar(&request.LockWait, "lock-wait", 300, "seconds to wait for another actor holding the module's lock")
+	flags.BoolVar(&request.ForceFull, "force-full", false, "take a full backup where the module would take a delta")
+	flags.BoolVar(&request.Restart, "restart", true, "start the service again after the copy, false when the caller starts it itself")
+}
+
+func addBackupModuleHookFlags(flags *pflag.FlagSet, request *engine.BackupModuleRequest) {
+	flags.StringVar(&request.Source, "source", "", "the module's source path, defaulting to its latest")
+	flags.StringVar(&request.Run, "run", "", "this run's timestamp")
+	flags.StringVar(&request.State, "state", "", "the run's state directory")
 }
 
 const (

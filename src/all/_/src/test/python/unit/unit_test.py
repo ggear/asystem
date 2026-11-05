@@ -447,7 +447,7 @@ class GenerateRulesTest(unittest.TestCase):
         script = join(root, "out", "backup.sh")
         with open(script) as handle:
             text = handle.read()
-        self.assertIn("backup-engine", text)
+        self.assertIn("backup_supervised run", text)
         for retired in (r"backup_pruned\b", r"backup_pruned_gfs", "backup_gfs_kept", "backup_kept_next", "Prune disagreement", "backup_manifested", "backup_regression"):
             self.assertIsNone(re.search(retired, text), retired)
         os.makedirs(join(root, "data", "latest"), exist_ok=True)

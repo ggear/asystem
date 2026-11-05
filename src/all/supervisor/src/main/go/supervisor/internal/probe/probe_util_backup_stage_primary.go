@@ -26,7 +26,7 @@ func runPrimaryStage(ctx context.Context, request stageRequest, counters *stageC
 	configured := loaded.Services(host)
 	var enrolled []string
 	for _, service := range configured {
-		script := moduleBackupScript(service)
+		script := backupScriptPath(service)
 		if info, err := os.Stat(script); err == nil && info.Mode()&0o111 != 0 {
 			enrolled = append(enrolled, service)
 		}
@@ -102,30 +102,30 @@ func runOneService(ctx context.Context, request stageRequest, loaded *config.Con
 	}
 	defer func() { _ = logFile.Close() }()
 
-	script := moduleBackupScript(service)
+	script := backupScriptPath(service)
 	command := exec.CommandContext(ctx, "bash", script)
 	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	command.Cancel = func() error { return syscall.Kill(-command.Process.Pid, syscall.SIGTERM) }
-	command.WaitDelay = moduleStopGrace
+	command.WaitDelay = scriptStopGrace
 	command.Stdin = nil
 	command.Stdout = logFile
 	command.Stderr = logFile
 	command.Env = append(os.Environ(),
-		moduleSkipHoursVariable+"="+strconv.Itoa(moduleSkipHours()),
-		moduleRestartVariable+"=true",
-		backupTimeoutVariable+"="+strconv.Itoa(moduleTimeoutHours(loaded, request)))
+		scriptSkipHoursVariable+"="+strconv.Itoa(scriptSkipHours()),
+		scriptRestartVariable+"=true",
+		backupTimeoutVariable+"="+strconv.Itoa(scriptTimeoutHours(loaded, request)))
 	runErr := command.Run()
 
 	ok := runErr == nil
 	var pruneErr error
 	if ok {
-		pruneErr = pruneBackupRuns(ctx, subject, backupDir, keepPolicy{window: time.Duration(loaded.BackupWindowOf(service).RetainDays) * 24 * time.Hour})
+		pruneErr = pruneBackupRuns(ctx, subject, backupDir, backupKeepPolicy{window: time.Duration(loaded.BackupWindowOf(service).RetainDays) * 24 * time.Hour})
 	}
 	state, newest := backupOutcome(ok, previous, newestBackupDir(backupDir))
 	var evidence []string
 	if state == metric.BackupStateSuccess {
-		if verdict, lines := readManifestVerdict(newest); verdict == metric.BackupStateRegressed {
-			state, evidence = metric.BackupStateRegressed, lines
+		if manifest, found := readBackupManifest(backupDir, filepath.Base(newest)); found && manifest.Verdict == metric.BackupStateRegressed {
+			state, evidence = metric.BackupStateRegressed, manifest.Evidence
 		}
 	}
 	regressed := state == metric.BackupStateRegressed
@@ -175,8 +175,8 @@ func runOneService(ctx context.Context, request stageRequest, loaded *config.Con
 }
 
 func stopPrimaryStage(ctx context.Context, request stageRequest) error {
-	_, _, _ = bounded(ctx, stageBoundedWait, "pkill", "-CONT", "-f", moduleBackupScriptPattern)
-	_, _, _ = bounded(ctx, stageBoundedWait, "pkill", "-TERM", "-f", moduleBackupScriptPattern)
+	_, _, _ = bounded(ctx, stageBoundedWait, "pkill", "-CONT", "-f", scriptPathPattern)
+	_, _, _ = bounded(ctx, stageBoundedWait, "pkill", "-TERM", "-f", scriptPathPattern)
 	return nil
 }
 
@@ -233,7 +233,7 @@ func parseBackupArtefact(service, dir string) (kind, version string) {
 	}
 	var files []string
 	for _, entry := range entries {
-		if !entry.IsDir() && (strings.Contains(entry.Name(), "_full.") || strings.Contains(entry.Name(), "_delta.")) {
+		if !entry.IsDir() && (strings.Contains(entry.Name(), backupFullSuffix+".") || strings.Contains(entry.Name(), backupDeltaSuffix+".")) {
 			files = append(files, entry.Name())
 		}
 	}
@@ -244,12 +244,12 @@ func parseBackupArtefact(service, dir string) (kind, version string) {
 	file := files[0]
 	stem := file
 	switch {
-	case strings.Contains(file, "_delta."):
+	case strings.Contains(file, backupDeltaSuffix+"."):
 		kind = "delta"
-		stem = strings.SplitN(file, "_delta.", 2)[0]
-	case strings.Contains(file, "_full."):
+		stem = strings.SplitN(file, backupDeltaSuffix+".", 2)[0]
+	case strings.Contains(file, backupFullSuffix+"."):
 		kind = "full"
-		stem = strings.SplitN(file, "_full.", 2)[0]
+		stem = strings.SplitN(file, backupFullSuffix+".", 2)[0]
 	}
 	timestamp := filepath.Base(dir)
 	switch {
@@ -274,21 +274,6 @@ func backupIdentity(newest string) string {
 	return filepath.Base(newest)
 }
 
-func readManifestVerdict(runDir string) (verdict string, evidence []string) {
-	data, err := os.ReadFile(filepath.Join(runDir, treeMetaDirectory, treeManifestLeaf))
-	if err != nil {
-		return "", nil
-	}
-	var manifest struct {
-		Verdict  string   `json:"verdict"`
-		Evidence []string `json:"evidence"`
-	}
-	if json.Unmarshal(data, &manifest) != nil {
-		return "", nil
-	}
-	return manifest.Verdict, manifest.Evidence
-}
-
 func backupOutcome(ok bool, previous, newest string) (state, artefact string) {
 	switch {
 	case ok && newest == previous:
@@ -302,16 +287,16 @@ func backupOutcome(ok bool, previous, newest string) (state, artefact string) {
 	}
 }
 
-func moduleSkipHours() int {
-	if override := os.Getenv(moduleSkipHoursVariable); override != "" {
+func scriptSkipHours() int {
+	if override := os.Getenv(scriptSkipHoursVariable); override != "" {
 		if hours, err := strconv.Atoi(override); err == nil && hours >= 0 {
 			return hours
 		}
 	}
-	return moduleSkipHoursDefault
+	return scriptSkipHoursDefault
 }
 
-func moduleTimeoutHours(loaded *config.Config, request stageRequest) int {
+func scriptTimeoutHours(loaded *config.Config, request stageRequest) int {
 	if !request.Expires.IsZero() {
 		if hours := int(time.Until(request.Expires).Hours()); hours > 0 {
 			return hours

@@ -11,6 +11,7 @@ import (
 
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
+	"supervisor/internal/scribe"
 )
 
 func TestProbeUtilBackupStageTertiary_ProgressTotal(t *testing.T) {
@@ -398,7 +399,6 @@ func TestProbeUtilBackupStageTertiary_AHostDeclaringNoBackupDiskSkipsTheStage(t 
 		t.Error("a host with no backup target shelled out, want the stage to end before it powers or mounts anything")
 		return "", 1, false
 	}
-
 	result, err := runTertiaryStage(t.Context(), stageRequest{Stage: metric.BackupStageTertiary, RunPath: t.TempDir(),
 		RunID: "2026-09-22_01-00-00", ConfigPath: filepath.Join(t.TempDir(), "config.json")}, &stageCounters{})
 	if err != nil {
@@ -411,3 +411,40 @@ func TestProbeUtilBackupStageTertiary_AHostDeclaringNoBackupDiskSkipsTheStage(t 
 		t.Errorf("stageVerdict() = (%q, %v), want (%q, true)", state, success, metric.BackupStateSkipped)
 	}
 }
+
+func TestProbeUtilBackupStageTertiary_SnapshotsAreThinnedByTheConfiguredWindow(t *testing.T) {
+	days := []string{"2026-10-01_01-00-00", "2026-10-02_01-00-00", "2026-10-03_01-00-00", "2026-10-04_01-00-00", "2026-10-05_01-00-00", "2026-10-06_01-00-00"}
+	tests := []struct {
+		name       string
+		configBody string
+		expected   []string
+	}{
+		{"the newest snapshots inside the daily window stay", `{"asystem":{"backup":{"keep_daily":4,"keep_weekly":0,"keep_monthly":0}}}`, days[2:]},
+		{"a window holding every snapshot prunes none", `{"asystem":{"backup":{"keep_daily":12,"keep_weekly":0,"keep_monthly":0}}}`, days},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			snapshots := t.TempDir()
+			for _, day := range days {
+				if err := os.MkdirAll(filepath.Join(snapshots, day), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(filepath.Join(snapshots, day, "data.txt"), []byte("x"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			configPath := filepath.Join(t.TempDir(), "config.json")
+			if err := os.WriteFile(configPath, []byte(testCase.configBody), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			loaded := config.Load(configPath)
+			err := pruneBackupRuns(t.Context(), scribe.SubjectStage(metric.BackupStageTertiary), snapshots,
+				backupKeepPolicy{daily: loaded.BackupKeepDaily(), weekly: loaded.BackupKeepWeekly(), monthly: loaded.BackupKeepMonthly()})
+			if actual := backupRuns(snapshots); err != nil || !slices.Equal(actual, testCase.expected) {
+				t.Errorf("pruneBackupRuns() = error [%v] and snapshots %v, want %v", err, actual, testCase.expected)
+			}
+		})
+	}
+}
+
+const bytesPerGibibyte = 1024 * bytesPerMebibyte

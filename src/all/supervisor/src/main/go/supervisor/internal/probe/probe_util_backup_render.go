@@ -496,7 +496,6 @@ var (
 
 const (
 	bytesPerMebibyte     = 1048576
-	bytesPerGibibyte     = 1024 * bytesPerMebibyte
 	mebibytesPerGibibyte = 1024
 	mebibytesPerTebibyte = 1024 * mebibytesPerGibibyte
 

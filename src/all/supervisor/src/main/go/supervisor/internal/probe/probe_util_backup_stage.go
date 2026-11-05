@@ -276,8 +276,8 @@ func (b *lockedBuffer) String() string {
 	return b.buffer.String()
 }
 
-func moduleBackupScript(service string) string {
-	return filepath.Join(config.DirInstall, service, config.DirInstallLatestLink, moduleBackupLeaf)
+func backupScriptPath(service string) string {
+	return filepath.Join(config.DirInstall, service, config.DirInstallLatestLink, scriptLeaf)
 }
 
 func configHost(configPath string) string {
@@ -365,13 +365,13 @@ var (
 )
 
 const (
-	moduleSkipHoursDefault  = 1
-	moduleSkipHoursVariable = "BACKUP_SKIP_HOURS"
-	moduleStopGrace         = time.Minute
-	moduleRestartVariable   = "BACKUP_SERVICE_RESTART"
-	moduleBackupLeaf        = "backup.sh"
+	scriptSkipHoursDefault  = 1
+	scriptSkipHoursVariable = "BACKUP_SKIP_HOURS"
+	scriptStopGrace         = time.Minute
+	scriptRestartVariable   = "BACKUP_SERVICE_RESTART"
+	scriptLeaf              = "backup.sh"
 
-	moduleBackupScriptPattern = config.DirInstall + `/[a-z0-9_-]*/` + config.DirInstallLatestLink + `/` + moduleBackupLeaf
+	scriptPathPattern = config.DirInstall + `/[a-z0-9_-]*/` + config.DirInstallLatestLink + `/` + scriptLeaf
 )
 
 const (

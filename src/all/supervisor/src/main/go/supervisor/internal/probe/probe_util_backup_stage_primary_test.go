@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
 	"testing"
 	"time"
 
@@ -175,40 +174,6 @@ func TestProbeUtilBackupStagePrimary_BackupIdentity(t *testing.T) {
 	}
 }
 
-func TestProbeUtilBackupStagePrimary_ReadManifestVerdict(t *testing.T) {
-	tests := []struct {
-		name             string
-		manifest         *string
-		expectedVerdict  string
-		expectedEvidence []string
-	}{
-		{name: "no_manifest_carries_no_verdict"},
-		{name: "unreadable_manifest_carries_no_verdict", manifest: new("{")},
-		{name: "regressed_with_evidence", manifest: new(`{"verdict":"regressed","evidence":["first","second"]}`), expectedVerdict: metric.BackupStateRegressed, expectedEvidence: []string{"first", "second"}},
-		{name: "accepted_verdict_is_passed_through", manifest: new(`{"verdict":"accepted"}`), expectedVerdict: "accepted"},
-	}
-	for _, testCase := range tests {
-		t.Run(testCase.name, func(t *testing.T) {
-			dir := t.TempDir()
-			if testCase.manifest != nil {
-				if err := os.MkdirAll(filepath.Join(dir, treeMetaDirectory), 0o755); err != nil {
-					t.Fatalf("mkdir: %v", err)
-				}
-				if err := os.WriteFile(filepath.Join(dir, treeMetaDirectory, treeManifestLeaf), []byte(*testCase.manifest), 0o644); err != nil {
-					t.Fatalf("write manifest: %v", err)
-				}
-			}
-			verdict, evidence := readManifestVerdict(dir)
-			if verdict != testCase.expectedVerdict {
-				t.Errorf("verdict = %q, want %q", verdict, testCase.expectedVerdict)
-			}
-			if !slices.Equal(evidence, testCase.expectedEvidence) {
-				t.Errorf("evidence = %v, want %v", evidence, testCase.expectedEvidence)
-			}
-		})
-	}
-}
-
 func TestProbeUtilBackupStagePrimary_BackupOutcome(t *testing.T) {
 	const previous, written = "/backup/2026-10-15_01-00-00", "/backup/2026-10-16_01-00-00"
 	tests := []struct {
@@ -236,37 +201,37 @@ func TestProbeUtilBackupStagePrimary_BackupOutcome(t *testing.T) {
 	}
 }
 
-func TestProbeUtilBackupStagePrimary_ModuleSkipHoursHonoursTheOverrideEnvVar(t *testing.T) {
+func TestProbeUtilBackupStagePrimary_ScriptSkipHoursHonoursTheOverrideEnvVar(t *testing.T) {
 	tests := []struct {
 		name     string
 		override string
 		expected int
 	}{
-		{name: "unset_falls_back_to_default", override: "", expected: moduleSkipHoursDefault},
+		{name: "unset_falls_back_to_default", override: "", expected: scriptSkipHoursDefault},
 		{name: "valid_override", override: "4", expected: 4},
 		{name: "zero_is_a_valid_override", override: "0", expected: 0},
-		{name: "negative_falls_back_to_default", override: "-1", expected: moduleSkipHoursDefault},
-		{name: "unparseable_falls_back_to_default", override: "soon", expected: moduleSkipHoursDefault},
+		{name: "negative_falls_back_to_default", override: "-1", expected: scriptSkipHoursDefault},
+		{name: "unparseable_falls_back_to_default", override: "soon", expected: scriptSkipHoursDefault},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Setenv(moduleSkipHoursVariable, testCase.override)
-			if got := moduleSkipHours(); got != testCase.expected {
-				t.Errorf("moduleSkipHours() = %d, want %d", got, testCase.expected)
+			t.Setenv(scriptSkipHoursVariable, testCase.override)
+			if got := scriptSkipHours(); got != testCase.expected {
+				t.Errorf("scriptSkipHours() = %d, want %d", got, testCase.expected)
 			}
 		})
 	}
 }
 
-func TestProbeUtilBackupStagePrimary_ModuleTimeoutHoursPrefersTheRunDeadlineWhenItLeavesTimeToRun(t *testing.T) {
+func TestProbeUtilBackupStagePrimary_ScriptTimeoutHoursPrefersTheRunDeadlineWhenItLeavesTimeToRun(t *testing.T) {
 	loaded := loadedWithTimeout(t, 3)
 	request := stageRequest{Expires: time.Now().Add(10*time.Hour + 50*time.Minute)}
-	if got := moduleTimeoutHours(loaded, request); got != 10 {
-		t.Errorf("moduleTimeoutHours() = %d, want 10 taken from the run deadline, not the configured default", got)
+	if got := scriptTimeoutHours(loaded, request); got != 10 {
+		t.Errorf("scriptTimeoutHours() = %d, want 10 taken from the run deadline, not the configured default", got)
 	}
 }
 
-func TestProbeUtilBackupStagePrimary_ModuleTimeoutHoursFallsBackToTheConfiguredDefault(t *testing.T) {
+func TestProbeUtilBackupStagePrimary_ScriptTimeoutHoursFallsBackToTheConfiguredDefault(t *testing.T) {
 	tests := []struct {
 		name    string
 		expires time.Time
@@ -278,8 +243,8 @@ func TestProbeUtilBackupStagePrimary_ModuleTimeoutHoursFallsBackToTheConfiguredD
 		t.Run(testCase.name, func(t *testing.T) {
 			loaded := loadedWithTimeout(t, 7)
 			request := stageRequest{Expires: testCase.expires}
-			if got := moduleTimeoutHours(loaded, request); got != 7 {
-				t.Errorf("moduleTimeoutHours() = %d, want 7 taken from the configured default", got)
+			if got := scriptTimeoutHours(loaded, request); got != 7 {
+				t.Errorf("scriptTimeoutHours() = %d, want 7 taken from the configured default", got)
 			}
 		})
 	}

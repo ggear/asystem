@@ -4,7 +4,9 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
+	"strings"
 	"time"
 
 	"supervisor/internal/config"
@@ -19,6 +21,33 @@ func backupRunRoot() string {
 }
 
 func backupRunPath(root, runID string) string { return filepath.Join(root, runID) }
+
+func backupRunTime(run string) time.Time {
+	parsed, _ := time.ParseInLocation(backupTimestampFormat, run, time.Local)
+	return parsed
+}
+
+func backupRunHolds(dir, marker string) bool {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return false
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.Contains(entry.Name(), marker) {
+			return true
+		}
+	}
+	return false
+}
+
+func parentBackupRun(root, run string) string {
+	for _, name := range slices.Backward(backupRuns(root)) {
+		if name < run && backupRunHolds(filepath.Join(root, name), backupFullSuffix+".") {
+			return name
+		}
+	}
+	return ""
+}
 
 func backupRuns(root string) []string {
 	entries, err := os.ReadDir(root)
@@ -129,7 +158,9 @@ func (s *backupSnapshot) age() time.Duration {
 }
 
 const (
-	backupAgeUnknown = 1000 * time.Hour
+	backupFullSuffix  = "_full"
+	backupDeltaSuffix = "_delta"
+	backupAgeUnknown  = 1000 * time.Hour
 
 	treeModule           = "supervisor"
 	treeBackupDirectory  = "backup"

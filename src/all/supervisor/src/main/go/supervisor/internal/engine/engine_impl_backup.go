@@ -35,8 +35,9 @@ func RunBackup(request BackupRequest) error {
 }
 
 type (
-	BackupCommand = probe.BackupCommand
-	BackupRequest = probe.BackupRequest
+	BackupCommand       = probe.BackupCommand
+	BackupModuleRequest = probe.BackupModuleRequest
+	BackupRequest       = probe.BackupRequest
 )
 
 const (
@@ -48,6 +49,11 @@ const (
 	BackupCommandClean = probe.BackupCommandClean
 )
 
-func BackupEngine(arguments []string) int {
-	return probe.BackupEngine(context.Background(), arguments, os.Stdout, os.Stderr)
-}
+var (
+	BackupModuleRun    = probe.BackupModuleRun
+	BackupModuleAccept = probe.BackupModuleAccept
+	BackupModuleTarget = probe.BackupModuleTarget
+	BackupModuleFiles  = probe.BackupModuleFiles
+	BackupModuleParent = probe.BackupModuleParent
+	BackupModuleEpoch  = probe.BackupModuleEpoch
+)

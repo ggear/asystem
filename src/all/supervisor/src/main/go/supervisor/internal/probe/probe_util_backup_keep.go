@@ -2,7 +2,6 @@ package probe
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,13 +13,13 @@ import (
 	"supervisor/internal/scribe"
 )
 
-func pruneBackupRuns(ctx context.Context, subject scribe.Subject, dir string, policy keepPolicy) error {
+func pruneBackupRuns(ctx context.Context, subject scribe.Subject, dir string, policy backupKeepPolicy) error {
 	if policy.window <= 0 && policy.daily+policy.weekly+policy.monthly <= 0 {
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionRemove).Warnf("excluded", time.Now(),
 			"[%s] is not pruned, the config declares no retention window so only the newest runs would be kept", dir)
 		return nil
 	}
-	runs := readKeepRuns(dir)
+	runs := readBackupKeepRuns(dir)
 	kept := backupKeepSet(runs, policy, time.Now())
 	var doomed []string
 	for _, run := range runs {
@@ -50,48 +49,27 @@ func pruneBackupRuns(ctx context.Context, subject scribe.Subject, dir string, po
 	return nil
 }
 
-func readKeepRuns(dir string) []keepRun {
-	isFull := func(runDir string) bool {
-		entries, err := os.ReadDir(runDir)
-		if err != nil {
-			return false
-		}
-		full, delta := false, false
-		for _, entry := range entries {
-			if entry.IsDir() {
-				continue
-			}
-			full = full || strings.Contains(entry.Name(), "_full.")
-			delta = delta || strings.Contains(entry.Name(), "_delta.")
-		}
-		return full || !delta
-	}
-	var runs []keepRun
+func readBackupKeepRuns(dir string) []backupKeepRun {
+	var runs []backupKeepRun
 	for _, name := range backupRuns(dir) {
 		at, _ := time.ParseInLocation(backupTimestampFormat, name, time.Local)
-		run := keepRun{name: name, at: at, full: isFull(filepath.Join(dir, name))}
-		if data, err := os.ReadFile(filepath.Join(dir, name, treeMetaDirectory, treeManifestLeaf)); err == nil {
-			var manifest struct {
-				Parent   string `json:"parent"`
-				Verdict  string `json:"verdict"`
-				Accepted bool   `json:"accepted"`
-			}
-			if json.Unmarshal(data, &manifest) == nil {
-				run.parent, run.verdict, run.accepted = manifest.Parent, manifest.Verdict, manifest.Accepted
-			}
+		runDir := filepath.Join(dir, name)
+		run := backupKeepRun{name: name, at: at, full: backupRunHolds(runDir, backupFullSuffix+".") || !backupRunHolds(runDir, backupDeltaSuffix+".")}
+		if manifest, found := readBackupManifest(dir, name); found {
+			run.parent, run.verdict, run.accepted = manifest.Parent, manifest.Verdict, manifest.Accepted
 		}
 		runs = append(runs, run)
 	}
 	return runs
 }
 
-func backupKeepSet(runs []keepRun, policy keepPolicy, now time.Time) map[string]bool {
+func backupKeepSet(runs []backupKeepRun, policy backupKeepPolicy, now time.Time) map[string]bool {
 	kept := map[string]bool{}
 	if len(runs) == 0 {
 		return kept
 	}
 	ordered := slices.Clone(runs)
-	slices.SortFunc(ordered, func(left, right keepRun) int { return strings.Compare(left.name, right.name) })
+	slices.SortFunc(ordered, func(left, right backupKeepRun) int { return strings.Compare(left.name, right.name) })
 	newest := len(ordered) - 1
 	if policy.window > 0 {
 		for _, run := range ordered {
@@ -171,14 +149,14 @@ func backupKeepSet(runs []keepRun, policy keepPolicy, now time.Time) map[string]
 	return kept
 }
 
-type keepPolicy struct {
+type backupKeepPolicy struct {
 	window  time.Duration
 	daily   int
 	weekly  int
 	monthly int
 }
 
-type keepRun struct {
+type backupKeepRun struct {
 	name     string
 	at       time.Time
 	full     bool
