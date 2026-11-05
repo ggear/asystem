@@ -28,31 +28,7 @@ func BackupModuleRun(ctx context.Context, request BackupModuleRequest, stdout, s
 		return 2
 	}
 	stamp, version := time.Now().Format(backupTimestampFormat), filepath.Base(source)
-	locked := func() bool {
-		if os.Getenv(moduleLockHeldVariable) == module {
-			return true
-		}
-		parent := filepath.Dir(source)
-		if os.MkdirAll(parent, 0o755) != nil {
-			return true
-		}
-		lock, openErr := os.OpenFile(filepath.Join(parent, treeLockLeaf), os.O_CREATE|os.O_RDWR, 0o644)
-		if openErr != nil {
-			return true
-		}
-		deadline := time.Now().Add(time.Duration(request.LockWait) * time.Second)
-		for syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB) != nil {
-			if time.Now().After(deadline) {
-				fmt.Fprintf(stderr, "Another actor holds the lock for [%s] at [%s], giving up after [%d] seconds\n", module, lock.Name(), request.LockWait)
-				_ = lock.Close()
-				return false
-			}
-			time.Sleep(time.Second)
-		}
-		_ = os.Setenv(moduleLockHeldVariable, module)
-		return true
-	}
-	if !locked() {
+	if !lockBackupModule(stderr, module, source, request.LockWait) {
 		return 1
 	}
 	_ = filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {

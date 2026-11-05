@@ -170,6 +170,7 @@ const (
 
 	treeStatusLeaf   = "status.json"
 	treeManifestLeaf = "manifest.json"
+	treeDrillLeaf    = "drill.json"
 	treeScrubLeaf    = "scrub.json"
 	treeLogLeaf      = "output.log"
 	treeLockLeaf     = ".lock"
