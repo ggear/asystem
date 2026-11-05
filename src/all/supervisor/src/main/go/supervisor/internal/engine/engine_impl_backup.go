@@ -47,3 +47,7 @@ const (
 	BackupCommandAuto  = probe.BackupCommandAuto
 	BackupCommandClean = probe.BackupCommandClean
 )
+
+func BackupEngine(arguments []string) int {
+	return probe.BackupEngine(context.Background(), arguments, os.Stdout, os.Stderr)
+}

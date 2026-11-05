@@ -1,0 +1,42 @@
+{
+  "datasets": {
+    "validation": [
+      {
+        "path": "2026-11-03_16-40-55/pyfunc_linear_validation_2026-11-03_2026-11-03.csv",
+        "sha256": "e8360053c21185892a0213a7ce86b1d0f769db6f441acc9470f6f1e916ed9003"
+      }
+    ],
+    "backtest": [
+      {
+        "path": "2026-11-03_16-40-55/pyfunc_linear_backtest_2026-11-03_2026-11-03.csv",
+        "sha256": "a2d34a3c2ed06a5871972185b6de96de55a83cc9a166f50a70c09804c7de5865"
+      }
+    ]
+  },
+  "checks": [
+    {
+      "split": "validation",
+      "output": "example_pyfunc_out",
+      "name": "rmse",
+      "value": 0.03316624790355297,
+      "limit": 0.5,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 0.06633249580710594
+    },
+    {
+      "split": "backtest",
+      "output": "example_pyfunc_out",
+      "name": "rmse",
+      "value": 0.03301514803843781,
+      "limit": 0.5,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 0.06603029607687562
+    }
+  ],
+  "passed": true,
+  "budget": 0.06633249580710594
+}

@@ -1,0 +1,27 @@
+{
+  "spec_version": 1,
+  "name": "example_static_constant",
+  "signature_version": 1,
+  "flavour": "static",
+  "provenance": {
+    "source": "manual",
+    "trained_on": "none",
+    "inputs": [
+      "example/static/constant/data/golden/2026-11-02_18-04-26/static_constant_golden.csv"
+    ],
+    "notes": "register path smoke test"
+  },
+  "files": {
+    "signature": {
+      "path": "signature.json",
+      "sha256": "b6d3d5f589a4f4b1ffd86f9c32acff8f01ec575f07a2a1e747e782f9a9b4443d"
+    },
+    "golden": {
+      "path": "golden.json",
+      "sha256": "69f8bd73b1de7faed77a507d84e126ed232ee3f031689ac9785c364e4e493086"
+    }
+  },
+  "constants": {
+    "example_static_out": 7
+  }
+}

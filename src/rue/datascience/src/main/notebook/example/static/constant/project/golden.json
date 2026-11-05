@@ -1,0 +1,49 @@
+{
+  "sequences": [
+    {
+      "name": "golden",
+      "steps": [
+        {
+          "request": {
+            "id": "s1-0",
+            "inputs": [
+              {
+                "name": "example_static_in",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  1.0
+                ]
+              }
+            ]
+          },
+          "response": {
+            "model_name": "example_static_constant",
+            "id": "s1-0",
+            "outputs": [
+              {
+                "name": "example_static_out",
+                "datatype": "INT64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  7
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "request": {
+            "id": "s1-1",
+            "inputs": []
+          },
+          "error": "signature"
+        }
+      ]
+    }
+  ]
+}

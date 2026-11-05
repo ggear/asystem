@@ -1,0 +1,33 @@
+{
+  "content_sha256": "e99f1b3ce884690a0197865aaab3d62d5b8cc8f28af01da3785328ae6f3c2ebb",
+  "inputs_sha256": "f90384729705d93a25c279034749659bc7b49cbf8bd35921e1c3c72c8b60607e",
+  "passed": [],
+  "released_at": null,
+  "released_by": null,
+  "released_signature": null,
+  "released_version": null,
+  "runtime": {
+    "wasm": [
+      "tanh"
+    ]
+  },
+  "schema": 1,
+  "snapshot_version": "10.200.1951-SNAPSHOT",
+  "targets": [
+    {
+      "kind": "served"
+    },
+    {
+      "kind": "embedded",
+      "language": "python"
+    },
+    {
+      "kind": "embedded",
+      "language": "go"
+    },
+    {
+      "kind": "embedded",
+      "language": "rust"
+    }
+  ]
+}

@@ -75,3 +75,4 @@ src/mad/wrangle/src/test/resources/repos/release/bank/*/data/*
 *.mbox
 
 src/max/grafana/src/main/resources/image/plugins
+mlruns

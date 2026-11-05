@@ -1,6 +1,8 @@
 import contextlib
 import json
 import os
+import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -8,234 +10,11 @@ import textwrap
 import unittest
 import zipfile
 from os.path import dirname, isdir, join, realpath
-from pathlib import Path
-from unittest import mock
 
 ROOT = realpath(join(dirname(__file__), "../../../../../.."))
-SCRIPT = join(ROOT, "mad/postgres/src/main/resources/backup.sh")
 RESTORE = join(ROOT, "max/letsencrypt/src/main/resources/restore.sh")
 BASH = "/opt/homebrew/bin/bash" if os.path.exists("/opt/homebrew/bin/bash") else "bash"
 GNU = {"find": "gfind", "date": "gdate"}
-
-
-class BackupWrapperTest(unittest.TestCase):
-    def setUp(self):
-        self.workdir = tempfile.mkdtemp()
-        self.bin = join(self.workdir, "bin")
-        os.makedirs(self.bin)
-        for name, target in GNU.items():
-            found = subprocess.run(["which", target], capture_output=True, text=True).stdout.strip()
-            if found:
-                os.symlink(found, join(self.bin, name))
-        self.latest = join(self.workdir, "postgres", "latest")
-        self.root = join(self.workdir, "postgres", "backup")
-        os.makedirs(self.latest)
-        os.makedirs(self.root)
-
-    def shell(self, body, **env):
-        script = textwrap.dedent(
-            """
-            set -o pipefail
-            source "{script}"
-            {body}
-            """
-        ).format(script=SCRIPT, body=textwrap.dedent(body))
-        environment = dict(os.environ, PATH=self.bin + ":" + os.environ["PATH"], BACKUP_SOURCE_PATH=self.latest, **{k: str(v) for k, v in env.items()})
-        return subprocess.run([BASH, "-c", script], capture_output=True, text=True, env=environment)
-
-    def run_dir(self, stamp, files=None):
-        path = join(self.root, stamp)
-        os.makedirs(path, exist_ok=True)
-        for name, content in (files or {}).items():
-            with open(join(path, name), "wb") as handle:
-                handle.write(content)
-        return path
-
-    def artifact(self, stamp, kind="full", extension="tar.gz"):
-        return f"postgres_at_{stamp}_from_10.200.1_{kind}.{extension}"
-
-    def manifest(self, stamp, units, verdict="success", parent="", kind="full"):
-        meta = join(self.run_dir(stamp), ".meta")
-        os.makedirs(meta, exist_ok=True)
-        body = ",\n".join(f'    "{unit}": {count}' for unit, count in units.items())
-        with open(join(meta, "manifest.json"), "w") as handle:
-            handle.write(
-                f'{{\n  "kind": "{kind}",\n  "parent": "{parent}",\n  "source_version": "x",\n  "verdict": "{verdict}",\n  "accepted": false,\n  "baseline": "",\n  "evidence": [\n  ],\n  "fingerprint": {{\n{body}\n  }}\n}}\n'
-            )
-
-    def test_fingerprint_of_a_tar_sums_bytes_per_declared_include(self):
-        source = join(self.workdir, "src")
-        os.makedirs(join(source, "db"))
-        os.makedirs(join(source, "other"))
-        for path, size in (("db/a.db", 100), ("db/b.db", 50), ("other/c.txt", 7), ("top.txt", 3)):
-            with open(join(source, path), "wb") as handle:
-                handle.write(b"x" * size)
-        archive = join(self.workdir, "a_full.tar.gz")
-        subprocess.run(["tar", "-czf", archive, "-C", source, "db", "other", "top.txt"], check=True)
-        done = self.shell(f'BACKUP_FINGERPRINT_INCLUDES=("db"); backup_fingerprinted "{archive}"')
-        self.assertEqual(done.returncode, 0, done.stderr)
-        self.assertEqual(done.stdout.split("\n")[:-1], ["db 150", "other 7", "top.txt 3"])
-
-    def test_fingerprint_of_a_zip_counts_bytes_per_entry_including_names_with_spaces(self):
-        archive = join(self.workdir, "z_full.zip")
-        with zipfile.ZipFile(archive, "w") as handle:
-            handle.writestr("coordinator_backup.json", "x" * 40)
-            handle.writestr("a name with spaces.json", "y" * 9)
-        done = self.shell(f'backup_fingerprinted "{archive}"')
-        self.assertEqual(done.returncode, 0, done.stderr)
-        self.assertEqual(sorted(done.stdout.split("\n")[:-1]), ["a name with spaces.json 9", "coordinator_backup.json 40"])
-
-    def test_fingerprint_of_a_postgres_dump_counts_copy_rows_per_database_table(self):
-        dump = join(self.workdir, "d_full.sql.gz")
-        text = "\\connect hass\n\nCOPY public.states (a, b) FROM stdin;\n1\t2\n3\t4\n5\t6\n\\.\n\nCOPY public.events (a) FROM stdin;\n\\.\n\\connect other\nCOPY public.t (a) FROM stdin;\n9\n\\.\n"
-        subprocess.run(f"gzip -c > {dump}", shell=True, input=text.encode(), check=True)
-        done = self.shell(f'backup_fingerprinted "{dump}"')
-        self.assertEqual(done.returncode, 0, done.stderr)
-        self.assertEqual(done.stdout.split("\n")[:-1], ["hass.public.events 0", "hass.public.states 3", "other.public.t 1"])
-
-    def test_fingerprint_of_a_mariadb_dump_sums_bytes_per_database(self):
-        dump = join(self.workdir, "m_full.sql.gz")
-        text = "-- Current Database: `alpha`\nCREATE TABLE t;\nINSERT 1;\n-- Current Database: `beta`\nINSERT 2;\n"
-        subprocess.run(f"gzip -c > {dump}", shell=True, input=text.encode(), check=True)
-        done = self.shell(f'backup_fingerprinted "{dump}"')
-        self.assertEqual(done.returncode, 0, done.stderr)
-        lines = dict(line.rsplit(" ", 1) for line in done.stdout.split("\n")[:-1])
-        self.assertEqual(set(lines), {"alpha", "beta"})
-        self.assertEqual(int(lines["beta"]), len("INSERT 2;") + 1)
-
-    def regress(self, current, baseline_units, **env):
-        self.manifest("2026-10-01_01-00-00", baseline_units)
-        body = f'BACKUP_INTERNAL_ROOT_DIR="{self.root}"; backup_regression "{current}" "2026-10-01_01-00-00"; echo "$BACKUP_INTERNAL_VERDICT"; printf "%s\\n" "${{BACKUP_INTERNAL_EVIDENCE[@]}}"'
-        return self.shell(body, **env)
-
-    def test_a_missing_durable_unit_regresses_with_evidence(self):
-        done = self.regress("a 10", {"a": 10, "b": 5})
-        lines = done.stdout.split("\n")
-        self.assertEqual(lines[0], "regressed")
-        self.assertIn("missing [b] was [5]", done.stdout)
-        self.assertIn("regressed [1] closed units missing", done.stdout)
-
-    def test_a_total_drop_beyond_the_threshold_regresses_and_zero_disables_it(self):
-        self.assertEqual(self.regress("a 70", {"a": 100}).stdout.split("\n")[0], "regressed")
-        self.assertEqual(self.regress("a 85", {"a": 100}).stdout.split("\n")[0], "success")
-        self.assertEqual(self.regress("a 70", {"a": 100}, BACKUP_SHRINK_PERCENT=0).stdout.split("\n")[0], "success")
-
-    def test_growth_and_new_units_never_regress(self):
-        self.assertEqual(self.regress("a 200\nnew 5", {"a": 100}).stdout.split("\n")[0], "success")
-
-    def test_no_baseline_is_success(self):
-        done = self.shell(f'BACKUP_INTERNAL_ROOT_DIR="{self.root}"; backup_regression "a 1" ""; echo "$BACKUP_INTERNAL_VERDICT"')
-        self.assertEqual(done.stdout.strip(), "success")
-
-    def test_a_regressed_run_is_not_a_baseline(self):
-        self.manifest("2026-10-01_01-00-00", {"a": 100})
-        self.manifest("2026-10-02_01-00-00", {}, verdict="regressed")
-        done = self.shell(f'BACKUP_INTERNAL_ROOT_DIR="{self.root}"; backup_baseline "2026-10-03_01-00-00"')
-        self.assertEqual(done.stdout.strip(), "2026-10-01_01-00-00")
-
-    def test_manifested_writes_kind_parent_fingerprint_and_the_regressed_verdict(self):
-        self.run_dir("2026-10-01_01-00-00", {self.artifact("2026-10-01_01-00-00"): b"x"})
-        self.manifest("2026-10-01_01-00-00", {"a": 100})
-        stamp = "2026-10-02_01-00-00"
-        self.run_dir(stamp, {self.artifact(stamp, "delta"): b"x"})
-        fingerprint = join(self.workdir, "fp.sh")
-        with open(fingerprint, "w") as handle:
-            handle.write('backup_fingerprinted() { echo "a 1"; }\n')
-        body = """
-            source "{fp}"
-            BACKUP_INTERNAL_ROOT_DIR="{root}"; BACKUP_RUN_TIMESTAMP="{stamp}"
-            BACKUP_TARGET_PATH="{root}/{stamp}/{name}"
-            backup_manifested
-            """.format(fp=fingerprint, root=self.root, stamp=stamp, name=self.artifact(stamp, "delta"))
-        done = self.shell(body)
-        self.assertEqual(done.returncode, 0, done.stderr)
-        with open(join(self.root, stamp, ".meta", "manifest.json")) as handle:
-            text = handle.read()
-        self.assertIn('"kind": "delta"', text)
-        self.assertIn('"parent": "2026-10-01_01-00-00"', text)
-        self.assertIn('"verdict": "regressed"', text)
-        self.assertIn('"a": 1', text)
-        self.assertIn("total [-99]% beyond [20]%", text)
-        self.assertIn("Backup regressed", done.stderr)
-
-    def test_accepting_a_regressed_run_releases_it(self):
-        self.manifest("2026-10-02_01-00-00", {"a": 1}, verdict="regressed")
-        done = self.shell(
-            f'BACKUP_INTERNAL_ROOT_DIR="{self.root}"; backup_accepted "2026-10-02_01-00-00"; backup_manifest_field "2026-10-02_01-00-00" verdict; backup_manifest_field "2026-10-02_01-00-00" accepted'
-        )
-        self.assertEqual(done.stdout.split("\n")[1:3], ["success", "true"])
-
-    def test_shadow_prune_removes_a_run_both_windows_would_delete(self):
-        old, newest = "2026-01-01_01-00-00", "2026-10-28_01-00-00"
-        for stamp in (old, newest):
-            self.run_dir(stamp, {self.artifact(stamp): b"x"})
-        done = self.shell(f'BACKUP_INTERNAL_ROOT_DIR="{self.root}"; BACKUP_RETAIN_DAYS=1; backup_pruned')
-        self.assertEqual(done.returncode, 0, done.stderr)
-        self.assertFalse(isdir(join(self.root, old)))
-        self.assertTrue(isdir(join(self.root, newest)))
-        self.assertIn(f"Pruned backup [{old}]", done.stdout)
-        self.assertNotIn("Prune disagreement", done.stdout)
-
-    def test_shadow_prune_disagreement_holds_the_run_the_new_window_keeps(self):
-        old, newest = "2026-10-20_01-00-00", "2026-10-28_01-00-00"
-        for stamp in (old, newest):
-            self.run_dir(stamp, {self.artifact(stamp): b"x"})
-        body = f'BACKUP_INTERNAL_ROOT_DIR="{self.root}"; BACKUP_RETAIN_DAYS=1; BACKUP_NEXT_RETAIN_DAYS=10000; backup_pruned'
-        done = self.shell(body)
-        self.assertIn(f"Prune disagreement run [{old}] old [delete] new [keep]", done.stdout)
-        self.assertTrue(isdir(join(self.root, old)))
-
-    def test_a_delta_is_refused_without_a_local_full_to_hang_off(self):
-        stamp = "2026-10-28_01-00-00"
-        done = self.shell(f'BACKUP_INTERNAL_ROOT_DIR="{self.root}"; BACKUP_RUN_TIMESTAMP="{stamp}"; backup_target "$BACKUP_DELTA_SUFFIX" tar.gz; echo "status=$?"')
-        self.assertIn("status=1", done.stdout)
-        self.assertIn("no full backup is held locally", done.stderr)
-        self.assertFalse(isdir(join(self.root, stamp)))
-
-    def test_a_delta_is_named_when_a_local_full_exists(self):
-        full, stamp = "2026-10-27_01-00-00", "2026-10-28_01-00-00"
-        self.run_dir(full, {self.artifact(full): b"x"})
-        done = self.shell(f'BACKUP_INTERNAL_ROOT_DIR="{self.root}"; BACKUP_RUN_TIMESTAMP="{stamp}"; backup_target "$BACKUP_DELTA_SUFFIX" tar.gz; echo "status=$?"; echo "$BACKUP_TARGET_PATH"')
-        self.assertIn("status=0", done.stdout)
-        self.assertIn("_delta.tar.gz", done.stdout)
-
-    def test_the_anchor_chain_survives_when_the_newest_run_is_regressed(self):
-        full, delta, bad = "2026-10-01_01-00-00", "2026-10-02_01-00-00", "2026-10-28_01-00-00"
-        self.run_dir(full, {self.artifact(full): b"x"})
-        self.run_dir(delta, {self.artifact(delta, "delta"): b"x"})
-        self.run_dir(bad, {self.artifact(bad): b"x"})
-        self.manifest(full, {"a": 1})
-        self.manifest(delta, {"a": 1}, parent=full, kind="delta")
-        self.manifest(bad, {}, verdict="regressed")
-        body = f'BACKUP_INTERNAL_ROOT_DIR="{self.root}"; BACKUP_RETAIN_DAYS=1; backup_pruned'
-        done = self.shell(body)
-        self.assertIn(f"Prune disagreement run [{delta}]", done.stdout)
-        self.assertTrue(isdir(join(self.root, delta)))
-        self.assertTrue(isdir(join(self.root, full)))
-
-    def test_a_delta_keeps_its_manifest_parent_even_outside_the_window(self):
-        full, delta = "2026-01-01_01-00-00", "2026-10-28_01-00-00"
-        self.run_dir(full, {self.artifact(full): b"x"})
-        self.run_dir(delta, {self.artifact(delta, "delta"): b"x"})
-        self.manifest(full, {"a": 1})
-        self.manifest(delta, {"a": 1}, parent=full, kind="delta")
-        body = f'BACKUP_INTERNAL_ROOT_DIR="{self.root}"; BACKUP_RETAIN_DAYS=1; backup_pruned'
-        done = self.shell(body)
-        self.assertIn(f"Prune disagreement run [{full}]", done.stdout)
-        self.assertTrue(isdir(join(self.root, full)))
-
-    def test_gfs_prune_still_applies_the_tiers_and_removes_the_rest(self):
-        stamps = [f"2026-0{month}-01_01-00-00" for month in range(1, 9)]
-        for stamp in stamps:
-            self.run_dir(stamp, {self.artifact(stamp): b"x"})
-        body = f'BACKUP_INTERNAL_ROOT_DIR="{self.root}"; BACKUP_KEEP_DAILY=2; BACKUP_KEEP_WEEKLY=1; BACKUP_KEEP_MONTHLY=1; backup_pruned_gfs'
-        done = self.shell(body)
-        self.assertEqual(done.returncode, 0, done.stderr)
-        remaining = sorted(os.listdir(self.root))
-        self.assertIn(stamps[-1], remaining)
-        self.assertIn(stamps[-2], remaining)
-        self.assertLess(len(remaining), len(stamps))
-        self.assertIn("grandfather-father-son", done.stdout)
 
 
 class RestoreWrapperTest(unittest.TestCase):
@@ -663,16 +442,19 @@ class GenerateRulesTest(unittest.TestCase):
         environment = dict(os.environ, PATH=bin_dir + ":" + os.environ["PATH"], BACKUP_SOURCE_PATH=join(root, "data", "latest"), **extra)
         return subprocess.run([BASH, join(root, "out", "backup.sh"), *args], capture_output=True, text=True, env=environment)
 
-    def test_full_forces_a_full_and_skips_the_throttle(self):
-        root = self.generated_backup(f'backup_written() {{ echo "full=${{BACKUP_FORCE_FULL}} skip=${{BACKUP_SKIP_HOURS}}" > "{tempfile.gettempdir()}/full-probe"; return 1; }}\n')
-        probe = join(tempfile.gettempdir(), "full-probe")
-        self.run_generated(root)
-        with open(probe) as handle:
-            self.assertEqual(handle.read().strip(), "full=false skip=1")
-        self.run_generated(root, "--full")
-        with open(probe) as handle:
-            self.assertEqual(handle.read().strip(), "full=true skip=0")
-        os.remove(probe)
+    def test_the_generated_backup_script_hands_the_run_to_the_engine_and_keeps_only_hooks(self):
+        root = self.generated_backup('backup_written() { echo "full=${BACKUP_FORCE_FULL} skip=${BACKUP_SKIP_HOURS}"; }\n')
+        script = join(root, "out", "backup.sh")
+        with open(script) as handle:
+            text = handle.read()
+        self.assertIn("backup-engine", text)
+        for retired in (r"backup_pruned\b", r"backup_pruned_gfs", "backup_gfs_kept", "backup_kept_next", "Prune disagreement", "backup_manifested", "backup_regression"):
+            self.assertIsNone(re.search(retired, text), retired)
+        os.makedirs(join(root, "data", "latest"), exist_ok=True)
+        environment = dict(os.environ, BACKUP_SOURCE_PATH=join(root, "data", "latest"), BACKUP_FORCE_FULL="true", BACKUP_SKIP_HOURS="0")
+        done = subprocess.run([BASH, "-c", f'source "{script}"; backup_written; type -t backup_target backup_files backup_parent backup_epoch'], capture_output=True, text=True, env=environment)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertEqual(done.stdout.split("\n")[:5], ["full=true skip=0", "function", "function", "function", "function"])
 
     def test_a_module_defining_restore_merged_without_deltas_fails_generate(self):
         sys.path.insert(0, join(ROOT, "all/_/src/build/python"))
@@ -694,23 +476,23 @@ if __name__ == "__main__":
 
 class ModelProjectTest(unittest.TestCase):
     def setUp(self):
+        self.enterContext(contextlib.chdir(fresh_mlruns_dir()))
         sys.path.insert(0, join(ROOT, "all/_/src/build/python"))
         from asystem.model import build_signature, golden_document, golden_step, signature_input, signature_output, signature_state
 
         self.project_dir = join(tempfile.mkdtemp(), "project")
         self.signature = build_signature(
             "demo_calc",
-            ["static-1"],
             [signature_input("demo_clock_seconds", "seconds", "Time of the call."), signature_input("demo_state_in", "state", "Carried state.", required=False, shape=[-1])],
             [signature_output("demo_limit_seconds", "seconds", "A limit."), signature_output("demo_state_out", "state", "Next state.", required=False, shape=[-1])],
             state=[signature_state("last_seconds", "seconds", "The previous call.")],
         )
         steps = [
-            golden_step(self.signature, "static-1", "s-0", {"demo_clock_seconds": 10.0}, {"demo_limit_seconds": 5}),
-            golden_step(self.signature, "static-1", "s-1", {"demo_clock_seconds": 11.0, "demo_state_in": [10.0]}, {"demo_limit_seconds": 5}),
-            golden_step(self.signature, "static-1", "s-2", {"demo_state_in": [10.0]}, error="signature"),
+            golden_step(self.signature, "s-0", {"demo_clock_seconds": 10.0}, {"demo_limit_seconds": 5}),
+            golden_step(self.signature, "s-1", {"demo_clock_seconds": 11.0, "demo_state_in": [10.0]}, {"demo_limit_seconds": 5}),
+            golden_step(self.signature, "s-2", {"demo_state_in": [10.0]}, error="signature"),
         ]
-        self.golden = golden_document("static-1", [("calls", steps)])
+        self.golden = golden_document([("calls", steps)])
 
     def write(self, **overrides):
         from asystem.model import write_project
@@ -718,8 +500,7 @@ class ModelProjectTest(unittest.TestCase):
         arguments = {
             "project_dir": self.project_dir,
             "name": "demo_calc",
-            "model_version": "static-1",
-            "flavor": "static",
+            "flavour": "static",
             "signature": self.signature,
             "golden": self.golden,
             "provenance": {"source": "manual", "inputs": []},
@@ -735,7 +516,7 @@ class ModelProjectTest(unittest.TestCase):
         return sorted({rule for rule, _ in lint_project(self.project_dir)})
 
     def test_valid_project_has_no_findings(self):
-        self.assertEqual("static", self.write()["flavor"])
+        self.assertEqual("static", self.write()["flavour"])
         self.assertEqual([], self.rules())
 
     def test_tampered_file_is_found(self):
@@ -746,20 +527,19 @@ class ModelProjectTest(unittest.TestCase):
 
         self.assertEqual(["PJ003"], sorted({rule for rule, _ in lint_project(self.project_dir)}))
 
-    def test_unknown_flavor_and_source_are_found(self):
-        self.assertEqual(["PJ002"], self.rules(flavor="guess", provenance={"source": "guess", "inputs": []}))
+    def test_unknown_flavour_and_source_are_found(self):
+        self.assertEqual(["PJ002"], self.rules(flavour="guess", provenance={"source": "guess", "inputs": []}))
 
     def test_provenance_inputs_must_be_a_list(self):
         self.assertEqual(["PJ002"], self.rules(provenance={"source": "manual"}))
 
-    def test_model_flavor_needs_its_file(self):
-        self.assertEqual(["PJ003"], self.rules(flavor="wasm", evaluation=self.evaluation(), provenance={"source": "manual", "inputs": [], "implementation": "demo model.py requires pandas"}))
+    def test_model_flavour_needs_its_file(self):
+        self.assertEqual(["PJ003"], self.rules(flavour="wasm", evaluation=self.evaluation(), provenance={"source": "manual", "inputs": [], "implementation": "demo model.py requires pandas"}))
 
     def test_model_file_is_copied_into_the_project_and_hashed(self):
         model_path = self.model_file()
         manifest = self.write(
-            **self.versioned("1"),
-            flavor="pyfunc",
+            flavour="pyfunc",
             model_path=model_path,
             constants=None,
             evaluation=self.evaluation(),
@@ -770,24 +550,83 @@ class ModelProjectTest(unittest.TestCase):
 
     def test_implementation_must_say_something(self):
         for implementation in ("demo", "TBD", "to be determined", "", None):
-            self.assertEqual(["PJ002", "PJ003"], self.rules(flavor="wasm", evaluation=self.evaluation(), provenance={"source": "manual", "inputs": [], "implementation": implementation}))
+            self.assertEqual(["PJ002", "PJ003"], self.rules(flavour="wasm", evaluation=self.evaluation(), provenance={"source": "manual", "inputs": [], "implementation": implementation}))
+
+    def test_a_wasm_module_may_import_only_the_maths_functions(self):
+        import wasmtime
+
+        from asystem.model import lint_project
+
+        def rules(wat):
+            project_dir = demo_project("wasm")
+            with open(join(project_dir, "model.wasm"), "wb") as model_file:
+                model_file.write(wasmtime.wat2wasm(wat))
+            return {rule for rule, _ in lint_project(project_dir)}
+
+        body = '(memory (export "memory") 1) (func (export "predict") (param i32 i32 i32))'
+        self.assertNotIn("PJ016", rules(f'(module (import "asystem_math" "atan" (func (param f64) (result f64))) {body})'))
+        self.assertIn("PJ016", rules(f'(module (import "env" "atan" (func (param f64) (result f64))) {body})'))
+        self.assertIn("PJ016", rules(f'(module (import "asystem_math" "pow" (func (param f64) (result f64))) {body})'))
+        self.assertIn("PJ016", rules(f'(module (import "asystem_math" "atan" (func (param f64 f64) (result f64))) {body})'))
+
+    def test_a_pyfunc_declares_the_packages_its_model_imports_beyond_the_base(self):
+        def rules(source, python_deps):
+            model_path = join(tempfile.mkdtemp(), "model.py")
+            with open(model_path, "w") as model_file:
+                model_file.write(source)
+            return self.rules(flavour="pyfunc", model_path=model_path, python_deps=python_deps)
+
+        body = "import json\nimport pandas\nfrom mlflow.models import set_model\n"
+        self.assertNotIn("PJ017", rules(body, []))
+        self.assertNotIn("PJ017", rules(body + "import polars as pl\n", ["polars"]))
+        self.assertNotIn("PJ017", rules(body + "from sklearn.linear_model import Ridge\n", ["Scikit-Learn"]))
+        self.assertIn("PJ017", rules(body + "import polars as pl\n", []))
+        self.assertIn("PJ017", rules(body, ["polars"]))
+        self.assertIn("PJ017", rules(body, ["pandas"]))
+
+    def test_a_wasm_runtime_must_equal_the_module_imports(self):
+        import wasmtime
+
+        from asystem.model import lint_project
+
+        project_dir = demo_project("wasm")
+        with open(join(project_dir, "model.wasm"), "wb") as model_file:
+            model_file.write(wasmtime.wat2wasm('(module (import "asystem_math" "tanh" (func (param f64) (result f64))) (memory (export "memory") 1) (func (export "predict") (param i32 i32 i32)))'))
+        with open(join(project_dir, "project.json")) as manifest_file:
+            manifest = json.load(manifest_file)
+        self.assertEqual({"wasm": []}, manifest["runtime"])
+        self.assertIn("PJ017", {rule for rule, _ in lint_project(project_dir)})
+        for runtime, expected in (({"wasm": ["tanh"]}, False), ({"wasm": ["sin"]}, True), ({"wasm": ["tanh"], "python": []}, True), ({}, True)):
+            with open(join(project_dir, "project.json"), "w") as manifest_file:
+                json.dump({**manifest, "runtime": runtime}, manifest_file)
+            self.assertEqual(expected, "PJ017" in {rule for rule, _ in lint_project(project_dir)})
+
+    def test_a_flavour_with_no_runtime_takes_no_python_dependencies(self):
+        with self.assertRaises(ValueError):
+            self.write(python_deps=["polars"])
+        self.write()
+        with open(join(self.project_dir, "project.json")) as manifest_file:
+            manifest = json.load(manifest_file)
+        with open(join(self.project_dir, "project.json"), "w") as manifest_file:
+            json.dump({**manifest, "runtime": {"python": []}}, manifest_file)
+        from asystem.model import lint_project
+
+        self.assertEqual(["PJ017"], sorted({rule for rule, _ in lint_project(self.project_dir)}))
 
     def test_pyfunc_project_is_registered_as_a_pyfunc_model(self):
         from asystem.model import build_signature, golden_document, golden_step, pull_model, register_project, signature_input, signature_output
 
-        signature = build_signature("demo_calc", ["1"], [signature_input("demo_in_seconds", "seconds", "Input.")], [signature_output("demo_out_seconds", "seconds", "Output.")])
-        golden = golden_document("1", [("calls", [golden_step(signature, "1", "s-0", {"demo_in_seconds": 1.0}, {"demo_out_seconds": 2.0}), golden_step(signature, "1", "s-1", {}, error="signature")])])
+        signature = build_signature("demo_calc", [signature_input("demo_in_seconds", "seconds", "Input.")], [signature_output("demo_out_seconds", "seconds", "Output.")])
+        golden = golden_document([("calls", [golden_step(signature, "s-0", {"demo_in_seconds": 1.0}, {"demo_out_seconds": 2.0}), golden_step(signature, "s-1", {}, error="signature")])])
         model_path = join(tempfile.mkdtemp(), "model.py")
         with open(model_path, "w") as model_file:
             model_file.write(
-                'MODEL_VERSION = "1"\n'
                 "import pandas as pd\nfrom mlflow.models import set_model\nfrom mlflow.pyfunc import PythonModel\n\n\n"
                 "class Demo(PythonModel):\n    def predict(self, context, model_input: pd.DataFrame, params=None):\n"
                 '        return pd.DataFrame({"demo_out_seconds": model_input["demo_in_seconds"] * 2})\n\n\nset_model(Demo())\n'
             )
         self.write(
-            flavor="pyfunc",
-            model_version="1",
+            flavour="pyfunc",
             model_path=model_path,
             signature=signature,
             golden=golden,
@@ -799,12 +638,19 @@ class ModelProjectTest(unittest.TestCase):
         uri = f"sqlite:///{join(root_dir, 'mlflow.db')}"
         import mlflow.pyfunc
 
-        version = register_project(self.project_dir, "demo_calc", uri)
+        version = register_project(self.project_dir, "demo_calc", uri, snapshot_version="10.200.1951-SNAPSHOT")
         mlflow.set_tracking_uri(uri)
-        loaded = mlflow.pyfunc.load_model("models:/demo_calc@candidate")
+        client = mlflow.MlflowClient()
+        registered = client.get_model_version("demo_calc", str(version))
+        self.assertEqual("10.200.1951-SNAPSHOT", registered.tags["snapshot_version"])
+        self.assertEqual("datascience", client.get_run(registered.run_id).data.tags["mlflow.source.name"])
+        register_project(self.project_dir, "demo_calc", uri, snapshot_version="10.200.1952-SNAPSHOT")
+        self.assertEqual("10.200.1951-SNAPSHOT", client.get_model_version("demo_calc", str(version)).tags["snapshot_version"])
+        loaded = mlflow.pyfunc.load_model("models:/demo_calc@preview")
         self.assertEqual([2.0], list(loaded.predict({"demo_in_seconds": [1.0]})["demo_out_seconds"]))
-        self.assertEqual("pyfunc", pull_model("demo_calc", "candidate", join(root_dir, "pulled"), uri, unpromoted=True)["flavor"])
-        self.assertEqual("1000", pull_model("demo_calc", "candidate", join(root_dir, "pulled"), uri, unpromoted=True)["model_version"])
+        pulled = pull_model("demo_calc", "preview", join(root_dir, "pulled"), uri)
+        assert pulled is not None
+        self.assertEqual("pyfunc", pulled["flavour"])
         self.assertEqual("1", str(version))
 
     def test_pyfunc_registration_refuses_a_state_vector_signature(self):
@@ -812,8 +658,7 @@ class ModelProjectTest(unittest.TestCase):
 
         model_path = self.model_file()
         self.write(
-            **self.versioned("1"),
-            flavor="pyfunc",
+            flavour="pyfunc",
             model_path=model_path,
             constants=None,
             evaluation=self.evaluation(),
@@ -822,14 +667,12 @@ class ModelProjectTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             register_project(self.project_dir, "demo_calc", f"sqlite:///{join(tempfile.mkdtemp(), 'mlflow.db')}")
 
-    def model_file(self, flavor="pyfunc", version="1"):
-        from asystem.model import stamp_model
-
-        path = join(tempfile.mkdtemp(), {"wasm": "model.wasm", "onnx": "model.onnx"}.get(flavor, "model.py"))
-        if flavor == "wasm":
+    def model_file(self, flavour="pyfunc"):
+        path = join(tempfile.mkdtemp(), {"wasm": "model.wasm", "onnx": "model.onnx"}.get(flavour, "model.py"))
+        if flavour == "wasm":
             with open(path, "wb") as model_file:
                 model_file.write(b"\0asm\x01\x00\x00\x00")
-        elif flavor == "onnx":
+        elif flavour == "onnx":
             import onnx
             from onnx import TensorProto, helper
 
@@ -839,9 +682,6 @@ class ModelProjectTest(unittest.TestCase):
         else:
             with open(path, "w") as model_file:
                 model_file.write("VALUE = 1\n")
-            with open(path, "a") as model_file:
-                model_file.write('MODEL_VERSION = "placeholder"\n')
-        stamp_model(path, flavor, version)
         return path
 
     def evaluation(self, passing=True, output="demo_limit_seconds", checks=None):
@@ -932,16 +772,6 @@ class ModelProjectTest(unittest.TestCase):
         del evaluation["datasets"]["backtest"]
         self.assertIn("AC003", self.rules(evaluation=evaluation))
 
-    def test_promotion_needs_acceptance_passed(self):
-        from asystem.model import check_acceptance
-
-        self.write()
-        self.assertEqual(["PM004"], [rule for rule, _ in check_acceptance(self.project_dir)])
-        self.write(evaluation=self.evaluation(passing=False))
-        self.assertEqual(["PM004"], [rule for rule, _ in check_acceptance(self.project_dir)])
-        self.write(evaluation=self.evaluation())
-        self.assertEqual([], check_acceptance(self.project_dir))
-
     def test_registration_logs_metrics_datasets_and_the_verdict(self):
         import mlflow
         from asystem.model import register_project
@@ -953,55 +783,33 @@ class ModelProjectTest(unittest.TestCase):
         run = mlflow.search_runs(experiment_names=["demo_calc"], output_format="list")[0]
         self.assertEqual(("passed", "0.5"), (run.data.tags["acceptance"], run.data.tags["acceptance_budget"]))
         self.assertEqual((1.0, 0.5, 0.5), (run.data.metrics["acceptance_passed"], run.data.metrics["acceptance_budget"], run.data.metrics["backtest/demo_limit_seconds/rmse"]))
+        assert run.inputs is not None
         self.assertEqual("backtest", run.inputs.dataset_inputs[0].tags[0].value)
 
     def other_project(self, **overrides):
         other_dir = join(tempfile.mkdtemp(), "project")
-        self.write(project_dir=other_dir, **overrides)
+        with contextlib.suppress(ValueError):
+            self.write(project_dir=other_dir, **overrides)
         return other_dir
-
-    def versioned(self, version):
-        golden = json.loads(json.dumps(self.golden))
-        golden["model_version"] = version
-        for sequence in golden["sequences"]:
-            for step in sequence["steps"]:
-                if "response" in step:
-                    step["response"]["model_version"] = version
-        return {"model_version": version, "signature": {**self.signature, "versions": [version]}, "golden": golden}
 
     def fitted_overrides(self, passing=True):
         model_path = self.model_file("wasm")
         return {
-            **self.versioned("1"),
-            "flavor": "wasm",
+            "flavour": "wasm",
             "model_path": model_path,
             "constants": None,
             "evaluation": self.evaluation(passing=passing),
             "provenance": {"source": "manual", "inputs": [], "implementation": "demo module built by hand"},
         }
 
-    def test_static_project_must_reproduce_exactly(self):
-        from asystem.model import compare_project
-
-        self.write()
-        self.assertEqual([], compare_project(self.other_project(), self.project_dir))
-        self.assertEqual(["CP001"], [rule for rule, _ in compare_project(self.other_project(provenance={"source": "manual", "inputs": [], "notes": "edited by hand"}), self.project_dir)])
-
-    def test_fitted_project_is_compared_by_signature_and_verdict_not_bytes(self):
-        from asystem.model import compare_project
-
-        self.write(**self.fitted_overrides())
-        self.assertEqual([], compare_project(self.other_project(**self.fitted_overrides()), self.project_dir))
-        self.assertEqual(["CP003"], [rule for rule, _ in compare_project(self.other_project(**self.fitted_overrides(passing=False)), self.project_dir)])
-        changed = {**self.signature, "outputs": [{**self.signature["outputs"][0], "parameters": {**self.signature["outputs"][0]["parameters"], "unit": "minutes"}}, self.signature["outputs"][1]]}
-        self.assertEqual({"CP002"}, {rule for rule, _ in compare_project(self.other_project(**{**self.fitted_overrides(), "signature": {**changed, "versions": ["1"]}}), self.project_dir)})
-
     def test_release_check_needs_a_passing_evaluation(self):
-        from asystem.model import check_release
+        from asystem.model import GateError, check_release
 
         self.write()
         self.assertEqual(["PM004"], [rule for rule, _ in check_release(self.project_dir)])
-        self.write(**self.fitted_overrides(passing=False))
+        with self.assertRaises(GateError) as raised:
+            self.write(**self.fitted_overrides(passing=False))
+        self.assertEqual(("Evaluate", "acceptance"), (raised.exception.stage, raised.exception.gate))
         self.assertEqual(["PM004"], [rule for rule, _ in check_release(self.project_dir)])
         self.write(**self.fitted_overrides())
         self.assertEqual([], check_release(self.project_dir))
@@ -1013,72 +821,13 @@ class ModelProjectTest(unittest.TestCase):
         self.write()
         uri = f"sqlite:///{join(tempfile.mkdtemp(), 'mlflow.db')}"
         first = register_project(self.project_dir, "demo_calc", uri)
-        second = register_project(self.project_dir, "demo_calc", uri, aliases=("candidate", "release"))
+        second = register_project(self.project_dir, "demo_calc", uri, aliases=("preview", "release"))
         self.assertEqual(first, second)
         mlflow.set_tracking_uri(uri)
         self.assertEqual(1, len(mlflow.search_runs(experiment_names=["demo_calc"])))
         self.assertEqual(second, mlflow.MlflowClient().get_model_version_by_alias("demo_calc", "release").version)
         self.write(provenance={"source": "manual", "inputs": [], "notes": "changed"})
         self.assertNotEqual(first, register_project(self.project_dir, "demo_calc", uri))
-
-    def test_stamp_is_written_read_and_ignored_by_the_content_hash(self):
-        from asystem.model import content_sha256, read_stamp, stamp_model
-
-        for flavor in ("pyfunc", "wasm", "onnx"):
-            path = self.model_file(flavor, "1000-SNAPSHOT")
-            self.assertEqual("1000-SNAPSHOT", read_stamp(path, flavor))
-            before = content_sha256(path, flavor)
-            stamp_model(path, flavor, "1004")
-            self.assertEqual("1004", read_stamp(path, flavor))
-            self.assertEqual(before, content_sha256(path, flavor))
-            stamp_model(path, flavor, "1004")
-            self.assertEqual("1004", read_stamp(path, flavor))
-        with self.assertRaises(ValueError):
-            read_stamp(join(tempfile.mkdtemp(), "model"), "static")
-
-    def test_content_hash_changes_with_the_model_but_not_the_stamp(self):
-        from asystem.model import content_sha256, stamp_model
-
-        first, second = self.model_file(), self.model_file()
-        with open(second, "a") as model_file:
-            model_file.write("OTHER = 2\n")
-        stamp_model(first, "pyfunc", "1001")
-        self.assertNotEqual(content_sha256(first, "pyfunc"), content_sha256(second, "pyfunc"))
-
-    def test_wasm_stamp_keeps_the_other_sections(self):
-        from asystem.model import read_stamp, stamp_model
-
-        path = join(tempfile.mkdtemp(), "model.wasm")
-        with open(path, "wb") as model_file:
-            model_file.write(b"\0asm\x01\x00\x00\x00" + b"\x01\x04\x01\x60\x00\x00" + b"\x00\x06\x04name\x01")
-        stamp_model(path, "wasm", "1000")
-        with open(path, "rb") as model_file:
-            data = model_file.read()
-        self.assertIn(b"\x01\x04\x01\x60\x00\x00", data)
-        self.assertIn(b"\x00\x06\x04name\x01", data)
-        self.assertEqual("1000", read_stamp(path, "wasm"))
-        with open(path, "wb") as model_file:
-            model_file.write(b"not wasm")
-        with self.assertRaises(ValueError):
-            read_stamp(path, "wasm")
-
-    def test_stamp_must_equal_the_manifest(self):
-        self.assertEqual([], self.rules(**self.fitted_overrides()))
-        self.assertIn("PJ013", self.rules(**{**self.fitted_overrides(), "model_path": self.model_file("wasm", "2")}))
-        self.assertIn("PJ013", self.rules(**{**self.fitted_overrides(), "flavor": "pyfunc", "model_path": self.model_file("wasm", "1")}))
-
-    def test_restamp_rewrites_every_version_and_still_verifies(self):
-        from asystem.model import project_content_sha256, restamp_project
-
-        self.write(**self.fitted_overrides())
-        restamped = restamp_project(self.project_dir, "1004", join(tempfile.mkdtemp(), "project"))
-        self.assertEqual("1004", restamped["model_version"])
-        self.assertEqual(project_content_sha256(self.project_dir), project_content_sha256(join(os.path.dirname(self.project_dir), "project")))
-
-    def test_a_static_version_must_have_the_static_form(self):
-        self.assertEqual(["PJ014"], self.rules(**self.versioned("1")))
-        self.assertEqual(["PJ014"], self.rules(**self.versioned("1004")))
-        self.assertEqual([], self.rules(**self.versioned("static-7")))
 
     def test_a_measured_check_needs_a_recorded_dataset(self):
         from asystem.model import evaluate_acceptance
@@ -1098,18 +847,15 @@ class ModelProjectTest(unittest.TestCase):
             self.evaluation(passing=False)
         self.assertEqual(["acceptance [passed] budget [0.5]", "acceptance [failed] budget [9.0]"], printed.getvalue().splitlines())
 
-    def test_static_flavor_refuses_a_model_file(self):
+    def test_static_flavour_refuses_a_model_file(self):
         with self.assertRaises(ValueError):
             self.write(model_path=join(self.project_dir, "signature.json"))
 
-    def test_model_flavor_needs_its_implementation(self):
-        self.assertEqual(["PJ002", "PJ003"], self.rules(flavor="wasm", evaluation=self.evaluation()))
+    def test_model_flavour_needs_its_implementation(self):
+        self.assertEqual(["PJ002", "PJ003"], self.rules(flavour="wasm", evaluation=self.evaluation()))
 
     def test_name_must_match_signature_and_style(self):
         self.assertIn("PJ004", self.rules(name="Demo-Calc"))
-
-    def test_signature_version_and_model_version_are_checked(self):
-        self.assertEqual(["PJ005"], self.rules(model_version="static-2", golden={**self.golden, "model_version": "static-2"}))
 
     def test_output_must_be_module_prefixed_with_a_unit_suffix(self):
         self.signature["outputs"][0]["name"] = "other_limit"
@@ -1120,9 +866,6 @@ class ModelProjectTest(unittest.TestCase):
 
     def test_static_must_cover_required_outputs(self):
         self.assertIn("PJ008", self.rules(constants={}))
-
-    def test_golden_version_mismatch_is_found(self):
-        self.assertEqual(["PJ009"], self.rules(golden={**self.golden, "model_version": "2"}))
 
     def test_golden_step_must_have_required_inputs(self):
         del self.golden["sequences"][0]["steps"][0]["request"]["inputs"][0]
@@ -1146,8 +889,8 @@ class ModelProjectTest(unittest.TestCase):
             {"demo_clock_seconds": 11.0, "demo_state_in": "10.0 11.0", "expect": "ok"},
             {"expect": "error"},
         ]
-        manifest = package_project(self.project_dir, "demo_calc", "static-1", "static", self.signature, rows, {"source": "manual", "inputs": []}, constants={"demo_limit_seconds": 5})
-        self.assertEqual("static", manifest["flavor"])
+        manifest = package_project(self.project_dir, "demo_calc", "static", self.signature, rows, {"source": "manual", "inputs": []}, constants={"demo_limit_seconds": 5})
+        self.assertEqual("static", manifest["flavour"])
         self.assertEqual([], lint_project(self.project_dir))
 
     def test_diff_signature_names_what_changed(self):
@@ -1161,7 +904,6 @@ class ModelProjectTest(unittest.TestCase):
         self.assertTrue(any("input [demo_clock_seconds] changed" in item for item in differences))
         self.assertTrue(any("output [demo_state_out] is missing" in item for item in differences))
         self.assertTrue(any("state slots changed" in item for item in differences))
-        self.assertEqual([], diff_signature(self.signature, {**self.signature, "versions": ["9"]}))
 
     def test_render_rust_names_every_tensor_with_optional_fields(self):
         from asystem.model import render_rust
@@ -1171,19 +913,10 @@ class ModelProjectTest(unittest.TestCase):
         self.assertIn("pub demo_state_in: Option<Vec<f64>>,", rust)
         self.assertIn('pub const REQUIRED_OUTPUT_NAMES: &[&str] = &["demo_limit_seconds"];', rust)
 
-    def test_gate_must_cover_every_host_and_architecture_for_this_project(self):
-        from asystem.model import check_gate
-
-        gate = {"project_sha256": "abc", "results": [{"host": "python", "arch": "x86_64", "passed": True}, {"host": "python", "arch": "aarch64", "passed": False}]}
-        findings = check_gate(gate, "abc", ["python"], ["x86_64", "aarch64"], "graham")
-        self.assertEqual(["PM001"], [rule for rule, _ in findings])
-        self.assertEqual(["PM002", "PM003"], sorted(rule for rule, _ in check_gate({**gate, "project_sha256": "xyz"}, "abc", ["python"], ["x86_64"], "")))
-        self.assertEqual([], check_gate(gate, "abc", ["python"], ["x86_64"], "graham"))
-
-    def test_a_signature_differs_in_everything_but_its_versions(self):
+    def test_a_signature_that_is_unchanged_has_no_differences_and_a_removed_output_has_one(self):
         from asystem.model import diff_signature
 
-        other = {**self.signature, "versions": ["2"]}
+        other = json.loads(json.dumps(self.signature))
         self.assertEqual([], diff_signature(self.signature, other))
         other["outputs"] = other["outputs"][:1]
         self.assertTrue(diff_signature(self.signature, other))
@@ -1197,103 +930,27 @@ class ModelProjectTest(unittest.TestCase):
             check_name("Bad-Name")
 
 
-def demo_project(flavor, golden_out=None, tolerance=None):
-    from asystem.model import build_signature, evaluate_acceptance, package_project, signature_input, signature_output, stamp_model
-
-    work_dir = tempfile.mkdtemp()
-    model_path = join(work_dir, {"wasm": "model.wasm", "onnx": "model.onnx", "pyfunc": "model.py"}[flavor])
-    if flavor == "pyfunc":
-        with open(model_path, "w") as model_file:
-            model_file.write(
-                textwrap.dedent(
-                    """
-                    import pandas as pd
-                    from mlflow.models import set_model
-                    from mlflow.pyfunc import PythonModel
-
-                    MODEL_VERSION = "1"
-
-
-                    class Double(PythonModel):
-                        def predict(self, context, model_input: pd.DataFrame, params=None):
-                            return pd.DataFrame({"demo_out": [x * 2.0 for x in model_input["demo_in"]]})
-
-
-                    set_model(Double())
-                    """
-                )
-            )
-    elif flavor == "wasm":
-        import wasmtime
-
-        wat = '(module (memory (export "memory") 1) (func (export "predict") (param i32 i32 i32) (f64.store (local.get 2) (f64.mul (f64.load (local.get 0)) (f64.const 2)))))'
-        with open(model_path, "wb") as model_file:
-            model_file.write(wasmtime.wat2wasm(wat))
-    else:
-        import numpy
-        import onnx
-        from onnx import TensorProto, helper, numpy_helper
-
-        graph = helper.make_graph(
-            [helper.make_node("Mul", ["demo_in", "two"], ["demo_out"])],
-            "double",
-            [helper.make_tensor_value_info("demo_in", TensorProto.DOUBLE, [1, 1])],
-            [helper.make_tensor_value_info("demo_out", TensorProto.DOUBLE, [1, 1])],
-            initializer=[numpy_helper.from_array(numpy.array(2.0, dtype=numpy.float64), "two")],
-        )
-        model = helper.make_model(graph, opset_imports=[helper.make_opsetid("", 21)])
-        model.ir_version = 10
-        onnx.save(model, model_path)
-    if flavor != "pyfunc":
-        stamp_model(model_path, flavor, "1")
-    signature = build_signature("demo_replay_double", ["1"], [signature_input("demo_in", "none", "A number.")], [signature_output("demo_out", "none", "Twice the number.", datatype="FP64")])
-    dataset = join(work_dir, "2026-11-03_10-00-00", "demo_replay_backtest_2026-11-01_2026-11-02.csv")
-    os.makedirs(dirname(dataset))
-    with open(dataset, "w") as dataset_file:
-        dataset_file.write("a,b\n1,2\n")
-    evaluation = evaluate_acceptance(lambda: [{"split": "backtest", "output": "demo_out", "name": "rmse", "value": 0.0, "limit": 1, "direction": "max"}], {"backtest": [dataset]})
-    samples = [
-        {"demo_in": 1.5, "demo_out": 3.0 if golden_out is None else golden_out},
-        {"demo_in": -2.0, "demo_out": -4.0},
-        {"demo_in": None, "expect": "error"},
-    ]
-    project_dir = join(work_dir, "project")
-    package_project(
-        project_dir,
-        "demo_replay_double",
-        "1",
-        flavor,
-        signature,
-        samples,
-        {"source": "manual", "inputs": [], "implementation": "demo built by hand"},
-        model_path=model_path,
-        evaluation=evaluation,
-        tolerance=tolerance,
-    )
-    return project_dir
-
-
 class ReplayTest(unittest.TestCase):
-    def test_each_flavor_replays_its_golden_exactly(self):
+    def test_each_flavour_replays_its_golden_exactly(self):
         from asystem.replay import replay_project
 
-        for flavor in ("pyfunc", "wasm", "onnx"):
-            self.assertEqual([], replay_project(demo_project(flavor)), flavor)
+        for flavour in ("pyfunc", "wasm", "onnx"):
+            self.assertEqual([], replay_project(demo_project(flavour)), flavour)
 
     def test_a_response_that_differs_from_the_golden_is_a_finding(self):
         from asystem.replay import replay_project
 
-        for flavor in ("pyfunc", "wasm", "onnx"):
-            self.assertEqual(["RP003"], [rule for rule, _ in replay_project(demo_project(flavor, golden_out=3.5))], flavor)
+        for flavour in ("pyfunc", "wasm", "onnx"):
+            self.assertEqual(["RP003"], [rule for rule, _ in replay_project(demo_project(flavour, golden_out=3.5))], flavour)
 
     def test_a_stated_tolerance_accepts_a_small_difference_and_rejects_a_large_one(self):
         from asystem.replay import replay_project
 
         bounds = {"demo_out": {"absolute": 1e-3}}
-        for flavor in ("pyfunc", "wasm", "onnx"):
-            self.assertEqual([], replay_project(demo_project(flavor, golden_out=3.0000001, tolerance=bounds)), flavor)
-            self.assertEqual(["RP003"], [rule for rule, _ in replay_project(demo_project(flavor, golden_out=3.5, tolerance=bounds))], flavor)
-            self.assertEqual(["RP003"], [rule for rule, _ in replay_project(demo_project(flavor, golden_out=3.0000001))], flavor)
+        for flavour in ("pyfunc", "wasm", "onnx"):
+            self.assertEqual([], replay_project(demo_project(flavour, golden_out=3.0000001, tolerance=bounds)), flavour)
+            self.assertEqual(["RP003"], [rule for rule, _ in replay_project(demo_project(flavour, golden_out=3.5, tolerance=bounds))], flavour)
+            self.assertEqual(["RP003"], [rule for rule, _ in replay_project(demo_project(flavour, golden_out=3.0000001))], flavour)
 
     def test_a_relative_tolerance_scales_with_the_expected_value(self):
         from asystem.replay import replay_project
@@ -1307,30 +964,363 @@ class ReplayTest(unittest.TestCase):
                 demo_project("pyfunc", tolerance=bounds)
             self.assertIn("PJ015", str(refused.exception), bounds)
 
-    def test_per_architecture_gates_merge_into_one_for_the_same_project(self):
-        from asystem.replay import merge_gates
 
-        first = {"project_sha256": "abc", "results": [{"host": "python", "arch": "x86_64", "passed": True}], "skipped": ["go"]}
-        second = {"project_sha256": "abc", "results": [{"host": "python", "arch": "aarch64", "passed": True}, {"host": "go", "arch": "aarch64", "passed": True}], "skipped": []}
-        merged = merge_gates([first, second])
-        self.assertEqual({("python", "x86_64"), ("python", "aarch64"), ("go", "aarch64")}, {(row["host"], row["arch"]) for row in merged["results"]})
-        self.assertEqual([], merged["skipped"])
-        failing = {"project_sha256": "abc", "results": [{"host": "python", "arch": "x86_64", "passed": False}], "skipped": []}
-        self.assertFalse(next(row for row in merge_gates([first, failing])["results"] if row["arch"] == "x86_64")["passed"])
-        with self.assertRaises(ValueError):
-            merge_gates([first, {**second, "project_sha256": "other"}])
+class MetadataTest(unittest.TestCase):
+    def setUp(self):
+        sys.path.insert(0, join(ROOT, "all/_/src/build/python"))
+        self.workspace = tempfile.mkdtemp()
+        os.makedirs(join(self.workspace, "data", "training", "2026-01-01_00-00-00"))
+        with open(join(self.workspace, "data", "training", "2026-01-01_00-00-00", "a.csv"), "w") as data_file:
+            data_file.write("x\n1\n")
+        self.write_notebook(["x = 1\n"], ["# a heading\n"])
+        self.project_dir = demo_project("wasm")
 
-    def test_gate_names_the_project_hash_and_this_architecture(self):
-        from asystem.model import file_sha256
-        from asystem.replay import ARCHITECTURES, gate_project
+    def write_notebook(self, code, markdown):
+        with open(join(self.workspace, "notebook.ipynb"), "w") as notebook_file:
+            json.dump({"cells": [{"cell_type": "code", "source": code}, {"cell_type": "markdown", "source": markdown}]}, notebook_file)
 
-        project_dir = demo_project("pyfunc")
-        document, findings = gate_project(project_dir)
-        self.assertEqual([], findings)
-        self.assertEqual(file_sha256(join(project_dir, "project.json")), document["project_sha256"])
-        self.assertEqual(1, len(document["results"]))
-        self.assertIn(document["results"][0]["arch"], set(ARCHITECTURES.values()))
-        self.assertTrue(document["results"][0]["passed"])
+    def metadata(self, **changes):
+        from asystem.metadata import METADATA_SCHEMA, content_sha256
+
+        return {
+            "schema": METADATA_SCHEMA,
+            "inputs_sha256": "a" * 64,
+            "content_sha256": content_sha256(self.project_dir),
+            "runtime": json.load(open(join(self.project_dir, "project.json"))).get("runtime", {}),
+            "released_version": None,
+            "snapshot_version": None,
+            "released_by": None,
+            "released_at": None,
+            "targets": [{"kind": "served"}, {"kind": "embedded", "language": "go"}],
+            "passed": [],
+            **changes,
+        }
+
+    def place(self, metadata):
+        from asystem.metadata import PROJECT_DIR, write_metadata
+
+        shutil.copytree(self.project_dir, join(self.workspace, PROJECT_DIR), dirs_exist_ok=True)
+        write_metadata(self.workspace, metadata)
+
+    def rules(self):
+        from asystem.metadata import lint_metadata
+
+        return sorted({rule for rule, _ in lint_metadata(self.workspace, "wasm")})
+
+    def test_a_consistent_workspace_has_no_findings(self):
+        self.place(self.metadata())
+        self.assertEqual([], self.rules())
+
+    def test_a_missing_metadata_or_field_or_project_is_a_finding(self):
+        self.assertEqual(["MD001"], self.rules())
+        self.place(self.metadata())
+        shutil.rmtree(join(self.workspace, "project"))
+        self.assertEqual(["MD003"], self.rules())
+        from asystem.metadata import write_metadata
+
+        write_metadata(self.workspace, {"schema": 1})
+        self.assertEqual(["MD002"], self.rules())
+
+    def test_a_runtime_that_differs_from_the_project_or_has_no_pin_is_a_finding(self):
+        from asystem.metadata import lint_metadata
+
+        self.place(self.metadata(runtime={"python": ["polars"]}))
+        self.assertEqual(["MD005"], self.rules())
+        with open(join(self.project_dir, "project.json")) as manifest_file:
+            manifest = json.load(manifest_file)
+        with open(join(self.project_dir, "project.json"), "w") as manifest_file:
+            json.dump({**manifest, "runtime": {"python": ["polars"]}}, manifest_file)
+        self.place(self.metadata())
+        pins_path = join(self.workspace, "py_deps.txt")
+        source_dir = join(self.workspace, "source")
+        served_dir = join(source_dir, "host", "mlserver", "src", "main", "python")
+        os.makedirs(served_dir)
+        with open(pins_path, "w") as pins_file:
+            pins_file.write("numpy==2.0.0\n")
+        with open(join(served_dir, "py_deps.txt"), "w") as served_file:
+            served_file.write("numpy\n")
+        self.assertEqual(["MD005"], [rule for rule, _ in lint_metadata(self.workspace, "wasm", pins_path)])
+        with open(pins_path, "a") as pins_file:
+            pins_file.write("Polars==2.1.0\n")
+        self.assertEqual([], lint_metadata(self.workspace, "wasm", pins_path))
+        self.assertEqual(["MD005"], [rule for rule, _ in lint_metadata(self.workspace, "wasm", pins_path, source_dir)])
+        with open(join(served_dir, "py_deps.txt"), "a") as served_file:
+            served_file.write("polars\n")
+        self.assertEqual([], lint_metadata(self.workspace, "wasm", pins_path, source_dir))
+
+    def test_the_changed_command_reports_a_notebook_that_packages_nothing(self):
+        import contextlib
+        import io
+
+        from asystem.model import main
+
+        pins_path = join(self.workspace, "py_deps.txt")
+        with open(pins_path, "w") as pins_file:
+            pins_file.write("numpy==2.0.0\n")
+
+        def state():
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                main(["changed", self.workspace, pins_path])
+            return output.getvalue().strip()
+
+        self.assertEqual("unpackaged", state())
+        self.write_notebook(["manifest = package_project(project_dir)\n"], ["# a heading\n"])
+        self.assertEqual("changed", state())
+
+    def test_a_project_that_differs_from_its_hash_is_a_finding(self):
+        self.place(self.metadata(content_sha256="b" * 64))
+        self.assertEqual(["MD003"], self.rules())
+
+    def test_a_target_with_no_wrapper_or_a_passed_target_not_declared_is_a_finding(self):
+        self.place(self.metadata(targets=[{"kind": "embedded", "language": "java"}]))
+        self.assertEqual(["MD004"], self.rules())
+        self.place(self.metadata(passed=[{"kind": "served"}], targets=[{"kind": "embedded", "language": "go"}]))
+        self.assertEqual(["MD004"], self.rules())
+
+    def test_a_released_version_must_look_like_a_release_version(self):
+        self.place(self.metadata(released_version="10.200.1949"))
+        self.assertEqual([], self.rules())
+        self.place(self.metadata(released_version="1000"))
+        self.assertEqual(["MD002"], self.rules())
+
+    def test_a_snapshot_version_must_look_like_one_and_a_released_project_has_none(self):
+        self.place(self.metadata(snapshot_version="10.200.1951-SNAPSHOT"))
+        self.assertEqual([], self.rules())
+        self.place(self.metadata(snapshot_version="10.200.1951"))
+        self.assertEqual(["MD002"], self.rules())
+        self.place(self.metadata(snapshot_version="10.200.1951-SNAPSHOT", released_version="10.200.1951"))
+        self.assertEqual(["MD002"], self.rules())
+
+    def test_the_inputs_hash_moves_with_code_data_and_pins_but_not_with_markdown(self):
+        from asystem.metadata import inputs_sha256
+
+        pins = {"numpy": "2.0"}
+        before = inputs_sha256(self.workspace, pins)
+        self.write_notebook(["x = 1\n"], ["# another heading\n"])
+        self.assertEqual(before, inputs_sha256(self.workspace, pins))
+        self.write_notebook(["x = 2\n"], ["# a heading\n"])
+        self.assertNotEqual(before, inputs_sha256(self.workspace, pins))
+        self.write_notebook(["x = 1\n"], ["# a heading\n"])
+        self.assertNotEqual(before, inputs_sha256(self.workspace, {"numpy": "2.1"}))
+        with open(join(self.workspace, "data", "training", "2026-01-01_00-00-00", "a.csv"), "a") as data_file:
+            data_file.write("2\n")
+        self.assertNotEqual(before, inputs_sha256(self.workspace, pins))
+
+    def test_the_pins_are_read_for_the_named_runtime_packages_only(self):
+        from asystem.metadata import read_pins
+
+        path = join(tempfile.mkdtemp(), "py_deps_prod.txt")
+        with open(path, "w") as pins_file:
+            pins_file.write("numpy==2.5.4\nruff==0.17.3\nwasmtime==50.0.1\n# comment\n")
+        self.assertEqual({"numpy": "2.5.4", "wasmtime": "50.0.1"}, read_pins(path))
+
+
+class ReleaseTest(unittest.TestCase):
+    def setUp(self):
+        self.enterContext(contextlib.chdir(fresh_mlruns_dir()))
+        sys.path.insert(0, join(ROOT, "all/_/src/build/python"))
+        from asystem.release import NOTEBOOK_ROOT
+
+        self.TARGETS = [{"kind": "served"}, {"kind": "embedded", "language": "python"}]
+
+        self.source = tempfile.mkdtemp()
+        self.workspace = join(self.source, NOTEBOOK_ROOT, "demo", "replay", "double")
+        os.makedirs(join(self.workspace, "data"))
+        with open(join(self.workspace, "notebook.ipynb"), "w") as notebook_file:
+            json.dump({"cells": [{"cell_type": "code", "source": ["x = 1\n"]}]}, notebook_file)
+        self.pins = join(tempfile.mkdtemp(), "pins.txt")
+        with open(self.pins, "w") as pins_file:
+            pins_file.write("numpy==2.0\n")
+        self.consumer = join(self.source, "max", "consumer")
+        self.slot = join(self.consumer, "src", "build", "resources", "model")
+        os.makedirs(dirname(self.slot))
+        shutil.copytree(demo_project("wasm", golden_out=3.5), self.slot)
+
+    def record(self, project_dir=None, targets=None):
+        from asystem.metadata import record_project
+
+        return record_project(self.workspace, project_dir or demo_project("wasm"), self.TARGETS if targets is None else targets, self.pins)
+
+    def version_file(self, text):
+        path = join(tempfile.mkdtemp(), ".version")
+        with open(path, "w") as version_file:
+            version_file.write(text)
+        return path
+
+    def passed(self):
+        from asystem.metadata import read_metadata, write_metadata
+
+        metadata = read_metadata(self.workspace)
+        write_metadata(self.workspace, {**metadata, "passed": metadata["targets"]})
+
+    def release(self, version="10.200.1", **options):
+        from asystem.release import release_workspaces
+
+        return release_workspaces(self.source, version, "someone", **options)
+
+    def test_a_project_is_recorded_and_a_workspace_with_no_target_is_not(self):
+        from asystem.metadata import METADATA_FILE
+
+        recorded = self.record()
+        assert recorded is not None
+        self.assertEqual("served", recorded["targets"][0]["kind"])
+        self.assertTrue(os.path.isfile(join(self.workspace, METADATA_FILE)))
+        os.remove(join(self.workspace, METADATA_FILE))
+        self.assertIsNone(self.record(targets=[]))
+        self.assertFalse(os.path.isfile(join(self.workspace, METADATA_FILE)))
+
+    def test_a_release_needs_every_target_to_have_passed_and_keeps_the_version_while_content_is_unchanged(self):
+        from asystem.errors import GateError
+        from asystem.metadata import read_metadata
+
+        self.record()
+        with self.assertRaises(GateError) as raised:
+            self.release()
+        self.assertEqual(("Release", "targets"), (raised.exception.stage, raised.exception.gate))
+        self.passed()
+        self.assertEqual(["demo_replay_double"], self.release())
+        self.assertEqual("10.200.1", read_metadata(self.workspace)["released_version"])
+        self.record()
+        self.release("10.200.2")
+        self.assertEqual("10.200.1", read_metadata(self.workspace)["released_version"])
+        self.record(project_dir=demo_project("wasm", golden_out=3.5))
+        self.assertIsNone(read_metadata(self.workspace)["released_version"])
+
+    def test_an_unreleased_project_carries_the_snapshot_until_its_content_changes_or_it_is_released(self):
+        from asystem.metadata import read_metadata, record_project
+
+        def record(project_dir, version):
+            return record_project(self.workspace, project_dir, self.TARGETS, self.pins, self.version_file(version))
+
+        self.assertEqual("10.200.1951-SNAPSHOT", record(demo_project("wasm"), "10.200.1951-SNAPSHOT\n")["snapshot_version"])
+        self.assertEqual("10.200.1951-SNAPSHOT", record(demo_project("wasm"), "10.200.1952-SNAPSHOT")["snapshot_version"])
+        self.assertEqual("10.200.1952-SNAPSHOT", record(demo_project("wasm", golden_out=3.5), "10.200.1952-SNAPSHOT")["snapshot_version"])
+        self.assertEqual("10.200.1952-SNAPSHOT", record(demo_project("wasm", golden_out=3.5), "10.200.1953")["snapshot_version"])
+        self.assertIsNone(record(demo_project("wasm", golden_out=4.5), "10.200.1953")["snapshot_version"])
+        record(demo_project("wasm"), "10.200.1954-SNAPSHOT")
+        self.passed()
+        self.release()
+        self.assertEqual((None, "10.200.1"), (read_metadata(self.workspace)["snapshot_version"], read_metadata(self.workspace)["released_version"]))
+        self.assertIsNone(record(demo_project("wasm"), "10.200.1955-SNAPSHOT")["snapshot_version"])
+
+    def test_the_fixtures_module_is_never_released(self):
+        from asystem.release import NOTEBOOK_ROOT
+
+        fixture = join(self.source, NOTEBOOK_ROOT, "example", "replay", "double")
+        os.makedirs(join(fixture, "data"))
+        shutil.copy(join(self.workspace, "notebook.ipynb"), fixture)
+        from asystem.metadata import record_project
+
+        record_project(fixture, demo_project("wasm"), self.TARGETS, self.pins)
+        self.assertEqual([], self.release())
+
+    def test_a_consumer_embeds_the_released_project_and_is_stale_until_it_does(self):
+        from asystem.release import embed_consumer, slot_findings, stale_consumers
+
+        self.record()
+        self.passed()
+        self.assertEqual("none", embed_consumer(self.consumer, self.source, "demo_replay_double"))
+        self.release()
+        self.assertEqual([self.consumer], stale_consumers(self.source))
+        self.assertEqual("embedded", embed_consumer(self.consumer, self.source, "demo_replay_double"))
+        self.assertEqual(("unchanged", []), (embed_consumer(self.consumer, self.source, "demo_replay_double"), stale_consumers(self.source)))
+        self.assertEqual([], slot_findings(self.slot, self.source))
+        with open(join(self.slot, "project.json"), "a") as manifest_file:
+            manifest_file.write(" ")
+        self.assertEqual(["CP004"], [rule for rule, _ in slot_findings(self.slot, self.source)])
+        self.assertEqual("embedded", embed_consumer(self.consumer, self.source, "demo_replay_double"))
+
+    def test_inputs_change_with_the_pins(self):
+        from asystem.metadata import inputs_changed
+
+        self.assertTrue(inputs_changed(self.workspace, self.pins))
+        self.record()
+        self.assertFalse(inputs_changed(self.workspace, self.pins))
+        with open(self.pins, "w") as pins_file:
+            pins_file.write("numpy==2.1\n")
+        self.assertTrue(inputs_changed(self.workspace, self.pins))
+
+    def test_a_passed_target_is_recorded_once_and_only_when_declared(self):
+        from asystem.metadata import read_metadata, record_passed
+
+        self.record()
+        record_passed(self.workspace, self.TARGETS[0])
+        record_passed(self.workspace, self.TARGETS[0])
+        record_passed(self.workspace, {"kind": "embedded", "language": "go"})
+        self.assertEqual([self.TARGETS[0]], read_metadata(self.workspace)["passed"])
+
+    def test_an_embedded_only_project_is_not_registered(self):
+        from asystem.model import register_preview
+
+        self.assertIsNone(register_preview(demo_project("wasm"), "demo_replay_double", "http://127.0.0.1:9", [{"kind": "embedded", "language": "rust"}]))
+
+    def test_the_signature_may_grow_but_not_change_what_was_released(self):
+        from asystem.errors import GateError
+        from asystem.metadata import read_metadata, signature_findings
+
+        self.record()
+        self.passed()
+        self.release()
+        released = read_metadata(self.workspace)["released_signature"]
+        grown = json.loads(json.dumps(released))
+        grown["outputs"].append({**grown["outputs"][0], "name": "demo_extra"})
+        grown["inputs"].append({**grown["inputs"][0], "name": "demo_optional", "parameters": {**grown["inputs"][0]["parameters"], "required": False}})
+        self.assertEqual([], signature_findings(released, grown))
+        for change in (
+            lambda signature: signature["outputs"].pop(0),
+            lambda signature: signature["inputs"][0].update({"datatype": "INT64"}),
+            lambda signature: signature["inputs"].append({**signature["inputs"][0], "name": "demo_new"}),
+        ):
+            broken = json.loads(json.dumps(released))
+            change(broken)
+            self.assertTrue(signature_findings(released, broken))
+        with self.assertRaises(GateError) as raised:
+            self.record(project_dir=self.project_with_signature(lambda signature: signature["outputs"].pop(0)))
+        self.assertEqual(("Package", "signature"), (raised.exception.stage, raised.exception.gate))
+
+    def project_with_signature(self, change):
+        project_dir = demo_project("wasm")
+        with open(join(project_dir, "signature.json")) as signature_file:
+            signature = json.load(signature_file)
+        change(signature)
+        with open(join(project_dir, "signature.json"), "w") as signature_file:
+            json.dump(signature, signature_file)
+        return project_dir
+
+    def test_publishing_registers_by_content_sets_the_tags_moves_release_and_clears_preview(self):
+        from asystem.release import clear_preview, publish_workspace, wait_served
+        from mlflow import MlflowClient
+
+        self.record()
+        self.passed()
+        self.release()
+        uri = f"sqlite:///{join(tempfile.mkdtemp(), 'mlflow.db')}"
+        from asystem.model import register_project
+
+        previewed = register_project(join(self.workspace, "project"), "demo_replay_double", uri)
+        self.assertEqual("published", publish_workspace("demo_replay_double", self.workspace, uri))
+        client = MlflowClient(uri, uri)
+        model = client.get_registered_model("demo_replay_double")
+        self.assertEqual({"release": str(previewed)}, {alias: str(version) for alias, version in model.aliases.items()})
+        tags = client.get_model_version("demo_replay_double", previewed).tags
+        self.assertEqual("10.200.1", tags["release_version"])
+        self.assertEqual("someone", json.loads(tags["metadata"])["released_by"])
+        self.assertEqual("published", publish_workspace("demo_replay_double", self.workspace, uri))
+        register_project(join(self.workspace, "project"), "demo_replay_double", uri)
+        clear_preview("demo_replay_double", uri)
+        self.assertNotIn("preview", client.get_registered_model("demo_replay_double").aliases)
+        self.assertEqual("unreachable", wait_served("http://127.0.0.1:9", "demo_replay_double", "10.200.1", timeout=1))
+
+    def test_status_names_a_stale_consumer_and_nothing_else_when_everything_matches(self):
+        from asystem.release import embed_consumer, status_lines
+
+        self.record()
+        self.passed()
+        self.release()
+        self.assertEqual(["WARN"], [level for level, _ in status_lines(self.source)])
+        embed_consumer(self.consumer, self.source, "demo_replay_double")
+        self.assertEqual([], status_lines(self.source))
 
 
 class RegistryToolsTest(unittest.TestCase):
@@ -1346,90 +1336,8 @@ class RegistryToolsTest(unittest.TestCase):
         from asystem.model import fix_hints
 
         self.assertEqual(1, len(fix_hints(["PJ003", "PJ013", "PJ015"])))
-        self.assertEqual(2, len(fix_hints(["PJ003", "CP002"])))
+        self.assertEqual(2, len(fix_hints(["PJ003", "CP004"])))
         self.assertEqual([], fix_hints(["ZZ999"]))
-
-    def test_status_joins_the_registry_with_what_the_server_has_ready(self):
-        from asystem.model import status_rows
-
-        registry = [{"name": "demo_a", "release": "1001", "latest": "1001"}, {"name": "demo_b", "release": "1002", "latest": "1002"}, {"name": "demo_c", "release": None, "latest": None}]
-        served = {"demo_a": {"version": "1001", "state": "READY"}, "demo_b": {"version": "1001", "state": "READY"}}
-        rows = {row["registry"]: row for row in status_rows(registry, served, tempfile.mkdtemp())}
-        self.assertEqual([True, False, False], [rows[name]["in_step"] for name in ("demo_a", "demo_b", "demo_c")])
-        self.assertEqual("absent", rows["demo_c"]["served_state"])
-        rows = status_rows(registry, None, tempfile.mkdtemp())
-        self.assertEqual({"unreachable"}, {row["served_state"] for row in rows})
-
-    def test_rollback_moves_release_to_the_last_earlier_version_that_passed(self):
-        from asystem.model import rollback_project
-        from mlflow import MlflowClient
-
-        uri = f"sqlite:///{join(tempfile.mkdtemp(), 'mlflow.db')}"
-        client = MlflowClient(uri, uri)
-        client.create_registered_model("demo_roll")
-        for number, acceptance in (("1000", "passed"), ("1001", "failed"), ("1002", "passed")):
-            version = client.create_model_version("demo_roll", f"file://{tempfile.mkdtemp()}", tags={"model_version": number, "acceptance": acceptance})
-            client.set_registered_model_alias("demo_roll", f"m{number}", version.version)
-        client.set_registered_model_alias("demo_roll", "release", "3")
-        self.assertEqual("1000", rollback_project("demo_roll", uri))
-        self.assertEqual(1, int(client.get_model_version_by_alias("demo_roll", "release").version))
-        with self.assertRaises(ValueError):
-            rollback_project("demo_roll", uri)
-
-
-class ServingRuntimeTest(unittest.TestCase):
-    def setUp(self):
-        sys.path.insert(0, join(ROOT, "may/mlserver/src/main/python"))
-        self.addCleanup(sys.path.remove, join(ROOT, "may/mlserver/src/main/python"))
-
-    def test_every_flavor_serves_what_replay_computes(self):
-        from asystem.replay import replay_project
-        from serving.project import load_project
-
-        for flavor in ("pyfunc", "wasm", "onnx"):
-            project_dir = demo_project(flavor)
-            self.assertEqual([], replay_project(project_dir), flavor)
-            self.assertEqual({"demo_out": [3.0]}, load_project(project_dir).predict({"demo_in": [1.5]}), flavor)
-
-    def test_a_missing_required_input_is_refused(self):
-        from serving.project import load_project
-
-        with self.assertRaises(ValueError):
-            load_project(demo_project("wasm")).predict({})
-
-    def test_a_changed_file_is_not_loaded(self):
-        from serving.project import load_project
-
-        project_dir = demo_project("wasm")
-        with open(join(project_dir, "model.wasm"), "ab") as model_file:
-            model_file.write(b"\0")
-        with self.assertRaises(ValueError):
-            load_project(project_dir)
-
-    def test_the_pull_serves_a_model_only_when_it_verifies(self):
-        import shutil
-
-        from registry import pull
-
-        project_dir = demo_project("onnx")
-        models_dir = tempfile.mkdtemp()
-
-        def download(artifact_uri, dst_path):
-            shutil.copytree(project_dir, join(dst_path, "model"))
-
-        with (
-            mock.patch.dict(os.environ, {"MLFLOW_TRACKING_URI": "http://registry.invalid", "MLFLOW_MODEL_DIR": models_dir, "MLSERVER_MODELS": "demo_replay_double"}),
-            mock.patch("mlflow.artifacts.download_artifacts", download),
-        ):
-            self.assertEqual(0, pull.main())
-            with open(join(models_dir, "demo_replay_double", "model-settings.json")) as settings_file:
-                settings = json.load(settings_file)
-            self.assertEqual(("demo_replay_double", "1", pull.RUNTIME), (settings["name"], settings["parameters"]["version"], settings["implementation"]))
-            self.assertEqual(["demo_in"], [entry["name"] for entry in settings["inputs"]])
-            self.assertTrue(os.path.isfile(join(models_dir, "settings.json")))
-            with open(join(project_dir, "model.onnx"), "ab") as model_file:
-                model_file.write(b"\0")
-            self.assertEqual(1, pull.main())
 
 
 class NotebookLintTest(unittest.TestCase):
@@ -1445,7 +1353,7 @@ class NotebookLintTest(unittest.TestCase):
     def notebook(self, **changes):
         import json
 
-        title = "# demo / calc / run\n\nA calculation.\n\n| Term | In This Notebook |\n|---|---|\n" + "\n".join(f"| **{term}** | Value |" for term in ("Intent", "Project Flavor", "Data Splits"))
+        title = "# demo / calc / run\n\nA calculation.\n\n| Term | In This Notebook |\n|---|---|\n" + "\n".join(f"| **{term}** | Value |" for term in ("Intent", "Project Flavour", "Data Splits"))
         section = "## {}\n\n- **Stage:** {}\n- **Intent:** Do it."
         cells = [
             {"cell_type": "markdown", "metadata": {}, "source": title},
@@ -1517,7 +1425,7 @@ class NotebookLintTest(unittest.TestCase):
 
     def test_star_import_and_sys_path_are_found(self):
         notebook = self.notebook()
-        notebook["cells"][2]["source"] += "from library.data import *\nimport sys\nsys.path.append('x')\n"
+        notebook["cells"][2]["source"] += "from workbench.data import *\nimport sys\nsys.path.append('x')\n"
         self.notebook(cells=notebook["cells"])
         self.assertEqual(["NB011", "NB012"], self.rules())
 
@@ -1536,10 +1444,10 @@ class NotebookLintTest(unittest.TestCase):
         from asystem.workspace import lint_workspace
 
         root = tempfile.mkdtemp()
-        for flavor in ("static", "wasm"):
-            created = scaffold_notebook(root, "example", "calc", flavor, flavor)
-            self.assertEqual([], lint_notebook(join(root, "example", "calc", flavor, "notebook.ipynb")))
-            self.assertEqual([], lint_workspace(join(root, "example", "calc", flavor)))
+        for flavour in ("static", "wasm"):
+            created = scaffold_notebook(root, "example", "calc", flavour, flavour)
+            self.assertEqual([], lint_notebook(join(root, "example", "calc", flavour, "notebook.ipynb")))
+            self.assertEqual([], lint_workspace(join(root, "example", "calc", flavour)))
             self.assertTrue(all(os.path.exists(path) for path in created))
         with self.assertRaises(ValueError):
             scaffold_notebook(root, "example", "calc", "static", "static")
@@ -1549,232 +1457,49 @@ class NotebookLintTest(unittest.TestCase):
             scaffold_notebook(root, "Bad-Name", "calc", "run", "static")
 
 
-class VersionRegistryTest(unittest.TestCase):
-    NAME = "demo_calc_run"
-
-    def setUp(self):
-        sys.path.insert(0, join(ROOT, "all/_/src/build/python"))
-        import mlflow
-        from asystem.model import build_signature, signature_input, signature_output
-
-        self.root = tempfile.mkdtemp()
-        self.uri = f"sqlite:///{join(self.root, 'mlflow.db')}"
-        mlflow.set_tracking_uri(self.uri)
-        self.signature = build_signature(self.NAME, ["1000-SNAPSHOT"], [signature_input("demo_in_seconds", "seconds", "Input.")], [signature_output("demo_out_seconds", "seconds", "Output.")])
-        self.workspaces = join(self.root, "workspaces")
-        self.workspace = join(self.workspaces, "demo", "calc", "run")
-        os.makedirs(self.workspace)
-
-    def project(self, factor=2, value=0.0):
-        from asystem.model import evaluate_acceptance, golden_document, golden_step, write_project
-
-        model_path = join(tempfile.mkdtemp(), "model.py")
-        with open(model_path, "w") as model_file:
-            model_file.write(
-                'MODEL_VERSION = "1000-SNAPSHOT"\nimport pandas as pd\nfrom mlflow.models import set_model\nfrom mlflow.pyfunc import PythonModel\n\n\n'
-                f"class Demo(PythonModel):\n    def predict(self, context, model_input: pd.DataFrame, params=None):\n"
-                f'        return pd.DataFrame({{"demo_out_seconds": model_input["demo_in_seconds"] * {factor}}})\n\n\nset_model(Demo())\n'
-            )
-        dataset_dir = join(tempfile.mkdtemp(), "2026-11-03_10-00-00")
-        os.makedirs(dataset_dir)
-        dataset = join(dataset_dir, "demo_calc_run_2026-11-01_2026-11-02.csv")
-        with open(dataset, "w") as dataset_file:
-            dataset_file.write("a\n1\n")
-        evaluation = evaluate_acceptance(lambda: [{"split": "backtest", "output": "demo_out_seconds", "name": "rmse", "value": value, "limit": 1.0, "direction": "max"}], {"backtest": [dataset]})
-        steps = [
-            golden_step(self.signature, "1000-SNAPSHOT", "s-0", {"demo_in_seconds": 1.0}, {"demo_out_seconds": float(factor)}),
-            golden_step(self.signature, "1000-SNAPSHOT", "s-1", {}, error="signature"),
-        ]
-        project_dir = join(tempfile.mkdtemp(), "project")
-        write_project(
-            project_dir,
-            self.NAME,
-            "1000-SNAPSHOT",
-            "pyfunc",
-            self.signature,
-            golden_document("1000-SNAPSHOT", [("calls", steps)]),
-            {"source": "manual", "inputs": [], "implementation": "demo model.py requires pandas"},
-            model_path=model_path,
-            evaluation=evaluation,
-        )
-        return project_dir
-
-    def gate(self, hosts=("python",), archs=("x86_64",)):
-        from asystem.model import PROJECT_ALIAS_CANDIDATE, PROJECT_MANIFEST, file_sha256, pull_model
-
-        pulled = join(tempfile.mkdtemp(), "pulled")
-        pull_model(self.NAME, PROJECT_ALIAS_CANDIDATE, pulled, self.uri, unpromoted=True)
-        path = join(tempfile.mkdtemp(), "gate.json")
-        with open(path, "w") as gate_file:
-            json.dump({"project_sha256": file_sha256(join(pulled, PROJECT_MANIFEST)), "results": [{"host": host, "arch": arch, "passed": True} for host in hosts for arch in archs]}, gate_file)
-        return path
-
-    def promote(self, **overrides):
-        from asystem.model import promote_project
-
-        arguments = {"released": "10.200.1926", "workspaces_dir": self.workspaces}
-        return promote_project(self.NAME, self.uri, self.gate(), ["python"], ["x86_64"], "graham", **{**arguments, **overrides})
-
-    def test_first_candidate_is_stamped_with_the_first_number_and_reregistering_reuses_it(self):
-        from asystem.model import PROJECT_ALIAS_CANDIDATE, pull_model, register_project
-
-        project = self.project()
-        first = register_project(project, self.NAME, self.uri)
-        self.assertEqual(first, register_project(project, self.NAME, self.uri))
-        pulled = join(tempfile.mkdtemp(), "pulled")
-        manifest = pull_model(self.NAME, PROJECT_ALIAS_CANDIDATE, pulled, self.uri, unpromoted=True)
-        self.assertEqual("1000", manifest["model_version"])
-        self.assertEqual("1000-SNAPSHOT", json.loads(Path(project, "project.json").read_text())["model_version"])
-
-    def test_promotion_takes_its_hosts_from_the_flavor_and_needs_both_architectures(self):
-        from asystem.model import promote_project, register_project
-
-        register_project(self.project(), self.NAME, self.uri)
-        arguments = {"released": "10.200.1926", "workspaces_dir": self.workspaces}
-        with self.assertRaises(ValueError) as refused:
-            promote_project(self.NAME, self.uri, self.gate(), None, ["x86_64", "aarch64"], "graham", **arguments)
-        self.assertIn("PM001", str(refused.exception))
-        self.assertTrue(promote_project(self.NAME, self.uri, self.gate(archs=("x86_64", "aarch64")), None, ["x86_64", "aarch64"], "graham", **arguments))
-
-    def test_promotion_records_the_version_and_advances_the_development_version(self):
-        from asystem.model import list_models, pull_model, register_project, resolve_model
-
-        register_project(self.project(), self.NAME, self.uri)
-        self.promote()
-        for selector in ("release", "latest", "1000"):
-            resolved = resolve_model(self.NAME, selector, self.uri)
-            self.assertEqual(("1000", "10.200.1926", "graham", "passed"), (resolved["model_version"], resolved["service_version"], resolved["reviewed_by"], resolved["acceptance"]))
-        self.assertEqual("1001-SNAPSHOT", Path(self.workspace, ".version").read_text().strip())
-        self.assertEqual({"name": self.NAME, "release": "1000", "latest": "1000", "service_version": "10.200.1926", "flavor": "pyfunc"}, list_models(self.uri)[0])
-        self.assertEqual("1000", pull_model(self.NAME, "1000", join(tempfile.mkdtemp(), "pulled"), self.uri)["model_version"])
-        with self.assertRaises(ValueError):
-            pull_model(self.NAME, "candidate", join(tempfile.mkdtemp(), "pulled"), self.uri)
-        self.assertIsNone(resolve_model(self.NAME, "1009", self.uri))
-
-    def test_a_stale_candidate_is_refused_and_a_new_one_gets_the_next_number(self):
-        from asystem.model import PROJECT_ALIAS_CANDIDATE, pull_model, register_project
-
-        register_project(self.project(), self.NAME, self.uri)
-        self.promote()
-        with self.assertRaises(ValueError) as stale:
-            self.promote()
-        self.assertIn("PM005", str(stale.exception))
-        register_project(self.project(factor=3), self.NAME, self.uri)
-        manifest = pull_model(self.NAME, PROJECT_ALIAS_CANDIDATE, join(tempfile.mkdtemp(), "pulled"), self.uri, unpromoted=True)
-        self.assertEqual("1001", manifest["model_version"])
-        self.promote()
-
-    def test_a_pull_refuses_a_release_that_never_passed_acceptance(self):
-        from asystem.model import pull_model, register_project
-        from mlflow import MlflowClient
-
-        version = register_project(self.project(value=9.0), self.NAME, self.uri)
-        MlflowClient().set_registered_model_alias(self.NAME, "release", version)
-        with self.assertRaises(ValueError) as refused:
-            pull_model(self.NAME, "release", join(tempfile.mkdtemp(), "pulled"), self.uri)
-        self.assertIn("PM004", str(refused.exception))
-        self.assertIsNone(pull_model(self.NAME, "latest", join(tempfile.mkdtemp(), "pulled"), self.uri))
-        self.assertEqual("1000", pull_model(self.NAME, "candidate", join(tempfile.mkdtemp(), "pulled"), self.uri, unpromoted=True)["model_version"])
-
-    def test_a_deleted_alias_never_lets_a_number_be_reused(self):
-        from asystem.model import next_model_version, register_project
-        from mlflow import MlflowClient
-
-        register_project(self.project(), self.NAME, self.uri)
-        self.promote()
-        client = MlflowClient()
-        client.delete_registered_model_alias(self.NAME, "m1000")
-        client.delete_registered_model_alias(self.NAME, "release")
-        self.assertEqual(1001, next_model_version(client, self.NAME))
-
-    def test_promotion_needs_a_release_version(self):
-        from asystem.model import register_project
-
-        register_project(self.project(), self.NAME, self.uri)
-        with mock.patch("asystem.model.service_version", side_effect=ValueError("no tag")), self.assertRaises(ValueError) as refused:
-            self.promote(released=None)
-        self.assertIn("PM006", str(refused.exception))
-
-    def test_service_version_is_the_latest_release_tag(self):
-        import subprocess
-
-        from asystem.model import service_version
-
-        repo = tempfile.mkdtemp()
-        with self.assertRaises(ValueError):
-            service_version(repo)
-        subprocess.run(["git", "init", "-q", repo], check=True)
-        subprocess.run(["git", "-C", repo, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "x"], check=True)
-        with self.assertRaises(ValueError):
-            service_version(repo)
-        for tag in ("10.200.1925", "10.200.1927", "10.200.1926", "weekly"):
-            subprocess.run(["git", "-C", repo, "tag", tag], check=True)
-        self.assertEqual("10.200.1927", service_version(repo))
-
-    def test_slot_versions_lists_default_and_release(self):
-        from asystem.model import slot_versions
-
-        source = tempfile.mkdtemp()
-        for slot, version in (("default", "static-1"), ("release", "1004")):
-            slot_dir = join(source, "max", "demo", "src/build/resources/model", slot)
-            os.makedirs(slot_dir)
-            with open(join(slot_dir, "project.json"), "w") as manifest_file:
-                json.dump({"name": "demo_calc_run", "flavor": "static", "model_version": version}, manifest_file)
-        self.assertEqual(["static-1", "1004"], [row["model_version"] for row in slot_versions(source)])
-
-
 class WorkspaceLintTest(unittest.TestCase):
     def setUp(self):
         sys.path.insert(0, join(ROOT, "all/_/src/build/python"))
-        self.model_dir = join(tempfile.mkdtemp(), "demo", "calc", "run")
-        os.makedirs(join(self.model_dir, "data/golden/2026-01-01_00-00-00"))
+        self.notebook_dir = join(tempfile.mkdtemp(), "demo", "calc", "run")
+        os.makedirs(join(self.notebook_dir, "data/golden/2026-01-01_00-00-00"))
         for path in ("notebook.ipynb", "plan.md", "data/golden/2026-01-01_00-00-00/calc_run_golden.csv", "data/golden/.gitkeep"):
-            open(join(self.model_dir, path), "w").close()
+            open(join(self.notebook_dir, path), "w").close()
 
     def rules(self):
         from asystem.workspace import lint_workspace
 
-        return sorted({rule for rule, _ in lint_workspace(self.model_dir)})
+        return sorted({rule for rule, _ in lint_workspace(self.notebook_dir)})
 
     def test_valid_workspace_has_no_findings(self):
         self.assertEqual([], self.rules())
 
     def test_stray_file_and_second_notebook_are_found(self):
-        open(join(self.model_dir, "notes.txt"), "w").close()
-        open(join(self.model_dir, "other.ipynb"), "w").close()
+        open(join(self.notebook_dir, "notes.txt"), "w").close()
+        open(join(self.notebook_dir, "other.ipynb"), "w").close()
         self.assertEqual(["WS002", "WS003"], self.rules())
 
-    def test_development_version_file_is_checked(self):
-        with open(join(self.model_dir, ".version"), "w") as version_file:
-            version_file.write("1003-SNAPSHOT\n")
-        self.assertEqual([], self.rules())
-        for text in ("1003\n", "static-1\n", "100-SNAPSHOT\n", "\n"):
-            with open(join(self.model_dir, ".version"), "w") as version_file:
-                version_file.write(text)
-            self.assertEqual(["WS008"], self.rules(), text)
-
     def test_two_model_files_are_found(self):
-        open(join(self.model_dir, "model.wasm"), "w").close()
+        open(join(self.notebook_dir, "model.wasm"), "w").close()
         self.assertEqual([], self.rules())
-        open(join(self.model_dir, "model.onnx"), "w").close()
+        open(join(self.notebook_dir, "model.onnx"), "w").close()
         self.assertEqual(["WS007"], self.rules())
 
     def test_unknown_label_is_found(self):
-        os.makedirs(join(self.model_dir, "data/testing"))
+        os.makedirs(join(self.notebook_dir, "data/testing"))
         self.assertEqual(["WS004"], self.rules())
 
     def test_non_timestamp_directory_is_found(self):
-        os.makedirs(join(self.model_dir, "data/golden/latest"))
+        os.makedirs(join(self.notebook_dir, "data/golden/latest"))
         self.assertEqual(["WS005"], self.rules())
 
     def test_dataset_must_be_a_csv_named_for_the_model_and_notebook(self):
-        open(join(self.model_dir, "data/golden/2026-01-01_00-00-00/other_golden.csv"), "w").close()
-        open(join(self.model_dir, "data/golden/2026-01-01_00-00-00/calc_run_golden.txt"), "w").close()
+        open(join(self.notebook_dir, "data/golden/2026-01-01_00-00-00/other_golden.csv"), "w").close()
+        open(join(self.notebook_dir, "data/golden/2026-01-01_00-00-00/calc_run_golden.txt"), "w").close()
         self.assertEqual(["WS006"], self.rules())
 
     def test_readings_must_end_with_their_date_range(self):
-        os.makedirs(join(self.model_dir, "data/training/2026-01-01_00-00-00"))
-        path = join(self.model_dir, "data/training/2026-01-01_00-00-00")
+        os.makedirs(join(self.notebook_dir, "data/training/2026-01-01_00-00-00"))
+        path = join(self.notebook_dir, "data/training/2026-01-01_00-00-00")
         open(join(path, "calc_run_voltage.csv"), "w").close()
         self.assertEqual(["WS006"], self.rules())
         os.remove(join(path, "calc_run_voltage.csv"))
@@ -1782,14 +1507,38 @@ class WorkspaceLintTest(unittest.TestCase):
         self.assertEqual([], self.rules())
 
     def test_bad_notebook_name_is_found(self):
-        bad = join(os.path.dirname(self.model_dir), "Run-Two")
-        os.rename(self.model_dir, bad)
-        self.model_dir = bad
+        bad = join(os.path.dirname(self.notebook_dir), "Run-Two")
+        os.rename(self.notebook_dir, bad)
+        self.notebook_dir = bad
         self.assertIn("WS001", self.rules())
 
 
+class ReportTest(unittest.TestCase):
+    def setUp(self):
+        sys.path.insert(0, join(ROOT, "all/_/src/build/python"))
+
+    def test_a_subject_and_its_stages_print_in_the_shape_of_go_test(self):
+        import contextlib
+        import io
+        import re
+
+        from asystem.report import stage, subject
+
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output), subject("notebook a/b/c"):
+            with stage("compile") as entry:
+                entry.detail = "interpreted"
+            with contextlib.suppress(ValueError), stage("replay"):
+                raise ValueError("boom")
+        lines = output.getvalue().splitlines()
+        self.assertEqual("=== RUN   notebook a/b/c", lines[0])
+        self.assertRegex(lines[1], r"^    compile      \.\.\. done \[interpreted\] \(\d+\.\d\ds\)$")
+        self.assertRegex(lines[2], r"^    replay       \.\.\. FAILED \(\d+\.\d\ds\)$")
+        self.assertTrue(re.fullmatch(r"--- PASS: notebook a/b/c \(\d+\.\d\ds\)", lines[3]))
+
+
 class SpecSyncTest(unittest.TestCase):
-    SPEC = join(ROOT, "may/mlflow/src/build/resources/doc/spec.md")
+    SPEC = join(ROOT, "rue/datascience/src/build/resources/doc/model.md")
 
     def setUp(self):
         sys.path.insert(0, join(ROOT, "all/_/src/build/python"))
@@ -1804,11 +1553,11 @@ class SpecSyncTest(unittest.TestCase):
     def test_check_identifiers_agree_both_ways(self):
         import re
 
-        in_spec = set(re.findall(r"^\| ((?:PJ|NB|WS|PM|AC|CP|RP)\d{3}) \|", self.spec, re.MULTILINE))
+        in_spec = set(re.findall(r"^\| ((?:PJ|NB|WS|PM|AC|CP|RP|MD)\d{3}) \|", self.spec, re.MULTILINE))
         in_code = set()
-        for module in ("model", "notebook", "replay", "workspace"):
+        for module in ("model", "notebook", "replay", "workspace", "metadata", "release"):
             with open(join(ROOT, f"all/_/src/build/python/asystem/{module}.py")) as source:
-                in_code |= set(re.findall(r'"((?:PJ|NB|WS|PM|AC|CP|RP)\d{3})"', source.read()))
+                in_code |= set(re.findall(r'"((?:PJ|NB|WS|PM|AC|CP|RP|MD)\d{3})"', source.read()))
         self.assertTrue(in_spec and in_code)
         self.assertEqual(in_spec, in_code)
 
@@ -1816,7 +1565,7 @@ class SpecSyncTest(unittest.TestCase):
         import re
 
         enforced = {}
-        for identifier, requirements in re.findall(r"^\| ((?:PJ|NB|WS|PM|AC|CP|RP)\d{3}) \|.*\| (R[0-9, R]+) \|$", self.spec, re.MULTILINE):
+        for identifier, requirements in re.findall(r"^\| ((?:PJ|NB|WS|PM|AC|CP|RP|MD)\d{3}) \|.*\| (R[0-9, R]+) \|$", self.spec, re.MULTILINE):
             for requirement in re.findall(r"R\d+", requirements):
                 enforced.setdefault(requirement, set()).add(identifier)
         coverage = {}
@@ -1827,16 +1576,30 @@ class SpecSyncTest(unittest.TestCase):
         self.assertEqual(defined, set(coverage))
         self.assertEqual({requirement: ids for requirement, ids in coverage.items() if ids}, enforced)
 
-    def test_flavors_splits_and_sections_agree(self):
+    def test_flavours_splits_and_sections_agree(self):
         import re
 
-        from asystem.model import PROJECT_FLAVORS, PROJECT_SPLITS
+        from asystem.model import PROJECT_FLAVOURS, PROJECT_SPLITS
         from asystem.notebook import NOTEBOOK_SECTIONS
 
-        flavors = re.findall(r"^\| `(\w+)` \|", self.section("### 3.2 Flavors"), re.MULTILINE)
+        flavours = re.findall(r"^\| `(\w+)` \|", self.section("### 3.2 Flavours"), re.MULTILINE)
         splits = re.findall(r"^\| `(\w+)` \|", self.section("### 6.3 Splits"), re.MULTILINE)
         sections = re.findall(r"^\| ([A-Z][A-Za-z ]+?) \| (?:None|\d) \|", self.section("### 6.7 Notebook style guide"), re.MULTILINE)
-        self.assertTrue(flavors and splits and sections)
-        self.assertEqual(sorted(PROJECT_FLAVORS), sorted(flavors))
+        self.assertTrue(flavours and splits and sections)
+        self.assertEqual(sorted(PROJECT_FLAVOURS), sorted(flavours))
         self.assertEqual(sorted(PROJECT_SPLITS), sorted(splits))
         self.assertEqual(list(NOTEBOOK_SECTIONS), sections)
+
+
+def demo_project(*arguments, **options):
+    sys.path.insert(0, join(ROOT, "all/_/src/build/python"))
+    from asystem.demo import demo_project as build
+
+    return build(*arguments, **options)
+
+
+def fresh_mlruns_dir():
+    directory = join(ROOT, "all/_/target/mlruns-test")
+    shutil.rmtree(directory, ignore_errors=True)
+    os.makedirs(directory)
+    return directory

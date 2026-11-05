@@ -1,0 +1,25 @@
+{
+  "datasets": {
+    "backtest": [
+      {
+        "path": "2026-11-04_10-40-00/console_battery_incumbent_2026-08-13_2026-10-30.csv",
+        "sha256": "df43d56a9e32f70d3240d9be617dfecb545d80f16bcf1efaa6dc3ac784cc9c59"
+      }
+    ]
+  },
+  "checks": [
+    {
+      "split": "backtest",
+      "output": "weewx_console_battery_capacity_pct",
+      "name": "rmse",
+      "value": 4.041299706905343,
+      "limit": 5,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 0.8082599413810685
+    }
+  ],
+  "passed": true,
+  "budget": 0.8082599413810685
+}

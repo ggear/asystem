@@ -1,11 +1,4 @@
-anyio==4.15.1
-virtualenv==21.15.1
-psycopg[binary]==3.3.6
+anyio==4.16.0
+virtualenv==21.15.5
+psycopg[binary]==3.3.8
 psycopg2-binary==2.9.13
-jupyterlab==4.6.4
-requests==2.34.2
-python-dateutil==3.0.0
-scipy==1.18.1
-polars==2.1.0
-scikit-learn==1.9.1
-matplotlib==3.11.2

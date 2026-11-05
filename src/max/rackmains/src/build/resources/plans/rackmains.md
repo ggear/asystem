@@ -6,10 +6,10 @@ publishes `rackmains/{data,status}` to the broker, and ships with a mock driver 
 (`tools/outage`) was deleted on 2026-10-30; a test cut is made by hand at the plug. The host side of the shutdown is built and tested
 on `max`, in the `system` module (`asleep`, `awake` and the restart-after-power-loss setting). Waiting on you: the 25 metric rows
 and the service switch row ("Workbook rows to add"), the release, and the power-on-after-cut tests. The shutdown guard is designed and not built.
-The battery model is designed and not built, apart from the default model of day one, which is built (the model plan, `src/may/mlflow/src/main/model/rackmains/ups/battery/plan.md`):
-the `static` project `rackmains_ups_battery` `static-1` is written by the `ups_battery` notebook from the guard thresholds into
-`src/build/resources/model/default/` (`project.json`, `signature.json`, `golden.json`), with four golden steps, and `generate.sh` verifies it
-on every generate. The Rust loader that reads it, its place in the image and the guard's validation at start are not built.
+The battery model is designed and not released (the model plan, `src/rue/datascience/src/main/notebook/rackmains/ups/battery/plan.md`):
+the `static` project `rackmains_ups_battery` is written by the `ups_battery` notebook in `datascience` from the guard thresholds, with four golden steps,
+and `generate.sh` embeds it into `src/build/resources/model/` once released. There is no default, floor or second copy. The Rust loader that reads it,
+its place in the image and the guard's validation at start are not built.
 
 **Decided 2026-10-30, not built.** Every metric is published on MQTT for Home Assistant and, during a battery drain, also written to a
 CSV in the home dir; there is no InfluxDB writer. Polling speeds up on battery and publishing is rare on mains, and health no longer
@@ -30,7 +30,7 @@ trials and tests that supply the data are in the model plan, which refers back h
    returns in time. Designed; a thread inside this container.
 
 **Simple and consistent.** rackmains only ever produces data. Nothing in the running service measures, fits or learns the
-battery. Thresholds are outputs of a model that is fitted offline (see "The model signature, inputs, outputs and thresholds" in the model plan); until a fitted model exists a default model project (flavor `static`) ships in the image from the first release, and changing it is a release.
+battery. Thresholds are outputs of a model that is fitted offline (see "The model signature, inputs, outputs and thresholds" in the model plan); until a fitted model exists a default model project (flavour `static`) ships in the image from the first release, and changing it is a release.
 
 **Out of scope, deliberately**
 
@@ -540,8 +540,7 @@ The model, its JSON signature, its training and the plan for fitting it are in t
 must build is the seam: how it builds a request from numbers it already records, carries and persists the model's state, validates and
 applies a response, and the default model it ships from day one. Implement the rules in "The model signature, inputs, outputs and thresholds" in the model plan under "How a response is used", and
 take the JSON from "The model signature, inputs, outputs and thresholds" in the model plan. The signature is built by the notebook with `build_signature` and is committed as
-`src/build/resources/model/default/signature.json`; the default project is there, and the pulled `release` project goes in
-`src/build/resources/model/release/`.
+`src/build/resources/model/signature.json`, the embedded released project.
 
 **Nothing computed here is a feature.** rackmains sends the poll time, the utilisation, the on-battery flag and the replace flag, exactly
 the numbers it records, plus the state the model returned last time. Every feature is inside the model's graph. The row and the outputs
@@ -550,7 +549,7 @@ outage (`rackmains_model_state`, JSON text), so a recorded outage is a complete 
 status becomes the flags and the time becomes `rackmains_clock_epoch_seconds` at source, here, in Rust.
 
 **The Rust seam.** A `model.rs` in the library holds the V2 request and response types and a `Model` trait with one method,
-`infer(request) -> response`. `StaticModel` loads the default project (`project.json` of flavor `static`) from the image at start, checks its
+`infer(request) -> response`. `StaticModel` loads the default project (`project.json` of flavour `static`) from the image at start, checks its
 hashes and returns its constants for every valid request. A later `EmbeddedModel` loads `model.onnx` with `ort` (pinned exactly, one thread,
 loading the shared library taken from the pinned wheel MLServer uses), builds the tensors from the row and the state, runs the step,
 merges the constants and returns a V2 response; a later `MlServerModel` posts to the endpoint named in the module's `.env_*` files, a run-dependency connection
@@ -576,19 +575,15 @@ in `signature.json` equal the validator's, checked both ways; the golden sequenc
 every recorded output to be reproduced from the `start` row's state and the final state to equal the `end` row's; a state from another
 project is discarded; and a failed call falls back.
 
-**The shipped default model** lives in the image as a project (`project.json` of flavor `static`, with its `signature.json` and `golden.json`), so
-changing it is a release and the model the guard falls back to is the one that was reviewed. It is the **default model of day one**
-("First pass: a default model, on day one" in the model plan), and it stays in the image as the last-resort floor even after a fitted project
-ships. The guard validates it at start, checks its hashes, and **refuses live mode** if it fails; it stays in dry-run and says so.
+**The shipped model** lives in the image as the embedded project (`project.json`, `signature.json` and `golden.json`), so
+changing it is a release. The first release is the `static` day-one project ("First pass: a default model, on day one" in the model plan) and a fitted
+project later replaces it; there is no floor beside it. The guard validates it at start, checks its hashes, and **refuses live mode** if it fails; it stays in dry-run and says so.
 Dry-run versus live is deployment config in `.env_prod`, never in a model document.
 
-**What is implemented (2026-10-31).** The default project exists and passes every project check of `spec.md` section 10. It is
-`src/build/resources/model/default/`: `project.json` (flavor `static`, provenance `manual`, the four constants, the golden data file in
-`provenance.inputs`), `signature.json` (the five inputs, twelve outputs and six state slots of the model plan) and `golden.json` (a first
+**What is implemented (2026-11-05).** The project is written by the notebook and passes every project check of `model.md` section 10 (the five inputs, twelve outputs and six state slots of the model plan, and a golden file with a first
 call with no state, a row mid-drain with state, a row with the replace flag raised, and a request with the utilisation missing that
-must give a signature error). `src/build/resources/model/release/` is empty until a fitted project is pulled, and `generate.sh` verifies
-both slots, pulling the `release` project only on `fab pull` and comparing its signature with the default's. **Not built:** `model.rs`
-with `StaticModel`, the validator, the fallback wrapper, copying the slots into the image at `/asystem/etc/model/`, and the guard's
+must give a signature error). It is embedded into `src/build/resources/model/` by `generate.sh` once released, and not before. **Not built:** the first release, `model.rs`
+with the loader, the validator, copying the project into the image at `/asystem/etc/model/`, and the guard's
 refusal of live mode on a failed validation.
 
 **Starting values, the default model.** Constants only: `rackmains_guard_shed_max_seconds` 120, inside the 145 s already held at service

@@ -19,9 +19,9 @@ pyright==$PYRIGHT_VERSION
 
 # Date/time
 datetime==6.0
-pytz==2026.5
-python-dateutil==3.0.0
-types-python-dateutil==2.9.0.20261029
+pytz==2026.6
+python-dateutil==4.0.0
+types-python-dateutil==2.9.0.20261104
 
 # Numeric/scientific
 numpy==2.5.4
@@ -32,29 +32,30 @@ sortedcontainers==2.4.0
 # Data serialisation
 pyyaml==6.0.3
 jinja2==3.1.6
-pandas==3.1.0
+pandas==3.1.1
 openpyxl==3.1.5
 polars==2.1.0
 orjson==3.13.0
 tabulate==0.10.0
 jproperties==2.1.2
-python-calamine==0.9.0
+python-calamine==0.9.1
 # MISREPORTED: pip outdated ranks legacy <epoch>!11.x builds above the 0.0.x line
 grafana-foundation-sdk==0.0.20
 # HELD: not stale, mlserver requires pyarrow<26, unblocks with MLSERVER_VERSION
 pyarrow==25.0.1
 
 # Machine learning/visualisation
-anyio==4.15.1
-notebook==7.6.3
+anyio==4.16.0
+notebook==7.6.4
 pdftotext==4.0.0
-jupyterlab==4.6.4
+jupyterlab==4.6.5
 matplotlib==3.11.2
-virtualenv==21.15.1
+virtualenv==21.15.5
 matplotlib-inline==0.2.2
 mlflow==$MLFLOW_VERSION
 onnx==1.23.2
-onnxruntime==1.31.1
+skl2onnx==1.20.0
+onnxruntime==$ONNXRUNTIME_VERSION
 wasmtime==50.0.1
 # HELD: not stale, mlserver requires fastapi<0.116.0, unblocks with MLSERVER_VERSION
 fastapi==0.115.14
@@ -63,7 +64,7 @@ fastapi==0.115.14
 dropbox==12.2.4
 gspread==6.2.1
 gspread-pandas==4.2.1
-psycopg[binary]==3.3.6
+psycopg[binary]==3.3.8
 psycopg2-binary==2.9.13
 influxdb3-python==0.21.0
 adbc-driver-postgresql==1.13.0
@@ -71,17 +72,17 @@ adbc-driver-postgresql==1.13.0
 # External services
 docker==7.2.0
 plexapi==4.18.3
-yfinance==1.7.0
-dnspython==2.9.0
-paho-mqtt==2.1.0
+yfinance==1.8.0
+dnspython==2.9.2
+paho-mqtt==2.2.0
 pydigitemp==1.4.1
-osxphotos==0.77.2
+osxphotos==0.78.0
 python-kasa==0.12.0
 speedtest-cli==2.1.3
 ffmpeg-python==0.2.0
 subtitle-filter==1.5.1
 decode-config==16.0.0.0
-google-auth==2.62.0
+google-auth==2.62.1
 google-auth-httplib2==0.4.4
 google-auth-oauthlib==1.5.0
 google-api-python-client==2.201.0

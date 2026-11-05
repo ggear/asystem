@@ -26,7 +26,7 @@ func TestProbeUtilBackupVocabulary_ShellStatesMirrorTheDeclaredWords(t *testing.
 	if len(declared) == 0 {
 		t.Fatalf("parsed no declared states")
 	}
-	for _, source := range []string{"backup_guard.sh", "restore_chain.sh"} {
+	for _, source := range []string{"restore_chain.sh"} {
 		mirrored := map[string]string{}
 		for _, match := range regexp.MustCompile(`(?m)^BACKUP_STATE_([A-Z]+)="([a-z]+)"$`).FindAllStringSubmatch(read("src/all/_/src/build/resources/bash/"+source), -1) {
 			mirrored[match[1]] = match[2]

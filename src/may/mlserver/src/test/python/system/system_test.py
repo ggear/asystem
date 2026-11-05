@@ -1,18 +1,23 @@
 import json
-import os
 import subprocess
 import sys
-import tempfile
+import time
+import urllib.error
 import urllib.request
 from os.path import abspath, dirname, join, realpath
 
-sys.path.append("../../../main/python")
-
 import pytest
+
+sys.path.append("../../../../../../all/_/src/build/python")
+
+from asystem.demo import demo_project
+from asystem.model import register_project
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 TIMEOUT_WARMUP = 300
+TIMEOUT_POLL = 90
 BOOTSTRAP = "mlserver_bootstrap"
+NAME = "demo_replay_double"
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -21,38 +26,75 @@ def bootstrapped():
     assert waited.stdout.strip() == "0", f"{BOOTSTRAP}: exit got [{waited.stdout.strip()}] want 0 [{waited.stderr.strip()}]"
 
 
+@pytest.fixture(scope="module")
+def registry():
+    from mlflow import MlflowClient
+
+    uri = f"http://localhost:{_env('MLFLOW_HTTP_PORT')}"
+    _wait(lambda: urllib.request.urlopen(f"{uri}/health", timeout=5).status == 200)
+    client = MlflowClient(uri, uri)
+    yield uri, client
+    if client.search_registered_models(filter_string=f"name = '{NAME}'"):
+        client.delete_registered_model(NAME)
+
+
 def test_the_server_is_alive_and_ready():
     assert _call("/v2/health/live") == {}
     assert _call("/v2/health/ready") == {}
 
 
-def test_every_listed_model_is_ready():
-    index = _call("/v2/repository/index", {})
-    assert all(entry["state"] == "READY" for entry in index), index
+def test_a_release_is_served_a_broken_newer_release_falls_back_and_a_preview_is_served_apart(registry):
+    uri, client = registry
+    good = register_project(demo_project("wasm"), NAME, uri, aliases=())
+    _release(client, good, "1.0.0")
+    _wait(lambda: _index().get(NAME) == ("1.0.0", "READY"))
+    broken = _broken_version(uri, client)
+    client.set_registered_model_alias(NAME, "release", broken)
+    time.sleep(8)
+    assert _index().get(NAME) == ("1.0.0", "READY")
+    preview = register_project(demo_project("wasm", golden_out=3.5), NAME, uri, aliases=("preview",))
+    assert preview not in (good, broken)
+    _wait(lambda: _index().get(NAME + "_preview", ("", ""))[0].startswith("preview-"))
+    assert _call(f"/v2/models/{NAME}_preview/infer", {"inputs": [{"name": "demo_in", "shape": [1], "datatype": "FP64", "data": [1.5]}]})["outputs"][0]["data"] == [3.0]
+    client.delete_registered_model_alias(NAME, "preview")
+    _wait(lambda: NAME + "_preview" not in _index())
+    client.delete_registered_model_alias(NAME, "release")
+    _wait(lambda: NAME not in _index())
 
 
-def test_every_served_model_answers_its_golden_file():
-    from mlflow.artifacts import download_artifacts
-
+def _broken_version(uri, client):
     import mlflow
 
-    mlflow.set_tracking_uri(_env("MLFLOW_TRACKING_URI"))
-    mlflow.set_registry_uri(_env("MLFLOW_TRACKING_URI"))
-    for entry in _call("/v2/repository/index", {}):
-        staging_dir = tempfile.mkdtemp()
-        download_artifacts(artifact_uri=f"models:/{entry['name']}@release", dst_path=staging_dir)
-        golden_path = next(join(root, "golden.json") for root, _, files in os.walk(staging_dir) if "golden.json" in files)
-        with open(golden_path) as golden_file:
-            golden = json.load(golden_file)
-        for sequence in golden["sequences"]:
-            for step in sequence["steps"]:
-                if "error" in step:
-                    continue
-                answer = _call(f"/v2/models/{entry['name']}/infer", step["request"])
-                served = {output["name"]: output["data"] for output in answer["outputs"]}
-                for output in step["response"]["outputs"]:
-                    bounds = golden.get("tolerance", {}).get(output["name"], {})
-                    assert all(abs(a - b) <= bounds.get("absolute", 0.0) + bounds.get("relative", 0.0) * abs(b) for a, b in zip(served[output["name"]], output["data"], strict=True))
+    project_dir = demo_project("wasm")
+    with open(join(project_dir, "model.wasm"), "ab") as model_file:
+        model_file.write(b"\0")
+    mlflow.set_tracking_uri(uri)
+    mlflow.set_experiment(NAME)
+    with mlflow.start_run() as run:
+        mlflow.log_artifacts(project_dir, artifact_path="project")
+    tags = {"content_sha256": "0" * 64, "project_flavour": "wasm", "release_version": "2.0.0"}
+    return client.create_model_version(NAME, f"{run.info.artifact_uri}/project", run_id=run.info.run_id, tags=tags).version
+
+
+def _release(client, version, label):
+    client.set_model_version_tag(NAME, version, "release_version", label)
+    client.set_registered_model_alias(NAME, "release", version)
+
+
+def _index():
+    return {entry["name"]: (entry["version"], entry["state"]) for entry in _call("/v2/repository/index", {})}
+
+
+def _wait(condition):
+    deadline = time.monotonic() + TIMEOUT_POLL
+    while time.monotonic() < deadline:
+        try:
+            if condition():
+                return
+        except (urllib.error.URLError, OSError):
+            pass
+        time.sleep(1)
+    raise AssertionError("condition not met in time")
 
 
 def _env(name):
@@ -74,15 +116,4 @@ def _call(path, body=None):
 
 
 if __name__ == "__main__":
-    sys.exit(
-        pytest.main(
-            [
-                "-s",
-                "-v",
-                "--durations=50",
-                "-o",
-                f"cache_dir={join(DIR_ROOT, 'target/.pytest_cache')}",
-                __file__,
-            ]
-        )
-    )
+    sys.exit(pytest.main(["-s", "-v", "--durations=50", "-o", f"cache_dir={join(DIR_ROOT, 'target/.pytest_cache')}", __file__]))

@@ -13,4 +13,4 @@ homeassistant==$HOMEASSISTANT_VERSION
 mlserver==$MLSERVER_VERSION
 
 # Type checking
-pandas-stubs==3.0.5.260914
+pandas-stubs==3.1.0.261029

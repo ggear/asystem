@@ -1,0 +1,67 @@
+{
+  "name": "example_wasm_accumulate",
+  "platform": "mlserver",
+  "parameters": {
+    "signature_version": 1,
+    "state": [
+      {
+        "slot": 0,
+        "name": "total",
+        "unit": "none",
+        "description": "The sum of every output since the first call."
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "name": "example_wasm_in",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "A number to scale."
+      }
+    },
+    {
+      "name": "example_wasm_state_in",
+      "datatype": "FP64",
+      "shape": [
+        -1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": false,
+        "description": "The running total from the previous call, absent on the first."
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "name": "example_wasm_out",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The input scaled by the fitted gain plus the fitted offset."
+      }
+    },
+    {
+      "name": "example_wasm_state_out",
+      "datatype": "FP64",
+      "shape": [
+        -1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": false,
+        "description": "The running total including this call."
+      }
+    }
+  ]
+}

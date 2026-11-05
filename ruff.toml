@@ -5,7 +5,7 @@ include = [
     "src/*/*/src/build/python/**/*.py",
     "src/*/*/src/main/python/**/*.py",
     "src/*/*/src/test/python/**/*.py",
-    "src/*/*/src/main/model/*/*/*/*.ipynb",
+    "src/*/*/src/main/notebook/*/*/*/*.ipynb",
     "fabfile.py",
     "src/max/grafana/src/main/resources/image/probe.py",
 ]
@@ -21,7 +21,7 @@ select = ["E", "F", "B", "SIM", "UP", "I", "C4", "DTZ", "ERA", "FURB", "G", "ISC
 ignore = ["F403", "F405"]
 
 [lint.per-file-ignores]
-"src/*/*/src/main/model/*/*/*/*.ipynb" = ["E402"]
+"src/*/*/src/main/notebook/*/*/*/*.ipynb" = ["E402"]
 "src/all/_/src/build/python/**" = ["UP032"]
 "src/all/_/src/build/python/asystem/__init__.py" = ["F401"]
 "src/all/_/src/build/python/asystem/schema/__init__.py" = ["F401"]

@@ -1,18 +1,14 @@
 import importlib.util
 import json
-import platform
+import math
 import struct
-import subprocess
 from os.path import join
 from unittest import mock
 
-from asystem.model import PROJECT_GOLDEN, PROJECT_MANIFEST, PROJECT_SIGNATURE, file_sha256, verify_project
+from asystem.model import PROJECT_GOLDEN, PROJECT_SIGNATURE, WASM_MATH_FUNCTIONS, WASM_MATH_MODULE, GateError, verify_project
 
-RUNNER_TIMEOUT_SECONDS = 120
-RUNNER_UNSUPPORTED = 2
 WASM_FUEL = 1_000_000
 WASM_MEMORY_BYTES = 1 << 20
-ARCHITECTURES = {"x86_64": "x86_64", "amd64": "x86_64", "aarch64": "aarch64", "arm64": "aarch64"}
 
 
 def replay_project(project_dir):
@@ -53,51 +49,25 @@ def _within(actual, expected, bounds):
     return all(abs(value - truth) <= absolute + relative * abs(truth) for value, truth in zip(actual, expected, strict=True))
 
 
-def gate_project(project_dir, runners=None):
+def require_replay(project_dir):
     findings = replay_project(project_dir)
-    results = [{"host": "python", "arch": ARCHITECTURES[platform.machine().lower()], "passed": not findings}]
-    skipped = []
-    for host, command in (runners or {}).items():
-        completed = subprocess.run([*command, project_dir], capture_output=True, text=True, timeout=RUNNER_TIMEOUT_SECONDS, check=False)
-        if completed.returncode == RUNNER_UNSUPPORTED:
-            skipped.append(host)
-            continue
-        try:
-            row = json.loads(completed.stdout)
-        except ValueError:
-            findings.append(("RP004", f"runner [{host}] gave no result [{completed.stderr.strip()}]"))
-            continue
-        results.append(row)
-        findings.extend(("RP005", f"runner [{host}] {line.removeprefix('ERROR ')}") for line in completed.stderr.splitlines() if line.startswith("ERROR "))
-    return {"project_sha256": file_sha256(join(project_dir, PROJECT_MANIFEST)), "results": results, "skipped": skipped}, findings
+    if findings:
+        raise GateError("Package", "replay", "; ".join(f"{rule} {message}" for rule, message in findings))
 
 
-def model_predict(model_path, flavor, signature):
-    if flavor == "wasm":
+def model_predict(model_path, flavour, signature):
+    if flavour == "wasm":
         return _wasm_predict(model_path, signature)
-    if flavor == "onnx":
+    if flavour == "onnx":
         return _onnx_predict(model_path, signature)
     return _pyfunc_predict(model_path, signature)
 
 
-def merge_gates(documents):
-    if len({document["project_sha256"] for document in documents}) != 1:
-        raise ValueError("gate files are for different projects")
-    rows = {}
-    for document in documents:
-        for row in document["results"]:
-            key = (row["host"], row["arch"])
-            rows[key] = {**row, "passed": row["passed"] and rows.get(key, row)["passed"]}
-    ran = {host for host, _ in rows}
-    skipped = sorted({host for document in documents for host in document.get("skipped", [])} - ran)
-    return {"project_sha256": documents[0]["project_sha256"], "results": list(rows.values()), "skipped": skipped}
-
-
 def _loader(project_dir, manifest, signature):
-    if manifest["flavor"] == "static":
+    if manifest["flavour"] == "static":
         constants = {name: [value] for name, value in manifest["constants"].items()}
         return lambda _inputs: dict(constants)
-    return model_predict(join(project_dir, manifest["files"]["model"]["path"]), manifest["flavor"], signature)
+    return model_predict(join(project_dir, manifest["files"]["model"]["path"]), manifest["flavour"], signature)
 
 
 def _wasm_predict(model_path, signature):
@@ -111,12 +81,15 @@ def _wasm_predict(model_path, signature):
     config.consume_fuel = True
     engine = wasmtime.Engine(config)
     module = wasmtime.Module.from_file(engine, model_path)
+    linker = wasmtime.Linker(engine)
+    for name in WASM_MATH_FUNCTIONS:
+        linker.define_func(WASM_MATH_MODULE, name, wasmtime.FuncType([wasmtime.ValType.f64()], [wasmtime.ValType.f64()]), _math_function(name))
 
     def predict(inputs):
         store = wasmtime.Store(engine)
         store.set_fuel(WASM_FUEL)
         store.set_limits(memory_size=WASM_MEMORY_BYTES)
-        instance = wasmtime.Instance(store, module, [])
+        instance = linker.instantiate(store, module)
         exports = instance.exports(store)
         memory = exports["memory"]
         function = exports["predict"]
@@ -175,3 +148,19 @@ def _pyfunc_predict(model_path, signature):
         return {entry["name"]: [int(item) if entry["datatype"] == "INT64" else float(item) for item in result[entry["name"]]] for entry in outputs}
 
     return predict
+
+
+def _math_function(name):
+    function = getattr(math, name)
+
+    def call(value):
+        if name == "log" and value == 0.0:
+            return -math.inf
+        try:
+            return function(value)
+        except OverflowError:
+            return math.inf
+        except ValueError:
+            return math.nan
+
+    return call

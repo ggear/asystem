@@ -1,14 +1,16 @@
 import argparse
-import glob
+import ast
 import hashlib
 import json
 import os
 import re
 import shutil
-import subprocess
 import sys
 import tempfile
-from os.path import abspath, basename, dirname, isdir, isfile, join, relpath
+from os.path import basename, dirname, isfile, join, relpath
+
+from asystem.errors import GateError
+from asystem.metadata import content_sha256
 
 PROJECT_SPEC_VERSION = 1
 CONSUMER_MODEL_PATH = "src/build/resources/model"
@@ -16,28 +18,17 @@ PROJECT_MANIFEST = "project.json"
 PROJECT_SIGNATURE = "signature.json"
 PROJECT_GOLDEN = "golden.json"
 PROJECT_EVALUATION = "evaluation.json"
-PROJECT_VERSION_FILE = ".version"
-PROJECT_VERSION_FIRST = 1000
-PROJECT_VERSION_SENTINEL = "0000-SNAPSHOT"
-PROJECT_VERSION_HIGH_WATER = "model_version_high_water"
-PROJECT_VERSION_ALIAS = re.compile(r"^m(\d{4,})$")
-PROJECT_VERSION_PLACEHOLDER = re.compile(r"^\d{4,}-SNAPSHOT$")
-PROJECT_VERSION_PROMOTED = re.compile(r"^\d{4,}$")
-PROJECT_VERSION_STATIC = re.compile(r"^static-\d+$")
-PROJECT_RELEASE_TAG = re.compile(r"^\d+\.\d+\.\d+$")
-PROJECT_STAMP_LINE = re.compile(r'^MODEL_VERSION = "([^"]*)"$', re.MULTILINE)
-PROJECT_STAMP_SECTION = "asystem.model_version"
-PROJECT_STAMPED = ("wasm", "onnx", "pyfunc")
-PROJECT_REGISTRY_TAGS = ("model_version", "service_version", "project_sha256", "project_flavor", "acceptance", "acceptance_budget", "reviewed_by")
-WASM_HEADER = b"\0asm\x01\x00\x00\x00"
 ACCEPTANCE_SPLITS = ("validation", "backtest")
 ACCEPTANCE_DIRECTIONS = ("max", "min")
-PROJECT_FLAVORS = ("static", "wasm", "onnx", "pyfunc")
-PROJECT_RUNTIMES = {"static": ("python", "rust", "go"), "wasm": ("python", "rust", "go"), "onnx": ("python",), "pyfunc": ("python",)}
+PROJECT_FLAVOURS = ("static", "wasm", "onnx", "pyfunc")
 PROJECT_PLACEHOLDERS = ("tbd", "todo", "unknown", "none", "n/a", "not applicable", "to be determined")
 PROJECT_MODEL_FILES = {"wasm": "model.wasm", "onnx": "model.onnx", "pyfunc": "model.py"}
 PROJECT_SOURCES = ("static", "manual", "mlflow")
-PROJECT_ALIAS_CANDIDATE = "candidate"
+WASM_MATH_MODULE = "asystem_math"
+WASM_MATH_FUNCTIONS = ("atan", "cos", "exp", "log", "sin", "tanh")
+PYFUNC_BASE_IMPORTS = ("mlflow", "numpy", "pandas")
+PYFUNC_IMPORT_NAMES = {"scikit_learn": "sklearn", "python_dateutil": "dateutil", "pyyaml": "yaml", "pillow": "PIL"}
+PROJECT_ALIAS_PREVIEW = "preview"
 PROJECT_ALIAS_RELEASE = "release"
 PROJECT_SPLITS = ("training", "validation", "backtest", "golden")
 PROJECT_NAME = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)*$")
@@ -47,15 +38,13 @@ PROJECT_REQUIRED_FILES = {"static": (), "wasm": ("model",), "onnx": ("model",), 
 PROJECT_SIGNATURE_ERROR = "signature"
 PROJECT_FIX_HINTS = {
     "PJ": "rerun the notebook, since the committed or pulled project is not the one its manifest describes",
-    "NB": "fix the notebook structure, then run fab build in mlflow to restyle it",
-    "WS": "fix the workspace layout under src/main/model",
+    "NB": "fix the notebook structure, then run fab unittest in datascience to restyle it",
+    "WS": "fix the workspace layout under src/main/notebook",
     "AC": "fix the acceptance check or its data in the notebook and rerun it",
-    "CP": "rerun the notebook, read the diff and commit the new default slot, or fix the notebook if the diff is unwanted",
+    "CP": "run fab generate in the consumer, which embeds the released project again",
     "RP": "the model no longer returns its golden file, fix the model or regenerate the golden file in the notebook",
-    "PM001": "run model.sh check so the parity gate covers every host and architecture",
-    "PM002": "register the project again, since the gate was run on a different one",
-    "PM004": "fix the acceptance failure and register again",
-    "PM005": "register the candidate again so it takes the next model version",
+    "PM004": "fix the acceptance failure and rerun the notebook",
+    "MD": "rerun fab unittest in datascience, which writes the project and its metadata together",
 }
 
 
@@ -81,38 +70,36 @@ def signature_state(name, unit, description):
     return {"name": name, "unit": unit, "description": description}
 
 
-def build_signature(name, versions, inputs, outputs, state=(), signature_version=1):
+def build_signature(name, inputs, outputs, state=(), signature_version=1):
     return {
         "name": name,
         "platform": "mlserver",
-        "versions": list(versions),
         "parameters": {"signature_version": signature_version, "state": [{"slot": slot, **entry} for slot, entry in enumerate(state)]},
         "inputs": list(inputs),
         "outputs": list(outputs),
     }
 
 
-def golden_step(signature, model_version, step_id, inputs, outputs=None, error=None):
+def golden_step(signature, step_id, inputs, outputs=None, error=None):
     request = {"id": step_id, "inputs": [_tensor(signature["inputs"], name, value) for name, value in inputs.items()]}
     if error is not None:
         return {"request": request, "error": error}
     response = {
         "model_name": signature["name"],
-        "model_version": model_version,
         "id": step_id,
         "outputs": [_tensor(signature["outputs"], name, value) for name, value in (outputs or {}).items()],
     }
     return {"request": request, "response": response}
 
 
-def golden_document(model_version, sequences, tolerance=None):
-    document = {"model_version": model_version, "sequences": [{"name": name, "steps": steps} for name, steps in sequences]}
+def golden_document(sequences, tolerance=None):
+    document = {"sequences": [{"name": name, "steps": steps} for name, steps in sequences]}
     if tolerance:
         document["tolerance"] = tolerance
     return document
 
 
-def golden_from_samples(signature, model_version, samples, sequence="golden", constants=None, tolerance=None):
+def golden_from_samples(signature, samples, sequence="golden", constants=None, tolerance=None):
     input_specs = {entry["name"]: entry for entry in signature["inputs"]}
     output_names = [entry["name"] for entry in signature["outputs"]]
     steps = []
@@ -120,11 +107,11 @@ def golden_from_samples(signature, model_version, samples, sequence="golden", co
         inputs = {name: _cell(spec, sample[name]) for name, spec in input_specs.items() if sample.get(name) is not None}
         step_id = f"s1-{index}"
         if sample.get("expect") == "error":
-            steps.append(golden_step(signature, model_version, step_id, inputs, error=PROJECT_SIGNATURE_ERROR))
+            steps.append(golden_step(signature, step_id, inputs, error=PROJECT_SIGNATURE_ERROR))
         else:
             outputs = dict(constants) if constants is not None else {name: sample[name] for name in output_names if sample.get(name) is not None}
-            steps.append(golden_step(signature, model_version, step_id, inputs, outputs))
-    return golden_document(model_version, [(sequence, steps)], tolerance)
+            steps.append(golden_step(signature, step_id, inputs, outputs))
+    return golden_document([(sequence, steps)], tolerance)
 
 
 def measure(y_true, y_pred):
@@ -182,39 +169,47 @@ def check_acceptance(project_dir):
     ]
 
 
-def package_project(project_dir, name, model_version, flavor, signature, samples, provenance, constants=None, model_path=None, sequence="golden", evaluation=None, tolerance=None):
-    golden = golden_from_samples(signature, model_version, samples, sequence, constants, tolerance)
-    return write_project(project_dir, name, model_version, flavor, signature, golden, provenance, constants, model_path, evaluation=evaluation)
+def package_project(project_dir, name, flavour, signature, samples, provenance, constants=None, model_path=None, sequence="golden", evaluation=None, tolerance=None, python_deps=None):
+    golden = golden_from_samples(signature, samples, sequence, constants, tolerance)
+    return write_project(project_dir, name, flavour, signature, golden, provenance, constants, model_path, evaluation=evaluation, python_deps=python_deps)
 
 
-def write_project(project_dir, name, model_version, flavor, signature, golden, provenance, constants=None, model_path=None, onnx=None, evaluation=None):
+def write_project(project_dir, name, flavour, signature, golden, provenance, constants=None, model_path=None, onnx=None, evaluation=None, python_deps=None):
     os.makedirs(project_dir, exist_ok=True)
     files = {"signature": PROJECT_SIGNATURE, "golden": PROJECT_GOLDEN}
     if evaluation is not None:
         _write_json(join(project_dir, PROJECT_EVALUATION), evaluation)
         files["evaluation"] = PROJECT_EVALUATION
     if model_path is not None:
-        if flavor not in PROJECT_MODEL_FILES:
-            raise ValueError(f"flavor [{flavor}] has no model file")
-        shutil.copy(model_path, join(project_dir, PROJECT_MODEL_FILES[flavor]))
-        files["model"] = PROJECT_MODEL_FILES[flavor]
+        if flavour not in PROJECT_MODEL_FILES:
+            raise ValueError(f"flavour [{flavour}] has no model file")
+        shutil.copy(model_path, join(project_dir, PROJECT_MODEL_FILES[flavour]))
+        files["model"] = PROJECT_MODEL_FILES[flavour]
     _write_json(join(project_dir, PROJECT_SIGNATURE), signature)
     _write_json(join(project_dir, PROJECT_GOLDEN), golden)
     manifest = {
         "spec_version": PROJECT_SPEC_VERSION,
         "name": name,
-        "model_version": model_version,
         "signature_version": signature["parameters"]["signature_version"],
-        "flavor": flavor,
+        "flavour": flavour,
         "provenance": provenance,
         "files": {key: {"path": file_name, "sha256": file_sha256(join(project_dir, file_name))} for key, file_name in files.items()},
     }
     if onnx is not None:
         manifest["onnx"] = onnx
+    if flavour == "pyfunc":
+        manifest["runtime"] = {"python": sorted(set(python_deps or ()))}
+    elif python_deps:
+        raise ValueError(f"flavour [{flavour}] takes no python dependencies")
+    if flavour == "wasm" and model_path is not None:
+        manifest["runtime"] = {"wasm": sorted({str(entry.name) for entry in _wasm_module_imports(model_path)})}
     if constants is not None:
         manifest["constants"] = constants
     _write_json(join(project_dir, PROJECT_MANIFEST), manifest)
-    return verify_project(project_dir)
+    verified = verify_project(project_dir)
+    if evaluation is not None and not evaluation["passed"]:
+        raise GateError("Evaluate", "acceptance", "; ".join(f"{rule} {message}" for rule, message in check_acceptance(project_dir)))
+    return verified
 
 
 def lint_project(project_dir):
@@ -226,36 +221,58 @@ def lint_project(project_dir):
         manifest = json.load(manifest_file)
     if manifest.get("spec_version") != PROJECT_SPEC_VERSION:
         findings.append(("PJ001", f"spec version unsupported [{manifest.get('spec_version')}]"))
-    flavor = manifest.get("flavor")
-    if flavor not in PROJECT_FLAVORS:
-        findings.append(("PJ002", f"flavor unknown [{flavor}]"))
+    flavour = manifest.get("flavour")
+    if flavour not in PROJECT_FLAVOURS:
+        findings.append(("PJ002", f"flavour unknown [{flavour}]"))
     provenance = manifest.get("provenance", {})
     if provenance.get("source") not in PROJECT_SOURCES:
         findings.append(("PJ002", f"provenance source unknown [{provenance.get('source')}]"))
     if not isinstance(provenance.get("inputs"), list):
         findings.append(("PJ002", "provenance inputs must be a list of the data files used"))
-    if flavor in PROJECT_FLAVORS and flavor != "static":
+    if flavour in PROJECT_FLAVOURS and flavour != "static":
         implementation = provenance.get("implementation")
         if not isinstance(implementation, str) or len(implementation.split()) < 2 or implementation.strip().lower() in PROJECT_PLACEHOLDERS:
-            findings.append(("PJ002", f"provenance implementation must say what is inside the model for flavor [{flavor}]"))
+            findings.append(("PJ002", f"provenance implementation must say what is inside the model for flavour [{flavour}]"))
     files = manifest.get("files", {})
-    findings.extend(("PJ003", f"file missing from manifest [{key}]") for key in ("signature", "golden", *PROJECT_REQUIRED_FILES.get(flavor, ())) if key not in files)
+    findings.extend(("PJ003", f"file missing from manifest [{key}]") for key in ("signature", "golden", *PROJECT_REQUIRED_FILES.get(flavour, ())) if key not in files)
     for key, entry in files.items():
         file_path = join(project_dir, entry["path"])
         if not isfile(file_path):
             findings.append(("PJ003", f"file absent [{key}] path [{entry['path']}]"))
         elif file_sha256(file_path) != entry["sha256"]:
             findings.append(("PJ003", f"file checksum mismatch [{key}] path [{entry['path']}]"))
-    if flavor == "static" and not PROJECT_VERSION_STATIC.match(str(manifest.get("model_version"))):
-        findings.append(("PJ014", f"a static project's model version must be static-<number>, found [{manifest.get('model_version')}]"))
-    if flavor in PROJECT_STAMPED and "model" in files and isfile(join(project_dir, files["model"]["path"])):
-        try:
-            stamp = read_stamp(join(project_dir, files["model"]["path"]), flavor)
-        except ValueError as error:
-            findings.append(("PJ013", str(error)))
+    if flavour == "wasm" and "model" in files and isfile(join(project_dir, files["model"]["path"])):
+        import wasmtime
+
+        f64 = wasmtime.ValType.f64()
+        for entry in _wasm_module_imports(join(project_dir, files["model"]["path"])):
+            kind = entry.type
+            if entry.module != WASM_MATH_MODULE or entry.name not in WASM_MATH_FUNCTIONS or not isinstance(kind, wasmtime.FuncType) or list(kind.params) != [f64] or list(kind.results) != [f64]:
+                findings.append(("PJ016", f"wasm module imports something other than a maths function [{entry.module}] [{entry.name}]"))
+    runtime = manifest.get("runtime")
+    if flavour == "pyfunc" or (flavour == "wasm" and "model" in files):
+        kind = "python" if flavour == "pyfunc" else "wasm"
+        listed = runtime.get(kind) if isinstance(runtime, dict) else None
+        if not isinstance(listed, list) or not all(isinstance(name, str) for name in listed) or listed != sorted(set(listed)):
+            findings.append(("PJ017", f"runtime [{kind}] must be a sorted list of unique names for flavour [{flavour}]"))
         else:
-            if stamp != str(manifest.get("model_version")):
-                findings.append(("PJ013", f"model stamp [{stamp}] differs from the manifest model version [{manifest.get('model_version')}]"))
+            findings.extend(("PJ017", f"runtime holds a key the flavour does not use [{key}]") for key in sorted(set(runtime) - {kind}))
+            model_file = join(project_dir, files["model"]["path"]) if "model" in files else None
+            if model_file is not None and isfile(model_file) and flavour == "wasm":
+                actual = sorted({str(entry.name) for entry in _wasm_module_imports(model_file)})
+                if listed != actual:
+                    findings.append(("PJ017", f"runtime wasm differs from the module imports, runtime {listed} module {actual}"))
+            elif model_file is not None and isfile(model_file):
+                with open(model_file) as source_file:
+                    tree = ast.parse(source_file.read())
+                imported = {alias.name.split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.Import) for alias in node.names}
+                imported |= {node.module.split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.ImportFrom) and node.level == 0 and node.module}
+                needed = imported - set(sys.stdlib_module_names) - set(PYFUNC_BASE_IMPORTS)
+                declared = {PYFUNC_IMPORT_NAMES.get(re.sub(r"[-_.]+", "_", name.lower()), re.sub(r"[-_.]+", "_", name.lower())): name for name in listed}
+                findings.extend(("PJ017", f"model imports a package that runtime python does not declare [{name}]") for name in sorted(needed - set(declared)))
+                findings.extend(("PJ017", f"runtime python declares a package the model does not need [{declared[name]}]") for name in sorted(set(declared) - needed))
+    elif runtime is not None:
+        findings.append(("PJ017", f"flavour [{flavour}] takes no runtime"))
     if "signature" not in files or not isfile(join(project_dir, files["signature"]["path"])):
         return findings
     with open(join(project_dir, files["signature"]["path"])) as signature_file:
@@ -263,8 +280,8 @@ def lint_project(project_dir):
     findings.extend(_lint_signature(manifest, signature))
     if "evaluation" in files:
         findings.extend(_lint_evaluation(project_dir, files, signature))
-    elif flavor in PROJECT_FLAVORS and flavor != "static":
-        findings.append(("AC001", f"a project of flavor [{flavor}] needs an acceptance evaluation"))
+    elif flavour in PROJECT_FLAVOURS and flavour != "static":
+        findings.append(("AC001", f"a project of flavour [{flavour}] needs an acceptance evaluation"))
     if "golden" in files and isfile(join(project_dir, files["golden"]["path"])):
         with open(join(project_dir, files["golden"]["path"])) as golden_file:
             golden = json.load(golden_file)
@@ -275,12 +292,12 @@ def lint_project(project_dir):
 def verify_project(project_dir):
     findings = lint_project(project_dir)
     if findings:
-        raise ValueError("; ".join(f"{rule} {message}" for rule, message in findings))
+        raise GateError("Package", "project", "; ".join(f"{rule} {message}" for rule, message in findings))
     with open(join(project_dir, PROJECT_MANIFEST)) as manifest_file:
         return json.load(manifest_file)
 
 
-def register_project(project_dir, name, tracking_uri, aliases=(PROJECT_ALIAS_CANDIDATE,)):
+def register_project(project_dir, name, tracking_uri, aliases=(PROJECT_ALIAS_PREVIEW,), snapshot_version=None):
     import mlflow.pyfunc
 
     import mlflow
@@ -290,218 +307,73 @@ def register_project(project_dir, name, tracking_uri, aliases=(PROJECT_ALIAS_CAN
     mlflow.set_tracking_uri(tracking_uri)
     mlflow.set_registry_uri(tracking_uri)
     client = MlflowClient()
-    static = manifest["flavor"] == "static"
-    content_sha256 = project_content_sha256(project_dir)
-    model_version = str(manifest["model_version"]) if static else str(next_model_version(client, name))
-    version = next(
-        (
-            candidate
-            for candidate in client.search_model_versions(f"name = '{name}'")
-            if candidate.tags.get("content_sha256") == content_sha256 and candidate.tags.get("model_version") == model_version
-        ),
-        None,
-    )
+    content = content_sha256(project_dir)
+    version = next((candidate for candidate in client.search_model_versions(f"name = '{name}'") if candidate.tags.get("content_sha256") == content), None)
     if version is None:
-        with tempfile.TemporaryDirectory(prefix=f"{name}-register-") as staging_dir:
-            staged_dir = project_dir if static else join(staging_dir, "project")
-            if not static:
-                manifest = restamp_project(project_dir, model_version, staged_dir)
-            mlflow.set_experiment(name)
-            with mlflow.start_run() as run:
-                mlflow.set_tags({"project_flavor": manifest["flavor"], "project_model_version": model_version})
-                if "evaluation" in manifest["files"]:
-                    import pandas
-                    from mlflow.data.pandas_dataset import from_pandas
+        if tracking_uri.startswith("sqlite:///") and client.get_experiment_by_name(name) is None:
+            client.create_experiment(name, artifact_location="file://" + join(dirname(os.path.abspath(tracking_uri.removeprefix("sqlite:///"))), "artifacts"))
+        mlflow.set_experiment(name)
+        with mlflow.start_run(tags={"mlflow.source.name": "datascience"}) as run:
+            mlflow.set_tags({"project_flavour": manifest["flavour"]})
+            if "evaluation" in manifest["files"]:
+                import pandas
+                from mlflow.data.pandas_dataset import from_pandas
 
-                    with open(join(staged_dir, PROJECT_EVALUATION)) as evaluation_file:
-                        evaluation = json.load(evaluation_file)
-                    mlflow.set_tags({"acceptance": "passed" if evaluation["passed"] else "failed", "acceptance_budget": str(evaluation["budget"])})
-                    mlflow.log_metrics({"acceptance_passed": float(evaluation["passed"]), **({"acceptance_budget": evaluation["budget"]} if evaluation["budget"] is not None else {})})
-                    mlflow.log_metrics({f"{entry['split']}/{entry['output']}/{entry['name']}": entry["value"] for entry in evaluation["checks"] if entry["value"] is not None})
-                    for split, entries in evaluation["datasets"].items():
-                        for entry in entries:
-                            dataset = from_pandas(pandas.DataFrame(), name=os.path.splitext(basename(entry["path"]))[0], digest=entry["sha256"][:16])
-                            mlflow.log_input(dataset, context=split)
-                if manifest["flavor"] == "pyfunc":
-                    import pandas
-                    from mlflow.models import ModelSignature
-                    from mlflow.types import ColSpec, Schema
+                with open(join(project_dir, PROJECT_EVALUATION)) as evaluation_file:
+                    evaluation = json.load(evaluation_file)
+                mlflow.set_tags({"acceptance": "passed" if evaluation["passed"] else "failed", "acceptance_budget": str(evaluation["budget"])})
+                mlflow.log_metrics({"acceptance_passed": float(evaluation["passed"]), **({"acceptance_budget": evaluation["budget"]} if evaluation["budget"] is not None else {})})
+                mlflow.log_metrics({f"{entry['split']}/{entry['output']}/{entry['name']}": entry["value"] for entry in evaluation["checks"] if entry["value"] is not None})
+                for split, entries in evaluation["datasets"].items():
+                    for entry in entries:
+                        dataset = from_pandas(pandas.DataFrame(), name=os.path.splitext(basename(entry["path"]))[0], digest=entry["sha256"][:16])
+                        mlflow.log_input(dataset, context=split)
+            if manifest["flavour"] == "pyfunc":
+                import pandas
+                from mlflow.models import ModelSignature
+                from mlflow.types import ColSpec, Schema
 
-                    with open(join(staged_dir, manifest["files"]["signature"]["path"])) as signature_file:
-                        signature = json.load(signature_file)
-                    column_types = {"FP64": "double", "INT64": "long"}
-                    with open(join(staged_dir, manifest["files"]["golden"]["path"])) as golden_file:
-                        golden = json.load(golden_file)
-                    first_step = next(step for sequence in golden["sequences"] for step in sequence["steps"] if "error" not in step)
+                with open(join(project_dir, manifest["files"]["signature"]["path"])) as signature_file:
+                    signature = json.load(signature_file)
+                column_types = {"FP64": "double", "INT64": "long"}
+                with open(join(project_dir, manifest["files"]["golden"]["path"])) as golden_file:
+                    golden = json.load(golden_file)
+                first_step = next(step for sequence in golden["sequences"] for step in sequence["steps"] if "error" not in step)
 
-                    def schema(entries):
-                        for entry in entries:
-                            if entry["datatype"] not in column_types or entry["shape"] != [1]:
-                                raise ValueError(f"pyfunc signature supports scalar FP64 and INT64 only [{entry['name']}]")
-                        return Schema([ColSpec(column_types[entry["datatype"]], entry["name"]) for entry in entries])
+                def schema(entries):
+                    for entry in entries:
+                        if entry["datatype"] not in column_types or entry["shape"] != [1]:
+                            raise ValueError(f"pyfunc signature supports scalar FP64 and INT64 only [{entry['name']}]")
+                    return Schema([ColSpec(column_types[entry["datatype"]], entry["name"]) for entry in entries])
 
-                    mlflow.pyfunc.log_model(
-                        name="project",
-                        python_model=join(staged_dir, manifest["files"]["model"]["path"]),
-                        artifacts={"project": staged_dir},
-                        signature=ModelSignature(inputs=schema(signature["inputs"]), outputs=schema(signature["outputs"])),
-                        input_example=pandas.DataFrame({entry["name"]: entry["data"] for entry in first_step["request"]["inputs"]}),
-                    )
-                else:
-                    mlflow.log_artifacts(staged_dir, artifact_path="project")
-            if manifest["flavor"] == "pyfunc":
-                version = mlflow.register_model(f"runs:/{run.info.run_id}/project", name)
+                mlflow.pyfunc.log_model(
+                    name="project",
+                    python_model=join(project_dir, manifest["files"]["model"]["path"]),
+                    artifacts={"project": project_dir},
+                    signature=ModelSignature(inputs=schema(signature["inputs"]), outputs=schema(signature["outputs"])),
+                    input_example=pandas.DataFrame({entry["name"]: entry["data"] for entry in first_step["request"]["inputs"]}),
+                )
             else:
-                if not client.search_registered_models(filter_string=f"name = '{name}'"):
-                    client.create_registered_model(name)
-                version = client.create_model_version(name, f"{run.info.artifact_uri}/project", run_id=run.info.run_id)
-            for key, value in {
-                "content_sha256": content_sha256,
-                "model_version": model_version,
-                "project_flavor": manifest["flavor"],
-                "project_sha256": file_sha256(join(staged_dir, PROJECT_MANIFEST)),
-            }.items():
-                client.set_model_version_tag(name, version.version, key, value)
+                mlflow.log_artifacts(project_dir, artifact_path="project")
+        if manifest["flavour"] == "pyfunc":
+            version = mlflow.register_model(f"runs:/{run.info.run_id}/project", name)
+        else:
+            if not client.search_registered_models(filter_string=f"name = '{name}'"):
+                client.create_registered_model(name)
+            version = client.create_model_version(name, f"{run.info.artifact_uri}/project", run_id=run.info.run_id)
+        for key, value in {"content_sha256": content, "project_flavour": manifest["flavour"]}.items():
+            client.set_model_version_tag(name, version.version, key, value)
+    if snapshot_version is not None and "snapshot_version" not in version.tags and "release_version" not in version.tags:
+        client.set_model_version_tag(name, version.version, "snapshot_version", snapshot_version)
     for alias in aliases:
         client.set_registered_model_alias(name, alias, version.version)
     return version.version
 
 
-def read_stamp(path, flavor):
-    if flavor == "pyfunc":
-        with open(path) as model_file:
-            stamps = PROJECT_STAMP_LINE.findall(model_file.read())
-        if len(stamps) != 1:
-            raise ValueError(f'model file needs exactly one line MODEL_VERSION = "..." [{path}]')
-        return stamps[0]
-    if flavor == "wasm":
-        with open(path, "rb") as model_file:
-            stamps = [data for name, data in _wasm_custom_sections(model_file.read()) if name == PROJECT_STAMP_SECTION]
-        if len(stamps) != 1:
-            raise ValueError(f"model file needs exactly one custom section [{PROJECT_STAMP_SECTION}] [{path}]")
-        return stamps[0].decode()
-    if flavor == "onnx":
-        import onnx
-
-        stamps = [entry.value for entry in onnx.load(path).metadata_props if entry.key == PROJECT_STAMP_SECTION]
-        if len(stamps) != 1:
-            raise ValueError(f"model file needs exactly one metadata property [{PROJECT_STAMP_SECTION}] [{path}]")
-        return stamps[0]
-    raise ValueError(f"stamping is not built for flavor [{flavor}]")
-
-
-def stamp_model(path, flavor, version):
-    stamped = _stamped_bytes(path, flavor, version)
-    with open(path, "wb") as model_file:
-        model_file.write(stamped)
-
-
-def content_sha256(path, flavor):
-    return hashlib.sha256(_stamped_bytes(path, flavor, PROJECT_VERSION_SENTINEL)).hexdigest()
-
-
-def restamp_project(project_dir, model_version, dest_dir):
-    manifest = verify_project(project_dir)
-    flavor = manifest["flavor"]
-    if flavor not in PROJECT_STAMPED and flavor != "static":
-        raise ValueError(f"stamping is not built for flavor [{flavor}]")
-    shutil.rmtree(dest_dir, ignore_errors=True)
-    shutil.copytree(project_dir, dest_dir)
-    if flavor in PROJECT_STAMPED:
-        stamp_model(join(dest_dir, manifest["files"]["model"]["path"]), flavor, model_version)
-    signature_path, golden_path = join(dest_dir, manifest["files"]["signature"]["path"]), join(dest_dir, manifest["files"]["golden"]["path"])
-    with open(signature_path) as signature_file, open(golden_path) as golden_file:
-        signature, golden = json.load(signature_file), json.load(golden_file)
-    signature["versions"] = [model_version]
-    golden["model_version"] = model_version
-    for sequence in golden["sequences"]:
-        for step in sequence["steps"]:
-            if "response" in step:
-                step["response"]["model_version"] = model_version
-    _write_json(signature_path, signature)
-    _write_json(golden_path, golden)
-    manifest["model_version"] = model_version
-    manifest["files"] = {key: {"path": entry["path"], "sha256": file_sha256(join(dest_dir, entry["path"]))} for key, entry in manifest["files"].items()}
-    _write_json(join(dest_dir, PROJECT_MANIFEST), manifest)
-    return verify_project(dest_dir)
-
-
-def project_content_sha256(project_dir):
-    manifest = verify_project(project_dir)
-    if manifest["flavor"] == "static":
-        return file_sha256(join(project_dir, PROJECT_MANIFEST))
-    with tempfile.TemporaryDirectory(prefix="content-") as staging_dir:
-        restamp_project(project_dir, PROJECT_VERSION_SENTINEL, join(staging_dir, "project"))
-        return file_sha256(join(staging_dir, "project", PROJECT_MANIFEST))
-
-
-def next_model_version(client, name):
-    from mlflow.exceptions import MlflowException
-
-    try:
-        model = client.get_registered_model(name)
-    except MlflowException as error:
-        if _not_found(error):
-            return PROJECT_VERSION_FIRST
-        raise
-    promoted = [int(match.group(1)) for alias in model.aliases if (match := PROJECT_VERSION_ALIAS.match(alias))]
-    return max(PROJECT_VERSION_FIRST - 1, int(model.tags.get(PROJECT_VERSION_HIGH_WATER, 0)), *promoted) + 1
-
-
-def service_version(repo_dir=None):
-    directory = repo_dir if repo_dir is not None else dirname(abspath(__file__))
-    try:
-        result = subprocess.run(["git", "-C", directory, "tag", "--list", "--sort=-v:refname"], capture_output=True, text=True, timeout=30, check=True)
-    except (OSError, subprocess.SubprocessError) as error:
-        raise ValueError(f"no release tag could be read [{directory}] [{error}]") from error
-    tags = [tag for tag in result.stdout.split() if PROJECT_RELEASE_TAG.match(tag)]
-    if not tags:
-        raise ValueError(f"no release tag in [{directory}]")
-    return tags[0]
-
-
-def resolve_model(name, selector, tracking_uri):
-    from mlflow.exceptions import MlflowException
-
-    import mlflow
-    from mlflow import MlflowClient
-
-    mlflow.set_tracking_uri(tracking_uri)
-    mlflow.set_registry_uri(tracking_uri)
-    client = MlflowClient()
-    alias = _selector_alias(client, name, selector)
-    if alias is None:
+def register_preview(project_dir, name, tracking_uri, targets, snapshot_version=None):
+    if not any(target["kind"] == "served" for target in targets):
         return None
-    try:
-        version = client.get_model_version_by_alias(name, alias)
-    except MlflowException as error:
-        if _not_found(error):
-            return None
-        raise
-    return {"name": name, "alias": alias, "registry_version": version.version, **{key: version.tags.get(key) for key in PROJECT_REGISTRY_TAGS}}
-
-
-def list_models(tracking_uri):
-    import mlflow
-    from mlflow import MlflowClient
-
-    mlflow.set_tracking_uri(tracking_uri)
-    mlflow.set_registry_uri(tracking_uri)
-    client = MlflowClient()
-    rows = []
-    for model in client.search_registered_models():
-        promoted = sorted(int(match.group(1)) for alias in model.aliases if (match := PROJECT_VERSION_ALIAS.match(alias)))
-        release = client.get_model_version(model.name, model.aliases["release"]) if "release" in model.aliases else None
-        rows.append(
-            {
-                "name": model.name,
-                "release": release.tags.get("model_version") if release is not None else None,
-                "latest": str(promoted[-1]) if promoted else None,
-                "service_version": release.tags.get("service_version") if release is not None else None,
-                "flavor": release.tags.get("project_flavor") if release is not None else None,
-            }
-        )
-    return sorted(rows, key=lambda row: row["name"])
+    return register_project(project_dir, name, tracking_uri, aliases=(PROJECT_ALIAS_PREVIEW,), snapshot_version=snapshot_version)
 
 
 def registry_address(uri):
@@ -514,123 +386,34 @@ def registry_address(uri):
     return uri
 
 
-def status_rows(registry_rows, served, source_dir):
-    registry = {row["name"]: row for row in registry_rows}
-    rows = [{**row, "registry_release": registry.get(row["name"], {}).get("release"), "registry_latest": registry.get(row["name"], {}).get("latest")} for row in slot_versions(source_dir)]
-    for name, row in registry.items():
-        shipped = None if served is None else served.get(name)
-        rows.append(
-            {
-                "registry": name,
-                "release": row["release"],
-                "latest": row["latest"],
-                "served_version": shipped["version"] if shipped else None,
-                "served_state": shipped["state"] if shipped else ("unreachable" if served is None else "absent"),
-                "in_step": row["release"] is not None and shipped is not None and shipped["version"] == row["release"] and shipped["state"] == "READY",
-            }
-        )
-    return rows
-
-
-def rollback_project(name, tracking_uri):
-    import mlflow
-    from mlflow import MlflowClient
-
-    mlflow.set_tracking_uri(tracking_uri)
-    mlflow.set_registry_uri(tracking_uri)
-    client = MlflowClient()
-    aliases = client.get_registered_model(name).aliases
-    if PROJECT_ALIAS_RELEASE not in aliases:
-        raise ValueError(f"model [{name}] has no [{PROJECT_ALIAS_RELEASE}] alias to roll back")
-    current = client.get_model_version(name, aliases[PROJECT_ALIAS_RELEASE]).tags.get("model_version")
-    earlier = sorted(
-        (int(match.group(1)), version) for alias, version in aliases.items() if (match := PROJECT_VERSION_ALIAS.match(alias)) and current is not None and int(match.group(1)) < int(current)
-    )
-    for number, version in reversed(earlier):
-        if client.get_model_version(name, version).tags.get("acceptance") == "passed":
-            client.set_registered_model_alias(name, PROJECT_ALIAS_RELEASE, version)
-            return str(number)
-    raise ValueError(f"model [{name}] has no earlier promoted version that passed acceptance than [{current}]")
-
-
-def slot_versions(source_dir):
-    rows = []
-    for slot in ("default", "release"):
-        for manifest_path in sorted(glob.glob(join(source_dir, "*", "*", CONSUMER_MODEL_PATH, slot, PROJECT_MANIFEST))):
-            with open(manifest_path) as manifest_file:
-                manifest = json.load(manifest_file)
-            rows.append({"slot": relpath(dirname(manifest_path), source_dir), "name": manifest["name"], "flavor": manifest["flavor"], "model_version": str(manifest["model_version"])})
-    return rows
-
-
-def compare_project(output_dir, committed_dir):
-    output, committed = verify_project(output_dir), verify_project(committed_dir)
-    findings = []
-    if output["flavor"] == "static" and committed["flavor"] == "static":
-        differing = sorted(key for key in output["files"].keys() | committed["files"].keys() if output["files"].get(key) != committed["files"].get(key))
-        if differing or {key: value for key, value in output.items() if key != "files"} != {key: value for key, value in committed.items() if key != "files"}:
-            findings.append(("CP001", f"the static project differs from the committed one in files {differing}"))
-        return findings
-    with open(join(output_dir, PROJECT_SIGNATURE)) as output_file, open(join(committed_dir, PROJECT_SIGNATURE)) as committed_file:
-        findings.extend(("CP002", difference) for difference in diff_signature(json.load(committed_file), json.load(output_file)))
-    verdicts = []
-    for directory in (output_dir, committed_dir):
-        evaluation_path = join(directory, PROJECT_EVALUATION)
-        if isfile(evaluation_path):
-            with open(evaluation_path) as evaluation_file:
-                verdicts.append(json.load(evaluation_file)["passed"])
-        else:
-            verdicts.append(None)
-    if verdicts[0] != verdicts[1]:
-        findings.append(("CP003", f"the acceptance verdict is [{verdicts[0]}] and the committed one is [{verdicts[1]}]"))
-    return findings
-
-
 def check_release(project_dir):
     verify_project(project_dir)
     return check_acceptance(project_dir)
 
 
-def pull_model(name, selector, dest_dir, tracking_uri, signature_path=None, unpromoted=False):
+def pull_model(name, alias, dest_dir, tracking_uri):
     from mlflow.artifacts import download_artifacts
     from mlflow.exceptions import MlflowException
 
     import mlflow
     from mlflow import MlflowClient
 
-    if not unpromoted and selector not in ("release", "latest") and not PROJECT_VERSION_PROMOTED.match(selector):
-        raise ValueError(f"only a promoted version may be pulled, not [{selector}]")
     mlflow.set_tracking_uri(tracking_uri)
     mlflow.set_registry_uri(tracking_uri)
     client = MlflowClient()
-    alias = _selector_alias(client, name, selector)
-    if alias is None:
-        return None
     staging_dir = tempfile.mkdtemp(prefix=f"{name}-")
     try:
         try:
-            download_artifacts(artifact_uri=f"models:/{name}@{alias}", dst_path=staging_dir)
             tags = client.get_model_version_by_alias(name, alias).tags
+            download_artifacts(artifact_uri=f"models:/{name}@{alias}", dst_path=staging_dir)
         except MlflowException as error:
             if _not_found(error):
                 return None
             raise
         project_dir = _find_project_dir(staging_dir)
         manifest = verify_project(project_dir)
-        expected = tags.get("model_version")
-        if PROJECT_VERSION_PROMOTED.match(selector) and expected != selector:
-            raise ValueError(f"alias [{alias}] is for model version [{expected}] and not [{selector}]")
-        if manifest["flavor"] in PROJECT_STAMPED and expected is not None and str(manifest["model_version"]) != expected:
-            raise ValueError(f"pulled model version [{manifest['model_version']}] differs from the registered one [{expected}]")
-        if not unpromoted:
-            unaccepted = check_acceptance(project_dir)
-            if unaccepted:
-                raise ValueError("; ".join(f"{rule} {message}" for rule, message in unaccepted))
-        if signature_path is not None and isfile(signature_path):
-            with open(signature_path) as expected_file, open(join(project_dir, PROJECT_SIGNATURE)) as pulled_file:
-                differences = diff_signature(json.load(expected_file), json.load(pulled_file))
-                if differences:
-                    raise ValueError(f"pulled signature differs from [{signature_path}], a signature change is a release of the consumer: {'; '.join(differences)}")
+        if tags.get("content_sha256") != content_sha256(project_dir):
+            raise ValueError(f"pulled project differs from the registered content hash [{tags.get('content_sha256')}]")
         shutil.rmtree(dest_dir, ignore_errors=True)
         shutil.copytree(project_dir, dest_dir)
         return manifest
@@ -657,7 +440,7 @@ def diff_signature(expected, actual):
         findings.append(f"state slots changed from {expected_state} to {actual_state}")
     if expected["parameters"].get("signature_version") != actual["parameters"].get("signature_version"):
         findings.append(f"signature version changed from [{expected['parameters'].get('signature_version')}] to [{actual['parameters'].get('signature_version')}]")
-    if not findings and _without_versions(expected) != _without_versions(actual):
+    if not findings and expected != actual:
         findings.append("signature differs in a field not listed above")
     return findings
 
@@ -687,61 +470,6 @@ def render_rust(signature):
     return "\n".join(lines) + "\n"
 
 
-def check_gate(gate, project_sha256, hosts, archs, reviewed_by):
-    findings = []
-    passed = {(result.get("host"), result.get("arch")) for result in gate.get("results", []) if result.get("passed") is True}
-    findings.extend(("PM001", f"the parity gate has not passed for host [{host}] on [{arch}]") for host in hosts for arch in archs if (host, arch) not in passed)
-    if gate.get("project_sha256") != project_sha256:
-        findings.append(("PM002", f"the gate is for project [{gate.get('project_sha256')}] and the candidate is [{project_sha256}]"))
-    if not reviewed_by:
-        findings.append(("PM003", "a person must be named as the reviewer"))
-    return findings
-
-
-def promote_project(name, tracking_uri, gate_path, hosts, archs, reviewed_by, workspaces_dir=None, released=None):
-    from mlflow import MlflowClient
-
-    staging_dir = tempfile.mkdtemp(prefix=f"{name}-promote-")
-    try:
-        project_dir = join(staging_dir, "project")
-        manifest = pull_model(name, PROJECT_ALIAS_CANDIDATE, project_dir, tracking_uri, unpromoted=True)
-        if manifest is None:
-            raise ValueError(f"no registered model [{name}] with alias [{PROJECT_ALIAS_CANDIDATE}]")
-        with open(gate_path) as gate_file:
-            gate = json.load(gate_file)
-        client = MlflowClient()
-        findings = check_gate(gate, file_sha256(join(project_dir, PROJECT_MANIFEST)), hosts or PROJECT_RUNTIMES[manifest["flavor"]], archs, reviewed_by)
-        findings.extend(check_acceptance(project_dir))
-        number = str(manifest["model_version"])
-        evaluation = {"budget": None}
-        if isfile(join(project_dir, PROJECT_EVALUATION)):
-            with open(join(project_dir, PROJECT_EVALUATION)) as evaluation_file:
-                evaluation = json.load(evaluation_file)
-        if manifest["flavor"] == "static":
-            findings.append(("PM005", "a static project has no numbered model version to promote"))
-        elif number != str(next_model_version(client, name)):
-            findings.append(("PM005", f"the candidate is stamped [{number}] and the next model version is [{next_model_version(client, name)}], register it again"))
-        try:
-            released = released if released is not None else service_version()
-        except ValueError as error:
-            findings.append(("PM006", f"no release version could be recorded [{error}]"))
-        if findings:
-            raise ValueError("; ".join(f"{rule} {message}" for rule, message in findings))
-        version = client.get_model_version_by_alias(name, PROJECT_ALIAS_CANDIDATE).version
-        for alias in (f"m{number}", PROJECT_ALIAS_RELEASE):
-            client.set_registered_model_alias(name, alias, version)
-        for key, value in {"service_version": released, "reviewed_by": reviewed_by, "acceptance": "passed", "acceptance_budget": str(evaluation["budget"])}.items():
-            client.set_model_version_tag(name, version, key, value)
-        client.set_registered_model_tag(name, PROJECT_VERSION_HIGH_WATER, number)
-        workspace = _find_workspace(workspaces_dir, name) if workspaces_dir else None
-        if workspace is not None:
-            with open(join(workspace, PROJECT_VERSION_FILE), "w") as version_file:
-                version_file.write(f"{int(number) + 1}-SNAPSHOT\n")
-        return version
-    finally:
-        shutil.rmtree(staging_dir, ignore_errors=True)
-
-
 def file_sha256(path):
     digest = hashlib.sha256()
     with open(path, "rb") as file:
@@ -762,43 +490,37 @@ def fix_hints(rules):
 def main(arguments=None):
     parser = argparse.ArgumentParser(prog="asystem.model")
     commands = parser.add_subparsers(dest="command", required=True)
-    pull = commands.add_parser("pull")
-    pull.add_argument("name")
-    pull.add_argument("selector")
-    pull.add_argument("dest_dir")
-    pull.add_argument("--signature")
-    resolve = commands.add_parser("resolve")
-    resolve.add_argument("name")
-    resolve.add_argument("selector")
-    commands.add_parser("list")
-    status = commands.add_parser("status")
-    status.add_argument("source_dir")
-    status.add_argument("--mlserver")
-    commands.add_parser("rollback").add_argument("name")
     commands.add_parser("verify").add_argument("project_dir")
     commands.add_parser("replay").add_argument("project_dir")
-    gate = commands.add_parser("gate")
-    gate.add_argument("project_dir")
-    gate.add_argument("--out", required=True)
-    gate.add_argument("--runner", action="append", default=[])
-    merge = commands.add_parser("gate-merge")
-    merge.add_argument("--out", required=True)
-    merge.add_argument("gates", nargs="+")
     commands.add_parser("lint").add_argument("project_dir")
     generate = commands.add_parser("generate")
     generate.add_argument("project_dir")
     generate.add_argument("--rust")
-    compare = commands.add_parser("compare")
-    compare.add_argument("output_dir")
-    compare.add_argument("committed_dir")
-    commands.add_parser("check-release").add_argument("project_dir")
-    promote = commands.add_parser("promote")
-    promote.add_argument("name")
-    promote.add_argument("--gate")
-    promote.add_argument("--hosts")
-    promote.add_argument("--archs", default="x86_64,aarch64")
-    promote.add_argument("--reviewed-by", default=os.environ.get("USER"))
-    promote.add_argument("--workspaces")
+    check_release_parser = commands.add_parser("check-release")
+    check_release_parser.add_argument("project_dir")
+    check_release_parser.add_argument("--source-dir")
+    changed = commands.add_parser("changed")
+    changed.add_argument("workspace_dir")
+    changed.add_argument("pins_path")
+    check_metadata = commands.add_parser("check-metadata")
+    check_metadata.add_argument("workspace_dir")
+    check_metadata.add_argument("pins_path")
+    check_metadata.add_argument("source_dir")
+    release = commands.add_parser("release")
+    release.add_argument("source_dir")
+    release.add_argument("--version", required=True)
+    release.add_argument("--by", required=True)
+    release.add_argument("--mlserver")
+    publish = commands.add_parser("publish")
+    publish.add_argument("source_dir")
+    publish.add_argument("--mlserver")
+    status = commands.add_parser("status")
+    status.add_argument("source_dir")
+    status.add_argument("--mlserver")
+    embed = commands.add_parser("embed")
+    embed.add_argument("consumer_dir")
+    embed.add_argument("source_dir")
+    embed.add_argument("name")
     options = parser.parse_args(arguments)
 
     def hints(rules):
@@ -806,73 +528,78 @@ def main(arguments=None):
             print(f"HINT {hint}", file=sys.stderr)
 
     try:
-        tracking_uri = (
-            registry_address(os.environ.get("MLFLOW_TRACKING_URI"))
-            if options.command in ("pull", "resolve", "list", "rollback", "promote") or (options.command == "status" and os.environ.get("MLFLOW_TRACKING_URI"))
-            else None
-        )
-        if options.command == "pull":
-            manifest = pull_model(options.name, options.selector, options.dest_dir, tracking_uri, options.signature)
-            if manifest is None:
-                print(f"no registered model [{options.name}] selector [{options.selector}], nothing pulled")
-            else:
-                print(f"pulled model [{options.name}] selector [{options.selector}] version [{manifest['model_version']}]")
-                print(json.dumps(resolve_model(options.name, options.selector, tracking_uri), sort_keys=True))
-        elif options.command == "resolve":
-            print(json.dumps(resolve_model(options.name, options.selector, tracking_uri), sort_keys=True))
-        elif options.command == "list":
-            for row in list_models(tracking_uri):
-                print(json.dumps(row, sort_keys=True))
-        elif options.command == "status":
-            import urllib.request
-
-            served = None
-            if tracking_uri and options.mlserver:
-                request = urllib.request.Request(f"{options.mlserver}/v2/repository/index", data=b"{}", headers={"Content-Type": "application/json"}, method="POST")
-                try:
-                    with urllib.request.urlopen(request, timeout=10) as response:
-                        served = {entry["name"]: {"version": entry.get("version"), "state": entry.get("state")} for entry in json.load(response)}
-                except (OSError, ValueError):
-                    pass
-            for row in status_rows(list_models(tracking_uri) if tracking_uri else [], served, options.source_dir):
-                print(json.dumps(row, sort_keys=True))
-        elif options.command == "verify" and isdir(options.project_dir):
-            manifest = verify_project(options.project_dir)
-            print(f"verified model [{manifest['name']}] version [{manifest['model_version']}]")
+        if options.command == "verify":
+            print(f"verified model [{verify_project(options.project_dir)['name']}]")
         elif options.command == "lint":
             findings = lint_project(options.project_dir)
             for rule, message in findings:
                 print(f"{options.project_dir}: {rule} {message}", file=sys.stderr)
             hints(rule for rule, _ in findings)
             return 1 if findings else 0
-        elif options.command in ("compare", "check-release"):
-            findings = compare_project(options.output_dir, options.committed_dir) if options.command == "compare" else check_release(options.project_dir)
+        elif options.command == "changed":
+            from asystem.metadata import inputs_changed
+
+            with open(join(options.workspace_dir, "notebook.ipynb")) as notebook_file:
+                packages = any(cell["cell_type"] == "code" and "package_project(" in "".join(cell["source"]) for cell in json.load(notebook_file)["cells"])
+            if not packages:
+                print("unpackaged")
+            else:
+                print("changed" if inputs_changed(options.workspace_dir, options.pins_path) else "unchanged")
+        elif options.command == "check-metadata":
+            from asystem.metadata import PROJECT_DIR, lint_metadata
+
+            with open(join(options.workspace_dir, PROJECT_DIR, PROJECT_MANIFEST)) as manifest_file:
+                findings = lint_metadata(options.workspace_dir, json.load(manifest_file)["flavour"], options.pins_path, options.source_dir)
             for rule, message in findings:
-                print(f"{options.committed_dir if options.command == 'compare' else options.project_dir} {rule} {message}", file=sys.stderr)
+                print(f"{options.workspace_dir} {rule} {message}", file=sys.stderr)
             hints(rule for rule, _ in findings)
             return 1 if findings else 0
-        elif options.command == "gate-merge":
-            from asystem.replay import merge_gates
+        elif options.command == "release":
+            from asystem.release import release_workspaces, stale_consumers
 
-            documents = []
-            for gate_path in options.gates:
-                with open(gate_path) as gate_file:
-                    documents.append(json.load(gate_file))
-            _write_json(options.out, merge_gates(documents))
-            print(f"merged [{len(documents)}] gate files into [{options.out}]")
-        elif options.command in ("replay", "gate"):
-            from asystem.replay import gate_project
+            tracking_uri = registry_address(os.environ.get("MLFLOW_TRACKING_URI"))
+            released = release_workspaces(options.source_dir, options.version, options.by, tracking_uri, options.mlserver)
+            print(f"released workspaces {released}")
+            for consumer in stale_consumers(options.source_dir):
+                print(f"WARN consumer embeds an older release [{relpath(consumer, options.source_dir)}]", file=sys.stderr)
+        elif options.command == "publish":
+            from asystem.metadata import read_metadata
+            from asystem.release import publish_workspace, workspaces
 
-            runners = {}
-            for runner in getattr(options, "runner", []):
-                host, _, command = runner.partition("=")
-                runners[host] = command.split()
-            document, findings = gate_project(options.project_dir, runners)
+            tracking_uri = registry_address(os.environ.get("MLFLOW_TRACKING_URI"))
+            for name, directory in workspaces(options.source_dir).items():
+                if (
+                    isfile(join(directory, "metadata.json"))
+                    and read_metadata(directory)["released_version"] is not None
+                    and any(target["kind"] == "served" for target in read_metadata(directory)["targets"])
+                ):
+                    print(f"published model [{name}] [{publish_workspace(name, directory, tracking_uri, options.mlserver)}]")
+        elif options.command == "status":
+            from asystem.release import status_lines
+
+            for level, message in status_lines(options.source_dir, os.environ.get("MLFLOW_TRACKING_URI") and registry_address(os.environ["MLFLOW_TRACKING_URI"]), options.mlserver):
+                print(f"{level} {message}", file=sys.stderr)
+        elif options.command == "embed":
+            from asystem.release import embed_consumer
+
+            print(f"embed [{embed_consumer(options.consumer_dir, options.source_dir, options.name)}] consumer [{options.consumer_dir}]")
+        elif options.command == "check-release":
+            findings = check_release(options.project_dir)
+            if options.source_dir:
+                from asystem.release import slot_findings
+
+                findings = [*findings, *slot_findings(options.project_dir, options.source_dir)]
+            for rule, message in findings:
+                print(f"{options.project_dir} {rule} {message}", file=sys.stderr)
+            hints(rule for rule, _ in findings)
+            return 1 if findings else 0
+        elif options.command == "replay":
+            from asystem.replay import replay_project
+
+            findings = replay_project(options.project_dir)
             for rule, message in findings:
                 print(f"ERROR {rule} {message}", file=sys.stderr)
             hints(rule for rule, _ in findings)
-            if options.command == "gate":
-                _write_json(options.out, document)
             if findings:
                 return 1
             print(f"replayed project [{options.project_dir}]")
@@ -881,15 +608,13 @@ def main(arguments=None):
                 signature = json.load(signature_file)
             if options.rust:
                 _write_text(options.rust, render_rust(signature))
-        elif options.command == "rollback":
-            print(f"rolled model [{options.name}] alias [{PROJECT_ALIAS_RELEASE}] back to model version [{rollback_project(options.name, tracking_uri)}]")
-        elif options.command == "promote":
-            gate_path = options.gate or join(dirname(dirname(dirname(options.workspaces))), "target", "gate", f"{options.name}.json") if options.workspaces else options.gate
-            version = promote_project(options.name, tracking_uri, gate_path, options.hosts.split(",") if options.hosts else None, options.archs.split(","), options.reviewed_by, options.workspaces)
-            print(f"promoted model [{options.name}] version [{version}] to alias [{PROJECT_ALIAS_RELEASE}]")
+    except GateError as error:
+        print(f"FAILED stage [{error.stage}] gate [{error.gate}] [{error.cause}]", file=sys.stderr)
+        hints(re.findall(r"\b((?:PJ|NB|WS|PM|AC|CP|RP|MD)\d{3})\b", error.cause))
+        return 1
     except (ValueError, KeyError, OSError) as error:
         print(f"ERROR model command failed [{options.command}] [{error}]", file=sys.stderr)
-        hints(re.findall(r"\b((?:PJ|NB|WS|PM|AC|CP|RP)\d{3})\b", str(error)))
+        hints(re.findall(r"\b((?:PJ|NB|WS|PM|AC|CP|RP|MD)\d{3})\b", str(error)))
         return 1
     return 0
 
@@ -914,111 +639,6 @@ def _quoted(text):
 
 def _not_found(error):
     return error.error_code == "RESOURCE_DOES_NOT_EXIST" or "not found" in str(error.message)
-
-
-def _selector_alias(client, name, selector):
-    from mlflow.exceptions import MlflowException
-
-    if selector == "latest":
-        try:
-            aliases = client.get_registered_model(name).aliases
-        except MlflowException as error:
-            if _not_found(error):
-                return None
-            raise
-        promoted = [int(match.group(1)) for alias in aliases if (match := PROJECT_VERSION_ALIAS.match(alias))]
-        return f"m{max(promoted)}" if promoted else None
-    return f"m{selector}" if PROJECT_VERSION_PROMOTED.match(selector) else selector
-
-
-def _find_workspace(workspaces_dir, name):
-    for path in sorted(glob.glob(join(workspaces_dir, "*", "*", "*"))):
-        parts = relpath(path, workspaces_dir).split(os.sep)
-        if all(PROJECT_NAME.match(part) for part in parts) and registered_name(*parts) == name:
-            return path
-    return None
-
-
-def _wasm_custom_sections(data):
-    if data[:8] != WASM_HEADER:
-        raise ValueError("not a WebAssembly module")
-    sections, position = [], 8
-    while position < len(data):
-        section_id = data[position]
-        size, position = _leb128_read(data, position + 1)
-        payload = data[position : position + size]
-        if len(payload) != size:
-            raise ValueError("WebAssembly section is truncated")
-        position += size
-        if section_id == 0:
-            name_size, offset = _leb128_read(payload, 0)
-            sections.append((payload[offset : offset + name_size].decode(), payload[offset + name_size :]))
-    return sections
-
-
-def _leb128_read(data, position):
-    value, shift = 0, 0
-    while True:
-        if position >= len(data):
-            raise ValueError("WebAssembly integer is truncated")
-        byte = data[position]
-        position += 1
-        value |= (byte & 0x7F) << shift
-        if not byte & 0x80:
-            return value, position
-        shift += 7
-
-
-def _leb128_write(value):
-    out = bytearray()
-    while True:
-        byte = value & 0x7F
-        value >>= 7
-        if value:
-            out.append(byte | 0x80)
-        else:
-            out.append(byte)
-            return bytes(out)
-
-
-def _stamped_bytes(path, flavor, version):
-    if flavor == "pyfunc":
-        with open(path) as model_file:
-            text = model_file.read()
-        if len(PROJECT_STAMP_LINE.findall(text)) != 1:
-            raise ValueError(f'model file needs exactly one line MODEL_VERSION = "..." [{path}]')
-        return PROJECT_STAMP_LINE.sub(lambda _: f'MODEL_VERSION = "{version}"', text).encode()
-    if flavor == "wasm":
-        with open(path, "rb") as model_file:
-            data = model_file.read()
-        if data[:8] != WASM_HEADER:
-            raise ValueError("not a WebAssembly module")
-        kept, position = bytearray(WASM_HEADER), 8
-        while position < len(data):
-            start = position
-            section_id = data[position]
-            size, payload_start = _leb128_read(data, position + 1)
-            position = payload_start + size
-            if position > len(data):
-                raise ValueError("WebAssembly section is truncated")
-            if section_id == 0:
-                name_size, offset = _leb128_read(data[payload_start:position], 0)
-                if data[payload_start + offset : payload_start + offset + name_size].decode() == PROJECT_STAMP_SECTION:
-                    continue
-            kept += data[start:position]
-        name = PROJECT_STAMP_SECTION.encode()
-        payload = _leb128_write(len(name)) + name + version.encode()
-        return bytes(kept) + b"\x00" + _leb128_write(len(payload)) + payload
-    if flavor == "onnx":
-        import onnx
-
-        graph = onnx.load(path)
-        kept = [entry for entry in graph.metadata_props if entry.key != PROJECT_STAMP_SECTION]
-        del graph.metadata_props[:]
-        graph.metadata_props.extend(kept)
-        graph.metadata_props.add(key=PROJECT_STAMP_SECTION, value=version)
-        return graph.SerializeToString(deterministic=True)
-    raise ValueError(f"stamping is not built for flavor [{flavor}]")
 
 
 def _acceptance_outcome(value, limit, direction):
@@ -1078,10 +698,6 @@ def _brief(entry):
     return f"{entry['datatype']} {entry['shape']} unit [{entry['parameters']['unit']}] required [{entry['parameters']['required']}]"
 
 
-def _without_versions(signature):
-    return {key: value for key, value in signature.items() if key != "versions"}
-
-
 def _rust_type(entry):
     base = {"FP64": "f64", "INT64": "i64"}[entry["datatype"]]
     return f"Vec<{base}>" if entry["shape"] == [-1] else base
@@ -1104,8 +720,6 @@ def _lint_signature(manifest, signature):
         findings.append(("PJ004", f"signature name [{signature.get('name')}] differs from the project name [{name}]"))
     if signature["parameters"]["signature_version"] != manifest.get("signature_version"):
         findings.append(("PJ005", f"signature version mismatch manifest [{manifest.get('signature_version')}] signature [{signature['parameters']['signature_version']}]"))
-    if str(manifest.get("model_version")) not in [str(version) for version in signature.get("versions", [])]:
-        findings.append(("PJ005", f"model version [{manifest.get('model_version')}] is not in the signature versions {signature.get('versions')}"))
     names = [entry["name"] for entry in signature["inputs"] + signature["outputs"]]
     if len(set(names)) != len(names):
         findings.append(("PJ006", "input and output names must be unique"))
@@ -1132,7 +746,7 @@ def _lint_signature(manifest, signature):
     output_names = {entry["name"] for entry in signature["outputs"]}
     constants = manifest.get("constants", {})
     findings.extend(("PJ008", f"constant [{constant}] is not a signature output") for constant in constants if constant not in output_names)
-    if manifest.get("flavor") == "static":
+    if manifest.get("flavour") == "static":
         required = {entry["name"] for entry in signature["outputs"] if entry["parameters"]["required"]}
         findings.extend(("PJ008", f"a static project must give a constant for the required output [{missing}]") for missing in sorted(required - set(constants)))
     return findings
@@ -1140,8 +754,6 @@ def _lint_signature(manifest, signature):
 
 def _lint_golden(manifest, signature, golden):
     findings = []
-    if str(golden.get("model_version")) != str(manifest.get("model_version")):
-        findings.append(("PJ009", f"golden model version [{golden.get('model_version')}] differs from the manifest [{manifest.get('model_version')}]"))
     input_specs = {entry["name"]: entry for entry in signature["inputs"]}
     output_specs = {entry["name"]: entry for entry in signature["outputs"]}
     required_inputs = {name for name, entry in input_specs.items() if entry["parameters"]["required"]}
@@ -1192,7 +804,7 @@ def _lint_golden(manifest, signature, golden):
         findings.extend(("PJ010", f"step [{request.get('id')}] names an output that is not in the signature [{name}]") for name in sorted(set(outputs) - set(output_specs)))
         if required_outputs - set(outputs):
             findings.append(("PJ010", f"step [{request.get('id')}] is missing required outputs {sorted(required_outputs - set(outputs))}"))
-        if manifest.get("flavor") == "static":
+        if manifest.get("flavour") == "static":
             for name, constant in constants.items():
                 if outputs.get(name) != [constant]:
                     findings.append(("PJ012", f"step [{request.get('id')}] output [{name}] must equal the constant [{constant}]"))
@@ -1208,6 +820,13 @@ def _find_project_dir(root_dir):
         if PROJECT_MANIFEST in file_names:
             return current_dir
     raise ValueError(f"no project found under [{root_dir}]")
+
+
+def _wasm_module_imports(path):
+    import wasmtime
+
+    with open(path, "rb") as model_file:
+        return wasmtime.Module(wasmtime.Engine(), model_file.read()).imports
 
 
 def _write_json(path, document):

@@ -1,0 +1,34 @@
+{
+  "spec_version": 1,
+  "name": "example_onnx_linear",
+  "signature_version": 1,
+  "flavour": "onnx",
+  "provenance": {
+    "source": "manual",
+    "trained_on": "synthetic line, training split",
+    "inputs": [
+      "example/onnx/linear/data/training/2026-11-03_16-40-53/onnx_linear_training_2026-11-03_2026-11-03.csv",
+      "example/onnx/linear/data/golden/2026-11-03_16-40-53/onnx_linear_golden.csv"
+    ],
+    "notes": "least squares line, gain and offset built into the graph",
+    "implementation": "onnx.helper graph, opset 21, ir version 10"
+  },
+  "files": {
+    "signature": {
+      "path": "signature.json",
+      "sha256": "d3c19e61b80e4aacd44e3f4e36a52699e260bb77a1eb1efd4bf1594b61e3447b"
+    },
+    "golden": {
+      "path": "golden.json",
+      "sha256": "54f9c35def699f8327586772fe09fd9cfddfd19992fde92d066049e77b4de9e5"
+    },
+    "evaluation": {
+      "path": "evaluation.json",
+      "sha256": "bab2baf690d959288f5121c1bd29488c3d0c8d4ad123f2b53db346fc22b070a3"
+    },
+    "model": {
+      "path": "model.onnx",
+      "sha256": "2cd8d1696ddfd5b1d26adbe7b6f2f252a545a88e5b90df2b1f95a31df7e9e1cc"
+    }
+  }
+}

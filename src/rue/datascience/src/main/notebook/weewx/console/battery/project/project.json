@@ -1,0 +1,37 @@
+{
+  "spec_version": 1,
+  "name": "weewx_console_battery",
+  "signature_version": 1,
+  "flavour": "pyfunc",
+  "provenance": {
+    "source": "mlflow",
+    "trained_on": "weewx_console_battery_voltage, training split",
+    "inputs": [
+      "weewx/console/battery/data/training/2026-10-31_15-17-42/console_battery_voltage_2024-06-06_2024-10-25.csv",
+      "weewx/console/battery/data/golden/2026-11-04_12-23-38/console_battery_voltage_golden.csv"
+    ],
+    "notes": "arctan fit, steps of 5",
+    "implementation": "mlflow.pyfunc model.py, requires mlflow and pandas"
+  },
+  "files": {
+    "signature": {
+      "path": "signature.json",
+      "sha256": "f3dc72f5bb9566db959dd5134c699315589f191283c8b0c2a047abab1312f020"
+    },
+    "golden": {
+      "path": "golden.json",
+      "sha256": "0d00d8ae900ca2c793e636bf9c164d25c74b3b9c4c95ac7488c38906bc645e87"
+    },
+    "evaluation": {
+      "path": "evaluation.json",
+      "sha256": "a51c564b3bd6bb9e866b1f96507033be07d014d9c9f215990a8fa89d5fda4b8a"
+    },
+    "model": {
+      "path": "model.py",
+      "sha256": "2e72318252819855b5199ae166363ea31ef4b504f0a5eb72c4cf09b12b371287"
+    }
+  },
+  "runtime": {
+    "python": []
+  }
+}

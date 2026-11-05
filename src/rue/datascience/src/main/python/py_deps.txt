@@ -1,0 +1,11 @@
+mlflow
+jupyterlab
+requests
+python-dateutil
+scipy
+polars
+scikit-learn
+matplotlib
+onnx
+onnxruntime
+wasmtime

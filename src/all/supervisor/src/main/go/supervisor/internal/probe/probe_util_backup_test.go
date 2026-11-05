@@ -152,11 +152,11 @@ func TestProbeUtilBackup_TheModuleContractIsSpelledInTheGeneratedBackupScript(t 
 	if err != nil {
 		t.Fatalf("read the shared build library at %s: %v", path, err)
 	}
-	generated := regexp.MustCompile(`(?s)def write_container_backup\(.*?\ndef `).Find(source)
+	generated := regexp.MustCompile(`(?s)BACKUP_WRAPPER = """.*?"""`).Find(source)
 	if generated == nil {
-		t.Fatalf("found no write_container_backup in %s, the parse has rotted", path)
+		t.Fatalf("found no BACKUP_WRAPPER in %s, the parse has rotted", path)
 	}
-	for _, token := range []string{moduleSkipHoursVariable, moduleRestartVariable, backupTimeoutVariable, modulePruneVariable} {
+	for _, token := range []string{moduleSkipHoursVariable, moduleRestartVariable, backupTimeoutVariable} {
 		if !strings.Contains(string(generated), token) {
 			t.Errorf("the generated module backup.sh names no [%s], which the primary stage passes it", token)
 		}

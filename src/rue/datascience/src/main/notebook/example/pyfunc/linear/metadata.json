@@ -1,0 +1,25 @@
+{
+  "content_sha256": "2629e4bf48ec0dfd978430bbbcbe335cd1c769199968e61b7436c6d109cde25c",
+  "inputs_sha256": "cd0e7fa08b81b9cd01e54f3c3a45e46b620dbd096361296ae969722474f9d63c",
+  "passed": [],
+  "released_at": null,
+  "released_by": null,
+  "released_signature": null,
+  "released_version": null,
+  "runtime": {
+    "python": [
+      "polars"
+    ]
+  },
+  "schema": 1,
+  "snapshot_version": "10.200.1951-SNAPSHOT",
+  "targets": [
+    {
+      "kind": "served"
+    },
+    {
+      "kind": "embedded",
+      "language": "python"
+    }
+  ]
+}

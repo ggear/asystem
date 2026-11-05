@@ -1,0 +1,31 @@
+{
+  "content_sha256": "bf4042a80f40a0640f4b19c4717a560b0c145ea6bd0dee6167d24080e2a5e1ae",
+  "inputs_sha256": "7c19bc8e03f9264f6f95df222b726f42655c5fd11fe5aa8340c096d17a1ab1ad",
+  "passed": [],
+  "released_at": null,
+  "released_by": null,
+  "released_signature": null,
+  "released_version": null,
+  "runtime": {
+    "wasm": []
+  },
+  "schema": 1,
+  "snapshot_version": "10.200.1951-SNAPSHOT",
+  "targets": [
+    {
+      "kind": "served"
+    },
+    {
+      "kind": "embedded",
+      "language": "python"
+    },
+    {
+      "kind": "embedded",
+      "language": "go"
+    },
+    {
+      "kind": "embedded",
+      "language": "rust"
+    }
+  ]
+}

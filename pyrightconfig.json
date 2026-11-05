@@ -37,7 +37,6 @@
     "src/may/_debian_may/src/build/python",
     "src/may/influxdb3/src/build/python",
     "src/may/mlflow/src/build/python",
-    "src/may/mlflow/src/main/python",
     "src/may/mlflow/src/test/python",
     "src/may/mlserver/src/build/python",
     "src/may/mlserver/src/main/python",
@@ -52,6 +51,8 @@
     "src/meg/tasmota/src/build/python",
     "src/meg/vernemq/src/build/python",
     "src/meg/vernemq/src/test/python",
+    "src/rue/datascience/src/main/python",
+    "src/rue/datascience/src/test/python",
     "src/rue/kasa/src/build/python",
     "src/rue/photos/src/build/python",
     "src/zzz/appdaemon/src/build/python",
@@ -309,6 +310,14 @@
     {
       "root": "src/meg/vernemq/src",
       "extraPaths": [
+        "src/all/_/src/build/python",
+        "."
+      ]
+    },
+    {
+      "root": "src/rue/datascience/src",
+      "extraPaths": [
+        "src/rue/datascience/src/main/python",
         "src/all/_/src/build/python",
         "."
       ]

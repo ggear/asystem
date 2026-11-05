@@ -1,0 +1,37 @@
+{
+  "spec_version": 1,
+  "name": "example_wasm_accumulate",
+  "signature_version": 1,
+  "flavour": "wasm",
+  "provenance": {
+    "source": "manual",
+    "trained_on": "synthetic line, training split",
+    "inputs": [
+      "example/wasm/accumulate/data/training/2026-11-03_16-40-51/wasm_accumulate_training_2026-11-03_2026-11-03.csv",
+      "example/wasm/accumulate/data/golden/2026-11-03_16-40-51/wasm_accumulate_golden.csv"
+    ],
+    "notes": "least squares line, gain and offset built into the module",
+    "implementation": "hand-written WebAssembly text compiled with wasmtime.wat2wasm"
+  },
+  "files": {
+    "signature": {
+      "path": "signature.json",
+      "sha256": "32d8446946254d0a956958f64e644b6f7559555f4849cce6217f09ccd3d4186a"
+    },
+    "golden": {
+      "path": "golden.json",
+      "sha256": "7c7816ee6f9459beb0d6fc25bfb24abdf6a33ed836d0510e03da6f32207ddafb"
+    },
+    "evaluation": {
+      "path": "evaluation.json",
+      "sha256": "1bd56e57f4588312348872916fb935c91ec3e6cdac18a5c7a82589c3cbb28431"
+    },
+    "model": {
+      "path": "model.wasm",
+      "sha256": "9c019ced5a2b5dea927a83486eca770d3fbbb4047ae6445eb60233753ae7950e"
+    }
+  },
+  "runtime": {
+    "wasm": []
+  }
+}

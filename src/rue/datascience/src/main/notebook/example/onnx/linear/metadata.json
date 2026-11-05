@@ -1,0 +1,21 @@
+{
+  "content_sha256": "8004dbdd18946d2606c5d9773676bb626c29ab24eff633ac1895dace88ce7a60",
+  "inputs_sha256": "5041fa9239b41ad52c16e57cc2906c7ff4e68aa2112ae841920ff17be71af4f9",
+  "passed": [],
+  "released_at": null,
+  "released_by": null,
+  "released_signature": null,
+  "released_version": null,
+  "runtime": {},
+  "schema": 1,
+  "snapshot_version": "10.200.1951-SNAPSHOT",
+  "targets": [
+    {
+      "kind": "served"
+    },
+    {
+      "kind": "embedded",
+      "language": "python"
+    }
+  ]
+}

@@ -852,8 +852,8 @@ def _build(context, filter_module=None, filter_host=None, is_release=False):
             _run_local(context, f"ruff format {python_paths}", module)
             _print_line("Type checking sources ...")
             _run_local(context, f"pyright --project {ROOT_DIR} {python_paths}", module)
-        notebook_paths = " ".join(relpath(path, join(ROOT_MODULE_DIR, module)) for path in sorted(glob.glob(join(ROOT_MODULE_DIR, module, "src/main/model/*/*/*/*.ipynb"))))
-        model_paths = " ".join(relpath(path, join(ROOT_MODULE_DIR, module)) for path in sorted(glob.glob(join(ROOT_MODULE_DIR, module, "src/main/model/*/*/*/model.py"))))
+        notebook_paths = " ".join(relpath(path, join(ROOT_MODULE_DIR, module)) for path in sorted(glob.glob(join(ROOT_MODULE_DIR, module, "src/main/notebook/*/*/*/*.ipynb"))))
+        model_paths = " ".join(relpath(path, join(ROOT_MODULE_DIR, module)) for path in sorted(glob.glob(join(ROOT_MODULE_DIR, module, "src/main/notebook/*/*/*/model.py"))))
         if model_paths:
             _print_line("Linting models ...")
             _run_local(context, f"ruff check --fix {model_paths}", module)
@@ -864,7 +864,7 @@ def _build(context, filter_module=None, filter_host=None, is_release=False):
             _run_local(context, f"ruff format {notebook_paths}", module)
             shared_python_path = glob.glob(join(ROOT_MODULE_DIR, "*", SHARED_MODULE_NAME, "src/build/python"))[0]
             _run_local(context, f"PYTHONPATH={shared_python_path} python -W ignore -m asystem.notebook --fix {notebook_paths}", module)
-            workspace_paths = " ".join(relpath(path, join(ROOT_MODULE_DIR, module)) for path in sorted(glob.glob(join(ROOT_MODULE_DIR, module, "src/main/model/*/*/*/"))))
+            workspace_paths = " ".join(relpath(path, join(ROOT_MODULE_DIR, module)) for path in sorted(glob.glob(join(ROOT_MODULE_DIR, module, "src/main/notebook/*/*/*/"))))
             _run_local(context, f"PYTHONPATH={shared_python_path} python -W ignore -m asystem.workspace {workspace_paths}", module)
         if isfile(join(ROOT_MODULE_DIR, module, "src/setup.py")):
             _run_local(context, "python setup.py sdist", join(module, "target/package"))
@@ -909,6 +909,7 @@ def _build(context, filter_module=None, filter_host=None, is_release=False):
 
 
 def _test_unit(context, filter_module=None):
+    _test_models(context, "unittest", filter_module=filter_module)
     for module in _get_modules(context, "src/test/python/unit/unit_test.py", filter_module=filter_module):
         _print_header(module, "unit test")
         _print_line("Running unit tests ...")
@@ -918,6 +919,8 @@ def _test_unit(context, filter_module=None):
         )
         _print_footer(module, "unit test")
     for module in _get_modules(context, "src/main/go", filter_module=filter_module):
+        if not isdir(join(ROOT_MODULE_DIR, module, "src/main/go", _get_service(module))):
+            continue
         _print_header(module, "unit test")
         _print_line("Running unit tests ...")
         _run_external(
@@ -978,15 +981,15 @@ def _schema(context, filter_module=None):
             _print_footer(module, "schema")
 
 
-def _test_models(context, filter_module=None):
-    for module in _get_modules(context, "src/main/resources/model.sh", filter_module=filter_module):
-        _print_header(module, "model test")
-        _run_local(context, "src/main/resources/model.sh check", module)
-        _print_footer(module, "model test")
+def _test_models(context, verb, filter_module=None):
+    for module in _get_modules(context, "src/build/resources/model.sh", filter_module=filter_module):
+        _print_header(module, f"model {verb}")
+        _run_local(context, f"src/build/resources/model.sh {verb}", module)
+        _print_footer(module, f"model {verb}")
 
 
 def _test_sys(context, filter_module=None):
-    _test_models(context, filter_module=filter_module)
+    _test_models(context, "systest", filter_module=filter_module)
     for module in _get_modules(context, "src/test/*/system", filter_module=filter_module):
         _up_module(context, module, is_test=True)
         _print_header(module, "system test")
@@ -1033,14 +1036,13 @@ def _deploy(context):
 
 
 def _release_models(context, module):
-    model_script = join(ROOT_MODULE_DIR, module, "src/main/resources/model.sh")
-    if isfile(model_script) and FAB_SKIP_TESTS in os.environ:
-        _print_line("Checking models ...")
-        _run_local(context, "src/main/resources/model.sh check", module)
     shared_python_path = glob.glob(join(ROOT_MODULE_DIR, "*", SHARED_MODULE_NAME, "src/build/python"))[0]
-    if isfile(join(ROOT_MODULE_DIR, module, "src/build/resources/model/release/project.json")):
+    if isfile(join(ROOT_MODULE_DIR, module, "src/build/resources/model/project.json")):
         _print_line("Checking release model ...")
-        _run_local(context, f"PYTHONPATH={shared_python_path} python -W ignore -m asystem.model check-release src/build/resources/model/release", module)
+        _run_local(context, f"PYTHONPATH={shared_python_path} python -W ignore -m asystem.model check-release src/build/resources/model --source-dir {ROOT_MODULE_DIR}", module)
+    if isfile(join(ROOT_MODULE_DIR, module, "src/build/resources/model.sh")):
+        _print_line("Releasing models ...")
+        _run_local(context, f"src/build/resources/model.sh release {_get_versions_next()[0]}", module)
 
 
 def _release(context):

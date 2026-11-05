@@ -1,0 +1,42 @@
+{
+  "datasets": {
+    "validation": [
+      {
+        "path": "2026-11-03_16-40-51/wasm_accumulate_validation_2026-11-03_2026-11-03.csv",
+        "sha256": "da4efb03cfb1b3900ec80379613191723d8eacc3ac7ab55e4e253ffb949d92ac"
+      }
+    ],
+    "backtest": [
+      {
+        "path": "2026-11-03_16-40-51/wasm_accumulate_backtest_2026-11-03_2026-11-03.csv",
+        "sha256": "759defd7a250cd2feeeae48dff1515283caf54e19faa9ad84d5c60c3ab88b215"
+      }
+    ]
+  },
+  "checks": [
+    {
+      "split": "validation",
+      "output": "example_wasm_out",
+      "name": "rmse",
+      "value": 0.03316624790355297,
+      "limit": 0.5,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 0.06633249580710594
+    },
+    {
+      "split": "backtest",
+      "output": "example_wasm_out",
+      "name": "rmse",
+      "value": 0.03301514803843781,
+      "limit": 0.5,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 0.06603029607687562
+    }
+  ],
+  "passed": true,
+  "budget": 0.06633249580710594
+}

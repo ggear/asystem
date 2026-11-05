@@ -33,7 +33,7 @@ func pruneBackupRuns(ctx context.Context, subject scribe.Subject, dir string, po
 	}
 	if len(doomed)*2 > len(runs) {
 		err := fmt.Errorf("prune of [%s] refused, [%d] of [%d] runs fall outside the keep set which is more than half", dir, len(doomed), len(runs))
-		scribe.Log(scribe.SourceBackup, subject, scribe.ActionRemove).Errorf("faulting", time.Now(), "%v", err)
+		scribe.Log(scribe.SourceBackup, subject, scribe.ActionRemove).Errorf("faulting", time.Now(), "[%s] refused with [%d] of [%d] runs outside the keep set", dir, len(doomed), len(runs))
 		return err
 	}
 	for _, name := range doomed {
