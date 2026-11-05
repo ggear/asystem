@@ -5,7 +5,7 @@ from os.path import dirname, join
 
 
 def demo_project(flavour, golden_out=None, tolerance=None):
-    from asystem.model import build_signature, evaluate_acceptance, package_project, signature_input, signature_output
+    from workbench.model import build_signature, evaluate_acceptance, package_project, signature_input, signature_output
 
     work_dir = tempfile.mkdtemp()
     model_path = join(work_dir, {"wasm": "model.wasm", "onnx": "model.onnx", "pyfunc": "model.py"}[flavour])

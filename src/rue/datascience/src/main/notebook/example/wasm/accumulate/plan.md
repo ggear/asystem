@@ -59,7 +59,7 @@ The golden states a tolerance of 1e-9, absolute and relative, for the outputs th
 
 ## Parity
 
-`python -m asystem.model replay` runs the golden through the Python runtime and compares every response exactly. The Rust and Go replays are in `src/may/mlflow/src/main/{rust,go}/modelreplay`, and the parity test runs all of them over this project.
+`python -m workbench.model replay` runs the golden through the Python runtime and compares every response exactly. The Rust and Go replays are in `src/may/mlflow/src/main/{rust,go}/modelreplay`, and the parity test runs all of them over this project.
 
 ## To do
 

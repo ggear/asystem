@@ -76,3 +76,4 @@ src/mad/wrangle/src/test/resources/repos/release/bank/*/data/*
 
 src/max/grafana/src/main/resources/image/plugins
 mlruns
+src/may/mlserver/src/main/python/serving/run_*.py

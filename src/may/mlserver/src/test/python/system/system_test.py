@@ -8,10 +8,10 @@ from os.path import abspath, dirname, join, realpath
 
 import pytest
 
-sys.path.append("../../../../../../all/_/src/build/python")
+sys.path.append("../../../../../../rue/datascience/src/main/python")
 
-from asystem.demo import demo_project
-from asystem.model import register_project
+from workbench.demo import demo_project
+from workbench.model import register_project
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 TIMEOUT_WARMUP = 300

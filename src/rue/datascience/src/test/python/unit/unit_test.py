@@ -124,8 +124,8 @@ class BuildWasmTest(unittest.TestCase):
     def test_a_maths_function_is_imported_and_runs_through_the_python_hosts(self):
         import math
 
-        from asystem.model import build_signature, signature_input, signature_output
-        from asystem.replay import model_predict
+        from workbench.model import build_signature, signature_input, signature_output
+        from workbench.replay import model_predict
         from workbench.wasm import add, atan, build_wasm, const, exp, feature, log, mul, tanh
 
         built = build_wasm(1, [add(mul(atan(feature(0)), const(2.0)), const(1.0)), exp(feature(0)), log(feature(0)), tanh(feature(0))])
@@ -148,8 +148,8 @@ class BuildWasmTest(unittest.TestCase):
         self.assertEqual(float("inf"), predict({"demo_in_seconds": [1000.0]})["demo_b_seconds"][0])
 
     def predictor(self, built, names):
-        from asystem.model import build_signature, signature_input, signature_output
-        from asystem.replay import model_predict
+        from workbench.model import build_signature, signature_input, signature_output
+        from workbench.replay import model_predict
 
         path = join(tempfile.mkdtemp(), "model.wasm")
         with open(path, "wb") as model_file:
@@ -216,8 +216,8 @@ class BuildWasmTest(unittest.TestCase):
     def test_every_maths_function_agrees_with_numpy_at_the_edges_of_its_domain(self):
         import math
 
-        from asystem.model import WASM_MATH_FUNCTIONS
         from workbench import wasm
+        from workbench.model import WASM_MATH_FUNCTIONS
 
         edges = [0.0, -0.0, 0.5, -0.5, 1.0, -1.0, 2.0, -3.0, 710.0, -710.0, 1000.0, -1000.0, float("inf"), float("-inf"), float("nan")]
         rights = [-1.0, -2.0, 0.5, 2.0, 3.0, 1e300]
@@ -316,7 +316,7 @@ class ReplayRunnerTest(unittest.TestCase):
     def project(self, flavour, model_bytes=None, samples=None, tolerance=None):
         import wasmtime
 
-        from asystem.model import build_signature, evaluate_acceptance, package_project, signature_input, signature_output
+        from workbench.model import build_signature, evaluate_acceptance, package_project, signature_input, signature_output
 
         work_dir = tempfile.mkdtemp()
         model_path = None
@@ -368,7 +368,7 @@ class ReplayRunnerTest(unittest.TestCase):
     def retouch(self, project_dir, change):
         import json
 
-        from asystem.model import file_sha256
+        from workbench.model import file_sha256
 
         golden_path = join(project_dir, "golden.json")
         with open(golden_path) as golden_file:
@@ -407,8 +407,8 @@ class ReplayRunnerTest(unittest.TestCase):
             self.assertEqual(0, completed.returncode, f"{host} {completed.stderr}")
 
     def test_each_runner_provides_every_maths_function_within_a_stated_tolerance(self):
-        from asystem.model import WASM_MATH_FUNCTIONS
         from workbench import wasm
+        from workbench.model import WASM_MATH_FUNCTIONS
 
         for name, arity in WASM_MATH_FUNCTIONS.items():
             function = getattr(wasm, "power" if name == "pow" else name)
@@ -455,15 +455,10 @@ class ReplayRunnerTest(unittest.TestCase):
 
 
 class ConsumerSourceTest(unittest.TestCase):
-    def test_the_python_consumer_loads_projects_with_the_same_source_as_mlserver(self):
-        for name in ("run_static", "run_wasm", "run_onnx", "run_pyfunc"):
-            with open(join(DIR_ROOT, f"src/main/python/consumer/{name}.py"), "rb") as consumer_file, open(join(DIR_ROOT, f"../../may/mlserver/src/main/python/serving/{name}.py"), "rb") as served_file:
-                self.assertEqual(served_file.read(), consumer_file.read(), name)
-
     def test_every_host_provides_exactly_the_maths_functions_of_the_spec(self):
         import re
 
-        from asystem.model import WASM_MATH_FUNCTIONS
+        from workbench.model import WASM_MATH_FUNCTIONS
 
         def read(path):
             with open(join(DIR_ROOT, path)) as source_file:
@@ -510,4 +505,4 @@ class ConsumerSourceTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    sys.exit(run_pytest("datascience/unittest", ["-s", "-o", f"cache_dir={join(DIR_ROOT, 'target/.pytest_cache')}", __file__]))
+    sys.exit(run_pytest("datascience/unittest", ["-s", "-o", f"cache_dir={join(DIR_ROOT, 'target/.pytest_cache')}", __file__, join(dirname(__file__), "library_test.py")]))

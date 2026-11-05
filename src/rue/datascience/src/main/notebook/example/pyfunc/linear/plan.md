@@ -42,7 +42,7 @@ The notebook owns the limits (`model.md` 6.8). Two gating checks on `example_pyf
 
 ## Parity
 
-`python -m asystem.model replay` runs the golden through the Python runtime and compares every response exactly. The Rust and Go replays are in `src/may/mlflow/src/main/{rust,go}/modelreplay`, and the parity test runs all of them over this project.
+`python -m workbench.model replay` runs the golden through the Python runtime and compares every response exactly. The Rust and Go replays are in `src/may/mlflow/src/main/{rust,go}/modelreplay`, and the parity test runs all of them over this project.
 
 ## To do
 

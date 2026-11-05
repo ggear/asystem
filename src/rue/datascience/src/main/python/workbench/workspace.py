@@ -4,8 +4,8 @@ import sys
 from os import listdir
 from os.path import basename, dirname, isdir, join, splitext
 
-from asystem.metadata import METADATA_FILE, PROJECT_DIR
-from asystem.model import PROJECT_MODEL_FILES, PROJECT_NAME, PROJECT_SPLITS
+from workbench.metadata import METADATA_FILE, PROJECT_DIR
+from workbench.model import PROJECT_MODEL_FILES, PROJECT_NAME, PROJECT_SPLITS
 
 WORKSPACE_TIMESTAMP = re.compile(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$")
 WORKSPACE_DATE_RANGE = re.compile(r"_\d{4}-\d{2}-\d{2}_\d{4}-\d{2}-\d{2}$")
@@ -42,7 +42,7 @@ def lint_workspace(notebook_dir):
 
 
 def main(arguments=None):
-    parser = argparse.ArgumentParser(prog="asystem.workspace")
+    parser = argparse.ArgumentParser(prog="workbench.workspace")
     parser.add_argument("paths", nargs="+")
     options = parser.parse_args(arguments)
     failed = False

@@ -36,4 +36,4 @@ Every other split is unused.
 
 ## To do
 
-1. A Rust and a Go loader that validate the project at load and replay the golden sequence (`model.md` R8). The Python replay is built (`python -m asystem.model replay`).
+1. A Rust and a Go loader that validate the project at load and replay the golden sequence (`model.md` R8). The Python replay is built (`python -m workbench.model replay`).

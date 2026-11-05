@@ -80,6 +80,7 @@
       "root": "src/all/_/src",
       "extraPaths": [
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -88,6 +89,7 @@
       "extraPaths": [
         "src/all/media/src/main/python",
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -95,6 +97,7 @@
       "root": "src/all/storage/src",
       "extraPaths": [
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -102,6 +105,7 @@
       "root": "src/all/supervisor/src",
       "extraPaths": [
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -109,6 +113,7 @@
       "root": "src/dar/udmutilities/src",
       "extraPaths": [
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -116,6 +121,7 @@
       "root": "src/jen/_debian_jen/src",
       "extraPaths": [
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -124,6 +130,7 @@
       "extraPaths": [
         "src/jen/weewx/src/main/python",
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -131,6 +138,7 @@
       "root": "src/jen/zigbee2mqtt/src",
       "extraPaths": [
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -138,6 +146,7 @@
       "root": "src/jil/_debian_jil/src",
       "extraPaths": [
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -145,6 +154,7 @@
       "root": "src/mad/_fedora_mad/src",
       "extraPaths": [
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -152,6 +162,7 @@
       "root": "src/mad/network/src",
       "extraPaths": [
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -159,6 +170,7 @@
       "root": "src/mad/plex/src",
       "extraPaths": [
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -166,6 +178,7 @@
       "root": "src/mad/postgres/src",
       "extraPaths": [
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -173,6 +186,7 @@
       "root": "src/mad/sabnzbd/src",
       "extraPaths": [
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -181,6 +195,7 @@
       "extraPaths": [
         "src/mad/wrangle/src/main/python",
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -188,6 +203,7 @@
       "root": "src/max/_fedora_max/src",
       "extraPaths": [
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -195,6 +211,7 @@
       "root": "src/max/cloudflare/src",
       "extraPaths": [
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -203,6 +220,7 @@
       "extraPaths": [
         "src/max/grafana/src/main/python",
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -210,6 +228,7 @@
       "root": "src/max/letsencrypt/src",
       "extraPaths": [
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -217,6 +236,7 @@
       "root": "src/max/openra/src",
       "extraPaths": [
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -224,6 +244,7 @@
       "root": "src/max/rackmains/src",
       "extraPaths": [
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -231,6 +252,7 @@
       "root": "src/may/_debian_may/src",
       "extraPaths": [
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -238,6 +260,7 @@
       "root": "src/may/influxdb3/src",
       "extraPaths": [
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -246,6 +269,7 @@
       "extraPaths": [
         "src/may/mlflow/src/main/python",
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -254,6 +278,7 @@
       "extraPaths": [
         "src/may/mlserver/src/main/python",
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -261,6 +286,7 @@
       "root": "src/may/sonarr/src",
       "extraPaths": [
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -268,6 +294,7 @@
       "root": "src/may/tempstat/src",
       "extraPaths": [
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -275,6 +302,7 @@
       "root": "src/meg/_debian_meg/src",
       "extraPaths": [
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -282,6 +310,7 @@
       "root": "src/meg/homeassistant/src",
       "extraPaths": [
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -289,6 +318,7 @@
       "root": "src/meg/mariadb/src",
       "extraPaths": [
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -296,6 +326,7 @@
       "root": "src/meg/nginx/src",
       "extraPaths": [
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -304,6 +335,7 @@
       "extraPaths": [
         "src/meg/tasmota/src/main/python",
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -311,6 +343,7 @@
       "root": "src/meg/vernemq/src",
       "extraPaths": [
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -319,6 +352,7 @@
       "extraPaths": [
         "src/rue/datascience/src/main/python",
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -327,6 +361,7 @@
       "extraPaths": [
         "src/rue/kasa/src/main/python",
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -335,6 +370,7 @@
       "extraPaths": [
         "src/rue/photos/src/main/python",
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -343,6 +379,7 @@
       "extraPaths": [
         "src/zzz/appdaemon/src/main/python",
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -351,6 +388,7 @@
       "extraPaths": [
         "src/zzz/backup/src/main/python",
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -358,6 +396,7 @@
       "root": "src/zzz/monitor/src",
       "extraPaths": [
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -365,6 +404,7 @@
       "root": "src/zzz/rhasspy/src",
       "extraPaths": [
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     },
@@ -372,6 +412,7 @@
       "root": "src/zzz/unpoller/src",
       "extraPaths": [
         "src/all/_/src/build/python",
+        "src/rue/datascience/src/main/python",
         "."
       ]
     }

@@ -8,10 +8,10 @@ from os.path import isfile, join
 import nbformat
 from nbclient import NotebookClient
 
-from asystem.errors import GateError
-from asystem.metadata import PROJECT_DIR, lint_metadata
-from asystem.model import PROJECT_MANIFEST
 from asystem.report import stage, subject
+from workbench.errors import GateError
+from workbench.metadata import PROJECT_DIR, lint_metadata
+from workbench.model import PROJECT_MANIFEST
 
 KERNEL = "asystem"
 CELL_TIMEOUT = 1800

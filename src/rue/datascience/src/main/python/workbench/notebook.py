@@ -5,7 +5,7 @@ import re
 import sys
 from os.path import abspath, basename, dirname, isfile, join
 
-from asystem.model import PROJECT_FLAVOURS, PROJECT_SPLITS, check_name, registered_name
+from workbench.model import PROJECT_FLAVOURS, PROJECT_SPLITS, check_name, registered_name
 
 NOTEBOOK_FORMAT = 4
 NOTEBOOK_SECTIONS = ("Setup", "Capture Data", "Explore", "Fit", "Evaluate", "Package", "Register", "Pull")
@@ -101,7 +101,7 @@ def scaffold_notebook(root, module, model, notebook, flavour):
 
 
 def main(arguments=None):
-    parser = argparse.ArgumentParser(prog="asystem.notebook")
+    parser = argparse.ArgumentParser(prog="workbench.notebook")
     commands = parser.add_subparsers(dest="command")
     new = commands.add_parser("new")
     new.add_argument("module")
@@ -165,7 +165,7 @@ def _scaffold_notebook(module, model, notebook, name, flavour):
     cells += [
         section("Package", "5, package.", "write the golden samples, build the signature and write the project with its evaluation (R1, R3, R14)."),
         code(
-            "from asystem.model import build_signature, package_project, signature_input, signature_output\n" + ("from asystem.replay import require_replay\n" if static else "") + "\n"
+            "from workbench.model import build_signature, package_project, signature_input, signature_output\n" + ("from workbench.replay import require_replay\n" if static else "") + "\n"
             f'golden_pl, golden_path = golden_data(WORKSPACE, GOLDEN, lambda: {{"{module}_{model}_in": [1.0, None], "expect": ["ok", "error"]}})\n\n'
             f'signature = build_signature(MODEL_NAME, [signature_input("{module}_{model}_in", "none", "An input.")], [signature_output("{module}_{model}_out", "none", "An output.")])\n'
             "project_dir = scratch_project_dir(WORKSPACE)\n"
@@ -182,7 +182,7 @@ def _scaffold_notebook(module, model, notebook, name, flavour):
             "6, register.",
             "register the verified project with the alias `preview` when it has a served target. `fab systest` runs this section and `fab unittest` does not (`model.md` 11.5).",
         ),
-        code('from asystem.model import register_preview\n\nversion = register_preview(project_dir, MODEL_NAME, env["MLFLOW_TRACKING_URI"], TARGETS)\nprint("registered version", version)'),
+        code('from workbench.model import register_preview\n\nversion = register_preview(project_dir, MODEL_NAME, env["MLFLOW_TRACKING_URI"], TARGETS)\nprint("registered version", version)'),
     ]
     return {
         "cells": cells,

@@ -498,6 +498,7 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
         _print_footer(module, "generate env", host=filter_host)
     generate_pythonpath = [dirname(abspath(__file__)), *sorted(glob.glob(join(ROOT_MODULE_DIR, "*/*/src/build/python")))]
     shared_python_paths = [relpath(path, ROOT_DIR) for path in sorted(glob.glob(join(ROOT_MODULE_DIR, "*", SHARED_MODULE_NAME, "src/build/python")))]
+    model_python_path = relpath(join(ROOT_MODULE_DIR, MODEL_MODULE, "src/main/python"), ROOT_DIR)
     pyright_includes = []
     pyright_environments = []
     for module_source_path in sorted(glob.glob(join(ROOT_MODULE_DIR, "*/*/src"))):
@@ -508,7 +509,7 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
             pyright_environments.append(
                 {
                     "root": relpath(module_source_path, ROOT_DIR),
-                    "extraPaths": ([relpath(module_main_path, ROOT_DIR)] if isdir(module_main_path) else []) + shared_python_paths + ["."],
+                    "extraPaths": ([relpath(module_main_path, ROOT_DIR)] if isdir(module_main_path) else []) + shared_python_paths + [model_python_path, "."],
                 }
             )
     pyright_includes.extend(_python_files_adopted())
@@ -862,10 +863,10 @@ def _build(context, filter_module=None, filter_host=None, is_release=False):
             _print_line("Linting notebooks ...")
             _run_local(context, f"ruff check --fix {notebook_paths}", module)
             _run_local(context, f"ruff format {notebook_paths}", module)
-            shared_python_path = glob.glob(join(ROOT_MODULE_DIR, "*", SHARED_MODULE_NAME, "src/build/python"))[0]
-            _run_local(context, f"PYTHONPATH={shared_python_path} python -W ignore -m asystem.notebook --fix {notebook_paths}", module)
+            model_python_path = join(ROOT_MODULE_DIR, MODEL_MODULE, "src/main/python")
+            _run_local(context, f"PYTHONPATH={model_python_path} python -W ignore -m workbench.notebook --fix {notebook_paths}", module)
             workspace_paths = " ".join(relpath(path, join(ROOT_MODULE_DIR, module)) for path in sorted(glob.glob(join(ROOT_MODULE_DIR, module, "src/main/notebook/*/*/*/"))))
-            _run_local(context, f"PYTHONPATH={shared_python_path} python -W ignore -m asystem.workspace {workspace_paths}", module)
+            _run_local(context, f"PYTHONPATH={model_python_path} python -W ignore -m workbench.workspace {workspace_paths}", module)
         if isfile(join(ROOT_MODULE_DIR, module, "src/setup.py")):
             _run_local(context, "python setup.py sdist", join(module, "target/package"))
         module_go_main_path = join(ROOT_MODULE_DIR, module, "src/main/go", _get_service(module))
@@ -1036,10 +1037,10 @@ def _deploy(context):
 
 
 def _release_models(context, module):
-    shared_python_path = glob.glob(join(ROOT_MODULE_DIR, "*", SHARED_MODULE_NAME, "src/build/python"))[0]
+    model_python_path = join(ROOT_MODULE_DIR, MODEL_MODULE, "src/main/python")
     if isfile(join(ROOT_MODULE_DIR, module, "src/build/resources/model/project.json")):
         _print_line("Checking release model ...")
-        _run_local(context, f"PYTHONPATH={shared_python_path} python -W ignore -m asystem.model check-release src/build/resources/model --source-dir {ROOT_MODULE_DIR}", module)
+        _run_local(context, f"PYTHONPATH={model_python_path} python -W ignore -m workbench.model check-release src/build/resources/model --source-dir {ROOT_MODULE_DIR}", module)
     if isfile(join(ROOT_MODULE_DIR, module, "src/build/resources/model.sh")):
         _print_line("Releasing models ...")
         _run_local(context, f"src/build/resources/model.sh release {_get_versions_next()[0]}", module)
@@ -1573,6 +1574,7 @@ INSTALL_DIR = "/var/lib/asystem/install"
 ROOT_DIR = dirname(abspath(__file__))
 ROOT_MODULE_DIR = join(ROOT_DIR, "src")
 SHARED_MODULE_NAME = "_"
+MODEL_MODULE = "rue/datascience"
 PYTHON_SOURCE_KINDS = ("build", "main", "test")
 
 GLOBAL_ENV_PATH = join(dirname(abspath(__file__)), ".env_fab")

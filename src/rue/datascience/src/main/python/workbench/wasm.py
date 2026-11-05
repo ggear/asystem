@@ -4,7 +4,7 @@ from numbers import Real
 import numpy
 import wasmtime
 
-from asystem.model import WASM_MATH_FUNCTIONS, WASM_MATH_MODULE
+from workbench.model import WASM_MATH_FUNCTIONS, WASM_MATH_MODULE
 
 BINARY = {"add": "f64.add", "sub": "f64.sub", "mul": "f64.mul", "div": "f64.div", "min": "f64.min", "max": "f64.max"}
 UNARY = {"neg": "f64.neg", "abs": "f64.abs", "sqrt": "f64.sqrt", "floor": "f64.floor", "ceil": "f64.ceil", "trunc": "f64.trunc", "nearest": "f64.nearest"}

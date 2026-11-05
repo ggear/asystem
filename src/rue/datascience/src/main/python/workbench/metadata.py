@@ -6,7 +6,7 @@ import shutil
 from glob import glob
 from os.path import isfile, join, relpath
 
-from asystem.errors import GateError
+from workbench.errors import GateError
 
 METADATA_FILE = "metadata.json"
 PROJECT_DIR = "project"

@@ -2,8 +2,8 @@ import os.path
 import shutil
 import tempfile
 
-from asystem.metadata import record_project as record_workspace_project
 from workbench.config import NOTEBOOK_DIR, PINS_PATH, VERSION_PATH
+from workbench.metadata import record_project as record_workspace_project
 
 
 def scratch_project_dir(workspace, output_dir=None):

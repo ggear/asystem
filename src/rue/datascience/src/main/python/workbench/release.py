@@ -7,9 +7,9 @@ import urllib.request
 from datetime import UTC, datetime
 from os.path import isdir, isfile, join
 
-from asystem.errors import GateError
-from asystem.metadata import METADATA_FILE, PROJECT_DIR, content_sha256, read_metadata, write_metadata
-from asystem.model import CONSUMER_MODEL_PATH, PROJECT_ALIAS_PREVIEW, PROJECT_ALIAS_RELEASE, PROJECT_MANIFEST, PROJECT_NAME, register_project, registered_name, registry_client
+from workbench.errors import GateError
+from workbench.metadata import METADATA_FILE, PROJECT_DIR, content_sha256, read_metadata, write_metadata
+from workbench.model import CONSUMER_MODEL_PATH, PROJECT_ALIAS_PREVIEW, PROJECT_ALIAS_RELEASE, PROJECT_MANIFEST, PROJECT_NAME, register_project, registered_name, registry_client
 
 NOTEBOOK_ROOT = "rue/datascience/src/main/notebook"
 RELEASE_FIXTURES = "example"

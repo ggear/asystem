@@ -1,20 +1,14 @@
 {
   "brightness": <number>,
   "color_mode": "<text>",
-  "color_options": "<text>",
   "color_temp": <number>,
   "color_temp_startup": <number>,
-  "effect": "<text>",
-  "identify": "<text>",
   "last_seen": "<text>",
   "linkquality": <number>,
   "power_on_behavior": "<text>",
   "state": "<text>",
   "update": {
     "installed_version": <number>,
-    "latest_release_notes": "<text>",
-    "latest_source": "<text>",
-    "latest_version": <number>,
-    "state": "<text>"
+    "latest_version": <number>
   }
 }

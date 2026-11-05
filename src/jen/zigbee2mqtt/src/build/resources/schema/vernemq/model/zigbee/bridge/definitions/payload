@@ -6977,6 +6977,11 @@
           "name": "<text>",
           "parameters": "<text>"
         },
+        "dataReportAlt": {
+          "ID": <number>,
+          "name": "<text>",
+          "parameters": "<text>"
+        },
         "dataResponse": {
           "ID": <number>,
           "name": "<text>",

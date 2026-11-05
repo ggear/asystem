@@ -9,11 +9,11 @@ from os.path import abspath, dirname, isdir, join, realpath
 import pytest
 
 sys.path.append("../../../main/python")
-sys.path.append("../../../../../../all/_/src/build/python")
+sys.path.append("../../../../../../rue/datascience/src/main/python")
 
-from asystem.demo import demo_project
 from registry.sync import ALIAS_PREVIEW, ALIAS_RELEASE, sync
 from serving.project import load_project
+from workbench.demo import demo_project
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 NAME = "demo_replay_double"
@@ -138,7 +138,7 @@ class SyncTest(unittest.TestCase):
 
 class ServingRuntimeTest(unittest.TestCase):
     def test_every_flavour_serves_what_replay_computes(self):
-        from asystem.replay import replay_project
+        from workbench.replay import replay_project
 
         for flavour in ("pyfunc", "wasm", "onnx"):
             project_dir = demo_project(flavour)

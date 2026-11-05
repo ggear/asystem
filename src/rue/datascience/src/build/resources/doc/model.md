@@ -51,13 +51,13 @@ The key words MUST, MUST NOT, SHOULD and MAY are to be read as in RFC 2119.
 | R14 | Parity | A project that is not `static` MUST carry an evaluation from an acceptance check its notebook defines, run through its shipped runtime, and MUST NOT be given the alias `release` unless every gating check has passed | Every model is enforced against its own limits, and the outcome is recorded the same way for all |
 | R15 | Parity | A notebook MUST run through its Package section from committed data, and a re-run MUST write the project its `metadata.json` hashes describe. A gate that is not met MUST fail the run, and a project whose acceptance failed MUST NOT be released | A notebook is evidence anyone can reproduce, and every gate fails loudly where it is not met |
 | R16 | Standard | A project MUST be version-free and content-addressed. Its release version is a label in `metadata.json` and in registry tags, issued as the release version of the `fab release` that changed its inputs, and an unchanged project MUST keep its label | The artifact that was tested is the artifact that ships |
-| R17 | Standard | The registry MUST be written only through `asystem.model`, from `metadata.json` and the project, and never read back for a decision except by a serving runtime choosing what to load. A serving runtime MUST refuse a model whose evaluation did not pass | The registry is a mirror of git |
+| R17 | Standard | The registry MUST be written only through `workbench.model`, from `metadata.json` and the project, and never read back for a decision except by a serving runtime choosing what to load. A serving runtime MUST refuse a model whose evaluation did not pass | The registry is a mirror of git |
 
 ## 3. Project
 
 ### 3.1 Files
 
-A project is a directory read the same way by every environment and written and checked by `asystem.model`.
+A project is a directory read the same way by every environment and written and checked by `workbench.model`.
 
 | File | Flavours | Content |
 |---|---|---|
@@ -124,7 +124,7 @@ A project states what a runtime must provide beyond the base, so a missing depen
 | `pyfunc` | `{"python": [<package>, ...]}` | `PYTHON_DEPS` in the notebook's Setup cell, passed to `package_project` as `python_deps` | The base packages `mlflow`, `numpy` and `pandas`, plus the declared packages |
 
 - A `python` entry is a package name and never a version. Its version is the one global pin in the root `py_deps_prod.txt`, the same pin `fab` gives every module that lists the name in its `py_deps.txt` (R11), and a name with no pin fails the Package stage. Names are matched ignoring case and `-`, `_` and `.`.
-- A `python` list is sorted and unique, and excludes the standard library and the base packages. Lint (PJ017) reads the imports of `model.py` and fails in both directions: an import with no entry, and an entry nothing imports. A package whose import name differs from its package name (`scikit-learn` and `sklearn`) is matched through a short table in `asystem.model`.
+- A `python` list is sorted and unique, and excludes the standard library and the base packages. Lint (PJ017) reads the imports of `model.py` and fails in both directions: an import with no entry, and an entry nothing imports. A package whose import name differs from its package name (`scikit-learn` and `sklearn`) is matched through a short table in `workbench.model`.
 - `fab systest` installs the base pins and every workspace's declared packages at their global pins into the test image, so an embedded Python target fails if the list is incomplete. For a `served` target, MD005 requires every declared package to be named in `mlserver`'s own `py_deps.txt`, from which `fab generate` writes its pins from the same global file, so the served image carries exactly the version the notebook was tested against.
 - Adding a dependency is a change of behaviour (R10), made in this order: add the package to the project wide pins, add its name to `mlserver`'s `py_deps.txt` (no version, since `fab generate` pins it), then release `mlserver`, add the name to `PYTHON_DEPS`, and rerun the notebook, which changes the content hash. A consumer that embeds the project in Python adds the same names to its own `py_deps.txt`. A Rust or Go consumer never embeds a `pyfunc`, and needs for a `wasm` project only the maths functions of 4.1.
 
@@ -143,14 +143,14 @@ manifest's `provenance.implementation` names what made it, and no implementation
 - Samples are independent, so `predict` holds no state between calls and the caller carries state from each response to the next request (R3).
 - A module is a fitted estimator. `fit` is not part of the ABI: fitting is offline, and the fitted attributes are built into the module.
 - A call MUST be bounded in time and memory. A host MUST meter fuel and cap memory.
-- A module MUST import nothing from its host except the maths functions of the table below, each imported from the module `asystem_math` with the type `(f64, ...) -> f64` of its arity. A host that runs a module MUST provide all of them, and they MUST give IEEE (C99) results for a value outside the domain: `log(0)` is negative infinity, `log` of a negative value, `asin` of a value above one and `sin` of an infinity are NaN, an overflowing `exp` or `cosh` is positive infinity, an overflowing `sinh` takes the sign of its argument, and `pow(0, y)` is infinity for a negative `y`. The Python host (`wasmtime`, in `asystem.replay` and the `run_wasm` files, which `mlserver` carries), the Go host (`wazero`) and the Rust host (`wasmi`) provide them from their standard libraries, and a module that imports any of them can be run only by a host that does.
+- A module MUST import nothing from its host except the maths functions of the table below, each imported from the module `asystem_math` with the type `(f64, ...) -> f64` of its arity. A host that runs a module MUST provide all of them, and they MUST give IEEE (C99) results for a value outside the domain: `log(0)` is negative infinity, `log` of a negative value, `asin` of a value above one and `sin` of an infinity are NaN, an overflowing `exp` or `cosh` is positive infinity, an overflowing `sinh` takes the sign of its argument, and `pow(0, y)` is infinity for a negative `y`. The Python host (`wasmtime`, in `workbench.replay` and the `run_wasm` files, which `mlserver` carries), the Go host (`wazero`) and the Rust host (`wasmi`) provide them from their standard libraries, and a module that imports any of them can be run only by a host that does.
 
   | Arity | Functions |
   |---|---|
   | 1 | `acos`, `asin`, `atan`, `cos`, `cosh`, `exp`, `log` (natural), `log10`, `log2`, `sin`, `sinh`, `tan`, `tanh` |
   | 2 | `atan2(y, x)`, `pow(base, exponent)` |
 
-  `sqrt`, `abs`, `floor`, `ceil`, `trunc`, `nearest`, `min` and `max` are WebAssembly instructions, exact on every host, and are never imported. The set is closed and owned by `WASM_MATH_FUNCTIONS` in `asystem.model`, which gives each name's arity; the Python `run_wasm` files, the Go host and the Rust host mirror it, and a test asserts the sets and arities are equal. Adding a function is an ABI change and a release of every consumer (R10): add it to the owner, to all three hosts and to this table, and bump the ABI version. Prefer 4.5 for a simple function the table lacks.
+  `sqrt`, `abs`, `floor`, `ceil`, `trunc`, `nearest`, `min` and `max` are WebAssembly instructions, exact on every host, and are never imported. The set is closed and owned by `WASM_MATH_FUNCTIONS` in `workbench.model`, which gives each name's arity; the Python `run_wasm` files, the Go host and the Rust host mirror it, and a test asserts the sets and arities are equal. Adding a function is an ABI change and a release of every consumer (R10): add it to the owner, to all three hosts and to this table, and bump the ABI version. Prefer 4.5 for a simple function the table lacks.
 - A module MUST export its linear memory as `memory` and `predict` as `predict(x: i32, n: i32, y: i32)`. The host writes `n` rows of float64 features, row-major, at byte offset `x`, calls `predict`, and reads `n` rows of float64 outputs from byte offset `y`. A host puts `x` at 0 and `y` immediately after the features.
 - The signature's tensors are named columns, so column `j` of `X` is the `j`-th feature in signature order, and a V2 request is stacked into `X` in that order.
 - A signature tensor of datatype `INT64` travels as float64, exact to 2^53, and the runtime casts it back by the signature. A larger value is invalid.
@@ -244,7 +244,7 @@ its flavour: `static` needs none, `wasm` needs one small host per language, `onn
 | Check Every Notebook | `fab unittest`, which runs `model.sh unittest` | Trusting a committed project nobody has reproduced |
 | Refresh Served Models | The `mlserver` sync loop (11.4) | Restarting the whole `mlflow` image to change a model |
 | Write the Registry | `register_preview` and the `datascience` release function only (R17) | Hand edits of versions, aliases or tags in the MLflow UI |
-| Register and Alias | `asystem.model.register_project` over `mlflow` | Hand-copying files between hosts |
+| Register and Alias | `workbench.model.register_project` over `mlflow` | Hand-copying files between hosts |
 
 ## 6. Workspace layout and data
 
@@ -318,7 +318,7 @@ A run held out for `validation` or `backtest` MUST NOT be moved into `training` 
 | `<module>/<model>/<notebook>/data/golden/<ts>/<dataset>.csv` | Fixed inputs with exact expected outputs | Generated from the shipped runtime, then committed | `write_project` (becomes `golden.json`) and the consumer's golden test |
 | `src/rue/datascience/target/notebook/<module>/<model>/<notebook>/notebook.ipynb` | An executed notebook | `notebook.sh`; not committed | A person reading the run |
 | MLflow Run and Registered Model `<name>` | The logged project and the aliases `preview` and `release` | The notebooks' register function sets `preview`; the `datascience` release function sets `release` | The `mlserver` sync loop, and a system test through `<name>_preview` |
-| `<consumer>/src/build/resources/model/` | The embedded copy of the released `project/`, committed | The consumer's `generate.sh`, through `python -m asystem.model embed` | The consumer's build, tests and image |
+| `<consumer>/src/build/resources/model/` | The embedded copy of the released `project/`, committed | The consumer's `generate.sh`, through `python -m workbench.model embed` | The consumer's build, tests and image |
 | `/asystem/mnt/models/<name>/` in `mlserver` | The served copy of the `release` project | `mlserver`'s start-up pull | The serving runtime |
 
 ### 6.5 The data cache
@@ -401,9 +401,9 @@ A model notebook:
 
 `fab build` lints every notebook under `src/main/notebook/*/*/*/` the way it lints Python, and rewrites the source:
 - `ruff check --fix` and `ruff format` run on the code cells, with the repo `ruff.toml`. E402 is ignored in notebooks, because an import sits at the top of the cell that first needs it, not of the notebook.
-- `python -m asystem.notebook --fix` strips outputs and execution counts and checks the notebook rules of section 10. The executed copy
+- `python -m workbench.notebook --fix` strips outputs and execution counts and checks the notebook rules of section 10. The executed copy
   is kept under `target/notebook`, never in the tree.
-- `python -m asystem.workspace` checks each workspace against the rules of section 10.
+- `python -m workbench.workspace` checks each workspace against the rules of section 10.
 - `ruff check --fix` and `ruff format` also run on a workspace's `model.py`, which is not type checked.
 
 A finding other than NB002 fails the build. Notebooks are not type checked, since `pyright` does not check `.ipynb` files from the command
@@ -460,7 +460,7 @@ exactly or within the golden tolerance, and exits 0, or exits 1 on a difference 
 | 6 | Register | Notebook | `register_preview(...)` | A registry version with the alias `preview`, for a project with a `served` target | The registry shows it with its tags |
 | 7 | Test targets | `fab systest` | 11.5 | The targets that passed, in `metadata.json` | Every declared target passed |
 | 8 | Release | `fab release` | 11.6 | The release version in `metadata.json`, `release` moved, `preview` removed | The label is `READY` in the production index |
-| 9 | Embed | The consumer's `generate.sh` | `python -m asystem.model embed <consumer dir> <source dir> <name>` | The released `project/` copied unchanged into the consumer's `src/build/resources/model/`, unstaged | The hash of the copy equals `content_sha256` in the workspace's `metadata.json` |
+| 9 | Embed | The consumer's `generate.sh` | `python -m workbench.model embed <consumer dir> <source dir> <name>` | The released `project/` copied unchanged into the consumer's `src/build/resources/model/`, unstaged | The hash of the copy equals `content_sha256` in the workspace's `metadata.json` |
 | 10 | Release the consumer | A person | The consumer's own `fab release` | A release of the consumer | `check-release` and the consumer's own tests |
 
 ### 7.2 Fab lifecycle
@@ -488,7 +488,7 @@ Each task includes the ones before it.
 ## 8. Procedure: adding a model
 
 1. Pick the flavour from section 3.2.
-2. Create `src/rue/datascience/src/main/notebook/<module>/<model>/<notebook>/` with `python -m asystem.notebook new`, and name it as section 6.1 requires.
+2. Create `src/rue/datascience/src/main/notebook/<module>/<model>/<notebook>/` with `python -m workbench.notebook new`, and name it as section 6.1 requires.
 3. Write the signature with `build_signature`, `signature_input`, `signature_output` and `signature_state`. An input name MUST be a metric name
    from its owning service, required outputs MUST be the ones the consumer cannot act without, and state slots are numbered in order.
 4. Put data under splits, with `query_influxdb3`, `read_data`, `golden_data` or `data_path`.
@@ -508,9 +508,9 @@ Each task includes the ones before it.
 `project/` of the workspace, and no other. A signature that grows additively is picked up by the next embed, and the consumer is rebuilt against it.
 
 ```bash
-export PYTHONPATH="${ROOT_DIR}/../../all/_/src/build/python${PYTHONPATH:+:${PYTHONPATH}}"
-python -m asystem.model embed "${ROOT_DIR}" "${ROOT_DIR}/../.." <name>
-[ ! -f "<dir>/project.json" ] || python -m asystem.model verify "<dir>"
+export PYTHONPATH="${ROOT_DIR}/../../rue/datascience/src/main/python${PYTHONPATH:+:${PYTHONPATH}}"
+python -m workbench.model embed "${ROOT_DIR}" "${ROOT_DIR}/../.." <name>
+[ ! -f "<dir>/project.json" ] || python -m workbench.model verify "<dir>"
 ```
 
 The pull needs `MLFLOW_TRACKING_URI` in the environment, read from the generated `.env`, which carries it from the `mlflow` run dependency. Every command MUST do nothing
@@ -524,7 +524,7 @@ MLflow owns data and lifecycle, MLServer only serves, and nothing is shared by a
 |---|---|---|
 | Notebooks and Their Data | `datascience` module, `src/main/notebook/<module>/<model>/<notebook>` | Fitting and registering MUST sit in the `datascience` module, apart from the tracking and serving containers; notebooks MUST be thin |
 | The `library` Package | `datascience` module, `src/main/python/workbench` | MUST have one module per concern (`config`, `env`, `data`, `project`, `plot`), an `__init__.py` holding only the shared path, and no logic in notebooks that belongs here |
-| Project Code | `_` module, `asystem.model` | One implementation, unit tested, and also a command: `python -m asystem.model` |
+| Project Code | `datascience` module, `workbench.model` | One implementation, unit tested, and also a command: `python -m workbench.model` |
 | Tracking DB, Registry, Artifact Storage | `mlflow` only | MUST run `--serve-artifacts` with `--artifacts-destination` on its own volume and `--default-artifact-root mlflow-artifacts:/`, so no client writes a path or needs a share |
 | Allowed Hosts | `mlflow` `.env_all` | MUST set `--allowed-hosts` and `--cors-allowed-origins`, since MLflow 3 rejects an unknown `Host` header |
 | Models in `mlserver` | A local volume | MUST be pulled by the sync loop (section 11.4), MUST replace a model only after its new copy verified, MUST NOT stop serving on a failed pull, and MUST bound every call with a timeout |
@@ -547,7 +547,7 @@ MLflow owns data and lifecycle, MLServer only serves, and nothing is shared by a
 
 A project, a notebook and a workspace MUST pass the checks below (R13). Each check has an identifier, which the tool prints with its
 finding. A project is checked by `verify_project`, which `write_project`, `package_project`, `register_project` and `pull_model` call, and by
-`python -m asystem.model verify` and `python -m asystem.model lint`, which prints every finding. A release is checked by `check_release`, which `fab release` runs through `check-release` for a consumer and `model.sh release` for a workspace. A notebook is checked by `python -m asystem.notebook` and a workspace by `python -m asystem.workspace`,
+`python -m workbench.model verify` and `python -m workbench.model lint`, which prints every finding. A release is checked by `check_release`, which `fab release` runs through `check-release` for a consumer and `model.sh release` for a workspace. A notebook is checked by `python -m workbench.notebook` and a workspace by `python -m workbench.workspace`,
 both run by `fab build`.
 
 ### 10.1 Invariants
@@ -610,22 +610,22 @@ Common operations are in two places, so a notebook states what it means and not 
 
 | Where | Helper | Does |
 |---|---|---|
-| `asystem.model` | `registered_name`, `check_name` | Derives a registered name from a model and a notebook, and checks the naming style |
-| `asystem.model` | `build_signature`, `signature_input`, `signature_output`, `signature_state` | Builds `signature.json` with every field the checks need |
-| `asystem.model` | `golden_step`, `golden_document`, `golden_from_samples` | Builds V2 requests and responses from named values or from dataset samples, with the datatype taken from the signature |
-| `asystem.model` | `package_project`, `write_project` | Builds the golden from samples and writes the project with its evaluation and its `runtime` (`python_deps` for a `pyfunc`, the module's imports for a `wasm`), then runs every project check |
-| `asystem.model` | `file_sha256`, `project_content_sha256` | Hash a file, and hash a project's content, so two registrations of the same content match |
-| `asystem.model` | `lint_project`, `verify_project` | Reports or raises every finding of 10.1 |
-| `asystem.model` | `register_project`, `pull_model` | Registers a project, logging its measured criteria as run metrics, and pulls one by selector |
-| `asystem.model` | `register_preview`, `registry_client` | Register a project with the alias `preview` when it has a served target, and open the registry client every registry call shares |
-| `asystem.model` | `registry_address` | Resolves the registry address, through `release`, `publish` and `status` |
-| `asystem.model` | `render_rust` | Generate Rust request and response types from `signature.json`, through `python -m asystem.model generate` |
-| `asystem.model` | `measure`, `evaluate_acceptance` | Measures a prediction against its truth with numpy, and runs a notebook's acceptance check into `evaluation.json` with the outcome and budget of each check |
-| `asystem.model` | `check_release` | Check that a project verifies and its acceptance passed, which a consumer's embedded project must also satisfy |
-| `asystem.replay` | `replay_project`, `require_replay`, `model_predict` | Replay a project's golden through its runtime in process and compare every response exactly or within the golden tolerance (RP001 to RP005), raising `GateError` when it differs, and load a model file as a predict function |
-| `asystem.metadata`, `asystem.release` | `record_project`, `record_passed`, `lint_metadata`, `release_workspaces`, `publish_workspace`, `embed_consumer`, `status_lines` | Write `project/` and `metadata.json`, record a passed target, lint the metadata, release and publish workspaces, embed a consumer and report drift, through `python -m asystem.model` |
-| `asystem.notebook`, `asystem.workspace` | `lint_notebook`, `fix_notebook`, `lint_workspace` | Report the findings of 10.1 for a notebook or a workspace, and strip a notebook's outputs |
-| `asystem.notebook` | `scaffold_notebook` | Writes a notebook, a plan and the data directories that already pass section 10, through `python -m asystem.notebook new <module> <model> <notebook> <flavour>` |
+| `workbench.model` | `registered_name`, `check_name` | Derives a registered name from a model and a notebook, and checks the naming style |
+| `workbench.model` | `build_signature`, `signature_input`, `signature_output`, `signature_state` | Builds `signature.json` with every field the checks need |
+| `workbench.model` | `golden_step`, `golden_document`, `golden_from_samples` | Builds V2 requests and responses from named values or from dataset samples, with the datatype taken from the signature |
+| `workbench.model` | `package_project`, `write_project` | Builds the golden from samples and writes the project with its evaluation and its `runtime` (`python_deps` for a `pyfunc`, the module's imports for a `wasm`), then runs every project check |
+| `workbench.model` | `file_sha256`, `project_content_sha256` | Hash a file, and hash a project's content, so two registrations of the same content match |
+| `workbench.model` | `lint_project`, `verify_project` | Reports or raises every finding of 10.1 |
+| `workbench.model` | `register_project`, `pull_model` | Registers a project, logging its measured criteria as run metrics, and pulls one by selector |
+| `workbench.model` | `register_preview`, `registry_client` | Register a project with the alias `preview` when it has a served target, and open the registry client every registry call shares |
+| `workbench.model` | `registry_address` | Resolves the registry address, through `release`, `publish` and `status` |
+| `workbench.model` | `render_rust` | Generate Rust request and response types from `signature.json`, through `python -m workbench.model generate` |
+| `workbench.model` | `measure`, `evaluate_acceptance` | Measures a prediction against its truth with numpy, and runs a notebook's acceptance check into `evaluation.json` with the outcome and budget of each check |
+| `workbench.model` | `check_release` | Check that a project verifies and its acceptance passed, which a consumer's embedded project must also satisfy |
+| `workbench.replay` | `replay_project`, `require_replay`, `model_predict` | Replay a project's golden through its runtime in process and compare every response exactly or within the golden tolerance (RP001 to RP005), raising `GateError` when it differs, and load a model file as a predict function |
+| `workbench.metadata`, `workbench.release` | `record_project`, `record_passed`, `lint_metadata`, `release_workspaces`, `publish_workspace`, `embed_consumer`, `status_lines` | Write `project/` and `metadata.json`, record a passed target, lint the metadata, release and publish workspaces, embed a consumer and report drift, through `python -m workbench.model` |
+| `workbench.notebook`, `workbench.workspace` | `lint_notebook`, `fix_notebook`, `lint_workspace` | Report the findings of 10.1 for a notebook or a workspace, and strip a notebook's outputs |
+| `workbench.notebook` | `scaffold_notebook` | Writes a notebook, a plan and the data directories that already pass section 10, through `python -m workbench.notebook new <module> <model> <notebook> <flavour>` |
 | `workbench.data` | `data_path`, `read_data`, `ensure_data`, `golden_data`, `query_influxdb3` | Resolves a dataset path, reads one, reads or writes a dataset when it is absent, and queries with the cache |
 | `workbench.project` | `scratch_project_dir`, `provenance`, `record_project` | Resolves a scratch project directory, or the same under `MODEL_OUTPUT_DIR`, builds `provenance` from data paths and records the project and its hashes in the workspace |
 | `workbench.env`, `workbench.plot` | `init_env`, `show_plot` | Loads the module environment, and plots a series |
@@ -684,7 +684,7 @@ Every run of a notebook, a unit test or a system test, in any flavour and langua
 - `mlflow` and `mlserver` MUST be only a container and its configuration. `mlserver` keeps its `serving` and `registry` packages, which MUST NOT be named `mlserver` or `mlflow`.
 - `datascience` MUST use `mlflow` and `mlserver` as production services, through the connection variables of its run dependencies and the `*_PROD` endpoints, as `supervisor` uses `vernemq`. It MUST NOT start, build or test them.
 - Each of `mlflow` and `mlserver` MUST test itself, in its own module. `mlserver` MUST test its `serving` and `registry` packages, its sync loop (fallback, a failed reload, an unreachable registry, an alias moved back, a failed version not retried) and its container, and `mlflow` MUST test its container and configuration. The tests of a project belong to `datascience`.
-- `asystem.model`, `asystem.replay` and `asystem.notebook` MUST stay in the shared library, since fab and every consumer's `generate.sh` import it.
+- `workbench.model`, `workbench.replay` and `workbench.notebook` MUST live in the `datascience` module, which owns the pipeline. fab and every consumer's `generate.sh` reach them as a command with that module's `src/main/python` on `PYTHONPATH`, and `replay` MUST run a model through the same Python `run_` files that the reference consumer and `mlserver` use.
 - `datascience` MUST have no `.group`, so it runs before every grouped module in each fab phase and has no per-host install. It MUST read its configuration from the generated `.env` and use the `*_PROD` variables for the production services.
 
 ### 11.2 Versions and metadata
@@ -705,7 +705,7 @@ Every run of a notebook, a unit test or a system test, in any flavour and langua
 - The version tags MUST mirror `metadata.json`: the whole file as one compact JSON tag, and `release_version`, `content_sha256` and `project_flavour` as scalars. A model is a datascience model when it carries `content_sha256` and `project_flavour`. The flow MUST be from git to the registry only.
 - A version registered before its release MUST carry the tag `snapshot_version` from `metadata.json`, which the release function MUST remove when it sets `release_version`. The tag is set when the version is first registered and is not changed by a later registration of the same content.
 - The tags MUST be set before `release` is moved, so a reader never sees an alias without its tags. A version that has carried `release` MUST NOT be deleted.
-- The registry MUST be written only through `asystem.model`.
+- The registry MUST be written only through `workbench.model`.
 
 ### 11.4 Serving
 

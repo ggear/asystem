@@ -6,10 +6,10 @@ import pytest
 
 sys.path.append("../../../../../../all/_/src/build/python")
 
-from asystem.metadata import METADATA_FILE, PROJECT_DIR, package_key, read_metadata, read_pins, record_passed
-from asystem.model import PROJECT_ALIAS_PREVIEW, GateError
-from asystem.release import clear_preview, wait_served, workspaces
 from asystem.report import run_pytest, stage
+from workbench.metadata import METADATA_FILE, PROJECT_DIR, package_key, read_metadata, read_pins, record_passed
+from workbench.model import PROJECT_ALIAS_PREVIEW, GateError
+from workbench.release import clear_preview, wait_served, workspaces
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 DIR_SOURCE = abspath(join(DIR_ROOT, "../.."))

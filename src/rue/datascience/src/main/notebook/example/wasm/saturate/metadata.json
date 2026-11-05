@@ -1,6 +1,6 @@
 {
   "content_sha256": "ade0ea06c3ee95f77b442229bbab419a05bfa9ffb0c022de5e68f26ce28010fd",
-  "inputs_sha256": "432f3f3c947d2cd405ba7c14899bc865f3f2a9e13baac4e6ed719c07fa8e2e5c",
+  "inputs_sha256": "37b3014e60b5b50bc95452b6225a9567c07372e67b3383d5873bffe3684abb7e",
   "passed": [],
   "released_at": null,
   "released_by": null,
@@ -12,7 +12,7 @@
     ]
   },
   "schema": 1,
-  "snapshot_version": null,
+  "snapshot_version": "10.200.1964-SNAPSHOT",
   "targets": [
     {
       "kind": "served"

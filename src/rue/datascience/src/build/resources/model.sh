@@ -11,7 +11,7 @@ SOURCE_DIR="$(cd "${ROOT_DIR}/../.." && pwd)"
 PYENV_BIN="${HOME}/.pyenv/versions/asystem/bin"
 OUTPUT_DIR="${ROOT_DIR}/target/model-output"
 COMMAND="${1:?usage: model.sh <unittest|systest|release|publish|status>}"
-export PYTHONPATH="${SOURCE_DIR}/all/_/src/build/python${PYTHONPATH:+:${PYTHONPATH}}"
+export PYTHONPATH="${ROOT_DIR}/src/main/python${PYTHONPATH:+:${PYTHONPATH}}"
 
 unittest() {
   rm -rf "${OUTPUT_DIR}"
@@ -27,16 +27,16 @@ release() {
   local version="${1:?usage: model.sh release <version> [--by <name>]}" by="${USER}"
   shift
   [[ "${1:-}" == "--by" ]] && by="${2:?--by needs a name}"
-  MLFLOW_TRACKING_URI="$(env_value MLFLOW_TRACKING_URI)" "${PYENV_BIN}/python" -W ignore -m asystem.model release "${SOURCE_DIR}" \
+  MLFLOW_TRACKING_URI="$(env_value MLFLOW_TRACKING_URI)" "${PYENV_BIN}/python" -W ignore -m workbench.model release "${SOURCE_DIR}" \
     --version "${version}" --by "${by}" --mlserver "$(mlserver_url)"
 }
 
 publish() {
-  MLFLOW_TRACKING_URI="$(env_value MLFLOW_TRACKING_URI)" "${PYENV_BIN}/python" -W ignore -m asystem.model publish "${SOURCE_DIR}" --mlserver "$(mlserver_url)"
+  MLFLOW_TRACKING_URI="$(env_value MLFLOW_TRACKING_URI)" "${PYENV_BIN}/python" -W ignore -m workbench.model publish "${SOURCE_DIR}" --mlserver "$(mlserver_url)"
 }
 
 status() {
-  MLFLOW_TRACKING_URI="$(env_value MLFLOW_TRACKING_URI)" "${PYENV_BIN}/python" -W ignore -m asystem.model status "${SOURCE_DIR}" --mlserver "$(mlserver_url)"
+  MLFLOW_TRACKING_URI="$(env_value MLFLOW_TRACKING_URI)" "${PYENV_BIN}/python" -W ignore -m workbench.model status "${SOURCE_DIR}" --mlserver "$(mlserver_url)"
 }
 
 run_notebooks() {
@@ -46,7 +46,7 @@ run_notebooks() {
     local target="${notebook_dir#"${ROOT_DIR}/src/main/notebook/"}"
     target="${target%/}"
     local state
-    state="$("${PYENV_BIN}/python" -W ignore -m asystem.model changed "${notebook_dir}" "${SOURCE_DIR}/../.py_deps_prod.txt")"
+    state="$("${PYENV_BIN}/python" -W ignore -m workbench.model changed "${notebook_dir}" "${SOURCE_DIR}/../.py_deps_prod.txt")"
     if [[ "${state}" == "unpackaged" ]]; then
       echo "--- SKIP: notebook ${target} (nothing packaged)"
       continue

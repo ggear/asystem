@@ -9,8 +9,8 @@ import sys
 import tempfile
 from os.path import basename, dirname, isfile, join, relpath
 
-from asystem.errors import GateError
-from asystem.metadata import content_sha256
+from workbench.errors import GateError
+from workbench.metadata import content_sha256
 
 PROJECT_SPEC_VERSION = 1
 CONSUMER_MODEL_PATH = "src/build/resources/model"
@@ -472,7 +472,7 @@ def fix_hints(rules):
 
 
 def main(arguments=None):
-    parser = argparse.ArgumentParser(prog="asystem.model")
+    parser = argparse.ArgumentParser(prog="workbench.model")
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("verify").add_argument("project_dir")
     commands.add_parser("replay").add_argument("project_dir")
@@ -524,7 +524,7 @@ def main(arguments=None):
             hints(rule for rule, _ in findings)
             return 1 if findings else 0
         elif options.command == "changed":
-            from asystem.metadata import inputs_changed
+            from workbench.metadata import inputs_changed
 
             with open(join(options.workspace_dir, "notebook.ipynb")) as notebook_file:
                 packages = any(cell["cell_type"] == "code" and "package_project(" in "".join(cell["source"]) for cell in json.load(notebook_file)["cells"])
@@ -533,7 +533,7 @@ def main(arguments=None):
             else:
                 print("changed" if inputs_changed(options.workspace_dir, options.pins_path) else "unchanged")
         elif options.command == "check-metadata":
-            from asystem.metadata import PROJECT_DIR, lint_metadata
+            from workbench.metadata import PROJECT_DIR, lint_metadata
 
             with open(join(options.workspace_dir, PROJECT_DIR, PROJECT_MANIFEST)) as manifest_file:
                 findings = lint_metadata(options.workspace_dir, json.load(manifest_file)["flavour"], options.pins_path, options.source_dir)
@@ -542,7 +542,7 @@ def main(arguments=None):
             hints(rule for rule, _ in findings)
             return 1 if findings else 0
         elif options.command == "release":
-            from asystem.release import release_workspaces, stale_consumers
+            from workbench.release import release_workspaces, stale_consumers
 
             tracking_uri = registry_address(os.environ.get("MLFLOW_TRACKING_URI"))
             released = release_workspaces(options.source_dir, options.version, options.by, tracking_uri, options.mlserver)
@@ -550,8 +550,8 @@ def main(arguments=None):
             for consumer in stale_consumers(options.source_dir):
                 print(f"WARN consumer embeds an older release [{relpath(consumer, options.source_dir)}]", file=sys.stderr)
         elif options.command == "publish":
-            from asystem.metadata import read_metadata
-            from asystem.release import publish_workspace, workspaces
+            from workbench.metadata import read_metadata
+            from workbench.release import publish_workspace, workspaces
 
             tracking_uri = registry_address(os.environ.get("MLFLOW_TRACKING_URI"))
             for name, directory in workspaces(options.source_dir).items():
@@ -559,18 +559,18 @@ def main(arguments=None):
                 if metadata is not None and metadata["released_version"] is not None and any(target["kind"] == "served" for target in metadata["targets"]):
                     print(f"published model [{name}] [{publish_workspace(name, directory, tracking_uri, options.mlserver)}]")
         elif options.command == "status":
-            from asystem.release import status_lines
+            from workbench.release import status_lines
 
             for level, message in status_lines(options.source_dir, os.environ.get("MLFLOW_TRACKING_URI") and registry_address(os.environ["MLFLOW_TRACKING_URI"]), options.mlserver):
                 print(f"{level} {message}", file=sys.stderr)
         elif options.command == "embed":
-            from asystem.release import embed_consumer
+            from workbench.release import embed_consumer
 
             print(f"embed [{embed_consumer(options.consumer_dir, options.source_dir, options.name)}] consumer [{options.consumer_dir}]")
         elif options.command == "check-release":
             findings = check_release(options.project_dir)
             if options.source_dir:
-                from asystem.release import slot_findings
+                from workbench.release import slot_findings
 
                 findings = [*findings, *slot_findings(options.project_dir, options.source_dir)]
             for rule, message in findings:
@@ -578,7 +578,7 @@ def main(arguments=None):
             hints(rule for rule, _ in findings)
             return 1 if findings else 0
         elif options.command == "replay":
-            from asystem.replay import replay_project
+            from workbench.replay import replay_project
 
             findings = replay_project(options.project_dir)
             for rule, message in findings:
