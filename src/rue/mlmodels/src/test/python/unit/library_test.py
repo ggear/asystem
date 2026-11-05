@@ -352,6 +352,22 @@ class ModelProjectTest(unittest.TestCase):
         self.write(**self.fitted_overrides())
         self.assertEqual([], check_release(self.project_dir))
 
+    def test_a_project_registers_again_after_its_experiment_and_model_were_deleted(self):
+        import mlflow
+        from workbench.model import register_project
+
+        self.write()
+        uri = f"sqlite:///{join(tempfile.mkdtemp(), 'mlflow.db')}"
+        register_project(self.project_dir, "demo_calc", uri)
+        client = mlflow.MlflowClient()
+        client.delete_registered_model("demo_calc")
+        experiment = client.get_experiment_by_name("demo_calc")
+        assert experiment is not None
+        client.delete_experiment(experiment.experiment_id)
+        version = register_project(self.project_dir, "demo_calc", uri)
+        self.assertEqual("1", str(version))
+        self.assertEqual("1", str(client.get_model_version_by_alias("demo_calc", "preview").version))
+
     def test_registering_an_unchanged_project_creates_nothing_new(self):
         import mlflow
         from workbench.model import register_project

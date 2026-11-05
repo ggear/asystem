@@ -5,6 +5,9 @@
     {
       "kind": "embedded",
       "language": "python"
+    },
+    {
+      "kind": "served"
     }
   ],
   "released_at": null,

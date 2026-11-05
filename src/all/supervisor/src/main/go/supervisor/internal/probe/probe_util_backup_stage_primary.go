@@ -52,6 +52,9 @@ func runPrimaryStage(ctx context.Context, request stageRequest, counters *stageC
 	}
 	scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStagePrimary), scribe.ActionStop).Infof("reported", time.Now(),
 		"[%d] services attempted with [%d] failed and [%d] regressed", len(enrolled), failed, regressed)
+	for _, service := range enrolled {
+		failed += reportReleaseDrills(service)
+	}
 	if failed > 0 {
 		return stageResult{}, fmt.Errorf("[%d] of [%d] service backups failed", failed, len(enrolled))
 	}

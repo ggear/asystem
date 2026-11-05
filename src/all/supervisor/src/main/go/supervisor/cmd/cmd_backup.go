@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"supervisor/internal/config"
@@ -27,11 +29,6 @@ func newBackupCmd() *cobra.Command {
 		Short: backupDescription,
 		Long:  backupDescription,
 	}
-	cmd.PersistentFlags().StringVarP(&opts.stage, "stage", "G", "", "execute one stage only [primary, secondary, tertiary]")
-	cmd.PersistentFlags().BoolVarP(&opts.scrub, "scrub", "S", false, "scrub the backup disk, whatever the monthly window says")
-	cmd.PersistentFlags().BoolVarP(&opts.quiet, "quiet", "Q", false, "drop the stdout copy of the log, keeping the run log and the log file")
-	cmd.PersistentFlags().DurationVarP(&opts.timeout, "timeout-period", "T", 0, "deadline for the whole run, defaulting to the configured timeout, uses unit suffixes [s, m, h]")
-	addLogFlags(cmd, &opts.logOptions, "info")
 	cmd.PersistentFlags().SortFlags = false
 	cmd.Flags().SortFlags = false
 	for _, verb := range backupVerbs {
@@ -50,18 +47,26 @@ func newBackupModuleCmd(verb backupModuleVerb) *cobra.Command {
 		Short:  verb.short,
 		Hidden: verb.hidden,
 		Args:   cobra.ExactArgs(verb.arguments),
-		Run: func(_ *cobra.Command, args []string) {
+		RunE: func(_ *cobra.Command, args []string) error {
+			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+			defer stop()
 			request.Arguments = args
-			os.Exit(verb.run(context.Background(), *request, os.Stdout, os.Stderr))
+			if code := verb.run(ctx, *request, os.Stdout, os.Stderr); code != 0 {
+				return exitError(code)
+			}
+			return nil
 		},
 	}
 	verb.flags(cmd.Flags(), request)
 	cmd.Flags().SortFlags = false
+	if len(verb.advanced) > 0 {
+		addAdvancedFlags(cmd, verb.advanced)
+	}
 	return cmd
 }
 
 func newBackupVerbCmd(verb backupVerb, opts *backupOptions) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   verb.use,
 		Short: verb.short,
 		Args:  cobra.MaximumNArgs(verb.arguments),
@@ -84,6 +89,13 @@ func newBackupVerbCmd(verb backupVerb, opts *backupOptions) *cobra.Command {
 			return executeBackup(request, opts)
 		},
 	}
+	cmd.Flags().StringVarP(&opts.stage, "stage", "G", "", "execute one stage only [primary, secondary, tertiary]")
+	cmd.Flags().BoolVarP(&opts.scrub, "scrub", "S", false, "scrub the backup disk, whatever the monthly window says")
+	cmd.Flags().BoolVarP(&opts.quiet, "quiet", "Q", false, "drop the stdout copy of the log, keeping the run log and the log file")
+	cmd.Flags().DurationVarP(&opts.timeout, "timeout-period", "T", 0, "deadline for the whole run, defaulting to the configured timeout, uses unit suffixes [s, m, h]")
+	addLogFlags(cmd, &opts.logOptions, "info")
+	cmd.Flags().SortFlags = false
+	return cmd
 }
 
 func executeBackup(request engine.BackupRequest, opts *backupOptions) error {
@@ -151,13 +163,17 @@ type backupModuleVerb struct {
 	hidden    bool
 	arguments int
 	flags     func(*pflag.FlagSet, *engine.BackupModuleRequest)
+	advanced  []string
 }
 
 var backupModuleVerbs = []backupModuleVerb{
-	{run: engine.BackupModuleRun, use: "run <module>", short: "run one module's backup, the module's hooks supplied by --script", arguments: 1, flags: addBackupModuleRunFlags},
+	{run: engine.BackupModuleRun, use: "run <module>", short: "run one module's backup, the module's hooks supplied by --script", arguments: 1, flags: addBackupModuleRunFlags, advanced: []string{"script", "lock-period"}},
 	{run: engine.BackupModuleAccept, use: "accept <module> <run>", short: "accept a regressed run, releasing its anchor", arguments: 2, flags: func(flags *pflag.FlagSet, request *engine.BackupModuleRequest) {
-		flags.StringVar(&request.Source, "source", "", "the module's source path, defaulting to its latest")
+		addBackupModuleSourceFlag(flags, request)
 	}},
+	{run: engine.BackupModuleRestore, use: "restore <module>", short: "restore a module from a backup chain, the plan only without --force", arguments: 1, flags: addBackupModuleRestoreFlags, advanced: []string{"script", "lock-period"}},
+	{run: engine.BackupModuleDrill, use: "drill <module>", short: "prove a backup chain restores without touching the live module", arguments: 1, flags: addBackupModuleRestoreFlags, advanced: []string{"script", "lock-period"}},
+	{run: engine.BackupModuleMerge, use: "merge <module>", short: "put back the history a live module lost, keeping what it has written since", arguments: 1, flags: addBackupModuleRestoreFlags, advanced: []string{"script", "lock-period"}},
 	{run: engine.BackupModuleTarget, use: "target <module> <suffix> <extension>", short: "name this run's backup file for a module hook", hidden: true, arguments: 3, flags: addBackupModuleHookFlags},
 	{run: engine.BackupModuleFiles, use: "files <module>", short: "archive declared paths for a module hook", hidden: true, arguments: 1, flags: func(flags *pflag.FlagSet, request *engine.BackupModuleRequest) {
 		addBackupModuleHookFlags(flags, request)
@@ -168,26 +184,52 @@ var backupModuleVerbs = []backupModuleVerb{
 	}},
 	{run: engine.BackupModuleParent, use: "parent <module>", short: "print the full backup before this run for a module hook", hidden: true, arguments: 1, flags: addBackupModuleHookFlags},
 	{run: engine.BackupModuleEpoch, use: "epoch <run>", short: "print the unix time of a run for a module hook", hidden: true, arguments: 1, flags: func(*pflag.FlagSet, *engine.BackupModuleRequest) {}},
+	{run: engine.BackupModuleReport, use: "report <text>", short: "print a restore line in the report columns for a module hook", hidden: true, arguments: 1, flags: func(*pflag.FlagSet, *engine.BackupModuleRequest) {}},
+	{run: engine.BackupModuleRestoreFiles, use: "restore-files <module>", short: "extract an archive over declared paths for a module hook", hidden: true, arguments: 1, flags: func(flags *pflag.FlagSet, request *engine.BackupModuleRequest) {
+		addBackupModuleHookFlags(flags, request)
+		flags.StringVar(&request.Target, "target", "", "the directory the archive is extracted into")
+		flags.StringVar(&request.File, "file", "", "the archive")
+		flags.StringVar(&request.Paths, "paths", "", "colon separated paths moved aside before the extract")
+		flags.StringArrayVar(&request.Carry, "carry", nil, "a file name pattern carried back from the moved paths")
+	}},
 }
 
 func addBackupModuleRunFlags(flags *pflag.FlagSet, request *engine.BackupModuleRequest) {
-	flags.StringVar(&request.Source, "source", "", "the module's source path, defaulting to its latest")
-	flags.StringVar(&request.Script, "script", "", "the module's backup.sh, sourced for its hooks")
-	flags.IntVar(&request.SkipHours, "skip-hours", 1, "skip the run when the newest backup is younger than this, zero to never skip")
-	flags.IntVar(&request.TimeoutHours, "timeout-hours", 5, "the budget a backup waiting on its service allows before abandoning the run")
-	flags.IntVar(&request.ShrinkPercent, "shrink-percent", 20, "the fall in a module's total that marks a run regressed, zero to disable")
-	flags.IntVar(&request.LockWait, "lock-wait", 300, "seconds to wait for another actor holding the module's lock")
-	flags.BoolVar(&request.ForceFull, "force-full", false, "take a full backup where the module would take a delta")
-	flags.BoolVar(&request.Restart, "restart", true, "start the service again after the copy, false when the caller starts it itself")
+	addBackupModuleSourceFlag(flags, request)
+	flags.StringVarP(&request.Script, "script", "x", "", "the module's backup.sh, sourced for its hooks")
+	flags.DurationVarP(&request.SkipPeriod, "skip-period", "p", time.Hour, "skip the run when the newest backup is younger than this, zero to never skip, uses unit suffixes [s, m, h]")
+	flags.DurationVarP(&request.TimeoutPeriod, "timeout-period", "T", 5*time.Hour, "the budget a backup waiting on its service allows before abandoning the run, uses unit suffixes [s, m, h]")
+	flags.IntVarP(&request.ShrinkPercent, "shrink-percent", "z", 20, "the fall in a module's total that marks a run regressed, zero to disable")
+	flags.DurationVarP(&request.LockPeriod, "lock-period", "k", backupModuleLockPeriod, "time to wait for another actor holding the module's lock, uses unit suffixes [s, m, h]")
+	flags.BoolVarP(&request.ForceFull, "force-full", "F", false, "take a full backup where the module would take a delta")
+	flags.BoolVarP(&request.NoRestart, "no-restart", "N", false, "leave the service stopped after the copy, for a caller that starts it itself")
+}
+
+func addBackupModuleRestoreFlags(flags *pflag.FlagSet, request *engine.BackupModuleRequest) {
+	addBackupModuleSourceFlag(flags, request)
+	flags.StringVarP(&request.Script, "script", "x", "", "the module's restore.sh, sourced for its hooks")
+	flags.StringVarP(&request.Runs, "runs", "r", "", "a directory of runs searched alone")
+	flags.StringVarP(&request.From, "from", "f", "", "the run to restore, defaulting to the newest not regressed")
+	flags.StringVarP(&request.File, "file", "i", "", "an artifact path outright")
+	flags.StringVarP(&request.Record, "record", "R", "", "the stage under whose .meta a drill writes its verdict [primary, secondary]")
+	flags.DurationVarP(&request.LockPeriod, "lock-period", "k", backupModuleLockPeriod, "time to wait for another actor holding the module's lock, uses unit suffixes [s, m, h]")
+	flags.BoolVarP(&request.Force, "force", "F", false, "apply the plan")
+	flags.BoolVarP(&request.NoBackup, "no-backup", "n", false, "skip the safety backup before applying")
+	flags.BoolVarP(&request.KeepScratch, "keep-scratch", "K", false, "leave the scratch copy behind")
 }
 
 func addBackupModuleHookFlags(flags *pflag.FlagSet, request *engine.BackupModuleRequest) {
-	flags.StringVar(&request.Source, "source", "", "the module's source path, defaulting to its latest")
+	addBackupModuleSourceFlag(flags, request)
 	flags.StringVar(&request.Run, "run", "", "this run's timestamp")
 	flags.StringVar(&request.State, "state", "", "the run's state directory")
 }
 
+func addBackupModuleSourceFlag(flags *pflag.FlagSet, request *engine.BackupModuleRequest) {
+	flags.StringVarP(&request.Source, "source", "s", "", "the module's source path, defaulting to its latest")
+}
+
 const (
-	backupCommandName = "backup"
-	backupDescription = "Drive a backup run, or execute one stage of the scheduled run"
+	backupModuleLockPeriod = 5 * time.Minute
+	backupCommandName      = "backup"
+	backupDescription      = "Drive a backup run, or execute one stage of the scheduled run"
 )

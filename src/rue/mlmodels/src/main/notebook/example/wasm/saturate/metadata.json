@@ -1,7 +1,23 @@
 {
   "content_sha256": "ade0ea06c3ee95f77b442229bbab419a05bfa9ffb0c022de5e68f26ce28010fd",
   "inputs_sha256": "37b3014e60b5b50bc95452b6225a9567c07372e67b3383d5873bffe3684abb7e",
-  "passed": [],
+  "passed": [
+    {
+      "kind": "served"
+    },
+    {
+      "kind": "embedded",
+      "language": "python"
+    },
+    {
+      "kind": "embedded",
+      "language": "go"
+    },
+    {
+      "kind": "embedded",
+      "language": "rust"
+    }
+  ],
   "released_at": null,
   "released_by": null,
   "released_signature": null,

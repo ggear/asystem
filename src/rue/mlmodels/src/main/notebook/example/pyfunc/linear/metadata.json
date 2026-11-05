@@ -1,7 +1,15 @@
 {
   "content_sha256": "2629e4bf48ec0dfd978430bbbcbe335cd1c769199968e61b7436c6d109cde25c",
   "inputs_sha256": "d4cd9a236a4ef891752326ca431f8c2135746a99e719d5442aeaeecc8d3900ca",
-  "passed": [],
+  "passed": [
+    {
+      "kind": "served"
+    },
+    {
+      "kind": "embedded",
+      "language": "python"
+    }
+  ],
   "released_at": null,
   "released_by": null,
   "released_signature": null,

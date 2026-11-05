@@ -58,6 +58,9 @@ func readBackupKeepRuns(dir string) []backupKeepRun {
 		if manifest, found := readBackupManifest(dir, name); found {
 			run.parent, run.verdict, run.accepted = manifest.Parent, manifest.Verdict, manifest.Accepted
 		}
+		if drill, found := readBackupDrill(backupDrillPath(runDir, string(metric.BackupStageSecondary))); found {
+			run.drilled, run.judged = drill.Verdict == metric.BackupStateSuccess, true
+		}
 		runs = append(runs, run)
 	}
 	return runs
@@ -87,22 +90,32 @@ func backupKeepSet(runs []backupKeepRun, policy backupKeepPolicy, now time.Time)
 		daySeen[day] = true
 		kept[ordered[index].name] = true
 	}
-	weekSeen, monthSeen := map[string]bool{}, map[string]bool{}
+	tiers := []struct {
+		seen, tried map[string]bool
+		quota       int
+		bucket      func(backupKeepRun) string
+	}{
+		{map[string]bool{}, map[string]bool{}, policy.weekly, func(run backupKeepRun) string {
+			year, week := run.at.ISOWeek()
+			return fmt.Sprintf("%04d-%02d", year, week)
+		}},
+		{map[string]bool{}, map[string]bool{}, policy.monthly, func(run backupKeepRun) string { return run.name[:7] }},
+	}
 	for index := newest; index >= 0; index-- {
 		run := ordered[index]
 		if !run.full {
 			continue
 		}
-		year, week := run.at.ISOWeek()
-		weekBucket := fmt.Sprintf("%04d-%02d", year, week)
-		if !weekSeen[weekBucket] && len(weekSeen) < policy.weekly {
-			weekSeen[weekBucket] = true
+		for _, tier := range tiers {
+			bucket := tier.bucket(run)
+			if tier.seen[bucket] || tier.tried[bucket] || len(tier.seen) >= tier.quota {
+				continue
+			}
+			tier.tried[bucket] = true
 			kept[run.name] = true
-		}
-		monthBucket := run.name[:7]
-		if !monthSeen[monthBucket] && len(monthSeen) < policy.monthly {
-			monthSeen[monthBucket] = true
-			kept[run.name] = true
+			if run.drilled || !policy.gated {
+				tier.seen[bucket] = true
+			}
 		}
 	}
 	kept[ordered[newest].name] = true
@@ -154,6 +167,7 @@ type backupKeepPolicy struct {
 	daily   int
 	weekly  int
 	monthly int
+	gated   bool
 }
 
 type backupKeepRun struct {
@@ -163,4 +177,6 @@ type backupKeepRun struct {
 	parent   string
 	verdict  string
 	accepted bool
+	drilled  bool
+	judged   bool
 }

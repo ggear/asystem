@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"testing"
+	"time"
 
 	"supervisor/internal/metric"
 )
@@ -79,5 +80,24 @@ func TestProbeUtilBackupModule_Accept(t *testing.T) {
 				t.Errorf("BackupModuleAccept() = code [%d] verdict [%s] accepted [%t], want [%d] [%s] [%t]", code, manifest.Verdict, manifest.Accepted, testCase.expectedCode, testCase.expectedVerdict, testCase.expectedAccepted)
 			}
 		})
+	}
+}
+
+func TestProbeUtilBackupModule_LockBackupModule(t *testing.T) {
+	t.Setenv(moduleLockHeldVariable, "")
+	source := filepath.Join(t.TempDir(), "mod", "1.0")
+	var stderr bytes.Buffer
+	release, first := lockBackupModule(&stderr, "mod", source, time.Second)
+	held := os.Getenv(moduleLockHeldVariable)
+	_ = os.Setenv(moduleLockHeldVariable, "")
+	_, second := lockBackupModule(&stderr, "mod", source, time.Second)
+	_ = os.Setenv(moduleLockHeldVariable, held)
+	_, reentrant := lockBackupModule(&stderr, "mod", source, time.Second)
+	release()
+	_ = os.Setenv(moduleLockHeldVariable, "")
+	again, afterRelease := lockBackupModule(&stderr, "mod", source, time.Second)
+	again()
+	if !first || second || !reentrant || !afterRelease || held != "mod" {
+		t.Errorf("lock: got first [%t] second [%t] reentrant [%t] afterRelease [%t] held [%s] want true false true true mod", first, second, reentrant, afterRelease, held)
 	}
 }

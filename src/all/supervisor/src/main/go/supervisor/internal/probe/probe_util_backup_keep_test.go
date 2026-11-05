@@ -92,6 +92,26 @@ func TestProbeUtilBackupKeep_KeepSet(t *testing.T) {
 			backupKeepPolicy{daily: 2},
 			[]string{"2026-10-01_01-00-13", "2026-10-01_11-10-26", "2026-10-01_12-05-50", "2026-09-28_01-00-54"},
 		},
+		{
+			"gating keeps an undrilled bucket point but it fills no quota, so the older drilled point stays",
+			[]backupKeepRun{
+				drilledFixture(keepFixture("2026-10-05_01-00-00", true, "", ""), true),
+				drilledFixture(keepFixture("2026-10-12_01-00-00", true, "", ""), true),
+				drilledFixture(keepFixture("2026-10-19_01-00-00", true, "", ""), false),
+			},
+			backupKeepPolicy{weekly: 2, gated: true},
+			[]string{"2026-10-05_01-00-00", "2026-10-12_01-00-00", "2026-10-19_01-00-00"},
+		},
+		{
+			"without gating the same runs fill the quota by newest",
+			[]backupKeepRun{
+				drilledFixture(keepFixture("2026-10-05_01-00-00", true, "", ""), true),
+				drilledFixture(keepFixture("2026-10-12_01-00-00", true, "", ""), true),
+				drilledFixture(keepFixture("2026-10-19_01-00-00", true, "", ""), false),
+			},
+			backupKeepPolicy{weekly: 2},
+			[]string{"2026-10-12_01-00-00", "2026-10-19_01-00-00"},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -180,4 +200,9 @@ func TestProbeUtilBackupKeep_ReadBackupKeepRuns(t *testing.T) {
 func keepFixture(name string, full bool, parent, verdict string) backupKeepRun {
 	at, _ := time.ParseInLocation(backupTimestampFormat, name, time.Local)
 	return backupKeepRun{name: name, at: at, full: full, parent: parent, verdict: verdict}
+}
+
+func drilledFixture(run backupKeepRun, drilled bool) backupKeepRun {
+	run.drilled, run.judged = drilled, true
+	return run
 }

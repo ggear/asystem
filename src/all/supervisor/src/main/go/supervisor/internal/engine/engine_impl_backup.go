@@ -50,10 +50,15 @@ const (
 )
 
 var (
-	BackupModuleRun    = probe.BackupModuleRun
-	BackupModuleAccept = probe.BackupModuleAccept
-	BackupModuleTarget = probe.BackupModuleTarget
-	BackupModuleFiles  = probe.BackupModuleFiles
-	BackupModuleParent = probe.BackupModuleParent
-	BackupModuleEpoch  = probe.BackupModuleEpoch
+	BackupModuleRun          = probe.BackupModuleRun
+	BackupModuleAccept       = probe.BackupModuleAccept
+	BackupModuleTarget       = probe.BackupModuleTarget
+	BackupModuleFiles        = probe.BackupModuleFiles
+	BackupModuleParent       = probe.BackupModuleParent
+	BackupModuleEpoch        = probe.BackupModuleEpoch
+	BackupModuleRestore      = probe.BackupModuleRestore
+	BackupModuleDrill        = probe.BackupModuleDrill
+	BackupModuleMerge        = probe.BackupModuleMerge
+	BackupModuleReport       = probe.BackupModuleReport
+	BackupModuleRestoreFiles = probe.BackupModuleRestoreFiles
 )

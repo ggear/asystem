@@ -1,7 +1,11 @@
 {
   "content_sha256": "28f9606affc52a8208841a7c272bdf9724412ed315f295f3874f2fa685fb9fbb",
   "inputs_sha256": "095a86ee14d408c5e593bb18337e9ef478402d4b7bea91eaf25c3b441f1e358f",
-  "passed": [],
+  "passed": [
+    {
+      "kind": "served"
+    }
+  ],
   "released_at": null,
   "released_by": null,
   "released_signature": null,

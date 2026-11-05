@@ -28,9 +28,11 @@ func BackupModuleRun(ctx context.Context, request BackupModuleRequest, stdout, s
 		return 2
 	}
 	stamp, version := time.Now().Format(backupTimestampFormat), filepath.Base(source)
-	if !lockBackupModule(stderr, module, source, request.LockWait) {
+	release, locked := lockBackupModule(stderr, module, source, request.LockPeriod)
+	if !locked {
 		return 1
 	}
+	defer release()
 	_ = filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
 		if err == nil && !entry.IsDir() && strings.HasSuffix(path, ".tmp") {
 			_ = os.Remove(path)
@@ -42,9 +44,9 @@ func BackupModuleRun(ctx context.Context, request BackupModuleRequest, stdout, s
 	if len(existing) > 0 {
 		newest = existing[len(existing)-1]
 		age := time.Since(backupRunTime(newest))
-		if age < time.Duration(request.SkipHours)*time.Hour {
+		if age < request.SkipPeriod {
 			_, newestVersion := parseBackupArtefact(module, filepath.Join(root, newest))
-			fmt.Fprintf(stdout, "Backup skipped, newest backup [%s] of version [%s] is [%d] seconds old, skipping given within [%d] hours\n", newest, newestVersion, int(age.Seconds()), request.SkipHours)
+			fmt.Fprintf(stdout, "Backup skipped, newest backup [%s] of version [%s] is [%d] seconds old, skipping given within [%s]\n", newest, newestVersion, int(age.Seconds()), request.SkipPeriod)
 			return 0
 		}
 	}
@@ -58,8 +60,8 @@ func BackupModuleRun(ctx context.Context, request BackupModuleRequest, stdout, s
 	binary, _ := os.Executable()
 	hooks := moduleHooks{script: request.Script, env: []string{
 		"BACKUP_RUN_TIMESTAMP=" + stamp, "BACKUP_STATE_DIR=" + state, "BACKUP_SUPERVISOR=" + binary,
-		"BACKUP_FORCE_FULL=" + strconv.FormatBool(request.ForceFull), "BACKUP_SKIP_HOURS=" + strconv.Itoa(request.SkipHours),
-		"BACKUP_TIMEOUT_HOURS=" + strconv.Itoa(request.TimeoutHours), "BACKUP_SERVICE_RESTART=" + strconv.FormatBool(request.Restart),
+		"BACKUP_FORCE_FULL=" + strconv.FormatBool(request.ForceFull), "BACKUP_SKIP_HOURS=" + strconv.Itoa(int(request.SkipPeriod.Hours())),
+		"BACKUP_TIMEOUT_HOURS=" + strconv.Itoa(int(request.TimeoutPeriod.Hours())), "BACKUP_SERVICE_RESTART=" + strconv.FormatBool(!request.NoRestart),
 		"BACKUP_SOURCE_PATH=" + source,
 	}}
 	defined := map[string]bool{}
@@ -90,7 +92,7 @@ func BackupModuleRun(ctx context.Context, request BackupModuleRequest, stdout, s
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	defer signal.Stop(signals)
-	hookCtx, cancelHook := context.WithTimeout(ctx, time.Duration(max(request.TimeoutHours, 1)+1)*time.Hour)
+	hookCtx, cancelHook := context.WithTimeout(ctx, max(request.TimeoutPeriod, time.Hour)+time.Hour)
 	defer cancelHook()
 	received := make(chan os.Signal, 1)
 	go func() {

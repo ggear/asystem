@@ -1,7 +1,12 @@
 {
   "content_sha256": "5302f78b0a6dee6316cadc150cfa029327aa0de179fa7e2c1c8416082034e571",
   "inputs_sha256": "fbce48e2d8ecff0d9ba56f184f0126fb4cfd4e5ed9db9673994448a60943e675",
-  "passed": [],
+  "passed": [
+    {
+      "kind": "embedded",
+      "language": "rust"
+    }
+  ],
   "released_at": null,
   "released_by": null,
   "released_signature": null,

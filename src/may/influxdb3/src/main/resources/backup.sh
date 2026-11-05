@@ -249,8 +249,9 @@ case "${1:-}" in
   ;;
 esac
 
-BACKUP_INTERNAL_ARGUMENTS=(--source "${BACKUP_INTERNAL_SOURCE_DIR}" --script "${BACKUP_INTERNAL_SCRIPT}" --skip-hours "${BACKUP_SKIP_HOURS}" --timeout-hours "${BACKUP_TIMEOUT_HOURS}" --shrink-percent "${BACKUP_SHRINK_PERCENT}" "--restart=${BACKUP_SERVICE_RESTART}")
+BACKUP_INTERNAL_ARGUMENTS=(--source "${BACKUP_INTERNAL_SOURCE_DIR}" --script "${BACKUP_INTERNAL_SCRIPT}" --skip-period "${BACKUP_SKIP_HOURS}h" --timeout-period "${BACKUP_TIMEOUT_HOURS}h" --shrink-percent "${BACKUP_SHRINK_PERCENT}")
+[ "${BACKUP_SERVICE_RESTART}" = "true" ] || BACKUP_INTERNAL_ARGUMENTS+=(--no-restart)
 [ "${BACKUP_FORCE_FULL}" = "true" ] && BACKUP_INTERNAL_ARGUMENTS+=(--force-full)
-[ -n "${BACKUP_LOCK_WAIT:-}" ] && BACKUP_INTERNAL_ARGUMENTS+=(--lock-wait "${BACKUP_LOCK_WAIT}")
+[ -n "${BACKUP_LOCK_SECONDS:-}" ] && BACKUP_INTERNAL_ARGUMENTS+=(--lock-period "${BACKUP_LOCK_SECONDS}s")
 
 backup_supervised run "${BACKUP_MODULE_NAME}" "${BACKUP_INTERNAL_ARGUMENTS[@]}"

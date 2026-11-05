@@ -56,7 +56,7 @@ func TestProbeUtilBackupModuleRun_Lifecycle(t *testing.T) {
 			}
 			t.Setenv("BACKUP_PAYLOAD", testCase.payload)
 			t.Setenv(moduleLockHeldVariable, "")
-			request := BackupModuleRequest{Arguments: []string{"mod"}, Source: source, Script: script, SkipHours: testCase.skipHours, ShrinkPercent: 20, LockWait: 1, TimeoutHours: 1, Restart: true}
+			request := BackupModuleRequest{Arguments: []string{"mod"}, Source: source, Script: script, SkipPeriod: time.Duration(testCase.skipHours) * time.Hour, ShrinkPercent: 20, LockPeriod: time.Second, TimeoutPeriod: time.Hour}
 			var stdout, stderr bytes.Buffer
 			if code := BackupModuleRun(context.Background(), request, &stdout, &stderr); code != testCase.expectedCode {
 				t.Fatalf("BackupModuleRun: got code [%d] want [%d] stdout [%s] stderr [%s]", code, testCase.expectedCode, stdout.String(), stderr.String())

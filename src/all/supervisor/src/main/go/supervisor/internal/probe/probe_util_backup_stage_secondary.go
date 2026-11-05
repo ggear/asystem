@@ -77,6 +77,8 @@ func runSecondaryStage(ctx context.Context, request stageRequest, counters *stag
 		}
 	}
 
+	_, drillFailed := drillSecondaryServices(ctx, loaded, share, host, promote)
+
 	percent, usedMB, totalMB, ok := measureUsage(ctx, scribe.SubjectStage(metric.BackupStageSecondary), share)
 	result := stageResult{}
 	if ok {
@@ -84,6 +86,9 @@ func runSecondaryStage(ctx context.Context, request stageRequest, counters *stag
 	}
 	if failed > 0 {
 		return result, fmt.Errorf("[%d] of [%d] service promotions failed", failed, len(promote))
+	}
+	if drillFailed > 0 {
+		return result, fmt.Errorf("[%d] of [%d] services fail their drill", drillFailed, len(promote))
 	}
 	return result, nil
 }
@@ -128,6 +133,7 @@ func promoteOneService(ctx context.Context, request stageRequest, share, host, s
 
 	scribe.Log(scribe.SourceBackup, scribe.SubjectService(service), scribe.ActionCompute).Infof("thinning", time.Now(),
 		"[%s] thinning with the keep set", target)
+	policy.gated = true
 	pruneErr := pruneBackupRuns(ctx, scribe.SubjectStage(metric.BackupStageSecondary), target, policy)
 	if rsyncErr != nil {
 		return rsyncErr

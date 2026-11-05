@@ -1,16 +1,19 @@
-# The wrapper owns the run, this snippet owns the restore. The wrapper resolves the artifact, checks
-# its integrity, takes a safety backup, stops or starts the service and sets the exit code. Define
-# restore_applied below, reading "${RESTORE_SOURCE_FILE}" and writing it back into the service, and
-# optionally restore_planned to describe that in the dry run. Declare RESTORE_SERVICE_STATE as
-# "stopped" when the restore replaces files the service holds open, or "running" when it is applied
-# through the service itself. Never assign another wrapper variable, prefix this snippet's own state
-# with the module name, and expand a value read from .env as "${VAR:?}", so a missing key fails by
-# name rather than corrupting the restore.
+# The engine owns the run, this snippet owns the restore. `supervisor backup restore` resolves the chain, checks
+# its integrity, takes a safety backup, stops or starts the service, counts faults and sets the exit code, calling
+# this snippet's hooks, each in its own bash. Define restore_applied below, reading "${RESTORE_SOURCE_FILE}" and
+# writing it back into the service, and optionally restore_planned to describe that in the dry run. Declare
+# RESTORE_SERVICE_STATE as "stopped" when the restore replaces files the service holds open, or "running" when
+# it is applied through the service itself. A snippet with a scratch copy also defines restore_staged (print the
+# scratch address), restore_sealed, restore_teardown and restore_checked, one with live history to merge
+# restore_merged, and one with units still being written restore_settled, a stdin to stdout filter dropping the
+# open ones. No hook may rely on a variable another set. Never assign another wrapper variable, prefix this
+# snippet's own state with the module name, and expand a value read from .env as "${VAR:?}", so a missing key
+# fails by name rather than corrupting the restore.
 #
 # RESTORE_MODULE_NAME     this module's name
 # RESTORE_SOURCE_PATH     this module's data path, the restore target
 # RESTORE_SOURCE_FILE     the artifact being restored from
-# RESTORE_SOURCE_VERSION  the version the artifact was taken from
+# RESTORE_CHAIN_FILES     every artifact of the chain, oldest first
 # RESTORE_RUN_TIMESTAMP   the timestamp of the run the artifact belongs to
 # RESTORE_FULL_SUFFIX     the file suffix marking a full backup
 # RESTORE_DELTA_SUFFIX    the file suffix marking a delta backup
@@ -183,6 +186,12 @@ restore_sealed() {
   influxdb3_restore_started query
 }
 
+restore_settled() {
+  local cutoff
+  cutoff="$(date -u -d "${RESTORE_RUN_TIMESTAMP%%_*} -1 day" +%F)"
+  awk -v cutoff="${cutoff}" '{ day = substr($1, length($1) - 9); if (day ~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$/ && day >= cutoff) next; print }'
+}
+
 restore_teardown() {
   docker rm -f "${INFLUXDB3_RESTORE_SCRATCH}" >/dev/null 2>&1
   rm -rf "$(restore_scratch_dir)"
@@ -235,7 +244,7 @@ for raw in sys.stdin:
 }
 
 restore_merged() {
-  local unit="${1}" scratch="${2}" table day next types columns url token chunks code chunk header rows bytes
+  local unit="${1}" scratch="${2}" RESTORE_STATS_FILE="${3:-}" table day next types columns url token chunks code chunk header rows bytes
   table="${unit%/*}"
   day="${unit##*/}"
   next="$(date -u -d "${day} + 1 day" +%F)"

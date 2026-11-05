@@ -21,20 +21,19 @@ type BackupModuleRequest struct {
 	Live          string
 	Includes      []string
 	Excludes      []string
-	SkipHours     int
-	TimeoutHours  int
+	SkipPeriod    time.Duration
+	TimeoutPeriod time.Duration
 	ShrinkPercent int
-	LockWait      int
-	Pinned        string
+	LockPeriod    time.Duration
+	Runs          string
 	From          string
 	File          string
-	Mode          string
 	Record        string
 	Target        string
 	Paths         string
 	Carry         []string
 	ForceFull     bool
-	Restart       bool
+	NoRestart     bool
 	Force         bool
 	NoBackup      bool
 	KeepScratch   bool
@@ -92,29 +91,37 @@ func BackupModuleEpoch(_ context.Context, request BackupModuleRequest, stdout, _
 	return 0
 }
 
-func lockBackupModule(stderr io.Writer, module, source string, wait int) bool {
-	if os.Getenv(moduleLockHeldVariable) == module {
-		return true
+func lockBackupModule(stderr io.Writer, module, source string, period time.Duration) (release func(), ok bool) {
+	held, wasHeld := os.LookupEnv(moduleLockHeldVariable)
+	if held == module {
+		return func() {}, true
 	}
 	parent := filepath.Dir(source)
 	if os.MkdirAll(parent, 0o755) != nil {
-		return true
+		return func() {}, true
 	}
 	lock, err := os.OpenFile(filepath.Join(parent, treeLockLeaf), os.O_CREATE|os.O_RDWR, 0o644)
 	if err != nil {
-		return true
+		return func() {}, true
 	}
-	deadline := time.Now().Add(time.Duration(wait) * time.Second)
+	deadline := time.Now().Add(period)
 	for syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB) != nil {
 		if time.Now().After(deadline) {
-			fmt.Fprintf(stderr, "Another actor holds the lock for [%s] at [%s], giving up after [%d] seconds\n", module, lock.Name(), wait)
+			fmt.Fprintf(stderr, "Another actor holds the lock for [%s] at [%s], giving up after [%s]\n", module, lock.Name(), period)
 			_ = lock.Close()
-			return false
+			return nil, false
 		}
 		time.Sleep(time.Second)
 	}
 	_ = os.Setenv(moduleLockHeldVariable, module)
-	return true
+	return func() {
+		if wasHeld {
+			_ = os.Setenv(moduleLockHeldVariable, held)
+		} else {
+			_ = os.Unsetenv(moduleLockHeldVariable)
+		}
+		_ = lock.Close()
+	}, true
 }
 
 func resolveBackupModule(request BackupModuleRequest, stderr io.Writer, arguments int) (module, source, root string, ok bool) {

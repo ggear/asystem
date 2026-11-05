@@ -18,6 +18,9 @@ import (
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
+		if exited, ok := errors.AsType[exitError](err); ok {
+			os.Exit(int(exited))
+		}
 		if !errors.Is(err, errCommandReported) {
 			_, _ = fmt.Fprintln(os.Stderr, err)
 		}
@@ -241,3 +244,7 @@ var (
 
 	flagDefaultPattern = regexp.MustCompile(`\(default "?(.*?)"?\)$`)
 )
+
+type exitError int
+
+func (e exitError) Error() string { return fmt.Sprintf("the command exited [%d]", int(e)) }

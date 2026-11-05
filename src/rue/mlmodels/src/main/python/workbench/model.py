@@ -314,8 +314,11 @@ def register_project(project_dir, name, tracking_uri, aliases=(PROJECT_ALIAS_PRE
     content = content_sha256(project_dir)
     version = next((candidate for candidate in client.search_model_versions(f"name = '{name}'") if candidate.tags.get("content_sha256") == content), None)
     if version is None:
-        if tracking_uri.startswith("sqlite:///") and client.get_experiment_by_name(name) is None:
+        experiment = client.get_experiment_by_name(name)
+        if experiment is None and tracking_uri.startswith("sqlite:///"):
             client.create_experiment(name, artifact_location="file://" + join(dirname(os.path.abspath(tracking_uri.removeprefix("sqlite:///"))), "artifacts"))
+        elif experiment is not None and experiment.lifecycle_stage == "deleted":
+            client.restore_experiment(experiment.experiment_id)
         mlflow.set_experiment(name)
         with mlflow.start_run(tags={"mlflow.source.name": "mlmodels"}) as run:
             mlflow.set_tags({"project_flavour": manifest["flavour"]})

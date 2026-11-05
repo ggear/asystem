@@ -9,6 +9,13 @@
     {
       "kind": "embedded",
       "language": "rust"
+    },
+    {
+      "kind": "served"
+    },
+    {
+      "kind": "embedded",
+      "language": "go"
     }
   ],
   "released_at": null,

@@ -5,6 +5,17 @@
     {
       "kind": "embedded",
       "language": "go"
+    },
+    {
+      "kind": "served"
+    },
+    {
+      "kind": "embedded",
+      "language": "python"
+    },
+    {
+      "kind": "embedded",
+      "language": "rust"
     }
   ],
   "released_at": null,

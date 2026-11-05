@@ -72,7 +72,11 @@ func BackupModuleRestoreFiles(_ context.Context, request BackupModuleRequest, st
 		fmt.Fprintf(stderr, "Could not extract [%s] into [%s] [%s]\n", request.File, request.Target, strings.TrimSpace(output))
 		return 1
 	}
-	fmt.Fprintln(stdout, reportedRestoreLine("extracted ["+cmpOr(request.Paths, "archive")+"] into ["+request.Target+"]"))
+	extracted := request.Paths
+	if extracted == "" {
+		extracted = "archive"
+	}
+	fmt.Fprintln(stdout, reportedRestoreLine("extracted ["+extracted+"] into ["+request.Target+"]"))
 	for _, pattern := range request.Carry {
 		_ = filepath.WalkDir(replaced, func(path string, entry os.DirEntry, err error) error {
 			if err != nil || entry.IsDir() {
@@ -104,12 +108,18 @@ func runBackupModuleRestore(ctx context.Context, request BackupModuleRequest, mo
 		fmt.Fprintln(stderr, "Restore needs the script holding the module hooks")
 		return 2
 	}
-	if !lockBackupModule(stderr, module, source, request.LockWait) {
+	if request.Record != "" && request.Record != string(metric.BackupStagePrimary) && request.Record != string(metric.BackupStageSecondary) {
+		fmt.Fprintf(stderr, "Record takes [primary] or [secondary], not [%s]\n", request.Record)
+		return 2
+	}
+	release, locked := lockBackupModule(stderr, module, source, request.LockPeriod)
+	if !locked {
 		return 1
 	}
+	defer release()
 	session := &restoreSession{
 		ctx: ctx, request: request, mode: mode, module: module, source: source, stdout: stdout, stderr: stderr,
-		roots: restoreRoots(module, root, request.Pinned),
+		roots: restoreRoots(module, root, request.Runs),
 	}
 	return session.execute()
 }
@@ -123,7 +133,6 @@ type restoreSession struct {
 	roots   []string
 	chain   []restoreLink
 	run     string
-	scratch string
 	hooks   moduleHooks
 	defined map[string]bool
 	stdout  io.Writer
@@ -157,25 +166,15 @@ func (s *restoreSession) scratchDir() string {
 	return filepath.Join(filepath.Dir(s.source), "restore", s.run)
 }
 
-func (s *restoreSession) hookEnvironment() []string {
-	files := make([]string, 0, len(s.chain))
-	for _, link := range s.chain {
-		files = append(files, link.file)
-	}
-	binary, _ := os.Executable()
-	return []string{
-		"RESTORE_RUN_TIMESTAMP=" + s.run, "RESTORE_CHAIN_LIST=" + strings.Join(files, "\n"), "RESTORE_SUPERVISOR=" + binary,
-		"RESTORE_SOURCE_PATH=" + s.source, "RESTORE_FORCE=" + strconv.FormatBool(s.request.Force),
-		"RESTORE_KEEP_SCRATCH=" + strconv.FormatBool(s.request.KeepScratch),
-	}
-}
-
 func (s *restoreSession) hooked(name string, input string, arguments ...string) (string, error) {
 	timeout, cancel := context.WithTimeout(s.ctx, restoreHookWait)
 	defer cancel()
 	command := s.hooks.command(timeout, name, arguments...)
 	var output bytes.Buffer
 	command.Stdout, command.Stderr = &output, s.stderr
+	if !restoreCaptured[name] {
+		command.Stdout = io.MultiWriter(&output, s.stdout)
+	}
 	if input != "" {
 		command.Stdin = strings.NewReader(input)
 	}
@@ -269,10 +268,6 @@ func (s *restoreSession) serviceRunning() bool {
 	return slices.Contains(strings.Fields(names), s.module)
 }
 
-func (s *restoreSession) restarted() {
-	_, _, _ = bounded(s.ctx, restoreHookWait, "docker", "restart", s.module)
-}
-
 func (s *restoreSession) backedUp() bool {
 	if s.request.NoBackup {
 		s.report("backup skipped, [--no-backup] given")
@@ -346,7 +341,16 @@ func (s *restoreSession) execute() int {
 		}
 		s.chain = chain
 	}
-	s.hooks.env = s.hookEnvironment()
+	files := make([]string, 0, len(s.chain))
+	for _, link := range s.chain {
+		files = append(files, link.file)
+	}
+	binary, _ := os.Executable()
+	s.hooks.env = []string{
+		"RESTORE_RUN_TIMESTAMP=" + s.run, "RESTORE_CHAIN_LIST=" + strings.Join(files, "\n"), "RESTORE_SUPERVISOR=" + binary,
+		"RESTORE_SOURCE_PATH=" + s.source, "RESTORE_FORCE=" + strconv.FormatBool(s.request.Force),
+		"RESTORE_KEEP_SCRATCH=" + strconv.FormatBool(s.request.KeepScratch),
+	}
 	last := s.chain[len(s.chain)-1].file
 	kind := "full"
 	if strings.Contains(filepath.Base(last), backupDeltaSuffix+".") {
@@ -365,6 +369,9 @@ func (s *restoreSession) execute() int {
 		}
 	}
 	if s.faults > 0 {
+		if s.mode == backupRestoreModeDrill {
+			s.record(metric.BackupStateFailure, "artifact failed its integrity check")
+		}
 		return s.finish()
 	}
 	s.report("integrity passed")
@@ -411,13 +418,20 @@ func (s *restoreSession) replace() bool {
 	if !s.backedUp() {
 		return false
 	}
+	applied := func() {
+		if _, err := s.hooked(restoreHookApplied, ""); err != nil {
+			s.fault(fmt.Sprintf("the restore of [%s] failed [%v]", s.run, err))
+			return
+		}
+		s.changed++
+	}
 	state, _ := s.hooked("restore_service_state", "")
 	if strings.TrimSpace(state) == "running" {
 		if !s.serviceRunning() {
 			s.fault(fmt.Sprintf("[%s] must be running to restore, start it first", s.module))
 			return false
 		}
-		s.applied()
+		applied()
 		return false
 	}
 	stopped := false
@@ -429,7 +443,7 @@ func (s *restoreSession) replace() bool {
 		stopped = true
 		s.change("stopped [" + s.module + "]")
 	}
-	s.applied()
+	applied()
 	if stopped {
 		if _, code, abandoned := bounded(s.ctx, restoreHookWait, "docker", "start", s.module); abandoned || code != 0 {
 			s.fault(fmt.Sprintf("could not start [%s]", s.module))
@@ -440,12 +454,6 @@ func (s *restoreSession) replace() bool {
 	return false
 }
 
-func (s *restoreSession) applied() {
-	if _, err := s.hooked(restoreHookApplied, ""); err != nil {
-		s.fault(fmt.Sprintf("the restore of [%s] failed [%v]", s.run, err))
-	}
-}
-
 func reportedRestoreLine(text string) string {
 	word, rest, _ := strings.Cut(text, " ")
 	if restoreLabels[word] {
@@ -454,12 +462,7 @@ func reportedRestoreLine(text string) string {
 	return fmt.Sprintf("   %-10s%s", "", text)
 }
 
-func cmpOr(value, fallback string) string {
-	if value == "" {
-		return fallback
-	}
-	return value
-}
+var restoreCaptured = map[string]bool{restoreHookStaged: true, restoreHookSettled: true, moduleHookFingerprint: true, "restore_service_state": true, "restore_live_address": true}
 
 var restoreLabels = map[string]bool{
 	"artifact": true, "taken": true, "size": true, "service": true, "integrity": true, "chain": true, "drill": true, "merge": true, "plan": true,
