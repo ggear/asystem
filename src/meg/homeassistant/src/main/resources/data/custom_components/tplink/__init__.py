@@ -57,6 +57,7 @@ from .const import (
     PLATFORMS,
 )
 from .coordinator import TPLinkConfigEntry, TPLinkData, TPLinkDataUpdateCoordinator
+from .services import async_setup_services
 
 # HACK-GRAHAM-Start: Increase discovery polling interval from 15m to 7d
 DISCOVERY_INTERVAL = timedelta(days=7)
@@ -161,6 +162,7 @@ async def get_manually_configured_devices(config_path="/config/network_devices.j
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the TP-Link component."""
+    async_setup_services(hass)
     hass.data.setdefault(DOMAIN, {})
 
     async def _async_discovery(*_: Any) -> None:
@@ -177,7 +179,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: TPLinkConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: TPLinkConfigEntry) -> None:
     """Set up TPLink from a config entry."""
     host: str = entry.data[CONF_HOST]
     credentials = await get_credentials(hass)
@@ -299,17 +301,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: TPLinkConfigEntry) -> bo
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    return True
 
-
-async def async_unload_entry(hass: HomeAssistant, entry: TPLinkConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: TPLinkConfigEntry) -> None:
     """Unload a config entry."""
     data = entry.runtime_data
     device = data.parent_coordinator.device
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    await device.protocol.close()
-
-    return unload_ok
+    try:
+        await hass.config_entries.async_unload_platforms_or_raise(entry, PLATFORMS)
+    finally:
+        await device.protocol.close()
 
 
 def legacy_device_id(device: Device) -> str:
@@ -386,7 +386,7 @@ def _device_id_is_mac_or_none(mac: str, device_ids: Iterable[str]) -> str | None
 
 async def async_migrate_entry(
     hass: HomeAssistant, config_entry: TPLinkConfigEntry
-) -> bool:
+) -> None:
     """Migrate old entry."""
     entry_version = config_entry.version
     entry_minor_version = config_entry.minor_version
@@ -508,4 +508,3 @@ async def async_migrate_entry(
         _LOGGER.debug(
             "Migration to version %s.%s complete", entry_version, new_minor_version
         )
-    return True
