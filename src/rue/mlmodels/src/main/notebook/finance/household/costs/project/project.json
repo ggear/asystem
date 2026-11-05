@@ -2,36 +2,29 @@
   "spec_version": 1,
   "name": "finance_household_costs",
   "signature_version": 1,
-  "flavour": "pyfunc",
+  "flavour": "static",
   "provenance": {
     "source": "manual",
     "trained_on": "synthetic annual series around the long run inflation and cost growth means, training split",
     "inputs": [
-      "finance/household/costs/data/training/2026-11-05_17-20-32/household_costs_training_2026-11-05_2026-11-05.csv",
-      "finance/household/costs/data/golden/2026-11-05_17-20-32/household_costs_golden.csv"
+      "finance/household/costs/data/training/2026-11-05_18-24-33/household_costs_training_2026-11-05_2026-11-05.csv",
+      "finance/household/costs/data/golden/2026-11-05_18-24-33/household_costs_golden.csv"
     ],
-    "notes": "mean inflation and mean cost growth per scenario",
-    "implementation": "mlflow.pyfunc model.py, requires mlflow and pandas"
+    "notes": "mean inflation, mean cost growth and the premium mirrored"
   },
   "files": {
     "signature": {
       "path": "signature.json",
-      "sha256": "3209fd2939d5487f1edb9f2ceb8cb3d5a96e3f00b8e78d27ad336af47c87ebe8"
+      "sha256": "66b240668010d0aad42f7155e8e545aab5686bf5cf239dd0c1ce0b202d7b3931"
     },
     "golden": {
       "path": "golden.json",
-      "sha256": "e2ceec9d881f6a3c7945a8cef7b2408b25529757cdd2bb763e7fa116ad6731c9"
-    },
-    "evaluation": {
-      "path": "evaluation.json",
-      "sha256": "0a63ea05ccb724591a5d59a3b34ed62e89d0ae8d170050364a2da90489bec186"
-    },
-    "model": {
-      "path": "model.py",
-      "sha256": "7a84e67f0972cb865ba7419293030dcd0304b52ffef017123e3114a28f3b3510"
+      "sha256": "a7cf1f68672bb19ce11f67c86e89c3ea8a4994bbc7210fc0a72f6e8a1c1eb6e7"
     }
   },
-  "runtime": {
-    "python": []
+  "constants": {
+    "finance_household_costs_growth_low_pct": 3.24,
+    "finance_household_costs_growth_base_pct": 4.83,
+    "finance_household_costs_growth_high_pct": 6.42
   }
 }

@@ -1,0 +1,29 @@
+{
+  "spec_version": 1,
+  "name": "finance_household_flexibility",
+  "signature_version": 1,
+  "flavour": "static",
+  "provenance": {
+    "source": "manual",
+    "trained_on": "synthetic categories with a class, training split",
+    "inputs": [
+      "finance/household/flexibility/data/training/2026-11-05_18-24-42/household_flexibility_training_2026-11-05_2026-11-05.csv",
+      "finance/household/flexibility/data/golden/2026-11-05_18-24-42/household_flexibility_golden.csv"
+    ],
+    "notes": "sum of the essential and committed classes against the total"
+  },
+  "files": {
+    "signature": {
+      "path": "signature.json",
+      "sha256": "9581e1c4c3db04e8e42e73b2e94fb9e724fedd56d88516e7dbf74b7fb908e6d2"
+    },
+    "golden": {
+      "path": "golden.json",
+      "sha256": "e7930bb705de0b76d0c5392ad280871c17e20dfc498ccf5cf6f5309b36a8e3fb"
+    }
+  },
+  "constants": {
+    "finance_household_flexibility_essential_floor_dollars": 40000.0,
+    "finance_household_flexibility_discretionary_pct": 60.0
+  }
+}

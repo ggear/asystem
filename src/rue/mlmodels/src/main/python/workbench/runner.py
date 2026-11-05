@@ -10,7 +10,7 @@ from nbclient import NotebookClient
 
 from asystem.report import stage, subject
 from workbench.errors import GateError
-from workbench.metadata import PROJECT_DIR, lint_metadata, requirement_lines
+from workbench.metadata import PROJECT_DIR, lint_metadata, requirements
 from workbench.model import PROJECT_MANIFEST
 
 KERNEL = "asystem"
@@ -42,8 +42,8 @@ def run_notebook(workspace_dir, output_dir, register, pins_path, source_dir):
             with open(join(workspace_dir, PROJECT_DIR, PROJECT_MANIFEST)) as manifest_file:
                 flavour = json.load(manifest_file)["flavour"]
             with stage("requirements") as entry:
-                lines = requirement_lines(workspace_dir, flavour, pins_path, source_dir)
-                entry.detail = f"{sum(line.startswith('  +') for line in lines)} to add"
+                to_add, summary, lines = requirements(workspace_dir, flavour, pins_path, source_dir)
+                entry.detail = f"{to_add} to add" + (f": {summary}" if summary else "")
             for line in lines:
                 print(f"    {line}", flush=True)
             with stage("metadata") as entry:

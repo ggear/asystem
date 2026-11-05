@@ -1,7 +1,11 @@
 {
   "content_sha256": "bfd93b4ae7ab4cc7b6500fca9a52417cba963de732266d1035e49d9946056354",
-  "inputs_sha256": "ad00b6a8bb3eda55d7905182c0b96abf8e8c8cd09b2945bffe8a3396298aae86",
-  "passed": [],
+  "inputs_sha256": "1626d814c2ef5ec26ab62e03b0231d9b185c8e658a85047d6016dd4a0a8ba90b",
+  "passed": [
+    {
+      "kind": "local"
+    }
+  ],
   "released_at": null,
   "released_by": null,
   "released_signature": null,
@@ -10,10 +14,10 @@
     "python": []
   },
   "schema": 1,
-  "snapshot_version": null,
+  "snapshot_version": "10.200.1990-SNAPSHOT",
   "targets": [
     {
-      "kind": "served"
+      "kind": "local"
     }
   ]
 }

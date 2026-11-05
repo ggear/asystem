@@ -1,16 +1,18 @@
 {
-  "content_sha256": "f50b12cf55aab7d414c8f7af0d6c8ee098a55fd1be2c90e8efa98081cc883bd2",
-  "inputs_sha256": "1e7a0bfce85d81d99167b372071e6af3ea8592f50f290f4ced9b3e82fa454725",
-  "passed": [],
+  "content_sha256": "b74a57fad05398988a8e0f6f5532f33c29358148fd0da6a3a15050a8e4d5eda6",
+  "inputs_sha256": "131f1b2558bd5706e5ee33cbe69f596ead14a7514d051a79c4d465f559c89d9a",
+  "passed": [
+    {
+      "kind": "served"
+    }
+  ],
   "released_at": null,
   "released_by": null,
   "released_signature": null,
   "released_version": null,
-  "runtime": {
-    "python": []
-  },
+  "runtime": {},
   "schema": 1,
-  "snapshot_version": "10.200.1989-SNAPSHOT",
+  "snapshot_version": "10.200.1990-SNAPSHOT",
   "targets": [
     {
       "kind": "served"

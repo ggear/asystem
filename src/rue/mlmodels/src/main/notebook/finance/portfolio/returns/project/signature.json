@@ -7,7 +7,7 @@
   },
   "inputs": [
     {
-      "name": "finance_portfolio_returns_scenario",
+      "name": "finance_portfolio_returns_in",
       "datatype": "FP64",
       "shape": [
         1
@@ -15,13 +15,13 @@
       "parameters": {
         "unit": "none",
         "required": true,
-        "description": "Scenario, 0 low, 1 base, 2 high."
+        "description": "Unused input."
       }
     }
   ],
   "outputs": [
     {
-      "name": "finance_portfolio_returns_nominal_pct",
+      "name": "finance_portfolio_returns_nominal_low_pct",
       "datatype": "FP64",
       "shape": [
         1
@@ -29,7 +29,31 @@
       "parameters": {
         "unit": "percent",
         "required": true,
-        "description": "Annual portfolio return for the scenario, percent per year."
+        "description": "Annual nominal portfolio return, percent per year, low scenario."
+      }
+    },
+    {
+      "name": "finance_portfolio_returns_nominal_base_pct",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "percent",
+        "required": true,
+        "description": "Annual nominal portfolio return, percent per year, base scenario."
+      }
+    },
+    {
+      "name": "finance_portfolio_returns_nominal_high_pct",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "percent",
+        "required": true,
+        "description": "Annual nominal portfolio return, percent per year, high scenario."
       }
     }
   ]

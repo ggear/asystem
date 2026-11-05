@@ -4,7 +4,7 @@ import os
 import re
 import shutil
 from glob import glob
-from os.path import dirname, isfile, join, relpath
+from os.path import dirname, isfile, join, normpath, relpath
 
 from workbench.errors import GateError
 
@@ -13,7 +13,8 @@ PROJECT_DIR = "project"
 METADATA_SCHEMA = 1
 RUNTIME_PINS = ("numpy", "scipy", "pandas", "polars", "onnx", "onnxruntime", "wasmtime", "scikit-learn", "mlflow")
 CONSUMER_PINS = ("numpy", "pandas", "onnxruntime", "wasmtime", "mlflow")
-TARGET_KINDS = ("served", "embedded")
+TARGET_KINDS = ("served", "embedded", "local")
+LOCAL_TARGET = {"kind": "local"}
 TARGET_LANGUAGES = ("python", "go", "rust")
 HOST_LIBRARIES = {("python", "wasm"): "wasmtime", ("python", "onnx"): "onnxruntime", ("rust", "wasm"): "wasmi", ("rust", "onnx"): "ort", ("go", "wasm"): "wazero"}
 HOST_FILES = {"python": "src/main/python/py_deps.txt", "rust": "src/main/rust/{host}/Cargo.toml", "go": "src/main/go/{host}/go.mod"}
@@ -112,7 +113,7 @@ def record_project(workspace_dir, project_dir, targets, pins_path, version_path=
         "released_at": previous.get("released_at") if same else None,
         "released_signature": previous.get("released_signature") if same else None,
         "targets": list(targets),
-        "passed": [target for target in previous.get("passed", []) if target in targets] if same else [],
+        "passed": list(targets) if list(targets) == [LOCAL_TARGET] else ([target for target in previous.get("passed", []) if target in targets] if same else []),
     }
     write_metadata(workspace_dir, metadata)
     return metadata
@@ -192,15 +193,17 @@ def lint_metadata(workspace_dir, flavour, pins_path=None, source_dir=None):
     return findings
 
 
-def requirement_lines(workspace_dir, flavour, pins_path, source_dir):
+def requirements(workspace_dir, flavour, pins_path, source_dir):
     metadata = read_metadata(workspace_dir)
     runtime = metadata["runtime"]
     pinned = {package_key(name) for name in read_pins(pins_path, None)}
+    source_dir = normpath(source_dir)
     module = workspace_dir.rstrip("/").split("/")[-3]
+    summary = []
     lines = []
-    if runtime.get("wasm"):
-        lines.append(f"wasm bindings asystem_math [{' '.join(runtime['wasm'])}] provided by every host, nothing to install")
     for target in metadata["targets"]:
+        if target["kind"] == "local":
+            continue
         served = target["kind"] == "served"
         language = "python" if served else target["language"]
         host = "mlserver" if served else "mlmodels" if module == "example" else module
@@ -208,19 +211,23 @@ def requirement_lines(workspace_dir, flavour, pins_path, source_dir):
         needed: list[str] = sorted({*runtime.get("python", ()), *HOST_LIBRARIES.get((language, flavour), "").split()})
         if not needed:
             continue
+        label = "served" if served else language
         paths = glob(join(source_dir, "*", host, HOST_FILES[language].format(host=crate)))
         if len(paths) != 1:
+            summary.append(f"{label} ?{host}")
             lines.append(f"{target['kind']} {language} no unique {host} file for [{', '.join(needed)}] under [{source_dir}] found {paths}")
             continue
         with open(paths[0]) as host_file:
             declared = host_file.read()
-        lines.append(f"{target['kind']} {language} host [{host}] file [{relpath(paths[0], dirname(source_dir))}]")
-        for name in needed:
-            present = package_key(name) in {package_key(line) for line in declared.splitlines()} if language == "python" else re.search(rf"\b{re.escape(name)}\b", declared)
-            lines.append(f"  {'=' if present else '+'} {name}")
-            if language == "python" and package_key(name) not in pinned:
-                lines.append(f"  ! {name} has no project wide pin, add {name}==<version> to [{pins_path}]")
-    return lines
+        declared_names = {package_key(line) for line in declared.splitlines()}
+        missing = [name for name in needed if not (package_key(name) in declared_names if language == "python" else re.search(rf"\b{re.escape(name)}\b", declared))]
+        unpinned = [name for name in needed if language == "python" and package_key(name) not in pinned]
+        if missing or unpinned:
+            summary.append(f"{label} {' '.join(missing or unpinned)}")
+            lines.append(f"{target['kind']} {language} host [{host}] file [{relpath(paths[0], dirname(source_dir))}]")
+            lines.extend(f"  + {name}" for name in missing)
+            lines.extend(f"  ! {name} has no project wide pin, add {name}==<version> to [{pins_path}]" for name in unpinned)
+    return sum(line.startswith("  +") for line in lines), ", ".join(summary), lines
 
 
 def content_sha256(project_dir):
@@ -230,6 +237,8 @@ def content_sha256(project_dir):
 
 def _target_findings(flavour, targets):
     findings = []
+    if LOCAL_TARGET in targets and len(targets) != 1:
+        findings.append(f"local must be the only target {targets}")
     for target in targets:
         if not isinstance(target, dict) or target.get("kind") not in TARGET_KINDS:
             findings.append(f"target kind unknown [{target}]")

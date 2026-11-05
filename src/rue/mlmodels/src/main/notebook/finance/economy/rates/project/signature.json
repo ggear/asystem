@@ -1,0 +1,96 @@
+{
+  "name": "finance_economy_rates",
+  "platform": "mlserver",
+  "parameters": {
+    "signature_version": 1,
+    "state": []
+  },
+  "inputs": [
+    {
+      "name": "finance_economy_rates_in",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "Unused input."
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "name": "finance_economy_rates_nominal_low_pct",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "percent",
+        "required": true,
+        "description": "Annual no risk rate, percent per year, low scenario."
+      }
+    },
+    {
+      "name": "finance_economy_rates_nominal_base_pct",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "percent",
+        "required": true,
+        "description": "Annual no risk rate, percent per year, base scenario."
+      }
+    },
+    {
+      "name": "finance_economy_rates_nominal_high_pct",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "percent",
+        "required": true,
+        "description": "Annual no risk rate, percent per year, high scenario."
+      }
+    },
+    {
+      "name": "finance_economy_rates_real_low_pct",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "percent",
+        "required": true,
+        "description": "Annual real return of cash, percent per year, low scenario."
+      }
+    },
+    {
+      "name": "finance_economy_rates_real_base_pct",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "percent",
+        "required": true,
+        "description": "Annual real return of cash, percent per year, base scenario."
+      }
+    },
+    {
+      "name": "finance_economy_rates_real_high_pct",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "percent",
+        "required": true,
+        "description": "Annual real return of cash, percent per year, high scenario."
+      }
+    }
+  ]
+}

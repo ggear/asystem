@@ -1,0 +1,33 @@
+{
+  "spec_version": 1,
+  "name": "finance_economy_rates",
+  "signature_version": 1,
+  "flavour": "static",
+  "provenance": {
+    "source": "manual",
+    "trained_on": "synthetic window means of the bank rate and real cash return, training split",
+    "inputs": [
+      "finance/economy/rates/data/training/2026-11-05_18-24-38/economy_rates_training_2026-11-05_2026-11-05.csv",
+      "finance/economy/rates/data/golden/2026-11-05_18-24-38/economy_rates_golden.csv"
+    ],
+    "notes": "smallest, mean and largest of the window means"
+  },
+  "files": {
+    "signature": {
+      "path": "signature.json",
+      "sha256": "641e48f62aeb8e4bcbcf1b4b83836b1790e8377f9e5055385e22fe560ed71014"
+    },
+    "golden": {
+      "path": "golden.json",
+      "sha256": "1e1ffca0600e6c963710d3c6ca5f551419e1464994b5da113b739a344ec15fe1"
+    }
+  },
+  "constants": {
+    "finance_economy_rates_nominal_low_pct": 2.0,
+    "finance_economy_rates_nominal_base_pct": 3.3,
+    "finance_economy_rates_nominal_high_pct": 5.0,
+    "finance_economy_rates_real_low_pct": -0.9,
+    "finance_economy_rates_real_base_pct": 0.45,
+    "finance_economy_rates_real_high_pct": 2.0
+  }
+}

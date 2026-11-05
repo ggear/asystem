@@ -8,10 +8,10 @@ The plan for the `finance_household_costs` model. It follows `model.md`, the spe
 | **Model** | `household` |
 | **Notebook** | `src/rue/mlmodels/src/main/notebook/finance/household/costs/notebook.ipynb` |
 | **Registered Model** | `finance_household_costs` (`model.md` 6.1) |
-| **Project Flavour** | `pyfunc` (`model.md` 3.2) |
-| **Consumers** | Served by `mlserver`. `pyfunc` is Python only, so there is no Rust or Go runtime |
+| **Project Flavour** | `static` (`model.md` 3.2), target `served` |
+| **Target** | `served` by `mlserver`. |
 
-**Status.** Placeholder. The notebook fits, accepts, packages and replays on synthetic series around the two long run means; no real data is loaded yet and nothing is released.
+**Status, 2026-11-05.** A placeholder. The notebook fits on a synthetic series, packages a `static` project, replays the golden and records it; the real series is not loaded yet and nothing is released.
 
 ## Intent
 
@@ -21,25 +21,25 @@ Give one annual cost growth rate per scenario to inflate spending to 2070. Place
 
 | Direction | Name | Type | Notes |
 |---|---|---|---|
-| Input | `finance_household_costs_scenario` | FP64 | Scenario, 0 low, 1 base, 2 high. |
-| Output | `finance_household_costs_growth_pct` | FP64 | Annual growth rate of costs for the scenario, percent per year. |
+| Input | `finance_household_costs_in` | FP64 | Unused, required by the spec so the request is still validated |
+| Output | `finance_household_costs_growth_low_pct` | FP64 | Annual growth rate of costs, percent per year, low scenario. |
+| Output | `finance_household_costs_growth_base_pct` | FP64 | Annual growth rate of costs, percent per year, base scenario. |
+| Output | `finance_household_costs_growth_high_pct` | FP64 | Annual growth rate of costs, percent per year, high scenario. |
 
-`model.py` calls `set_model` and imports nothing beyond the base packages (`mlflow`, `numpy`, `pandas`) and the standard library, so the notebook declares no `PYTHON_DEPS` and `mlserver` needs no new package.
+`static` (`model.md` 3.2): the fitted numbers are the manifest's constants, and the simulation behind them stays in the notebook as evidence. It carries no evaluation (R14), so the check is the golden replay and the assertions in the notebook's Fit cell.
 
 ## Data
 
 | Split | Dataset | Content |
 |---|---|---|
-| `training` | `household_costs_training` | Ten years of annual inflation and cost growth, synthetic around 3.24 and 4.83 percent. To be replaced by the two sheets below |
-| `validation` | `household_costs_validation` | Five further years of observed cost growth against the base scenario |
-| `backtest` | `household_costs_backtest` | Ten more years, held back for acceptance |
-| `golden` | `household_costs_golden` | Scenarios 0, 1, 2, rounding cases and out of range ones, then a request with the input missing, which must give a signature error |
+| `training` | `household_costs_training` | Ten years of inflation and cost growth, synthetic until the real series are loaded |
+| `golden` | `household_costs_golden` | One valid request, then a request with the input missing, which must give a signature error |
 
-The placeholder datasets are synthetic and committed, so `fab unittest` needs no database. The real sources are in the approach and the data to get below. `workbench.data` has `query_influxdb3` only: a `query_postgres` helper for `wrangle` is the first change before any of the real data can be loaded.
+The placeholder dataset is synthetic and committed, so `fab unittest` needs no database. `workbench.data` has `query_influxdb3` only: a `query_postgres` helper for `wrangle` is the first change before the real data can be loaded.
 
 ## Acceptance
 
-The notebook owns the limits (`model.md` 6.8). Two gating checks on `finance_household_costs_growth_pct`: the `rmse` of the base scenario against observed growth on `validation` and `backtest` must not exceed 1.0 percentage point. The placeholder noise is about 0.3 to 0.5.
+None. A `static` project carries no evaluation (R14); the gate is the golden replay, which reproduces the constants exactly.
 
 ## Approach
 
@@ -82,6 +82,17 @@ Placeholder in this notebook: low is the inflation mean, base the cost growth me
 | Reserve Bank target, forecasts and inflation expectations; indexed bond breakevens | The anchor for the mean reversion, and a market view | RBA, `wrangle` interest table |
 | Treasury Intergenerational Report health and aged-care cost projections | Evidence for the ageing driver | Treasury |
 | Energy and insurance price outlooks | Evidence for those drivers | AEMO Integrated System Plan, insurer indices |
+
+## Consumption
+
+Target `served`. The planning sheet reads this model's numbers from `mlserver` through `wrangle`, the way it reads Yahoo Finance prices today, and that is **to be built later**:
+
+- `wrangle`'s HTTP server (`server.py`) gains a feed that asks `mlserver` for the released `static` models and caches each answer with a TTL, so a recalculating sheet costs one call per model.
+- The resource gets its own hostname through the `<MODULE>_HTTP_API_<RESOURCE>_CONTEXT` key in `wrangle`'s `.env_all`, which `nginx` turns into a vhost, and reaches Google through `cloudflare` behind the Access service token.
+- The sheet calls it with an Apps Script custom function, as `src/build/resources/sheets/equity_price.js` does, for example `=WRANGLE_PLAN("finance_household_costs", "base")`. `IMPORTDATA` cannot send the Access headers.
+- The numbers are the model's three constant outputs (low, base and high), so the function picks one by name. Show the project hash with it so the sheet says which release a number came from.
+
+Nothing here is built, and this model needs no change for it beyond staying `static` and `served`.
 
 ## To do
 

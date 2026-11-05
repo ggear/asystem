@@ -8,9 +8,9 @@ The plan for the `finance_household_flexibility` model. It follows `model.md`, t
 | **Model** | `household` |
 | **Notebook** | `src/rue/mlmodels/src/main/notebook/finance/household/flexibility/notebook.ipynb` |
 | **Registered Model** | `finance_household_flexibility` (`model.md` 6.1) |
-| **Project Flavour** | `pyfunc` (`model.md` 3.2), served by `mlserver` |
+| **Project Flavour** | `static` (`model.md` 3.2), target `local` |
 
-**Status, 2026-11-05.** A placeholder beside the other finance projects. The notebook, the directories and this plan are scaffolded; nothing is fitted or built.
+**Status, 2026-11-05.** A placeholder. The notebook fits on a synthetic series, packages a `static` project, replays the golden and records it; the real series is not loaded yet and nothing is released.
 
 ## Intent
 
@@ -19,6 +19,16 @@ Split spending into essential, committed, discretionary and irregular, and say h
 ## What the data holds
 
 The `Bank` workbook that `wrangle`'s `bank` plugin writes (tabs `Accounts`, `Classifier`, `Balances`, `Transactions_<year>` and the `Summary` and `Logs` outputs), on Drive under `Wrangle/Bank/release/data`. About 11,700 transactions across 13 accounts from 2021-05-01, when the statement history begins, to now, each with a `Category` (about 40) that the `Classifier` tab maps to a bucket. `bank` writes nothing to Postgres yet, so the first change for every household project is a `bank` table in `wrangle`'s schema, or a loader that reads the year files. The categories (groceries, hospitality, lifestyle, subscriptions, home improvements, insurance, utilities, school, child care, holidays and the rest) are the raw material; the split is a judgement that has to be written down.
+
+## Signature
+
+| Direction | Name | Type | Notes |
+|---|---|---|---|
+| Input | `finance_household_flexibility_in` | FP64 | Unused, required by the spec so the request is still validated |
+| Output | `finance_household_flexibility_essential_floor_dollars` | FP64 | Annual spending that cannot be cut, essential plus committed, dollars. |
+| Output | `finance_household_flexibility_discretionary_pct` | FP64 | Share of annual spending that is discretionary, percent. |
+
+`static` (`model.md` 3.2): the fitted numbers are the manifest's constants, and the simulation behind them stays in the notebook as evidence. It carries no evaluation (R14), so the check is the golden replay and the assertions in the notebook's Fit cell.
 
 ## Approach
 

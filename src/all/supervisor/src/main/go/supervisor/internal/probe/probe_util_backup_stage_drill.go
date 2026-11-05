@@ -128,7 +128,7 @@ func backupDrillDue(runs []backupKeepRun, policy backupKeepPolicy, now time.Time
 func backupDrillFailing(target string) bool {
 	for _, run := range slices.Backward(backupRuns(target)) {
 		if drill, found := readBackupDrill(backupDrillPath(filepath.Join(target, run), string(metric.BackupStageSecondary))); found {
-			return drill.Verdict == metric.BackupStateFailure
+			return backupDrillFailed(target, run, drill)
 		}
 	}
 	return false
@@ -136,11 +136,16 @@ func backupDrillFailing(target string) bool {
 
 func backupDrillRetained(target string) bool {
 	for _, run := range backupRuns(target) {
-		if drill, found := readBackupDrill(backupDrillPath(filepath.Join(target, run), string(metric.BackupStageSecondary))); found && drill.Verdict == metric.BackupStateFailure {
+		if drill, found := readBackupDrill(backupDrillPath(filepath.Join(target, run), string(metric.BackupStageSecondary))); found && backupDrillFailed(target, run, drill) {
 			return true
 		}
 	}
 	return false
+}
+
+func backupDrillFailed(target, run string, drill backupDrill) bool {
+	manifest, read := readBackupManifest(target, run)
+	return drill.Verdict == metric.BackupStateFailure && read && manifest.SourceSoftware != ""
 }
 
 func flagBackupDrillFailed(path string) {

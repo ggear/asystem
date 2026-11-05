@@ -1,0 +1,21 @@
+{
+  "content_sha256": "8387788ae9947de348b58cc0ecb614abbe19920ac6d52da06e7cd26a49446860",
+  "inputs_sha256": "f36dcd73056474acfa6fcad0a4df4371bde517ad93ac92644fd7f03674d2d65d",
+  "passed": [
+    {
+      "kind": "local"
+    }
+  ],
+  "released_at": null,
+  "released_by": null,
+  "released_signature": null,
+  "released_version": null,
+  "runtime": {},
+  "schema": 1,
+  "snapshot_version": "10.200.1990-SNAPSHOT",
+  "targets": [
+    {
+      "kind": "local"
+    }
+  ]
+}

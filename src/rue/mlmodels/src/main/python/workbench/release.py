@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from os.path import isdir, isfile, join
 
 from workbench.errors import GateError
-from workbench.metadata import METADATA_FILE, PROJECT_DIR, content_sha256, read_metadata, write_metadata
+from workbench.metadata import LOCAL_TARGET, METADATA_FILE, PROJECT_DIR, content_sha256, read_metadata, write_metadata
 from workbench.model import CONSUMER_MODEL_PATH, PROJECT_ALIAS_PREVIEW, PROJECT_ALIAS_RELEASE, PROJECT_MANIFEST, PROJECT_NAME, register_project, registered_name, registry_client
 
 NOTEBOOK_ROOT = "rue/mlmodels/src/main/notebook"
@@ -35,6 +35,8 @@ def release_workspaces(source_dir, version, released_by, tracking_uri=None, mlse
         if name.startswith(RELEASE_FIXTURES + "_") or not isfile(join(directory, METADATA_FILE)):
             continue
         metadata = read_metadata(directory)
+        if metadata["targets"] == [LOCAL_TARGET]:
+            continue
         if metadata["released_version"] is None:
             missing = [target for target in metadata["targets"] if target not in metadata["passed"]]
             if missing:

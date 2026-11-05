@@ -27,7 +27,7 @@ def _targets():
     found = []
     for name, directory in workspaces(DIR_SOURCE).items():
         if isfile(join(directory, METADATA_FILE)):
-            found.extend(pytest.param(name, directory, target, id=f"{name}-{_label(target)}") for target in read_metadata(directory)["targets"])
+            found.extend(pytest.param(name, directory, target, id=f"{name}-{_label(target)}") for target in read_metadata(directory)["targets"] if target["kind"] != "local")
     return found
 
 

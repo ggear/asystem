@@ -197,6 +197,38 @@ func TestProbeUtilBackupKeep_ReadBackupKeepRuns(t *testing.T) {
 	}
 }
 
+func TestProbeUtilBackupKeep_ReadBackupKeepRunsDrills(t *testing.T) {
+	tests := []struct {
+		name            string
+		verdict         string
+		expectedDrilled bool
+		expectedJudged  bool
+	}{
+		{"a pass counts as drilled", metric.BackupStateSuccess, true, true},
+		{"a skip counts as drilled", metric.BackupStateSkipped, true, true},
+		{"a failure is judged but not drilled", metric.BackupStateFailure, false, true},
+		{"no verdict is neither", "", false, false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := t.TempDir()
+			run := filepath.Join(root, "2026-10-19_01-00-00")
+			if err := os.MkdirAll(run, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if test.verdict != "" {
+				if err := writeAtomicDrill(backupDrillPath(run, "secondary"), test.verdict); err != nil {
+					t.Fatal(err)
+				}
+			}
+			runs := readBackupKeepRuns(root)
+			if len(runs) != 1 || runs[0].drilled != test.expectedDrilled || runs[0].judged != test.expectedJudged {
+				t.Errorf("drills: got %+v want drilled [%t] judged [%t]", runs, test.expectedDrilled, test.expectedJudged)
+			}
+		})
+	}
+}
+
 func keepFixture(name string, full bool, parent, verdict string) backupKeepRun {
 	at, _ := time.ParseInLocation(backupTimestampFormat, name, time.Local)
 	return backupKeepRun{name: name, at: at, full: full, parent: parent, verdict: verdict}

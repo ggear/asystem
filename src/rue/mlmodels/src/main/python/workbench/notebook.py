@@ -74,7 +74,7 @@ def fix_notebook(path):
     return changed
 
 
-def scaffold_notebook(root, module, model, notebook, flavour):
+def scaffold_notebook(root, module, model, notebook, flavour, local=False):
     for part in (module, model, notebook):
         check_name(part)
     if flavour not in PROJECT_FLAVOURS:
@@ -93,7 +93,7 @@ def scaffold_notebook(root, module, model, notebook, flavour):
             open(keep, "w").close()
             created.append(keep)
     with open(notebook_path, "w") as notebook_file:
-        json.dump(_scaffold_notebook(module, model, notebook, name, flavour), notebook_file, indent=1, ensure_ascii=False)
+        json.dump(_scaffold_notebook(module, model, notebook, name, flavour, local), notebook_file, indent=1, ensure_ascii=False)
         notebook_file.write("\n")
     with open(created[1], "w") as plan_file:
         plan_file.write(_scaffold_plan(module, model, notebook, name, flavour))
@@ -109,6 +109,7 @@ def main(arguments=None):
     new.add_argument("notebook")
     new.add_argument("flavour")
     new.add_argument("--root", default="src/main/notebook")
+    new.add_argument("--local", action="store_true")
     lint = commands.add_parser("lint")
     lint.add_argument("--fix", action="store_true")
     lint.add_argument("paths", nargs="+")
@@ -116,7 +117,7 @@ def main(arguments=None):
     options = parser.parse_args(argv if argv and argv[0] in ("new", "lint") else ["lint", *argv])
     if options.command == "new":
         try:
-            for path in scaffold_notebook(options.root, options.module, options.model, options.notebook, options.flavour):
+            for path in scaffold_notebook(options.root, options.module, options.model, options.notebook, options.flavour, options.local):
                 print(f"created [{path}]")
         except ValueError as error:
             print(f"ERROR notebook command failed [new] [{error}]", file=sys.stderr)
@@ -132,7 +133,7 @@ def main(arguments=None):
     return 1 if failed else 0
 
 
-def _scaffold_notebook(module, model, notebook, name, flavour):
+def _scaffold_notebook(module, model, notebook, name, flavour, local):
     def markdown(text):
         return {"cell_type": "markdown", "metadata": {}, "source": text.strip("\n").splitlines(keepends=True)}
 
@@ -143,7 +144,7 @@ def _scaffold_notebook(module, model, notebook, name, flavour):
         return markdown(f"## {title}\n\n- **Stage:** {stage}\n- **Intent:** {intent}")
 
     static = flavour == "static"
-    targets = "[]" if static else '[{"kind": "served"}]'
+    targets = '[{"kind": "local"}]' if local else '[{"kind": "served"}]'
     cells = [
         markdown(
             f"# {module} / {model} / {notebook}\n\nState in one line what this model does.\n\n| Term | In This Notebook |\n|---|---|\n"
@@ -184,6 +185,8 @@ def _scaffold_notebook(module, model, notebook, name, flavour):
         ),
         code('from workbench.model import register_preview\n\nversion = register_preview(project_dir, MODEL_NAME, env["MLFLOW_TRACKING_URI"], TARGETS)\nprint("registered version", version)'),
     ]
+    if local:
+        cells = cells[:-2]
     return {
         "cells": cells,
         "metadata": {"kernelspec": {"name": "asystem", "language": "python", "display_name": "asystem (Python 3.12)"}, "language_info": {"name": "python"}},

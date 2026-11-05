@@ -8,8 +8,8 @@ The plan for the `finance_portfolio_excess` model. It follows `model.md`, the sp
 | **Model** | `portfolio` |
 | **Notebook** | `src/rue/mlmodels/src/main/notebook/finance/portfolio/excess/notebook.ipynb` |
 | **Registered Model** | `finance_portfolio_excess` (`model.md` 6.1) |
-| **Project Flavour** | `pyfunc` (`model.md` 3.2) |
-| **Consumers** | Served by `mlserver`. `pyfunc` is Python only, so there is no Rust or Go runtime |
+| **Project Flavour** | `pyfunc` (`model.md` 3.2), target `local` |
+| **Target** | `local`: it never leaves the notebook and `mlserver` cannot pull it. Promote it by changing the target to `served` when something needs to call it |
 
 **Status.** Placeholder. The notebook recovers a 4 percent excess return and a risk aversion of 3 from synthetic points; nothing is released.
 
@@ -24,7 +24,7 @@ Show what is left of a portfolio's excess return once its volatility is charged 
 | Input | `finance_portfolio_excess_volatility_pct` | FP64 | Annualised volatility of the portfolio, percent. |
 | Output | `finance_portfolio_excess_risk_adjusted_pct` | FP64 | Excess return over cash less the charge for volatility, percent per year. |
 
-`model.py` calls `set_model` and imports nothing beyond the base packages (`mlflow`, `numpy`, `pandas`) and the standard library, so the notebook declares no `PYTHON_DEPS` and `mlserver` needs no new package.
+`model.py` calls `set_model` and imports nothing beyond the base packages (`mlflow`, `numpy`, `pandas`) and the standard library, so the notebook declares no `PYTHON_DEPS`. Promoting it to `served` needs no new package in `mlserver` either.
 
 ## Data
 

@@ -8,8 +8,8 @@ The plan for the `finance_portfolio_utility` model. It follows `model.md`, the s
 | **Model** | `portfolio` |
 | **Notebook** | `src/rue/mlmodels/src/main/notebook/finance/portfolio/utility/notebook.ipynb` |
 | **Registered Model** | `finance_portfolio_utility` (`model.md` 6.1) |
-| **Project Flavour** | `pyfunc` (`model.md` 3.2) |
-| **Consumers** | Served by `mlserver`. `pyfunc` is Python only, so there is no Rust or Go runtime |
+| **Project Flavour** | `pyfunc` (`model.md` 3.2), target `local` |
+| **Target** | `local`: it never leaves the notebook and `mlserver` cannot pull it. Promote it by changing the target to `served` when something needs to call it |
 
 **Status.** Placeholder. The notebook recovers a risk aversion of 3 from synthetic utilities; the real input is your own choices and nothing is released.
 
@@ -24,7 +24,7 @@ Turn a wealth multiple into utility so a portfolio can be ranked by what it is w
 | Input | `finance_portfolio_utility_wealth` | FP64 | Wealth as a multiple of today's wealth. |
 | Output | `finance_portfolio_utility_value` | FP64 | Constant relative risk aversion utility of the wealth multiple. |
 
-`model.py` calls `set_model` and imports nothing beyond the base packages (`mlflow`, `numpy`, `pandas`) and the standard library, so the notebook declares no `PYTHON_DEPS` and `mlserver` needs no new package.
+`model.py` calls `set_model` and imports nothing beyond the base packages (`mlflow`, `numpy`, `pandas`) and the standard library, so the notebook declares no `PYTHON_DEPS`. Promoting it to `served` needs no new package in `mlserver` either.
 
 ## Data
 

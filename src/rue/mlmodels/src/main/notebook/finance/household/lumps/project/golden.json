@@ -1,0 +1,59 @@
+{
+  "sequences": [
+    {
+      "name": "golden",
+      "steps": [
+        {
+          "request": {
+            "id": "s1-0",
+            "inputs": [
+              {
+                "name": "finance_household_lumps_in",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  1.0
+                ]
+              }
+            ]
+          },
+          "response": {
+            "model_name": "finance_household_lumps",
+            "id": "s1-0",
+            "outputs": [
+              {
+                "name": "finance_household_lumps_expected_annual_dollars",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  20000.0
+                ]
+              },
+              {
+                "name": "finance_household_lumps_p95_annual_dollars",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  42100.0
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "request": {
+            "id": "s1-1",
+            "inputs": []
+          },
+          "error": "signature"
+        }
+      ]
+    }
+  ]
+}

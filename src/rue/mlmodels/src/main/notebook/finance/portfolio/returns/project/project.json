@@ -2,36 +2,29 @@
   "spec_version": 1,
   "name": "finance_portfolio_returns",
   "signature_version": 1,
-  "flavour": "pyfunc",
+  "flavour": "static",
   "provenance": {
     "source": "manual",
     "trained_on": "synthetic annual portfolio returns, training split",
     "inputs": [
-      "finance/portfolio/returns/data/training/2026-11-05_17-20-34/portfolio_returns_training_2026-11-05_2026-11-05.csv",
-      "finance/portfolio/returns/data/golden/2026-11-05_17-20-35/portfolio_returns_golden.csv"
+      "finance/portfolio/returns/data/training/2026-11-05_18-24-35/portfolio_returns_training_2026-11-05_2026-11-05.csv",
+      "finance/portfolio/returns/data/golden/2026-11-05_18-24-35/portfolio_returns_golden.csv"
     ],
-    "notes": "mean and standard deviation of annual returns per scenario",
-    "implementation": "mlflow.pyfunc model.py, requires mlflow and pandas"
+    "notes": "mean and standard deviation of annual returns"
   },
   "files": {
     "signature": {
       "path": "signature.json",
-      "sha256": "40601d960f4020f8cf1de510f8fd3d15a0aae48ed85594bcb649b0abc3cd107d"
+      "sha256": "bdf792e0d6a54f67133ea2e58288ef44ee9ee879bd0da509c521b2ab65876e51"
     },
     "golden": {
       "path": "golden.json",
-      "sha256": "ba0294631fafa8c0a9f50b6c75d160302ed0d00b937f3f0a2422319a2fa77f52"
-    },
-    "evaluation": {
-      "path": "evaluation.json",
-      "sha256": "fb73044f13c93c5344ab3feb8528d8463412f05ce9b8f0c5749b8de924ee7402"
-    },
-    "model": {
-      "path": "model.py",
-      "sha256": "772e670a41355bb312a7fdc73a35b4da03e87eb0af283de63b47d924cd3e8be4"
+      "sha256": "506e52c2d684a089339013e599a087321d1a8d5c52b918c668591b6c0962fef1"
     }
   },
-  "runtime": {
-    "python": []
+  "constants": {
+    "finance_portfolio_returns_nominal_low_pct": 3.55,
+    "finance_portfolio_returns_nominal_base_pct": 6.0,
+    "finance_portfolio_returns_nominal_high_pct": 8.45
   }
 }

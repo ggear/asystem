@@ -1,0 +1,48 @@
+{
+  "name": "finance_household_runrate",
+  "platform": "mlserver",
+  "parameters": {
+    "signature_version": 1,
+    "state": []
+  },
+  "inputs": [
+    {
+      "name": "finance_household_runrate_in",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "Unused input."
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "name": "finance_household_runrate_normal_spend_dollars",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "Normal annual spend with the one-offs taken out, dollars."
+      }
+    },
+    {
+      "name": "finance_household_runrate_oneoff_allowance_dollars",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "Average annual spend on one-offs, dollars."
+      }
+    }
+  ]
+}

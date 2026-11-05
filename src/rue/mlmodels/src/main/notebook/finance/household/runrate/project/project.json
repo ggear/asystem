@@ -1,0 +1,29 @@
+{
+  "spec_version": 1,
+  "name": "finance_household_runrate",
+  "signature_version": 1,
+  "flavour": "static",
+  "provenance": {
+    "source": "manual",
+    "trained_on": "synthetic monthly spending with three one-offs, training split",
+    "inputs": [
+      "finance/household/runrate/data/training/2026-11-05_18-24-40/household_runrate_training_2026-11-05_2026-11-05.csv",
+      "finance/household/runrate/data/golden/2026-11-05_18-24-40/household_runrate_golden.csv"
+    ],
+    "notes": "median absolute deviation rule for one-offs"
+  },
+  "files": {
+    "signature": {
+      "path": "signature.json",
+      "sha256": "3ca1a9a0725d158f7bf4fedf4d766dac59250d2fa9237c5b8fac7d1a9853b2c1"
+    },
+    "golden": {
+      "path": "golden.json",
+      "sha256": "739e84bb1ce9f829d7a1ed7a2ad0dadbd07a26fadbfcb8cdf3d4aae4e5f65e5f"
+    }
+  },
+  "constants": {
+    "finance_household_runrate_normal_spend_dollars": 120057.0,
+    "finance_household_runrate_oneoff_allowance_dollars": 9250.0
+  }
+}

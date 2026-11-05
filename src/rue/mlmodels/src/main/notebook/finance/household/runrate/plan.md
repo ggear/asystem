@@ -8,9 +8,9 @@ The plan for the `finance_household_runrate` model. It follows `model.md`, the s
 | **Model** | `household` |
 | **Notebook** | `src/rue/mlmodels/src/main/notebook/finance/household/runrate/notebook.ipynb` |
 | **Registered Model** | `finance_household_runrate` (`model.md` 6.1) |
-| **Project Flavour** | `pyfunc` (`model.md` 3.2), served by `mlserver` |
+| **Project Flavour** | `static` (`model.md` 3.2), target `local` |
 
-**Status, 2026-11-05.** A placeholder beside the other finance projects. The notebook, the directories and this plan are scaffolded; nothing is fitted or built.
+**Status, 2026-11-05.** A placeholder. The notebook fits on a synthetic series, packages a `static` project, replays the golden and records it; the real series is not loaded yet and nothing is released.
 
 ## Intent
 
@@ -20,6 +20,16 @@ Separate the household's steady spending from its irregular spending, to give on
 
 The `Bank` workbook that `wrangle`'s `bank` plugin writes (tabs `Accounts`, `Classifier`, `Balances`, `Transactions_<year>` and the `Summary` and `Logs` outputs), on Drive under `Wrangle/Bank/release/data`. About 11,700 transactions across 13 accounts from 2021-05-01, when the statement history begins, to now, each with a `Category` (about 40) that the `Classifier` tab maps to a bucket. `bank` writes nothing to Postgres yet, so the first change for every household project is a `bank` table in `wrangle`'s schema, or a loader that reads the year files. The history is about 5 years, so the first year over year growth point is 2022-05 and there are fewer than 5 of them: the 4.83 percent is a short sample, compared above with the 40 year inflation window. Compare like with like (the 5 year inflation mean).
 
+## Signature
+
+| Direction | Name | Type | Notes |
+|---|---|---|---|
+| Input | `finance_household_runrate_in` | FP64 | Unused, required by the spec so the request is still validated |
+| Output | `finance_household_runrate_normal_spend_dollars` | FP64 | Normal annual spend with the one-offs taken out, dollars. |
+| Output | `finance_household_runrate_oneoff_allowance_dollars` | FP64 | Average annual spend on one-offs, dollars. |
+
+`static` (`model.md` 3.2): the fitted numbers are the manifest's constants, and the simulation behind them stays in the notebook as evidence. It carries no evaluation (R14), so the check is the golden replay and the assertions in the notebook's Fit cell.
+
 ## Approach
 
 1. **Explore.** Monthly spend by category as a table and a heat map, the transfers, interest and tax categories left out (`Bank Transfer`, `Credit Payment` and the `Excluded` bucket are movements of money and not spending).
@@ -27,7 +37,7 @@ The `Bank` workbook that `wrangle`'s `bank` plugin writes (tabs `Accounts`, `Cla
 3. **Compute the run rate.** Trailing twelve months of normal spend by category, summed, and its growth Y/Y with and without the one-offs. If the two growth rates differ, the single number was measuring the one-offs.
 4. **Ship** the baseline annual spend and the one-off allowance as separate numbers.
 
-This is exploration first. The served model is small: it returns the run rate for a year.
+This is exploration first. It is `local`, so other notebooks read its two constants from the committed `project/project.json` and nothing is served.
 
 ## Data to get
 

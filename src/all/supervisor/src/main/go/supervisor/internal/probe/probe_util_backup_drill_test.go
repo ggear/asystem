@@ -325,20 +325,40 @@ func TestProbeUtilBackupDrill_FlagBackupDrillFailed(t *testing.T) {
 	if err := writeAtomic(path, serviceSummary{SuccessBool: true, Kind: "full"}); err != nil {
 		t.Fatal(err)
 	}
-	target := t.TempDir()
-	if err := writeAtomicDrill(backupDrillPath(filepath.Join(target, "2026-11-01_01-00-00"), "secondary"), metric.BackupStateFailure); err != nil {
-		t.Fatal(err)
-	}
-	if err := writeAtomicDrill(backupDrillPath(filepath.Join(target, "2026-11-02_01-00-00"), "secondary"), metric.BackupStateSuccess); err != nil {
-		t.Fatal(err)
-	}
-	if !backupDrillRetained(target) || backupDrillFailing(target) {
-		t.Fatal("retained failure not seen behind a newer pass")
-	}
 	flagBackupDrillFailed(path)
 	document := readSummary[serviceSummary](path)
 	if document == nil || !document.SuccessBool || !document.DrillFailedBool || document.Kind != "full" {
 		t.Errorf("status: got %+v want the backup kept successful, flagged, and its other fields intact", document)
+	}
+}
+
+func TestProbeUtilBackupDrill_RetainedFailures(t *testing.T) {
+	tests := []struct {
+		name             string
+		software         map[string]string
+		verdicts         map[string]string
+		expectedRetained bool
+		expectedFailing  bool
+	}{
+		{"a failure behind a newer pass is retained but not failing", map[string]string{"2026-11-01_01-00-00": "s", "2026-11-02_01-00-00": "s"},
+			map[string]string{"2026-11-01_01-00-00": metric.BackupStateFailure, "2026-11-02_01-00-00": metric.BackupStateSuccess}, true, false},
+		{"a newest failure is failing", map[string]string{"2026-11-01_01-00-00": "s"}, map[string]string{"2026-11-01_01-00-00": metric.BackupStateFailure}, true, true},
+		{"a failure on a point naming no software proves nothing", map[string]string{"2026-11-01_01-00-00": ""}, map[string]string{"2026-11-01_01-00-00": metric.BackupStateFailure}, false, false},
+		{"skipped is never a failure", map[string]string{"2026-11-01_01-00-00": "s"}, map[string]string{"2026-11-01_01-00-00": metric.BackupStateSkipped}, false, false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			target := t.TempDir()
+			for run, verdict := range test.verdicts {
+				plantBackupManifest(t, target, run, backupManifest{Kind: "full", Verdict: metric.BackupStateSuccess, SourceSoftware: test.software[run]})
+				if err := writeAtomicDrill(backupDrillPath(filepath.Join(target, run), "secondary"), verdict); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if retained, failing := backupDrillRetained(target), backupDrillFailing(target); retained != test.expectedRetained || failing != test.expectedFailing {
+				t.Errorf("drills: got retained [%t] failing [%t] want retained [%t] failing [%t]", retained, failing, test.expectedRetained, test.expectedFailing)
+			}
+		})
 	}
 }
 

@@ -9,10 +9,10 @@ ROOT_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../.." && pwd)"
 PYENV_BIN="${HOME}/.pyenv/versions/asystem/bin"
 KERNEL_PATH="${ROOT_DIR}/src/main/python:${ROOT_DIR}/../../all/_/src/build/python"
 if [[ "${1:-}" == "new" ]]; then
-  SCAFFOLD="${2:?usage: notebook.sh new <module>/<model>/<notebook> <static|wasm|onnx|pyfunc>}"
-  FLAVOUR="${3:?usage: notebook.sh new <module>/<model>/<notebook> <static|wasm|onnx|pyfunc>}"
+  SCAFFOLD="${2:?usage: notebook.sh new <module>/<model>/<notebook> <static|wasm|onnx|pyfunc> [--local]}"
+  FLAVOUR="${3:?usage: notebook.sh new <module>/<model>/<notebook> <static|wasm|onnx|pyfunc> [--local]}"
   IFS=/ read -r SCAFFOLD_MODULE SCAFFOLD_MODEL SCAFFOLD_NOTEBOOK <<<"${SCAFFOLD}"
-  PYTHONPATH="${ROOT_DIR}/src/main/python" "${PYENV_BIN}/python" -m workbench.notebook new "${SCAFFOLD_MODULE}" "${SCAFFOLD_MODEL}" "${SCAFFOLD_NOTEBOOK}" "${FLAVOUR}" --root "${ROOT_DIR}/src/main/notebook"
+  PYTHONPATH="${ROOT_DIR}/src/main/python" "${PYENV_BIN}/python" -m workbench.notebook new "${SCAFFOLD_MODULE}" "${SCAFFOLD_MODEL}" "${SCAFFOLD_NOTEBOOK}" "${FLAVOUR}" --root "${ROOT_DIR}/src/main/notebook" ${4:+"$4"}
   exit 0
 fi
 TARGET="${1:?usage: notebook.sh <module>/<model>/<notebook> [--register], or notebook.sh new <module>/<model>/<notebook> <flavour>}"

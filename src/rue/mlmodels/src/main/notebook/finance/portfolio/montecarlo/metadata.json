@@ -1,7 +1,11 @@
 {
   "content_sha256": "bf82c140cfd3314704b346289837a626beb09c3deead73ad1950b4337387dfe5",
   "inputs_sha256": "0e3a63e1bc074e1f7861917ff6f381f4fb58ca1efc7109868fc054248544c90d",
-  "passed": [],
+  "passed": [
+    {
+      "kind": "served"
+    }
+  ],
   "released_at": null,
   "released_by": null,
   "released_signature": null,
@@ -10,7 +14,7 @@
     "python": []
   },
   "schema": 1,
-  "snapshot_version": null,
+  "snapshot_version": "10.200.1990-SNAPSHOT",
   "targets": [
     {
       "kind": "served"

@@ -571,26 +571,28 @@ class MetadataTest(unittest.TestCase):
             served_file.write("polars\n")
         self.assertEqual([], lint_metadata(self.workspace, "wasm", pins_path, source_dir))
 
-    def test_requirement_lines_name_what_a_host_still_needs(self):
-        from workbench.metadata import requirement_lines
+    def test_requirements_condense_what_is_declared_and_list_what_a_host_still_needs(self):
+        from workbench.metadata import requirements
 
         self.place(self.metadata(runtime={"python": ["polars"], "wasm": ["tanh"]}, targets=[{"kind": "served"}]))
         pins_path = join(self.workspace, "py_deps.txt")
-        source_dir = join(self.workspace, "source")
-        served_dir = join(source_dir, "host", "mlserver", "src", "main", "python")
+        source_dir = join(self.workspace, "source", "..", "source")
+        served_dir = join(self.workspace, "source", "host", "mlserver", "src", "main", "python")
         os.makedirs(served_dir)
         with open(pins_path, "w") as pins_file:
             pins_file.write("wasmtime==1.0.0\n")
         with open(join(served_dir, "py_deps.txt"), "w") as served_file:
             served_file.write("wasmtime\n")
-        lines = requirement_lines(self.workspace, "wasm", pins_path, source_dir)
-        self.assertIn("  + polars", lines)
+        to_add, summary, lines = requirements(self.workspace, "wasm", pins_path, source_dir)
+        self.assertEqual(1, to_add)
+        self.assertEqual("served polars", summary)
+        self.assertEqual(["served python host [mlserver] file [source/host/mlserver/src/main/python/py_deps.txt]", "  + polars"], lines[:2])
         self.assertEqual(1, len([line for line in lines if line.startswith("  ! polars")]))
-        self.assertIn("  = wasmtime", lines)
-        self.assertTrue(lines[0].startswith("wasm bindings"))
+        with open(pins_path, "a") as pins_file:
+            pins_file.write("polars==2.0.0\n")
         with open(join(served_dir, "py_deps.txt"), "a") as served_file:
             served_file.write("polars\n")
-        self.assertNotIn("  + polars", requirement_lines(self.workspace, "wasm", pins_path, source_dir))
+        self.assertEqual((0, "", []), requirements(self.workspace, "wasm", pins_path, source_dir))
 
     def test_the_changed_command_reports_a_notebook_that_packages_nothing(self):
         import contextlib
@@ -712,6 +714,22 @@ class ReleaseTest(unittest.TestCase):
         os.remove(join(self.workspace, METADATA_FILE))
         self.assertIsNone(self.record(targets=[]))
         self.assertFalse(os.path.isfile(join(self.workspace, METADATA_FILE)))
+
+    def test_a_local_project_passes_by_being_recorded_and_is_never_released(self):
+        from workbench.metadata import LOCAL_TARGET, lint_metadata, read_metadata
+
+        recorded = self.record(targets=[LOCAL_TARGET])
+        assert recorded is not None
+        self.assertEqual([LOCAL_TARGET], recorded["passed"])
+        self.assertEqual([], lint_metadata(self.workspace, "wasm"))
+        self.assertEqual([], self.release())
+        self.assertIsNone(read_metadata(self.workspace)["released_version"])
+
+    def test_a_local_target_must_be_the_only_target(self):
+        from workbench.metadata import LOCAL_TARGET, lint_metadata
+
+        self.record(targets=[LOCAL_TARGET, {"kind": "served"}])
+        self.assertEqual(["MD004"], sorted({rule for rule, _ in lint_metadata(self.workspace, "wasm")}))
 
     def test_a_runtime_with_no_pin_is_refused_before_the_workspace_changes(self):
         from workbench.errors import GateError
@@ -1025,6 +1043,12 @@ class NotebookLintTest(unittest.TestCase):
             self.assertEqual([], lint_notebook(join(root, "example", "calc", flavour, "notebook.ipynb")))
             self.assertEqual([], lint_workspace(join(root, "example", "calc", flavour)))
             self.assertTrue(all(os.path.exists(path) for path in created))
+        scaffold_notebook(root, "example", "calc", "kept", "static", local=True)
+        self.assertEqual([], lint_notebook(join(root, "example", "calc", "kept", "notebook.ipynb")))
+        with open(join(root, "example", "calc", "kept", "notebook.ipynb")) as kept_file:
+            kept = json.load(kept_file)
+        self.assertIn('TARGETS = [{"kind": "local"}]', "".join("".join(cell["source"]) for cell in kept["cells"]))
+        self.assertNotIn("Register", [cell["source"][0] for cell in kept["cells"] if cell["cell_type"] == "markdown"])
         with self.assertRaises(ValueError):
             scaffold_notebook(root, "example", "calc", "static", "static")
         with self.assertRaises(ValueError):
