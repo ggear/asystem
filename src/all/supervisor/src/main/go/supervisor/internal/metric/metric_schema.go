@@ -203,6 +203,7 @@ func Payloads() []schema.Payload {
 		{Key: "duration_s", Kind: schema.KindInt},
 		{Key: "success_bool", Kind: schema.KindBool},
 		{Key: "regressed_bool", Kind: schema.KindBool},
+		{Key: "drill_failed_bool", Kind: schema.KindBool},
 		{Key: "kind", Kind: schema.KindStr},
 		{Key: "version", Kind: schema.KindStr},
 		{Key: "file_count", Kind: schema.KindInt},

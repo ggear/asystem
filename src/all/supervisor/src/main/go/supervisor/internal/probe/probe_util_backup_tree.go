@@ -85,8 +85,8 @@ func readBackupRun(root, dir string) *backupSnapshot {
 	}
 	documents, _ := filepath.Glob(filepath.Join(serviceRoot(runPath), "*", treeStatusLeaf))
 	for _, path := range documents {
-		if document := readBackupSummary(path); document != nil {
-			snapshot.services[filepath.Base(filepath.Dir(path))] = document.SuccessBool && !document.RegressedBool
+		if document := readSummary[serviceSummary](path); document != nil {
+			snapshot.services[filepath.Base(filepath.Dir(path))] = document.SuccessBool && !document.RegressedBool && !document.DrillFailedBool
 		}
 	}
 	return snapshot

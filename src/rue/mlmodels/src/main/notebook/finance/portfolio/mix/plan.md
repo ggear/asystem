@@ -58,7 +58,9 @@ How the module maps to the book (Haghani and White, `financial-decisions`):
 | 5 lifetime spending with a risky asset | `portfolio/allocation` | The Merton share |
 | 6 Monte Carlo | `portfolio/montecarlo` | Ruin probability and shortfall |
 | none | `portfolio/mix` | Return and volatility of any blend, and the decision table |
-| none | `forecast/costs`, `forecast/returns` | What spending grows at and what the assets earn |
+| none | `household/costs`, `portfolio/returns` | What spending grows at and what the assets earn |
+| none | `economy/inflation`, `economy/rates` | Inflation and the no risk rate that costs and returns are built on |
+| none | `household/runrate`, `household/lumps`, `household/flexibility`, `household/income`, `household/networth` | What you spend, in what shape, what can be cut, what other income there is, and where you start |
 
 **What you should have in front of you to decide a mix.** The notebook should end in one table, one row per candidate risky share, with these columns:
 

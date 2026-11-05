@@ -1,0 +1,42 @@
+{
+  "datasets": {
+    "validation": [
+      {
+        "path": "2026-11-05_17-20-32/household_costs_validation_2026-11-05_2026-11-05.csv",
+        "sha256": "7bd636d3df846a3fcc6990acf22c6789bcdddd7ec377050f6863fa82945c1e08"
+      }
+    ],
+    "backtest": [
+      {
+        "path": "2026-11-05_17-20-32/household_costs_backtest_2026-11-05_2026-11-05.csv",
+        "sha256": "06d9258d3bba5f6632e2ec9e199a8f8d3be6042018d27b85794eda1528a53b0c"
+      }
+    ]
+  },
+  "checks": [
+    {
+      "split": "validation",
+      "output": "finance_household_costs_growth_pct",
+      "name": "rmse",
+      "value": 0.2828427124746193,
+      "limit": 1.0,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 0.2828427124746193
+    },
+    {
+      "split": "backtest",
+      "output": "finance_household_costs_growth_pct",
+      "name": "rmse",
+      "value": 0.5495452665613635,
+      "limit": 1.0,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 0.5495452665613635
+    }
+  ],
+  "passed": true,
+  "budget": 0.5495452665613635
+}

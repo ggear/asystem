@@ -47,8 +47,8 @@ From `6-monte-carlo`. **Ruin** is wealth reaching zero before the horizon. The p
 
 Method, to replace the placeholder:
 
-1. Draw returns by **stationary block bootstrap** from the `forecast/returns` history, re-centred on its forward base, so fat tails and runs of bad years are in the data and not assumed away.
-2. Draw inflation from `forecast/costs` jointly with returns, because a bad return year and a high cost year arrive together.
+1. Draw returns by **stationary block bootstrap** from the `portfolio/returns` history, re-centred on its forward base, so fat tails and runs of bad years are in the data and not assumed away.
+2. Draw inflation from `household/costs` jointly with returns, because a bad return year and a high cost year arrive together.
 3. Use survival from `portfolio/spending` instead of a fixed 30 years.
 4. Report the ruin probability, the **expected shortfall** (average depth of ruin) and the 5th percentile terminal wealth, not ruin alone, which treats running out in year 29 like year 5.
 5. Try a flexible rule (cut spending by a fixed fraction after a bad year, the guardrail rule), because the largest improvement in ruin comes from being able to cut, not from any asset choice.

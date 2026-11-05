@@ -1,0 +1,36 @@
+{
+  "name": "finance_household_costs",
+  "platform": "mlserver",
+  "parameters": {
+    "signature_version": 1,
+    "state": []
+  },
+  "inputs": [
+    {
+      "name": "finance_household_costs_scenario",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "Scenario, 0 low, 1 base, 2 high."
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "name": "finance_household_costs_growth_pct",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "percent",
+        "required": true,
+        "description": "Annual growth rate of costs for the scenario, percent per year."
+      }
+    }
+  ]
+}

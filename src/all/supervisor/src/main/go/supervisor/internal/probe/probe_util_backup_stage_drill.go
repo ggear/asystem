@@ -48,7 +48,7 @@ func drillSecondaryServices(ctx context.Context, loaded *config.Config, share, h
 			}
 		}
 		if backupDrillRetained(target) {
-			demoteBackupService(filepath.Join(servicePath, service, treeStatusLeaf))
+			flagBackupDrillFailed(filepath.Join(servicePath, service, treeStatusLeaf))
 		}
 		if backupDrillFailing(target) {
 			failed++
@@ -143,13 +143,11 @@ func backupDrillRetained(target string) bool {
 	return false
 }
 
-func demoteBackupService(path string) {
-	document := readBackupSummary(path)
-	if document == nil || !document.SuccessBool {
-		return
+func flagBackupDrillFailed(path string) {
+	if document := readSummary[serviceSummary](path); document != nil {
+		document.DrillFailedBool = true
+		_ = writeAtomic(path, *document)
 	}
-	document.SuccessBool = false
-	_ = writeAtomic(path, *document)
 }
 
 func firstDrillFault(output string) string {

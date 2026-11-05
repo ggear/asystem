@@ -7,6 +7,7 @@
   "duration_s": <number>,
   "success_bool": <true|false>,
   "regressed_bool": <true|false>,
+  "drill_failed_bool": <true|false>,
   "kind": "<text>",
   "version": "<text>",
   "file_count": <number>,

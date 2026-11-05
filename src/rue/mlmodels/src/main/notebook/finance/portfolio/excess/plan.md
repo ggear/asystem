@@ -45,14 +45,14 @@ The notebook owns the limits (`model.md` 6.8). Two gating checks on `finance_por
 
 From `2-approximating-risk-adjusted-excess-returns`. For a portfolio with expected return `mu`, cash rate `r` and volatility `sigma`, the value to a CRRA investor is close to `(mu - r) - gamma * sigma^2 / 2`, the **risk adjusted excess return**. It puts portfolios of different risk on one scale, so a 100 percent equity portfolio and a 60/40 one can be compared by the number that matters.
 
-Method: take `mu`, `r` and `sigma` for each candidate portfolio from `forecast/returns` and the `interest` table, and `gamma` from `portfolio/utility`. Report the number as a table over `gamma` low, central and high, since the ranking can flip. The notebook fits the same line to labelled points, as the placeholder does.
+Method: take `mu`, `r` and `sigma` for each candidate portfolio from `portfolio/returns` and the `interest` table, and `gamma` from `portfolio/utility`. Report the number as a table over `gamma` low, central and high, since the ranking can flip. The notebook fits the same line to labelled points, as the placeholder does.
 
 ## Data to get
 
 | Data | Why | Where from |
 |---|---|---|
 | Cash rate history | `r` | `wrangle` interest table |
-| Volatility of each candidate portfolio | `sigma` | Built from `forecast/returns` history |
+| Volatility of each candidate portfolio | `sigma` | Built from `portfolio/returns` history |
 
 ## To do
 

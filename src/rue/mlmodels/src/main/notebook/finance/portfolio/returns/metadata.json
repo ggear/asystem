@@ -1,0 +1,19 @@
+{
+  "content_sha256": "f50b12cf55aab7d414c8f7af0d6c8ee098a55fd1be2c90e8efa98081cc883bd2",
+  "inputs_sha256": "1e7a0bfce85d81d99167b372071e6af3ea8592f50f290f4ced9b3e82fa454725",
+  "passed": [],
+  "released_at": null,
+  "released_by": null,
+  "released_signature": null,
+  "released_version": null,
+  "runtime": {
+    "python": []
+  },
+  "schema": 1,
+  "snapshot_version": "10.200.1989-SNAPSHOT",
+  "targets": [
+    {
+      "kind": "served"
+    }
+  ]
+}

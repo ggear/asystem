@@ -51,7 +51,7 @@ Method: replace the single coefficient by `excess` from `portfolio/excess` and `
 
 | Data | Why | Where from |
 |---|---|---|
-| Excess return and volatility per asset class | The inputs of the formula | `forecast/returns` and `wrangle` |
+| Excess return and volatility per asset class | The inputs of the formula | `portfolio/returns` and `wrangle` |
 | Leverage and borrowing limits | Whether the cap is 100 percent | Your own rule |
 
 ## To do

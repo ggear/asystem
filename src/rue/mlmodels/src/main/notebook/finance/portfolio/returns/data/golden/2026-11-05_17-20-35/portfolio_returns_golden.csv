@@ -1,0 +1,9 @@
+finance_portfolio_returns_scenario,finance_portfolio_returns_nominal_pct,expect
+0.0,3.55,ok
+1.0,6.0,ok
+2.0,8.45,ok
+1.4,6.0,ok
+1.6,8.45,ok
+-1.0,3.55,ok
+3.0,8.45,ok
+,,error

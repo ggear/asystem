@@ -320,9 +320,9 @@ func TestProbeUtilBackupDrill_ReportReleaseDrills(t *testing.T) {
 	}
 }
 
-func TestProbeUtilBackupDrill_DemoteBackupService(t *testing.T) {
+func TestProbeUtilBackupDrill_FlagBackupDrillFailed(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "status.json")
-	if err := writeAtomic(path, backupSummary{SuccessBool: true}); err != nil {
+	if err := writeAtomic(path, serviceSummary{SuccessBool: true, Kind: "full"}); err != nil {
 		t.Fatal(err)
 	}
 	target := t.TempDir()
@@ -335,9 +335,10 @@ func TestProbeUtilBackupDrill_DemoteBackupService(t *testing.T) {
 	if !backupDrillRetained(target) || backupDrillFailing(target) {
 		t.Fatal("retained failure not seen behind a newer pass")
 	}
-	demoteBackupService(path)
-	if document := readBackupSummary(path); document == nil || document.SuccessBool {
-		t.Errorf("status: got %+v want success false", document)
+	flagBackupDrillFailed(path)
+	document := readSummary[serviceSummary](path)
+	if document == nil || !document.SuccessBool || !document.DrillFailedBool || document.Kind != "full" {
+		t.Errorf("status: got %+v want the backup kept successful, flagged, and its other fields intact", document)
 	}
 }
 
