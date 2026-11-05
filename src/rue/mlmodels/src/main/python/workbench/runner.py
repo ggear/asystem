@@ -47,7 +47,7 @@ def run_notebook(workspace_dir, output_dir, register, pins_path, source_dir):
             for line in lines:
                 print(f"    {line}", flush=True)
             with stage("metadata") as entry:
-                findings = lint_metadata(workspace_dir, flavour, pins_path, source_dir)
+                findings = lint_metadata(workspace_dir, flavour, pins_path)
                 if findings:
                     raise GateError("Metadata", "check", "; ".join(f"{rule} {message}" for rule, message in findings))
                 entry.detail = flavour

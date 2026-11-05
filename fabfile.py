@@ -260,14 +260,33 @@ def _pull(context):
                         raise Exception(f"Error parsing line [{py_all_line.strip()}] from python module file [{join(ROOT_DIR, py_deps_name)}], duplicate python module")
                     py_deps_dict[py_all_line.split("==")[0].strip()] = py_all_line.split("==")[1].strip()
     py_deps_path = join(ROOT_DIR, "py_*.txt")
+
+    def model_py_deps(service):
+        names = []
+        for metadata_path in sorted(glob.glob(join(ROOT_MODULE_DIR, "rue/mlmodels/src/main/notebook/*/*/*/metadata.json"))):
+            notebook_dir = dirname(metadata_path)
+            model_deps_path = join(notebook_dir, "py_deps.txt")
+            with open(metadata_path) as metadata_file:
+                targets = json.load(metadata_file)["targets"]
+            consumer = basename(dirname(dirname(notebook_dir)))
+            if isfile(model_deps_path) and (
+                (service == "mlserver" and {"kind": "served"} in targets) or (service == ("mlmodels" if consumer == "example" else consumer) and {"kind": "embedded", "language": "python"} in targets)
+            ):
+                with open(model_deps_path) as model_deps_file:
+                    names.extend(line.strip() for line in model_deps_file if line.strip())
+        return names
+
     for py_mod_path in glob.glob(join(ROOT_MODULE_DIR, "*/*/*/main/python/py_deps.txt")):
         py_mod_versioned_path = join(py_mod_path.removesuffix(basename(py_mod_path)), "." + basename(py_mod_path))
-        with open(py_mod_versioned_path, "w") as py_mod_versioned_file, open(py_mod_path) as py_mod_file:
-            for py_mod_line in py_mod_file:
-                if py_mod_line.strip() != "" and not py_mod_line.strip().startswith("#"):
-                    if py_mod_line.strip() not in py_deps_dict:
-                        raise Exception(f"Error parsing line [{py_mod_line.strip()}] from python module file [{py_mod_path}], python module version not found in file [{py_deps_path}]")
-                    py_mod_versioned_file.write(f"{py_mod_line.strip()}=={py_deps_dict[py_mod_line.strip()]}\n")
+        with open(py_mod_path) as py_mod_file:
+            py_mod_names = [line.strip() for line in py_mod_file if line.strip() != "" and not line.strip().startswith("#")]
+        with open(py_mod_versioned_path, "w") as py_mod_versioned_file:
+            for py_mod_name in dict.fromkeys([*py_mod_names, *model_py_deps(py_mod_path.split("/")[-5])]):
+                if py_mod_name not in py_deps_dict:
+                    raise Exception(
+                        f"Error parsing line [{py_mod_name}] from python module file [{py_mod_path}] or the model requirements it takes, python module version not found in file [{py_deps_path}]"
+                    )
+                py_mod_versioned_file.write(f"{py_mod_name}=={py_deps_dict[py_mod_name]}\n")
     _print_footer("asystem", "pull dependencies")
     _print_header("asystem", "pull dependencies install")
     _run_pinned(context, "pip install --ignore-requires-python --default-timeout=1000 -r {}".format(join(ROOT_DIR, ".py_deps_prod.txt")), ".", "python")

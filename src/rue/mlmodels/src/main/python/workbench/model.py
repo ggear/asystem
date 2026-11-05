@@ -492,7 +492,6 @@ def main(arguments=None):
     check_metadata = commands.add_parser("check-metadata")
     check_metadata.add_argument("workspace_dir")
     check_metadata.add_argument("pins_path")
-    check_metadata.add_argument("source_dir")
     release = commands.add_parser("release")
     release.add_argument("source_dir")
     release.add_argument("--version", required=True)
@@ -542,7 +541,7 @@ def main(arguments=None):
             from workbench.metadata import PROJECT_DIR, lint_metadata
 
             with open(join(options.workspace_dir, PROJECT_DIR, PROJECT_MANIFEST)) as manifest_file:
-                findings = lint_metadata(options.workspace_dir, json.load(manifest_file)["flavour"], options.pins_path, options.source_dir)
+                findings = lint_metadata(options.workspace_dir, json.load(manifest_file)["flavour"], options.pins_path)
             for rule, message in findings:
                 print(f"{options.workspace_dir} {rule} {message}", file=sys.stderr)
             hints(rule for rule, _ in findings)

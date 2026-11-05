@@ -524,6 +524,19 @@ class MetadataTest(unittest.TestCase):
 
         shutil.copytree(self.project_dir, join(self.workspace, PROJECT_DIR), dirs_exist_ok=True)
         write_metadata(self.workspace, metadata)
+        self.write_requirements(metadata)
+
+    def write_requirements(self, metadata):
+        from workbench.metadata import REQUIREMENT_FILES, derived_requirements
+
+        derived = derived_requirements(metadata["runtime"], "wasm", metadata["targets"])
+        for language, file_name in REQUIREMENT_FILES.items():
+            path = join(self.workspace, file_name)
+            if language in derived:
+                with open(path, "w") as requirements_file:
+                    requirements_file.write("".join(f"{name}\n" for name in derived[language]))
+            elif os.path.exists(path):
+                os.remove(path)
 
     def rules(self):
         from workbench.metadata import lint_metadata
@@ -553,45 +566,53 @@ class MetadataTest(unittest.TestCase):
             manifest = json.load(manifest_file)
         with open(join(self.project_dir, "project.json"), "w") as manifest_file:
             json.dump({**manifest, "runtime": {"python": ["polars"]}}, manifest_file)
-        self.place(self.metadata())
-        pins_path = join(self.workspace, "py_deps.txt")
-        source_dir = join(self.workspace, "source")
-        served_dir = join(source_dir, "host", "mlserver", "src", "main", "python")
-        os.makedirs(served_dir)
+        self.place(self.metadata(targets=[{"kind": "served"}]))
+        pins_path = join(self.workspace, "pins.txt")
         with open(pins_path, "w") as pins_file:
             pins_file.write("numpy==2.0.0\n")
-        with open(join(served_dir, "py_deps.txt"), "w") as served_file:
-            served_file.write("numpy\n")
-        self.assertEqual(["MD005"], [rule for rule, _ in lint_metadata(self.workspace, "wasm", pins_path)])
+        self.assertEqual(["MD005"], sorted({rule for rule, _ in lint_metadata(self.workspace, "wasm", pins_path)}))
         with open(pins_path, "a") as pins_file:
             pins_file.write("Polars==2.1.0\n")
         self.assertEqual([], lint_metadata(self.workspace, "wasm", pins_path))
-        self.assertEqual(["MD005"], [rule for rule, _ in lint_metadata(self.workspace, "wasm", pins_path, source_dir)])
-        with open(join(served_dir, "py_deps.txt"), "a") as served_file:
-            served_file.write("polars\n")
-        self.assertEqual([], lint_metadata(self.workspace, "wasm", pins_path, source_dir))
 
-    def test_requirements_condense_what_is_declared_and_list_what_a_host_still_needs(self):
+    def test_a_requirements_file_that_differs_from_the_derived_names_is_a_finding(self):
+        from workbench.metadata import LOCAL_TARGET, REQUIREMENT_FILES
+
+        self.place(self.metadata(targets=[{"kind": "served"}]))
+        self.assertEqual([], self.rules())
+        path = join(self.workspace, REQUIREMENT_FILES["python"])
+        with open(path, "w") as requirements_file:
+            requirements_file.write("wasmtime\npolars\n")
+        self.assertEqual(["MD005"], self.rules())
+        os.remove(path)
+        self.assertEqual(["MD005"], self.rules())
+        self.place(self.metadata(targets=[LOCAL_TARGET]))
+        self.assertEqual([], self.rules())
+        with open(path, "w") as requirements_file:
+            requirements_file.write("wasmtime\n")
+        self.assertEqual(["MD005"], self.rules())
+
+    def test_requirements_report_an_unpinned_python_name_and_what_an_embedded_host_lacks(self):
         from workbench.metadata import requirements
 
-        self.place(self.metadata(runtime={"python": ["polars"], "wasm": ["tanh"]}, targets=[{"kind": "served"}]))
-        pins_path = join(self.workspace, "py_deps.txt")
+        self.place(self.metadata(runtime={"python": ["polars"], "wasm": ["tanh"]}, targets=[{"kind": "served"}, {"kind": "embedded", "language": "go"}]))
+        module = self.workspace.rstrip("/").split("/")[-3]
+        pins_path = join(self.workspace, "pins.txt")
         source_dir = join(self.workspace, "source", "..", "source")
-        served_dir = join(self.workspace, "source", "host", "mlserver", "src", "main", "python")
-        os.makedirs(served_dir)
+        go_dir = join(self.workspace, "source", "host", module, "src", "main", "go", module)
+        os.makedirs(go_dir)
         with open(pins_path, "w") as pins_file:
             pins_file.write("wasmtime==1.0.0\n")
-        with open(join(served_dir, "py_deps.txt"), "w") as served_file:
-            served_file.write("wasmtime\n")
+        with open(join(go_dir, "go.mod"), "w") as go_file:
+            go_file.write("module host\n")
         to_add, summary, lines = requirements(self.workspace, "wasm", pins_path, source_dir)
-        self.assertEqual(1, to_add)
-        self.assertEqual("served polars", summary)
-        self.assertEqual(["served python host [mlserver] file [source/host/mlserver/src/main/python/py_deps.txt]", "  + polars"], lines[:2])
-        self.assertEqual(1, len([line for line in lines if line.startswith("  ! polars")]))
+        self.assertEqual((1, "python polars, go wazero"), (to_add, summary))
+        self.assertIn("  + wazero", lines)
+        self.assertTrue(any(line.startswith("! polars has no project wide pin") for line in lines))
         with open(pins_path, "a") as pins_file:
             pins_file.write("polars==2.0.0\n")
-        with open(join(served_dir, "py_deps.txt"), "a") as served_file:
-            served_file.write("polars\n")
+        with open(join(go_dir, "go.mod"), "a") as go_file:
+            go_file.write("require github.com/tetratelabs/wazero v1.0.0\n")
         self.assertEqual((0, "", []), requirements(self.workspace, "wasm", pins_path, source_dir))
 
     def test_the_changed_command_reports_a_notebook_that_packages_nothing(self):
@@ -730,6 +751,18 @@ class ReleaseTest(unittest.TestCase):
 
         self.record(targets=[LOCAL_TARGET, {"kind": "served"}])
         self.assertEqual(["MD004"], sorted({rule for rule, _ in lint_metadata(self.workspace, "wasm")}))
+
+    def test_a_recorded_project_writes_the_requirements_of_its_targets_and_removes_the_rest(self):
+        from workbench.metadata import LOCAL_TARGET, REQUIREMENT_FILES
+
+        self.record(targets=[{"kind": "served"}, {"kind": "embedded", "language": "go"}])
+        with open(join(self.workspace, REQUIREMENT_FILES["python"])) as python_file:
+            self.assertEqual("wasmtime\n", python_file.read())
+        with open(join(self.workspace, REQUIREMENT_FILES["go"])) as go_file:
+            self.assertEqual("wazero\n", go_file.read())
+        self.assertFalse(os.path.exists(join(self.workspace, REQUIREMENT_FILES["rust"])))
+        self.record(targets=[LOCAL_TARGET])
+        self.assertEqual([], [name for name in REQUIREMENT_FILES.values() if os.path.exists(join(self.workspace, name))])
 
     def test_a_runtime_with_no_pin_is_refused_before_the_workspace_changes(self):
         from workbench.errors import GateError

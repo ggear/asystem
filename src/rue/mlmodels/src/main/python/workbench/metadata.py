@@ -15,6 +15,7 @@ RUNTIME_PINS = ("numpy", "scipy", "pandas", "polars", "onnx", "onnxruntime", "wa
 CONSUMER_PINS = ("numpy", "pandas", "onnxruntime", "wasmtime", "mlflow")
 TARGET_KINDS = ("served", "embedded", "local")
 LOCAL_TARGET = {"kind": "local"}
+REQUIREMENT_FILES = {"python": "py_deps.txt", "rust": "cargo_deps.txt", "go": "go_deps.txt"}
 TARGET_LANGUAGES = ("python", "go", "rust")
 HOST_LIBRARIES = {("python", "wasm"): "wasmtime", ("python", "onnx"): "onnxruntime", ("rust", "wasm"): "wasmi", ("rust", "onnx"): "ort", ("go", "wasm"): "wazero"}
 HOST_FILES = {"python": "src/main/python/py_deps.txt", "rust": "src/main/rust/{host}/Cargo.toml", "go": "src/main/go/{host}/go.mod"}
@@ -87,7 +88,8 @@ def record_project(workspace_dir, project_dir, targets, pins_path, version_path=
     if findings:
         raise GateError("Package", "signature", "; ".join(findings))
     with open(join(project_dir, "project.json")) as manifest_file:
-        runtime = json.load(manifest_file).get("runtime", {})
+        manifest = json.load(manifest_file)
+    runtime = manifest.get("runtime", {})
     pinned = {package_key(name) for name in read_pins(pins_path, None)}
     unpinned = sorted(name for name in runtime.get("python", ()) if package_key(name) not in pinned)
     if unpinned:
@@ -116,6 +118,14 @@ def record_project(workspace_dir, project_dir, targets, pins_path, version_path=
         "passed": list(targets) if list(targets) == [LOCAL_TARGET] else ([target for target in previous.get("passed", []) if target in targets] if same else []),
     }
     write_metadata(workspace_dir, metadata)
+    derived = derived_requirements(runtime, manifest["flavour"], metadata["targets"])
+    for language, file_name in REQUIREMENT_FILES.items():
+        path = join(workspace_dir, file_name)
+        if language in derived:
+            with open(path, "w") as requirements_file:
+                requirements_file.write("".join(f"{name}\n" for name in derived[language]))
+        elif isfile(path):
+            os.remove(path)
     return metadata
 
 
@@ -148,7 +158,7 @@ def inputs_changed(workspace_dir, pins_path):
     return read_metadata(workspace_dir).get("inputs_sha256") != inputs_sha256(workspace_dir, read_pins(pins_path))
 
 
-def lint_metadata(workspace_dir, flavour, pins_path=None, source_dir=None):
+def lint_metadata(workspace_dir, flavour, pins_path=None):
     metadata_path = join(workspace_dir, METADATA_FILE)
     if not isfile(metadata_path):
         return [("MD001", f"metadata missing [{metadata_path}]")]
@@ -182,51 +192,60 @@ def lint_metadata(workspace_dir, flavour, pins_path=None, source_dir=None):
     if pins_path is not None:
         pinned = {package_key(name) for name in read_pins(pins_path, None)}
         findings.extend(("MD005", f"python dependency has no project wide pin [{name}]") for name in metadata["runtime"].get("python", ()) if package_key(name) not in pinned)
-    if source_dir is not None and {"kind": "served"} in metadata["targets"]:
-        served_paths = glob(join(source_dir, "*/mlserver/src/main/python/py_deps.txt"))
-        if len(served_paths) != 1:
-            findings.append(("MD005", f"mlserver python dependency list not found exactly once under [{source_dir}] found {served_paths}"))
-        else:
-            with open(served_paths[0]) as served_file:
-                served = {package_key(line) for line in served_file if line.strip()}
-            findings.extend(("MD005", f"served python dependency is not in [{served_paths[0]}] [{name}]") for name in metadata["runtime"].get("python", ()) if package_key(name) not in served)
+    derived = derived_requirements(metadata["runtime"], flavour, metadata["targets"])
+    for language, file_name in REQUIREMENT_FILES.items():
+        path = join(workspace_dir, file_name)
+        found = None
+        if isfile(path):
+            with open(path) as requirements_file:
+                found = [line for line in requirements_file.read().splitlines() if line]
+        if found != derived.get(language):
+            findings.append(("MD005", f"requirements file [{file_name}] differs from the names derived from the metadata, expected {derived.get(language)} found {found}"))
     return findings
+
+
+def derived_requirements(runtime, flavour, targets):
+    derived = {}
+    for target in targets:
+        if target["kind"] == "local":
+            continue
+        language = "python" if target["kind"] == "served" else target["language"]
+        names = {*(runtime.get("python", ()) if language == "python" else ()), *HOST_LIBRARIES.get((language, flavour), "").split()}
+        if names:
+            derived[language] = sorted(names | set(derived.get(language, ())))
+    return derived
 
 
 def requirements(workspace_dir, flavour, pins_path, source_dir):
     metadata = read_metadata(workspace_dir)
-    runtime = metadata["runtime"]
     pinned = {package_key(name) for name in read_pins(pins_path, None)}
     source_dir = normpath(source_dir)
     module = workspace_dir.rstrip("/").split("/")[-3]
+    host = "mlmodels" if module == "example" else module
     summary = []
-    lines = []
+    lines = [
+        f"! {name} has no project wide pin, add {name}==<version> to [{pins_path}]"
+        for name in derived_requirements(metadata["runtime"], flavour, metadata["targets"]).get("python", ())
+        if package_key(name) not in pinned
+    ]
+    if lines:
+        summary.append("python " + " ".join(line.split()[1] for line in lines))
     for target in metadata["targets"]:
-        if target["kind"] == "local":
+        if target["kind"] != "embedded" or target["language"] == "python":
             continue
-        served = target["kind"] == "served"
-        language = "python" if served else target["language"]
-        host = "mlserver" if served else "mlmodels" if module == "example" else module
-        crate = "consumer" if host == "mlmodels" else host
-        needed: list[str] = sorted({*runtime.get("python", ()), *HOST_LIBRARIES.get((language, flavour), "").split()})
-        if not needed:
-            continue
-        label = "served" if served else language
-        paths = glob(join(source_dir, "*", host, HOST_FILES[language].format(host=crate)))
-        if len(paths) != 1:
-            summary.append(f"{label} ?{host}")
-            lines.append(f"{target['kind']} {language} no unique {host} file for [{', '.join(needed)}] under [{source_dir}] found {paths}")
-            continue
-        with open(paths[0]) as host_file:
-            declared = host_file.read()
-        declared_names = {package_key(line) for line in declared.splitlines()}
-        missing = [name for name in needed if not (package_key(name) in declared_names if language == "python" else re.search(rf"\b{re.escape(name)}\b", declared))]
-        unpinned = [name for name in needed if language == "python" and package_key(name) not in pinned]
-        if missing or unpinned:
-            summary.append(f"{label} {' '.join(missing or unpinned)}")
-            lines.append(f"{target['kind']} {language} host [{host}] file [{relpath(paths[0], dirname(source_dir))}]")
+        needed = derived_requirements(metadata["runtime"], flavour, [target]).get(target["language"], [])
+        paths = glob(join(source_dir, "*", host, HOST_FILES[target["language"]].format(host="consumer" if host == "mlmodels" else host)))
+        declared = ""
+        if len(paths) == 1:
+            with open(paths[0]) as host_file:
+                declared = host_file.read()
+        missing = [name for name in needed if not re.search(rf"\b{re.escape(name)}\b", declared)]
+        if len(paths) != 1 or missing:
+            summary.append(f"{target['language']} {' '.join(missing or needed)}")
+            lines.append(
+                f"embedded {target['language']} host [{host}] " + (f"file [{relpath(paths[0], dirname(source_dir))}]" if len(paths) == 1 else f"no unique file under [{source_dir}] found {paths}")
+            )
             lines.extend(f"  + {name}" for name in missing)
-            lines.extend(f"  ! {name} has no project wide pin, add {name}==<version> to [{pins_path}]" for name in unpinned)
     return sum(line.startswith("  +") for line in lines), ", ".join(summary), lines
 
 

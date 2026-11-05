@@ -130,6 +130,31 @@ A project states what a runtime must provide beyond the base, so a missing depen
 - Every notebook run prints a `requirements` stage before `metadata`, so it appears even when MD005 then fails, and its detail is `N to add`, followed by the target and names when N is not zero. Under it, only for a host that still needs something, a line names the host file (`mlserver`'s `py_deps.txt` for `served`, and for `embedded` the notebook module's own `py_deps.txt`, `Cargo.toml` or `go.mod`, or `mlmodels`' consumers for the `example` module) and one line per name: `+ name` to add to that file (a Python name only, since `fab generate` pins it) and `! name` for a Python package with no pin to add to `py_deps_prod.txt`. What a target needs is the declared `python` packages plus its host library (`wasmtime`, `wasmi` or `wazero` for `wasm`, `onnxruntime` or `ort` for `onnx`). The stage reports and never fails.
 - Adding a dependency is a change of behaviour (R10), made in this order: add the package to the project wide pins, add its name to `mlserver`'s `py_deps.txt` (no version, since `fab generate` pins it), then release `mlserver`, add the name to `PYTHON_DEPS`, and rerun the notebook, which changes the content hash. A consumer that embeds the project in Python adds the same names to its own `py_deps.txt`. A Rust or Go consumer never embeds a `pyfunc`, and for a `wasm` project needs only its host library (`wasmi`, `wazero`) and the maths functions of 4.1.
 
+### 3.6 From metadata to host requirements
+
+`metadata.json` carries the project-specific part of what a host must install, and nothing else. A person or tool derives the rest in the three steps below, and the `requirements` stage of 3.5 does the same derivation and prints only what a host still lacks.
+
+| In `metadata.json` | Not in `metadata.json` |
+|---|---|
+| `runtime.python`: the package names a `pyfunc` project imports beyond the base, with no versions | The host library of a flavour and language: `wasmtime`, `wasmi`, `wazero`, `onnxruntime`, `ort` |
+| `runtime.wasm`: the `asystem_math` functions a module imports, a record that nothing installs | The base packages `mlflow`, `numpy` and `pandas`, which every Python host already carries |
+| `targets`: where the project runs, which says which hosts to look at | Every version: Python pins are in the root `py_deps_prod.txt`, crate versions in a `Cargo.toml` and `Cargo.lock`, module versions in a `go.mod`, the native `onnxruntime` library in `.env_fab` (`ONNXRUNTIME_VERSION`) |
+
+1. **Find the hosts from `targets`.** One host per target, and none for `local`.
+2. **Work out what each host needs.** The `runtime.python` names plus the host library for the flavour and language, with `static` needing only its loader libraries (5.1):
+
+| Target | Host file | Host library | Version comes from |
+|---|---|---|---|
+| `served` | `mlserver`'s `src/main/python/py_deps.txt` | `wasmtime` for `wasm`, `onnxruntime` for `onnx` | The root pin, written into `.py_deps.txt` by `fab generate` |
+| `embedded` Python | The consuming module's `src/main/python/py_deps.txt` (`mlmodels`' own for the `example` module) | The same as `served` | The same |
+| `embedded` Rust | The crate's `Cargo.toml` | `wasmi` for `wasm`, `ort` for `onnx` | `Cargo.toml` and `Cargo.lock`, with `ort` loading the pinned `onnxruntime` library |
+| `embedded` Go | The module's `go.mod` | `wazero` for `wasm` | `go.mod` |
+| `local` | None | None | None |
+
+3. **Compare with the host file.** A name the file lacks is the work to do; a Python name with no entry in the root `py_deps_prod.txt` also needs a pin there first (3.5).
+
+`served` is the automatic case. `mlserver` already lists the base packages and both host libraries, `fab generate` pins every name in its `py_deps.txt` from the root file so the served image carries the version the notebook was tested against, and MD005 fails the notebook if a declared Python package is not yet named in that file. The only step left to a person is naming a new Python package there, and only a `pyfunc` project with a new import needs it. An `embedded` host is the same derivation done by hand against its own file.
+
 ## 4. WebAssembly models
 
 A `wasm` project is a WebAssembly module, `model.wasm`, that satisfies one ABI. Python, Rust and Go run the same bytes in a WebAssembly
