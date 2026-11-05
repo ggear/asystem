@@ -126,7 +126,8 @@ A project states what a runtime must provide beyond the base, so a missing depen
 - A `python` entry is a package name and never a version. Its version is the one global pin in the root `py_deps_prod.txt`, the same pin `fab` gives every module that lists the name in its `py_deps.txt` (R11), and a name with no pin fails the Package stage. Names are matched ignoring case and `-`, `_` and `.`.
 - A `python` list is sorted and unique, and excludes the standard library and the base packages. Lint (PJ017) reads the imports of `model.py` and fails in both directions: an import with no entry, and an entry nothing imports. A package whose import name differs from its package name (`scikit-learn` and `sklearn`) is matched through a short table in `workbench.model`.
 - `fab systest` installs the base pins and every workspace's declared packages at their global pins into the test image, so an embedded Python target fails if the list is incomplete. For a `served` target, MD005 requires every declared package to be named in `mlserver`'s own `py_deps.txt`, from which `fab generate` writes its pins from the same global file, so the served image carries exactly the version the notebook was tested against.
-- Adding a dependency is a change of behaviour (R10), made in this order: add the package to the project wide pins, add its name to `mlserver`'s `py_deps.txt` (no version, since `fab generate` pins it), then release `mlserver`, add the name to `PYTHON_DEPS`, and rerun the notebook, which changes the content hash. A consumer that embeds the project in Python adds the same names to its own `py_deps.txt`. A Rust or Go consumer never embeds a `pyfunc`, and needs for a `wasm` project only the maths functions of 4.1.
+- Every notebook run prints a `requirements` stage before `metadata`, so it appears even when MD005 then fails, and under it one line per target naming the host file and each dependency the target needs, being the declared `python` packages plus the target's host library (`wasmtime`, `wasmi` or `wazero` for `wasm`, `onnxruntime` or `ort` for `onnx`). A host file is `mlserver`'s `py_deps.txt` for `served`, and for `embedded` the notebook module's own `py_deps.txt`, `Cargo.toml` or `go.mod` (`mlmodels`' consumers for the `example` module). `= name` is declared, `+ name` is to be added to that file (a Python name only, since `fab generate` pins it) and `! name` is a Python package with no pin to add to `py_deps_prod.txt`. The stage detail counts the `+` lines, and the stage reports and never fails.
+- Adding a dependency is a change of behaviour (R10), made in this order: add the package to the project wide pins, add its name to `mlserver`'s `py_deps.txt` (no version, since `fab generate` pins it), then release `mlserver`, add the name to `PYTHON_DEPS`, and rerun the notebook, which changes the content hash. A consumer that embeds the project in Python adds the same names to its own `py_deps.txt`. A Rust or Go consumer never embeds a `pyfunc`, and for a `wasm` project needs only its host library (`wasmi`, `wazero`) and the maths functions of 4.1.
 
 ## 4. WebAssembly models
 
@@ -238,7 +239,7 @@ its flavour: `static` needs none, `wasm` needs one small host per language, `onn
 
 | Need | Yes | No |
 |---|---|---|
-| Run a Notebook | `jupyterlab` and `nbconvert --execute` through `notebook.sh`, kernel `asystem` | The Conda Python, which lacks the dependencies |
+| Run a Notebook | `jupyterlab`'s kernel `asystem`, executed by `workbench.runner` (`nbclient`) through `notebook.sh` | The Conda Python, which lacks the dependencies |
 | Parameterise a Headless Run | `papermill`, once pinned | Editing cells to change inputs |
 | Review a Notebook Diff | Commit without outputs, or pair with `jupytext` | Committing large embedded outputs |
 | Check Every Notebook | `fab unittest`, which runs `model.sh unittest` | Trusting a committed project nobody has reproduced |
@@ -497,7 +498,7 @@ Each task includes the ones before it.
    include a first call with no state, boundary values, a missing input that gives a signature error and a long gap. Build each step with
    `golden_step` and the document with `golden_document`.
 7. Package with `package_project` and `record_project`, which copy the model file and the evaluation into the project, run `verify_project` and so every project check of section 10, and write `project/` and `metadata.json` with the targets the project is for.
-8. Run `fab unittest`, read the diff, and commit. Run `fab systest` to test each target, and `fab release` to release (11.5, 11.6).
+8. Run `fab unittest`, add what its `requirements` stage lists with `+` to the host files (3.5), read the diff, and commit. Run `fab systest` to test each target, and `fab release` to release (11.5, 11.6).
 9. For an embedded consumer, add the embed to its `generate.sh` as in section 8.1, load the project through the reference consumer of its language and flavour (11.8), and carry the state between calls and
    record the project hash wherever a decision is logged.
 10. To refit, put new data under splits, fit and repeat steps 6 to 8. The signature MUST only grow. A served rollback is `fab deploy` in the module after reverting; an embedded rollback reverts the project in the tree and releases the consumer.
@@ -665,13 +666,14 @@ Every run of a notebook, a unit test or a system test, in any flavour and langua
 === RUN   notebook example/wasm/saturate
     setup        ... done (0.44s)
     fit          ... done (0.00s)
+    requirements ... done [0 to add] (0.00s)
     metadata     ... done [wasm] (0.00s)
 --- PASS: notebook example/wasm/saturate (1.34s)
 ```
 
 - A subject opens with `=== RUN   <name>` and closes with `--- PASS: <name> (<seconds>s)`, `--- FAIL: ...` or `--- SKIP: <name> (<reason>)`. A run ends with `PASS` or `FAIL` and a line `ok  <TAB><suite><TAB><seconds>s` or `FAIL<TAB><suite><TAB><seconds>s`.
 - A stage is one line indented four spaces: the name padded to 12, ` ... `, `done` or `FAILED`, an optional detail in brackets and the seconds in brackets. A stage with nothing to do still prints, so a `compile` stage reads `done [interpreted]` for Python.
-- A notebook's stages are its sections of 6.7, lowercased, then `metadata`. A reference consumer's `main` prints `verify`, `load` and `replay` with the same shape in Python, Go and Rust, and a system test prints `compile` (`interpreted` or `prebuilt`), for a `served` target `registry` and `serve`, and then the consumer's own lines.
+- A notebook's stages are its sections of 6.7, lowercased, then `requirements` and `metadata` (3.5). A reference consumer's `main` prints `verify`, `load` and `replay` with the same shape in Python, Go and Rust, and a system test prints `compile` (`interpreted` or `prebuilt`), for a `served` target `registry` and `serve`, and then the consumer's own lines.
 - A finding or an error is still printed as `ERROR <message>` on standard error. `asystem.report` writes this shape for Python, and the three consumers repeat it in their own language, since a consumer MUST NOT import `asystem`.
 
 ## 11. The mlmodels release model
