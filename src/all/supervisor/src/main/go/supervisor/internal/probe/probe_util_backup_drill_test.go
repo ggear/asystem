@@ -87,34 +87,70 @@ func TestProbeUtilBackupDrill_Compatible(t *testing.T) {
 	}
 }
 
-func TestProbeUtilBackupDrill_SkipsAnIncompatiblePoint(t *testing.T) {
-	work := t.TempDir()
-	home := filepath.Join(work, "mod")
-	source := filepath.Join(home, "2.0")
-	root := filepath.Join(home, treeBackupDirectory)
-	run := "2026-11-01_01-00-00"
-	if err := os.MkdirAll(filepath.Join(root, run), 0o755); err != nil {
-		t.Fatal(err)
+func TestProbeUtilBackupDrill_VersionedHook(t *testing.T) {
+	tests := []struct {
+		name            string
+		recorded        string
+		expectedCode    int
+		expectedVerdict string
+	}{
+		{"software matching the hook is drilled", "new", 1, metric.BackupStateFailure},
+		{"software differing from the hook is skipped", "old", 0, metric.BackupStateSkipped},
 	}
-	if err := os.MkdirAll(source, 0o755); err != nil {
-		t.Fatal(err)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			home := filepath.Join(t.TempDir(), "mod")
+			source := filepath.Join(home, "2.0")
+			root := filepath.Join(home, treeBackupDirectory)
+			run := "2026-11-01_01-00-00"
+			for _, dir := range []string{filepath.Join(root, run), source} {
+				if err := os.MkdirAll(dir, 0o755); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := os.WriteFile(filepath.Join(root, run, "mod_full.tar.gz"), tarGzipped(t, "data/a.txt", "hello"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			plantBackupManifest(t, root, run, backupManifest{Kind: "full", Verdict: metric.BackupStateSuccess, SourceSoftware: test.recorded, Fingerprint: []backupFingerprintUnit{{name: "data", count: 5}}})
+			scripts := t.TempDir()
+			if err := os.WriteFile(filepath.Join(scripts, "restore.sh"), []byte("restore_staged() { return 1; }\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(scripts, "backup.sh"), []byte("backup_versioned() { echo new; }\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			code := BackupModuleDrill(context.Background(), BackupModuleRequest{Arguments: []string{"mod"}, Source: source, Script: filepath.Join(scripts, "restore.sh"), Record: "secondary", LockPeriod: time.Second}, &stdout, &stderr)
+			drill, found := readBackupDrill(backupDrillPath(filepath.Join(root, run), "secondary"))
+			if code != test.expectedCode || !found || drill.Verdict != test.expectedVerdict {
+				t.Errorf("drill: got code [%d] verdict [%s] found [%t] stderr [%s] want code [%d] verdict [%s]", code, drill.Verdict, found, stderr.String(), test.expectedCode, test.expectedVerdict)
+			}
+		})
 	}
-	if err := os.WriteFile(filepath.Join(root, run, "mod_full.tar.gz"), tarGzipped(t, "data/a.txt", "hello"), 0o644); err != nil {
-		t.Fatal(err)
+}
+
+func TestProbeUtilBackupManifest_VersionedModule(t *testing.T) {
+	tests := []struct {
+		name     string
+		script   string
+		expected string
+	}{
+		{"the hook output is recorded", "backup_versioned() { printf '18-2.30\\nextra\\n'; }", "18-2.30"},
+		{"no hook falls back to the version", ":", "9.9"},
+		{"an empty hook falls back to the version", "backup_versioned() { :; }", "9.9"},
+		{"a failing hook falls back to the version", "backup_versioned() { echo 18; return 1; }", "9.9"},
 	}
-	plantBackupManifest(t, root, run, backupManifest{Kind: "full", Verdict: metric.BackupStateSuccess, SourceSoftware: "old", Fingerprint: []backupFingerprintUnit{{name: "data", count: 5}}})
-	scripts := t.TempDir()
-	if err := os.WriteFile(filepath.Join(scripts, "restore.sh"), []byte("restore_staged() { return 1; }\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(scripts, "backup.sh"), []byte("backup_versioned() { echo new; }\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	var stdout, stderr bytes.Buffer
-	code := BackupModuleDrill(context.Background(), BackupModuleRequest{Arguments: []string{"mod"}, Source: source, Script: filepath.Join(scripts, "restore.sh"), Record: "secondary", LockPeriod: time.Second}, &stdout, &stderr)
-	drill, found := readBackupDrill(backupDrillPath(filepath.Join(root, run), "secondary"))
-	if code != 0 || !found || drill.Verdict != metric.BackupStateSkipped {
-		t.Errorf("drill: got code [%d] verdict [%s] found [%t] stderr [%s] want code [0] verdict [%s]", code, drill.Verdict, found, stderr.String(), metric.BackupStateSkipped)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			script := filepath.Join(t.TempDir(), "backup.sh")
+			if err := os.WriteFile(script, []byte(test.script+"\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stderr bytes.Buffer
+			if actual := versionedModule(context.Background(), moduleHooks{script: script}, &stderr, "9.9"); actual != test.expected {
+				t.Errorf("software: got [%s] want [%s]", actual, test.expected)
+			}
+		})
 	}
 }
 

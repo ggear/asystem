@@ -311,8 +311,9 @@ func versionedModule(ctx context.Context, hooks moduleHooks, stderr io.Writer, v
 	command := hooks.command(versionCtx, moduleHookVersioned)
 	var output bytes.Buffer
 	command.Stdout, command.Stderr = &output, stderr
+	err := command.Run()
 	software := strings.TrimSpace(output.String())
-	if err := command.Run(); err != nil || software == "" {
+	if err != nil || software == "" {
 		fmt.Fprintf(stderr, "Backup hook [%s] gave no software version [%v], falling back to the module version\n", moduleHookVersioned, err)
 		return version
 	}
