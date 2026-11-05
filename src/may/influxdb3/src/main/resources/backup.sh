@@ -189,6 +189,7 @@ backup_written() {
   done
   if [ -n "${full}" ] &&
     [ "$(date -d "$(date -d "@$(backup_epoch "${full}")" +%F)" +%G-%V)" = "$(date +%G-%V)" ] &&
+    [ "$(jq -r '.source_version // empty' "${BACKUP_INTERNAL_ROOT_DIR}/${full#*-}/.meta/manifest.json" 2>/dev/null)" = "${BACKUP_SOURCE_VERSION}" ] &&
     [ -n "${parent}" ] && [ "$(backup_status "${parent}")" = "completed" ] &&
     [ -n "$(backup_parent "${BACKUP_RUN_TIMESTAMP}")" ] && [ "${BACKUP_FORCE_FULL}" != "true" ]; then
     name="delta-${BACKUP_RUN_TIMESTAMP}"
@@ -204,7 +205,7 @@ backup_written() {
     if [ "${BACKUP_FORCE_FULL}" = "true" ]; then
       echo "Starting a new full backup as asked, previous full backup [${full:-none}]"
     else
-      [ -n "${full}" ] && echo "Starting a new full backup, previous full backup [${full}] is from an earlier ISO week"
+      [ -n "${full}" ] && echo "Starting a new full backup, previous full backup [${full}] cannot parent a delta, it is from an earlier ISO week or another version"
     fi
     docker exec --user root "${BACKUP_MODULE_NAME}" \
       influxdb3 create backup --name "${name}" >/dev/null || return 1

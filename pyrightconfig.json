@@ -36,6 +36,7 @@
     "src/max/rackmains/src/test/python",
     "src/may/_debian_may/src/build/python",
     "src/may/influxdb3/src/build/python",
+    "src/may/influxdb3/src/test/python",
     "src/may/mlflow/src/build/python",
     "src/may/mlflow/src/test/python",
     "src/may/mlserver/src/build/python",

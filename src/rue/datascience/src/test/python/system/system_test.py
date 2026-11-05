@@ -4,11 +4,13 @@ from os.path import abspath, dirname, isfile, join, realpath
 
 import pytest
 
+sys.path.append("../../../main/python")
 sys.path.append("../../../../../../all/_/src/build/python")
 
 from asystem.report import run_pytest, stage
+from workbench.errors import GateError
 from workbench.metadata import METADATA_FILE, PROJECT_DIR, package_key, read_metadata, read_pins, record_passed
-from workbench.model import PROJECT_ALIAS_PREVIEW, GateError
+from workbench.model import PROJECT_ALIAS_PREVIEW
 from workbench.release import clear_preview, wait_served, workspaces
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
@@ -19,9 +21,13 @@ IMAGE = "datascience-consumers:test"
 CONSUMER_PINS = ("numpy", "pandas", "onnxruntime", "wasmtime", "mlflow")
 
 
+def _label(target):
+    return target["kind"] if target["kind"] == "served" else f"embedded-{target['language']}"
+
+
 def _targets():
     found = []
-    for name, directory in workspaces(DIR_ROOT).items():
+    for name, directory in workspaces(DIR_SOURCE).items():
         if isfile(join(directory, METADATA_FILE)):
             found.extend(pytest.param(name, directory, target, id=f"{name}-{_label(target)}") for target in read_metadata(directory)["targets"])
     return found
@@ -41,7 +47,7 @@ def env():
 @pytest.fixture(scope="session")
 def image(env):
     pins = {package_key(name): (name, version) for name, version in read_pins(join(DIR_SOURCE, "../.py_deps_prod.txt"), None).items()}
-    declared = sorted({package_key(name) for directory in workspaces(DIR_ROOT).values() if isfile(join(directory, METADATA_FILE)) for name in read_metadata(directory)["runtime"].get("python", ())})
+    declared = sorted({package_key(name) for directory in workspaces(DIR_SOURCE).values() if isfile(join(directory, METADATA_FILE)) for name in read_metadata(directory)["runtime"].get("python", ())})
     unpinned = [name for name in declared if name not in pins]
     if unpinned:
         raise GateError("image", "runtime", f"python dependencies with no project wide pin {unpinned}")
@@ -113,10 +119,6 @@ def _wait_registry(name, content_sha256, tracking_uri):
 def _run(language, arguments, project_dir):
     command = ["python", *arguments] if language == "python" else [f"/asystem/bin/{language}", *arguments]
     return subprocess.run(["docker", "run", "--rm", "--volume", f"{project_dir}:/project:ro", IMAGE, *command], capture_output=True, text=True, timeout=TIMEOUT_RUN, check=False)
-
-
-def _label(target):
-    return target["kind"] if target["kind"] == "served" else f"embedded-{target['language']}"
 
 
 if __name__ == "__main__":
