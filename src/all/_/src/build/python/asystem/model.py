@@ -6,6 +6,7 @@ import os
 import re
 import shutil
 import sys
+import tempfile
 from os.path import basename, dirname, isfile, join, relpath
 
 from asystem.errors import GateError
@@ -307,12 +308,9 @@ def register_project(project_dir, name, tracking_uri, aliases=(PROJECT_ALIAS_PRE
     import mlflow.pyfunc
 
     import mlflow
-    from mlflow import MlflowClient
 
     manifest = verify_project(project_dir)
-    mlflow.set_tracking_uri(tracking_uri)
-    mlflow.set_registry_uri(tracking_uri)
-    client = MlflowClient()
+    client = registry_client(tracking_uri)
     content = content_sha256(project_dir)
     version = next((candidate for candidate in client.search_model_versions(f"name = '{name}'") if candidate.tags.get("content_sha256") == content), None)
     if version is None:
@@ -382,6 +380,15 @@ def register_preview(project_dir, name, tracking_uri, targets, snapshot_version=
     return register_project(project_dir, name, tracking_uri, aliases=(PROJECT_ALIAS_PREVIEW,), snapshot_version=snapshot_version)
 
 
+def registry_client(tracking_uri):
+    import mlflow
+    from mlflow import MlflowClient
+
+    mlflow.set_tracking_uri(tracking_uri)
+    mlflow.set_registry_uri(tracking_uri)
+    return MlflowClient()
+
+
 def registry_address(uri):
     from urllib.parse import urlparse
 
@@ -395,6 +402,31 @@ def registry_address(uri):
 def check_release(project_dir):
     verify_project(project_dir)
     return check_acceptance(project_dir)
+
+
+def pull_model(name, alias, dest_dir, tracking_uri):
+    from mlflow.artifacts import download_artifacts
+    from mlflow.exceptions import MlflowException
+
+    client = registry_client(tracking_uri)
+    staging_dir = tempfile.mkdtemp(prefix=f"{name}-")
+    try:
+        try:
+            tags = client.get_model_version_by_alias(name, alias).tags
+            download_artifacts(artifact_uri=f"models:/{name}@{alias}", dst_path=staging_dir)
+        except MlflowException as error:
+            if _not_found(error):
+                return None
+            raise
+        project_dir = _find_project_dir(staging_dir)
+        manifest = verify_project(project_dir)
+        if tags.get("content_sha256") != content_sha256(project_dir):
+            raise ValueError(f"pulled project differs from the registered content hash [{tags.get('content_sha256')}]")
+        shutil.rmtree(dest_dir, ignore_errors=True)
+        shutil.copytree(project_dir, dest_dir)
+        return manifest
+    finally:
+        shutil.rmtree(staging_dir, ignore_errors=True)
 
 
 def render_rust(signature):
@@ -589,6 +621,10 @@ def _quoted(text):
     return f'"{text}"'
 
 
+def _not_found(error):
+    return error.error_code == "RESOURCE_DOES_NOT_EXIST" or "not found" in str(error.message)
+
+
 def _acceptance_outcome(value, limit, direction):
     if value is None:
         return False, None
@@ -757,6 +793,13 @@ def _lint_golden(manifest, signature, golden):
     if signature["parameters"].get("state") and not has_stateless_ok:
         findings.append(("PJ011", "golden needs a first call with no state"))
     return findings
+
+
+def _find_project_dir(root_dir):
+    for current_dir, _, file_names in os.walk(root_dir):
+        if PROJECT_MANIFEST in file_names:
+            return current_dir
+    raise ValueError(f"no project found under [{root_dir}]")
 
 
 def _wasm_module_imports(path):

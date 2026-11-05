@@ -9,7 +9,7 @@ from os.path import isdir, isfile, join
 
 from asystem.errors import GateError
 from asystem.metadata import METADATA_FILE, PROJECT_DIR, content_sha256, read_metadata, write_metadata
-from asystem.model import CONSUMER_MODEL_PATH, PROJECT_ALIAS_PREVIEW, PROJECT_ALIAS_RELEASE, PROJECT_MANIFEST, PROJECT_NAME, register_project, registered_name
+from asystem.model import CONSUMER_MODEL_PATH, PROJECT_ALIAS_PREVIEW, PROJECT_ALIAS_RELEASE, PROJECT_MANIFEST, PROJECT_NAME, register_project, registered_name, registry_client
 
 NOTEBOOK_ROOT = "rue/datascience/src/main/notebook"
 RELEASE_FIXTURES = "example"
@@ -49,16 +49,11 @@ def release_workspaces(source_dir, version, released_by, tracking_uri=None, mlse
 
 
 def publish_workspace(name, directory, tracking_uri, mlserver_url=None):
-    import mlflow
-    from mlflow import MlflowClient
-
     metadata = read_metadata(directory)
     if metadata["released_version"] is None:
         raise GateError("Release", "publish", f"workspace [{name}] has no released version")
     register_project(join(directory, PROJECT_DIR), name, tracking_uri, aliases=())
-    mlflow.set_tracking_uri(tracking_uri)
-    mlflow.set_registry_uri(tracking_uri)
-    client = MlflowClient()
+    client = registry_client(tracking_uri)
     version = next(candidate for candidate in client.search_model_versions(f"name = '{name}'") if candidate.tags.get("content_sha256") == metadata["content_sha256"])
     tags = {
         "release_version": metadata["released_version"],
@@ -80,12 +75,7 @@ def publish_workspace(name, directory, tracking_uri, mlserver_url=None):
 
 
 def clear_preview(name, tracking_uri):
-    import mlflow
-    from mlflow import MlflowClient
-
-    mlflow.set_tracking_uri(tracking_uri)
-    mlflow.set_registry_uri(tracking_uri)
-    client = MlflowClient()
+    client = registry_client(tracking_uri)
     if PROJECT_ALIAS_PREVIEW in client.get_registered_model(name).aliases:
         client.delete_registered_model_alias(name, PROJECT_ALIAS_PREVIEW)
 
@@ -165,7 +155,7 @@ def status_lines(source_dir, tracking_uri=None, mlserver_url=None):
                 lines.append(("WARN", f"registry release differs from metadata model [{name}]"))
             if registry is not None and PROJECT_ALIAS_PREVIEW in registry.get(name, {}):
                 lines.append(("WARN", f"a preview alias remains model [{name}]"))
-    lines.extend(("WARN", f"consumer embeds an older release module [{os.path.relpath(consumer, source_dir)}]") for consumer in consumers(source_dir) if _stale(consumer, source_dir))
+    lines.extend(("WARN", f"consumer embeds an older release module [{os.path.relpath(consumer, source_dir)}]") for consumer in stale_consumers(source_dir))
     return lines
 
 
@@ -189,12 +179,7 @@ def _released(source_dir, name):
 
 
 def _registry_state(tracking_uri):
-    import mlflow
-    from mlflow import MlflowClient
-
-    mlflow.set_tracking_uri(tracking_uri)
-    mlflow.set_registry_uri(tracking_uri)
-    client = MlflowClient()
+    client = registry_client(tracking_uri)
     state = {}
     for model in client.search_registered_models():
         state[model.name] = {alias: client.get_model_version(model.name, version).tags.get("content_sha256") for alias, version in model.aliases.items()}

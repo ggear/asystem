@@ -22,7 +22,7 @@ open decisions, and MUST NOT restate the specification. Each notebook's own plan
   finding with its identifier.
 - `python -m asystem.notebook new <module> <model> <notebook> <flavour>`, which scaffolds a notebook, a plan and the data directories that already pass
   `model.md` section 10.
-- `diff_signature`, which a failed pull now reports, and `python -m asystem.model generate`, which writes Rust request and response
+- `python -m asystem.model generate`, which writes Rust request and response
   types from `signature.json` (rackmains' `contract.rs`). A Go generator was removed, since no Go consumer exists.
 - Acceptance (`model.md` 6.8, R14): a notebook-defined `acceptance_checks` function run by `evaluate_acceptance`, which computes each check's outcome and budget from its value, limit and direction, writes `evaluation.json` into the project (AC001 to AC003, PM004), and has `register_project` log `acceptance_passed`, `acceptance_budget` and each measured value. `weewx/console/battery` uses it and records a failed verdict until a labelled `backtest` run exists.
 - `register_project` registers a non-`pyfunc` project through `create_model_version` on the run's artifact path, since MLflow 3 refuses `register_model` for plain artifacts.

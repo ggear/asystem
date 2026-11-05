@@ -613,7 +613,7 @@ class ModelProjectTest(unittest.TestCase):
         self.assertEqual(["PJ017"], sorted({rule for rule, _ in lint_project(self.project_dir)}))
 
     def test_pyfunc_project_is_registered_as_a_pyfunc_model(self):
-        from asystem.model import build_signature, golden_document, golden_step, register_project, signature_input, signature_output
+        from asystem.model import build_signature, golden_document, golden_step, pull_model, register_project, signature_input, signature_output
 
         signature = build_signature("demo_calc", [signature_input("demo_in_seconds", "seconds", "Input.")], [signature_output("demo_out_seconds", "seconds", "Output.")])
         golden = golden_document([("calls", [golden_step(signature, "s-0", {"demo_in_seconds": 1.0}, {"demo_out_seconds": 2.0}), golden_step(signature, "s-1", {}, error="signature")])])
@@ -647,6 +647,9 @@ class ModelProjectTest(unittest.TestCase):
         self.assertEqual("10.200.1951-SNAPSHOT", client.get_model_version("demo_calc", str(version)).tags["snapshot_version"])
         loaded = mlflow.pyfunc.load_model("models:/demo_calc@preview")
         self.assertEqual([2.0], list(loaded.predict({"demo_in_seconds": [1.0]})["demo_out_seconds"]))
+        pulled = pull_model("demo_calc", "preview", join(root_dir, "pulled"), uri)
+        assert pulled is not None
+        self.assertEqual("pyfunc", pulled["flavour"])
         self.assertEqual("1", str(version))
 
     def test_pyfunc_registration_refuses_a_state_vector_signature(self):
@@ -1135,6 +1138,19 @@ class ReleaseTest(unittest.TestCase):
         os.remove(join(self.workspace, METADATA_FILE))
         self.assertIsNone(self.record(targets=[]))
         self.assertFalse(os.path.isfile(join(self.workspace, METADATA_FILE)))
+
+    def test_a_runtime_with_no_pin_is_refused_before_the_workspace_changes(self):
+        from asystem.errors import GateError
+
+        project_dir = demo_project("wasm")
+        with open(join(project_dir, "project.json")) as manifest_file:
+            manifest = json.load(manifest_file)
+        manifest["runtime"] = {"python": ["unpinned_package"]}
+        with open(join(project_dir, "project.json"), "w") as manifest_file:
+            json.dump(manifest, manifest_file)
+        with self.assertRaises(GateError):
+            self.record(project_dir)
+        self.assertFalse(os.path.exists(join(self.workspace, "project")))
 
     def test_a_release_needs_every_target_to_have_passed_and_keeps_the_version_while_content_is_unchanged(self):
         from asystem.errors import GateError
