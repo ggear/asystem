@@ -732,11 +732,15 @@ class RunHistory:
         timestamps += [""] * (bins - n_real)
         return View(name="raw", label=self._raw_label, bins=bins, bin_seconds=bucket_seconds, in_progress_bin=-1, timestamps=timestamps, series=series, errored=errored)
 
+    def _earliest_day(self, today: datetime.date, window_days: int) -> datetime.date:
+        window_start = (today - datetime.timedelta(days=window_days - 1)).isoformat()
+        return datetime.date.fromisoformat(min((e["date"] for e in self._day if e["date"] >= window_start), default=today.isoformat()))
+
     def _build_day_view(self) -> View:
         bins = HISTORY_RAW_RUN_LENGTH
         today = datetime.datetime.now(tz=CTR_TZ).date()
         if self._day:
-            earliest = datetime.date.fromisoformat(min(e["date"] for e in self._day))
+            earliest = self._earliest_day(today, bins)
             n_real = min(bins, (today - earliest).days + 1)
             start = today - datetime.timedelta(days=n_real - 1)
         else:
@@ -771,7 +775,7 @@ class RunHistory:
         bins = HISTORY_RAW_RUN_LENGTH
         today = datetime.datetime.now(tz=CTR_TZ).date()
         if self._day:
-            earliest = datetime.date.fromisoformat(min(e["date"] for e in self._day))
+            earliest = self._earliest_day(today, bins * 7)
             filled_bins = min(bins, (today - earliest).days // 7 + 1)
         else:
             filled_bins = 0
