@@ -6,7 +6,6 @@ import os
 import re
 import shutil
 import sys
-import tempfile
 from os.path import basename, dirname, isfile, join, relpath
 
 from asystem.errors import GateError
@@ -268,7 +267,7 @@ def lint_project(project_dir):
             if model_file is not None and isfile(model_file) and flavour == "wasm":
                 actual = sorted({str(entry.name) for entry in _wasm_module_imports(model_file)})
                 if listed != actual:
-                    findings.append(("PJ017", f"runtime wasm differs from the module imports, runtime {listed} module {actual}"))
+                    findings.append(("PJ017", f"runtime wasm differs from the module imports runtime {listed} module {actual}"))
             elif model_file is not None and isfile(model_file):
                 with open(model_file) as source_file:
                     tree = ast.parse(source_file.read())
@@ -398,60 +397,6 @@ def check_release(project_dir):
     return check_acceptance(project_dir)
 
 
-def pull_model(name, alias, dest_dir, tracking_uri):
-    from mlflow.artifacts import download_artifacts
-    from mlflow.exceptions import MlflowException
-
-    import mlflow
-    from mlflow import MlflowClient
-
-    mlflow.set_tracking_uri(tracking_uri)
-    mlflow.set_registry_uri(tracking_uri)
-    client = MlflowClient()
-    staging_dir = tempfile.mkdtemp(prefix=f"{name}-")
-    try:
-        try:
-            tags = client.get_model_version_by_alias(name, alias).tags
-            download_artifacts(artifact_uri=f"models:/{name}@{alias}", dst_path=staging_dir)
-        except MlflowException as error:
-            if _not_found(error):
-                return None
-            raise
-        project_dir = _find_project_dir(staging_dir)
-        manifest = verify_project(project_dir)
-        if tags.get("content_sha256") != content_sha256(project_dir):
-            raise ValueError(f"pulled project differs from the registered content hash [{tags.get('content_sha256')}]")
-        shutil.rmtree(dest_dir, ignore_errors=True)
-        shutil.copytree(project_dir, dest_dir)
-        return manifest
-    finally:
-        shutil.rmtree(staging_dir, ignore_errors=True)
-
-
-def diff_signature(expected, actual):
-    findings = []
-    for section in ("inputs", "outputs"):
-        expected_entries = {entry["name"]: entry for entry in expected[section]}
-        actual_entries = {entry["name"]: entry for entry in actual[section]}
-        singular = section[:-1]
-        findings.extend(f"{singular} [{name}] is missing from the pulled signature" for name in sorted(expected_entries.keys() - actual_entries.keys()))
-        findings.extend(f"{singular} [{name}] is new in the pulled signature" for name in sorted(actual_entries.keys() - expected_entries.keys()))
-        findings.extend(
-            f"{singular} [{name}] changed from {_brief(expected_entries[name])} to {_brief(actual_entries[name])}"
-            for name in sorted(expected_entries.keys() & actual_entries.keys())
-            if expected_entries[name] != actual_entries[name]
-        )
-    expected_state = [slot.get("name") for slot in expected["parameters"].get("state", [])]
-    actual_state = [slot.get("name") for slot in actual["parameters"].get("state", [])]
-    if expected_state != actual_state:
-        findings.append(f"state slots changed from {expected_state} to {actual_state}")
-    if expected["parameters"].get("signature_version") != actual["parameters"].get("signature_version"):
-        findings.append(f"signature version changed from [{expected['parameters'].get('signature_version')}] to [{actual['parameters'].get('signature_version')}]")
-    if not findings and expected != actual:
-        findings.append("signature differs in a field not listed above")
-    return findings
-
-
 def render_rust(signature):
     required_inputs = [entry["name"] for entry in signature["inputs"] if entry["parameters"]["required"]]
     required_outputs = [entry["name"] for entry in signature["outputs"] if entry["parameters"]["required"]]
@@ -534,13 +479,16 @@ def main(arguments=None):
         for hint in fix_hints(rules):
             print(f"HINT {hint}", file=sys.stderr)
 
+    def hints_in(text):
+        hints(re.findall(r"\b((?:PJ|NB|WS|PM|AC|CP|RP|MD)\d{3})\b", text))
+
     try:
         if options.command == "verify":
             print(f"verified model [{verify_project(options.project_dir)['name']}]")
         elif options.command == "lint":
             findings = lint_project(options.project_dir)
             for rule, message in findings:
-                print(f"{options.project_dir}: {rule} {message}", file=sys.stderr)
+                print(f"{options.project_dir} {rule} {message}", file=sys.stderr)
             hints(rule for rule, _ in findings)
             return 1 if findings else 0
         elif options.command == "changed":
@@ -575,11 +523,8 @@ def main(arguments=None):
 
             tracking_uri = registry_address(os.environ.get("MLFLOW_TRACKING_URI"))
             for name, directory in workspaces(options.source_dir).items():
-                if (
-                    isfile(join(directory, "metadata.json"))
-                    and read_metadata(directory)["released_version"] is not None
-                    and any(target["kind"] == "served" for target in read_metadata(directory)["targets"])
-                ):
+                metadata = read_metadata(directory) if isfile(join(directory, "metadata.json")) else None
+                if metadata is not None and metadata["released_version"] is not None and any(target["kind"] == "served" for target in metadata["targets"]):
                     print(f"published model [{name}] [{publish_workspace(name, directory, tracking_uri, options.mlserver)}]")
         elif options.command == "status":
             from asystem.release import status_lines
@@ -617,11 +562,11 @@ def main(arguments=None):
                 _write_text(options.rust, render_rust(signature))
     except GateError as error:
         print(f"FAILED stage [{error.stage}] gate [{error.gate}] [{error.cause}]", file=sys.stderr)
-        hints(re.findall(r"\b((?:PJ|NB|WS|PM|AC|CP|RP|MD)\d{3})\b", error.cause))
+        hints_in(error.cause)
         return 1
     except (ValueError, KeyError, OSError) as error:
         print(f"ERROR model command failed [{options.command}] [{error}]", file=sys.stderr)
-        hints(re.findall(r"\b((?:PJ|NB|WS|PM|AC|CP|RP|MD)\d{3})\b", str(error)))
+        hints_in(str(error))
         return 1
     return 0
 
@@ -642,10 +587,6 @@ def _cell(spec, value):
 
 def _quoted(text):
     return f'"{text}"'
-
-
-def _not_found(error):
-    return error.error_code == "RESOURCE_DOES_NOT_EXIST" or "not found" in str(error.message)
 
 
 def _acceptance_outcome(value, limit, direction):
@@ -699,10 +640,6 @@ def _lint_evaluation(project_dir, files, signature):
     if evaluation.get("passed") is not all(entry.get("passed") is True for entry in entries if entry.get("gate") is True) or evaluation.get("budget") != _acceptance_budget(entries):
         findings.append(("AC003", "the evaluation verdict and budget do not match its checks"))
     return findings
-
-
-def _brief(entry):
-    return f"{entry['datatype']} {entry['shape']} unit [{entry['parameters']['unit']}] required [{entry['parameters']['required']}]"
 
 
 def _rust_type(entry):
@@ -820,13 +757,6 @@ def _lint_golden(manifest, signature, golden):
     if signature["parameters"].get("state") and not has_stateless_ok:
         findings.append(("PJ011", "golden needs a first call with no state"))
     return findings
-
-
-def _find_project_dir(root_dir):
-    for current_dir, _, file_names in os.walk(root_dir):
-        if PROJECT_MANIFEST in file_names:
-            return current_dir
-    raise ValueError(f"no project found under [{root_dir}]")
 
 
 def _wasm_module_imports(path):

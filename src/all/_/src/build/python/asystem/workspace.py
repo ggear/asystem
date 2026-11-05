@@ -29,7 +29,8 @@ def lint_workspace(notebook_dir):
     if len(models) > 1:
         findings.append(("WS007", f"the directory must hold at most one model file, found {models}"))
     allowed = {WORKSPACE_NOTEBOOK, "plan.md", METADATA_FILE, PROJECT_DIR, "data", *PROJECT_MODEL_FILES.values(), *WORKSPACE_IGNORED}
-    findings.extend(("WS003", f"[{name}] is not one of {sorted(allowed)}") for name in sorted(listdir(notebook_dir)) if name not in allowed) if isdir(notebook_dir) else None
+    if isdir(notebook_dir):
+        findings.extend(("WS003", f"[{name}] is not one of {sorted(allowed)}") for name in sorted(listdir(notebook_dir)) if name not in allowed)
     data_dir = join(notebook_dir, "data")
     if isdir(data_dir):
         for split in sorted(listdir(data_dir)):
@@ -48,7 +49,7 @@ def main(arguments=None):
     for path in options.paths:
         for rule, message in lint_workspace(path):
             failed = True
-            print(f"{path}: {rule} {message}", file=sys.stderr)
+            print(f"{path} {rule} {message}", file=sys.stderr)
     return 1 if failed else 0
 
 

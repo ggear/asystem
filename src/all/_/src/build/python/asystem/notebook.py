@@ -128,7 +128,7 @@ def main(arguments=None):
             print(f"stripped outputs [{path}]")
         for rule, message, cell in lint_notebook(path):
             failed = True
-            print(f"{path}:{'cell ' + str(cell) if cell is not None else 'notebook'}: {rule} {message}", file=sys.stderr)
+            print(f"{path} [{'cell ' + str(cell) if cell is not None else 'notebook'}] {rule} {message}", file=sys.stderr)
     return 1 if failed else 0
 
 

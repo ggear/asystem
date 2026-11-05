@@ -5,7 +5,8 @@ import struct
 from os.path import join
 from unittest import mock
 
-from asystem.model import PROJECT_GOLDEN, PROJECT_SIGNATURE, WASM_MATH_FUNCTIONS, WASM_MATH_MODULE, GateError, verify_project
+from asystem.errors import GateError
+from asystem.model import PROJECT_GOLDEN, PROJECT_SIGNATURE, WASM_MATH_FUNCTIONS, WASM_MATH_MODULE, verify_project
 
 WASM_FUEL = 1_000_000
 WASM_MEMORY_BYTES = 1 << 20

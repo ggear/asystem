@@ -8,7 +8,6 @@ import sys
 import tempfile
 import textwrap
 import unittest
-import zipfile
 from os.path import dirname, isdir, join, realpath
 
 ROOT = realpath(join(dirname(__file__), "../../../../../.."))
@@ -614,7 +613,7 @@ class ModelProjectTest(unittest.TestCase):
         self.assertEqual(["PJ017"], sorted({rule for rule, _ in lint_project(self.project_dir)}))
 
     def test_pyfunc_project_is_registered_as_a_pyfunc_model(self):
-        from asystem.model import build_signature, golden_document, golden_step, pull_model, register_project, signature_input, signature_output
+        from asystem.model import build_signature, golden_document, golden_step, register_project, signature_input, signature_output
 
         signature = build_signature("demo_calc", [signature_input("demo_in_seconds", "seconds", "Input.")], [signature_output("demo_out_seconds", "seconds", "Output.")])
         golden = golden_document([("calls", [golden_step(signature, "s-0", {"demo_in_seconds": 1.0}, {"demo_out_seconds": 2.0}), golden_step(signature, "s-1", {}, error="signature")])])
@@ -648,9 +647,6 @@ class ModelProjectTest(unittest.TestCase):
         self.assertEqual("10.200.1951-SNAPSHOT", client.get_model_version("demo_calc", str(version)).tags["snapshot_version"])
         loaded = mlflow.pyfunc.load_model("models:/demo_calc@preview")
         self.assertEqual([2.0], list(loaded.predict({"demo_in_seconds": [1.0]})["demo_out_seconds"]))
-        pulled = pull_model("demo_calc", "preview", join(root_dir, "pulled"), uri)
-        assert pulled is not None
-        self.assertEqual("pyfunc", pulled["flavour"])
         self.assertEqual("1", str(version))
 
     def test_pyfunc_registration_refuses_a_state_vector_signature(self):
@@ -837,16 +833,6 @@ class ModelProjectTest(unittest.TestCase):
         unmeasured = evaluate_acceptance(lambda: [{"split": "backtest", "output": "demo_limit_seconds", "name": "rmse", "value": None, "limit": 1.0, "direction": "max"}], {"backtest": []})
         self.assertNotIn("AC003", self.rules(evaluation=unmeasured))
 
-    def test_the_standard_verdict_line_is_printed(self):
-        import contextlib
-        import io
-
-        printed = io.StringIO()
-        with contextlib.redirect_stdout(printed):
-            self.evaluation()
-            self.evaluation(passing=False)
-        self.assertEqual(["acceptance [passed] budget [0.5]", "acceptance [failed] budget [9.0]"], printed.getvalue().splitlines())
-
     def test_static_flavour_refuses_a_model_file(self):
         with self.assertRaises(ValueError):
             self.write(model_path=join(self.project_dir, "signature.json"))
@@ -893,18 +879,6 @@ class ModelProjectTest(unittest.TestCase):
         self.assertEqual("static", manifest["flavour"])
         self.assertEqual([], lint_project(self.project_dir))
 
-    def test_diff_signature_names_what_changed(self):
-        from asystem.model import diff_signature
-
-        other = json.loads(json.dumps(self.signature))
-        other["inputs"][0]["parameters"]["unit"] = "minutes"
-        del other["outputs"][1]
-        other["parameters"]["state"] = []
-        differences = diff_signature(self.signature, other)
-        self.assertTrue(any("input [demo_clock_seconds] changed" in item for item in differences))
-        self.assertTrue(any("output [demo_state_out] is missing" in item for item in differences))
-        self.assertTrue(any("state slots changed" in item for item in differences))
-
     def test_render_rust_names_every_tensor_with_optional_fields(self):
         from asystem.model import render_rust
 
@@ -912,14 +886,6 @@ class ModelProjectTest(unittest.TestCase):
         self.assertIn("pub demo_clock_seconds: f64,", rust)
         self.assertIn("pub demo_state_in: Option<Vec<f64>>,", rust)
         self.assertIn('pub const REQUIRED_OUTPUT_NAMES: &[&str] = &["demo_limit_seconds"];', rust)
-
-    def test_a_signature_that_is_unchanged_has_no_differences_and_a_removed_output_has_one(self):
-        from asystem.model import diff_signature
-
-        other = json.loads(json.dumps(self.signature))
-        self.assertEqual([], diff_signature(self.signature, other))
-        other["outputs"] = other["outputs"][:1]
-        self.assertTrue(diff_signature(self.signature, other))
 
     def test_registered_name_and_check_name(self):
         from asystem.model import check_name, registered_name

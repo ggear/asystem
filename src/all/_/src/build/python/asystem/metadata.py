@@ -82,14 +82,14 @@ def record_project(workspace_dir, project_dir, targets, pins_path, version_path=
         findings = signature_findings(previous.get("released_signature"), json.load(signature_file))
     if findings:
         raise GateError("Package", "signature", "; ".join(findings))
-    shutil.rmtree(join(workspace_dir, PROJECT_DIR), ignore_errors=True)
-    shutil.copytree(project_dir, join(workspace_dir, PROJECT_DIR))
     with open(join(project_dir, "project.json")) as manifest_file:
         runtime = json.load(manifest_file).get("runtime", {})
     pinned = {package_key(name) for name in read_pins(pins_path, None)}
     unpinned = sorted(name for name in runtime.get("python", ()) if package_key(name) not in pinned)
     if unpinned:
         raise GateError("Package", "runtime", f"python dependencies with no project wide pin {unpinned} in [{pins_path}]")
+    shutil.rmtree(join(workspace_dir, PROJECT_DIR), ignore_errors=True)
+    shutil.copytree(project_dir, join(workspace_dir, PROJECT_DIR))
     content = content_sha256(project_dir)
     same = previous.get("content_sha256") == content
     released = previous.get("released_version") if same else None
@@ -165,16 +165,16 @@ def lint_metadata(workspace_dir, flavour, pins_path=None, source_dir=None):
         findings.append(("MD002", f"snapshot version is not a snapshot version [{metadata['snapshot_version']}]"))
     if metadata["snapshot_version"] is not None and metadata["released_version"] is not None:
         findings.append(("MD002", f"a released project carries a snapshot version [{metadata['snapshot_version']}]"))
-    if not isfile(join(workspace_dir, PROJECT_DIR, "project.json")):
-        findings.append(("MD003", f"project missing beside the metadata [{workspace_dir}]"))
-    elif content_sha256(join(workspace_dir, PROJECT_DIR)) != metadata["content_sha256"]:
-        findings.append(("MD003", f"project differs from the metadata content hash [{metadata['content_sha256']}]"))
     manifest_path = join(workspace_dir, PROJECT_DIR, "project.json")
-    if isfile(manifest_path):
+    if not isfile(manifest_path):
+        findings.append(("MD003", f"project missing beside the metadata [{workspace_dir}]"))
+    else:
+        if content_sha256(join(workspace_dir, PROJECT_DIR)) != metadata["content_sha256"]:
+            findings.append(("MD003", f"project differs from the metadata content hash [{metadata['content_sha256']}]"))
         with open(manifest_path) as manifest_file:
             manifest_runtime = json.load(manifest_file).get("runtime", {})
         if metadata["runtime"] != manifest_runtime:
-            findings.append(("MD005", f"metadata runtime differs from the project runtime, metadata {metadata['runtime']} project {manifest_runtime}"))
+            findings.append(("MD005", f"metadata runtime differs from the project runtime metadata {metadata['runtime']} project {manifest_runtime}"))
     if pins_path is not None:
         pinned = {package_key(name) for name in read_pins(pins_path, None)}
         findings.extend(("MD005", f"python dependency has no project wide pin [{name}]") for name in metadata["runtime"].get("python", ()) if package_key(name) not in pinned)
