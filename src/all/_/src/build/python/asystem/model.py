@@ -101,7 +101,8 @@ def golden_document(sequences, tolerance=None):
 
 def golden_from_samples(signature, samples, sequence="golden", constants=None, tolerance=None):
     input_specs = {entry["name"]: entry for entry in signature["inputs"]}
-    output_names = [entry["name"] for entry in signature["outputs"]]
+    output_specs = {entry["name"]: entry for entry in signature["outputs"]}
+    output_names = list(output_specs)
     steps = []
     for index, sample in enumerate(samples):
         inputs = {name: _cell(spec, sample[name]) for name, spec in input_specs.items() if sample.get(name) is not None}
@@ -109,7 +110,7 @@ def golden_from_samples(signature, samples, sequence="golden", constants=None, t
         if sample.get("expect") == "error":
             steps.append(golden_step(signature, step_id, inputs, error=PROJECT_SIGNATURE_ERROR))
         else:
-            outputs = dict(constants) if constants is not None else {name: sample[name] for name in output_names if sample.get(name) is not None}
+            outputs = dict(constants) if constants is not None else {name: _cell(output_specs[name], sample[name]) for name in output_names if sample.get(name) is not None}
             steps.append(golden_step(signature, step_id, inputs, outputs))
     return golden_document([(sequence, steps)], tolerance)
 

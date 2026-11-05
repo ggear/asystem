@@ -8,30 +8,46 @@
     "trained_on": "synthetic line, training split",
     "inputs": [
       "example/wasm/accumulate/data/training/2026-11-03_16-40-51/wasm_accumulate_training_2026-11-03_2026-11-03.csv",
-      "example/wasm/accumulate/data/golden/2026-11-03_16-40-51/wasm_accumulate_golden.csv"
+      "example/wasm/accumulate/data/golden/2026-11-05_09-55-17/wasm_accumulate_golden.csv"
     ],
     "notes": "least squares line, gain and offset built into the module",
-    "implementation": "WebAssembly traced from a Python function by workbench.wasm.trace and built by build_wasm"
+    "implementation": "WebAssembly traced from a Python function by workbench.wasm.trace and built by build_wasm, importing every asystem_math function"
   },
   "files": {
     "signature": {
       "path": "signature.json",
-      "sha256": "32d8446946254d0a956958f64e644b6f7559555f4849cce6217f09ccd3d4186a"
+      "sha256": "6b11ec84fbe1de92fd8f1b7e6e24a7794ea71f149943a376b87de2811644264c"
     },
     "golden": {
       "path": "golden.json",
-      "sha256": "7c7816ee6f9459beb0d6fc25bfb24abdf6a33ed836d0510e03da6f32207ddafb"
+      "sha256": "69ae9fd63ea0089f29617328fd339ec61e04d10e1edde4890b2f7dba1d2b2bf4"
     },
     "evaluation": {
       "path": "evaluation.json",
-      "sha256": "1bd56e57f4588312348872916fb935c91ec3e6cdac18a5c7a82589c3cbb28431"
+      "sha256": "c177bcd6d70aaa83e0195a58bab171e4694f7acb899652d74dc73d5842c10eb4"
     },
     "model": {
       "path": "model.wasm",
-      "sha256": "c1df69a6b31d76dea929fcdbc3378efc329d3a4ba749ced3920e51dce37931af"
+      "sha256": "2a0aaf01188c3a3695b7527418ec0e67b46dc8c163519ea57dd2a9610c1bf2a5"
     }
   },
   "runtime": {
-    "wasm": []
+    "wasm": [
+      "acos",
+      "asin",
+      "atan",
+      "atan2",
+      "cos",
+      "cosh",
+      "exp",
+      "log",
+      "log10",
+      "log2",
+      "pow",
+      "sin",
+      "sinh",
+      "tan",
+      "tanh"
+    ]
   }
 }
