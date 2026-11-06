@@ -1,0 +1,410 @@
+{
+  "schema": 1,
+  "name": "example_wasm_accumulate",
+  "platform": "mlserver",
+  "parameters": {
+    "signature_version": 1,
+    "state": [
+      {
+        "slot": 0,
+        "name": "total",
+        "unit": "none",
+        "description": "The sum of every output since the first call."
+      },
+      {
+        "slot": 1,
+        "name": "peak",
+        "unit": "none",
+        "description": "The largest output since the first call."
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "name": "example_wasm_in",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "A number to scale."
+      }
+    },
+    {
+      "name": "example_wasm_state_in",
+      "datatype": "FP64",
+      "shape": [
+        -1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": false,
+        "description": "The running total and peak from the previous call, absent on the first."
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "name": "example_wasm_out",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The input scaled by the fitted gain plus the fitted offset."
+      }
+    },
+    {
+      "name": "example_wasm_bounded",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The bounded check of the tracer and the hosts."
+      }
+    },
+    {
+      "name": "example_wasm_band",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The band check of the tracer and the hosts."
+      }
+    },
+    {
+      "name": "example_wasm_band_inclusive",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The band_inclusive check of the tracer and the hosts."
+      }
+    },
+    {
+      "name": "example_wasm_equal",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The equal check of the tracer and the hosts."
+      }
+    },
+    {
+      "name": "example_wasm_unequal",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The unequal check of the tracer and the hosts."
+      }
+    },
+    {
+      "name": "example_wasm_floor",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The floor check of the tracer and the hosts."
+      }
+    },
+    {
+      "name": "example_wasm_ceil",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The ceil check of the tracer and the hosts."
+      }
+    },
+    {
+      "name": "example_wasm_trunc",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The trunc check of the tracer and the hosts."
+      }
+    },
+    {
+      "name": "example_wasm_nearest",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The nearest check of the tracer and the hosts."
+      }
+    },
+    {
+      "name": "example_wasm_magnitude",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The magnitude check of the tracer and the hosts."
+      }
+    },
+    {
+      "name": "example_wasm_polynomial",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The polynomial check of the tracer and the hosts."
+      }
+    },
+    {
+      "name": "example_wasm_power_const",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The power_const check of the tracer and the hosts."
+      }
+    },
+    {
+      "name": "example_wasm_power_base",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The power_base check of the tracer and the hosts."
+      }
+    },
+    {
+      "name": "example_wasm_power_unit",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The power_unit check of the tracer and the hosts."
+      }
+    },
+    {
+      "name": "example_wasm_atan2",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The atan2 check of the tracer and the hosts."
+      }
+    },
+    {
+      "name": "example_wasm_acos",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The acos check of the tracer and the hosts."
+      }
+    },
+    {
+      "name": "example_wasm_asin",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The asin check of the tracer and the hosts."
+      }
+    },
+    {
+      "name": "example_wasm_atan",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The atan check of the tracer and the hosts."
+      }
+    },
+    {
+      "name": "example_wasm_cos",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The cos check of the tracer and the hosts."
+      }
+    },
+    {
+      "name": "example_wasm_cosh",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The cosh check of the tracer and the hosts."
+      }
+    },
+    {
+      "name": "example_wasm_exp",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The exp check of the tracer and the hosts."
+      }
+    },
+    {
+      "name": "example_wasm_log",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The log check of the tracer and the hosts."
+      }
+    },
+    {
+      "name": "example_wasm_log10",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The log10 check of the tracer and the hosts."
+      }
+    },
+    {
+      "name": "example_wasm_log2",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The log2 check of the tracer and the hosts."
+      }
+    },
+    {
+      "name": "example_wasm_sin",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The sin check of the tracer and the hosts."
+      }
+    },
+    {
+      "name": "example_wasm_sinh",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The sinh check of the tracer and the hosts."
+      }
+    },
+    {
+      "name": "example_wasm_tan",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The tan check of the tracer and the hosts."
+      }
+    },
+    {
+      "name": "example_wasm_tanh",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "The tanh check of the tracer and the hosts."
+      }
+    },
+    {
+      "name": "example_wasm_state_out",
+      "datatype": "FP64",
+      "shape": [
+        -1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": false,
+        "description": "The running total and peak including this call."
+      }
+    }
+  ]
+}

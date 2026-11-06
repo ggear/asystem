@@ -246,7 +246,7 @@ restore_merged() {
     restore_fault "python3 is not installed where the engine runs, the merge of [${1}] needs it to convert rows to line protocol"
     return 1
   }
-  local unit="${1}" scratch="${2}" RESTORE_STATS_FILE="${3:-}" table day next types columns url token chunks code chunk header rows bytes
+  local unit="${1}" scratch="${2}" RESTORE_STATS_FILE="${3:-}" table day next types columns token chunks code chunk header rows bytes
   table="${unit%/*}"
   day="${unit##*/}"
   next="$(date -u -d "${day} + 1 day" +%F)"
@@ -254,23 +254,20 @@ restore_merged() {
     "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '${table}' AND table_schema = 'iox'" |
     jq -c 'map({(.column_name): .data_type}) | add')" || return 1
   columns="$(jq -r 'keys[] | select(. != "time") | "\"" + . + "\""' <<<"${types}" | paste -sd, -)"
-  url="${INFLUXDB3_RESTORE_LIVE_URL:-http://127.0.0.1:${INFLUXDB3_API_PORT:?}}"
   token="${INFLUXDB3_RESTORE_WRITE_TOKEN-${INFLUXDB3_TOKEN_ADMIN:-}}"
   chunks="$(mktemp -d "$(dirname "$(restore_scratch_dir)")/merge.XXXXXX")" || return 1
   docker exec "${scratch}" influxdb3 query --format jsonl --database "${INFLUXDB3_RESTORE_DATABASE}" \
     "SELECT CAST(time AS BIGINT) AS time_ns, ${columns} FROM \"${table}\" WHERE time >= '${day}T00:00:00Z' AND time < '${next}T00:00:00Z'" |
     influxdb3_restore_lp "${table}" "${types}" | influxdb3_restore_niced split -C "${INFLUXDB3_RESTORE_CHUNK_BYTES}" - "${chunks}/chunk." || { rm -rf "${chunks}"; return 1; }
   read -r rows bytes < <(cat "${chunks}"/chunk.* 2>/dev/null | wc -lc)
-  header=""
-  if [ -n "${token}" ]; then
-    header="${chunks}/header"
-    (umask 077 && printf 'Authorization: Bearer %s\n' "${token}" >"${header}")
-  fi
+  header="${chunks}/header"
+  (umask 077 && if [ -n "${token}" ]; then printf 'Authorization: Bearer %s\n' "${token}"; else echo; fi >"${header}")
   for chunk in "${chunks}"/chunk.*; do
     [ -e "${chunk}" ] || continue
-    code="$(influxdb3_restore_niced curl -sS -o /dev/null -w '%{http_code}' -X POST "${url}/api/v3/write_lp?db=${INFLUXDB3_RESTORE_DATABASE}&precision=nanosecond" \
-      ${header:+--header "@${header}"} --data-binary "@${chunk}")"
-    [ "${code}" = "204" ] || { restore_fault "writing [${unit}] to [${url}] returned [${code}]"; rm -rf "${chunks}"; return 1; }
+    code="$(cat "${header}" "${chunk}" | docker exec --interactive "${RESTORE_MODULE_NAME}" bash -c \
+      'IFS= read -r auth; curl -sS -o /dev/null -w "%{http_code}" -X POST "http://127.0.0.1:8181/api/v3/write_lp?db=${1}&precision=nanosecond" ${auth:+--header "${auth}"} --data-binary @-' \
+      bash "${INFLUXDB3_RESTORE_DATABASE}")"
+    [ "${code}" = "204" ] || { restore_fault "writing [${unit}] to [${RESTORE_MODULE_NAME}] returned [${code}]"; rm -rf "${chunks}"; return 1; }
     [ "${INFLUXDB3_RESTORE_WRITE_PAUSE}" = "0" ] || sleep "${INFLUXDB3_RESTORE_WRITE_PAUSE}"
   done
   [ -z "${RESTORE_STATS_FILE:-}" ] || echo "${rows:-0} ${bytes:-0}" >>"${RESTORE_STATS_FILE}"

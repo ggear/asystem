@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "name": "weewx_console_battery",
+  "platform": "mlserver",
+  "parameters": {
+    "signature_version": 1,
+    "state": []
+  },
+  "inputs": [
+    {
+      "name": "weatherstation_console_battery_voltage",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "volts",
+        "required": true,
+        "description": "Voltage of the weather station console's battery as Home Assistant reports it."
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "name": "weewx_console_battery_capacity_pct",
+      "datatype": "INT64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "percent",
+        "required": true,
+        "description": "Estimated battery capacity left, in steps of 5, 0 to 100."
+      }
+    }
+  ]
+}

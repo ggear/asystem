@@ -1,7 +1,8 @@
 {
+  "schema": 1,
   "sequences": [
     {
-      "name": "from capped to well below fully invested",
+      "name": "across the range of the inputs",
       "steps": [
         {
           "request": {
@@ -31,6 +32,16 @@
                 ],
                 "data": [
                   100.0
+                ]
+              },
+              {
+                "name": "finance_portfolio_allocation_riskadjusted_pct",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  3.625
                 ]
               }
             ]
@@ -65,6 +76,16 @@
                 "data": [
                   100.0
                 ]
+              },
+              {
+                "name": "finance_portfolio_allocation_riskadjusted_pct",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  2.5
+                ]
               }
             ]
           }
@@ -96,7 +117,17 @@
                   1
                 ],
                 "data": [
-                  100.0
+                  89.58165367732688
+                ]
+              },
+              {
+                "name": "finance_portfolio_allocation_riskadjusted_pct",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  1.7674000000000003
                 ]
               }
             ]
@@ -129,7 +160,17 @@
                   1
                 ],
                 "data": [
-                  66.66666666666667
+                  59.25925925925926
+                ]
+              },
+              {
+                "name": "finance_portfolio_allocation_riskadjusted_pct",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  0.625
                 ]
               }
             ]
@@ -162,7 +203,17 @@
                   1
                 ],
                 "data": [
-                  37.49999999999999
+                  33.33333333333332
+                ]
+              },
+              {
+                "name": "finance_portfolio_allocation_riskadjusted_pct",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  -2.000000000000001
                 ]
               }
             ]
@@ -195,7 +246,17 @@
                   1
                 ],
                 "data": [
-                  16.666666666666668
+                  14.814814814814815
+                ]
+              },
+              {
+                "name": "finance_portfolio_allocation_riskadjusted_pct",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  -9.5
                 ]
               }
             ]
@@ -228,7 +289,17 @@
                   1
                 ],
                 "data": [
-                  4.166666666666667
+                  3.7037037037037037
+                ]
+              },
+              {
+                "name": "finance_portfolio_allocation_riskadjusted_pct",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  -50.0
                 ]
               }
             ]

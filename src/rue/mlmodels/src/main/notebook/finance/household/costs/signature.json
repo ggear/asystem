@@ -1,0 +1,121 @@
+{
+  "schema": 1,
+  "name": "finance_household_costs",
+  "platform": "mlserver",
+  "parameters": {
+    "signature_version": 1,
+    "state": []
+  },
+  "inputs": [
+    {
+      "name": "finance_household_costs_in",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "Unused, required so the request is still validated."
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "name": "finance_household_costs_normal_annual_dollars",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "Normal annual cost of running the household, with the irregular expenses taken out, dollars."
+      }
+    },
+    {
+      "name": "finance_household_costs_essential_dollars",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "Annual cost that cannot be cut, the essential and committed classes, dollars."
+      }
+    },
+    {
+      "name": "finance_household_costs_discretionary_pct",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "percent",
+        "required": true,
+        "description": "Share of the normal annual cost that is discretionary, percent."
+      }
+    },
+    {
+      "name": "finance_household_costs_irregular_expected_dollars",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "Expected annual cost of irregular expenses, dollars."
+      }
+    },
+    {
+      "name": "finance_household_costs_irregular_p95_dollars",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "Annual cost of irregular expenses that is exceeded one year in twenty, dollars."
+      }
+    },
+    {
+      "name": "finance_household_costs_growth_low_pct",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "percent",
+        "required": true,
+        "description": "Annual growth rate of costs, low scenario, percent per year."
+      }
+    },
+    {
+      "name": "finance_household_costs_growth_base_pct",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "percent",
+        "required": true,
+        "description": "Annual growth rate of costs, base scenario, percent per year."
+      }
+    },
+    {
+      "name": "finance_household_costs_growth_high_pct",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "percent",
+        "required": true,
+        "description": "Annual growth rate of costs, high scenario, percent per year."
+      }
+    }
+  ]
+}

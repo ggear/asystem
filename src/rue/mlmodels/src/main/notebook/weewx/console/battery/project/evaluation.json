@@ -1,4 +1,7 @@
 {
+  "schema": 1,
+  "passed": true,
+  "budget": 0.8082599413810685,
   "datasets": {
     "backtest": [
       {
@@ -19,7 +22,5 @@
       "passed": true,
       "budget": 0.8082599413810685
     }
-  ],
-  "passed": true,
-  "budget": 0.8082599413810685
+  ]
 }

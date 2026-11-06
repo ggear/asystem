@@ -1,8 +1,0 @@
-finance_portfolio_spending_age_years,finance_portfolio_spending_rate_pct,expect
-30.0,2.666764853825961,ok
-50.0,3.182320970369655,ok
-65.0,4.00022091907501,ok
-80.0,6.115671812529034,ok
-99.5,101.99999999999979,ok
-120.0,101.99999999999979,ok
-,,error

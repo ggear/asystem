@@ -196,7 +196,7 @@ func TestProbeUtilBackupStageSecondary_PromoteOneService(t *testing.T) {
 			if err := os.WriteFile(configPath, []byte(testCase.configBody), 0o644); err != nil {
 				t.Fatal(err)
 			}
-			err := promoteOneService(t.Context(), stageRequest{ConfigPath: configPath}, share, "macmini-mad", "plex", 1, 1, &stageCounters{})
+			err := promoteOneService(t.Context(), config.Load(configPath), share, "macmini-mad", "plex", 1, 1, &stageCounters{})
 			target := promotionTarget("plex", share, "macmini-mad")
 			actual := backupRuns(target)
 			if (err != nil) != testCase.expectedError || !slices.Equal(actual, testCase.expected) {

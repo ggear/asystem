@@ -1,8 +1,13 @@
 {
-  "spec_version": 1,
+  "schema": 1,
   "name": "example_wasm_saturate",
-  "signature_version": 1,
   "flavour": "wasm",
+  "signature_version": 1,
+  "runtime": {
+    "wasm": [
+      "tanh"
+    ]
+  },
   "provenance": {
     "source": "manual",
     "trained_on": "synthetic curve, training split",
@@ -16,24 +21,19 @@
   "files": {
     "signature": {
       "path": "signature.json",
-      "sha256": "9c275598641b4d9f3ef5a6f4b1de5fd92ce454ea394cc27032c1abf09241fe8c"
+      "sha256": "e04d91e53d643b674d7e832e79ee18fec095b223ecc89702e82b1f567a92787a"
     },
     "golden": {
       "path": "golden.json",
-      "sha256": "c761493e8e09e99f5bf74ce044c175218eb84802a060c9ca4a8dd470444f7a52"
+      "sha256": "3e27d9fddeb6627ad980bdee94d86d7636464af0478c54542f6e189c2051aad1"
     },
     "evaluation": {
       "path": "evaluation.json",
-      "sha256": "abefbf7ed084877a3df6d5bf8c12cae60c5c279634a1f82fdb367ca32aee03b8"
+      "sha256": "c5a454f799cf084139376451ce21892f01de5bdb776cc961dfd57f452d78bf9a"
     },
     "model": {
       "path": "model.wasm",
       "sha256": "fa18cbf7d18b08da974a72f165d88948df523dbc12cf7d45bd281e0347b0ec25"
     }
-  },
-  "runtime": {
-    "wasm": [
-      "tanh"
-    ]
   }
 }

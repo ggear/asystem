@@ -1,4 +1,5 @@
 {
+  "schema": 1,
   "name": "finance_portfolio_utility",
   "platform": "mlserver",
   "parameters": {

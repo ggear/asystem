@@ -1,36 +1,8 @@
 {
-  "spec_version": 1,
+  "schema": 1,
   "name": "example_wasm_accumulate",
-  "signature_version": 1,
   "flavour": "wasm",
-  "provenance": {
-    "source": "manual",
-    "trained_on": "synthetic line, training split",
-    "inputs": [
-      "example/wasm/accumulate/data/training/2026-11-03_16-40-51/wasm_accumulate_training_2026-11-03_2026-11-03.csv",
-      "example/wasm/accumulate/data/golden/2026-11-05_09-55-17/wasm_accumulate_golden.csv"
-    ],
-    "notes": "least squares line, gain and offset built into the module",
-    "implementation": "WebAssembly traced from a Python function by workbench.wasm.trace and built by build_wasm, importing every asystem_math function"
-  },
-  "files": {
-    "signature": {
-      "path": "signature.json",
-      "sha256": "6b11ec84fbe1de92fd8f1b7e6e24a7794ea71f149943a376b87de2811644264c"
-    },
-    "golden": {
-      "path": "golden.json",
-      "sha256": "69ae9fd63ea0089f29617328fd339ec61e04d10e1edde4890b2f7dba1d2b2bf4"
-    },
-    "evaluation": {
-      "path": "evaluation.json",
-      "sha256": "c177bcd6d70aaa83e0195a58bab171e4694f7acb899652d74dc73d5842c10eb4"
-    },
-    "model": {
-      "path": "model.wasm",
-      "sha256": "2a0aaf01188c3a3695b7527418ec0e67b46dc8c163519ea57dd2a9610c1bf2a5"
-    }
-  },
+  "signature_version": 1,
   "runtime": {
     "wasm": [
       "acos",
@@ -49,5 +21,33 @@
       "tan",
       "tanh"
     ]
+  },
+  "provenance": {
+    "source": "manual",
+    "trained_on": "synthetic line, training split",
+    "inputs": [
+      "example/wasm/accumulate/data/training/2026-11-03_16-40-51/wasm_accumulate_training_2026-11-03_2026-11-03.csv",
+      "example/wasm/accumulate/data/golden/2026-11-05_09-55-17/wasm_accumulate_golden.csv"
+    ],
+    "notes": "least squares line, gain and offset built into the module",
+    "implementation": "WebAssembly traced from a Python function by workbench.wasm.trace and built by build_wasm, importing every asystem_math function"
+  },
+  "files": {
+    "signature": {
+      "path": "signature.json",
+      "sha256": "4c81cc7c137f858a4d4c8033c48a2c50dcdc483cc587b3087660792c463e51f4"
+    },
+    "golden": {
+      "path": "golden.json",
+      "sha256": "0108843434631a20da5be48d4b31af251051eac27f0b8b5ddc7f13e6b88270df"
+    },
+    "evaluation": {
+      "path": "evaluation.json",
+      "sha256": "d95734ad625eea8e901b3a9dfcd187ae6ce2e70e16fd1a501941f2304e24b0ad"
+    },
+    "model": {
+      "path": "model.wasm",
+      "sha256": "2a0aaf01188c3a3695b7527418ec0e67b46dc8c163519ea57dd2a9610c1bf2a5"
+    }
   }
 }

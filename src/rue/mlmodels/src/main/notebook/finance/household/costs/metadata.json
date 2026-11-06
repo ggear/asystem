@@ -1,21 +1,17 @@
 {
-  "content_sha256": "f55a99634f731f11f6f8258096edc88b0aa8febb3010f35bd0447f5fe025b781",
-  "inputs_sha256": "0c981a316a364f3250d03ede10434b53f7ac73dfa7e2bec0199ddc11fa25a02f",
-  "passed": [
-    {
-      "kind": "served"
-    }
-  ],
-  "released_at": null,
-  "released_by": null,
-  "released_signature": null,
-  "released_version": null,
-  "runtime": {},
   "schema": 1,
-  "snapshot_version": "10.200.1990-SNAPSHOT",
   "targets": [
     {
       "kind": "served"
     }
-  ]
+  ],
+  "passed": [],
+  "runtime": {},
+  "snapshot_version": "10.200.1991-SNAPSHOT",
+  "released_version": null,
+  "released_by": null,
+  "released_at": null,
+  "released_signature": null,
+  "content_sha256": "f155dd0b9294a96433131d3facaffc4370f120d56c8c1df1ac9860e3db74acd3",
+  "inputs_sha256": "7185087f945e9ab1f7c0676e3cf911539c5608b1765b38cd71678e385f727f9a"
 }

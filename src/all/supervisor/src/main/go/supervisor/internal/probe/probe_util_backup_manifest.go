@@ -97,6 +97,17 @@ func renderBackupManifest(manifest backupManifest) string {
 	return out.String()
 }
 
+func writeBackupManifest(root, run string, manifest backupManifest) error {
+	path := backupManifestPath(root, run)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	if err := os.WriteFile(path+".tmp", []byte(renderBackupManifest(manifest)), 0o644); err != nil {
+		return err
+	}
+	return os.Rename(path+".tmp", path)
+}
+
 func readBackupManifest(root, run string) (backupManifest, bool) {
 	data, err := os.ReadFile(backupManifestPath(root, run))
 	if err != nil {

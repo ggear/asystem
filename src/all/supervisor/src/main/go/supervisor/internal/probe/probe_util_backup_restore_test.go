@@ -100,3 +100,38 @@ func TestProbeUtilBackupRestore_RecordStage(t *testing.T) {
 		})
 	}
 }
+
+func TestProbeUtilBackupRestore_RestoreFiles(t *testing.T) {
+	home := filepath.Join(t.TempDir(), "mod")
+	source := filepath.Join(home, "1.0")
+	target := filepath.Join(source, "config")
+	for _, dir := range []string{target} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for name, content := range map[string]string{"keep/db": "old", "keep/db-wal": "sidecar", "keep/db-2026-11-01": "carry", "stale": "newer"} {
+		path := filepath.Join(target, name)
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	archive := filepath.Join(t.TempDir(), "a.tar.gz")
+	if err := os.WriteFile(archive, tarGzipped(t, "keep/db", "restored"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	code := BackupModuleRestoreFiles(context.Background(), BackupModuleRequest{
+		Arguments: []string{"mod"}, Source: source, Target: target, File: archive, Run: "2026-11-01_01-00-00", Paths: "keep", Carry: []string{"db-*", "*-wal"},
+	}, &stdout, &stderr)
+	read := func(name string) string {
+		data, _ := os.ReadFile(filepath.Join(target, name))
+		return string(data)
+	}
+	if code != 0 || read("keep/db") != "restored" || read("keep/db-2026-11-01") != "carry" || read("keep/db-wal") != "" || read("stale") != "newer" {
+		t.Errorf("restore files: got code [%d] db [%s] carried [%s] sidecar [%s] stderr [%s]", code, read("keep/db"), read("keep/db-2026-11-01"), read("keep/db-wal"), stderr.String())
+	}
+}

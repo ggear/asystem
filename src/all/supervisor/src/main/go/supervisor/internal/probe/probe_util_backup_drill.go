@@ -12,11 +12,9 @@ import (
 )
 
 func (s *restoreSession) drill() {
-	var want []backupFingerprintUnit
-	if manifest, read := s.manifest(); read {
-		want = manifest.Fingerprint
-	}
-	if manifest, read := s.manifest(); read && !s.compatible(manifest) {
+	manifest, manifested := s.manifest()
+	want := manifest.Fingerprint
+	if manifested && !s.compatible(manifest) {
 		s.report(fmt.Sprintf("drill     skipped, taken from software [%s] version [%s], now [%s] version [%s], integrity passed", manifest.SourceSoftware, manifest.SourceVersion, s.software, filepath.Base(s.source)))
 		s.record(metric.BackupStateSkipped, "software differs")
 		return
@@ -51,7 +49,22 @@ func (s *restoreSession) drill() {
 			return s.fingerprinted(scratch)
 		}
 		if extracts {
-			return fingerprintBackupScratch(scratch, want), nil
+			counts := map[string]int64{}
+			for _, unit := range want {
+				path := filepath.Join(scratch, unit.name)
+				if _, err := os.Lstat(path); err != nil {
+					continue
+				}
+				var total int64
+				_ = filepath.WalkDir(path, func(_ string, entry fs.DirEntry, err error) error {
+					if info, infoErr := entry.Info(); err == nil && infoErr == nil && info.Mode().IsRegular() {
+						total += info.Size()
+					}
+					return nil
+				})
+				counts[unit.name] = total
+			}
+			return sortBackupFingerprint(counts), nil
 		}
 		return want, nil
 	}
@@ -111,23 +124,4 @@ func (s *restoreSession) compatible(manifest backupManifest) bool {
 		s.software = versionedModule(s.ctx, sibling, s.stderr, filepath.Base(s.source))
 	}
 	return backupCompatible(manifest, s.software)
-}
-
-func fingerprintBackupScratch(scratch string, want []backupFingerprintUnit) []backupFingerprintUnit {
-	counts := map[string]int64{}
-	for _, unit := range want {
-		path := filepath.Join(scratch, unit.name)
-		if _, err := os.Lstat(path); err != nil {
-			continue
-		}
-		var total int64
-		_ = filepath.WalkDir(path, func(_ string, entry fs.DirEntry, err error) error {
-			if info, infoErr := entry.Info(); err == nil && infoErr == nil && info.Mode().IsRegular() {
-				total += info.Size()
-			}
-			return nil
-		})
-		counts[unit.name] = total
-	}
-	return sortBackupFingerprint(counts)
 }

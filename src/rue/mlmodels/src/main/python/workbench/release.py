@@ -37,6 +37,7 @@ def release_workspaces(source_dir, version, released_by, tracking_uri=None, mlse
         metadata = read_metadata(directory)
         if metadata["targets"] == [LOCAL_TARGET]:
             continue
+        _require_project(name, directory)
         if metadata["released_version"] is None:
             missing = [target for target in metadata["targets"] if target not in metadata["passed"]]
             if missing:
@@ -52,6 +53,7 @@ def release_workspaces(source_dir, version, released_by, tracking_uri=None, mlse
 
 def publish_workspace(name, directory, tracking_uri, mlserver_url=None):
     metadata = read_metadata(directory)
+    _require_project(name, directory)
     if metadata["released_version"] is None:
         raise GateError("Release", "publish", f"workspace [{name}] has no released version")
     register_project(join(directory, PROJECT_DIR), name, tracking_uri, aliases=())
@@ -186,3 +188,8 @@ def _registry_state(tracking_uri):
     for model in client.search_registered_models():
         state[model.name] = {alias: client.get_model_version(model.name, version).tags.get("content_sha256") for alias, version in model.aliases.items()}
     return state
+
+
+def _require_project(name, directory):
+    if not isfile(join(directory, PROJECT_DIR, "project.json")):
+        raise GateError("Release", "project", f"workspace [{name}] has no project beside its metadata, run fab unittest first")

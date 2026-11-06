@@ -2,6 +2,7 @@ package probe
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"fmt"
 	"io"
@@ -13,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"supervisor/internal/config"
 	"supervisor/internal/metric"
 )
 
@@ -117,10 +119,12 @@ func runBackupModuleRestore(ctx context.Context, request BackupModuleRequest, mo
 		return 1
 	}
 	defer release()
-	session := &restoreSession{
-		ctx: ctx, request: request, mode: mode, module: module, source: source, stdout: stdout, stderr: stderr,
-		roots: restoreRoots(module, root, request.Runs),
+	roots := []string{request.Runs}
+	if request.Runs == "" {
+		shares, _ := filepath.Glob(filepath.Join(config.DirShare, "*", treeBackupDirectory, module))
+		roots = append([]string{root}, shares...)
 	}
+	session := &restoreSession{ctx: ctx, request: request, mode: mode, module: module, source: source, stdout: stdout, stderr: stderr, roots: roots}
 	return session.execute()
 }
 
@@ -329,11 +333,9 @@ func (s *restoreSession) execute() int {
 			s.fault(fmt.Sprintf("no accepted backup run under %v", s.roots))
 			return s.finish()
 		}
-		if dir, found := restoreRunDir(s.roots, s.run); found {
-			if manifest, read := readBackupManifest(filepath.Dir(dir), s.run); read && manifest.Verdict == metric.BackupStateRegressed && !s.request.Force {
-				s.fault(fmt.Sprintf("refusing to restore the regressed run [%s] without [--force], a regressed backup holds less than the one before it", s.run))
-				return s.finish()
-			}
+		if manifest, read := s.manifest(); read && manifest.Verdict == metric.BackupStateRegressed && !s.request.Force {
+			s.fault(fmt.Sprintf("refusing to restore the regressed run [%s] without [--force], a regressed backup holds less than the one before it", s.run))
+			return s.finish()
 		}
 		chain, err := restoreChain(s.roots, s.run)
 		if err != nil {
@@ -353,10 +355,7 @@ func (s *restoreSession) execute() int {
 		"RESTORE_KEEP_SCRATCH=" + strconv.FormatBool(s.request.KeepScratch),
 	}
 	last := s.chain[len(s.chain)-1].file
-	kind := "full"
-	if strings.Contains(filepath.Base(last), backupDeltaSuffix+".") {
-		kind = "delta"
-	}
+	kind := cmp.Or(backupArtefactKind(filepath.Base(last)), backupKindFull)
 	var megabytes int64
 	if info, err := os.Stat(last); err == nil {
 		megabytes = info.Size() >> 20

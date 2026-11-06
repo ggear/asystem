@@ -47,7 +47,7 @@ From Haghani and White, *The Missing Billionaires*, `1-crra-utility`. Utility of
 
 Terminology: **constant relative risk aversion** (CRRA) means you hold the same share in risky assets whatever your wealth. **Certainty equivalent** is the sure wealth you would swap for a gamble, and is how `gamma` is measured.
 
-Method: ask the questions the book asks, a series of 50/50 gambles on a fraction of your wealth with the sure amount you would accept, and fit `gamma` to the certainty equivalents. Do it twice, a year apart and with Jane, because a `gamma` that moves with the day is noise. Report the range, not a point: the later notebooks take a low, central and high `gamma`.
+Method: ask the questions the book asks, a series of 50/50 gambles on a fraction of your wealth with the sure amount you would accept, and fit `gamma` to the certainty equivalents. Do it twice, a year apart and with your partner, because a `gamma` that moves with the day is noise. Report the range, not a point: the later notebooks take a low, central and high `gamma`.
 
 Placeholder: the fit recovers 3 from synthetic utilities of wealth.
 
@@ -55,7 +55,11 @@ Placeholder: the fit recovers 3 from synthetic utilities of wealth.
 
 | Data | Why | Where from |
 |---|---|---|
-| Your certainty equivalents for a set of gambles, and Jane's | `gamma` is a preference, not a market number | A short questionnaire kept as a `training` file |
+| Your certainty equivalents for a set of gambles, and your partner's | `gamma` is a preference, not a market number | A short questionnaire kept as a `training` file |
+
+## Personal data
+
+Real personal financial data MUST NOT be committed (`wrangle`'s rule, applied to `mlmodels`; see its `CLAUDE.md`). The `data/` captures of this workspace are git-ignored in the root `.gitignore`; the real inputs are your holdings, spending and elicited preferences, and none of them is recorded in a plan, a notebook or a test. What is committed here is synthetic, and the notebook rebuilds the placeholder when the files are absent. Check `git status` before staging.
 
 ## To do
 

@@ -1,23 +1,18 @@
 {
-  "content_sha256": "5302f78b0a6dee6316cadc150cfa029327aa0de179fa7e2c1c8416082034e571",
-  "inputs_sha256": "fbce48e2d8ecff0d9ba56f184f0126fb4cfd4e5ed9db9673994448a60943e675",
-  "passed": [
-    {
-      "kind": "embedded",
-      "language": "rust"
-    }
-  ],
-  "released_at": null,
-  "released_by": null,
-  "released_signature": null,
-  "released_version": null,
-  "runtime": {},
   "schema": 1,
-  "snapshot_version": "10.200.1951-SNAPSHOT",
   "targets": [
     {
       "kind": "embedded",
       "language": "rust"
     }
-  ]
+  ],
+  "passed": [],
+  "runtime": {},
+  "snapshot_version": "10.200.1991-SNAPSHOT",
+  "released_version": null,
+  "released_by": null,
+  "released_at": null,
+  "released_signature": null,
+  "content_sha256": "b295882fbedaf9d853eae2c3915aa6f5b554ab43fe281de5f15db7617609960d",
+  "inputs_sha256": "1ac0b5de5a5840639a6c340be6abd5f82aa36a1d4bac140a5f67dfa8ce4fc035"
 }

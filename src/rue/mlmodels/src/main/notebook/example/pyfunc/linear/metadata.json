@@ -1,26 +1,5 @@
 {
-  "content_sha256": "2629e4bf48ec0dfd978430bbbcbe335cd1c769199968e61b7436c6d109cde25c",
-  "inputs_sha256": "d4cd9a236a4ef891752326ca431f8c2135746a99e719d5442aeaeecc8d3900ca",
-  "passed": [
-    {
-      "kind": "served"
-    },
-    {
-      "kind": "embedded",
-      "language": "python"
-    }
-  ],
-  "released_at": null,
-  "released_by": null,
-  "released_signature": null,
-  "released_version": null,
-  "runtime": {
-    "python": [
-      "polars"
-    ]
-  },
   "schema": 1,
-  "snapshot_version": "10.200.1951-SNAPSHOT",
   "targets": [
     {
       "kind": "served"
@@ -29,5 +8,18 @@
       "kind": "embedded",
       "language": "python"
     }
-  ]
+  ],
+  "passed": [],
+  "runtime": {
+    "python": [
+      "polars"
+    ]
+  },
+  "snapshot_version": "10.200.1991-SNAPSHOT",
+  "released_version": null,
+  "released_by": null,
+  "released_at": null,
+  "released_signature": null,
+  "content_sha256": "5d71015d377d171e9101d156b196e0086a45e3c08248198f2c245b20beb31869",
+  "inputs_sha256": "2562b3a2c51f18b5a0e9969b0fef97c038ea392f3870a1b29a6552e9884fd6e7"
 }

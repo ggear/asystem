@@ -146,16 +146,9 @@ func BackupModuleRun(ctx context.Context, request BackupModuleRequest, stdout, s
 		return true
 	}
 	manifested := func() error {
-		kind, parent := "full", ""
-		if strings.Contains(filepath.Base(target), backupDeltaSuffix+".") {
-			kind = "delta"
-			for _, name := range slices.Backward(backupRuns(root)) {
-				dir := filepath.Join(root, name)
-				if name < stamp && (backupRunHolds(dir, backupFullSuffix+".") || backupRunHolds(dir, backupDeltaSuffix+".")) {
-					parent = name
-					break
-				}
-			}
+		kind, parent := backupKindFull, ""
+		if backupArtefactKind(filepath.Base(target)) == backupKindDelta {
+			kind, parent = backupKindDelta, previousBackupRun([]string{root}, stamp)
 		}
 		var current []backupFingerprintUnit
 		if defined[moduleHookFingerprint] {
@@ -185,17 +178,10 @@ func BackupModuleRun(ctx context.Context, request BackupModuleRequest, stdout, s
 			}
 		}
 		verdict := judgeBackupRegression(current, baseline, baselineRun, request.ShrinkPercent)
-		path := backupManifestPath(root, stamp)
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-			return err
-		}
 		manifest := backupManifest{
 			Kind: kind, Parent: parent, SourceVersion: version, SourceSoftware: versionedModule(ctx, hooks, stderr, version), Verdict: verdict.verdict, Baseline: baselineRun, Evidence: verdict.evidence, Fingerprint: current,
 		}
-		if err := os.WriteFile(path+".tmp", []byte(renderBackupManifest(manifest)), 0o644); err != nil {
-			return err
-		}
-		if err := os.Rename(path+".tmp", path); err != nil {
+		if err := writeBackupManifest(root, stamp, manifest); err != nil {
 			return err
 		}
 		for _, line := range verdict.evidence {

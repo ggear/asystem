@@ -1,4 +1,7 @@
 {
+  "schema": 1,
+  "passed": true,
+  "budget": 0.00025600892834279647,
   "datasets": {
     "validation": [
       {
@@ -36,7 +39,5 @@
       "passed": true,
       "budget": 0.00025600892834279647
     }
-  ],
-  "passed": true,
-  "budget": 0.00025600892834279647
+  ]
 }

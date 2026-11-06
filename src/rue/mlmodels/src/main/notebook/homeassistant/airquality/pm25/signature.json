@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "name": "homeassistant_airquality_pm25",
+  "platform": "mlserver",
+  "parameters": {
+    "signature_version": 1,
+    "state": []
+  },
+  "inputs": [
+    {
+      "name": "homeassistant_airquality_in",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "An input."
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "name": "homeassistant_airquality_out",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "none",
+        "required": true,
+        "description": "An output."
+      }
+    }
+  ]
+}

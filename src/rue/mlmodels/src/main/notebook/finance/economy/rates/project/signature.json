@@ -1,4 +1,5 @@
 {
+  "schema": 1,
   "name": "finance_economy_rates",
   "platform": "mlserver",
   "parameters": {
@@ -15,13 +16,13 @@
       "parameters": {
         "unit": "none",
         "required": true,
-        "description": "Unused input."
+        "description": "Unused, required so the request is still validated."
       }
     }
   ],
   "outputs": [
     {
-      "name": "finance_economy_rates_nominal_low_pct",
+      "name": "finance_economy_rates_inflation_low_pct",
       "datatype": "FP64",
       "shape": [
         1
@@ -29,11 +30,11 @@
       "parameters": {
         "unit": "percent",
         "required": true,
-        "description": "Annual no risk rate, percent per year, low scenario."
+        "description": "Annual inflation rate, low scenario, percent per year."
       }
     },
     {
-      "name": "finance_economy_rates_nominal_base_pct",
+      "name": "finance_economy_rates_inflation_base_pct",
       "datatype": "FP64",
       "shape": [
         1
@@ -41,11 +42,11 @@
       "parameters": {
         "unit": "percent",
         "required": true,
-        "description": "Annual no risk rate, percent per year, base scenario."
+        "description": "Annual inflation rate, base scenario, percent per year."
       }
     },
     {
-      "name": "finance_economy_rates_nominal_high_pct",
+      "name": "finance_economy_rates_inflation_high_pct",
       "datatype": "FP64",
       "shape": [
         1
@@ -53,7 +54,43 @@
       "parameters": {
         "unit": "percent",
         "required": true,
-        "description": "Annual no risk rate, percent per year, high scenario."
+        "description": "Annual inflation rate, high scenario, percent per year."
+      }
+    },
+    {
+      "name": "finance_economy_rates_riskfree_low_pct",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "percent",
+        "required": true,
+        "description": "Annual risk-free (bank) rate, nominal, low scenario, percent per year."
+      }
+    },
+    {
+      "name": "finance_economy_rates_riskfree_base_pct",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "percent",
+        "required": true,
+        "description": "Annual risk-free (bank) rate, nominal, base scenario, percent per year."
+      }
+    },
+    {
+      "name": "finance_economy_rates_riskfree_high_pct",
+      "datatype": "FP64",
+      "shape": [
+        1
+      ],
+      "parameters": {
+        "unit": "percent",
+        "required": true,
+        "description": "Annual risk-free (bank) rate, nominal, high scenario, percent per year."
       }
     },
     {
@@ -65,7 +102,7 @@
       "parameters": {
         "unit": "percent",
         "required": true,
-        "description": "Annual real return of cash, percent per year, low scenario."
+        "description": "Annual real return of cash, low scenario, percent per year."
       }
     },
     {
@@ -77,7 +114,7 @@
       "parameters": {
         "unit": "percent",
         "required": true,
-        "description": "Annual real return of cash, percent per year, base scenario."
+        "description": "Annual real return of cash, base scenario, percent per year."
       }
     },
     {
@@ -89,7 +126,7 @@
       "parameters": {
         "unit": "percent",
         "required": true,
-        "description": "Annual real return of cash, percent per year, high scenario."
+        "description": "Annual real return of cash, high scenario, percent per year."
       }
     }
   ]

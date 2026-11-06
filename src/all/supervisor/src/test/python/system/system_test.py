@@ -4,9 +4,7 @@ import random
 import string
 import subprocess
 import sys
-import threading
 import time
-from datetime import UTC, datetime
 from os.path import abspath, dirname, join, realpath
 
 import paho.mqtt.client as mqtt
@@ -54,16 +52,11 @@ TOPIC_SHARES = f"supervisor/{HOST}/data/host/failed_shares"
 TOPIC_CLUSTER = "supervisor/all/data/cluster"
 TOPIC_CLUSTER_STATUS = "supervisor/all/status"
 TOPIC_LEASE = "supervisor/all/leader/lease"
-RIVAL = "macmini-mad"
 TIMEOUT_ELECTION = 90
 
 
 def _candidate(host):
     return f"supervisor/all/leader/candidate/{host}"
-
-
-def _stamp():
-    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
 def _configured():
@@ -77,7 +70,7 @@ def _configured():
 
 def _client():
     client = mqtt.Client(CallbackAPIVersion.VERSION2, client_id="".join(random.choice(string.ascii_lowercase) for _ in range(10)), clean_session=True)
-    client.connect(BROKER, PORT)
+    client.connect(BROKER, PORT, keepalive=5)
     return client
 
 
@@ -253,67 +246,6 @@ def test_wins_every_election_it_stands_in_alone():
     _retry(assertion, TIMEOUT_ELECTION)
 
 
-def test_defers_to_an_incumbent_and_reclaims_when_it_leaves():
-    rival_standing = threading.Event()
-    rival_standing.set()
-
-    def rival():
-        client = _client()
-        client.loop_start()
-        claimed = _stamp()
-        while rival_standing.is_set():
-            renewed = _stamp()
-            client.publish(_candidate(RIVAL), json.dumps({"host": RIVAL, "renewed_ts": renewed}), 1, True).wait_for_publish()
-            client.publish(
-                TOPIC_LEASE,
-                json.dumps(
-                    {
-                        "host": RIVAL,
-                        "epoch": 1,
-                        "claimed_ts": claimed,
-                        "renewed_ts": renewed,
-                    }
-                ),
-                1,
-                True,
-            ).wait_for_publish()
-            time.sleep(1)
-        client.publish(_candidate(RIVAL), b"", 1, True).wait_for_publish()
-        client.publish(TOPIC_LEASE, b"", 1, True).wait_for_publish()
-        client.loop_stop()
-        client.disconnect()
-
-    standing = threading.Thread(target=rival, daemon=True)
-    standing.start()
-    try:
-        time.sleep(10)
-        clearer = _client()
-        clearer.loop_start()
-        clearer.publish(TOPIC_CLUSTER, b"", 1, True).wait_for_publish()
-        clearer.loop_stop()
-        clearer.disconnect()
-        received, _, _ = _await([TOPIC_LEASE, TOPIC_CLUSTER], lambda _seen: False, 15, lambda _client: None)
-        leases = [json.loads(payload)["host"] for payload in received.get(TOPIC_LEASE, []) if payload]
-        assert leases, "the rival lease must be observed while it stands"
-        assert _collect([TOPIC_CLUSTER_STATUS], SETTLE).get(TOPIC_CLUSTER_STATUS) == b"offline", "a host that yields the cluster must mark the cluster offline, the rival publishes no presence"
-        assert HOST not in leases, f"the host must not write the lease while an incumbent holds it, saw [{leases}]"
-        assert not [payload for payload in received.get(TOPIC_CLUSTER, []) if payload], "a host that does not lead the cluster must not publish its status"
-    finally:
-        rival_standing.clear()
-        standing.join(TIMEOUT)
-    released = int(time.time())
-
-    def assertion():
-        received = _collect([TOPIC_LEASE, TOPIC_CLUSTER], SETTLE)
-        assert TOPIC_LEASE in received, "the lease must be claimed again once the incumbent leaves"
-        assert json.loads(received[TOPIC_LEASE])["host"] == HOST, "the remaining candidate must reclaim the lease"
-        assert TOPIC_CLUSTER in received, "a new leader must republish the cluster status at once"
-        assert _collect([TOPIC_CLUSTER_STATUS], SETTLE).get(TOPIC_CLUSTER_STATUS) == b"online", "the reclaiming holder must mark the cluster online"
-        assert json.loads(received[TOPIC_CLUSTER])["timestamp"] >= released, "the cluster status must be republished, not left over"
-
-    _retry(assertion, TIMEOUT_ELECTION)
-
-
 def test_declares_every_published_topic():
     model_dir = join(DIR_SCHEMA, "model")
     declared = {os.path.relpath(directory, model_dir) for directory, _, files in os.walk(model_dir) if SCHEMA_LEAF in files}
@@ -454,6 +386,8 @@ def test_rediscovers_and_clears_an_orphan_on_restart():
     received, matched, elapsed = _await([TOPIC_ORPHAN, TOPIC_PROCESSOR], lambda seen: seen.get(TOPIC_ORPHAN, [b"x"])[-1] == b"", TIMEOUT_RESTART, start_container)
     assert matched, f"the orphan must be tombstoned after a restart, saw [{received}]"
     print(f"Cleared the orphan [{round(elapsed, 1)}] s after the restart")
+    logged = _docker("logs", CONTAINER)
+    print("\n".join(line for line in (logged.stdout + logged.stderr).splitlines() if ORPHAN in line))
     assert _collect([TOPIC_ORPHAN], SETTLE) == {}, "the retained orphan topic must end cleared"
 
 

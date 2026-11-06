@@ -110,7 +110,6 @@ func runOneService(ctx context.Context, request stageRequest, loaded *config.Con
 	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	command.Cancel = func() error { return syscall.Kill(-command.Process.Pid, syscall.SIGTERM) }
 	command.WaitDelay = scriptStopGrace
-	command.Stdin = nil
 	command.Stdout = logFile
 	command.Stderr = logFile
 	command.Env = append(os.Environ(),
@@ -236,7 +235,7 @@ func parseBackupArtefact(service, dir string) (kind, version string) {
 	}
 	var files []string
 	for _, entry := range entries {
-		if !entry.IsDir() && (strings.Contains(entry.Name(), backupFullSuffix+".") || strings.Contains(entry.Name(), backupDeltaSuffix+".")) {
+		if !entry.IsDir() && backupArtefactKind(entry.Name()) != "" {
 			files = append(files, entry.Name())
 		}
 	}
@@ -245,15 +244,8 @@ func parseBackupArtefact(service, dir string) (kind, version string) {
 	}
 	sort.Strings(files)
 	file := files[0]
-	stem := file
-	switch {
-	case strings.Contains(file, backupDeltaSuffix+"."):
-		kind = "delta"
-		stem = strings.SplitN(file, backupDeltaSuffix+".", 2)[0]
-	case strings.Contains(file, backupFullSuffix+"."):
-		kind = "full"
-		stem = strings.SplitN(file, backupFullSuffix+".", 2)[0]
-	}
+	kind = backupArtefactKind(file)
+	stem := strings.SplitN(file, "_"+kind+".", 2)[0]
 	timestamp := filepath.Base(dir)
 	switch {
 	case strings.Contains(stem, "_from_"):

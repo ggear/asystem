@@ -11,17 +11,8 @@ import (
 	"sort"
 	"strings"
 
-	"supervisor/internal/config"
 	"supervisor/internal/metric"
 )
-
-func restoreRoots(module, root, pinned string) []string {
-	if pinned != "" {
-		return []string{pinned}
-	}
-	shares, _ := filepath.Glob(filepath.Join(config.DirShare, "*", treeBackupDirectory, module))
-	return append([]string{root}, shares...)
-}
 
 func restoreChain(roots []string, run string) ([]restoreLink, error) {
 	var reversed []restoreLink
@@ -35,20 +26,10 @@ func restoreChain(roots []string, run string) ([]restoreLink, error) {
 			return nil, fmt.Errorf("no artifact in run [%s]", run)
 		}
 		reversed = append(reversed, restoreLink{run: run, file: file})
-		if !strings.Contains(filepath.Base(file), backupDeltaSuffix+".") {
+		if backupArtefactKind(filepath.Base(file)) != backupKindDelta {
 			break
 		}
-		previous := ""
-		for _, candidate := range restoreRuns(roots) {
-			if candidate >= run {
-				break
-			}
-			if candidateDir, ok := restoreRunDir(roots, candidate); ok {
-				if _, holds := restoreArtefact(candidateDir); holds {
-					previous = candidate
-				}
-			}
-		}
+		previous := previousBackupRun(roots, run)
 		if previous == "" {
 			return nil, fmt.Errorf("delta run [%s] has no run before it to hang off, so its chain has no full", run)
 		}
@@ -56,6 +37,20 @@ func restoreChain(roots []string, run string) ([]restoreLink, error) {
 	}
 	slices.Reverse(reversed)
 	return reversed, nil
+}
+
+func previousBackupRun(roots []string, run string) string {
+	for _, candidate := range slices.Backward(restoreRuns(roots)) {
+		if candidate >= run {
+			continue
+		}
+		if dir, found := restoreRunDir(roots, candidate); found {
+			if _, holds := restoreArtefact(dir); holds {
+				return candidate
+			}
+		}
+	}
+	return ""
 }
 
 func restoreDefaultRun(roots []string) string {
@@ -100,9 +95,8 @@ func restoreArtefact(dir string) (string, bool) {
 		return "", false
 	}
 	for _, entry := range entries {
-		name := entry.Name()
-		if !entry.IsDir() && (strings.Contains(name, backupFullSuffix+".") || strings.Contains(name, backupDeltaSuffix+".")) {
-			return filepath.Join(dir, name), true
+		if !entry.IsDir() && backupArtefactKind(entry.Name()) != "" {
+			return filepath.Join(dir, entry.Name()), true
 		}
 	}
 	return "", false

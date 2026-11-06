@@ -1,37 +1,37 @@
 {
-  "spec_version": 1,
+  "schema": 1,
   "name": "finance_portfolio_allocation",
-  "signature_version": 1,
   "flavour": "pyfunc",
+  "signature_version": 1,
+  "runtime": {
+    "python": []
+  },
   "provenance": {
     "source": "manual",
-    "trained_on": "synthetic Merton shares, training split",
+    "trained_on": "synthetic risk-adjusted returns and risky shares, training split",
     "inputs": [
-      "finance/portfolio/allocation/data/training/2026-11-05_16-33-56/portfolio_allocation_training_2026-11-05_2026-11-05.csv",
-      "finance/portfolio/allocation/data/golden/2026-11-05_16-33-56/portfolio_allocation_golden.csv"
+      "finance/portfolio/allocation/data/training/2026-11-06_11-08-29/portfolio_allocation_training_2026-11-05_2026-11-05.csv",
+      "finance/portfolio/allocation/data/golden/2026-11-06_11-08-30/portfolio_allocation_golden.csv"
     ],
-    "notes": "least squares coefficient through the origin",
-    "implementation": "mlflow.pyfunc model.py, requires mlflow and pandas"
+    "notes": "least squares on the variance",
+    "implementation": "mlflow.pyfunc model.py, requires mlflow, pandas and the standard library"
   },
   "files": {
     "signature": {
       "path": "signature.json",
-      "sha256": "e653d1d6379cf076ce62ab23bc0cbc49d317006349f4cb3f53314208980425dc"
+      "sha256": "aa0e6e5bb80e2de876583b4d406467b8fa55534da0c890defb57d84b5cd98379"
     },
     "golden": {
       "path": "golden.json",
-      "sha256": "c359545d6cd22c1e789bb099ffe9467a2379856481c9dcd89e03ce4de6989919"
+      "sha256": "e6fc1f35351c32d11028b2cc20ca56a24d48622a9febeac47841395f174fe7a8"
     },
     "evaluation": {
       "path": "evaluation.json",
-      "sha256": "4d1e720316d927010a76379e260ce044d4037f25dcb83b64b5c358868dbe535c"
+      "sha256": "6daf43eeba81b36dcd14a6595d334679c00a640afb06647a5ba985b66d8d29c8"
     },
     "model": {
       "path": "model.py",
-      "sha256": "004f2b8d488b12561d7965f3ebfd31f0c6e713df5dd3fdbdfba265435cf8e951"
+      "sha256": "61fc6a6971a3cd78bab5d40391cae1aca902a3bcd909f4d70c0b185d71d42b09"
     }
-  },
-  "runtime": {
-    "python": []
   }
 }

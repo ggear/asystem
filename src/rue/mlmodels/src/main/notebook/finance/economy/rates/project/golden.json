@@ -1,4 +1,5 @@
 {
+  "schema": 1,
   "sequences": [
     {
       "name": "golden",
@@ -24,7 +25,37 @@
             "id": "s1-0",
             "outputs": [
               {
-                "name": "finance_economy_rates_nominal_low_pct",
+                "name": "finance_economy_rates_inflation_low_pct",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  2.7
+                ]
+              },
+              {
+                "name": "finance_economy_rates_inflation_base_pct",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  2.91
+                ]
+              },
+              {
+                "name": "finance_economy_rates_inflation_high_pct",
+                "datatype": "FP64",
+                "shape": [
+                  1
+                ],
+                "data": [
+                  3.24
+                ]
+              },
+              {
+                "name": "finance_economy_rates_riskfree_low_pct",
                 "datatype": "FP64",
                 "shape": [
                   1
@@ -34,7 +65,7 @@
                 ]
               },
               {
-                "name": "finance_economy_rates_nominal_base_pct",
+                "name": "finance_economy_rates_riskfree_base_pct",
                 "datatype": "FP64",
                 "shape": [
                   1
@@ -44,7 +75,7 @@
                 ]
               },
               {
-                "name": "finance_economy_rates_nominal_high_pct",
+                "name": "finance_economy_rates_riskfree_high_pct",
                 "datatype": "FP64",
                 "shape": [
                   1
@@ -70,7 +101,7 @@
                   1
                 ],
                 "data": [
-                  0.45
+                  0.39
                 ]
               },
               {
@@ -80,7 +111,7 @@
                   1
                 ],
                 "data": [
-                  2.0
+                  1.76
                 ]
               }
             ]

@@ -1,34 +1,5 @@
 {
-  "content_sha256": "ade0ea06c3ee95f77b442229bbab419a05bfa9ffb0c022de5e68f26ce28010fd",
-  "inputs_sha256": "37b3014e60b5b50bc95452b6225a9567c07372e67b3383d5873bffe3684abb7e",
-  "passed": [
-    {
-      "kind": "served"
-    },
-    {
-      "kind": "embedded",
-      "language": "python"
-    },
-    {
-      "kind": "embedded",
-      "language": "go"
-    },
-    {
-      "kind": "embedded",
-      "language": "rust"
-    }
-  ],
-  "released_at": null,
-  "released_by": null,
-  "released_signature": null,
-  "released_version": null,
-  "runtime": {
-    "wasm": [
-      "tanh"
-    ]
-  },
   "schema": 1,
-  "snapshot_version": "10.200.1964-SNAPSHOT",
   "targets": [
     {
       "kind": "served"
@@ -45,5 +16,18 @@
       "kind": "embedded",
       "language": "rust"
     }
-  ]
+  ],
+  "passed": [],
+  "runtime": {
+    "wasm": [
+      "tanh"
+    ]
+  },
+  "snapshot_version": "10.200.1991-SNAPSHOT",
+  "released_version": null,
+  "released_by": null,
+  "released_at": null,
+  "released_signature": null,
+  "content_sha256": "c4d2c2d9d4a409ee295b93ef23a17bccb6aa345d4710e6a39e2292985ba47cc0",
+  "inputs_sha256": "3e58f81298550cbb0367fffd645e30eb0a041b5912b5f61fbaad8ddb03f4da42"
 }

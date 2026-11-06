@@ -1,0 +1,106 @@
+# return
+
+The plan for the `finance_portfolio_return` model. It follows `model.md`, the specification for MLflow model projects.
+
+| Term | In This Plan |
+|---|---|
+| **Module** | `finance` |
+| **Model** | `portfolio` |
+| **Notebook** | `src/rue/mlmodels/src/main/notebook/finance/portfolio/return/notebook.ipynb` |
+| **Registered Model** | `finance_portfolio_return` (`model.md` 6.1) |
+| **Project Flavour** | `static` (`model.md` 3.2), target `served` |
+| **Target** | `served` by `mlserver`. |
+
+**Status, 2026-11-05.** A placeholder. The notebook fits on a synthetic series, packages a `static` project, replays the golden and records it; the real series is not loaded yet and nothing is released.
+
+## Intent
+
+Give one annual nominal return per scenario to grow the portfolio to 2070, as a compound rate. Placeholder: the base is the mean annual return and the low and high are one standard deviation either side.
+
+## Signature
+
+| Direction | Name | Type | Notes |
+|---|---|---|---|
+| Input | `finance_portfolio_return_in` | FP64 | Unused, required by the spec so the request is still validated |
+| Output | `finance_portfolio_return_nominal_low_pct` | FP64 | Annual nominal portfolio return, percent per year, low scenario. |
+| Output | `finance_portfolio_return_nominal_base_pct` | FP64 | Annual nominal portfolio return, percent per year, base scenario. |
+| Output | `finance_portfolio_return_nominal_high_pct` | FP64 | Annual nominal portfolio return, percent per year, high scenario. |
+
+`static` (`model.md` 3.2): the fitted numbers are the manifest's constants, and the simulation behind them stays in the notebook as evidence. It carries no evaluation (R14), so the check is the golden replay and the assertions in the notebook's Fit cell.
+
+## Data
+
+| Split | Dataset | Content |
+|---|---|---|
+| `training` | `portfolio_return_training` | Ten years of annual portfolio returns, synthetic until the wrangle series is loaded |
+| `golden` | `portfolio_return_golden` | One valid request, then a request with the input missing, which must give a signature error |
+
+The placeholder dataset is synthetic and committed, so `fab unittest` needs no database. `workbench.data` has `query_influxdb3` only: a `query_postgres` helper for `wrangle` is the first change before the real data can be loaded.
+
+## Acceptance
+
+None. A `static` project carries no evaluation (R14); the gate is the golden replay, which reproduces the constants exactly.
+
+## Approach
+
+Goal: one annual return for the portfolio to 2070, as a low, base and high scenario.
+
+What `wrangle` holds today (checked against `src/mad/wrangle/src/build/resources/schema/postgres`): the `equity` table, one row per `(time, entity, type, period, unit)`, with `entity` a ticker and `type` including `price-close` and the 1, 30, 90 and 365 day `price-close-*-change-percentage`. The portfolio proxies are `MUS`, `MUK`, `MCK` and `MSG`, and the index funds are `VAS`, `VGS`, `VDHG`, `VHY`, `IAF`, `GOLD` and others. **There is no weights table in Postgres**: the weights come from the Portfolio sheet, `Indexes` tab, `Quantity` columns, which `wrangle` reads but does not store. The first step is to land those holdings in `wrangle` so weights are a queryable history.
+
+The risk-free anchor is already in Postgres: the `interest` table (`interest/rate`, from the Reserve Bank, sheet `Rates`) has entities `Bank`, `Inflation` and `Net`, each with the mean rate over 1, 5, 10, 20 and 40 years. `Bank` is the return with no risk, `Inflation` the matching price rise and `Net` the real return of cash. Those windows are the building block of the scenarios:
+
+| Use | Reading |
+|---|---|
+| Floor of the low scenario | `Bank` mean at the longest window you believe, so low is cash plus a small premium and never below the risk-free return |
+| Base | `Bank` plus an equity risk premium times the share in risky assets, with the premium shrunk from the portfolio's own history toward a published figure |
+| Spread of the windows | `Bank` at 5, 10, 20 and 40 years shows how far the risk-free rate has moved between regimes, which is the honest width of the low to high range for the safe part |
+| Real number | Use `Net`, or subtract the matching `household/costs` growth scenario by Fisher, so the return you plan with is the return after your own costs |
+
+Terminology:
+
+- **Total return against price return.** `price-close` leaves out distributions, which for `VAS` and `VHY` are several points a year. Price return understates the portfolio, and every number here must be total return (add distributions, or use an accumulation series).
+- **Arithmetic against geometric mean.** The compound return is about the arithmetic mean minus half the variance (the **volatility drag**). Wealth grows at the geometric rate, so that is the single number.
+- **Capital market assumptions.** A forward looking, building block estimate of each asset class: yield plus growth plus change in valuation (the Grinold-Kroner decomposition), not a historical average.
+- **Sequence of returns risk.** The order of returns matters when you are spending. A single number hides it, which is why `portfolio/profile` exists.
+
+Method:
+
+1. **Build the history.** Weights times asset total returns, monthly, converted to AUD with the `currency` table, net of fees. Report the portfolio's own volatility and drawdown, not just its mean.
+2. **Forward base.** Blend the building block estimate with the history. Shrink the historical mean toward the capital market assumption, because 15 years of data cannot tell a 6 percent from a 7 percent return (the standard error of the mean is about the volatility over the square root of the years).
+3. **Simulate to 2070.** Stationary block bootstrap of the monthly returns, with the mean re-centred on the forward base, so volatility and fat tails come from your data and the level from the assumptions. Take the compound rate of each path.
+4. **Scenarios.** Base is the median compound rate and low and high the 25th and 75th percentiles. For named scenarios, move the drivers: a valuation reset, a lower growth world, a higher inflation world.
+5. **Ship** the three numbers, and the real return by subtracting the matching `household/costs` growth scenario (Fisher), because spending is in costs.
+
+Placeholder in this notebook: low and high are one standard deviation either side of the mean of ten synthetic years.
+
+## Data to get
+
+| Data | Why | Where from |
+|---|---|---|
+| Portfolio holdings and weights as a history | Weights are not in Postgres, only in the Portfolio sheet `Indexes` tab | `wrangle` equity plugin, new table |
+| Distributions and franking for each fund | Price return is not total return | Fund registries or an accumulation series |
+| Total return history for bonds, cash and property | `IAF` is price only, there is no property series | `wrangle` interest table, fund data |
+| Fees (management expense ratio) and tax drag | The return you keep | Fund disclosures, your tax return |
+| Forward capital market assumptions | The forward base | Vanguard, JPMorgan or similar published assumptions |
+| Valuation (cyclically adjusted price earnings, yields) | Mean reversion of returns | Public series |
+
+## Consumption
+
+Target `served`. The planning sheet reads this model's numbers from `mlserver` through `wrangle`, the way it reads Yahoo Finance prices today, and that is **to be built later**:
+
+- `wrangle`'s HTTP server (`server.py`) gains a feed that asks `mlserver` for the released `static` models and caches each answer with a TTL, so a recalculating sheet costs one call per model.
+- The resource gets its own hostname through the `<MODULE>_HTTP_API_<RESOURCE>_CONTEXT` key in `wrangle`'s `.env_all`, which `nginx` turns into a vhost, and reaches Google through `cloudflare` behind the Access service token.
+- The sheet calls it with an Apps Script custom function, as `src/build/resources/sheets/equity_price.js` does, for example `=WRANGLE_PLAN("finance_portfolio_return", "base")`. `IMPORTDATA` cannot send the Access headers.
+- The numbers are the model's three constant outputs (low, base and high), so the function picks one by name. Show the project hash with it so the sheet says which release a number came from.
+
+Nothing here is built, and this model needs no change for it beyond staying `static` and `served`.
+
+## Personal data
+
+Real personal financial data MUST NOT be committed (`wrangle`'s rule, applied to `mlmodels`; see its `CLAUDE.md`). The `data/` captures and the `project/` of this workspace are git-ignored in the root `.gitignore` (`metadata.json` holds hashes and release state, no values, and stays committed), because the constants are derived from the real holdings and returns. What is committed here is synthetic, and the notebook rebuilds the placeholder when the files are absent. Check `git status` before staging.
+
+## To do
+
+1. Add `query_postgres` to `workbench.data` and load the real series in place of the synthetic ones.
+2. Replace the placeholder fit with the method in the approach, keeping the signature.
+3. Fix the limits against real data, then register and review before any release.

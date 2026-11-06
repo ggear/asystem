@@ -148,13 +148,15 @@ func (p *servicesProbe) poll(ctx context.Context, isPulse bool) error {
 	}
 	tombstoneStart := time.Now()
 	var tombstoned []string
-	for _, cachedServiceName := range p.cache.Services(p.hostName) {
+	cachedServiceNames := p.cache.Services(p.hostName)
+	for _, cachedServiceName := range cachedServiceNames {
 		if _, exists := polledServiceNames[cachedServiceName]; !exists {
 			p.cache.Evict(p.hostName, cachedServiceName)
 			p.cache.Delete(p.hostName, cachedServiceName)
 			tombstoned = append(tombstoned, cachedServiceName)
 		}
 	}
+	scribe.Log(scribe.SourceProbeServices, p.subject(), scribe.ActionCensus).Debugf("surveyed", tombstoneStart, "[%s] host, polled [%3d] services against cached [%3d], absent [%s]", p.hostName, len(servicesByName), len(cachedServiceNames), strings.Join(tombstoned, ","))
 	if len(tombstoned) > 0 {
 		scribe.Log(scribe.SourceProbeServices, p.subject(), scribe.ActionRemove).Infof("removals", tombstoneStart, "[%s] host, [%d] services [%s]", p.hostName, len(tombstoned), strings.Join(tombstoned, ","))
 	}

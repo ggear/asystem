@@ -1,8 +1,11 @@
 {
-  "spec_version": 1,
+  "schema": 1,
   "name": "example_static_constant",
-  "signature_version": 1,
   "flavour": "static",
+  "signature_version": 1,
+  "constants": {
+    "example_static_out": 7
+  },
   "provenance": {
     "source": "manual",
     "trained_on": "none",
@@ -14,14 +17,11 @@
   "files": {
     "signature": {
       "path": "signature.json",
-      "sha256": "b6d3d5f589a4f4b1ffd86f9c32acff8f01ec575f07a2a1e747e782f9a9b4443d"
+      "sha256": "1a1f7819ba6849903f51eaa6ca10f4827ebc6e49aabe35a2c55c8cf847a6c3d1"
     },
     "golden": {
       "path": "golden.json",
-      "sha256": "69f8bd73b1de7faed77a507d84e126ed232ee3f031689ac9785c364e4e493086"
+      "sha256": "91c1a84a78513636cbc4342e2d44134557cf1951b53fa509d3db40cdce4d02c8"
     }
-  },
-  "constants": {
-    "example_static_out": 7
   }
 }

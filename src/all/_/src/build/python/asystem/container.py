@@ -540,7 +540,17 @@ def write_container_volumes(module_name=None, working_dir=None):
     script_path = join(working_dir, "volumes.sh")
     if not isdir(dirname(script_path)):
         os.makedirs(dirname(script_path), exist_ok=True)
-    _verify_container_partlabels(root_dir, module_name)
+    declared = {}
+    for fstab_path in sorted(glob.glob(join(root_dir, "../../*/_*/src/main/resources/fstab"))):
+        host = basename(dirname(dirname(dirname(dirname(fstab_path)))))
+        for line in Path(fstab_path).read_text().splitlines():
+            fields = line.split()
+            if len(fields) < 2 or line.lstrip().startswith("#") or not fields[0].startswith("PARTLABEL="):
+                continue
+            declared.setdefault(fields[0][len("PARTLABEL=") :], []).append("{} {}".format(host, fields[1]))
+    for label, claims in sorted(declared.items()):
+        if len(claims) > 1:
+            print("Build generate script [{}] partlabel [{}] is claimed by [{}], a disk moved between hosts would mount against the wrong declaration".format(module_name, label, ", ".join(claims)))
     with open(script_path, "w") as script_file:
         script_file.write(
             r"""
@@ -1222,20 +1232,6 @@ echo "✅ Volumes ${VOLUMES_ACTION} converged, changed [${VOLUMES_CHANGED}]" && 
         )
     os.chmod(script_path, os.stat(script_path).st_mode | stat.S_IEXEC)
     print("Build generate script [{}] script persisted to [{}]".format(module_name, script_path))
-
-
-def _verify_container_partlabels(root_dir, module_name):
-    declared = {}
-    for fstab_path in sorted(glob.glob(join(root_dir, "../../*/_*/src/main/resources/fstab"))):
-        host = basename(dirname(dirname(dirname(dirname(fstab_path)))))
-        for line in Path(fstab_path).read_text().splitlines():
-            fields = line.split()
-            if len(fields) < 2 or line.lstrip().startswith("#") or not fields[0].startswith("PARTLABEL="):
-                continue
-            declared.setdefault(fields[0][len("PARTLABEL=") :], []).append("{} {}".format(host, fields[1]))
-    for label, claims in sorted(declared.items()):
-        if len(claims) > 1:
-            print("Build generate script [{}] partlabel [{}] is claimed by [{}], a disk moved between hosts would mount against the wrong declaration".format(module_name, label, ", ".join(claims)))
 
 
 def write_container_backup(module_name=None, working_dir=None):

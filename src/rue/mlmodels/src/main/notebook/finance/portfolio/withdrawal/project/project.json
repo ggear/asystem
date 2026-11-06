@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "name": "finance_portfolio_withdrawal",
+  "flavour": "pyfunc",
+  "signature_version": 1,
+  "runtime": {
+    "python": []
+  },
+  "provenance": {
+    "source": "manual",
+    "trained_on": "synthetic annuity withdrawal rates, training split",
+    "inputs": [
+      "finance/portfolio/withdrawal/data/training/2026-11-06_10-33-08/portfolio_withdrawal_training_2026-11-05_2026-11-05.csv",
+      "finance/portfolio/withdrawal/data/golden/2026-11-06_10-33-09/portfolio_withdrawal_golden.csv"
+    ],
+    "notes": "least squares real return",
+    "implementation": "mlflow.pyfunc model.py, requires mlflow and pandas"
+  },
+  "files": {
+    "signature": {
+      "path": "signature.json",
+      "sha256": "4b5f8d0ce07897ebd1262b1bb7518fdbea0a1121f580ed35fc421ca03de3dafe"
+    },
+    "golden": {
+      "path": "golden.json",
+      "sha256": "0a438ed4c423e2d199489c0e3a45d5ea8c4acfcf72e2e8dd5d4cc86783f2c769"
+    },
+    "evaluation": {
+      "path": "evaluation.json",
+      "sha256": "934fb3f18af52b3760ac591bc7561a72e8cef8f4d7d54450720b901f64af3b49"
+    },
+    "model": {
+      "path": "model.py",
+      "sha256": "1d053fac61108bd86a725e5e5f6f3b1b6b62505a667036fdc016f07a0978a570"
+    }
+  }
+}

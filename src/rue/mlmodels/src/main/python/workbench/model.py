@@ -12,7 +12,7 @@ from os.path import basename, dirname, isfile, join, relpath
 from workbench.errors import GateError
 from workbench.metadata import content_sha256
 
-PROJECT_SPEC_VERSION = 1
+PROJECT_SCHEMA = 1
 CONSUMER_MODEL_PATH = "src/build/resources/model"
 PROJECT_MANIFEST = "project.json"
 PROJECT_SIGNATURE = "signature.json"
@@ -72,6 +72,7 @@ def signature_state(name, unit, description):
 
 def build_signature(name, inputs, outputs, state=(), signature_version=1):
     return {
+        "schema": PROJECT_SCHEMA,
         "name": name,
         "platform": "mlserver",
         "parameters": {"signature_version": signature_version, "state": [{"slot": slot, **entry} for slot, entry in enumerate(state)]},
@@ -93,7 +94,7 @@ def golden_step(signature, step_id, inputs, outputs=None, error=None):
 
 
 def golden_document(sequences, tolerance=None):
-    document = {"sequences": [{"name": name, "steps": steps} for name, steps in sequences]}
+    document = {"schema": PROJECT_SCHEMA, "sequences": [{"name": name, "steps": steps} for name, steps in sequences]}
     if tolerance:
         document["tolerance"] = tolerance
     return document
@@ -148,10 +149,11 @@ def evaluate_acceptance(check, datasets):
         passed, budget = _acceptance_outcome(value, limit, direction)
         checks.append({**entry, "gate": entry.get("gate", True), "passed": passed, "budget": budget})
     evaluation = {
-        "datasets": {split: [{"path": f"{basename(dirname(path))}/{basename(path)}", "sha256": file_sha256(path)} for path in sorted(paths)] for split, paths in datasets.items()},
-        "checks": checks,
+        "schema": PROJECT_SCHEMA,
         "passed": all(entry["passed"] for entry in checks if entry["gate"]),
         "budget": _acceptance_budget(checks),
+        "datasets": {split: [{"path": f"{basename(dirname(path))}/{basename(path)}", "sha256": file_sha256(path)} for path in sorted(paths)] for split, paths in datasets.items()},
+        "checks": checks,
     }
     print(f"acceptance [{'passed' if evaluation['passed'] else 'failed'}] budget [{evaluation['budget']}]")
     return evaluation
@@ -188,24 +190,19 @@ def write_project(project_dir, name, flavour, signature, golden, provenance, con
         files["model"] = PROJECT_MODEL_FILES[flavour]
     _write_json(join(project_dir, PROJECT_SIGNATURE), signature)
     _write_json(join(project_dir, PROJECT_GOLDEN), golden)
-    manifest = {
-        "spec_version": PROJECT_SPEC_VERSION,
-        "name": name,
-        "signature_version": signature["parameters"]["signature_version"],
-        "flavour": flavour,
-        "provenance": provenance,
-        "files": {key: {"path": file_name, "sha256": file_sha256(join(project_dir, file_name))} for key, file_name in files.items()},
-    }
-    if onnx is not None:
-        manifest["onnx"] = onnx
-    if flavour == "pyfunc":
-        manifest["runtime"] = {"python": sorted(set(python_deps or ()))}
-    elif python_deps:
+    if python_deps and flavour != "pyfunc":
         raise ValueError(f"flavour [{flavour}] takes no python dependencies")
-    if flavour == "wasm" and model_path is not None:
-        manifest["runtime"] = {"wasm": sorted({str(entry.name) for entry in _wasm_module_imports(model_path)})}
+    manifest = {"schema": PROJECT_SCHEMA, "name": name, "flavour": flavour, "signature_version": signature["parameters"]["signature_version"]}
     if constants is not None:
         manifest["constants"] = constants
+    if flavour == "pyfunc":
+        manifest["runtime"] = {"python": sorted(set(python_deps or ()))}
+    if flavour == "wasm" and model_path is not None:
+        manifest["runtime"] = {"wasm": sorted({str(entry.name) for entry in _wasm_module_imports(model_path)})}
+    manifest["provenance"] = provenance
+    if onnx is not None:
+        manifest["onnx"] = onnx
+    manifest["files"] = {key: {"path": file_name, "sha256": file_sha256(join(project_dir, file_name))} for key, file_name in files.items()}
     _write_json(join(project_dir, PROJECT_MANIFEST), manifest)
     verified = verify_project(project_dir)
     if evaluation is not None and not evaluation["passed"]:
@@ -220,8 +217,13 @@ def lint_project(project_dir):
         return [("PJ001", f"manifest missing [{manifest_path}]")]
     with open(manifest_path) as manifest_file:
         manifest = json.load(manifest_file)
-    if manifest.get("spec_version") != PROJECT_SPEC_VERSION:
-        findings.append(("PJ001", f"spec version unsupported [{manifest.get('spec_version')}]"))
+    for file_name in (PROJECT_MANIFEST, PROJECT_SIGNATURE, PROJECT_GOLDEN, PROJECT_EVALUATION):
+        document_path = join(project_dir, file_name)
+        if isfile(document_path):
+            with open(document_path) as document_file:
+                document = json.load(document_file)
+            if next(iter(document), None) != "schema" or document["schema"] != PROJECT_SCHEMA:
+                findings.append(("PJ001", f"document [{file_name}] must start with schema [{PROJECT_SCHEMA}] found [{next(iter(document), None)}]"))
     flavour = manifest.get("flavour")
     if flavour not in PROJECT_FLAVOURS:
         findings.append(("PJ002", f"flavour unknown [{flavour}]"))

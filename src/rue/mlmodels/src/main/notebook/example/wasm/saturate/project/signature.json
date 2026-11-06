@@ -1,4 +1,5 @@
 {
+  "schema": 1,
   "name": "example_wasm_saturate",
   "platform": "mlserver",
   "parameters": {

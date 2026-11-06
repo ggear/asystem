@@ -62,14 +62,20 @@ A project is a directory read the same way by every environment and written and 
 
 | File | Flavours | Content |
 |---|---|---|
-| `project.json` | All | Spec version, name, model version, signature version, `flavour`, provenance, the SHA-256 of every other file, optional constants, and for `wasm` and `pyfunc` the `runtime` (3.5) |
-| `signature.json` | All | The MLServer V2 model metadata, which is also the MLflow model signature. It MUST be identical in the project, the consumer and the logged MLflow model, apart from its `versions` list |
+| `project.json` | All | The schema, name, `flavour`, signature version, optional constants, the `runtime` for `wasm` and `pyfunc` (3.5), provenance, and last the SHA-256 of every other file |
+| `signature.json` | All | The MLServer V2 model metadata, which is also the MLflow model signature. It MUST be identical in the project, the consumer and the logged MLflow model, apart from its `versions` list, and in the workspace beside the notebook, where it is written first (3.1.1) |
 | `golden.json` | All | Named sequences of requests and responses, each request carrying the previous response's state. A response is exact unless the file states a tolerance for an `FP64` output |
 | `evaluation.json` | All but `static` | Each acceptance check with its measured value, limit, outcome and budget, the SHA-256 of each dataset used, the verdict and the worst budget, specified in 6.8 |
 | `model.wasm` | `wasm` | The WebAssembly module, with its fitted attributes built in |
 | `model.py` | `pyfunc` | The Python model, in MLflow's models-from-code form |
 | `model.onnx` | `onnx` | The ONNX model at a pinned opset |
 | `MLmodel`, `artifacts/*` | `pyfunc` | The MLflow model descriptor, written when the project is logged, with the project files carried under `artifacts/` |
+
+**JSON documents.** Every JSON document the workbench writes (`metadata.json`, and in a project `project.json`, `signature.json`, `golden.json` and `evaluation.json`) MUST start with `"schema"`, the version of that document's layout, so a reader checks the layout before anything else (PJ001). The fields that follow run from identity to detail and put the largest or most volatile last: in `metadata.json`, `targets`, `passed`, `runtime`, the versions and release record, then the two hashes; in `evaluation.json`, the verdict and worst budget before the datasets and checks. `signature_version` is a separate number, the version of the contract itself, which only grows.
+
+#### 3.1.1 The workspace signature
+
+A workspace holds `signature.json` beside its notebook. It is the one place the names, units, datatypes and descriptions of the inputs, outputs and state are declared, it is committed, and it holds no value, so it is safe where `project/` is git-ignored. The notebook calls `load_signature(WORKSPACE)` and `signature_names(signature)` and refers to its inputs and outputs only through those names, never by a literal string; `package_project` writes the same document into the project, and MD003 fails the notebook if the two differ. `init_env()` prints the names and units at the head of every run, and the file is part of `inputs_sha256`, so editing it re-runs the notebook. `metadata.json` does not repeat the names.
 
 The manifest's provenance `implementation` MUST name what is inside the container for every flavour but `static`: the builder of a `wasm` module, the converter and opset of an `onnx` graph, or the pinned requirements of a `pyfunc` model. The manifest's provenance `source` MUST be `static`, `manual` or `mlflow`, and `provenance.inputs` MUST list the data files used. A
 manifest MAY carry `constants`; they MUST name signature outputs and are merged into every response.
@@ -126,13 +132,13 @@ A project states what a runtime must provide beyond the base, so a missing depen
 
 - A `python` entry is a package name and never a version. Its version is the one global pin in the root `py_deps_prod.txt`, the same pin `fab` gives every module that lists the name in its `py_deps.txt` (R11), and a name with no pin fails the Package stage. Names are matched ignoring case and `-`, `_` and `.`.
 - A `python` list is sorted and unique, and excludes the standard library and the base packages. Lint (PJ017) reads the imports of `model.py` and fails in both directions: an import with no entry, and an entry nothing imports. A package whose import name differs from its package name (`scikit-learn` and `sklearn`) is matched through a short table in `workbench.model`.
-- `fab systest` installs the base pins and every workspace's declared packages at their global pins into the test image, so an embedded Python target fails if the list is incomplete. For a `served` target, MD005 requires every declared package to be named in `mlserver`'s own `py_deps.txt`, from which `fab generate` writes its pins from the same global file, so the served image carries exactly the version the notebook was tested against.
-- Every notebook run prints a `requirements` stage before `metadata`, so it appears even when MD005 then fails, and its detail is `N to add`, followed by the target and names when N is not zero. Under it, only for a host that still needs something, a line names the host file (`mlserver`'s `py_deps.txt` for `served`, and for `embedded` the notebook module's own `py_deps.txt`, `Cargo.toml` or `go.mod`, or `mlmodels`' consumers for the `example` module) and one line per name: `+ name` to add to that file (a Python name only, since `fab generate` pins it) and `! name` for a Python package with no pin to add to `py_deps_prod.txt`. What a target needs is the declared `python` packages plus its host library (`wasmtime`, `wasmi` or `wazero` for `wasm`, `onnxruntime` or `ort` for `onnx`). The stage reports and never fails.
-- Adding a dependency is a change of behaviour (R10), made in this order: add the package to the project wide pins, add its name to `mlserver`'s `py_deps.txt` (no version, since `fab generate` pins it), then release `mlserver`, add the name to `PYTHON_DEPS`, and rerun the notebook, which changes the content hash. A consumer that embeds the project in Python adds the same names to its own `py_deps.txt`. A Rust or Go consumer never embeds a `pyfunc`, and for a `wasm` project needs only its host library (`wasmi`, `wazero`) and the maths functions of 4.1.
+- `fab systest` installs the base pins and every workspace's declared packages at their global pins into the test image, so an embedded Python target fails if the list is incomplete. The names a host takes come from the requirements files of 3.6, which `record_project` writes beside `metadata.json` and which `fab pull` merges into the consuming module's list before pinning them from the same global file, so the served image carries exactly the version the notebook was tested against. MD005 fails the notebook if a requirements file differs from what the metadata derives.
+- Every notebook run prints a `requirements` stage before `metadata`, so it appears even when MD005 then fails, and its detail is `N to add`, followed by the target and names when N is not zero. Python names reach `served` and `embedded` Python hosts automatically (3.6), so the stage reports for them only a package with no pin (`! name`, to add to the root `py_deps_prod.txt`). For an `embedded` Rust or Go host, whose `Cargo.toml` or `go.mod` cannot take a merged list, it names the file and each library the file lacks (`+ name`). The stage reports and never fails.
+- Adding a dependency is a change of behaviour (R10), made in this order: add the package to the project wide pins, add its name to `PYTHON_DEPS` and rerun the notebook, which changes the content hash and rewrites the requirements files of 3.6, then run `fab pull` so the consuming modules pin it, and release those modules. A Rust or Go consumer never embeds a `pyfunc`, and for a `wasm` project needs only its host library (`wasmi`, `wazero`), added by hand to its `Cargo.toml` or `go.mod`, and the maths functions of 4.1.
 
 ### 3.6 From metadata to host requirements
 
-`metadata.json` carries the project-specific part of what a host must install, and nothing else. A person or tool derives the rest in the three steps below, and the `requirements` stage of 3.5 does the same derivation and prints only what a host still lacks.
+`metadata.json` carries the project-specific part of what a host must install, and the workbench derives the rest and writes it beside the metadata, so a person does not.
 
 | In `metadata.json` | Not in `metadata.json` |
 |---|---|
@@ -140,20 +146,19 @@ A project states what a runtime must provide beyond the base, so a missing depen
 | `runtime.wasm`: the `asystem_math` functions a module imports, a record that nothing installs | The base packages `mlflow`, `numpy` and `pandas`, which every Python host already carries |
 | `targets`: where the project runs, which says which hosts to look at | Every version: Python pins are in the root `py_deps_prod.txt`, crate versions in a `Cargo.toml` and `Cargo.lock`, module versions in a `go.mod`, the native `onnxruntime` library in `.env_fab` (`ONNXRUNTIME_VERSION`) |
 
-1. **Find the hosts from `targets`.** One host per target, and none for `local`.
-2. **Work out what each host needs.** The `runtime.python` names plus the host library for the flavour and language, with `static` needing only its loader libraries (5.1):
+**Requirements files.** `record_project` derives, for each language the targets need, the runtime names plus the host library for the flavour and language, and writes them sorted, one name a line and with no versions, beside `metadata.json`. A language no target needs has no file, and a file left over from an earlier target is removed. A `local` project has none, and `static` needs only its loader libraries (5.1).
 
-| Target | Host file | Host library | Version comes from |
-|---|---|---|---|
-| `served` | `mlserver`'s `src/main/python/py_deps.txt` | `wasmtime` for `wasm`, `onnxruntime` for `onnx` | The root pin, written into `.py_deps.txt` by `fab generate` |
-| `embedded` Python | The consuming module's `src/main/python/py_deps.txt` (`mlmodels`' own for the `example` module) | The same as `served` | The same |
-| `embedded` Rust | The crate's `Cargo.toml` | `wasmi` for `wasm`, `ort` for `onnx` | `Cargo.toml` and `Cargo.lock`, with `ort` loading the pinned `onnxruntime` library |
-| `embedded` Go | The module's `go.mod` | `wazero` for `wasm` | `go.mod` |
-| `local` | None | None | None |
+| File | Language of the target | Names |
+|---|---|---|
+| `py_deps.txt` | `served` and `embedded` Python | `runtime.python`, and `wasmtime` for `wasm` or `onnxruntime` for `onnx` |
+| `cargo_deps.txt` | `embedded` Rust | `wasmi` for `wasm`, `ort` for `onnx` |
+| `go_deps.txt` | `embedded` Go | `wazero` for `wasm` |
 
-3. **Compare with the host file.** A name the file lacks is the work to do; a Python name with no entry in the root `py_deps_prod.txt` also needs a pin there first (3.5).
+**Taking them in.**
+- **`served` and `embedded` Python, automatic.** `fab pull` writes each module's pinned `.py_deps.txt` from its hand-written `py_deps.txt` plus the `py_deps.txt` of every project that targets it: `mlserver` takes every project with a `served` target, and any other module takes the projects of the notebook module of its own name with an `embedded` Python target (`mlmodels` those of `example`). Each name is pinned from the root `py_deps_prod.txt`, and one with no pin there stops the pull. A module's own `py_deps.txt` keeps what the module needs whatever the projects are, such as the host libraries `mlserver` must carry to serve any `onnx` or `wasm` project. The module is repackaged when its pinned list moves.
+- **`embedded` Rust and Go, by hand.** A `Cargo.toml` and a `go.mod` carry versions and cannot take a merged list, so the person adds each library the file lacks, and the `requirements` stage of 3.5 names the file and the library until it does.
 
-`served` is the automatic case. `mlserver` already lists the base packages and both host libraries, `fab generate` pins every name in its `py_deps.txt` from the root file so the served image carries the version the notebook was tested against, and MD005 fails the notebook if a declared Python package is not yet named in that file. The only step left to a person is naming a new Python package there, and only a `pyfunc` project with a new import needs it. An `embedded` host is the same derivation done by hand against its own file.
+MD005 fails the notebook if a requirements file is missing, stale or different from what the metadata derives, so the files in git always match the project beside them. The versions are never in the metadata or the files.
 
 ## 4. WebAssembly models
 
@@ -286,6 +291,7 @@ Every name MUST follow the module and dimension style the metrics use: `<module>
 - A name a service already publishes MUST be used as published. A model MUST NOT rename a service's metric.
 - A workspace has three levels, so several models can sit under one module and several notebooks under one model: the module, the model
   (a group of related notebooks) and the notebook.
+- A model and a notebook MUST be named for the quantity they output, using its standard term, and never for how they are built: `portfolio/withdrawal` and not `portfolio/annuity`, `portfolio/return` and not `portfolio/bootstrap`. A signature name MUST use the same words, so a withdrawal rate is `withdrawal_rate_pct` in every project that takes or gives one. A worked example is the exception, since it is named for the flavour it shows.
 
 | What | Form | Examples |
 |---|---|---|
@@ -338,7 +344,9 @@ A run held out for `validation` or `backtest` MUST NOT be moved into `training` 
 | `<module>/<model>/<notebook>/notebook.ipynb` | The notebook, committed without outputs | By hand | `notebook.sh <module>/<model>/<notebook>` or the IDE |
 | `<module>/<model>/<notebook>/model.wasm`, `model.onnx` | The model, committed so a refit is a reviewable diff | The notebook's Fit and Package cells | `write_project`, which copies it into the project, and a person reviewing the diff |
 | `<module>/<model>/<notebook>/model.py` | The Python model | By hand, or by the notebook when it builds the fitted attributes in | `write_project`, which copies it into the project, and `ruff` |
+| `<module>/<model>/<notebook>/signature.json` | The declared names, units and datatypes of the inputs, outputs and state; committed, no values (3.1.1) | By hand, or the skeleton from `notebook.sh new` | `load_signature` in the notebook, `init_env`, and MD003 |
 | `<module>/<model>/<notebook>/plan.md` | The notebook's plan | By hand | A person; the notebook's intent, signature, data, status and open decisions |
+| `<module>/<model>/<notebook>/py_deps.txt`, `cargo_deps.txt`, `go_deps.txt` | The library names the project's targets need in each language, no versions (3.6) | `record_project` | `fab pull`, for the Python one, and a person for the others |
 | `<module>/<model>/<notebook>/data/training/<ts>/<dataset>.csv` | Rows the fit sees | `query_influxdb3(..., "training", ...)`, or by hand | The notebook's fit cells |
 | `<module>/<model>/<notebook>/data/validation/<ts>/<dataset>.csv` | Rows held out for tuning and a first error estimate | `query_influxdb3(..., "validation", ...)` | The notebook's evaluate cells |
 | `<module>/<model>/<notebook>/data/backtest/<ts>/<dataset>.csv` | Whole recorded runs | Copied from the consumer, or a query | The evaluate and replay cells, and the consumer's replay test |
@@ -358,6 +366,8 @@ A run held out for `validation` or `backtest` MUST NOT be moved into `training` 
 - MUST accept only the four splits.
 
 `data_path(workspace, split, name, timestamp=None)` returns the same path, for a file that did not come from a query.
+
+Real personal financial data MUST NOT enter git (`wrangle`'s rule, applied here). The `data/` captures of a workspace that holds it MUST be git-ignored in the root `.gitignore`, and so MUST its `project/` when its constants are derived from it. `metadata.json` holds hashes, targets and release state and no value, so it stays committed; a checkout without the `project/` rebuilds it with `fab unittest`, and a release stops with a `GateError` until it has. A committed dataset or project in such a workspace MUST be synthetic, and the notebook rebuilds it when absent so a fresh checkout still runs. Every plan of such a workspace MUST say so in a `Personal data` section.
 
 ### 6.6 Notebook conventions
 
@@ -385,10 +395,10 @@ A model notebook:
 
 **The title cell**
 - MUST hold the heading `# <module> / <model> / <notebook>`, the only level-one heading in the notebook.
-- MUST follow it with one line stating the notebook's intent.
-- MUST then hold a table with the header Term and In This Notebook and one row for each of Intent, Project Flavour and Data Splits, in that
-  order. Each row uses the terms of this specification and cites its section where one applies.
-- MUST bold only the Term column of that table. It is the one place a bold cell is used.
+- MUST follow it with a line `**Intent:** <what the outputs of the model are intended to be>`, in the terms of this specification: the inputs and outputs by their signature names and units, whether the outputs are constants or a function of the inputs, and what they are for.
+- MUST name every output of the workspace `signature.json` in that line, in backticks, as a name, a brace list `finance_x_{low,high}_pct` or a pattern `example_wasm_*`, and MUST NOT name an input or output the signature lacks (NB013). The Intent cannot then drift from the signature.
+- MUST then hold `**Notes:**` and dot points for the details that matter, such as the data splits, a placeholder and any limit. It holds no table.
+- MUST NOT state the flavour, the targets or the runtime, since `init_env()` prints them from `metadata.json` at the head of every run.
 
 **Sections**
 - A section heading MUST be level two, `## <Section>`, in Title Case, and MUST be one of the names below, in this order. A section that
@@ -502,7 +512,7 @@ Each task includes the ones before it.
 | `systest` | `model.sh systest` registers the previews, `fab` packages the `mlmodels` image, then the system tests run, `mlmodels`'s against the production services (11.5) |
 | `package` | Builds the `mlmodels` image through the shared packaging step, with the `PINS` build argument from `model.sh docker-args`. `execute` has nothing to run for `mlmodels`, whose `Dockerfile` is a test environment |
 | `release` | `check-release` on a consumer's embedded project, then `model.sh release <version>` for `mlmodels` (11.6) |
-| `pull` | Backs up git-ignored files, `git pull --all` and installs the pinned dependencies. It does not pull models |
+| `pull` | Backs up git-ignored files, `git pull --all`, merges each project's requirements files into the modules that take them and installs the pinned dependencies. It does not pull models |
 | `deploy` | `mlmodels`'s `deploy.sh` runs `model.sh publish` and `status` |
 
 ### 7.3 Consequences
@@ -516,7 +526,7 @@ Each task includes the ones before it.
 
 1. Pick the flavour from section 3.2.
 2. Create `src/rue/mlmodels/src/main/notebook/<module>/<model>/<notebook>/` with `python -m workbench.notebook new`, and name it as section 6.1 requires, adding `--local` for a project that is to stay in its notebook (the `targets` rule of 11.2).
-3. Write the signature with `build_signature`, `signature_input`, `signature_output` and `signature_state`. An input name MUST be a metric name
+3. Write `signature.json` beside the notebook (`notebook.sh new` writes a skeleton), with the names, units, datatypes and descriptions of the inputs, outputs and state, and load it in Setup with `load_signature`. An input name MUST be a metric name
    from its owning service, required outputs MUST be the ones the consumer cannot act without, and state slots are numbered in order.
 4. Put data under splits, with `query_influxdb3`, `read_data`, `golden_data` or `data_path`.
 5. Write the notebook to sections 6.6 and 6.7, and fit on `training`.
@@ -581,7 +591,7 @@ both run by `fab build`.
 
 | Id | Invariant | Enforces |
 |---|---|---|
-| PJ001 | A project has a manifest with a supported spec version | R1 |
+| PJ001 | A project has a manifest, and every JSON document in it starts with a supported `schema` | R1 |
 | PJ002 | The flavour and the provenance source are known, the provenance inputs are a list, and a flavour but `static` states its implementation as more than one word and not a placeholder | R1 |
 | PJ003 | Every file the flavour requires is in the manifest, exists, and matches its SHA-256 | R1 |
 | PJ004 | The project name follows the naming style and equals the signature name | R12 |
@@ -602,7 +612,7 @@ both run by `fab build`.
 | NB001 | The notebook is format 4 | R13 |
 | NB002 | The notebook has no outputs and no execution counts | R13 |
 | NB003 | The notebook has exactly one level-one title, `# <module> / <model> / <notebook>`, matching its directories | R13 |
-| NB004 | The title table has the header Term and In This Notebook and the three rows in order, with a bold Term column | R13 |
+| NB004 | The title cell has an `**Intent:**` line, a `**Notes:**` line with dot points and no table | R13 |
 | NB005 | The sections are the names of 6.7, in order, none deeper than level two, with Setup present | R13 |
 | NB006 | Every section has Stage and Intent dot points | R13 |
 | NB007 | A code cell has no magics, shell lines, absolute paths or literal secrets | R13 |
@@ -611,18 +621,19 @@ both run by `fab build`.
 | NB010 | The notebook's `plan.md` exists | R13 |
 | NB011 | A notebook imports from `workbench.<module>` by name and never with `*` | R13 |
 | NB012 | A notebook does not extend `sys.path`, since the kernel carries it | R13 |
+| NB013 | The Intent names every output of the workspace `signature.json`, as a name, a brace list `name_{a,b}_x` or a pattern `prefix_*`, and no name with the module prefix that the signature lacks | R13 |
 | PM004 | The project has an evaluation and every gating criterion passed, which `check_release` also applies to a consumer's embedded project | R14, R15 |
 | RP001 | A replayed step that expects a signature error does not supply every required input | R8 |
 | RP002 | A replayed step supplies every required input | R8 |
 | RP003 | A runtime reproduces every golden response exactly | R5 |
 | MD001 | A released workspace has a `metadata.json` that is valid JSON of the supported schema | R1 |
 | MD002 | Every metadata field is present and of its type, a released version is a release version, a snapshot version is a snapshot version, and a released project has no snapshot version | R1 |
-| MD003 | A `project/` sits beside the metadata and its `project.json` hash equals `content_sha256` | R1 |
+| MD003 | A `project/` sits beside the metadata, its `project.json` hash equals `content_sha256`, and the workspace `signature.json` equals the project's | R1 |
 | MD004 | Every target is a `served` target, an `embedded` target with a reference consumer for the flavour, or the only target `local`, and every passed target is declared | R1 |
-| MD005 | The metadata `runtime` equals the project's, every Python package in it has a global pin, and for a `served` target is named in `mlserver`'s `py_deps.txt` | R11 |
+| MD005 | The metadata `runtime` equals the project's, every Python package in it has a global pin, and each requirements file (3.6) equals the names derived from the metadata, with none left for a language no target uses | R11 |
 | WS001 | The module, model and notebook directories follow the naming style | R12 |
 | WS002 | A notebook directory holds exactly one notebook, named `notebook.ipynb` | R13 |
-| WS003 | A notebook directory holds only the notebook, `plan.md`, `metadata.json`, `project`, `data` and a model file | R13 |
+| WS003 | A notebook directory holds only the notebook, `plan.md`, `signature.json`, `metadata.json`, the requirements files, `project`, `data` and a model file | R13 |
 | WS004 | The data directory holds only the four splits | R6 |
 | WS005 | A split holds only timestamp directories | R6 |
 | WS006 | A dataset is a csv named `<model>_<notebook>_...`, and one that is not `golden` ends with its date range | R12 |
@@ -650,12 +661,12 @@ Common operations are in two places, so a notebook states what it means and not 
 | `workbench.model` | `measure`, `evaluate_acceptance` | Measures a prediction against its truth with numpy, and runs a notebook's acceptance check into `evaluation.json` with the outcome and budget of each check |
 | `workbench.model` | `check_release` | Check that a project verifies and its acceptance passed, which a consumer's embedded project must also satisfy |
 | `workbench.replay` | `replay_project`, `require_replay`, `model_predict` | Replay a project's golden through its runtime in process and compare every response exactly or within the golden tolerance (RP001 to RP005), raising `GateError` when it differs, and load a model file as a predict function |
-| `workbench.metadata`, `workbench.release` | `record_project`, `record_passed`, `lint_metadata`, `release_workspaces`, `publish_workspace`, `embed_consumer`, `status_lines` | Write `project/` and `metadata.json`, record a passed target, lint the metadata, release and publish workspaces, embed a consumer and report drift, through `python -m workbench.model` |
+| `workbench.metadata`, `workbench.release` | `record_project`, `record_passed`, `lint_metadata`, `derived_requirements`, `requirements`, `release_workspaces`, `publish_workspace`, `embed_consumer`, `status_lines` | Write `project/`, `metadata.json` and the requirements files, record a passed target, lint the metadata, derive and report requirements, release and publish workspaces, embed a consumer and report drift, through `python -m workbench.model` |
 | `workbench.notebook`, `workbench.workspace` | `lint_notebook`, `fix_notebook`, `lint_workspace` | Report the findings of 10.1 for a notebook or a workspace, and strip a notebook's outputs |
 | `workbench.notebook` | `scaffold_notebook` | Writes a notebook, a plan and the data directories that already pass section 10, through `python -m workbench.notebook new <module> <model> <notebook> <flavour>` |
 | `workbench.data` | `data_path`, `read_data`, `ensure_data`, `golden_data`, `query_influxdb3` | Resolves a dataset path, reads one, reads or writes a dataset when it is absent, and queries with the cache |
-| `workbench.project` | `scratch_project_dir`, `provenance`, `record_project` | Resolves a scratch project directory, or the same under `MODEL_OUTPUT_DIR`, builds `provenance` from data paths and records the project and its hashes in the workspace |
-| `workbench.env`, `workbench.plot` | `init_env`, `show_plot` | Loads the module environment, and plots a series |
+| `workbench.project` | `scratch_project_dir`, `provenance`, `record_project`, `load_signature`, `signature_names` | Resolves a scratch project directory, or the same under `MODEL_OUTPUT_DIR`, builds `provenance` from data paths, records the project and its hashes in the workspace, and loads the workspace signature and its input and output names |
+| `workbench.env`, `workbench.plot` | `init_env`, `show_plot` | Loads the module environment and prints the workspace's recorded flavour, targets, runtime and version, and plots a series |
 
 A notebook SHOULD use these helpers and MUST NOT reimplement them.
 
@@ -678,7 +689,7 @@ Enforces column of 10.1 disagree.
 | R10 | PJ005 |
 | R11 | PJ017, MD005 |
 | R12 | NB008, PJ004, PJ007, WS001, WS006 |
-| R13 | NB001, NB002, NB003, NB004, NB005, NB006, NB007, NB009, NB010, NB011, NB012, WS002, WS003, WS007 |
+| R13 | NB001, NB002, NB003, NB004, NB005, NB006, NB007, NB009, NB010, NB011, NB012, NB013, WS002, WS003, WS007 |
 | R14 | AC001, AC002, AC003, PM004 |
 | R15 | PM004 |
 | R16 | Review |

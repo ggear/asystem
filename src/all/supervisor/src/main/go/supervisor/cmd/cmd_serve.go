@@ -72,6 +72,9 @@ func executeServe(configPath string, opts *serveOptions) error {
 	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Infof("periodic", serveStart, "[%d] ms poll", periods.PollMillis)
 	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Infof("periodic", serveStart, "[%d] ms pulse", periods.PulseMillis)
 	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Infof("periodic", serveStart, "[%d] s heartbeat", periods.HeartbeatSecs)
+	if scale := config.TimingScale(); scale > 1 {
+		scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Warnf("rescaled", serveStart, "[%d] timing divisor, election and reconcile run faster than production", scale)
+	}
 	cache := metric.NewRecordCache()
 	engine.RunAllProbesPublishLoop(ctx, configPath, cache, periods)
 	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStop).Infof("identity", serveStart, "[%s] version, exited gracefully", loaded.Version())

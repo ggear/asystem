@@ -40,6 +40,16 @@ func backupRunHolds(dir, marker string) bool {
 	return false
 }
 
+func backupArtefactKind(name string) string {
+	switch {
+	case strings.Contains(name, backupDeltaSuffix+"."):
+		return backupKindDelta
+	case strings.Contains(name, backupFullSuffix+"."):
+		return backupKindFull
+	}
+	return ""
+}
+
 func parentBackupRun(root, run string) string {
 	for _, name := range slices.Backward(backupRuns(root)) {
 		if name < run && backupRunHolds(filepath.Join(root, name), backupFullSuffix+".") {
@@ -158,8 +168,10 @@ func (s *backupSnapshot) age() time.Duration {
 }
 
 const (
-	backupFullSuffix  = "_full"
-	backupDeltaSuffix = "_delta"
+	backupKindFull    = "full"
+	backupKindDelta   = "delta"
+	backupFullSuffix  = "_" + backupKindFull
+	backupDeltaSuffix = "_" + backupKindDelta
 	backupAgeUnknown  = 1000 * time.Hour
 
 	treeModule           = "supervisor"

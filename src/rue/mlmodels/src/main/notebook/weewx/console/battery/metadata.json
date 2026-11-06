@@ -1,23 +1,19 @@
 {
-  "content_sha256": "28f9606affc52a8208841a7c272bdf9724412ed315f295f3874f2fa685fb9fbb",
-  "inputs_sha256": "095a86ee14d408c5e593bb18337e9ef478402d4b7bea91eaf25c3b441f1e358f",
-  "passed": [
-    {
-      "kind": "served"
-    }
-  ],
-  "released_at": null,
-  "released_by": null,
-  "released_signature": null,
-  "released_version": null,
-  "runtime": {
-    "python": []
-  },
   "schema": 1,
-  "snapshot_version": "10.200.1951-SNAPSHOT",
   "targets": [
     {
       "kind": "served"
     }
-  ]
+  ],
+  "passed": [],
+  "runtime": {
+    "python": []
+  },
+  "snapshot_version": "10.200.1991-SNAPSHOT",
+  "released_version": null,
+  "released_by": null,
+  "released_at": null,
+  "released_signature": null,
+  "content_sha256": "e815a65cf123e39e9fd2e33c0fa84c63825cc2bfbe18d1b696f62034f60fe0e2",
+  "inputs_sha256": "01dffcac555f6855806a2a88ab43c0eb7f8d0f5ea6017ef274a68ed1ebe67cc1"
 }

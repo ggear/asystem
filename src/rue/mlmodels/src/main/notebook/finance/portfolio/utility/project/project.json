@@ -1,8 +1,11 @@
 {
-  "spec_version": 1,
+  "schema": 1,
   "name": "finance_portfolio_utility",
-  "signature_version": 1,
   "flavour": "pyfunc",
+  "signature_version": 1,
+  "runtime": {
+    "python": []
+  },
   "provenance": {
     "source": "manual",
     "trained_on": "synthetic constant relative risk aversion utilities, training split",
@@ -16,22 +19,19 @@
   "files": {
     "signature": {
       "path": "signature.json",
-      "sha256": "feb5e1445c4b8a6435e2c928dc80da5725be595e9bee6ddb38c8c2055ffc4f33"
+      "sha256": "ffbb343dd174ceb86fde43f75b15c81bfed12f8a74226ca84779784ef10d6e7b"
     },
     "golden": {
       "path": "golden.json",
-      "sha256": "c1e34c640b21b63d5733e322a59442172e778e9ef5aca97e166d79191fa29f7e"
+      "sha256": "c6c3fa35119572184c3cc9cdcc0fb756a4464f384ab02f0b9fc387abea57c46c"
     },
     "evaluation": {
       "path": "evaluation.json",
-      "sha256": "fac5ecdb898306eeba0a245a35d1d442bbf6b9307769cbc367db6759334a141c"
+      "sha256": "da4188286626e3158f2421bd8aeaa05b342afd1c18f60d396df938718a7c9477"
     },
     "model": {
       "path": "model.py",
-      "sha256": "87fdbe9590fd67762304b3e43aecb50317fd49596031a72a1565a1c933338a46"
+      "sha256": "0b238f756d60d6aa567b8bb3a8bec56cf0f96e2074351bd118007be1fb584f82"
     }
-  },
-  "runtime": {
-    "python": []
   }
 }

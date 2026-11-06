@@ -6,7 +6,7 @@ import shutil
 import sys
 import tempfile
 import unittest
-from os.path import dirname, join, realpath
+from os.path import basename, dirname, join, realpath
 
 ROOT = realpath(join(dirname(__file__), "../../../../../.."))
 sys.path.insert(0, join(ROOT, "rue/mlmodels/src/main/python"))
@@ -575,6 +575,29 @@ class MetadataTest(unittest.TestCase):
             pins_file.write("Polars==2.1.0\n")
         self.assertEqual([], lint_metadata(self.workspace, "wasm", pins_path))
 
+    def test_a_workspace_signature_that_differs_from_the_project_signature_is_a_finding(self):
+        self.place(self.metadata())
+        project_signature = join(self.workspace, "project", "signature.json")
+        shutil.copy(project_signature, join(self.workspace, "signature.json"))
+        self.assertEqual([], self.rules())
+        with open(join(self.workspace, "signature.json")) as signature_file:
+            signature = json.load(signature_file)
+        signature["outputs"][0]["name"] = "renamed_output"
+        with open(join(self.workspace, "signature.json"), "w") as signature_file:
+            json.dump(signature, signature_file)
+        self.assertEqual(["MD003"], self.rules())
+
+    def test_load_signature_and_signature_names_read_the_workspace_signature(self):
+        from workbench.project import load_signature, signature_names
+
+        self.place(self.metadata())
+        shutil.copy(join(self.workspace, "project", "signature.json"), join(self.workspace, "signature.json"))
+        signature = load_signature(basename(self.workspace), notebook_dir=dirname(self.workspace))
+        inputs, outputs = signature_names(signature)
+        self.assertEqual([entry["name"] for entry in signature["inputs"]], inputs)
+        self.assertEqual([entry["name"] for entry in signature["outputs"]], outputs)
+        self.assertTrue(inputs and outputs)
+
     def test_a_requirements_file_that_differs_from_the_derived_names_is_a_finding(self):
         from workbench.metadata import LOCAL_TARGET, REQUIREMENT_FILES
 
@@ -735,6 +758,54 @@ class ReleaseTest(unittest.TestCase):
         os.remove(join(self.workspace, METADATA_FILE))
         self.assertIsNone(self.record(targets=[]))
         self.assertFalse(os.path.isfile(join(self.workspace, METADATA_FILE)))
+
+    def test_init_env_prints_the_recorded_metadata_of_the_workspace_it_runs_in(self):
+        import contextlib
+        import io
+
+        from workbench.env import init_env
+
+        self.record(targets=[{"kind": "served"}, {"kind": "embedded", "language": "go"}])
+        shutil.copy(join(self.workspace, "project", "signature.json"), join(self.workspace, "signature.json"))
+        output = io.StringIO()
+        previous = os.getcwd()
+        os.chdir(self.workspace)
+        try:
+            with contextlib.redirect_stdout(output):
+                env = init_env()
+        finally:
+            os.chdir(previous)
+        printed = output.getvalue()
+        self.assertTrue(env["MLFLOW_TRACKING_URI"].startswith("http"))
+        for expected in ("flavour   wasm", "targets   served, embedded go", "passed    none", "runtime   none", "inputs    ", "outputs   "):
+            self.assertIn(expected, printed)
+        with contextlib.redirect_stdout(output := io.StringIO()):
+            init_env()
+        self.assertEqual("", output.getvalue())
+
+    def test_every_json_document_starts_with_its_schema(self):
+        from workbench.metadata import METADATA_FILE
+        from workbench.model import lint_project
+
+        self.record()
+        for path in (join(self.workspace, METADATA_FILE), *(join(self.workspace, "project", name) for name in ("project.json", "signature.json", "golden.json"))):
+            with open(path) as document_file:
+                self.assertEqual("schema", next(iter(json.load(document_file))), path)
+        golden_path = join(self.workspace, "project", "golden.json")
+        with open(golden_path) as golden_file:
+            golden = json.load(golden_file)
+        with open(golden_path, "w") as golden_file:
+            json.dump({"sequences": golden["sequences"], "schema": golden["schema"]}, golden_file)
+        self.assertIn("PJ001", {rule for rule, _ in lint_project(join(self.workspace, "project"))})
+
+    def test_a_workspace_whose_project_is_not_checked_out_cannot_be_released(self):
+        from workbench.errors import GateError
+
+        self.record()
+        self.passed()
+        shutil.rmtree(join(self.workspace, "project"))
+        with self.assertRaises(GateError):
+            self.release()
 
     def test_a_local_project_passes_by_being_recorded_and_is_never_released(self):
         from workbench.metadata import LOCAL_TARGET, lint_metadata, read_metadata
@@ -980,7 +1051,7 @@ class NotebookLintTest(unittest.TestCase):
     def notebook(self, **changes):
         import json
 
-        title = "# demo / calc / run\n\nA calculation.\n\n| Term | In This Notebook |\n|---|---|\n" + "\n".join(f"| **{term}** | Value |" for term in ("Intent", "Project Flavour", "Data Splits"))
+        title = "# demo / calc / run\n\n**Intent:** Output a calculation.\n\n**Notes:**\n- Data splits: `golden` the samples"
         section = "## {}\n\n- **Stage:** {}\n- **Intent:** Do it."
         cells = [
             {"cell_type": "markdown", "metadata": {}, "source": title},
@@ -1020,6 +1091,43 @@ class NotebookLintTest(unittest.TestCase):
         notebook["cells"][0]["source"] = notebook["cells"][0]["source"].replace("# demo / calc / run", "# demo / calc / other")
         self.notebook(cells=notebook["cells"])
         self.assertEqual(["NB003"], self.rules())
+
+    def test_a_title_cell_without_an_intent_or_notes_or_with_a_table_is_found(self):
+        base = "# demo / calc / run\n\n"
+        for source in (
+            base + "**Notes:**\n- Data splits: `golden`",
+            base + "**Intent:** Output a calculation.",
+            base + "**Intent:** Output a calculation.\n\n**Notes:**\nno dot points",
+            base + "**Intent:** Output a calculation.\n\n**Notes:**\n- one\n\n| Term | In This Notebook |\n|---|---|",
+        ):
+            notebook = self.notebook()
+            notebook["cells"][0]["source"] = source
+            self.notebook(cells=notebook["cells"])
+            self.assertEqual(["NB004"], self.rules(), source)
+
+    def test_an_intent_must_name_every_output_of_the_signature_and_nothing_it_lacks(self):
+        from workbench.model import build_signature, signature_input, signature_output
+
+        signature = build_signature(
+            "demo_calc_run",
+            [signature_input("demo_calc_in", "none", "An input.")],
+            [signature_output("demo_calc_out_low", "none", "Low.", datatype="FP64"), signature_output("demo_calc_out_high", "none", "High.", datatype="FP64")],
+        )
+        with open(join(self.notebook_dir, "signature.json"), "w") as signature_file:
+            json.dump(signature, signature_file)
+        base = "# demo / calc / run\n\n**Intent:** {}\n\n**Notes:**\n- Data splits: `golden`"
+        for intent, expected in (
+            ("Output `demo_calc_out_low` and `demo_calc_out_high`.", []),
+            ("Output `demo_calc_out_{low,high}`.", []),
+            ("Output `demo_calc_out_*`.", []),
+            ("Output `demo_calc_out_low`.", ["NB013"]),
+            ("Output `demo_calc_out_{low,high}` and `demo_calc_old`.", ["NB013"]),
+            ("Output `demo_calc_nothing_*` and `demo_calc_out_{low,high}`.", ["NB013"]),
+        ):
+            notebook = self.notebook()
+            notebook["cells"][0]["source"] = base.format(intent)
+            self.notebook(cells=notebook["cells"])
+            self.assertEqual(expected, self.rules(), intent)
 
     def test_section_without_stage_is_found(self):
         notebook = self.notebook()

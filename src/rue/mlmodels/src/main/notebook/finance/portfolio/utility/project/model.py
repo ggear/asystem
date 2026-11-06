@@ -4,8 +4,8 @@ import pandas as pd
 from mlflow.models import set_model
 from mlflow.pyfunc import PythonModel
 
-INPUT = "finance_portfolio_utility_wealth"
-OUTPUT = "finance_portfolio_utility_value"
+INPUT = 'finance_portfolio_utility_wealth'
+OUTPUT = 'finance_portfolio_utility_value'
 GAMMA = 3.0
 
 

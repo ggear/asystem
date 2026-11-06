@@ -42,6 +42,29 @@ func TestConfig_TrendWindow(t *testing.T) {
 	}
 }
 
+func TestConfig_TimingScale(t *testing.T) {
+	tests := []struct {
+		name          string
+		value         string
+		expectedScale int
+	}{
+		{name: "happy_unset_is_production_timing", value: "", expectedScale: 1},
+		{name: "happy_one_is_production_timing", value: "1", expectedScale: 1},
+		{name: "happy_a_divisor_above_one_is_taken", value: "5", expectedScale: 5},
+		{name: "zero_is_production_timing", value: "0", expectedScale: 1},
+		{name: "negative_is_production_timing", value: "-3", expectedScale: 1},
+		{name: "unparsable_is_production_timing", value: "fast", expectedScale: 1},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv(TimingScaleEnvVar, test.value)
+			if actual := TimingScale(); actual != test.expectedScale {
+				t.Errorf("TimingScale: got %d want %d", actual, test.expectedScale)
+			}
+		})
+	}
+}
+
 func TestConfig_BackupWindowOf(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.json")
 	body := `{"asystem":{"backup":{"keep_daily":7,"keep_weekly":4,"keep_monthly":12,"retain_days":7,"modules":{"influxdb3":{"retain_days":14,"keep_daily":7,"keep_weekly":8,"keep_monthly":12}}}}}`

@@ -7,4 +7,3 @@ onnxruntime
 wasmtime
 
 scikit-learn
-polars

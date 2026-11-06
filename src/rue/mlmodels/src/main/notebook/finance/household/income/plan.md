@@ -14,7 +14,7 @@ The plan for the `finance_household_income` model. It follows `model.md`, the sp
 
 ## Intent
 
-Give the income that does not come from drawing down the portfolio: salary, dividends, interest, Age Pension and superannuation, as a path to 2070. `portfolio/spending` and `portfolio/mix` need it, because spending covered by income is spending the portfolio does not have to fund.
+Give the income that does not come from drawing down the portfolio: salary, dividends, interest, Age Pension and superannuation, as a path to 2070. `portfolio/withdrawal` and `portfolio/profile` need it, because spending covered by income is spending the portfolio does not have to fund.
 
 ## What the data holds
 
@@ -35,8 +35,12 @@ Income already lands in the `Bank` workbook categories (salary, dividends, inter
 | Age Pension rates, thresholds and taper | The means test | Services Australia |
 | Expected work income and end date | The accumulation phase | A decision, written down |
 
+## Personal data
+
+Real personal financial data MUST NOT be committed (`wrangle`'s rule, applied to `mlmodels`; see its `CLAUDE.md`). The `data/` captures and the `project/` of this workspace are git-ignored in the root `.gitignore` (`metadata.json` holds hashes and release state, no values, and stays committed), because the constants are derived from real spending and balances. What is committed here is synthetic, and the notebook rebuilds the placeholder when the files are absent. Check `git status` before staging.
+
 ## To do
 
 1. Add a `super` loader to `wrangle`.
 2. Write the Age Pension means test as a function and test it against the published examples.
-3. Wire its output into `portfolio/spending`.
+3. Wire its output into `portfolio/withdrawal`.

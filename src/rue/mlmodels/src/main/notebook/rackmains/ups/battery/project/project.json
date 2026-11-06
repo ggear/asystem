@@ -1,8 +1,14 @@
 {
-  "spec_version": 1,
+  "schema": 1,
   "name": "rackmains_ups_battery",
-  "signature_version": 1,
   "flavour": "static",
+  "signature_version": 1,
+  "constants": {
+    "rackmains_guard_shed_max_seconds": 120,
+    "rackmains_guard_halt_max_seconds": 450,
+    "rackmains_guard_mains_stable_seconds": 300,
+    "rackmains_guard_halt_delay_seconds": 120
+  },
   "provenance": {
     "source": "manual",
     "trained_on": "none, the rollout A starting values",
@@ -14,17 +20,11 @@
   "files": {
     "signature": {
       "path": "signature.json",
-      "sha256": "b70f9798fe3a62ff44e16d493fa65d4ee3450c8653eb1fdc558f86c7f4790d8e"
+      "sha256": "13e35f2666c8a1b3b3489a048ea54a66711ba721a5513f5be7573491395b2a43"
     },
     "golden": {
       "path": "golden.json",
-      "sha256": "8729de32a0540be09cc6219550b022ef6f1155e538997b4f383a006aa8d88dc4"
+      "sha256": "fa7783c59aa5c45366e5942f27816a0a12b78de4b4c040fc2454153b32fc1fa3"
     }
-  },
-  "constants": {
-    "rackmains_guard_shed_max_seconds": 120,
-    "rackmains_guard_halt_max_seconds": 450,
-    "rackmains_guard_mains_stable_seconds": 300,
-    "rackmains_guard_halt_delay_seconds": 120
   }
 }

@@ -1,8 +1,10 @@
+import json
 import os.path
 import shutil
 import tempfile
 
 from workbench.config import NOTEBOOK_DIR, PINS_PATH, VERSION_PATH
+from workbench.metadata import SIGNATURE_FILE
 from workbench.metadata import record_project as record_workspace_project
 
 
@@ -24,3 +26,12 @@ def provenance(source, trained_on, paths, notes="", implementation=None, noteboo
 
 def record_project(workspace, project_dir, targets, notebook_dir=NOTEBOOK_DIR, pins_path=PINS_PATH, version_path=VERSION_PATH):
     return record_workspace_project(os.path.join(notebook_dir, workspace), project_dir, targets, pins_path, version_path)
+
+
+def load_signature(workspace, notebook_dir=NOTEBOOK_DIR):
+    with open(os.path.join(notebook_dir, workspace, SIGNATURE_FILE)) as signature_file:
+        return json.load(signature_file)
+
+
+def signature_names(signature):
+    return [entry["name"] for entry in signature["inputs"]], [entry["name"] for entry in signature["outputs"]]

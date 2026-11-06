@@ -115,6 +115,19 @@ type leaderCandidacy struct {
 	RenewedTS string `json:"renewed_ts"`
 }
 
+func leaderTimingOf(scale int) leaderTiming {
+	divisor := time.Duration(scale)
+	return leaderTiming{
+		refresh:        5 * time.Second / divisor,
+		publishTimeout: 3 * time.Second / divisor,
+		ackWindow:      13 * time.Second / divisor,
+		keepAlive:      max(10*time.Second/divisor, time.Second),
+		pingTimeout:    5 * time.Second / divisor,
+		ttl:            30 * time.Second / divisor,
+		settle:         20 * time.Second / divisor,
+	}
+}
+
 type leaderTiming struct {
 	refresh        time.Duration
 	publishTimeout time.Duration
@@ -867,15 +880,7 @@ const (
 	leaderResignWindow  = 5 * time.Second
 )
 
-var leaderTimingProduction = leaderTiming{
-	refresh:        5 * time.Second,
-	publishTimeout: 3 * time.Second,
-	ackWindow:      13 * time.Second,
-	keepAlive:      10 * time.Second,
-	pingTimeout:    5 * time.Second,
-	ttl:            30 * time.Second,
-	settle:         20 * time.Second,
-}
+var leaderTimingProduction = leaderTimingOf(config.TimingScale())
 
 var (
 	leaderCampaignsMu sync.Mutex

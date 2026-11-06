@@ -1,8 +1,13 @@
 {
-  "spec_version": 1,
+  "schema": 1,
   "name": "example_pyfunc_linear",
-  "signature_version": 1,
   "flavour": "pyfunc",
+  "signature_version": 1,
+  "runtime": {
+    "python": [
+      "polars"
+    ]
+  },
   "provenance": {
     "source": "manual",
     "trained_on": "synthetic line, training split",
@@ -16,24 +21,19 @@
   "files": {
     "signature": {
       "path": "signature.json",
-      "sha256": "46ff8895a76fd79f57f23b168820df5ab7968ffaf6a565048d62387c3350a77c"
+      "sha256": "2fb3d6f6fb36f146b7e4abf281ce0c1a358e10ae1688db5b017142a6cfc460d8"
     },
     "golden": {
       "path": "golden.json",
-      "sha256": "564531a2c28ce7dbc53289d57f13b279709365313c667c20e72a7c0d35ce8a9c"
+      "sha256": "f8bcc06a959415e0187400fd5b0c68f3f5ca1146a79978a91d168ad2b0746b23"
     },
     "evaluation": {
       "path": "evaluation.json",
-      "sha256": "276585a8b680d40ce2767368175e781164493e061bf4c7db73c1c0e44a944860"
+      "sha256": "1828d1de400b14741567485c57e0cf3099b5e3e3293160955d4bd235aeec33ca"
     },
     "model": {
       "path": "model.py",
       "sha256": "af19c78e203bccdb3fffd41153f4ef71f54c657df0511a8a5150640c4927ebdc"
     }
-  },
-  "runtime": {
-    "python": [
-      "polars"
-    ]
   }
 }

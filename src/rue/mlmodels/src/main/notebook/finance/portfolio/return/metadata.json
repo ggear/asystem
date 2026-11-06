@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "targets": [
+    {
+      "kind": "served"
+    }
+  ],
+  "passed": [],
+  "runtime": {},
+  "snapshot_version": "10.200.1991-SNAPSHOT",
+  "released_version": null,
+  "released_by": null,
+  "released_at": null,
+  "released_signature": null,
+  "content_sha256": "ae1195c732ca2dd11cf1d4df07c497c79ff556836295917155d3536d27142d16",
+  "inputs_sha256": "9db20b07f6501891c5b9ec8e8cbf68d46295900ffd1acd0a21bd9e4a34ac9dc5"
+}

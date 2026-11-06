@@ -9,6 +9,7 @@ from os.path import dirname, isfile, join, normpath, relpath
 from workbench.errors import GateError
 
 METADATA_FILE = "metadata.json"
+SIGNATURE_FILE = "signature.json"
 PROJECT_DIR = "project"
 METADATA_SCHEMA = 1
 RUNTIME_PINS = ("numpy", "scipy", "pandas", "polars", "onnx", "onnxruntime", "wasmtime", "scikit-learn", "mlflow")
@@ -20,6 +21,7 @@ TARGET_LANGUAGES = ("python", "go", "rust")
 HOST_LIBRARIES = {("python", "wasm"): "wasmtime", ("python", "onnx"): "onnxruntime", ("rust", "wasm"): "wasmi", ("rust", "onnx"): "ort", ("go", "wasm"): "wazero"}
 HOST_FILES = {"python": "src/main/python/py_deps.txt", "rust": "src/main/rust/{host}/Cargo.toml", "go": "src/main/go/{host}/go.mod"}
 TARGET_MATRIX = {"python": ("static", "wasm", "onnx", "pyfunc"), "go": ("static", "wasm", "onnx"), "rust": ("static", "wasm", "onnx")}
+METADATA_ORDER = ("schema", "targets", "passed", "runtime", "snapshot_version", "released_version", "released_by", "released_at", "released_signature", "content_sha256", "inputs_sha256")
 METADATA_FIELDS = {
     "schema": int,
     "inputs_sha256": str,
@@ -50,6 +52,9 @@ def inputs_sha256(workspace_dir, pins):
             digest.update(relpath(path, data_dir).encode())
             with open(path, "rb") as data_file:
                 digest.update(hashlib.sha256(data_file.read()).digest())
+    if isfile(join(workspace_dir, SIGNATURE_FILE)):
+        with open(join(workspace_dir, SIGNATURE_FILE), "rb") as signature_file:
+            digest.update(hashlib.sha256(signature_file.read()).digest())
     digest.update(json.dumps({name: pins.get(name) for name in RUNTIME_PINS}, sort_keys=True).encode())
     return digest.hexdigest()
 
@@ -74,8 +79,10 @@ def read_metadata(workspace_dir):
 
 
 def write_metadata(workspace_dir, metadata):
+    ordered = {key: metadata[key] for key in METADATA_ORDER if key in metadata}
+    ordered.update({key: metadata[key] for key in sorted(metadata) if key not in ordered})
     with open(join(workspace_dir, METADATA_FILE), "w") as metadata_file:
-        json.dump(metadata, metadata_file, indent=2, sort_keys=True)
+        json.dump(ordered, metadata_file, indent=2)
         metadata_file.write("\n")
 
 
@@ -187,6 +194,11 @@ def lint_metadata(workspace_dir, flavour, pins_path=None):
             findings.append(("MD003", f"project differs from the metadata content hash [{metadata['content_sha256']}]"))
         with open(manifest_path) as manifest_file:
             manifest_runtime = json.load(manifest_file).get("runtime", {})
+        signature_path = join(workspace_dir, SIGNATURE_FILE)
+        if isfile(signature_path):
+            with open(signature_path) as workspace_file, open(join(workspace_dir, PROJECT_DIR, SIGNATURE_FILE)) as project_file:
+                if json.load(workspace_file) != json.load(project_file):
+                    findings.append(("MD003", f"the signature of the workspace differs from the signature of the project [{SIGNATURE_FILE}]"))
         if metadata["runtime"] != manifest_runtime:
             findings.append(("MD005", f"metadata runtime differs from the project runtime metadata {metadata['runtime']} project {manifest_runtime}"))
     if pins_path is not None:

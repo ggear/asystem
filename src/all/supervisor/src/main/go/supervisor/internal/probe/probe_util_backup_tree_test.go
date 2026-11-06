@@ -140,3 +140,24 @@ func TestProbeUtilBackupTree_ReadBackupRunAgainstAnEmptyRunHasNoStages(t *testin
 		t.Errorf("Services = %v, want empty", snapshot.services)
 	}
 }
+
+func TestProbeUtilBackupTree_ArtefactKind(t *testing.T) {
+	tests := []struct {
+		name     string
+		file     string
+		expected string
+	}{
+		{"a full archive", "mod_at_2026-11-01_01-00-00_from_1.0_full.tar.gz", backupKindFull},
+		{"a delta archive", "mod_at_2026-11-01_01-00-00_from_1.0_delta.tar.gz", backupKindDelta},
+		{"a sql dump", "mod_at_2026-11-01_01-00-00_from_1.0_full.sql.gz", backupKindFull},
+		{"a sidecar is neither", "manifest.json", ""},
+		{"a name carrying the word without its extension is neither", "mod_full", ""},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if got := backupArtefactKind(testCase.file); got != testCase.expected {
+				t.Errorf("backupArtefactKind() = %q, want %q", got, testCase.expected)
+			}
+		})
+	}
+}

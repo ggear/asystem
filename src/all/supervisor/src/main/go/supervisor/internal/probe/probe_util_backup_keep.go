@@ -58,7 +58,7 @@ func readBackupKeepRuns(dir string) []backupKeepRun {
 		if manifest, found := readBackupManifest(dir, name); found {
 			run.parent, run.verdict, run.accepted, run.software = manifest.Parent, manifest.Verdict, manifest.Accepted, manifest.SourceSoftware
 		}
-		if drill, found := readBackupDrill(backupDrillPath(runDir, string(metric.BackupStageSecondary))); found {
+		if drill, found := readSecondaryDrill(dir, name); found {
 			run.drilled, run.judged = drill.Verdict != metric.BackupStateFailure, true
 		}
 		runs = append(runs, run)
@@ -95,11 +95,8 @@ func backupKeepSet(runs []backupKeepRun, policy backupKeepPolicy, now time.Time)
 		quota       int
 		bucket      func(backupKeepRun) string
 	}{
-		{map[string]bool{}, map[string]bool{}, policy.weekly, func(run backupKeepRun) string {
-			year, week := run.at.ISOWeek()
-			return fmt.Sprintf("%04d-%02d", year, week)
-		}},
-		{map[string]bool{}, map[string]bool{}, policy.monthly, func(run backupKeepRun) string { return run.name[:7] }},
+		{map[string]bool{}, map[string]bool{}, policy.weekly, backupWeekBucket},
+		{map[string]bool{}, map[string]bool{}, policy.monthly, backupMonthBucket},
 	}
 	for index := newest; index >= 0; index-- {
 		run := ordered[index]
@@ -161,6 +158,13 @@ func backupKeepSet(runs []backupKeepRun, policy backupKeepPolicy, now time.Time)
 	}
 	return kept
 }
+
+func backupWeekBucket(run backupKeepRun) string {
+	year, week := run.at.ISOWeek()
+	return fmt.Sprintf("%04d-%02d", year, week)
+}
+
+func backupMonthBucket(run backupKeepRun) string { return run.name[:7] }
 
 type backupKeepPolicy struct {
 	window  time.Duration

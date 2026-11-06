@@ -1,8 +1,8 @@
 {
-  "spec_version": 1,
+  "schema": 1,
   "name": "example_onnx_linear",
-  "signature_version": 1,
   "flavour": "onnx",
+  "signature_version": 1,
   "provenance": {
     "source": "manual",
     "trained_on": "synthetic line, training split",
@@ -16,15 +16,15 @@
   "files": {
     "signature": {
       "path": "signature.json",
-      "sha256": "d3c19e61b80e4aacd44e3f4e36a52699e260bb77a1eb1efd4bf1594b61e3447b"
+      "sha256": "e0ecda4e46e300cc9d38c82a137dad46d2adec6b62f89b01ddc11ecccb10230a"
     },
     "golden": {
       "path": "golden.json",
-      "sha256": "54f9c35def699f8327586772fe09fd9cfddfd19992fde92d066049e77b4de9e5"
+      "sha256": "c1485450f852c811369dd4c5d2591a9d7b7f81e5bd954ccddd0a4155809cccbe"
     },
     "evaluation": {
       "path": "evaluation.json",
-      "sha256": "bab2baf690d959288f5121c1bd29488c3d0c8d4ad123f2b53db346fc22b070a3"
+      "sha256": "5a585586140eb59f8d2f0c4f9230c7e9d2e52758147fcef53bf0b86e269030d6"
     },
     "model": {
       "path": "model.onnx",

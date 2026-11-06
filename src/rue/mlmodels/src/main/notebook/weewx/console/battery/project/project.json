@@ -1,8 +1,11 @@
 {
-  "spec_version": 1,
+  "schema": 1,
   "name": "weewx_console_battery",
-  "signature_version": 1,
   "flavour": "pyfunc",
+  "signature_version": 1,
+  "runtime": {
+    "python": []
+  },
   "provenance": {
     "source": "mlflow",
     "trained_on": "weewx_console_battery_voltage, training split",
@@ -16,22 +19,19 @@
   "files": {
     "signature": {
       "path": "signature.json",
-      "sha256": "f3dc72f5bb9566db959dd5134c699315589f191283c8b0c2a047abab1312f020"
+      "sha256": "0818c01c6fd87d9a73a3c5f1786776526e4c59a14e033b12ebe908bf9556ec45"
     },
     "golden": {
       "path": "golden.json",
-      "sha256": "0d00d8ae900ca2c793e636bf9c164d25c74b3b9c4c95ac7488c38906bc645e87"
+      "sha256": "ca5d359f56576b4bbd56a1a68d87318aa0ddc7afaff6bfef20b22d6f81c467a9"
     },
     "evaluation": {
       "path": "evaluation.json",
-      "sha256": "a51c564b3bd6bb9e866b1f96507033be07d014d9c9f215990a8fa89d5fda4b8a"
+      "sha256": "4e11f053595fc4d8aa6f4f75235382b74539e9a736a562b9a6190eb0d0bcd614"
     },
     "model": {
       "path": "model.py",
       "sha256": "2e72318252819855b5199ae166363ea31ef4b504f0a5eb72c4cf09b12b371287"
     }
-  },
-  "runtime": {
-    "python": []
   }
 }

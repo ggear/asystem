@@ -5,6 +5,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"compress/gzip"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -260,5 +261,30 @@ func writeTestZip(t *testing.T, path string, files map[string]string) {
 	_ = archive.Close()
 	if err := os.WriteFile(path, buffer.Bytes(), 0o644); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestProbeUtilBackupManifest_VersionedModule(t *testing.T) {
+	tests := []struct {
+		name     string
+		script   string
+		expected string
+	}{
+		{"the hook output is recorded", "backup_versioned() { printf '18-2.30\\nextra\\n'; }", "18-2.30"},
+		{"no hook falls back to the version", ":", "9.9"},
+		{"an empty hook falls back to the version", "backup_versioned() { :; }", "9.9"},
+		{"a failing hook falls back to the version", "backup_versioned() { echo 18; return 1; }", "9.9"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			script := filepath.Join(t.TempDir(), "backup.sh")
+			if err := os.WriteFile(script, []byte(test.script+"\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stderr bytes.Buffer
+			if actual := versionedModule(context.Background(), moduleHooks{script: script}, &stderr, "9.9"); actual != test.expected {
+				t.Errorf("software: got [%s] want [%s]", actual, test.expected)
+			}
+		})
 	}
 }

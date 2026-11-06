@@ -3,7 +3,6 @@ package probe
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -37,14 +36,21 @@ func drillSecondaryServices(ctx context.Context, loaded *config.Config, share, h
 			state := metric.BackupStateSuccess
 			if code != 0 {
 				state = metric.BackupStateFailure
-			} else if drill, found := readBackupDrill(backupDrillPath(filepath.Join(target, run), string(metric.BackupStageSecondary))); found {
+			} else if drill, found := readSecondaryDrill(target, run); found {
 				state = drill.Verdict
 			}
 			drilled++
 			scribe.Log(scribe.SourceBackup, scribe.SubjectService(service), scribe.ActionStop).Infof("verified", started,
 				"[%s] point [%s] restored as [%s] in [%d] s", service, run, state, int(time.Since(started).Seconds()))
 			if code != 0 {
-				scribe.Log(scribe.SourceBackup, scribe.SubjectService(service), scribe.ActionStop).Warnf("faulting", started, "%s", firstDrillFault(output.String()))
+				fault := "the drill failed without naming a fault"
+				for line := range strings.SplitSeq(output.String(), "\n") {
+					if strings.HasPrefix(line, "❌") {
+						fault = line
+						break
+					}
+				}
+				scribe.Log(scribe.SourceBackup, scribe.SubjectService(service), scribe.ActionStop).Warnf("faulting", started, "%s", fault)
 			}
 		}
 		if backupDrillRetained(target) {
@@ -81,19 +87,14 @@ func reportReleaseDrills(service string) (failed int) {
 }
 
 func backupDrillDue(runs []backupKeepRun, policy backupKeepPolicy, now time.Time) []string {
-	nowYear, nowWeek := now.ISOWeek()
-	currentWeek, currentMonth := fmt.Sprintf("%04d-%02d", nowYear, nowWeek), now.Format("2006-01")
+	current := backupKeepRun{name: now.Format(backupTimestampFormat), at: now}
 	tiers := []struct {
-		seen    map[string]bool
-		quota   int
-		current string
-		bucket  func(backupKeepRun) string
+		seen   map[string]bool
+		quota  int
+		bucket func(backupKeepRun) string
 	}{
-		{map[string]bool{}, policy.weekly, currentWeek, func(run backupKeepRun) string {
-			year, week := run.at.ISOWeek()
-			return fmt.Sprintf("%04d-%02d", year, week)
-		}},
-		{map[string]bool{}, policy.monthly, currentMonth, func(run backupKeepRun) string { return run.name[:7] }},
+		{map[string]bool{}, policy.weekly, backupWeekBucket},
+		{map[string]bool{}, policy.monthly, backupMonthBucket},
 	}
 	var due []string
 	generations := map[string]bool{}
@@ -116,7 +117,7 @@ func backupDrillDue(runs []backupKeepRun, policy backupKeepPolicy, now time.Time
 				continue
 			}
 			tier.seen[bucket] = true
-			if bucket != tier.current && !run.judged && !slices.Contains(due, run.name) {
+			if bucket != tier.bucket(current) && !run.judged && !slices.Contains(due, run.name) {
 				due = append(due, run.name)
 			}
 		}
@@ -125,9 +126,13 @@ func backupDrillDue(runs []backupKeepRun, policy backupKeepPolicy, now time.Time
 	return due
 }
 
+func readSecondaryDrill(target, run string) (backupDrill, bool) {
+	return readBackupDrill(backupDrillPath(filepath.Join(target, run), string(metric.BackupStageSecondary)))
+}
+
 func backupDrillFailing(target string) bool {
 	for _, run := range slices.Backward(backupRuns(target)) {
-		if drill, found := readBackupDrill(backupDrillPath(filepath.Join(target, run), string(metric.BackupStageSecondary))); found {
+		if drill, found := readSecondaryDrill(target, run); found {
 			return backupDrillFailed(target, run, drill)
 		}
 	}
@@ -136,7 +141,7 @@ func backupDrillFailing(target string) bool {
 
 func backupDrillRetained(target string) bool {
 	for _, run := range backupRuns(target) {
-		if drill, found := readBackupDrill(backupDrillPath(filepath.Join(target, run), string(metric.BackupStageSecondary))); found && backupDrillFailed(target, run, drill) {
+		if drill, found := readSecondaryDrill(target, run); found && backupDrillFailed(target, run, drill) {
 			return true
 		}
 	}
@@ -153,15 +158,6 @@ func flagBackupDrillFailed(path string) {
 		document.DrillFailedBool = true
 		_ = writeAtomic(path, *document)
 	}
-}
-
-func firstDrillFault(output string) string {
-	for line := range strings.SplitSeq(output, "\n") {
-		if strings.HasPrefix(line, "❌") {
-			return line
-		}
-	}
-	return "the drill failed without naming a fault"
 }
 
 const (

@@ -6,9 +6,10 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"syscall"
 	"time"
+
+	"supervisor/internal/metric"
 )
 
 type BackupModuleRequest struct {
@@ -45,26 +46,13 @@ func BackupModuleAccept(_ context.Context, request BackupModuleRequest, stdout, 
 		return 2
 	}
 	run := request.Arguments[1]
-	path := backupManifestPath(root, run)
-	data, err := os.ReadFile(path)
-	if err != nil {
+	manifest, found := readBackupManifest(root, run)
+	if !found {
 		fmt.Fprintf(stderr, "No manifest for run [%s] under [%s]\n", run, root)
 		return 1
 	}
-	lines := strings.Split(string(data), "\n")
-	for index, line := range lines {
-		switch {
-		case strings.HasPrefix(line, `  "verdict": "`) && strings.HasSuffix(line, `",`):
-			lines[index] = `  "verdict": "success",`
-		case line == `  "accepted": false,`:
-			lines[index] = `  "accepted": true,`
-		}
-	}
-	if err := os.WriteFile(path+".tmp", []byte(strings.Join(lines, "\n")), 0o644); err != nil {
-		fmt.Fprintf(stderr, "Backup failed [%v]\n", err)
-		return 1
-	}
-	if err := os.Rename(path+".tmp", path); err != nil {
+	manifest.Verdict, manifest.Accepted = metric.BackupStateSuccess, true
+	if err := writeBackupManifest(root, run, manifest); err != nil {
 		fmt.Fprintf(stderr, "Backup failed [%v]\n", err)
 		return 1
 	}

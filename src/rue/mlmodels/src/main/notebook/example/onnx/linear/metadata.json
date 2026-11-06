@@ -1,22 +1,5 @@
 {
-  "content_sha256": "8004dbdd18946d2606c5d9773676bb626c29ab24eff633ac1895dace88ce7a60",
-  "inputs_sha256": "8b389470de68547fb512635e0c533f2c87d9beb1c7a49fea65d128a0f6946ae3",
-  "passed": [
-    {
-      "kind": "embedded",
-      "language": "python"
-    },
-    {
-      "kind": "served"
-    }
-  ],
-  "released_at": null,
-  "released_by": null,
-  "released_signature": null,
-  "released_version": null,
-  "runtime": {},
   "schema": 1,
-  "snapshot_version": "10.200.1951-SNAPSHOT",
   "targets": [
     {
       "kind": "served"
@@ -25,5 +8,14 @@
       "kind": "embedded",
       "language": "python"
     }
-  ]
+  ],
+  "passed": [],
+  "runtime": {},
+  "snapshot_version": "10.200.1991-SNAPSHOT",
+  "released_version": null,
+  "released_by": null,
+  "released_at": null,
+  "released_signature": null,
+  "content_sha256": "6f0ec9a8e06c723d2a719ce8d42517f520ff30f984dcf0e22eff4d8cda54bc3a",
+  "inputs_sha256": "4fa55456f68039246c0fa9d4d634050e0ea1572aa680f4e6d60adbb7562bd381"
 }

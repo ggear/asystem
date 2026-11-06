@@ -6,6 +6,7 @@ import (
 	"os"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"supervisor/internal/scribe"
 	"sync"
@@ -241,6 +242,13 @@ func (c *Config) Services(host string) []string {
 	return []string{}
 }
 
+func TimingScale() int {
+	if scale, err := strconv.Atoi(os.Getenv(TimingScaleEnvVar)); err == nil && scale > 1 {
+		return scale
+	}
+	return 1
+}
+
 func TrendWindow(trendHours int) time.Duration {
 	if trendHours > 0 {
 		return time.Duration(trendHours) * time.Hour
@@ -456,7 +464,8 @@ const (
 	DirServiceHome       = "/home/asystem"
 	DirShare             = "/share"
 
-	BackupHomeEnvVar = "BACKUP_HOME_ROOT"
+	BackupHomeEnvVar  = "BACKUP_HOME_ROOT"
+	TimingScaleEnvVar = "SUPERVISOR_TIMING_SCALE"
 
 	FormFactorEdge   = "edge"
 	FormFactorClient = "client"

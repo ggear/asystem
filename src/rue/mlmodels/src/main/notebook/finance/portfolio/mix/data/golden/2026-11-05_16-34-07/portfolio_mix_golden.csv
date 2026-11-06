@@ -1,7 +1,0 @@
-finance_portfolio_mix_risky_share_pct,finance_portfolio_mix_return_pct,finance_portfolio_mix_volatility_pct,expect
-0.0,2.0,5.0,ok
-25.0,3.0,5.809475019311125,ok
-50.0,4.0,8.366600265340756,ok
-75.0,5.0,11.565033506220377,ok
-100.0,6.0,15.0,ok
-,,,error

@@ -3,14 +3,14 @@ import json
 import os
 import re
 import sys
+from fnmatch import fnmatch
 from os.path import abspath, basename, dirname, isfile, join
 
-from workbench.model import PROJECT_FLAVOURS, PROJECT_SPLITS, check_name, registered_name
+from workbench.metadata import SIGNATURE_FILE
+from workbench.model import PROJECT_FLAVOURS, PROJECT_SPLITS, build_signature, check_name, registered_name, signature_input, signature_output
 
 NOTEBOOK_FORMAT = 4
 NOTEBOOK_SECTIONS = ("Setup", "Capture Data", "Explore", "Fit", "Evaluate", "Package", "Register", "Pull")
-NOTEBOOK_TITLE_ROWS = ("Intent", "Project Flavour", "Data Splits")
-NOTEBOOK_TITLE_HEADER = "| Term | In This Notebook |"
 NOTEBOOK_ABSOLUTE_PATH = re.compile(r"""["'](/Users/|/home/|/private/|[A-Za-z]:\\)""")
 NOTEBOOK_SECRET = re.compile(r"""(?i)\b(token|password|passwd|secret|api_?key)\w*\s*=\s*["'][^"']+["']""")
 NOTEBOOK_MAGIC = re.compile(r"^\s*[%!]")
@@ -37,6 +37,7 @@ def lint_notebook(path):
         if cell["cell_type"] == "code" and (cell.get("outputs") or cell.get("execution_count") is not None):
             add("NB002", "outputs and execution counts must be stripped", index)
     findings.extend(_lint_structure(cells, module, model, name))
+    findings.extend(_lint_intent(cells, notebook_dir, module))
     for index, cell in enumerate(cells):
         text = _source(cell)
         if cell["cell_type"] == "code":
@@ -86,7 +87,7 @@ def scaffold_notebook(root, module, model, notebook, flavour, local=False):
     name = registered_name(module, model, notebook)
     for split in PROJECT_SPLITS:
         os.makedirs(join(notebook_dir, "data", split), exist_ok=True)
-    created = [notebook_path, join(notebook_dir, "plan.md")]
+    created = [notebook_path, join(notebook_dir, "plan.md"), join(notebook_dir, SIGNATURE_FILE)]
     for split in PROJECT_SPLITS:
         keep = join(notebook_dir, "data", split, ".gitkeep")
         if not isfile(keep):
@@ -97,6 +98,14 @@ def scaffold_notebook(root, module, model, notebook, flavour, local=False):
         notebook_file.write("\n")
     with open(created[1], "w") as plan_file:
         plan_file.write(_scaffold_plan(module, model, notebook, name, flavour))
+    signature = build_signature(
+        name,
+        [signature_input(f"{module}_{model}_in", "none", "An input.")],
+        [signature_output(f"{module}_{model}_out", "none", "An output.", datatype="FP64")],
+    )
+    with open(created[2], "w") as signature_file:
+        json.dump(signature, signature_file, indent=2)
+        signature_file.write("\n")
     return created
 
 
@@ -147,14 +156,14 @@ def _scaffold_notebook(module, model, notebook, name, flavour, local):
     targets = '[{"kind": "local"}]' if local else '[{"kind": "served"}]'
     cells = [
         markdown(
-            f"# {module} / {model} / {notebook}\n\nState in one line what this model does.\n\n| Term | In This Notebook |\n|---|---|\n"
-            f"| **Intent** | State what the model is for |\n| **Project Flavour** | `{flavour}` (`model.md` 3.2) |\n"
-            f"| **Data Splits** | `golden` the fixed samples and expected outputs |"
+            f"# {module} / {model} / {notebook}\n\n**Intent:** For an input (`{module}_{model}_in`), output (`{module}_{model}_out`) and state what the outputs are intended to be, with their units.\n\n"
+            "**Notes:**\n- Data splits: `golden` the fixed samples and expected outputs"
         ),
         section("Setup", "none, preparation for the stages below.", "load `env` and declare the model name, its targets and the dataset names as constants (`model.md` 6.6)."),
         code(
-            f"import json\n\nfrom workbench.data import golden_data\nfrom workbench.env import init_env\nfrom workbench.project import provenance, record_project, scratch_project_dir\n\nenv = init_env()\n\n"
-            f'WORKSPACE = "{module}/{model}/{notebook}"\nMODEL_NAME = "{name}"\nTARGETS = {targets}\nGOLDEN = "{model}_{notebook}_golden"\nCONSTANTS = {{"{module}_{model}_out": 1}}\n'
+            f"import json\n\nfrom workbench.data import golden_data\nfrom workbench.env import init_env\nfrom workbench.project import load_signature, provenance, record_project, scratch_project_dir, signature_names\n\nenv = init_env()\n\n"
+            f'WORKSPACE = "{module}/{model}/{notebook}"\nMODEL_NAME = "{name}"\nTARGETS = {targets}\nGOLDEN = "{model}_{notebook}_golden"\n'
+            "signature = load_signature(WORKSPACE)\nINPUTS, OUTPUTS = signature_names(signature)\nCONSTANTS = {OUTPUTS[0]: 1}\n"
         ),
     ]
     if not static:
@@ -164,11 +173,10 @@ def _scaffold_notebook(module, model, notebook, name, flavour, local):
             section("Evaluate", "4, evaluate.", "check the fit on `validation` and `backtest` through the shipped runtime and run its acceptance check with `evaluate_acceptance` (R4, R14)."),
         ]
     cells += [
-        section("Package", "5, package.", "write the golden samples, build the signature and write the project with its evaluation (R1, R3, R14)."),
+        section("Package", "5, package.", "write the golden samples and the project from the loaded signature, with its evaluation (R1, R3, R14)."),
         code(
-            "from workbench.model import build_signature, package_project, signature_input, signature_output\n" + ("from workbench.replay import require_replay\n" if static else "") + "\n"
-            f'golden_pl, golden_path = golden_data(WORKSPACE, GOLDEN, lambda: {{"{module}_{model}_in": [1.0, None], "expect": ["ok", "error"]}})\n\n'
-            f'signature = build_signature(MODEL_NAME, [signature_input("{module}_{model}_in", "none", "An input.")], [signature_output("{module}_{model}_out", "none", "An output.")])\n'
+            "from workbench.model import package_project\n" + ("from workbench.replay import require_replay\n" if static else "") + "\n"
+            'golden_pl, golden_path = golden_data(WORKSPACE, GOLDEN, lambda: {INPUTS[0]: [1.0, None], "expect": ["ok", "error"]})\n\n'
             "project_dir = scratch_project_dir(WORKSPACE)\n"
             + (
                 'manifest = package_project(project_dir, MODEL_NAME, "static", signature, golden_pl.iter_rows(named=True), provenance("manual", "none", [golden_path], "scaffold"), constants=CONSTANTS)\n'
@@ -206,6 +214,37 @@ def _scaffold_plan(module, model, notebook, name, flavour):
     )
 
 
+def _lint_intent(cells, notebook_dir, module):
+    signature_path = join(notebook_dir, SIGNATURE_FILE)
+    intent = next((match.group(1) for cell in cells if cell["cell_type"] == "markdown" for match in re.finditer(r"^\*\*Intent:\*\* (.*)$", _source(cell), re.MULTILINE)), None)
+    if not isfile(signature_path) or intent is None:
+        return []
+    with open(signature_path) as signature_file:
+        signature = json.load(signature_file)
+    inputs = [entry["name"] for entry in signature["inputs"]]
+    outputs = [entry["name"] for entry in signature["outputs"]]
+    tokens = {name for raw in re.findall(r"`([^`]+)`", intent) for name in _expand_braces(raw)}
+    findings = [
+        ("NB013", f"the Intent does not name the output [{name}], list it or a pattern such as [{name.rsplit('_', 2)[0]}_{{a,b}}_x] or [prefix_*]", None)
+        for name in outputs
+        if not any(fnmatch(name, token) for token in tokens)
+    ]
+    findings.extend(
+        ("NB013", f"the Intent names [{token}] which the signature does not have", None)
+        for token in sorted(tokens)
+        if token.startswith(f"{module}_") and "/" not in token and not any(fnmatch(name, token) for name in [*inputs, *outputs])
+    )
+    return findings
+
+
+def _expand_braces(text):
+    if "{" not in text or "}" not in text:
+        return [text]
+    before, _, rest = text.partition("{")
+    body, _, after = rest.partition("}")
+    return [before + option + after for option in body.split(",")]
+
+
 def _lint_structure(cells, module, model, name):
     findings = []
     markdown = [(index, _source(cell)) for index, cell in enumerate(cells) if cell["cell_type"] == "markdown"]
@@ -218,14 +257,13 @@ def _lint_structure(cells, module, model, name):
         lines = text.split("\n")
         if lines[0] != expected:
             findings.append(("NB003", f"title must be [{expected}] found [{lines[0]}]", index))
-        if NOTEBOOK_TITLE_HEADER not in lines:
-            findings.append(("NB004", f"title table header [{NOTEBOOK_TITLE_HEADER}] is missing", index))
-        else:
-            terms = [re.sub(r"^\|\s*(?:\*\*)?([^*|]+?)(?:\*\*)?\s*\|.*$", r"\1", row) for row in lines[lines.index(NOTEBOOK_TITLE_HEADER) + 2 :] if row.startswith("|")]
-            if tuple(terms) != NOTEBOOK_TITLE_ROWS:
-                findings.append(("NB004", f"title table rows must be {list(NOTEBOOK_TITLE_ROWS)} found {terms}", index))
-            if any(row.startswith("|") and not row.startswith("| **") for row in lines[lines.index(NOTEBOOK_TITLE_HEADER) + 2 :]):
-                findings.append(("NB004", "the Term column of the title table must be bold", index))
+        if not any(line.startswith("**Intent:** ") and len(line) > len("**Intent:** ") for line in lines):
+            findings.append(("NB004", "the title cell needs a line **Intent:** that says what the outputs are intended to be", index))
+        notes = lines.index("**Notes:**") if "**Notes:**" in lines else None
+        if notes is None or not any(line.startswith("- ") for line in lines[notes + 1 :]):
+            findings.append(("NB004", "the title cell needs a **Notes:** line followed by dot points", index))
+        if any(line.startswith("|") for line in lines):
+            findings.append(("NB004", "the title cell holds no table", index))
     sections = []
     for index, text in markdown:
         first = text.split("\n")[0]

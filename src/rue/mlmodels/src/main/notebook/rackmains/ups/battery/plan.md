@@ -84,7 +84,7 @@ default model is conservative and **not fitted**: it supplies the guard's thresh
 
 ```json
 {
-  "spec_version": 1,
+  "schema": 1,
   "name": "rackmains_ups_battery",
   "model_version": "static-1",
   "signature_version": 1,

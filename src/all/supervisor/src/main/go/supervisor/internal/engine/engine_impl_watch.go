@@ -672,5 +672,5 @@ var (
 	hostStatus   map[string]bool
 	hostOffline  map[string]int64
 
-	reconcileGrace = 10 * time.Second
+	reconcileGrace = 10 * time.Second / time.Duration(config.TimingScale())
 )

@@ -403,21 +403,35 @@ func TestProbeUtilLeader_LeadsWhileConfigsDisagree(t *testing.T) {
 }
 
 func TestProbeUtilLeader_TimingInvariants(t *testing.T) {
-	timing := leaderTimingProduction
-	if timing.ackWindow != 2*timing.refresh+timing.publishTimeout {
-		t.Errorf("ackWindow: got %v want two refreshes and a publish timeout [%v]", timing.ackWindow, 2*timing.refresh+timing.publishTimeout)
+	for _, scale := range []int{1, 5, 10} {
+		t.Run(fmt.Sprintf("scale_%d", scale), func(t *testing.T) {
+			timing := leaderTimingOf(scale)
+			if timing.ackWindow != 2*timing.refresh+timing.publishTimeout {
+				t.Errorf("ackWindow: got %v want two refreshes and a publish timeout [%v]", timing.ackWindow, 2*timing.refresh+timing.publishTimeout)
+			}
+			if timing.settle <= timing.ackWindow {
+				t.Errorf("settle: got %v want above the ackWindow %v, or a deposed holder could overlap its successor", timing.settle, timing.ackWindow)
+			}
+			if timing.ttl <= timing.ackWindow+timing.refresh {
+				t.Errorf("ttl: got %v want above ackWindow plus refresh %v, or a live candidate could read stale", timing.ttl, timing.ackWindow+timing.refresh)
+			}
+			if timing.keepAlive < time.Second {
+				t.Errorf("keepAlive: got %v want at least a second, the MQTT unit", timing.keepAlive)
+			}
+			if timing.publishTimeout >= timing.refresh {
+				t.Errorf("publishTimeout: got %v want below the refresh %v, or renewals queue behind each other", timing.publishTimeout, timing.refresh)
+			}
+		})
 	}
-	if timing.settle <= timing.ackWindow {
-		t.Errorf("settle: got %v want above the ackWindow %v, or a deposed holder could overlap its successor", timing.settle, timing.ackWindow)
+}
+
+func TestProbeUtilLeader_TimingOfScaleOneIsProduction(t *testing.T) {
+	expected := leaderTiming{
+		refresh: 5 * time.Second, publishTimeout: 3 * time.Second, ackWindow: 13 * time.Second, keepAlive: 10 * time.Second,
+		pingTimeout: 5 * time.Second, ttl: 30 * time.Second, settle: 20 * time.Second,
 	}
-	if timing.ttl <= timing.ackWindow+timing.refresh {
-		t.Errorf("ttl: got %v want above ackWindow plus refresh %v, or a live candidate could read stale", timing.ttl, timing.ackWindow+timing.refresh)
-	}
-	if timing.keepAlive < time.Second {
-		t.Errorf("keepAlive: got %v want at least a second, the MQTT unit", timing.keepAlive)
-	}
-	if timing.publishTimeout >= timing.refresh {
-		t.Errorf("publishTimeout: got %v want below the refresh %v, or renewals queue behind each other", timing.publishTimeout, timing.refresh)
+	if actual := leaderTimingOf(1); actual != expected {
+		t.Errorf("leaderTimingOf(1): got %+v want %+v", actual, expected)
 	}
 }
 
