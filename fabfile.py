@@ -700,17 +700,14 @@ EOF
     /tmp/base_image_run.sh
 }}
 DOCKER_CLI_HINTS=false
-CONTAINER_NAME="asystem_deps_bootstrap"
-docker ps -q --filter "name=$CONTAINER_NAME" | grep -q . && docker kill "$CONTAINER_NAME"
-docker ps -qa --filter "name=$CONTAINER_NAME" | grep -q . && docker rm -vf "$CONTAINER_NAME"
+CONTAINER_NAME="asystem_deps_bootstrap_$(basename "$(cd "$(dirname "${{BASH_SOURCE[0]}}")" && pwd)")_$$"
+trap 'docker rm -vf "$CONTAINER_NAME" >/dev/null 2>&1' EXIT
 docker run --name "$CONTAINER_NAME" --user root --platform linux/{} --entrypoint sh {} -dt '{}'
 docker exec -t "$CONTAINER_NAME" sh -c '[ "$(which apk)" != "" ] && apk add --no-cache bash; [ "$(which apt-get)" != "" ] && apt-get update && apt-get -y install bash'
 declare -f echo_package_install_commands | sed '1,2d;$d' | docker exec -i "$CONTAINER_NAME" bash -
 echo "Base image shell:"
 echo "#######################################################################################" && echo ""
 docker exec -it {} "$CONTAINER_NAME" bash
-docker kill "$CONTAINER_NAME"
-docker rm -vf "$CONTAINER_NAME"
                                               """.format(
                         docker_build_packages["base"],
                         docker_build_packages["build"],
