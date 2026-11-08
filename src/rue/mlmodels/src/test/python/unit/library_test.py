@@ -1156,6 +1156,22 @@ class NotebookLintTest(unittest.TestCase):
             self.notebook(cells=notebook["cells"])
             self.assertEqual(["NB004"], self.rules(), source)
 
+    def test_a_dot_point_may_have_indented_sub_bullets_which_are_also_kept_short(self):
+        base = "# demo / calc / run\n\n**Intent**\n- Outputs a calculation.\n\n**Data**\n- `golden` is the samples.\n\n**Future**\n- Overall the design holds.\n  - Keep it small.\n- Phase 1 is the build.\n  - Build it.\n  - Ship it.\n"
+        notebook = self.notebook()
+        notebook["cells"][0]["source"] = base
+        self.notebook(cells=notebook["cells"])
+        self.assertEqual([], self.rules())
+        notebook["cells"][0]["source"] = base + "  - " + "word " * 26
+        self.notebook(cells=notebook["cells"])
+        self.assertEqual(["NB004"], self.rules())
+
+    def test_a_future_dot_point_must_be_overall_or_a_phase(self):
+        notebook = self.notebook()
+        notebook["cells"][0]["source"] = "# demo / calc / run\n\n**Intent**\n- Outputs a calculation.\n\n**Data**\n- `golden` is the samples.\n\n**Future**\n- Build it.\n"
+        self.notebook(cells=notebook["cells"])
+        self.assertEqual(["NB004"], self.rules())
+
     def test_an_intent_must_name_every_output_of_the_signature_and_nothing_it_lacks(self):
         from workbench.model import build_signature, signature_input, signature_output
 

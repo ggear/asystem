@@ -255,6 +255,13 @@ def _lint_structure(cells, module, model, name):
         findings.extend(
             ("NB004", f"the title cell dot point is over [{HEADER_WORDS}] words [{point[:40]}]", index) for points in blocks.values() for point in points if len(point.split()) > HEADER_WORDS
         )
+        future = False
+        for line in lines[1:]:
+            label = re.match(r"^\*\*(\w+)\*\*$", line)
+            if label is not None:
+                future = label.group(1) == "Future"
+            elif future and line.startswith("- ") and not re.match(r"^- (Overall|Phase \d+) ", line):
+                findings.append(("NB004", f"a Future dot point must open with [Overall] or its phase as [Phase 1 ...] found [{line[:50]}]", index))
     sections = []
     for index, text in markdown:
         first = text.split("\n")[0]
@@ -292,7 +299,7 @@ def _title_blocks(text):
     blocks, stray, current = {}, [], None
     for line in text.split("\n")[1:]:
         label = re.match(r"^\*\*(\w+)\*\*$", line)
-        point = re.match(r"^- (\S.*)$", line)
+        point = re.match(r"^ {0,4}- (\S.*)$", line)
         if label is not None and label.group(1) in HEADER_LABELS:
             current = blocks.setdefault(label.group(1), [])
         elif point is not None and current is not None:

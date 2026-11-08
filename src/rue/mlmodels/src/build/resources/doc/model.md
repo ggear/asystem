@@ -390,7 +390,7 @@ A model notebook:
 2. One markdown section cell per section, each followed by the code cells of that section.
 
 **The title cell**
-- MUST hold the heading `# <module> / <model> / <notebook>`, the only level-one heading in the notebook, and then only bold labels on their own line, each followed by short dot points. The labels are Intent, Data, Status and Future, SHOULD come in that order, and Intent and Data MUST be present. A dot point is a short sentence of at most 25 words (NB004). It MUST NOT open with a label and a colon, restate another dot point, or state the flavour, the target or the runtime, which `init_env()` prints from `metadata.json` and the project at the head of every run.
+- MUST hold the heading `# <module> / <model> / <notebook>`, the only level-one heading in the notebook, and then only bold labels on their own line, each followed by short dot points. The labels are Intent, Data, Status and Future, SHOULD come in that order, and Intent and Data MUST be present. A dot point is a short sentence of at most 25 words (NB004), and MAY have sub-bullets indented two spaces, each also a short sentence, which Future uses for its points, since every top-level Future dot point MUST open with `Overall` or `Phase <n>` and group its points as sub-bullets. `Overall` comes first and applies to every phase, and a notebook with no natural phases uses only `Overall`. It MUST NOT open with a label and a colon, restate another dot point, or state the flavour, the target or the runtime, which `init_env()` prints from `metadata.json` and the project at the head of every run.
 
 | Label | Required | Dot points |
 |---|---|---|
@@ -633,7 +633,7 @@ both run by `fab build`.
 | NB001 | The notebook is format 4 | R13 |
 | NB002 | The notebook has no outputs and no execution counts | R13 |
 | NB003 | The notebook has exactly one level-one title, `# <module> / <model> / <notebook>`, matching its directories | R13 |
-| NB004 | The title cell is the heading and then only a bold label of Intent, Data, Status or Future on its own line and dot points of at most 25 words, with Intent and Data present | R13 |
+| NB004 | The title cell is the heading and then only a bold label of Intent, Data, Status or Future on its own line and dot points of at most 25 words, each of which MAY have indented sub-bullets of the same length, with Intent and Data present and every top-level Future dot point opening with `Overall` or `Phase <n>` | R13 |
 | NB005 | The sections are the names of 6.7, in order, none deeper than level two, with Setup present | R13 |
 | NB006 | Every section cell is only its heading, with the link to its 6.7 subsection | R13 |
 | NB007 | A code cell has no magics, shell lines, absolute paths or literal secrets | R13 |

@@ -12,7 +12,9 @@ sensor:
   #####################################################################################
   # TODO: Enable with the stateful weewx_console_battery model once it is released and served by mlserver,
   #       restore model_version to influxdb tags_attributes and outputs to influxdb ignore_attributes,
-  #       and enable the update action in the automation below. A restart loses the model state.
+  #       uncomment the rest sensor below and the update action in the automation at the end of this file,
+  #       moving that action to its own automation triggered by a state change of the reported helper,
+  #       so the model is queried once per report. A restart loses the model state.
   #- platform: rest
   #  name: mlserver_weewx_console_battery_capacity_pct
   #  unique_id: mlserver_weewx_console_battery_capacity_pct
@@ -79,20 +81,17 @@ automation:
     alias: "Weather Station: Record console battery voltage report time"
     mode: queued
     triggers:
-      - trigger: state
-        entity_id: sensor.weatherstation_console_battery_voltage
-        not_to: [unavailable, unknown]
-      - trigger: event
-        event_type: state_reported
-        event_data:
-          entity_id: sensor.weatherstation_console_battery_voltage
+      - trigger: time_pattern
+        minutes: "/1"
+    conditions:
+      - condition: template
+        value_template: "{{ has_value('sensor.weatherstation_console_battery_voltage') }}"
     actions:
       - action: input_number.set_value
         target:
           entity_id: input_number.weatherstation_console_battery_reported
         data:
-          value: "{{ now().timestamp() | int }}"
-      # TODO: Enable with the rest sensor above, so the model is queried on every report.
+          value: "{{ as_timestamp(states.sensor.weatherstation_console_battery_voltage.last_reported) | int }}"
       #- action: homeassistant.update_entity
       #  target:
       #    entity_id: sensor.mlserver_weewx_console_battery_capacity_pct
