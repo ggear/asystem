@@ -191,7 +191,9 @@ class ModelProjectTest(unittest.TestCase):
         self.assertEqual("10.200.1951-SNAPSHOT", client.get_model_version("demo_calc", str(version)).tags["snapshot_version"])
         loaded = mlflow.pyfunc.load_model("models:/demo_calc@preview")
         self.assertEqual([2.0], list(loaded.predict({"demo_in_seconds": [1.0]})["demo_out_seconds"]))
-        columns = {column.name: column.required for column in loaded.metadata.get_input_schema().inputs}
+        input_schema = loaded.metadata.get_input_schema()
+        assert input_schema is not None
+        columns = {column.name: column.required for column in input_schema.inputs}
         self.assertEqual({"demo_in_seconds": True, "demo_extra_seconds": False}, columns)
         pulled = pull_model("demo_calc", "preview", join(root_dir, "pulled"), uri)
         assert pulled is not None
@@ -1049,7 +1051,9 @@ class PlotTest(unittest.TestCase):
         from workbench.plot import show_curves
 
         show_curves([("first", [1, 2], [3, 4], {"color": "black"}), ("second", [1, 2], [4, 3], {"linestyle": "--"})], "x", "y", band=(1.2, 1.8), band_label="band")
-        self.assertEqual(["band", "first", "second"], [text.get_text() for text in plt.gca().get_legend().get_texts()])
+        legend = plt.gca().get_legend()
+        assert legend is not None
+        self.assertEqual(["band", "first", "second"], [text.get_text() for text in legend.get_texts()])
 
     def test_an_error_plot_reports_the_verdict_against_the_limit(self):
         import matplotlib
