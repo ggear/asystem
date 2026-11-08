@@ -58,7 +58,7 @@ sensor:
     state_class: measurement
     unit_of_measurement: "%"
     timeout: 10
-    scan_interval: 3600
+    scan_interval: 300
 #######################################################################################
 input_number:
   #####################################################################################
@@ -78,8 +78,8 @@ input_text:
 #######################################################################################
 automation:
   #####################################################################################
-  - id: weatherstation_console_battery_reported_record
-    alias: "Weather Station: Record console battery voltage report time"
+  - id: weatherstation_console_battery_reported
+    alias: "Weather Station: Record console battery voltage report and query model"
     mode: queued
     triggers:
       - trigger: state
@@ -95,20 +95,6 @@ automation:
           entity_id: input_number.weatherstation_console_battery_reported
         data:
           value: "{{ now().timestamp() | int }}"
-  #####################################################################################
-  - id: weatherstation_console_battery_capacity_update
-    alias: "Weather Station: Query console battery capacity model"
-    mode: queued
-    triggers:
-      - trigger: state
-        entity_id: input_number.weatherstation_console_battery_reported
-      - trigger: time_pattern
-        minutes: "/5"
-    conditions:
-      - condition: template
-        value_template: >-
-          {{ has_value('sensor.weatherstation_console_battery_voltage') and has_value('input_number.weatherstation_console_battery_reported') }}
-    actions:
       - action: homeassistant.update_entity
         target:
           entity_id: sensor.mlserver_weewx_console_battery_capacity_pct
@@ -120,15 +106,16 @@ automation:
       - trigger: state
         entity_id: sensor.mlserver_weewx_console_battery_capacity_pct
         attribute: outputs
+    variables:
+      saved: >-
+        {{ trigger.to_state.attributes.outputs | default([]) | selectattr('name', 'eq', 'weewx_console_battery_state_out') | map(attribute='data') | first | default([]) | join(' ') }}
     conditions:
       - condition: template
-        value_template: >-
-          {{ trigger.to_state.attributes.outputs | default([]) | selectattr('name', 'eq', 'weewx_console_battery_state_out') | list | length > 0 }}
+        value_template: "{{ saved != '' }}"
     actions:
       - action: input_text.set_value
         target:
           entity_id: input_text.weatherstation_console_battery_model_state
         data:
-          value: >-
-            {{ (trigger.to_state.attributes.outputs | selectattr('name', 'eq', 'weewx_console_battery_state_out') | first).data | join(' ') }}
+          value: "{{ saved }}"
 #######################################################################################
