@@ -1157,7 +1157,7 @@ class NotebookLintTest(unittest.TestCase):
             self.assertEqual(["NB004"], self.rules(), source)
 
     def test_a_dot_point_may_have_indented_sub_bullets_which_are_also_kept_short(self):
-        base = "# demo / calc / run\n\n**Intent**\n- Outputs a calculation.\n\n**Data**\n- `golden` is the samples.\n\n**Future**\n- Overall the design holds.\n  - Keep it small.\n- Phase 1 is the build.\n  - Build it.\n  - Ship it.\n"
+        base = "# demo / calc / run\n\n**Intent**\n- Outputs a calculation.\n\n**Data**\n- `golden` is the samples.\n\n**Future**\n- Overall: the design holds:\n  - Keep it small.\n- Phase 1: the build:\n  - Build it.\n  - Ship it.\n"
         notebook = self.notebook()
         notebook["cells"][0]["source"] = base
         self.notebook(cells=notebook["cells"])

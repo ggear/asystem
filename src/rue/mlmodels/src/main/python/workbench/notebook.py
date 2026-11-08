@@ -260,8 +260,8 @@ def _lint_structure(cells, module, model, name):
             label = re.match(r"^\*\*(\w+)\*\*$", line)
             if label is not None:
                 future = label.group(1) == "Future"
-            elif future and line.startswith("- ") and not re.match(r"^- (Overall|Phase \d+) ", line):
-                findings.append(("NB004", f"a Future dot point must open with [Overall] or its phase as [Phase 1 ...] found [{line[:50]}]", index))
+            elif future and line.startswith("- ") and not re.match(r"^- (Overall|Phase \d+): ", line):
+                findings.append(("NB004", f"a Future dot point must open with [Overall:] or its phase as [Phase 1:] found [{line[:50]}]", index))
     sections = []
     for index, text in markdown:
         first = text.split("\n")[0]
