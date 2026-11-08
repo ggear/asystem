@@ -54,7 +54,8 @@
               "water_heating_turn_off_water_heater_booster",
               "water_heating_turn_off_water_heater_booster_fail_safe",
               "water_heating_turn_on_towel_rails",
-              "water_heating_turn_on_water_heater_booster"
+              "water_heating_turn_on_water_heater_booster",
+              "weather_station_query_console_battery_capacity_model"
             ]
           }
         ],
@@ -2788,6 +2789,7 @@
               "lounge_tv_plug_voltage",
               "rack_backup_plug_voltage",
               "server_lia_plug_voltage",
+              "statistics_weatherstation_console_battery_voltage_mean20",
               "weatherstation_console_battery_voltage"
             ]
           },
@@ -2803,6 +2805,24 @@
           }
         ],
         "measures": [
+          {
+            "key": "buffer_usage_ratio",
+            "kind": "float",
+            "unit": "",
+            "description": "Home Assistant value",
+            "persist": true,
+            "period": "",
+            "levels": null
+          },
+          {
+            "key": "source_value_valid",
+            "kind": "float",
+            "unit": "",
+            "description": "Home Assistant value",
+            "persist": true,
+            "period": "",
+            "levels": null
+          },
           {
             "key": "value",
             "kind": "float",

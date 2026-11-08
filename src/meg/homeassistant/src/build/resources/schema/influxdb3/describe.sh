@@ -571,7 +571,7 @@ UNION ALL
 SELECT
     'sensor__voltage'                AS relation,
     'entity_id*/unit_of_measurement' AS dimension,
-    1                                AS measures,
+    3                                AS measures,
     '<on-change>'                    AS cadence,
     count(*)                         AS rows,
     CAST(min(time) AS VARCHAR)       AS oldest,
@@ -1860,6 +1860,32 @@ WHERE
     AND column_name NOT IN ('entity_id', 'module', 'state', 'time')
 UNION ALL
 SELECT
+    'sensor__voltage'                                                        AS relation,
+    'buffer_usage_ratio'                                                     AS measure,
+    'float'                                                                  AS kind,
+    '-'                                                                      AS unit,
+    '<on-change>'                                                            AS period,
+    count(buffer_usage_ratio)                                                AS rows,
+    CAST(min(time) FILTER (WHERE buffer_usage_ratio IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE buffer_usage_ratio IS NOT NULL) AS VARCHAR) AS newest
+FROM sensor__voltage
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
+    'sensor__voltage'                                                        AS relation,
+    'source_value_valid'                                                     AS measure,
+    'float'                                                                  AS kind,
+    '-'                                                                      AS unit,
+    '<on-change>'                                                            AS period,
+    count(source_value_valid)                                                AS rows,
+    CAST(min(time) FILTER (WHERE source_value_valid IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE source_value_valid IS NOT NULL) AS VARCHAR) AS newest
+FROM sensor__voltage
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
     'sensor__voltage'                                           AS relation,
     'value'                                                     AS measure,
     'float'                                                     AS kind,
@@ -1884,7 +1910,10 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'sensor__voltage'
-    AND column_name NOT IN ('entity_id', 'module', 'time', 'unit_of_measurement', 'value')
+    AND column_name NOT IN (
+        'buffer_usage_ratio', 'entity_id', 'module', 'source_value_valid', 'time',
+        'unit_of_measurement', 'value'
+    )
 UNION ALL
 SELECT
     'sensor__wind_speed'                                        AS relation,

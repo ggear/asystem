@@ -16,16 +16,21 @@
 #     lounge_tv_plug_voltage,
 #     rack_backup_plug_voltage,
 #     server_lia_plug_voltage,
+#     statistics_weatherstation_console_battery_voltage_mean20,
 #     weatherstation_console_battery_voltage]
 #   tag unit_of_measurement [Home Assistant unit_of_measurement:
 #     %,
 #     V,
 #     mV]
+#   field buffer_usage_ratio - <on-change> [Home Assistant value]
+#   field source_value_valid - <on-change> [Home Assistant value]
 #   field value - <on-change> [Home Assistant value]
 
 sensor__voltage,
   module=homeassistant,
   entity_id=<string>,
   unit_of_measurement=<string>
+    buffer_usage_ratio=<float>,
+    source_value_valid=<float>,
     value=<float>
   <timestamp>
