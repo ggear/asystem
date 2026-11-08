@@ -10,55 +10,58 @@ sensor:
     radius: 30
     url: https://api.emergency.wa.gov.au/v1/rss/incidents?region=METRO%20NORTH%20EAST
   #####################################################################################
-  - platform: rest
-    name: mlserver_weewx_console_battery_capacity_pct
-    unique_id: mlserver_weewx_console_battery_capacity_pct
-    resource: https://mlserver.proxy.janeandgraham.com/v2/models/weewx_console_battery_preview/infer
-    method: POST
-    headers:
-      Content-Type: application/json
-    payload: |-
-      {
-        "inputs": [
-          {
-            "name": "weatherstation_console_battery_voltage",
-            "datatype": "FP64",
-            "shape": [1],
-            "data": [{{ states('sensor.weatherstation_console_battery_voltage') | float }}]
-          },
-          {
-            "name": "weewx_console_battery_reported_epoch_seconds",
-            "datatype": "FP64",
-            "shape": [1],
-            "data": [{{ states('input_number.weatherstation_console_battery_reported') | float }}]
-          },
-          {
-            "name": "weewx_console_battery_clock_epoch_seconds",
-            "datatype": "FP64",
-            "shape": [1],
-            "data": [{{ now().timestamp() | int }}]
-          }
-          {%- set saved = states('input_text.weatherstation_console_battery_model_state').split() %}
-          {%- if saved | length == 3 %},
-          {
-            "name": "weewx_console_battery_state_in",
-            "datatype": "FP64",
-            "shape": [3],
-            "data": [{{ saved | join(', ') }}]
-          }
-          {%- endif %}
-        ]
-      }
-    value_template: >-
-      {{ (value_json.outputs | selectattr('name', 'eq', 'weewx_console_battery_capacity_pct') | first).data[0] }}
-    json_attributes:
-      - model_version
-      - outputs
-    device_class: battery
-    state_class: measurement
-    unit_of_measurement: "%"
-    timeout: 10
-    scan_interval: 300
+  # TODO: Enable with the stateful weewx_console_battery model once it is released and served by mlserver,
+  #       restore model_version to influxdb tags_attributes and outputs to influxdb ignore_attributes,
+  #       and enable the update action in the automation below. A restart loses the model state.
+  #- platform: rest
+  #  name: mlserver_weewx_console_battery_capacity_pct
+  #  unique_id: mlserver_weewx_console_battery_capacity_pct
+  #  resource: https://mlserver.proxy.janeandgraham.com/v2/models/weewx_console_battery/infer
+  #  method: POST
+  #  headers:
+  #    Content-Type: application/json
+  #  payload: |-
+  #    {
+  #      "inputs": [
+  #        {
+  #          "name": "weatherstation_console_battery_voltage",
+  #          "datatype": "FP64",
+  #          "shape": [1],
+  #          "data": [{{ states('sensor.weatherstation_console_battery_voltage') | float }}]
+  #        },
+  #        {
+  #          "name": "weewx_console_battery_reported_epoch_seconds",
+  #          "datatype": "FP64",
+  #          "shape": [1],
+  #          "data": [{{ states('input_number.weatherstation_console_battery_reported') | float }}]
+  #        },
+  #        {
+  #          "name": "weewx_console_battery_clock_epoch_seconds",
+  #          "datatype": "FP64",
+  #          "shape": [1],
+  #          "data": [{{ now().timestamp() | int }}]
+  #        }
+  #        {%- set saved = state_attr('sensor.mlserver_weewx_console_battery_capacity_pct', 'outputs') | default([], true) | selectattr('name', 'eq', 'weewx_console_battery_state_out') | map(attribute='data') | first | default([], true) %}
+  #        {%- if saved | length == 4 %},
+  #        {
+  #          "name": "weewx_console_battery_state_in",
+  #          "datatype": "FP64",
+  #          "shape": [4],
+  #          "data": [{{ saved | join(', ') }}]
+  #        }
+  #        {%- endif %}
+  #      ]
+  #    }
+  #  value_template: >-
+  #    {{ (value_json.outputs | selectattr('name', 'eq', 'weewx_console_battery_capacity_pct') | first).data[0] }}
+  #  json_attributes:
+  #    - model_version
+  #    - outputs
+  #  device_class: battery
+  #  state_class: measurement
+  #  unit_of_measurement: "%"
+  #  timeout: 10
+  #  scan_interval: 300
 #######################################################################################
 input_number:
   #####################################################################################
@@ -70,16 +73,10 @@ input_number:
     mode: box
     unit_of_measurement: s
 #######################################################################################
-input_text:
-  #####################################################################################
-  weatherstation_console_battery_model_state:
-    name: Console Battery Model State
-    max: 100
-#######################################################################################
 automation:
   #####################################################################################
   - id: weatherstation_console_battery_reported
-    alias: "Weather Station: Record console battery voltage report and query model"
+    alias: "Weather Station: Record console battery voltage report time"
     mode: queued
     triggers:
       - trigger: state
@@ -95,27 +92,8 @@ automation:
           entity_id: input_number.weatherstation_console_battery_reported
         data:
           value: "{{ now().timestamp() | int }}"
-      - action: homeassistant.update_entity
-        target:
-          entity_id: sensor.mlserver_weewx_console_battery_capacity_pct
-  #####################################################################################
-  - id: weatherstation_console_battery_model_state_save
-    alias: "Weather Station: Save console battery model state"
-    mode: queued
-    triggers:
-      - trigger: state
-        entity_id: sensor.mlserver_weewx_console_battery_capacity_pct
-        attribute: outputs
-    variables:
-      saved: >-
-        {{ trigger.to_state.attributes.outputs | default([]) | selectattr('name', 'eq', 'weewx_console_battery_state_out') | map(attribute='data') | first | default([]) | join(' ') }}
-    conditions:
-      - condition: template
-        value_template: "{{ saved != '' }}"
-    actions:
-      - action: input_text.set_value
-        target:
-          entity_id: input_text.weatherstation_console_battery_model_state
-        data:
-          value: "{{ saved }}"
+      # TODO: Enable with the rest sensor above, so the model is queried on every report.
+      #- action: homeassistant.update_entity
+      #  target:
+      #    entity_id: sensor.mlserver_weewx_console_battery_capacity_pct
 #######################################################################################

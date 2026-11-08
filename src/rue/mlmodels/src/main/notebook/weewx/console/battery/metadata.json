@@ -2,7 +2,7 @@
   "schema": 2,
   "version": "10.200.1996-SNAPSHOT",
   "content_sha256": "a0c9d247fa6563a268e2a25130b462d662f3354d36fc18ec910f29782aa380c7",
-  "inputs_sha256": "1cc625fde5d5f0a2f966f4e2015c6dc069beea552fdafc7bd65b09262effd40c",
+  "inputs_sha256": "e50419cbbd6a058e7062490c274592833667f4e98df518adcfb3903189680cff",
   "target": {"kind": "served"},
   "release": null
 }
