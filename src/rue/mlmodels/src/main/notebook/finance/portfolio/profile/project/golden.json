@@ -8,62 +8,17 @@
           "request": {
             "id": "s1-0",
             "inputs": [
-              {
-                "name": "finance_portfolio_profile_risky_share_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  0.0
-                ]
-              },
-              {
-                "name": "finance_portfolio_profile_withdrawal_rate_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  2.0
-                ]
-              }
+              {"name": "finance_portfolio_profile_risky_share_pct", "datatype": "FP64", "shape": [1], "data": [0.0]},
+              {"name": "finance_portfolio_profile_withdrawal_rate_pct", "datatype": "FP64", "shape": [1], "data": [2.0]}
             ]
           },
           "response": {
             "model_name": "finance_portfolio_profile",
             "id": "s1-0",
             "outputs": [
-              {
-                "name": "finance_portfolio_profile_return_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  2.0
-                ]
-              },
-              {
-                "name": "finance_portfolio_profile_volatility_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  5.0
-                ]
-              },
-              {
-                "name": "finance_portfolio_profile_shortfall_probability_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  3.2746738378682614
-                ]
-              }
+              {"name": "finance_portfolio_profile_return_pct", "datatype": "FP64", "shape": [1], "data": [2.0]},
+              {"name": "finance_portfolio_profile_volatility_pct", "datatype": "FP64", "shape": [1], "data": [5.0]},
+              {"name": "finance_portfolio_profile_shortfall_probability_pct", "datatype": "FP64", "shape": [1], "data": [3.2746738378682614]}
             ]
           }
         },
@@ -71,62 +26,17 @@
           "request": {
             "id": "s1-1",
             "inputs": [
-              {
-                "name": "finance_portfolio_profile_risky_share_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  25.0
-                ]
-              },
-              {
-                "name": "finance_portfolio_profile_withdrawal_rate_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  3.0
-                ]
-              }
+              {"name": "finance_portfolio_profile_risky_share_pct", "datatype": "FP64", "shape": [1], "data": [25.0]},
+              {"name": "finance_portfolio_profile_withdrawal_rate_pct", "datatype": "FP64", "shape": [1], "data": [3.0]}
             ]
           },
           "response": {
             "model_name": "finance_portfolio_profile",
             "id": "s1-1",
             "outputs": [
-              {
-                "name": "finance_portfolio_profile_return_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  3.0
-                ]
-              },
-              {
-                "name": "finance_portfolio_profile_volatility_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  5.809475019311125
-                ]
-              },
-              {
-                "name": "finance_portfolio_profile_shortfall_probability_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  5.54404631054094
-                ]
-              }
+              {"name": "finance_portfolio_profile_return_pct", "datatype": "FP64", "shape": [1], "data": [3.0]},
+              {"name": "finance_portfolio_profile_volatility_pct", "datatype": "FP64", "shape": [1], "data": [5.809475019311125]},
+              {"name": "finance_portfolio_profile_shortfall_probability_pct", "datatype": "FP64", "shape": [1], "data": [5.54404631054094]}
             ]
           }
         },
@@ -134,62 +44,17 @@
           "request": {
             "id": "s1-2",
             "inputs": [
-              {
-                "name": "finance_portfolio_profile_risky_share_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  50.0
-                ]
-              },
-              {
-                "name": "finance_portfolio_profile_withdrawal_rate_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  4.0
-                ]
-              }
+              {"name": "finance_portfolio_profile_risky_share_pct", "datatype": "FP64", "shape": [1], "data": [50.0]},
+              {"name": "finance_portfolio_profile_withdrawal_rate_pct", "datatype": "FP64", "shape": [1], "data": [4.0]}
             ]
           },
           "response": {
             "model_name": "finance_portfolio_profile",
             "id": "s1-2",
             "outputs": [
-              {
-                "name": "finance_portfolio_profile_return_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  4.0
-                ]
-              },
-              {
-                "name": "finance_portfolio_profile_volatility_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  8.366600265340756
-                ]
-              },
-              {
-                "name": "finance_portfolio_profile_shortfall_probability_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  11.920914854400275
-                ]
-              }
+              {"name": "finance_portfolio_profile_return_pct", "datatype": "FP64", "shape": [1], "data": [4.0]},
+              {"name": "finance_portfolio_profile_volatility_pct", "datatype": "FP64", "shape": [1], "data": [8.366600265340756]},
+              {"name": "finance_portfolio_profile_shortfall_probability_pct", "datatype": "FP64", "shape": [1], "data": [11.920914854400275]}
             ]
           }
         },
@@ -197,62 +62,17 @@
           "request": {
             "id": "s1-3",
             "inputs": [
-              {
-                "name": "finance_portfolio_profile_risky_share_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  75.0
-                ]
-              },
-              {
-                "name": "finance_portfolio_profile_withdrawal_rate_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  5.0
-                ]
-              }
+              {"name": "finance_portfolio_profile_risky_share_pct", "datatype": "FP64", "shape": [1], "data": [75.0]},
+              {"name": "finance_portfolio_profile_withdrawal_rate_pct", "datatype": "FP64", "shape": [1], "data": [5.0]}
             ]
           },
           "response": {
             "model_name": "finance_portfolio_profile",
             "id": "s1-3",
             "outputs": [
-              {
-                "name": "finance_portfolio_profile_return_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  5.0
-                ]
-              },
-              {
-                "name": "finance_portfolio_profile_volatility_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  11.565033506220377
-                ]
-              },
-              {
-                "name": "finance_portfolio_profile_shortfall_probability_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  25.734585735323716
-                ]
-              }
+              {"name": "finance_portfolio_profile_return_pct", "datatype": "FP64", "shape": [1], "data": [5.0]},
+              {"name": "finance_portfolio_profile_volatility_pct", "datatype": "FP64", "shape": [1], "data": [11.565033506220377]},
+              {"name": "finance_portfolio_profile_shortfall_probability_pct", "datatype": "FP64", "shape": [1], "data": [25.734585735323716]}
             ]
           }
         },
@@ -260,62 +80,17 @@
           "request": {
             "id": "s1-4",
             "inputs": [
-              {
-                "name": "finance_portfolio_profile_risky_share_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  100.0
-                ]
-              },
-              {
-                "name": "finance_portfolio_profile_withdrawal_rate_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  6.0
-                ]
-              }
+              {"name": "finance_portfolio_profile_risky_share_pct", "datatype": "FP64", "shape": [1], "data": [100.0]},
+              {"name": "finance_portfolio_profile_withdrawal_rate_pct", "datatype": "FP64", "shape": [1], "data": [6.0]}
             ]
           },
           "response": {
             "model_name": "finance_portfolio_profile",
             "id": "s1-4",
             "outputs": [
-              {
-                "name": "finance_portfolio_profile_return_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  6.0
-                ]
-              },
-              {
-                "name": "finance_portfolio_profile_volatility_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  15.0
-                ]
-              },
-              {
-                "name": "finance_portfolio_profile_shortfall_probability_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  47.97421954239223
-                ]
-              }
+              {"name": "finance_portfolio_profile_return_pct", "datatype": "FP64", "shape": [1], "data": [6.0]},
+              {"name": "finance_portfolio_profile_volatility_pct", "datatype": "FP64", "shape": [1], "data": [15.0]},
+              {"name": "finance_portfolio_profile_shortfall_probability_pct", "datatype": "FP64", "shape": [1], "data": [47.97421954239223]}
             ]
           }
         },
@@ -323,16 +98,7 @@
           "request": {
             "id": "s1-5",
             "inputs": [
-              {
-                "name": "finance_portfolio_profile_withdrawal_rate_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  2.0
-                ]
-              }
+              {"name": "finance_portfolio_profile_withdrawal_rate_pct", "datatype": "FP64", "shape": [1], "data": [2.0]}
             ]
           },
           "error": "signature"

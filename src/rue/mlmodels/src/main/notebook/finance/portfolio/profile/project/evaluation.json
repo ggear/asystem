@@ -4,30 +4,14 @@
   "budget": 0.6489905607020179,
   "datasets": {
     "validation": [
-      {
-        "path": "2026-11-06_11-08-32/portfolio_profile_validation_2026-11-05_2026-11-05.csv",
-        "sha256": "6e1fa3c0cd0505cc42dad1c6c5af100f71dbbe0500631a1ba96a163ef7e9aa11"
-      }
+      {"path": "2026-11-06_11-08-32/portfolio_profile_validation_2026-11-05_2026-11-05.csv", "sha256": "6e1fa3c0cd0505cc42dad1c6c5af100f71dbbe0500631a1ba96a163ef7e9aa11"}
     ],
     "backtest": [
-      {
-        "path": "2026-11-06_11-08-32/portfolio_profile_backtest_2026-11-05_2026-11-05.csv",
-        "sha256": "9214b5e8b008f1f4b6566d5becf7aa05b744f789b50086735e163fa0b3493a29"
-      }
+      {"path": "2026-11-06_11-08-32/portfolio_profile_backtest_2026-11-05_2026-11-05.csv", "sha256": "9214b5e8b008f1f4b6566d5becf7aa05b744f789b50086735e163fa0b3493a29"}
     ]
   },
   "checks": [
-    {
-      "split": "validation",
-      "output": "finance_portfolio_profile_return_pct",
-      "name": "rmse",
-      "value": 0.0,
-      "limit": 0.05,
-      "direction": "max",
-      "gate": true,
-      "passed": true,
-      "budget": 0.0
-    },
+    {"split": "validation", "output": "finance_portfolio_profile_return_pct", "name": "rmse", "value": 0.0, "limit": 0.05, "direction": "max", "gate": true, "passed": true, "budget": 0.0},
     {
       "split": "validation",
       "output": "finance_portfolio_profile_volatility_pct",
@@ -50,17 +34,7 @@
       "passed": true,
       "budget": 0.5174055259600104
     },
-    {
-      "split": "backtest",
-      "output": "finance_portfolio_profile_return_pct",
-      "name": "rmse",
-      "value": 0.0,
-      "limit": 0.05,
-      "direction": "max",
-      "gate": true,
-      "passed": true,
-      "budget": 0.0
-    },
+    {"split": "backtest", "output": "finance_portfolio_profile_return_pct", "name": "rmse", "value": 0.0, "limit": 0.05, "direction": "max", "gate": true, "passed": true, "budget": 0.0},
     {
       "split": "backtest",
       "output": "finance_portfolio_profile_volatility_pct",

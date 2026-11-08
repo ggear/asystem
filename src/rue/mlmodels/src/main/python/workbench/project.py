@@ -24,8 +24,8 @@ def provenance(source, trained_on, paths, notes="", implementation=None, noteboo
     return document
 
 
-def record_project(workspace, project_dir, targets, notebook_dir=NOTEBOOK_DIR, pins_path=PINS_PATH, version_path=VERSION_PATH):
-    return record_workspace_project(os.path.join(notebook_dir, workspace), project_dir, targets, pins_path, version_path)
+def record_project(workspace, project_dir, target, notebook_dir=NOTEBOOK_DIR, pins_path=PINS_PATH, version_path=VERSION_PATH):
+    return record_workspace_project(os.path.join(notebook_dir, workspace), project_dir, target, pins_path, version_path)
 
 
 def load_signature(workspace, notebook_dir=NOTEBOOK_DIR):

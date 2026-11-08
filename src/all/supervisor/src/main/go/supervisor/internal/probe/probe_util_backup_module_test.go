@@ -101,3 +101,15 @@ func TestProbeUtilBackupModule_LockBackupModule(t *testing.T) {
 		t.Errorf("lock: got first [%t] second [%t] reentrant [%t] afterRelease [%t] held [%s] want true false true true mod", first, second, reentrant, afterRelease, held)
 	}
 }
+
+func TestProbeUtilBackupModule_LockBackupModuleRefusesWhenTheLockCannotBeCreated(t *testing.T) {
+	t.Setenv(moduleLockHeldVariable, "")
+	blocker := filepath.Join(t.TempDir(), "blocker")
+	if err := os.WriteFile(blocker, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var stderr bytes.Buffer
+	if _, locked := lockBackupModule(&stderr, "mod", filepath.Join(blocker, "mod", "1.0"), time.Second); locked {
+		t.Errorf("lock: got locked [%t] want false", locked)
+	}
+}

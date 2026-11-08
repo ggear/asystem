@@ -33,7 +33,7 @@ def run_notebook(workspace_dir, output_dir, register, pins_path, source_dir):
                     heading = SECTION.match(cell.source) if cell.cell_type == "markdown" else None
                     if heading:
                         stages.close()
-                        stages.enter_context(stage(heading.group(1).lower()))
+                        stages.enter_context(stage(heading.group(1).split(" (")[0].lower()))
                     elif cell.cell_type == "code":
                         client.execute_cell(cell, index)
         finally:

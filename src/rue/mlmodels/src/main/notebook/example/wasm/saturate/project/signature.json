@@ -2,36 +2,21 @@
   "schema": 1,
   "name": "example_wasm_saturate",
   "platform": "mlserver",
-  "parameters": {
-    "signature_version": 1,
-    "state": []
-  },
+  "parameters": {"signature_version": 1, "state": []},
   "inputs": [
     {
       "name": "example_saturate_in",
       "datatype": "FP64",
-      "shape": [
-        1
-      ],
-      "parameters": {
-        "unit": "none",
-        "required": true,
-        "description": "A number to squash."
-      }
+      "shape": [1],
+      "parameters": {"unit": "none", "required": true, "description": "A number to squash."}
     }
   ],
   "outputs": [
     {
       "name": "example_saturate_out",
       "datatype": "FP64",
-      "shape": [
-        1
-      ],
-      "parameters": {
-        "unit": "none",
-        "required": true,
-        "description": "The fitted height times the hyperbolic tangent of the fitted rate times the input."
-      }
+      "shape": [1],
+      "parameters": {"unit": "none", "required": true, "description": "The fitted height times the hyperbolic tangent of the fitted rate times the input."}
     }
   ]
 }

@@ -2,36 +2,21 @@
   "schema": 1,
   "name": "example_onnx_linear",
   "platform": "mlserver",
-  "parameters": {
-    "signature_version": 1,
-    "state": []
-  },
+  "parameters": {"signature_version": 1, "state": []},
   "inputs": [
     {
       "name": "example_onnx_in",
       "datatype": "FP64",
-      "shape": [
-        1
-      ],
-      "parameters": {
-        "unit": "none",
-        "required": true,
-        "description": "A number to scale."
-      }
+      "shape": [1],
+      "parameters": {"unit": "none", "required": true, "description": "A number to scale."}
     }
   ],
   "outputs": [
     {
       "name": "example_onnx_out",
       "datatype": "FP64",
-      "shape": [
-        1
-      ],
-      "parameters": {
-        "unit": "none",
-        "required": true,
-        "description": "The input scaled by the fitted gain plus the fitted offset."
-      }
+      "shape": [1],
+      "parameters": {"unit": "none", "required": true, "description": "The input scaled by the fitted gain plus the fitted offset."}
     }
   ]
 }

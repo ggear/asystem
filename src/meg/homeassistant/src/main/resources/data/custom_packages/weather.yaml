@@ -9,4 +9,82 @@ sensor:
     name: DFES Incidents Metro South East
     radius: 30
     url: https://api.emergency.wa.gov.au/v1/rss/incidents?region=METRO%20NORTH%20EAST
+  #####################################################################################
+  - platform: statistics
+    name: statistics_weatherstation_console_battery_voltage_mean20
+    unique_id: statistics_weatherstation_console_battery_voltage_mean20
+    entity_id: sensor.weatherstation_console_battery_voltage
+    state_characteristic: mean
+    sampling_size: 20
+    precision: 3
+  #####################################################################################
+  - platform: rest
+    name: mlserver_weewx_console_battery_capacity_pct
+    unique_id: mlserver_weewx_console_battery_capacity_pct
+    resource: https://mlserver.proxy.janeandgraham.com/v2/models/weewx_console_battery_preview/infer
+    method: POST
+    headers:
+      Content-Type: application/json
+    payload: |-
+      {
+        "inputs": [
+          {
+            "name": "weatherstation_console_battery_voltage",
+            "datatype": "FP64",
+            "shape": [1],
+            "data": [{{ states('sensor.weatherstation_console_battery_voltage') | float }}]
+          }
+          {%- if has_value('sensor.template_weatherstation_console_battery_voltage_mean20') %},
+          {
+            "name": "weatherstation_console_battery_voltage_mean20",
+            "datatype": "FP64",
+            "shape": [1],
+            "data": [{{ states('sensor.template_weatherstation_console_battery_voltage_mean20') | float }}]
+          }
+          {%- endif %}
+        ]
+      }
+    value_template: >-
+      {{ (value_json.outputs | selectattr('name', 'eq', 'weewx_console_battery_capacity_pct') | first).data[0] }}
+    json_attributes:
+      - model_name
+      - model_version
+    device_class: battery
+    state_class: measurement
+    unit_of_measurement: "%"
+    timeout: 10
+    scan_interval: 3600
+#######################################################################################
+template:
+  #####################################################################################
+  - sensor:
+      #################################################################################
+      - unique_id: weatherstation_console_battery_voltage_mean20
+        default_entity_id: sensor.template_weatherstation_console_battery_voltage_mean20
+        device_class: voltage
+        state_class: measurement
+        unit_of_measurement: V
+        availability: >-
+          {{ state_attr('sensor.statistics_weatherstation_console_battery_voltage_mean20', 'buffer_usage_ratio') | float(None) >= 1 }}
+        state: >-
+          {{ states('sensor.statistics_weatherstation_console_battery_voltage_mean20') | float(None) }}
+#######################################################################################
+automation:
+  #####################################################################################
+  - id: weatherstation_console_battery_capacity_update
+    alias: "Weather Station: Query console battery capacity model"
+    mode: queued
+    triggers:
+      - trigger: state
+        entity_id: sensor.statistics_weatherstation_console_battery_voltage_mean20
+        not_from: [unavailable, unknown]
+        not_to: [unavailable, unknown]
+    conditions:
+      - condition: template
+        value_template: >-
+          {{ has_value('sensor.weatherstation_console_battery_voltage') and trigger.from_state.state != trigger.to_state.state }}
+    actions:
+      - action: homeassistant.update_entity
+        target:
+          entity_id: sensor.mlserver_weewx_console_battery_capacity_pct
 #######################################################################################

@@ -1,39 +1,20 @@
 {
-  "schema": 1,
+  "schema": 2,
   "name": "example_wasm_saturate",
   "flavour": "wasm",
-  "signature_version": 1,
-  "runtime": {
-    "wasm": [
-      "tanh"
-    ]
-  },
+  "model": "model.wasm",
+  "runtime": {"wasm": ["tanh"]},
   "provenance": {
     "source": "manual",
     "trained_on": "synthetic curve, training split",
-    "inputs": [
-      "example/wasm/saturate/data/training/2026-11-04_19-52-47/wasm_saturate_training_2026-11-03_2026-11-03.csv",
-      "example/wasm/saturate/data/golden/2026-11-04_19-52-47/wasm_saturate_golden.csv"
-    ],
+    "inputs": ["example/wasm/saturate/data/training/2026-11-04_19-52-47/wasm_saturate_training_2026-11-03_2026-11-03.csv", "example/wasm/saturate/data/golden/2026-11-04_19-52-47/wasm_saturate_golden.csv"],
     "notes": "least squares tanh curve, height and rate built into the module",
     "implementation": "WebAssembly traced from the fitted Python function by workbench.wasm.trace and built by build_wasm, importing tanh from asystem_math"
   },
   "files": {
-    "signature": {
-      "path": "signature.json",
-      "sha256": "e04d91e53d643b674d7e832e79ee18fec095b223ecc89702e82b1f567a92787a"
-    },
-    "golden": {
-      "path": "golden.json",
-      "sha256": "3e27d9fddeb6627ad980bdee94d86d7636464af0478c54542f6e189c2051aad1"
-    },
-    "evaluation": {
-      "path": "evaluation.json",
-      "sha256": "c5a454f799cf084139376451ce21892f01de5bdb776cc961dfd57f452d78bf9a"
-    },
-    "model": {
-      "path": "model.wasm",
-      "sha256": "fa18cbf7d18b08da974a72f165d88948df523dbc12cf7d45bd281e0347b0ec25"
-    }
+    "signature.json": "69ec46d126f9e19e7bfad42c13917bc7df0ff741af8fa209e1ba7846066b4ce9",
+    "golden.json": "1e296dbc7725e7413b94cb13407d710f10a86bc6b6737869c55527ab91a37b96",
+    "evaluation.json": "e1e5a135c4734138400d752bdee7975f44a4e05794ba517a84c2035ac3ad1a0b",
+    "model.wasm": "fa18cbf7d18b08da974a72f165d88948df523dbc12cf7d45bd281e0347b0ec25"
   }
 }

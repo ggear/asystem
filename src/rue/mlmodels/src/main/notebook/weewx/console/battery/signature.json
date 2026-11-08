@@ -2,21 +2,22 @@
   "schema": 1,
   "name": "weewx_console_battery",
   "platform": "mlserver",
-  "parameters": {
-    "signature_version": 1,
-    "state": []
-  },
+  "parameters": {"signature_version": 1, "state": []},
   "inputs": [
     {
       "name": "weatherstation_console_battery_voltage",
       "datatype": "FP64",
-      "shape": [
-        1
-      ],
+      "shape": [1],
+      "parameters": {"unit": "volts", "required": true, "description": "Voltage of the weather station console's battery as Home Assistant reports it."}
+    },
+    {
+      "name": "weatherstation_console_battery_voltage_mean20",
+      "datatype": "FP64",
+      "shape": [1],
       "parameters": {
         "unit": "volts",
-        "required": true,
-        "description": "Voltage of the weather station console's battery as Home Assistant reports it."
+        "required": false,
+        "description": "Mean of the last 20 voltage readings, from the Home Assistant statistics sensor of this name (sampling_size 20, mean). Leave it absent until the sensor exists and has collected 20 readings. When present the model maps it in place of the raw voltage and skips the plateau shelf."
       }
     }
   ],
@@ -24,14 +25,8 @@
     {
       "name": "weewx_console_battery_capacity_pct",
       "datatype": "INT64",
-      "shape": [
-        1
-      ],
-      "parameters": {
-        "unit": "percent",
-        "required": true,
-        "description": "Estimated battery capacity left, in steps of 5, 0 to 100."
-      }
+      "shape": [1],
+      "parameters": {"unit": "percent", "required": true, "description": "Estimated battery capacity left, in steps of 5, 0 to 100, one level across the 3.77 to 3.83 V plateau."}
     }
   ]
 }

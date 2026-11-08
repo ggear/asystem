@@ -1,25 +1,8 @@
 {
-  "schema": 1,
-  "targets": [
-    {
-      "kind": "served"
-    },
-    {
-      "kind": "embedded",
-      "language": "python"
-    }
-  ],
-  "passed": [],
-  "runtime": {
-    "python": [
-      "polars"
-    ]
-  },
-  "snapshot_version": "10.200.1991-SNAPSHOT",
-  "released_version": null,
-  "released_by": null,
-  "released_at": null,
-  "released_signature": null,
-  "content_sha256": "5d71015d377d171e9101d156b196e0086a45e3c08248198f2c245b20beb31869",
-  "inputs_sha256": "2562b3a2c51f18b5a0e9969b0fef97c038ea392f3870a1b29a6552e9884fd6e7"
+  "schema": 2,
+  "version": "10.200.1991-SNAPSHOT",
+  "content_sha256": "d3e4b7ccd08caa62bab6c0479bec362b771ca3eed0509df561eb6c3affc3ab37",
+  "inputs_sha256": "b2112741fdc31ce06bf83df31a9bba4e4fee2f724b3d7bda69299cc6e50402ef",
+  "target": {"kind": "embedded", "language": "python"},
+  "release": null
 }

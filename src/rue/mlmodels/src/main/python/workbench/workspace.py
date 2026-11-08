@@ -28,7 +28,7 @@ def lint_workspace(notebook_dir):
     models = [name for name in PROJECT_MODEL_FILES.values() if isdir(notebook_dir) and name in listdir(notebook_dir)]
     if len(models) > 1:
         findings.append(("WS007", f"the directory must hold at most one model file, found {models}"))
-    allowed = {WORKSPACE_NOTEBOOK, "plan.md", METADATA_FILE, SIGNATURE_FILE, PROJECT_DIR, "data", *REQUIREMENT_FILES.values(), *PROJECT_MODEL_FILES.values(), *WORKSPACE_IGNORED}
+    allowed = {WORKSPACE_NOTEBOOK, METADATA_FILE, SIGNATURE_FILE, PROJECT_DIR, "data", *REQUIREMENT_FILES.values(), *PROJECT_MODEL_FILES.values(), *WORKSPACE_IGNORED}
     if isdir(notebook_dir):
         findings.extend(("WS003", f"[{name}] is not one of {sorted(allowed)}") for name in sorted(listdir(notebook_dir)) if name not in allowed)
     data_dir = join(notebook_dir, "data")

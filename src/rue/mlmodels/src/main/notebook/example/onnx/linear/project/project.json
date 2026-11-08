@@ -1,34 +1,19 @@
 {
-  "schema": 1,
+  "schema": 2,
   "name": "example_onnx_linear",
   "flavour": "onnx",
-  "signature_version": 1,
+  "model": "model.onnx",
   "provenance": {
     "source": "manual",
     "trained_on": "synthetic line, training split",
-    "inputs": [
-      "example/onnx/linear/data/training/2026-11-03_16-40-53/onnx_linear_training_2026-11-03_2026-11-03.csv",
-      "example/onnx/linear/data/golden/2026-11-03_16-40-53/onnx_linear_golden.csv"
-    ],
+    "inputs": ["example/onnx/linear/data/training/2026-11-03_16-40-53/onnx_linear_training_2026-11-03_2026-11-03.csv", "example/onnx/linear/data/golden/2026-11-03_16-40-53/onnx_linear_golden.csv"],
     "notes": "least squares line, gain and offset built into the graph",
     "implementation": "onnx.helper graph, opset 21, ir version 10"
   },
   "files": {
-    "signature": {
-      "path": "signature.json",
-      "sha256": "e0ecda4e46e300cc9d38c82a137dad46d2adec6b62f89b01ddc11ecccb10230a"
-    },
-    "golden": {
-      "path": "golden.json",
-      "sha256": "c1485450f852c811369dd4c5d2591a9d7b7f81e5bd954ccddd0a4155809cccbe"
-    },
-    "evaluation": {
-      "path": "evaluation.json",
-      "sha256": "5a585586140eb59f8d2f0c4f9230c7e9d2e52758147fcef53bf0b86e269030d6"
-    },
-    "model": {
-      "path": "model.onnx",
-      "sha256": "2cd8d1696ddfd5b1d26adbe7b6f2f252a545a88e5b90df2b1f95a31df7e9e1cc"
-    }
+    "signature.json": "f32a8b4b4d410c40a030f7dfec07775a434effe08bea61406f5d1e91a7755fd3",
+    "golden.json": "a96c2637d4f2d44230e60928b5852f84885dcbf2e6300046b0d0a4a71c08d263",
+    "evaluation.json": "96868ddf172d73647072c3c17d140d77e8400a591c8e42103db703456338e6b5",
+    "model.onnx": "2cd8d1696ddfd5b1d26adbe7b6f2f252a545a88e5b90df2b1f95a31df7e9e1cc"
   }
 }

@@ -379,7 +379,7 @@ class ReplayRunnerTest(unittest.TestCase):
         manifest_path = join(project_dir, "project.json")
         with open(manifest_path) as manifest_file:
             manifest = json.load(manifest_file)
-        manifest["files"]["golden"]["sha256"] = file_sha256(golden_path)
+        manifest["files"]["golden.json"] = file_sha256(golden_path)
         with open(manifest_path, "w") as manifest_file:
             json.dump(manifest, manifest_file)
 

@@ -65,12 +65,10 @@ func BackupModuleRun(ctx context.Context, request BackupModuleRequest, stdout, s
 		"BACKUP_SOURCE_PATH=" + source,
 	}}
 	defined := map[string]bool{}
-	declared, declareErr := hooks.command(ctx, "declare", "-F", moduleHookInterrupted, moduleHookCompleted, moduleHookFingerprint, moduleHookPrunedStore).Output()
-	if declareErr == nil || len(declared) > 0 {
-		for line := range strings.SplitSeq(string(declared), "\n") {
-			if fields := strings.Fields(line); len(fields) > 0 {
-				defined[fields[len(fields)-1]] = true
-			}
+	declared, _ := hooks.command(ctx, "declare", "-F", moduleHookInterrupted, moduleHookCompleted, moduleHookFingerprint, moduleHookPrunedStore).Output()
+	for line := range strings.SplitSeq(string(declared), "\n") {
+		if fields := strings.Fields(line); len(fields) > 0 {
+			defined[fields[len(fields)-1]] = true
 		}
 	}
 	targeted := func() string {
@@ -210,6 +208,7 @@ func BackupModuleRun(ctx context.Context, request BackupModuleRequest, stdout, s
 		fmt.Fprintf(stdout, "Finished backup [%d] MB in [%d] seconds to [%s]\n", megabytes, int(time.Since(started).Seconds()), target)
 		if manifestErr := manifested(); manifestErr != nil {
 			fmt.Fprintf(stderr, "Manifest for [%s] could not be written [%v]\n", stamp, manifestErr)
+			status = 1
 		}
 		if defined[moduleHookPrunedStore] {
 			_ = hooks.run(hookCtx, stdout, stderr, moduleHookPrunedStore)
@@ -232,8 +231,8 @@ func BackupModuleRun(ctx context.Context, request BackupModuleRequest, stdout, s
 		}
 		return nil
 	})
-	for _, directorie := range slices.Backward(directories) {
-		_ = os.Remove(directorie)
+	for _, directory := range slices.Backward(directories) {
+		_ = os.Remove(directory)
 	}
 	return status
 }

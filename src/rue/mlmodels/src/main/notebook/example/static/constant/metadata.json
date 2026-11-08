@@ -1,29 +1,8 @@
 {
-  "schema": 1,
-  "targets": [
-    {
-      "kind": "served"
-    },
-    {
-      "kind": "embedded",
-      "language": "python"
-    },
-    {
-      "kind": "embedded",
-      "language": "go"
-    },
-    {
-      "kind": "embedded",
-      "language": "rust"
-    }
-  ],
-  "passed": [],
-  "runtime": {},
-  "snapshot_version": "10.200.1991-SNAPSHOT",
-  "released_version": null,
-  "released_by": null,
-  "released_at": null,
-  "released_signature": null,
-  "content_sha256": "7bffe98ae1b1885908d51429b30e7a7c10bc1f91166626041c4b513bd8bd79f4",
-  "inputs_sha256": "423f21b052fb13af8513a536df617a78ccc5f271aa59b6ca42c05fd52b363a98"
+  "schema": 2,
+  "version": "10.200.1991-SNAPSHOT",
+  "content_sha256": "974d29d81670892b730e18b6efd140f51ef0ce189f4b40f0fd50a85cd3ca2a65",
+  "inputs_sha256": "03d99f6074c8bf8500fd281752c0850f7fbffda3aa6bf0775e7f3f8718940691",
+  "target": {"kind": "embedded", "language": "rust"},
+  "release": null
 }

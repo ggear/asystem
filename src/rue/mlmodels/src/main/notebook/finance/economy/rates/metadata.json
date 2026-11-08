@@ -1,17 +1,8 @@
 {
-  "schema": 1,
-  "targets": [
-    {
-      "kind": "served"
-    }
-  ],
-  "passed": [],
-  "runtime": {},
-  "snapshot_version": "10.200.1991-SNAPSHOT",
-  "released_version": null,
-  "released_by": null,
-  "released_at": null,
-  "released_signature": null,
-  "content_sha256": "216d0a8c26130dbf7edec5537d3c80a7baba657db5c5464b8dabf41aed21b104",
-  "inputs_sha256": "c8df6bd0e5d95efcdd44b4353e6e875b3ba4bc9d0de7d67ddd49fc1a0dd56533"
+  "schema": 2,
+  "version": "10.200.1991-SNAPSHOT",
+  "content_sha256": "6ae67fb862775691b60131b0eb4b36e900dd1f47ffaec60b97ecaa43dc9f06b3",
+  "inputs_sha256": "fb96198c88d05b83a372f3c17310959a2ce553fb38a7896f3975d475cf2f2c99",
+  "target": {"kind": "served"},
+  "release": null
 }

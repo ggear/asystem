@@ -1,11 +1,9 @@
 {
-  "schema": 1,
+  "schema": 2,
   "name": "finance_portfolio_withdrawal",
   "flavour": "pyfunc",
-  "signature_version": 1,
-  "runtime": {
-    "python": []
-  },
+  "model": "model.py",
+  "runtime": {"python": []},
   "provenance": {
     "source": "manual",
     "trained_on": "synthetic annuity withdrawal rates, training split",
@@ -17,21 +15,9 @@
     "implementation": "mlflow.pyfunc model.py, requires mlflow and pandas"
   },
   "files": {
-    "signature": {
-      "path": "signature.json",
-      "sha256": "4b5f8d0ce07897ebd1262b1bb7518fdbea0a1121f580ed35fc421ca03de3dafe"
-    },
-    "golden": {
-      "path": "golden.json",
-      "sha256": "0a438ed4c423e2d199489c0e3a45d5ea8c4acfcf72e2e8dd5d4cc86783f2c769"
-    },
-    "evaluation": {
-      "path": "evaluation.json",
-      "sha256": "934fb3f18af52b3760ac591bc7561a72e8cef8f4d7d54450720b901f64af3b49"
-    },
-    "model": {
-      "path": "model.py",
-      "sha256": "1d053fac61108bd86a725e5e5f6f3b1b6b62505a667036fdc016f07a0978a570"
-    }
+    "signature.json": "91cd31ec2987fe5e61d9e9e31ae33d4a14983a4dbb72dfa13a986d0de210784e",
+    "golden.json": "c3a9a6053239fe73f004358173dbde2ab2368b9346edbc1f0cc676befc698fae",
+    "evaluation.json": "f323910eae60b2bcecb6c5ac093dd3405be3e2ba12f077912ccd4df2b2a6e4d8",
+    "model.py": "1d053fac61108bd86a725e5e5f6f3b1b6b62505a667036fdc016f07a0978a570"
   }
 }

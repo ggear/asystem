@@ -2,132 +2,69 @@
   "schema": 1,
   "name": "finance_economy_rates",
   "platform": "mlserver",
-  "parameters": {
-    "signature_version": 1,
-    "state": []
-  },
+  "parameters": {"signature_version": 1, "state": []},
   "inputs": [
     {
       "name": "finance_economy_rates_in",
       "datatype": "FP64",
-      "shape": [
-        1
-      ],
-      "parameters": {
-        "unit": "none",
-        "required": true,
-        "description": "Unused, required so the request is still validated."
-      }
+      "shape": [1],
+      "parameters": {"unit": "none", "required": true, "description": "Unused, required so the request is still validated."}
     }
   ],
   "outputs": [
     {
       "name": "finance_economy_rates_inflation_low_pct",
       "datatype": "FP64",
-      "shape": [
-        1
-      ],
-      "parameters": {
-        "unit": "percent",
-        "required": true,
-        "description": "Annual inflation rate, low scenario, percent per year."
-      }
+      "shape": [1],
+      "parameters": {"unit": "percent", "required": true, "description": "Annual inflation rate, low scenario, percent per year."}
     },
     {
       "name": "finance_economy_rates_inflation_base_pct",
       "datatype": "FP64",
-      "shape": [
-        1
-      ],
-      "parameters": {
-        "unit": "percent",
-        "required": true,
-        "description": "Annual inflation rate, base scenario, percent per year."
-      }
+      "shape": [1],
+      "parameters": {"unit": "percent", "required": true, "description": "Annual inflation rate, base scenario, percent per year."}
     },
     {
       "name": "finance_economy_rates_inflation_high_pct",
       "datatype": "FP64",
-      "shape": [
-        1
-      ],
-      "parameters": {
-        "unit": "percent",
-        "required": true,
-        "description": "Annual inflation rate, high scenario, percent per year."
-      }
+      "shape": [1],
+      "parameters": {"unit": "percent", "required": true, "description": "Annual inflation rate, high scenario, percent per year."}
     },
     {
       "name": "finance_economy_rates_riskfree_low_pct",
       "datatype": "FP64",
-      "shape": [
-        1
-      ],
-      "parameters": {
-        "unit": "percent",
-        "required": true,
-        "description": "Annual risk-free (bank) rate, nominal, low scenario, percent per year."
-      }
+      "shape": [1],
+      "parameters": {"unit": "percent", "required": true, "description": "Annual risk-free (bank) rate, nominal, low scenario, percent per year."}
     },
     {
       "name": "finance_economy_rates_riskfree_base_pct",
       "datatype": "FP64",
-      "shape": [
-        1
-      ],
-      "parameters": {
-        "unit": "percent",
-        "required": true,
-        "description": "Annual risk-free (bank) rate, nominal, base scenario, percent per year."
-      }
+      "shape": [1],
+      "parameters": {"unit": "percent", "required": true, "description": "Annual risk-free (bank) rate, nominal, base scenario, percent per year."}
     },
     {
       "name": "finance_economy_rates_riskfree_high_pct",
       "datatype": "FP64",
-      "shape": [
-        1
-      ],
-      "parameters": {
-        "unit": "percent",
-        "required": true,
-        "description": "Annual risk-free (bank) rate, nominal, high scenario, percent per year."
-      }
+      "shape": [1],
+      "parameters": {"unit": "percent", "required": true, "description": "Annual risk-free (bank) rate, nominal, high scenario, percent per year."}
     },
     {
       "name": "finance_economy_rates_real_low_pct",
       "datatype": "FP64",
-      "shape": [
-        1
-      ],
-      "parameters": {
-        "unit": "percent",
-        "required": true,
-        "description": "Annual real return of cash, low scenario, percent per year."
-      }
+      "shape": [1],
+      "parameters": {"unit": "percent", "required": true, "description": "Annual real return of cash, low scenario, percent per year."}
     },
     {
       "name": "finance_economy_rates_real_base_pct",
       "datatype": "FP64",
-      "shape": [
-        1
-      ],
-      "parameters": {
-        "unit": "percent",
-        "required": true,
-        "description": "Annual real return of cash, base scenario, percent per year."
-      }
+      "shape": [1],
+      "parameters": {"unit": "percent", "required": true, "description": "Annual real return of cash, base scenario, percent per year."}
     },
     {
       "name": "finance_economy_rates_real_high_pct",
       "datatype": "FP64",
-      "shape": [
-        1
-      ],
-      "parameters": {
-        "unit": "percent",
-        "required": true,
-        "description": "Annual real return of cash, high scenario, percent per year."
-      }
+      "shape": [1],
+      "parameters": {"unit": "percent", "required": true, "description": "Annual real return of cash, high scenario, percent per year."}
     }
   ]
 }

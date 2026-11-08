@@ -1,21 +1,8 @@
 {
-  "schema": 1,
-  "targets": [
-    {
-      "kind": "served"
-    },
-    {
-      "kind": "embedded",
-      "language": "python"
-    }
-  ],
-  "passed": [],
-  "runtime": {},
-  "snapshot_version": "10.200.1991-SNAPSHOT",
-  "released_version": null,
-  "released_by": null,
-  "released_at": null,
-  "released_signature": null,
-  "content_sha256": "6f0ec9a8e06c723d2a719ce8d42517f520ff30f984dcf0e22eff4d8cda54bc3a",
-  "inputs_sha256": "4fa55456f68039246c0fa9d4d634050e0ea1572aa680f4e6d60adbb7562bd381"
+  "schema": 2,
+  "version": "10.200.1991-SNAPSHOT",
+  "content_sha256": "424948223f9f2f6aa627a2f92408ff940a6ca7f6e7e0b66f54ffa1a83cc5ebb1",
+  "inputs_sha256": "26e069f3921664b26f2209ec5e5c73105e410d8ee2be9b9c3f015ec8fc9f31e5",
+  "target": {"kind": "embedded", "language": "rust"},
+  "release": null
 }

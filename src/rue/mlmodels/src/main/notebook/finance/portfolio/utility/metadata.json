@@ -1,23 +1,8 @@
 {
-  "schema": 1,
-  "targets": [
-    {
-      "kind": "local"
-    }
-  ],
-  "passed": [
-    {
-      "kind": "local"
-    }
-  ],
-  "runtime": {
-    "python": []
-  },
-  "snapshot_version": "10.200.1991-SNAPSHOT",
-  "released_version": null,
-  "released_by": null,
-  "released_at": null,
-  "released_signature": null,
-  "content_sha256": "b0fba7f2091a03cc41f0a3851f8b1834751470cf4d29929fb352354f918ab942",
-  "inputs_sha256": "9bd9e170071a3c16aa3e2a9fb53001a831744b97f2a2a2a5a9faf0373d9fc78b"
+  "schema": 2,
+  "version": "10.200.1991-SNAPSHOT",
+  "content_sha256": "ad399dbf5150e70109bf899259e9a9b5649e83c02ea3a12cca3b5960d6aa3fea",
+  "inputs_sha256": "47899c65300fe49610f13fe14774c67f61c8245d432d5251279da0d4346f106e",
+  "target": {"kind": "local"},
+  "release": null
 }

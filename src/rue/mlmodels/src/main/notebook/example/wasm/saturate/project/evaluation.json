@@ -4,16 +4,10 @@
   "budget": 0.06605941774030245,
   "datasets": {
     "validation": [
-      {
-        "path": "2026-11-04_19-52-47/wasm_saturate_validation_2026-11-03_2026-11-03.csv",
-        "sha256": "d3f4cd2a20886018bc6b3a4712cef6be0b73f236ab3e5c729252b1eba9710ef2"
-      }
+      {"path": "2026-11-04_19-52-47/wasm_saturate_validation_2026-11-03_2026-11-03.csv", "sha256": "d3f4cd2a20886018bc6b3a4712cef6be0b73f236ab3e5c729252b1eba9710ef2"}
     ],
     "backtest": [
-      {
-        "path": "2026-11-04_19-52-47/wasm_saturate_backtest_2026-11-03_2026-11-03.csv",
-        "sha256": "87152e713e1de784f81e4f0cd057278fd0d295d6891e5eae67626e9b55309b18"
-      }
+      {"path": "2026-11-04_19-52-47/wasm_saturate_backtest_2026-11-03_2026-11-03.csv", "sha256": "87152e713e1de784f81e4f0cd057278fd0d295d6891e5eae67626e9b55309b18"}
     ]
   },
   "checks": [
@@ -28,16 +22,6 @@
       "passed": true,
       "budget": 0.06571610818014435
     },
-    {
-      "split": "backtest",
-      "output": "example_saturate_out",
-      "name": "rmse",
-      "value": 0.03302970887015123,
-      "limit": 0.5,
-      "direction": "max",
-      "gate": true,
-      "passed": true,
-      "budget": 0.06605941774030245
-    }
+    {"split": "backtest", "output": "example_saturate_out", "name": "rmse", "value": 0.03302970887015123, "limit": 0.5, "direction": "max", "gate": true, "passed": true, "budget": 0.06605941774030245}
   ]
 }

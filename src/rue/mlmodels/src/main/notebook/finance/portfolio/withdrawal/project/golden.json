@@ -8,32 +8,14 @@
           "request": {
             "id": "s1-0",
             "inputs": [
-              {
-                "name": "finance_portfolio_withdrawal_age_years",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  30.0
-                ]
-              }
+              {"name": "finance_portfolio_withdrawal_age_years", "datatype": "FP64", "shape": [1], "data": [30.0]}
             ]
           },
           "response": {
             "model_name": "finance_portfolio_withdrawal",
             "id": "s1-0",
             "outputs": [
-              {
-                "name": "finance_portfolio_withdrawal_rate_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  2.666764853825961
-                ]
-              }
+              {"name": "finance_portfolio_withdrawal_rate_pct", "datatype": "FP64", "shape": [1], "data": [2.666764853825961]}
             ]
           }
         },
@@ -41,32 +23,14 @@
           "request": {
             "id": "s1-1",
             "inputs": [
-              {
-                "name": "finance_portfolio_withdrawal_age_years",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  50.0
-                ]
-              }
+              {"name": "finance_portfolio_withdrawal_age_years", "datatype": "FP64", "shape": [1], "data": [50.0]}
             ]
           },
           "response": {
             "model_name": "finance_portfolio_withdrawal",
             "id": "s1-1",
             "outputs": [
-              {
-                "name": "finance_portfolio_withdrawal_rate_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  3.182320970369655
-                ]
-              }
+              {"name": "finance_portfolio_withdrawal_rate_pct", "datatype": "FP64", "shape": [1], "data": [3.182320970369655]}
             ]
           }
         },
@@ -74,32 +38,14 @@
           "request": {
             "id": "s1-2",
             "inputs": [
-              {
-                "name": "finance_portfolio_withdrawal_age_years",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  65.0
-                ]
-              }
+              {"name": "finance_portfolio_withdrawal_age_years", "datatype": "FP64", "shape": [1], "data": [65.0]}
             ]
           },
           "response": {
             "model_name": "finance_portfolio_withdrawal",
             "id": "s1-2",
             "outputs": [
-              {
-                "name": "finance_portfolio_withdrawal_rate_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  4.00022091907501
-                ]
-              }
+              {"name": "finance_portfolio_withdrawal_rate_pct", "datatype": "FP64", "shape": [1], "data": [4.00022091907501]}
             ]
           }
         },
@@ -107,32 +53,14 @@
           "request": {
             "id": "s1-3",
             "inputs": [
-              {
-                "name": "finance_portfolio_withdrawal_age_years",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  80.0
-                ]
-              }
+              {"name": "finance_portfolio_withdrawal_age_years", "datatype": "FP64", "shape": [1], "data": [80.0]}
             ]
           },
           "response": {
             "model_name": "finance_portfolio_withdrawal",
             "id": "s1-3",
             "outputs": [
-              {
-                "name": "finance_portfolio_withdrawal_rate_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  6.115671812529034
-                ]
-              }
+              {"name": "finance_portfolio_withdrawal_rate_pct", "datatype": "FP64", "shape": [1], "data": [6.115671812529034]}
             ]
           }
         },
@@ -140,32 +68,14 @@
           "request": {
             "id": "s1-4",
             "inputs": [
-              {
-                "name": "finance_portfolio_withdrawal_age_years",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  99.5
-                ]
-              }
+              {"name": "finance_portfolio_withdrawal_age_years", "datatype": "FP64", "shape": [1], "data": [99.5]}
             ]
           },
           "response": {
             "model_name": "finance_portfolio_withdrawal",
             "id": "s1-4",
             "outputs": [
-              {
-                "name": "finance_portfolio_withdrawal_rate_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  101.99999999999979
-                ]
-              }
+              {"name": "finance_portfolio_withdrawal_rate_pct", "datatype": "FP64", "shape": [1], "data": [101.99999999999979]}
             ]
           }
         },
@@ -173,40 +83,19 @@
           "request": {
             "id": "s1-5",
             "inputs": [
-              {
-                "name": "finance_portfolio_withdrawal_age_years",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  120.0
-                ]
-              }
+              {"name": "finance_portfolio_withdrawal_age_years", "datatype": "FP64", "shape": [1], "data": [120.0]}
             ]
           },
           "response": {
             "model_name": "finance_portfolio_withdrawal",
             "id": "s1-5",
             "outputs": [
-              {
-                "name": "finance_portfolio_withdrawal_rate_pct",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  101.99999999999979
-                ]
-              }
+              {"name": "finance_portfolio_withdrawal_rate_pct", "datatype": "FP64", "shape": [1], "data": [101.99999999999979]}
             ]
           }
         },
         {
-          "request": {
-            "id": "s1-6",
-            "inputs": []
-          },
+          "request": {"id": "s1-6", "inputs": []},
           "error": "signature"
         }
       ]

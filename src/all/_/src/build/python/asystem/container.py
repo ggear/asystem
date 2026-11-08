@@ -1,5 +1,6 @@
 import glob
 import os
+import re
 import stat
 import sys
 from os.path import abspath, basename, dirname, isdir, isfile, join, realpath
@@ -11,6 +12,25 @@ BACKUP_RETAIN_DAYS_DEFAULT = "7"
 BACKUP_KEEP_DAILY_DEFAULT = "7"
 BACKUP_KEEP_WEEKLY_DEFAULT = "4"
 BACKUP_KEEP_MONTHLY_DEFAULT = "12"
+
+SUPERVISED_FUNCTION = r"""NAME_supervised() {
+  local container image seconds=SECONDS
+  if [ -x /asystem/bin/supervisor ]; then
+    exec /asystem/bin/supervisor backup "$@"
+  fi
+  container="$(timeout 30 docker ps --filter name=^/supervisor$ --filter status=running --format '{{.Names}}')"
+  if [ -n "${container}" ]; then
+    exec timeout "${seconds}" docker exec supervisor /asystem/bin/supervisor backup "$@"
+  fi
+  image="$(timeout 30 docker image ls --format '{{.Repository}}:{{.Tag}}' | grep '^supervisor:' | sort -V | tail -n 1)"
+  [ -n "${image}" ] || { echo "No supervisor container is running and no supervisor image is installed, cannot run the VERB" >&2; exit 1; }
+  exec timeout "${seconds}" docker run --rm --init --entrypoint /asystem/bin/supervisor \
+    --volume /home/asystem:/home/asystem VOLUMES--volume /var/lib/asystem/install:/var/lib/asystem/install:ro --volume /var/run/docker.sock:/var/run/docker.sock \
+    "${image}" backup "$@"
+}
+"""
+BACKUP_SUPERVISED = SUPERVISED_FUNCTION.replace("NAME", "backup").replace("SECONDS", "$((BACKUP_TIMEOUT_HOURS * 3600 + 7200))").replace("VERB", "backup").replace("VOLUMES", "")
+RESTORE_SUPERVISED = SUPERVISED_FUNCTION.replace("NAME", "restore").replace("SECONDS", '"${RESTORE_TIMEOUT_SECONDS:-86400}"').replace("VERB", "restore").replace("VOLUMES", "--volume /share:/share ")
 
 BACKUP_WRAPPER = """
 #!/usr/bin/env bash
@@ -98,21 +118,7 @@ SNIPPET_TOKEN
 
 BACKUP_INTERNAL_SCRIPT="$(readlink -f "${BASH_SOURCE[0]}")"
 
-backup_supervised() {
-  local container image seconds=$((BACKUP_TIMEOUT_HOURS * 3600 + 7200))
-  if [ -x /asystem/bin/supervisor ]; then
-    exec /asystem/bin/supervisor backup "$@"
-  fi
-  container="$(timeout 30 docker ps --filter name=^/supervisor$ --filter status=running --format '{{.Names}}')"
-  if [ -n "${container}" ]; then
-    exec timeout "${seconds}" docker exec supervisor /asystem/bin/supervisor backup "$@"
-  fi
-  image="$(timeout 30 docker image ls --format '{{.Repository}}:{{.Tag}}' | grep '^supervisor:' | sort -V | tail -n 1)"
-  [ -n "${image}" ] || { echo "No supervisor container is running and no supervisor image is installed, cannot run the backup" >&2; exit 1; }
-  exec timeout "${seconds}" docker run --rm --init --entrypoint /asystem/bin/supervisor \\
-    --volume /home/asystem:/home/asystem --volume /var/lib/asystem/install:/var/lib/asystem/install:ro --volume /var/run/docker.sock:/var/run/docker.sock \\
-    "${image}" backup "$@"
-}
+SUPERVISED_TOKEN
 
 case "${1:-}" in
 --accept=*)
@@ -230,21 +236,7 @@ SNIPPET_TOKEN
 
 RESTORE_INTERNAL_SCRIPT="$(readlink -f "${BASH_SOURCE[0]}")"
 
-restore_supervised() {
-  local container image seconds="${RESTORE_TIMEOUT_SECONDS:-86400}"
-  if [ -x /asystem/bin/supervisor ]; then
-    exec /asystem/bin/supervisor backup "$@"
-  fi
-  container="$(timeout 30 docker ps --filter name=^/supervisor$ --filter status=running --format '{{.Names}}')"
-  if [ -n "${container}" ]; then
-    exec timeout "${seconds}" docker exec supervisor /asystem/bin/supervisor backup "$@"
-  fi
-  image="$(timeout 30 docker image ls --format '{{.Repository}}:{{.Tag}}' | grep '^supervisor:' | sort -V | tail -n 1)"
-  [ -n "${image}" ] || { echo "No supervisor container is running and no supervisor image is installed, cannot run the restore" >&2; exit 1; }
-  exec timeout "${seconds}" docker run --rm --init --entrypoint /asystem/bin/supervisor \
-    --volume /home/asystem:/home/asystem --volume /share:/share --volume /var/lib/asystem/install:/var/lib/asystem/install:ro --volume /var/run/docker.sock:/var/run/docker.sock \
-    "${image}" backup "$@"
-}
+SUPERVISED_TOKEN
 
 RESTORE_INTERNAL_MODE="replace"
 RESTORE_INTERNAL_ARGUMENTS=()
@@ -288,22 +280,22 @@ esac
 restore_supervised "${RESTORE_INTERNAL_VERB}" "${RESTORE_MODULE_NAME}" --source "${RESTORE_INTERNAL_SOURCE_DIR}" --script "${RESTORE_INTERNAL_SCRIPT}" "${RESTORE_INTERNAL_ARGUMENTS[@]}"
 """
 
-BACKUP_CONTRACT = """# The wrapper owns the run, this snippet owns the backup. The wrapper checks the throttle, calls
+BACKUP_CONTRACT = """# The engine owns the run, this snippet owns the backup. `supervisor backup run` checks the throttle, calls
 # backup_written, checks the archive's integrity, renames the temporary file on success, writes the manifest and
-# sets the exit code. Define backup_written below, naming the backup with backup_target (or letting
-# backup_files do both) and writing "${BACKUP_TARGET_PATH}.tmp". A snippet copying files passes
-# backup_files a root under BACKUP_SOURCE_PATH and the names of its include and exclude arrays, an
-# absent include fails the backup and whatever under the root neither array covers is reported. A
-# snippet leaving the estate changed while it works, such as one stopping its own container, also
-# defines backup_interrupted, called on INT, TERM or HUP but never on a backup that merely fails, and
-# backup_completed, called once the archive has been named and kept whatever the outcome, whose
-# non-zero return fails the run without discarding the archive. A snippet whose service keeps its own
-# store of backups defines backup_pruned_store, called after every kept backup. A snippet whose restore depends
-# on its software defines backup_versioned, printing that software's version on one line, recorded with the
-# backup so a drill skips a point the running software cannot restore, and one whose restore never does
-# prints "${BACKUP_VERSIONED_NONE}". Never assign another wrapper
-# variable, prefix this snippet's own state with the module name, and expand a value read from .env
-# as "${VAR:?}", so a missing key fails by name rather than corrupting the backup.
+# sets the exit code, calling this snippet's hooks, each in its own bash. Define backup_written below, naming the
+# backup with backup_target (or letting backup_files do both) and writing "${BACKUP_TARGET_PATH}.tmp". A snippet
+# copying files passes backup_files a root under BACKUP_SOURCE_PATH and the names of its include and exclude
+# arrays, an absent include fails the backup and whatever under the root neither array covers is reported. A
+# snippet leaving the estate changed while it works, such as one stopping its own container, also defines
+# backup_interrupted, called on INT, TERM or HUP but never on a backup that merely fails, and backup_completed,
+# called once the archive has been named and kept whatever the outcome, whose non-zero return fails the run
+# without discarding the archive. A snippet whose service keeps its own store of backups defines
+# backup_pruned_store, called after every kept backup. A snippet whose restore depends on its software defines
+# backup_versioned, printing that software's version on one line, recorded with the backup so a drill skips a
+# point the running software cannot restore, and one whose restore never does prints "${BACKUP_VERSIONED_NONE}".
+# No hook may rely on a variable another set. Never assign another wrapper variable, prefix this snippet's own
+# state with the module name, and expand a value read from .env as "${VAR:?}", so a missing key fails by name
+# rather than corrupting the backup.
 #
 # BACKUP_MODULE_NAME      this module's name
 # BACKUP_SOURCE_PATH      this module's source data path
@@ -1276,7 +1268,8 @@ backup_written() {
     script_path = abspath(join(working_dir, "backup.sh"))
     with open(script_path, "w") as script_file:
         script_file.write(
-            BACKUP_WRAPPER.replace("MODULE_NAME_TOKEN", module_name)
+            BACKUP_WRAPPER.replace("SUPERVISED_TOKEN", BACKUP_SUPERVISED.strip())
+            .replace("MODULE_NAME_TOKEN", module_name)
             .replace("PREFIX_TOKEN", prefix)
             .replace("TIMEOUT_TOKEN", BACKUP_TIMEOUT_HOURS_DEFAULT)
             .replace("SNIPPET_TOKEN", script_source)
@@ -1311,10 +1304,14 @@ restore_applied() {
     backup_source_path = join(root_dir, "src/build/resources/backup.sh")
     if "restore_merged()" in script_source and not (isfile(backup_source_path) and "BACKUP_DELTA_SUFFIX" in Path(backup_source_path).read_text()):
         raise ValueError("Module [{}] defines restore_merged but its backup.sh emits no deltas, merge is offered only to a module with incremental backups".format(module_name))
+    backup_includes = re.search(r"_BACKUP_INCLUDES=\((.*?)\n\)", Path(backup_source_path).read_text(), re.DOTALL) if isfile(backup_source_path) else None
+    restore_paths = re.search(r'_RESTORE_PATHS="([^"]*)"', script_source)
+    if backup_includes and restore_paths and set(re.findall(r'"([^"]+)"', backup_includes.group(1))) != set(restore_paths.group(1).split(":")):
+        raise ValueError("Module [{}] restores different paths to those its backup.sh includes, the two sets must match".format(module_name))
     if not script_source.startswith(RESTORE_CONTRACT):
         raise ValueError("Snippet contract violated in [{}], its leading comment block must match RESTORE_CONTRACT verbatim".format(script_source_path))
     script_path = abspath(join(working_dir, "restore.sh"))
     with open(script_path, "w") as script_file:
-        script_file.write(RESTORE_WRAPPER.replace("MODULE_NAME_TOKEN", module_name).replace("SNIPPET_TOKEN", script_source).strip())
+        script_file.write(RESTORE_WRAPPER.replace("SUPERVISED_TOKEN", RESTORE_SUPERVISED.strip()).replace("MODULE_NAME_TOKEN", module_name).replace("SNIPPET_TOKEN", script_source).strip())
     os.chmod(script_path, os.stat(script_path).st_mode | stat.S_IEXEC)
     print("Build generate script [{}] script persisted to [{}]".format(basename(root_dir), script_path))

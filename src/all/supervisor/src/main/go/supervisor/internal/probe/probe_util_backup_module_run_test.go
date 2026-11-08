@@ -17,6 +17,7 @@ func TestProbeUtilBackupModuleRun_Lifecycle(t *testing.T) {
 		t.Skip("no bash")
 	}
 	written := `backup_written() { local target="$(dirname "$BACKUP_SOURCE_PATH")/backup/${BACKUP_RUN_TIMESTAMP}/mod_at_${BACKUP_RUN_TIMESTAMP}_from_1.0_full.sql.gz"; mkdir -p "$(dirname "$target")"; echo "$target" >"${BACKUP_STATE_DIR}/target"; printf '%s' "$BACKUP_PAYLOAD" | gzip >"$target.tmp"; }`
+	corrupt := `backup_written() { local target="$(dirname "$BACKUP_SOURCE_PATH")/backup/${BACKUP_RUN_TIMESTAMP}/mod_at_${BACKUP_RUN_TIMESTAMP}_from_1.0_full.sql.gz"; mkdir -p "$(dirname "$target")"; echo "$target" >"${BACKUP_STATE_DIR}/target"; echo plain >"$target.tmp"; }`
 	tests := []struct {
 		name            string
 		body            string
@@ -34,6 +35,8 @@ func TestProbeUtilBackupModuleRun_Lifecycle(t *testing.T) {
 		{"throttled_run_is_skipped", written, "x", metric.BackupStateSuccess, []backupFingerprintUnit{{"a", 1}}, 1000, 0, 1, ""},
 		{"failing_hook_leaves_no_run", `backup_written() { return 1; }`, "", "", nil, 0, 1, 0, ""},
 		{"nothing_named", `backup_written() { :; }`, "", "", nil, 0, 1, 0, ""},
+		{"corrupt_archive_leaves_no_run", corrupt, "", "", nil, 0, 1, 0, ""},
+		{"failing_completed_hook_fails_the_run_and_keeps_the_archive", written + "\nbackup_completed() { return 1; }", "-- Current Database: `a`\nINSERT;\n", "", nil, 0, 1, 1, metric.BackupStateSuccess},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {

@@ -2,15 +2,21 @@ import argparse
 import json
 import os
 import re
+import subprocess
 import sys
 from fnmatch import fnmatch
 from os.path import abspath, basename, dirname, isfile, join
 
+from workbench.document import write_json
 from workbench.metadata import SIGNATURE_FILE
 from workbench.model import PROJECT_FLAVOURS, PROJECT_SPLITS, build_signature, check_name, registered_name, signature_input, signature_output
 
 NOTEBOOK_FORMAT = 4
+HEADER_LABELS = ("Intent", "Data", "Status", "Future")
+HEADER_REQUIRED = ("Intent", "Data")
+HEADER_WORDS = 25
 NOTEBOOK_SECTIONS = ("Setup", "Capture Data", "Explore", "Fit", "Evaluate", "Package", "Register", "Pull")
+NOTEBOOK_SPEC = "https://github.com/ggear/asystem/blob/master/src/rue/mlmodels/src/build/resources/doc/model.md"
 NOTEBOOK_ABSOLUTE_PATH = re.compile(r"""["'](/Users/|/home/|/private/|[A-Za-z]:\\)""")
 NOTEBOOK_SECRET = re.compile(r"""(?i)\b(token|password|passwd|secret|api_?key)\w*\s*=\s*["'][^"']+["']""")
 NOTEBOOK_MAGIC = re.compile(r"^\s*[%!]")
@@ -52,10 +58,15 @@ def lint_notebook(path):
                 add("NB011", "import from workbench by name, never with *", index)
             if NOTEBOOK_SYS_PATH.search(text):
                 add("NB012", "the kernel puts workbench on the path, a notebook must not extend sys.path", index)
-        elif index > 0 and any(row.startswith("|") and "**" in row for row in text.split("\n")):
-            add("NB009", "bold in a table cell outside the title table", index)
-    if not isfile(join(notebook_dir, "plan.md")):
-        add("NB010", "plan [plan.md] is missing next to the notebook")
+        elif any(row.startswith("|") and "**" in row for row in text.split("\n")):
+            add("NB009", "bold in a table cell", index)
+    data = _title_blocks(_title_text(cells))[0].get("Data", [])
+    ignored_data = _ignored(notebook_dir, "data", "training", "capture", "capture", "file.csv")
+    ignored_project = _ignored(notebook_dir, "project", "file")
+    if (ignored_data or ignored_project) and not (data and data[0].startswith("Personal data")):
+        add("NB014", "the first Data point of a workspace with git-ignored data must open with [Personal data]")
+    if ignored_project and not any("`project/`" in point for point in data):
+        add("NB014", "the Data points of a workspace with a git-ignored project must name [`project/`]")
     return findings
 
 
@@ -87,7 +98,7 @@ def scaffold_notebook(root, module, model, notebook, flavour, local=False):
     name = registered_name(module, model, notebook)
     for split in PROJECT_SPLITS:
         os.makedirs(join(notebook_dir, "data", split), exist_ok=True)
-    created = [notebook_path, join(notebook_dir, "plan.md"), join(notebook_dir, SIGNATURE_FILE)]
+    created = [notebook_path, join(notebook_dir, SIGNATURE_FILE)]
     for split in PROJECT_SPLITS:
         keep = join(notebook_dir, "data", split, ".gitkeep")
         if not isfile(keep):
@@ -96,16 +107,12 @@ def scaffold_notebook(root, module, model, notebook, flavour, local=False):
     with open(notebook_path, "w") as notebook_file:
         json.dump(_scaffold_notebook(module, model, notebook, name, flavour, local), notebook_file, indent=1, ensure_ascii=False)
         notebook_file.write("\n")
-    with open(created[1], "w") as plan_file:
-        plan_file.write(_scaffold_plan(module, model, notebook, name, flavour))
     signature = build_signature(
         name,
         [signature_input(f"{module}_{model}_in", "none", "An input.")],
         [signature_output(f"{module}_{model}_out", "none", "An output.", datatype="FP64")],
     )
-    with open(created[2], "w") as signature_file:
-        json.dump(signature, signature_file, indent=2)
-        signature_file.write("\n")
+    write_json(created[1], signature)
     return created
 
 
@@ -149,31 +156,31 @@ def _scaffold_notebook(module, model, notebook, name, flavour, local):
     def code(text):
         return {"cell_type": "code", "execution_count": None, "metadata": {}, "outputs": [], "source": text.strip("\n").splitlines(keepends=True)}
 
-    def section(title, stage, intent):
-        return markdown(f"## {title}\n\n- **Stage:** {stage}\n- **Intent:** {intent}")
+    def section(title):
+        return markdown(_section_heading(title))
 
     static = flavour == "static"
-    targets = '[{"kind": "local"}]' if local else '[{"kind": "served"}]'
+    target = '{"kind": "local"}' if local else '{"kind": "served"}'
     cells = [
         markdown(
-            f"# {module} / {model} / {notebook}\n\n**Intent:** For an input (`{module}_{model}_in`), output (`{module}_{model}_out`) and state what the outputs are intended to be, with their units.\n\n"
-            "**Notes:**\n- Data splits: `golden` the fixed samples and expected outputs"
+            f"# {module} / {model} / {notebook}\n\n**Intent**\n- Takes `{module}_{model}_in`.\n- Outputs `{module}_{model}_out`.\n- State what the outputs are intended to be, with their units.\n\n"
+            "**Data**\n- `golden` is the fixed samples and expected outputs.\n\n**Status**\n- Scaffolded, so the intent, the signature and the data are still to be written."
         ),
-        section("Setup", "none, preparation for the stages below.", "load `env` and declare the model name, its targets and the dataset names as constants (`model.md` 6.6)."),
+        section("Setup"),
         code(
             f"import json\n\nfrom workbench.data import golden_data\nfrom workbench.env import init_env\nfrom workbench.project import load_signature, provenance, record_project, scratch_project_dir, signature_names\n\nenv = init_env()\n\n"
-            f'WORKSPACE = "{module}/{model}/{notebook}"\nMODEL_NAME = "{name}"\nTARGETS = {targets}\nGOLDEN = "{model}_{notebook}_golden"\n'
+            f'WORKSPACE = "{module}/{model}/{notebook}"\nMODEL_NAME = "{name}"\nTARGET = {target}\nGOLDEN = "{model}_{notebook}_golden"\n'
             "signature = load_signature(WORKSPACE)\nINPUTS, OUTPUTS = signature_names(signature)\nCONSTANTS = {OUTPUTS[0]: 1}\n"
         ),
     ]
     if not static:
         cells += [
-            section("Capture Data", "1, capture data (`model.md` 7.1).", "load the `training` and `validation` data."),
-            section("Fit", "3, fit.", "fit the model on `training` only (R6)."),
-            section("Evaluate", "4, evaluate.", "check the fit on `validation` and `backtest` through the shipped runtime and run its acceptance check with `evaluate_acceptance` (R4, R14)."),
+            section("Capture Data"),
+            section("Fit"),
+            section("Evaluate"),
         ]
     cells += [
-        section("Package", "5, package.", "write the golden samples and the project from the loaded signature, with its evaluation (R1, R3, R14)."),
+        section("Package"),
         code(
             "from workbench.model import package_project\n" + ("from workbench.replay import require_replay\n" if static else "") + "\n"
             'golden_pl, golden_path = golden_data(WORKSPACE, GOLDEN, lambda: {INPUTS[0]: [1.0, None], "expect": ["ok", "error"]})\n\n'
@@ -181,17 +188,13 @@ def _scaffold_notebook(module, model, notebook, name, flavour, local):
             + (
                 'manifest = package_project(project_dir, MODEL_NAME, "static", signature, golden_pl.iter_rows(named=True), provenance("manual", "none", [golden_path], "scaffold"), constants=CONSTANTS)\n'
                 "print(json.dumps(manifest, indent=2))\n"
-                "require_replay(project_dir)\nrecord_project(WORKSPACE, project_dir, TARGETS)\n"
+                "require_replay(project_dir)\nrecord_project(WORKSPACE, project_dir, TARGET)\n"
                 if static
                 else 'print("no model is fitted yet, so nothing is packaged")\n'
             )
         ),
-        section(
-            "Register",
-            "6, register.",
-            "register the verified project with the alias `preview` when it has a served target. `fab systest` runs this section and `fab unittest` does not (`model.md` 11.5).",
-        ),
-        code('from workbench.model import register_preview\n\nversion = register_preview(project_dir, MODEL_NAME, env["MLFLOW_TRACKING_URI"], TARGETS)\nprint("registered version", version)'),
+        section("Register"),
+        code('from workbench.model import register_preview\n\nversion = register_preview(project_dir, MODEL_NAME, env["MLFLOW_TRACKING_URI"], TARGET)\nprint("registered version", version)'),
     ]
     if local:
         cells = cells[:-2]
@@ -203,20 +206,9 @@ def _scaffold_notebook(module, model, notebook, name, flavour, local):
     }
 
 
-def _scaffold_plan(module, model, notebook, name, flavour):
-    return (
-        f"# {notebook}\n\nThe plan for the `{name}` model. It follows `model.md`, the specification for MLflow model projects.\n\n"
-        f"| Term | In This Plan |\n|---|---|\n| **Module** | `{module}` |\n| **Model** | `{model}` |\n"
-        f"| **Notebook** | `src/rue/mlmodels/src/main/notebook/{module}/{model}/{notebook}/notebook.ipynb` |\n"
-        f"| **Registered Model** | `{name}` (`model.md` 6.1) |\n| **Project Flavour** | `{flavour}` (`model.md` 3.2) |\n\n"
-        "**Status.** Scaffolded.\n\n## Intent\n\nState what the model is for.\n\n## Signature\n\nList the inputs and outputs.\n\n"
-        "## Data\n\nName the datasets under each split.\n\n## To do\n\n1. Write the intent, the signature and the data.\n"
-    )
-
-
 def _lint_intent(cells, notebook_dir, module):
     signature_path = join(notebook_dir, SIGNATURE_FILE)
-    intent = next((match.group(1) for cell in cells if cell["cell_type"] == "markdown" for match in re.finditer(r"^\*\*Intent:\*\* (.*)$", _source(cell), re.MULTILINE)), None)
+    intent = " ".join(_title_blocks(_title_text(cells))[0].get("Intent", [])) or None
     if not isfile(signature_path) or intent is None:
         return []
     with open(signature_path) as signature_file:
@@ -257,25 +249,24 @@ def _lint_structure(cells, module, model, name):
         lines = text.split("\n")
         if lines[0] != expected:
             findings.append(("NB003", f"title must be [{expected}] found [{lines[0]}]", index))
-        if not any(line.startswith("**Intent:** ") and len(line) > len("**Intent:** ") for line in lines):
-            findings.append(("NB004", "the title cell needs a line **Intent:** that says what the outputs are intended to be", index))
-        notes = lines.index("**Notes:**") if "**Notes:**" in lines else None
-        if notes is None or not any(line.startswith("- ") for line in lines[notes + 1 :]):
-            findings.append(("NB004", "the title cell needs a **Notes:** line followed by dot points", index))
-        if any(line.startswith("|") for line in lines):
-            findings.append(("NB004", "the title cell holds no table", index))
+        blocks, stray = _title_blocks(text)
+        findings.extend(("NB004", f"the title cell holds only a bold label from {list(HEADER_LABELS)} and its dot points, found [{line[:50]}]", index) for line in stray[:3])
+        findings.extend(("NB004", f"the title cell needs the label [{label}] and a dot point under it", index) for label in HEADER_REQUIRED if not blocks.get(label))
+        findings.extend(
+            ("NB004", f"the title cell dot point is over [{HEADER_WORDS}] words [{point[:40]}]", index) for points in blocks.values() for point in points if len(point.split()) > HEADER_WORDS
+        )
     sections = []
     for index, text in markdown:
         first = text.split("\n")[0]
         if first.startswith("### "):
             findings.append(("NB005", "headings deeper than level two are not allowed", index))
         elif first.startswith("## "):
-            section = first[3:].strip()
+            section = first[3:].split(" (")[0].strip()
             sections.append(section)
             if section not in NOTEBOOK_SECTIONS:
                 findings.append(("NB005", f"unknown section [{section}]", index))
-            if not re.search(r"^- \*\*Stage:\*\* ", text, re.MULTILINE) or not re.search(r"^- \*\*Intent:\*\* ", text, re.MULTILINE):
-                findings.append(("NB006", f"section [{section}] needs Stage and Intent dot points", index))
+            if section in NOTEBOOK_SECTIONS and text != _section_heading(section):
+                findings.append(("NB006", f"section [{section}] must be only the heading [{_section_heading(section)}]", index))
     known = [NOTEBOOK_SECTIONS.index(section) for section in sections if section in NOTEBOOK_SECTIONS]
     if known != sorted(known):
         findings.append(("NB005", f"sections must be in the order {list(NOTEBOOK_SECTIONS)} found {sections}", None))
@@ -286,6 +277,36 @@ def _lint_structure(cells, module, model, name):
         if not re.search(rf"""^{constant}\s*=\s*["']{re.escape(value)}["']""", setup, re.MULTILINE):
             findings.append(("NB008", f"constant [{constant}] must be [{value}]", None))
     return findings
+
+
+def _section_heading(section):
+    number = f"6.7.{NOTEBOOK_SECTIONS.index(section) + 1}"
+    return f"## {section} ([{number}]({NOTEBOOK_SPEC}#{number.replace('.', '')}-{section.lower().replace(' ', '-')}))"
+
+
+def _title_text(cells):
+    return next((_source(cell) for cell in cells if cell["cell_type"] == "markdown" and _source(cell).startswith("# ")), "")
+
+
+def _title_blocks(text):
+    blocks, stray, current = {}, [], None
+    for line in text.split("\n")[1:]:
+        label = re.match(r"^\*\*(\w+)\*\*$", line)
+        point = re.match(r"^- (\S.*)$", line)
+        if label is not None and label.group(1) in HEADER_LABELS:
+            current = blocks.setdefault(label.group(1), [])
+        elif point is not None and current is not None:
+            current.append(point.group(1))
+        elif line.strip():
+            stray.append(line)
+    return blocks, stray
+
+
+def _ignored(notebook_dir, *parts):
+    try:
+        return subprocess.run(["git", "check-ignore", "-q", join(*parts)], cwd=notebook_dir, capture_output=True, timeout=10, check=False).returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        return False
 
 
 def _source(cell):

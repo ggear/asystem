@@ -10,7 +10,7 @@ sys.path.append("../../../../../../all/_/src/build/python")
 from asystem.report import run_pytest, stage
 from workbench.config import VERSION_PATH
 from workbench.errors import GateError
-from workbench.metadata import METADATA_FILE, PROJECT_DIR, read_metadata, record_passed
+from workbench.metadata import METADATA_FILE, PROJECT_DIR, read_metadata
 from workbench.model import PROJECT_ALIAS_PREVIEW
 from workbench.release import clear_preview, wait_served, workspaces
 
@@ -27,7 +27,9 @@ def _targets():
     found = []
     for name, directory in workspaces(DIR_SOURCE).items():
         if isfile(join(directory, METADATA_FILE)):
-            found.extend(pytest.param(name, directory, target, id=f"{name}-{_label(target)}") for target in read_metadata(directory)["targets"] if target["kind"] != "local")
+            target = read_metadata(directory)["target"]
+            if target["kind"] != "local":
+                found.append(pytest.param(name, directory, target, id=f"{name}-{_label(target)}"))
     return found
 
 
@@ -62,7 +64,7 @@ def previews(env):
 
 
 @pytest.mark.parametrize(("name", "directory", "target"), _targets())
-def test_a_declared_target_runs_its_project(name, directory, target, env, image, previews):
+def test_the_declared_target_runs_its_project(name, directory, target, env, image, previews):
     metadata = read_metadata(directory)
     project_dir = join(directory, PROJECT_DIR)
     if target["kind"] == "served":
@@ -84,7 +86,6 @@ def test_a_declared_target_runs_its_project(name, directory, target, env, image,
     print(output.stdout, end="", flush=True)
     if output.returncode != 0:
         raise GateError("target", _label(target), f"workspace [{name}] output [{(output.stderr or output.stdout).strip()}]")
-    record_passed(directory, target)
 
 
 def _wait_registry(name, content_sha256, tracking_uri):

@@ -24,20 +24,20 @@ def main(arguments=None):
 
 def load_project(directory):
     manifest = read_json(join(directory, "project.json"))
-    for key, entry in manifest["files"].items():
+    for path, sha256 in manifest["files"].items():
         try:
-            with open(join(directory, entry["path"]), "rb") as file:
+            with open(join(directory, path), "rb") as file:
                 content = file.read()
         except OSError as error:
-            raise ValueError(f"PJ003 file absent [{key}]") from error
-        if hashlib.sha256(content).hexdigest() != entry["sha256"]:
-            raise ValueError(f"PJ003 file checksum mismatch [{key}]")
-    if "evaluation" in manifest["files"]:
-        if read_json(join(directory, manifest["files"]["evaluation"]["path"])).get("passed") is not True:
+            raise ValueError(f"PJ003 file absent [{path}]") from error
+        if hashlib.sha256(content).hexdigest() != sha256:
+            raise ValueError(f"PJ003 file checksum mismatch [{path}]")
+    if "evaluation.json" in manifest["files"]:
+        if read_json(join(directory, "evaluation.json")).get("passed") is not True:
             raise ValueError("acceptance not passed")
     elif manifest["flavour"] != "static":
         raise ValueError(f"no acceptance evaluation for flavour [{manifest['flavour']}]")
-    with open(join(directory, manifest["files"]["signature"]["path"])) as signature_file:
+    with open(join(directory, "signature.json")) as signature_file:
         signature_json = signature_file.read()
     return manifest, signature_json
 
@@ -51,7 +51,7 @@ def replay(directory, served):
     started = time.monotonic()
     predict = new_predictor(directory, manifest, signature_json) if url is None else run_served.load_served(url, signature_json)
     report("load", manifest["flavour"] if url is None else "served", started)
-    golden = read_json(join(directory, manifest["files"]["golden"]["path"]))
+    golden = read_json(join(directory, "golden.json"))
     started = time.monotonic()
     steps = 0
     required = {entry["name"] for entry in signature["inputs"] if entry["parameters"]["required"]}
@@ -90,7 +90,7 @@ def new_predictor(directory, manifest, signature_json):
     loaders = {"wasm": run_wasm.load_wasm, "onnx": run_onnx.load_onnx, "pyfunc": run_pyfunc.load_pyfunc}
     if flavour not in loaders:
         raise ValueError(f"no consumer for flavour [{flavour}]")
-    return loaders[flavour](join(directory, manifest["files"]["model"]["path"]), signature_json)
+    return loaders[flavour](join(directory, manifest["model"]), signature_json)
 
 
 def within(actual, expected, tolerance, name):

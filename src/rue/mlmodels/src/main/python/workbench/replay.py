@@ -58,4 +58,4 @@ def model_predict(model_path, flavour, signature):
 def _loader(project_dir, manifest, signature):
     if manifest["flavour"] == "static":
         return run_static.load_static(json.dumps(manifest["constants"]), json.dumps(signature))
-    return model_predict(join(project_dir, manifest["files"]["model"]["path"]), manifest["flavour"], signature)
+    return model_predict(join(project_dir, manifest["model"]), manifest["flavour"], signature)

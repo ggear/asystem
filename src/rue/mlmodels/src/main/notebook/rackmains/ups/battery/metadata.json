@@ -1,18 +1,8 @@
 {
-  "schema": 1,
-  "targets": [
-    {
-      "kind": "embedded",
-      "language": "rust"
-    }
-  ],
-  "passed": [],
-  "runtime": {},
-  "snapshot_version": "10.200.1991-SNAPSHOT",
-  "released_version": null,
-  "released_by": null,
-  "released_at": null,
-  "released_signature": null,
-  "content_sha256": "b295882fbedaf9d853eae2c3915aa6f5b554ab43fe281de5f15db7617609960d",
-  "inputs_sha256": "1ac0b5de5a5840639a6c340be6abd5f82aa36a1d4bac140a5f67dfa8ce4fc035"
+  "schema": 2,
+  "version": "10.200.1991-SNAPSHOT",
+  "content_sha256": "7d0d588eded93c9de1278e96bb1a283de15eda0c64fd42a1ee6c1daf004b9d0f",
+  "inputs_sha256": "d3beba8beecb5d9c535a41aeacd3d3f909cf1af839031e90cf531683008cd1f4",
+  "target": {"kind": "embedded", "language": "rust"},
+  "release": null
 }

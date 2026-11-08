@@ -1,27 +1,9 @@
 {
-  "schema": 1,
+  "schema": 2,
   "name": "example_wasm_accumulate",
   "flavour": "wasm",
-  "signature_version": 1,
-  "runtime": {
-    "wasm": [
-      "acos",
-      "asin",
-      "atan",
-      "atan2",
-      "cos",
-      "cosh",
-      "exp",
-      "log",
-      "log10",
-      "log2",
-      "pow",
-      "sin",
-      "sinh",
-      "tan",
-      "tanh"
-    ]
-  },
+  "model": "model.wasm",
+  "runtime": {"wasm": ["acos", "asin", "atan", "atan2", "cos", "cosh", "exp", "log", "log10", "log2", "pow", "sin", "sinh", "tan", "tanh"]},
   "provenance": {
     "source": "manual",
     "trained_on": "synthetic line, training split",
@@ -33,21 +15,9 @@
     "implementation": "WebAssembly traced from a Python function by workbench.wasm.trace and built by build_wasm, importing every asystem_math function"
   },
   "files": {
-    "signature": {
-      "path": "signature.json",
-      "sha256": "4c81cc7c137f858a4d4c8033c48a2c50dcdc483cc587b3087660792c463e51f4"
-    },
-    "golden": {
-      "path": "golden.json",
-      "sha256": "0108843434631a20da5be48d4b31af251051eac27f0b8b5ddc7f13e6b88270df"
-    },
-    "evaluation": {
-      "path": "evaluation.json",
-      "sha256": "d95734ad625eea8e901b3a9dfcd187ae6ce2e70e16fd1a501941f2304e24b0ad"
-    },
-    "model": {
-      "path": "model.wasm",
-      "sha256": "2a0aaf01188c3a3695b7527418ec0e67b46dc8c163519ea57dd2a9610c1bf2a5"
-    }
+    "signature.json": "4b6b9d50615b1f801157a301d474426bd58d827dc6a2fc6c20ded20151e7cf6b",
+    "golden.json": "840b086f7fae437feb229a6278563333d969210feb0562ca17216353fd29e2c4",
+    "evaluation.json": "18d904fe81f03f3f16072632cbe9e33c3142b0a9e61ee7cedaaaa467a5f96d38",
+    "model.wasm": "2a0aaf01188c3a3695b7527418ec0e67b46dc8c163519ea57dd2a9610c1bf2a5"
   }
 }

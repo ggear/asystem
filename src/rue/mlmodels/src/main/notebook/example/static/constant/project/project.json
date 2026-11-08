@@ -1,27 +1,8 @@
 {
-  "schema": 1,
+  "schema": 2,
   "name": "example_static_constant",
   "flavour": "static",
-  "signature_version": 1,
-  "constants": {
-    "example_static_out": 7
-  },
-  "provenance": {
-    "source": "manual",
-    "trained_on": "none",
-    "inputs": [
-      "example/static/constant/data/golden/2026-11-02_18-04-26/static_constant_golden.csv"
-    ],
-    "notes": "register path smoke test"
-  },
-  "files": {
-    "signature": {
-      "path": "signature.json",
-      "sha256": "1a1f7819ba6849903f51eaa6ca10f4827ebc6e49aabe35a2c55c8cf847a6c3d1"
-    },
-    "golden": {
-      "path": "golden.json",
-      "sha256": "91c1a84a78513636cbc4342e2d44134557cf1951b53fa509d3db40cdce4d02c8"
-    }
-  }
+  "constants": {"example_static_out": 7},
+  "provenance": {"source": "manual", "trained_on": "none", "inputs": ["example/static/constant/data/golden/2026-11-02_18-04-26/static_constant_golden.csv"], "notes": "register path smoke test"},
+  "files": {"signature.json": "97a7c9ee745b067ffef124b7c8bbe91f17a1ba6364d47637b4b84588403c463e", "golden.json": "25436ebb23bdc2c797b2ce57728a869fd7d5920f4df46d959ebfd480721672ac"}
 }

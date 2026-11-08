@@ -24,11 +24,9 @@ systest() {
 }
 
 release() {
-  local version="${1:?usage: model.sh release <version> [--by <name>]}" by="${USER}"
-  shift
-  [[ "${1:-}" == "--by" ]] && by="${2:?--by needs a name}"
+  local version="${1:?usage: model.sh release <version>}"
   MLFLOW_TRACKING_URI="$(env_value MLFLOW_TRACKING_URI)" "${PYENV_BIN}/python" -W ignore -m workbench.model release "${SOURCE_DIR}" \
-    --version "${version}" --by "${by}" --mlserver "$(mlserver_url)"
+    --version "${version}" --mlserver "$(mlserver_url)"
 }
 
 publish() {

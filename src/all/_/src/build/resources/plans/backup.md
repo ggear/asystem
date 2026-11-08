@@ -1,10 +1,37 @@
 # Backup follow-up
 
-The backup and restore plan closed on 2026-11-06. This holds the two things it left open. Delete this file when both are done.
+The backup and restore plan closed on 2026-11-06. This holds what it left open, in the order it can be done. Delete this file when everything is done or dropped.
 
-## 1. First weekly drill, Monday 2026-11-09
+Already passed and removed from this list: the Saturday 2026-11-07 run on `macmini-mad` and `macmini-may` (all verdicts `success`, `baseline` the previous run, `evidence` empty; influxdb3 took a full because the pre-install full `2026-11-06_15-41-54` carries `source_version` `10.200.1994` and a delta chains only to a full of the running version, which happens once per release) and the influx prune across the 3.12.1 to 3.12.2 change (`cluster_1/backups` holds only `full-2026-11-07_01-00-59`).
 
-**What it is.** On the first nightly run of each ISO week, secondary drills the sparse points it keeps (`drillSecondaryServices`). It has run in production only for catch-up drills (5 Nov). It has never selected a point because the week turned.
+## A. Can be done now, by hand
+
+### A1. Restore the pre-upgrade points: done 2026-11-07
+
+postgres `2026-11-06_15-36-09` (`18-2.30.2`) and influxdb3 `2026-11-06_15-40-43` (`3.12.1`, a delta) are the newest points the running software did not take, and both drills were skipped as "software differs". Each was staged by hand into a scratch container, never over live; live stayed `healthy` and was untouched.
+- postgres: the engine only skips the point as "software differs". It does not fail at restore time, because the image still ships TimescaleDB 2.28.2 to 2.31.0. Loading the dump through the hook's `restore_staged` with `POSTGRES_RESTORE_TIMESCALEDB_VERSION=2.30.2` succeeded and reported 2.30.2. A restore of a pre-upgrade point would fail by name only once the image drops 2.30.2. Row counts were not compared.
+- influxdb3: the whole 3.12.1 chain (the full `2026-11-05_16-21-48` plus seven deltas) restored on 3.12.2, every step completed and the scratch instance held 44 tables. The engine logged one warning, "unable to locate manifest, falling back to listing", for the last delta. Per-day counts were not compared against the fingerprint.
+
+### A2. Restore the post-upgrade points and compare counts: done 2026-11-07
+
+postgres `2026-11-06_15-38-00` and influxdb3 `2026-11-06_15-41-54` were staged into scratch containers (live stayed `healthy` and untouched) and the scratch counts compared with each manifest's fingerprint.
+- postgres: all 159 fingerprinted tables match across `hass`, `mlflow`, `postgres` and `template1`, except `_timescaledb_catalog.bgw_job` (0 against 2) and `_timescaledb_catalog.metadata` (2 against 3) in each database, which are extension bookkeeping written on load, not data.
+- influxdb3: all 3510 fingerprinted per-day counts match, with 0 mismatches. The scratch copy held 41 more days than the manifest, the days after the fingerprint's cutoff.
+- Not covered: this proves the restored data matches the fingerprint, not that a replace lands on live. A replace over live is not tested, and is not worth doing against production.
+
+### A3. Failure path
+
+Make one backup fail on purpose (an unwritable target, or the container stopped mid-run) and confirm that the service is started again, that no `.tmp` is left in the run directory and that the next run recovers.
+
+## B. Waits for a scheduled run
+
+### B1. Sunday 2026-11-08 at 01:00
+
+On `macmini-may`, influxdb3 takes a delta whose `parent` is `2026-11-07_01-00-59`, with verdict `success`, `baseline` the previous run and `evidence` empty.
+
+### B2. First weekly drill, Monday 2026-11-09
+
+**What it is.** On the first nightly run of each ISO week, secondary drills the sparse points it keeps (`drillSecondaryServices`). It has run in production only for catch-up drills (5 Nov). It has never selected a point because the week turned. This is also the first time the 2026-11-07 points get a `drill.json`: no drill ran on Saturday, so their absence until now is expected.
 
 **Check, on Monday morning, on each of `macmini-mad`, `macmini-meg`, `macmini-may`, `macmini-max` and `raspbpi-jen`:**
 
@@ -20,13 +47,16 @@ for f in $r/stage/primary/service/*/status.json; do echo "$(basename $(dirname $
 - the run `state` is `success` and each service has `success_bool` true and no `drill_failed_bool`
 - there are no `faulting`, `WARN`, `ERROR` or `refused` lines
 - a `verified` line is expected only where a sparse point lacked a verdict (a point drills once, so there may be none, which is fine: every existing point was drilled on 5 Nov)
+- each `drill.json` for the 2026-11-07 points is `success`, or `skipped` only for a point the software did not take
 - `Fail BKP` reads 0 on every host's dashboard
 
 **If it fails:** read `<share>/backup/<svc>/<run>/.meta/secondary/drill.json` and the failed service's `output.log`, then hand drill the same point: `/var/lib/asystem/install/<svc>/latest/restore.sh --mode=drill --from=<run> --runs=<share dir>`. A hand drill that passes while the stage failed means the fault is in the stage (`probe_util_backup_stage_drill.go`), not the backup.
 
 **Known and fine:** postgres points 09-30, 10-18 and 10-25 carry failed verdicts because they predate the TimescaleDB update. They stay red in their own `drill.json` and the engine ignores them. 10-18 and 10-25 age out of the weekly tier around 17 to 23 Nov. 09-30 stays as September's monthly point for about a year unless deleted by hand from `/share/10/backup/postgres`.
 
-## 2. influxdb3 live merge, deferred
+## C. Deferred, needs a decision or a release
+
+### C1. influxdb3 live merge
 
 **State.** `restore_merged` now writes through `docker exec` into the live container (`src/may/influxdb3/src/build/resources/restore.sh`). The code is in the tree and covered by stubbed unit tests only. It is not released, and it has never written to a real instance. Drills and replace are unaffected by it.
 
@@ -80,4 +110,4 @@ for f in $r/stage/primary/service/*/status.json; do echo "$(basename $(dirname $
 
 ## Done when
 
-Section 1 passes on all five hosts, and section 2 passes or is dropped by decision. Then delete this file.
+A, B1 and B2 pass on every host they name, and C1 passes or is dropped by decision. Then delete this file.

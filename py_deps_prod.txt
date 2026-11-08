@@ -46,11 +46,11 @@ pyarrow==25.0.1
 
 # Machine learning/visualisation
 anyio==4.16.0
-notebook==7.6.4
+notebook==7.6.5
 pdftotext==4.0.0
-jupyterlab==4.6.5
+jupyterlab==4.6.6
 matplotlib==3.11.2
-virtualenv==21.15.5
+virtualenv==21.15.6
 matplotlib-inline==0.2.2
 mlflow==$MLFLOW_VERSION
 onnx==1.23.2

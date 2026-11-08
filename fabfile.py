@@ -267,10 +267,10 @@ def _pull(context):
             notebook_dir = dirname(metadata_path)
             model_deps_path = join(notebook_dir, "py_deps.txt")
             with open(metadata_path) as metadata_file:
-                targets = json.load(metadata_file)["targets"]
+                target = json.load(metadata_file)["target"]
             consumer = basename(dirname(dirname(notebook_dir)))
             if isfile(model_deps_path) and (
-                (service == "mlserver" and {"kind": "served"} in targets) or (service == ("mlmodels" if consumer == "example" else consumer) and {"kind": "embedded", "language": "python"} in targets)
+                (service == "mlserver" and target == {"kind": "served"}) or (service == ("mlmodels" if consumer == "example" else consumer) and target == {"kind": "embedded", "language": "python"})
             ):
                 with open(model_deps_path) as model_deps_file:
                     names.extend(line.strip() for line in model_deps_file if line.strip())

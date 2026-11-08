@@ -42,17 +42,17 @@ fn main() -> ExitCode {
 
 fn load_project(dir: &Path) -> Result<(Value, String), String> {
     let manifest = read_json(&dir.join("project.json"))?;
-    let signature_json = fs::read_to_string(dir.join(text(&manifest["files"]["signature"]["path"])))
-        .map_err(|error| format!("signature unreadable [{error}]"))?;
-    for (key, entry) in manifest["files"].as_object().into_iter().flatten() {
-        let bytes = fs::read(dir.join(text(&entry["path"]))).map_err(|_| format!("PJ003 file absent [{key}]"))?;
-        if hex(&Sha256::digest(&bytes)) != text(&entry["sha256"]) {
-            return Err(format!("PJ003 file checksum mismatch [{key}]"));
+    let signature_json =
+        fs::read_to_string(dir.join("signature.json")).map_err(|error| format!("signature unreadable [{error}]"))?;
+    for (path, checksum) in manifest["files"].as_object().into_iter().flatten() {
+        let bytes = fs::read(dir.join(path)).map_err(|_| format!("PJ003 file absent [{path}]"))?;
+        if hex(&Sha256::digest(&bytes)) != text(checksum) {
+            return Err(format!("PJ003 file checksum mismatch [{path}]"));
         }
     }
-    match manifest["files"].get("evaluation") {
-        Some(entry) => {
-            if read_json(&dir.join(text(&entry["path"])))?["passed"] != Value::Bool(true) {
+    match manifest["files"].get("evaluation.json") {
+        Some(_) => {
+            if read_json(&dir.join("evaluation.json"))?["passed"] != Value::Bool(true) {
                 return Err("acceptance not passed".to_string());
             }
         }
@@ -94,7 +94,7 @@ fn replay(dir: &Path, served: Option<(String, String)>) -> Result<Vec<String>, S
     report("load", &loaded, started);
     let started = Instant::now();
     let mut steps = 0;
-    let golden = read_json(&dir.join(text(&manifest["files"]["golden"]["path"])))?;
+    let golden = read_json(&dir.join("golden.json"))?;
     let required: Vec<String> = signature["inputs"]
         .as_array()
         .into_iter()
@@ -157,10 +157,7 @@ fn report(stage: &str, detail: &str, started: Instant) {
 }
 
 fn new_predictor(dir: &Path, manifest: &Value, signature_json: &str) -> Result<Predict, String> {
-    let model = dir
-        .join(text(&manifest["files"]["model"]["path"]))
-        .to_string_lossy()
-        .into_owned();
+    let model = dir.join(text(&manifest["model"])).to_string_lossy().into_owned();
     match text(&manifest["flavour"]).as_str() {
         "static" => run_static::load_static(&manifest["constants"].to_string(), signature_json),
         "wasm" => run_wasm::load_wasm(&model, signature_json),

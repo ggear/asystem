@@ -8,92 +8,20 @@
           "request": {
             "id": "s1-0",
             "inputs": [
-              {
-                "name": "rackmains_clock_epoch_seconds",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  1793355300.0
-                ]
-              },
-              {
-                "name": "rackmains_output_utilisation_pct",
-                "datatype": "INT64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  13
-                ]
-              },
-              {
-                "name": "rackmains_ups_on_battery",
-                "datatype": "INT64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  1
-                ]
-              },
-              {
-                "name": "rackmains_battery_replace",
-                "datatype": "INT64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  0
-                ]
-              }
+              {"name": "rackmains_clock_epoch_seconds", "datatype": "FP64", "shape": [1], "data": [1793355300.0]},
+              {"name": "rackmains_output_utilisation_pct", "datatype": "INT64", "shape": [1], "data": [13]},
+              {"name": "rackmains_ups_on_battery", "datatype": "INT64", "shape": [1], "data": [1]},
+              {"name": "rackmains_battery_replace", "datatype": "INT64", "shape": [1], "data": [0]}
             ]
           },
           "response": {
             "model_name": "rackmains_ups_battery",
             "id": "s1-0",
             "outputs": [
-              {
-                "name": "rackmains_guard_shed_max_seconds",
-                "datatype": "INT64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  120
-                ]
-              },
-              {
-                "name": "rackmains_guard_halt_max_seconds",
-                "datatype": "INT64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  450
-                ]
-              },
-              {
-                "name": "rackmains_guard_mains_stable_seconds",
-                "datatype": "INT64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  300
-                ]
-              },
-              {
-                "name": "rackmains_guard_halt_delay_seconds",
-                "datatype": "INT64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  120
-                ]
-              }
+              {"name": "rackmains_guard_shed_max_seconds", "datatype": "INT64", "shape": [1], "data": [120]},
+              {"name": "rackmains_guard_halt_max_seconds", "datatype": "INT64", "shape": [1], "data": [450]},
+              {"name": "rackmains_guard_mains_stable_seconds", "datatype": "INT64", "shape": [1], "data": [300]},
+              {"name": "rackmains_guard_halt_delay_seconds", "datatype": "INT64", "shape": [1], "data": [120]}
             ]
           }
         },
@@ -101,107 +29,21 @@
           "request": {
             "id": "s1-1",
             "inputs": [
-              {
-                "name": "rackmains_clock_epoch_seconds",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  1793355330.0
-                ]
-              },
-              {
-                "name": "rackmains_output_utilisation_pct",
-                "datatype": "INT64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  13
-                ]
-              },
-              {
-                "name": "rackmains_ups_on_battery",
-                "datatype": "INT64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  1
-                ]
-              },
-              {
-                "name": "rackmains_battery_replace",
-                "datatype": "INT64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  0
-                ]
-              },
-              {
-                "name": "rackmains_model_state_in",
-                "datatype": "FP64",
-                "shape": [
-                  6
-                ],
-                "data": [
-                  0.0,
-                  1235.0,
-                  0.0,
-                  1.0,
-                  1.0,
-                  1793355329.0
-                ]
-              }
+              {"name": "rackmains_clock_epoch_seconds", "datatype": "FP64", "shape": [1], "data": [1793355330.0]},
+              {"name": "rackmains_output_utilisation_pct", "datatype": "INT64", "shape": [1], "data": [13]},
+              {"name": "rackmains_ups_on_battery", "datatype": "INT64", "shape": [1], "data": [1]},
+              {"name": "rackmains_battery_replace", "datatype": "INT64", "shape": [1], "data": [0]},
+              {"name": "rackmains_model_state_in", "datatype": "FP64", "shape": [6], "data": [0.0, 1235.0, 0.0, 1.0, 1.0, 1793355329.0]}
             ]
           },
           "response": {
             "model_name": "rackmains_ups_battery",
             "id": "s1-1",
             "outputs": [
-              {
-                "name": "rackmains_guard_shed_max_seconds",
-                "datatype": "INT64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  120
-                ]
-              },
-              {
-                "name": "rackmains_guard_halt_max_seconds",
-                "datatype": "INT64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  450
-                ]
-              },
-              {
-                "name": "rackmains_guard_mains_stable_seconds",
-                "datatype": "INT64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  300
-                ]
-              },
-              {
-                "name": "rackmains_guard_halt_delay_seconds",
-                "datatype": "INT64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  120
-                ]
-              }
+              {"name": "rackmains_guard_shed_max_seconds", "datatype": "INT64", "shape": [1], "data": [120]},
+              {"name": "rackmains_guard_halt_max_seconds", "datatype": "INT64", "shape": [1], "data": [450]},
+              {"name": "rackmains_guard_mains_stable_seconds", "datatype": "INT64", "shape": [1], "data": [300]},
+              {"name": "rackmains_guard_halt_delay_seconds", "datatype": "INT64", "shape": [1], "data": [120]}
             ]
           }
         },
@@ -209,107 +51,21 @@
           "request": {
             "id": "s1-2",
             "inputs": [
-              {
-                "name": "rackmains_clock_epoch_seconds",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  1793355360.0
-                ]
-              },
-              {
-                "name": "rackmains_output_utilisation_pct",
-                "datatype": "INT64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  12
-                ]
-              },
-              {
-                "name": "rackmains_ups_on_battery",
-                "datatype": "INT64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  0
-                ]
-              },
-              {
-                "name": "rackmains_battery_replace",
-                "datatype": "INT64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  1
-                ]
-              },
-              {
-                "name": "rackmains_model_state_in",
-                "datatype": "FP64",
-                "shape": [
-                  6
-                ],
-                "data": [
-                  0.0,
-                  0.0,
-                  600.0,
-                  0.0,
-                  1.0,
-                  1793355359.0
-                ]
-              }
+              {"name": "rackmains_clock_epoch_seconds", "datatype": "FP64", "shape": [1], "data": [1793355360.0]},
+              {"name": "rackmains_output_utilisation_pct", "datatype": "INT64", "shape": [1], "data": [12]},
+              {"name": "rackmains_ups_on_battery", "datatype": "INT64", "shape": [1], "data": [0]},
+              {"name": "rackmains_battery_replace", "datatype": "INT64", "shape": [1], "data": [1]},
+              {"name": "rackmains_model_state_in", "datatype": "FP64", "shape": [6], "data": [0.0, 0.0, 600.0, 0.0, 1.0, 1793355359.0]}
             ]
           },
           "response": {
             "model_name": "rackmains_ups_battery",
             "id": "s1-2",
             "outputs": [
-              {
-                "name": "rackmains_guard_shed_max_seconds",
-                "datatype": "INT64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  120
-                ]
-              },
-              {
-                "name": "rackmains_guard_halt_max_seconds",
-                "datatype": "INT64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  450
-                ]
-              },
-              {
-                "name": "rackmains_guard_mains_stable_seconds",
-                "datatype": "INT64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  300
-                ]
-              },
-              {
-                "name": "rackmains_guard_halt_delay_seconds",
-                "datatype": "INT64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  120
-                ]
-              }
+              {"name": "rackmains_guard_shed_max_seconds", "datatype": "INT64", "shape": [1], "data": [120]},
+              {"name": "rackmains_guard_halt_max_seconds", "datatype": "INT64", "shape": [1], "data": [450]},
+              {"name": "rackmains_guard_mains_stable_seconds", "datatype": "INT64", "shape": [1], "data": [300]},
+              {"name": "rackmains_guard_halt_delay_seconds", "datatype": "INT64", "shape": [1], "data": [120]}
             ]
           }
         },
@@ -317,36 +73,9 @@
           "request": {
             "id": "s1-3",
             "inputs": [
-              {
-                "name": "rackmains_clock_epoch_seconds",
-                "datatype": "FP64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  1793355390.0
-                ]
-              },
-              {
-                "name": "rackmains_ups_on_battery",
-                "datatype": "INT64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  1
-                ]
-              },
-              {
-                "name": "rackmains_battery_replace",
-                "datatype": "INT64",
-                "shape": [
-                  1
-                ],
-                "data": [
-                  0
-                ]
-              }
+              {"name": "rackmains_clock_epoch_seconds", "datatype": "FP64", "shape": [1], "data": [1793355390.0]},
+              {"name": "rackmains_ups_on_battery", "datatype": "INT64", "shape": [1], "data": [1]},
+              {"name": "rackmains_battery_replace", "datatype": "INT64", "shape": [1], "data": [0]}
             ]
           },
           "error": "signature"

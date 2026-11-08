@@ -1,11 +1,9 @@
 {
-  "schema": 1,
+  "schema": 2,
   "name": "finance_portfolio_profile",
   "flavour": "pyfunc",
-  "signature_version": 1,
-  "runtime": {
-    "python": []
-  },
+  "model": "model.py",
+  "runtime": {"python": []},
   "provenance": {
     "source": "manual",
     "trained_on": "synthetic two asset blend and seeded simulation, training split",
@@ -17,21 +15,9 @@
     "implementation": "mlflow.pyfunc model.py, requires mlflow, pandas and the standard library"
   },
   "files": {
-    "signature": {
-      "path": "signature.json",
-      "sha256": "d791b36b06403f018731fd1577df19ee1692e8aa22dd20b7a8e3e6a07de9c83f"
-    },
-    "golden": {
-      "path": "golden.json",
-      "sha256": "5117c6b62388be1016c489e8ac8d8bc7a5fa138cdbc0ae5e1f8c6d4d40aaf8b8"
-    },
-    "evaluation": {
-      "path": "evaluation.json",
-      "sha256": "0290f598b8b1ccbc4ee0f7e257c32fe30c6d1b40a1c141f846ac5fa8b078cafe"
-    },
-    "model": {
-      "path": "model.py",
-      "sha256": "700c2c1680af26a84664baebebfc1a97ed68a24f0b2999e9e87dcd622764449f"
-    }
+    "signature.json": "ad189397b971feb31dcf1cbc40591f1619b45d4edb36ebf14ff8085fbdfa3ad5",
+    "golden.json": "efffee42785d44f0a46fa4a13e36d801b2fa08283fd1ddc5f94b41d840a43789",
+    "evaluation.json": "0d9a279f451bc7951082846a37c1b3da02fcd66305329131a38ad83bce8da3d0",
+    "model.py": "700c2c1680af26a84664baebebfc1a97ed68a24f0b2999e9e87dcd622764449f"
   }
 }

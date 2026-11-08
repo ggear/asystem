@@ -1,11 +1,9 @@
 {
-  "schema": 1,
+  "schema": 2,
   "name": "finance_portfolio_allocation",
   "flavour": "pyfunc",
-  "signature_version": 1,
-  "runtime": {
-    "python": []
-  },
+  "model": "model.py",
+  "runtime": {"python": []},
   "provenance": {
     "source": "manual",
     "trained_on": "synthetic risk-adjusted returns and risky shares, training split",
@@ -17,21 +15,9 @@
     "implementation": "mlflow.pyfunc model.py, requires mlflow, pandas and the standard library"
   },
   "files": {
-    "signature": {
-      "path": "signature.json",
-      "sha256": "aa0e6e5bb80e2de876583b4d406467b8fa55534da0c890defb57d84b5cd98379"
-    },
-    "golden": {
-      "path": "golden.json",
-      "sha256": "e6fc1f35351c32d11028b2cc20ca56a24d48622a9febeac47841395f174fe7a8"
-    },
-    "evaluation": {
-      "path": "evaluation.json",
-      "sha256": "6daf43eeba81b36dcd14a6595d334679c00a640afb06647a5ba985b66d8d29c8"
-    },
-    "model": {
-      "path": "model.py",
-      "sha256": "61fc6a6971a3cd78bab5d40391cae1aca902a3bcd909f4d70c0b185d71d42b09"
-    }
+    "signature.json": "0ffe5e500933c68999de5db00e334746719fd62d5eec4cdfcfee468a75d96bfb",
+    "golden.json": "9b94b4c9e5a22cb65a7edd313655e419146cdb30abdc7a0540ea3d741a4b1327",
+    "evaluation.json": "68cf4e07d4047e7cf2eefb16b7d560a8ba0eb491d37821b3c8ecb3f7788496ff",
+    "model.py": "61fc6a6971a3cd78bab5d40391cae1aca902a3bcd909f4d70c0b185d71d42b09"
   }
 }

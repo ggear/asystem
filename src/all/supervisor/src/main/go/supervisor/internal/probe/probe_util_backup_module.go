@@ -85,12 +85,14 @@ func lockBackupModule(stderr io.Writer, module, source string, period time.Durat
 		return func() {}, true
 	}
 	parent := filepath.Dir(source)
-	if os.MkdirAll(parent, 0o755) != nil {
-		return func() {}, true
+	if err := os.MkdirAll(parent, 0o755); err != nil {
+		fmt.Fprintf(stderr, "Lock directory [%s] could not be created [%v]\n", parent, err)
+		return nil, false
 	}
 	lock, err := os.OpenFile(filepath.Join(parent, treeLockLeaf), os.O_CREATE|os.O_RDWR, 0o644)
 	if err != nil {
-		return func() {}, true
+		fmt.Fprintf(stderr, "Lock for [%s] could not be opened [%v]\n", module, err)
+		return nil, false
 	}
 	deadline := time.Now().Add(period)
 	for syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB) != nil {

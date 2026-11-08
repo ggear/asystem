@@ -1,47 +1,8 @@
 {
-  "schema": 1,
-  "targets": [
-    {
-      "kind": "served"
-    },
-    {
-      "kind": "embedded",
-      "language": "python"
-    },
-    {
-      "kind": "embedded",
-      "language": "go"
-    },
-    {
-      "kind": "embedded",
-      "language": "rust"
-    }
-  ],
-  "passed": [],
-  "runtime": {
-    "wasm": [
-      "acos",
-      "asin",
-      "atan",
-      "atan2",
-      "cos",
-      "cosh",
-      "exp",
-      "log",
-      "log10",
-      "log2",
-      "pow",
-      "sin",
-      "sinh",
-      "tan",
-      "tanh"
-    ]
-  },
-  "snapshot_version": "10.200.1991-SNAPSHOT",
-  "released_version": null,
-  "released_by": null,
-  "released_at": null,
-  "released_signature": null,
-  "content_sha256": "062ca36142884d435d6d74445d8ed9ae0e8d6432755a101c52d65c6897f1625f",
-  "inputs_sha256": "48b00095e48b51ad3352300702c19c2afa26859bdebc06fee66f2c0d5b2a22a2"
+  "schema": 2,
+  "version": "10.200.1991-SNAPSHOT",
+  "content_sha256": "9b195156de920bbc7e44610217809134e41422e573c52f6f923e3ad0558b8b3d",
+  "inputs_sha256": "e04955bf0b20b6b14aa7bee25cba6d841e608f979453e5ab815bd019f416132e",
+  "target": {"kind": "embedded", "language": "python"},
+  "release": null
 }

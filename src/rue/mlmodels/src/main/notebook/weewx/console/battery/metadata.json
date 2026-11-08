@@ -1,19 +1,8 @@
 {
-  "schema": 1,
-  "targets": [
-    {
-      "kind": "served"
-    }
-  ],
-  "passed": [],
-  "runtime": {
-    "python": []
-  },
-  "snapshot_version": "10.200.1991-SNAPSHOT",
-  "released_version": null,
-  "released_by": null,
-  "released_at": null,
-  "released_signature": null,
-  "content_sha256": "e815a65cf123e39e9fd2e33c0fa84c63825cc2bfbe18d1b696f62034f60fe0e2",
-  "inputs_sha256": "01dffcac555f6855806a2a88ab43c0eb7f8d0f5ea6017ef274a68ed1ebe67cc1"
+  "schema": 2,
+  "version": "10.200.1996-SNAPSHOT",
+  "content_sha256": "a0c9d247fa6563a268e2a25130b462d662f3354d36fc18ec910f29782aa380c7",
+  "inputs_sha256": "8a52f3a7c1d151d72f96264a12ab7215caa638eedcce144d0907dee3566c5662",
+  "target": {"kind": "served"},
+  "release": null
 }

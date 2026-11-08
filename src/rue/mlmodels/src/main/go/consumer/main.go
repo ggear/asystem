@@ -16,11 +16,9 @@ type predictor func(inputs map[string][]float64) (map[string][]float64, error)
 
 type manifest struct {
 	Flavour   string             `json:"flavour"`
+	Model     string             `json:"model"`
 	Constants map[string]float64 `json:"constants"`
-	Files     map[string]struct {
-		Path   string `json:"path"`
-		Sha256 string `json:"sha256"`
-	} `json:"files"`
+	Files     map[string]string  `json:"files"`
 }
 
 type signature struct {
@@ -88,27 +86,27 @@ func loadProject(dir string) (manifest, signature, string, error) {
 	if err := readJSON(filepath.Join(dir, "project.json"), &project); err != nil {
 		return project, sig, "", err
 	}
-	signatureBytes, err := os.ReadFile(filepath.Join(dir, project.Files["signature"].Path))
+	signatureBytes, err := os.ReadFile(filepath.Join(dir, "signature.json"))
 	if err != nil {
 		return project, sig, "", fmt.Errorf("signature unreadable [%w]", err)
 	}
 	if err := json.Unmarshal(signatureBytes, &sig); err != nil {
 		return project, sig, "", fmt.Errorf("signature invalid [%w]", err)
 	}
-	for key, entry := range project.Files {
-		content, err := os.ReadFile(filepath.Join(dir, entry.Path))
+	for path, checksum := range project.Files {
+		content, err := os.ReadFile(filepath.Join(dir, path))
 		if err != nil {
-			return project, sig, "", fmt.Errorf("PJ003 file absent [%s]", key)
+			return project, sig, "", fmt.Errorf("PJ003 file absent [%s]", path)
 		}
-		if sum := sha256.Sum256(content); hex.EncodeToString(sum[:]) != entry.Sha256 {
-			return project, sig, "", fmt.Errorf("PJ003 file checksum mismatch [%s]", key)
+		if sum := sha256.Sum256(content); hex.EncodeToString(sum[:]) != checksum {
+			return project, sig, "", fmt.Errorf("PJ003 file checksum mismatch [%s]", path)
 		}
 	}
-	if evaluation, evaluated := project.Files["evaluation"]; evaluated {
+	if _, evaluated := project.Files["evaluation.json"]; evaluated {
 		var verdict struct {
 			Passed bool `json:"passed"`
 		}
-		if err := readJSON(filepath.Join(dir, evaluation.Path), &verdict); err != nil {
+		if err := readJSON(filepath.Join(dir, "evaluation.json"), &verdict); err != nil {
 			return project, sig, "", err
 		}
 		if !verdict.Passed {
@@ -143,7 +141,7 @@ func replay(dir string, served []string) ([]string, error) {
 	started = time.Now()
 	steps := 0
 	var doc golden
-	if err := readJSON(filepath.Join(dir, project.Files["golden"].Path), &doc); err != nil {
+	if err := readJSON(filepath.Join(dir, "golden.json"), &doc); err != nil {
 		return nil, err
 	}
 	var findings []string
@@ -199,9 +197,9 @@ func newPredictor(dir string, project manifest, signatureJSON string) (predictor
 		}
 		return loadStatic(string(constantsJSON), signatureJSON)
 	case "wasm":
-		return loadWasm(filepath.Join(dir, project.Files["model"].Path), signatureJSON)
+		return loadWasm(filepath.Join(dir, project.Model), signatureJSON)
 	case "onnx":
-		return loadOnnx(filepath.Join(dir, project.Files["model"].Path), signatureJSON)
+		return loadOnnx(filepath.Join(dir, project.Model), signatureJSON)
 	default:
 		return nil, fmt.Errorf("no consumer for flavour [%s]", project.Flavour)
 	}

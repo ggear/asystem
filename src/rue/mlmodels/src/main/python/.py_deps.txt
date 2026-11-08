@@ -1,5 +1,5 @@
 mlflow==3.18.0
-jupyterlab==4.6.5
+jupyterlab==4.6.6
 requests==2.34.2
 python-dateutil==4.0.0
 scipy==1.18.1

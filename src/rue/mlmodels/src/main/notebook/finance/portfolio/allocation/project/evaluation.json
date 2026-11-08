@@ -4,16 +4,10 @@
   "budget": 2.7158883509390102e-05,
   "datasets": {
     "validation": [
-      {
-        "path": "2026-11-06_11-08-29/portfolio_allocation_validation_2026-11-05_2026-11-05.csv",
-        "sha256": "d5deba21a5f39af80506f73a52cb03ed5f67cb78bd45982b4a478edb71366401"
-      }
+      {"path": "2026-11-06_11-08-29/portfolio_allocation_validation_2026-11-05_2026-11-05.csv", "sha256": "d5deba21a5f39af80506f73a52cb03ed5f67cb78bd45982b4a478edb71366401"}
     ],
     "backtest": [
-      {
-        "path": "2026-11-06_11-08-29/portfolio_allocation_backtest_2026-11-05_2026-11-05.csv",
-        "sha256": "95193e2b38ba3e0dafdd985ee85e66fe9cbeeaa99ae708149be40911da05bdc1"
-      }
+      {"path": "2026-11-06_11-08-29/portfolio_allocation_backtest_2026-11-05_2026-11-05.csv", "sha256": "95193e2b38ba3e0dafdd985ee85e66fe9cbeeaa99ae708149be40911da05bdc1"}
     ]
   },
   "checks": [

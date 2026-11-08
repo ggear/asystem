@@ -29,23 +29,23 @@ def load_project(directory):
         raise ValueError(f"manifest missing [{manifest_path}]")
     with open(manifest_path) as manifest_file:
         manifest = json.load(manifest_file)
-    for key, entry in manifest["files"].items():
-        path = join(directory, entry["path"])
+    for name, sha256 in manifest["files"].items():
+        path = join(directory, name)
         if not isfile(path):
-            raise ValueError(f"file absent [{key}] path [{entry['path']}]")
+            raise ValueError(f"file absent [{name}]")
         digest = hashlib.sha256()
         with open(path, "rb") as file:
             for chunk in iter(lambda: file.read(1 << 20), b""):
                 digest.update(chunk)
-        if digest.hexdigest() != entry["sha256"]:
-            raise ValueError(f"file checksum mismatch [{key}] path [{entry['path']}]")
-    if manifest["flavour"] != "static" and "evaluation" not in manifest["files"]:
+        if digest.hexdigest() != sha256:
+            raise ValueError(f"file checksum mismatch [{name}]")
+    if manifest["flavour"] != "static" and "evaluation.json" not in manifest["files"]:
         raise ValueError(f"no acceptance evaluation for flavour [{manifest['flavour']}]")
-    if "evaluation" in manifest["files"]:
-        with open(join(directory, manifest["files"]["evaluation"]["path"])) as evaluation_file:
+    if "evaluation.json" in manifest["files"]:
+        with open(join(directory, "evaluation.json")) as evaluation_file:
             if json.load(evaluation_file).get("passed") is not True:
                 raise ValueError("acceptance not passed")
-    with open(join(directory, manifest["files"]["signature"]["path"])) as signature_file:
+    with open(join(directory, "signature.json")) as signature_file:
         signature_json = signature_file.read()
     return Project(directory, manifest, signature_json)
 
@@ -57,4 +57,4 @@ def _predictor(manifest, directory, signature_json):
     loaders = {"wasm": run_wasm.load_wasm, "onnx": run_onnx.load_onnx, "pyfunc": run_pyfunc.load_pyfunc}
     if flavour not in loaders:
         raise ValueError(f"no consumer for flavour [{flavour}]")
-    return loaders[flavour](join(directory, manifest["files"]["model"]["path"]), signature_json)
+    return loaders[flavour](join(directory, manifest["model"]), signature_json)

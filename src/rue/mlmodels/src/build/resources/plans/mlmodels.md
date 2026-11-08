@@ -1,15 +1,14 @@
 # Data Science Delivery Plan
 
 Status: 2026-11-04. The `mlmodels` module owns this plan and the specification. The rules are in `../doc/model.md`; this plan holds only what is done, what is not, the issues found and the
-open decisions, and MUST NOT restate the specification. Each notebook's own plan sits beside it in
-`src/rue/mlmodels/src/main/notebook/<module>/<model>/<notebook>/plan.md`.
+open decisions, and MUST NOT restate the specification. Each notebook's own intent, data, status and future are in its title cell.
 
 ## 1. Implemented
 
 - The vocabulary is scikit-learn's, mapped onto MLServer's and MLflow's (`model.md` 4.1): a project has a flavour and a signature (`signature.json`,
-  the V2 model metadata), and `workbench.model`, `workbench.notebook`, the notebooks, the plans and the committed rackmains default project use those
+  the V2 model metadata), and `workbench.model`, `workbench.notebook`, the notebooks and the committed rackmains default project use those
   words. The `wasm` flavour's module ABI is `predict(X) -> y`, with state carried as the `state_in` and `state_out` vectors.
-- A workspace holds `notebook.ipynb`, `plan.md`, `data` and at most one model file (WS007), and `write_project` copies that file into the project
+- A workspace holds `notebook.ipynb`, `data` and at most one model file (WS007), and `write_project` copies that file into the project
   and hashes it. Every non-`static` project names its `provenance.implementation` (PJ002).
 - The checks of `model.md` section 10: `lint_project` and `verify_project` (PJ001 to PJ012), `workbench.notebook` (NB001 to NB010) and
   `workbench.workspace` (WS001 to WS007), with unit tests that plant each fault, run in `fab build`, and a test that fails when the
@@ -39,7 +38,7 @@ open decisions, and MUST NOT restate the specification. Each notebook's own plan
 - The rackmains project: the `static` project `rackmains_ups_battery`, built by the `rackmains/ups/battery` notebook from the guard thresholds with four golden steps, embedded into `src/max/rackmains/src/build/resources/model/` once released.
 - Models, each in its own notebook directory under a module (`model.md` 6.1): `weewx/console/battery` (flavour `pyfunc`), `rackmains/ups/battery` (flavour
   `static` now, `wasm` for the fitted model) and `example/static/constant` (flavour `static`), and the placeholders `homeassistant/hotwater/temp`
-  (flavour `wasm`) and `weewx/forecast/roof` (flavour `onnx`), each scaffolded with its plan.
+  (flavour `wasm`) and `weewx/forecast/roof` (flavour `onnx`), each scaffolded with its title cell.
 - Worked examples for every flavour under the module `example` (`model.md` 6.9): `static/constant`, `wasm/accumulate`, `wasm/saturate` (binds the host `tanh`), `onnx/linear` and `pyfunc/linear`, each with a plan,
   data under every split, a passing acceptance check and a golden file. `onnx` stamping (`metadata_props`) and the `wasm` ABI (`memory`, `predict(x, n, y)`) are built, and
   `onnx`, `onnxruntime` and `wasmtime` are pinned in `py_deps_prod.txt`.
@@ -73,7 +72,7 @@ In order. Each item is done when its worked example (4) runs and passes.
 
 ## 3a. Built
 
-Built and tested as of 2026-11-04: the `mlserver` sync loop (poll, fall back, remember failures, unload, labels) with its own unit and system tests; the `mlflow` system test; `metadata.json`, targets, the inputs hash and the version-free project; `model.sh` (`unittest`, which skips a notebook whose inputs are unchanged, `systest`, `release`, `publish`, `status`); the reference consumers in Python, Go and Rust, one `run_` file per flavour and one entry point, `load`, built into one `Dockerfile` image and run for `static`, `wasm` and `onnx` in all three languages; `deploy.sh`; the fab hooks; the embed; and the `mlmodels` system test of the targets.
+Built and tested as of 2026-11-04: the `mlserver` sync loop (poll, fall back, remember failures, unload, labels) with its own unit and system tests; the `mlflow` system test; `metadata.json`, the target, the inputs hash and the version-free project; `model.sh` (`unittest`, which skips a notebook whose inputs are unchanged, `systest`, `release`, `publish`, `status`); the reference consumers in Python, Go and Rust, one `run_` file per flavour and one entry point, `load`, built into one `Dockerfile` image and run for `static`, `wasm` and `onnx` in all three languages; `deploy.sh`; the fab hooks; the embed; and the `mlmodels` system test of the target.
 
 Decided on 2026-11-04 and not to be revisited without cause: no emulated second architecture (a second architecture is a `fab systest` on a host of that architecture); no static floor or second copy in a consumer; `mlmodels` uses the production `mlflow` and `mlserver` as `supervisor` uses `vernemq`; a breaking signature change is a new model name.
 
@@ -83,7 +82,7 @@ The required behaviour is `model.md` section 11 and is not restated here. This s
 
 ### Tree
 
-`src/rue/mlmodels/`: no `.group`; `run_deps.txt` listing `mlflow`, `mlserver` and `influxdb3`; `deploy.sh`; `Dockerfile` with `docker_deps_base.txt` and `docker_deps_build.txt` (the reference consumers' test image, never released); `CLAUDE.md`; `src/main/python/{workbench,consumer}` and `py_deps.txt`; `src/main/{go,rust}/consumer`; `src/main/notebook/<module>/<model>/<notebook>/` (notebook, `plan.md`, `data/`, model file, `project/`, `metadata.json`); `src/build/resources/{model.sh,notebook.sh,doc,plans}`; `src/test/python/unit` and `src/test/python/system`. `mlflow` keeps its container files, `.env_all`, `.env_prod`, `generate.sh` and the nginx body-limit key, and has its own system test; the notebook libraries moved out of its image.
+`src/rue/mlmodels/`: no `.group`; `run_deps.txt` listing `mlflow`, `mlserver` and `influxdb3`; `deploy.sh`; `Dockerfile` with `docker_deps_base.txt` and `docker_deps_build.txt` (the reference consumers' test image, never released); `CLAUDE.md`; `src/main/python/{workbench,consumer}` and `py_deps.txt`; `src/main/{go,rust}/consumer`; `src/main/notebook/<module>/<model>/<notebook>/` (notebook, `data/`, model file, `project/`, `metadata.json`); `src/build/resources/{model.sh,notebook.sh,doc,plans}`; `src/test/python/unit` and `src/test/python/system`. `mlflow` keeps its container files, `.env_all`, `.env_prod`, `generate.sh` and the nginx body-limit key, and has its own system test; the notebook libraries moved out of its image.
 
 ### Verified, and decisions the tests produced
 
@@ -106,7 +105,7 @@ The required behaviour is `model.md` section 11 and is not restated here. This s
 ### Open
 
 - Whether to add the optional fab selection hook for stale consumers after living with the log.
-- Whether `targets` should also be derived by discovery from the consumers' `default` slots, as `letsencrypt` discovers its consumers, once there is more than one.
+- Whether `target` should also be derived by discovery from the consumers' `default` slots, as `letsencrypt` discovers its consumers, once there is more than one.
 
 ## 4. Worked examples
 
@@ -135,8 +134,8 @@ flow and what it proves stay the same.
 
 | Candidate | Flow | Flavour | Replaces | Data Checked | Cautions |
 |---|---|---|---|---|---|
-| `homeassistant/hotwater/temp` (plan: `homeassistant/hotwater/temp/plan.md`) | Stateful model | `wasm` | `rackmains/ups/battery` in the Stateful model row | `compensation_sensor_landing_festoons_plug_temperature`: 137,618 readings, median 20 s apart and at most 7 h, 17.2 to 66.5 °C. `roof_max_solar_radiation`: 12,281 readings, 0 to 1,050. The booster's on and off commands from the `water_heating_turn_on_water_heater_booster` and `_turn_off_` automations | No flow meter, so a flow split has to be constructed or hand-annotated. The booster plug's own power sensor has 35 readings, all under 2 W, so it cannot be used for booster state. Solar is a radiation proxy only. The owning module is assumed to be `homeassistant` and is to be confirmed |
-| `weewx/forecast/roof` (plan: `weewx/forecast/roof/plan.md`) | Learned model | `onnx` | `example/onnx/regression` in the Learned model row | `roof_temperature`: 19,690 readings, 6.4 to 30.8 °C. The Bureau forecasts `bom_darlington_temp_max_0` to `_7` and `_min_0` to `_7`, and `_later`: 22,488 readings each. `roof_max_solar_radiation`: 12,281 readings. `bom_darlington_temp`: 22,644 readings | About 79 days, so about 79 realised days per horizon, from one site. The Bureau's station is not on the roof. The owning module of the `roof_*` and `bom_*` entities is to be confirmed |
+| `homeassistant/hotwater/temp` | Stateful model | `wasm` | `rackmains/ups/battery` in the Stateful model row | `compensation_sensor_landing_festoons_plug_temperature`: 137,618 readings, median 20 s apart and at most 7 h, 17.2 to 66.5 °C. `roof_max_solar_radiation`: 12,281 readings, 0 to 1,050. The booster's on and off commands from the `water_heating_turn_on_water_heater_booster` and `_turn_off_` automations | No flow meter, so a flow split has to be constructed or hand-annotated. The booster plug's own power sensor has 35 readings, all under 2 W, so it cannot be used for booster state. Solar is a radiation proxy only. The owning module is assumed to be `homeassistant` and is to be confirmed |
+| `weewx/forecast/roof` | Learned model | `onnx` | `example/onnx/regression` in the Learned model row | `roof_temperature`: 19,690 readings, 6.4 to 30.8 °C. The Bureau forecasts `bom_darlington_temp_max_0` to `_7` and `_min_0` to `_7`, and `_later`: 22,488 readings each. `roof_max_solar_radiation`: 12,281 readings. `bom_darlington_temp`: 22,644 readings | About 79 days, so about 79 realised days per horizon, from one site. The Bureau's station is not on the roof. The owning module of the `roof_*` and `bom_*` entities is to be confirmed |
 
 **Why `hotwater/temp` replaces the rackmains example.** The Stateful model row is meant to prove carried state, replay of recorded runs and the
 `static` fallback. The rackmains fit is blocked on trial 5, a discharge to the knee, which does not exist yet, while `homeassistant/hotwater/temp` has 79 days of

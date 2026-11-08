@@ -8,12 +8,6 @@ import (
 	"supervisor/internal/probe"
 )
 
-var (
-	_ = BackupRequest{}
-	_ = BackupCommandStart
-	_ = metric.BackupStagePrimary
-)
-
 func TestEngineImplBackup_EveryCommandInRangeIsNamed(t *testing.T) {
 	named := map[string]BackupCommand{}
 	for command := BackupCommandStart; command <= BackupCommandAuto; command++ {

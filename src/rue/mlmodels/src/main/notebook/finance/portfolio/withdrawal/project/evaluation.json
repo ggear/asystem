@@ -4,16 +4,10 @@
   "budget": 2.8775980407629587e-05,
   "datasets": {
     "validation": [
-      {
-        "path": "2026-11-06_10-33-08/portfolio_withdrawal_validation_2026-11-05_2026-11-05.csv",
-        "sha256": "0e68e65c51cb9641df7c8679cf0668def375b64dc64e93adaa02d241ed7aacdc"
-      }
+      {"path": "2026-11-06_10-33-08/portfolio_withdrawal_validation_2026-11-05_2026-11-05.csv", "sha256": "0e68e65c51cb9641df7c8679cf0668def375b64dc64e93adaa02d241ed7aacdc"}
     ],
     "backtest": [
-      {
-        "path": "2026-11-06_10-33-08/portfolio_withdrawal_backtest_2026-11-05_2026-11-05.csv",
-        "sha256": "f95de71682726a9a94bcbfd308ff35aec671035b72d5bd2ee6af2ea5c976cdc8"
-      }
+      {"path": "2026-11-06_10-33-08/portfolio_withdrawal_backtest_2026-11-05_2026-11-05.csv", "sha256": "f95de71682726a9a94bcbfd308ff35aec671035b72d5bd2ee6af2ea5c976cdc8"}
     ]
   },
   "checks": [

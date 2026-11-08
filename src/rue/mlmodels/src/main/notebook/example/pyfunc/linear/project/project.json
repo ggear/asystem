@@ -1,39 +1,20 @@
 {
-  "schema": 1,
+  "schema": 2,
   "name": "example_pyfunc_linear",
   "flavour": "pyfunc",
-  "signature_version": 1,
-  "runtime": {
-    "python": [
-      "polars"
-    ]
-  },
+  "model": "model.py",
+  "runtime": {"python": ["polars"]},
   "provenance": {
     "source": "manual",
     "trained_on": "synthetic line, training split",
-    "inputs": [
-      "example/pyfunc/linear/data/training/2026-11-03_16-40-55/pyfunc_linear_training_2026-11-03_2026-11-03.csv",
-      "example/pyfunc/linear/data/golden/2026-11-03_16-40-55/pyfunc_linear_golden.csv"
-    ],
+    "inputs": ["example/pyfunc/linear/data/training/2026-11-03_16-40-55/pyfunc_linear_training_2026-11-03_2026-11-03.csv", "example/pyfunc/linear/data/golden/2026-11-03_16-40-55/pyfunc_linear_golden.csv"],
     "notes": "least squares line, gain and offset built into model.py",
     "implementation": "mlflow.pyfunc model.py, requires mlflow, pandas and polars"
   },
   "files": {
-    "signature": {
-      "path": "signature.json",
-      "sha256": "2fb3d6f6fb36f146b7e4abf281ce0c1a358e10ae1688db5b017142a6cfc460d8"
-    },
-    "golden": {
-      "path": "golden.json",
-      "sha256": "f8bcc06a959415e0187400fd5b0c68f3f5ca1146a79978a91d168ad2b0746b23"
-    },
-    "evaluation": {
-      "path": "evaluation.json",
-      "sha256": "1828d1de400b14741567485c57e0cf3099b5e3e3293160955d4bd235aeec33ca"
-    },
-    "model": {
-      "path": "model.py",
-      "sha256": "af19c78e203bccdb3fffd41153f4ef71f54c657df0511a8a5150640c4927ebdc"
-    }
+    "signature.json": "6db4fd879553b5bda859f2221735a2faee5c07e3fd5eb254d346fae2743db3de",
+    "golden.json": "8fa97470bda2f82c8323bf91b3e9ecff0b2ff4126cca1116b0405e349887a881",
+    "evaluation.json": "f3b98d90ccb19bb0a69acb4c44a10a7af222aff378686aebca6b5f5cf985d97e",
+    "model.py": "af19c78e203bccdb3fffd41153f4ef71f54c657df0511a8a5150640c4927ebdc"
   }
 }

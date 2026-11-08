@@ -1,11 +1,9 @@
 {
-  "schema": 1,
+  "schema": 2,
   "name": "finance_portfolio_utility",
   "flavour": "pyfunc",
-  "signature_version": 1,
-  "runtime": {
-    "python": []
-  },
+  "model": "model.py",
+  "runtime": {"python": []},
   "provenance": {
     "source": "manual",
     "trained_on": "synthetic constant relative risk aversion utilities, training split",
@@ -17,21 +15,9 @@
     "implementation": "mlflow.pyfunc model.py, requires mlflow and pandas"
   },
   "files": {
-    "signature": {
-      "path": "signature.json",
-      "sha256": "ffbb343dd174ceb86fde43f75b15c81bfed12f8a74226ca84779784ef10d6e7b"
-    },
-    "golden": {
-      "path": "golden.json",
-      "sha256": "c6c3fa35119572184c3cc9cdcc0fb756a4464f384ab02f0b9fc387abea57c46c"
-    },
-    "evaluation": {
-      "path": "evaluation.json",
-      "sha256": "da4188286626e3158f2421bd8aeaa05b342afd1c18f60d396df938718a7c9477"
-    },
-    "model": {
-      "path": "model.py",
-      "sha256": "0b238f756d60d6aa567b8bb3a8bec56cf0f96e2074351bd118007be1fb584f82"
-    }
+    "signature.json": "5ae44441ef19916cd6108b596766138b9d708470bebe7fdf355933928a09d9d7",
+    "golden.json": "423893026d7454e14f86689ed9db10c745e15e28a4431856bb85829baf3814ec",
+    "evaluation.json": "d8f95dd2bc7c8b705e8e7c2404f956df5107cf3c7101577927573d3ed6790716",
+    "model.py": "0b238f756d60d6aa567b8bb3a8bec56cf0f96e2074351bd118007be1fb584f82"
   }
 }

@@ -28,25 +28,22 @@ def workspaces(source_dir):
     return found
 
 
-def release_workspaces(source_dir, version, released_by, tracking_uri=None, mlserver_url=None, clock=None):
+def release_workspaces(source_dir, version, tracking_uri=None, mlserver_url=None, clock=None):
     now = (clock or (lambda: datetime.now(UTC)))().strftime("%Y-%m-%dT%H:%M:%SZ")
     released = []
     for name, directory in workspaces(source_dir).items():
         if name.startswith(RELEASE_FIXTURES + "_") or not isfile(join(directory, METADATA_FILE)):
             continue
         metadata = read_metadata(directory)
-        if metadata["targets"] == [LOCAL_TARGET]:
+        if metadata["target"] == LOCAL_TARGET:
             continue
         _require_project(name, directory)
-        if metadata["released_version"] is None:
-            missing = [target for target in metadata["targets"] if target not in metadata["passed"]]
-            if missing:
-                raise GateError("Release", "targets", f"targets not passed for [{name}] {missing}")
+        if metadata["release"] is None:
             with open(join(directory, PROJECT_DIR, "signature.json")) as signature_file:
-                metadata = {**metadata, "released_version": version, "snapshot_version": None, "released_by": released_by, "released_at": now, "released_signature": json.load(signature_file)}
+                metadata = {**metadata, "version": version, "release": {"timestamp": now, "signature": json.load(signature_file)}}
             write_metadata(directory, metadata)
         released.append(name)
-        if tracking_uri is not None and any(target["kind"] == "served" for target in metadata["targets"]):
+        if tracking_uri is not None and metadata["target"]["kind"] == "served":
             publish_workspace(name, directory, tracking_uri, mlserver_url)
     return released
 
@@ -54,16 +51,15 @@ def release_workspaces(source_dir, version, released_by, tracking_uri=None, mlse
 def publish_workspace(name, directory, tracking_uri, mlserver_url=None):
     metadata = read_metadata(directory)
     _require_project(name, directory)
-    if metadata["released_version"] is None:
+    if metadata["release"] is None:
         raise GateError("Release", "publish", f"workspace [{name}] has no released version")
     register_project(join(directory, PROJECT_DIR), name, tracking_uri, aliases=())
     client = registry_client(tracking_uri)
     version = next(candidate for candidate in client.search_model_versions(f"name = '{name}'") if candidate.tags.get("content_sha256") == metadata["content_sha256"])
     tags = {
-        "release_version": metadata["released_version"],
+        "release_version": metadata["version"],
         "inputs_sha256": metadata["inputs_sha256"],
-        "released_by": metadata["released_by"],
-        "released_at": metadata["released_at"],
+        "released_at": metadata["release"]["timestamp"],
         "metadata": json.dumps(metadata, sort_keys=True, separators=(",", ":")),
     }
     for key, value in tags.items():
@@ -74,7 +70,7 @@ def publish_workspace(name, directory, tracking_uri, mlserver_url=None):
     if PROJECT_ALIAS_PREVIEW in client.get_registered_model(name).aliases:
         client.delete_registered_model_alias(name, PROJECT_ALIAS_PREVIEW)
     if mlserver_url is not None:
-        return wait_served(mlserver_url, name, metadata["released_version"])
+        return wait_served(mlserver_url, name, metadata["version"])
     return "published"
 
 
@@ -149,10 +145,10 @@ def status_lines(source_dir, tracking_uri=None, mlserver_url=None):
         if not isfile(join(directory, METADATA_FILE)):
             continue
         metadata = read_metadata(directory)
-        if metadata["released_version"] is None:
+        if metadata["release"] is None:
             continue
-        label = metadata["released_version"]
-        if any(target["kind"] == "served" for target in metadata["targets"]):
+        label = metadata["version"]
+        if metadata["target"]["kind"] == "served":
             if index is not None and index.get(name) != (label, "READY"):
                 lines.append(("WARN", f"served label differs from the released one model [{name}] served [{index.get(name)}] released [{label}]"))
             if registry is not None and registry.get(name, {}).get(PROJECT_ALIAS_RELEASE) != metadata["content_sha256"]:
@@ -179,7 +175,7 @@ def _released(source_dir, name):
     if directory is None or not isfile(join(directory, METADATA_FILE)):
         return None
     metadata = read_metadata(directory)
-    return None if metadata["released_version"] is None else metadata
+    return None if metadata["release"] is None else metadata
 
 
 def _registry_state(tracking_uri):

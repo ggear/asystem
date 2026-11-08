@@ -256,15 +256,6 @@ func TestProbeUtilBackup_DispatchesEachVerbAgainstAnEmptyRoot(t *testing.T) {
 	}
 }
 
-func TestProbeUtilBackup_CommandNamesItself(t *testing.T) {
-	if got := BackupCommandAuto.String(); got != "auto" {
-		t.Errorf("BackupCommandAuto.String() = %q, want auto", got)
-	}
-	if got := BackupCommand(99).String(); got != backupCommandUnnamed {
-		t.Errorf("BackupCommand(99).String() = %q, want %q", got, backupCommandUnnamed)
-	}
-}
-
 func TestProbeUtilBackup_TheShippedConfigDeclaresAThinningWindow(t *testing.T) {
 	path, err := filepath.Abs(filepath.Join("..", "..", "..", "..", "resources", "image", "config.json"))
 	if err != nil {
