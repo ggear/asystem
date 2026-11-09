@@ -541,6 +541,7 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
                 "pythonPlatform": "Linux",
                 "include": pyright_includes,
                 "exclude": ["**/__pycache__"],
+                "ignore": ["**/*.ipynb"],
                 "deprecateTypingAliases": True,
                 "reportDeprecated": "error",
                 "reportUnnecessaryCast": "error",

@@ -1354,6 +1354,24 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
+    # A balance move over more transactions in flight than can be sorted through is a warning, one over fewer reconciles
+    def test_bank_local_partial_80(self):
+        self._bank_run(
+            "partial_80",
+            standing=2,
+            rerun=False,
+            file_asserts={
+                "__bank_logs.csv": [
+                    assert_file_column_values(
+                        "Code",
+                        ["BALANCE_UNRECONCILED_UNJUDGED", "TRANSACTIONS_UNCLASSIFIED", "TRANSACTIONS_UNVETTED"],
+                        sort_by=["Code"],
+                    ),
+                    assert_file_column_values("Key", ["One 2025-12-23", "2025", "2025"], sort_by=["Code"]),
+                ],
+            },
+        )
+
     # An HSBC transaction is dated by its Sydney day, other banks by Redbark's date
     def test_bank_local_partial_55(self):
         self._bank_run(

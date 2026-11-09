@@ -136,7 +136,7 @@ BALANCES_MANUAL_JUMP = 10
 BALANCES_MANUAL_TIME = "23:59:59"
 BALANCES_RECONCILE_DAYS = 35
 BALANCES_RECONCILE_SETTLE_DAYS = 7
-BALANCES_RECONCILE_IN_FLIGHT = 12
+BALANCES_RECONCILE_IN_FLIGHT = 16
 BALANCES_BALANCE_FORMULA = '=IF({Balance Manual}<>"",{Balance Manual},{Balance Auto})'
 BALANCE_ID_NAMESPACE = uuid.uuid5(uuid.NAMESPACE_URL, "wrangle/balance/v2")
 BALANCES_KEY_COLUMNS = ["Date", "Time", "Account ID"]
@@ -293,6 +293,7 @@ ERROR_CODES = {
     "BALANCE_MANUAL_STALE": (plugin.LOG_KIND_ERROR, True, False, plugin.CTR_SRC_DATA),
     "BALANCE_UNRECONCILED": (plugin.LOG_KIND_ERROR, True, True, plugin.CTR_SRC_DATA),
     "BALANCE_UNRECONCILED_CURRENT": (plugin.LOG_KIND_WARNING, True, False, plugin.CTR_SRC_DATA),
+    "BALANCE_UNRECONCILED_UNJUDGED": (plugin.LOG_KIND_WARNING, True, False, plugin.CTR_SRC_DATA),
     "BALANCE_ABSENT": (plugin.LOG_KIND_WARNING, True, False, plugin.CTR_SRC_DATA),
     "IMPORT_GONE": (plugin.LOG_KIND_WARNING, True, True, plugin.CTR_SRC_DATA),
     "IMPORT_SUSPECT": (plugin.LOG_KIND_WARNING, True, True, plugin.CTR_SRC_DATA),
@@ -2343,12 +2344,13 @@ class Bank(plugin.Plugin):
             reconcile_postings_df = transactions_current_df.select(["Account ID", "Date", pl.coalesce("Date Posted", "Date").alias("__posted"), bank_cents("Amount Split").alias("__cents")])
             for (account_id,), account_readings_df in reconcile_readings_df.partition_by("Account ID", as_dict=True, maintain_order=True).items():
                 account_postings_df = reconcile_postings_df.filter(pl.col("Account ID") == account_id)
-                explained_before, reading_before = None, None
+                explained_before, reading_before, capped_before = None, None, False
                 for reading in account_readings_df.iter_rows(named=True):
                     day = reading["Date"]
                     in_flight = account_postings_df.filter((pl.col("Date") <= day) & (pl.col("__posted") >= day))["__cents"].to_list()
+                    capped = len(in_flight) > BALANCES_RECONCILE_IN_FLIGHT
                     in_flight_sums = {0: 0}
-                    for cents in in_flight if len(in_flight) <= BALANCES_RECONCILE_IN_FLIGHT else [sum(in_flight)]:
+                    for cents in [sum(in_flight)] if capped else in_flight:
                         for total, count in list(in_flight_sums.items()):
                             in_flight_sums[total + cents] = min(in_flight_sums.get(total + cents, count + 1), count + 1)
                     applied = account_postings_df.filter(pl.col("__posted") < day)["__cents"].sum()
@@ -2358,13 +2360,15 @@ class Bank(plugin.Plugin):
                         _bank_error(
                             "Balances",
                             f"{reading['Account']} {day}",
-                            "BALANCE_UNRECONCILED_CURRENT" if reading["__manual"] and day >= month_start else "BALANCE_UNRECONCILED",
+                            "BALANCE_UNRECONCILED_CURRENT" if reading["__manual"] and day >= month_start else "BALANCE_UNRECONCILED_UNJUDGED" if capped or capped_before else "BALANCE_UNRECONCILED",
                             f"balance on [{reading['Account']}] [{reading_before['__balance']}] at [{reading_before['Date']} {reading_before['Time']}] to [{reading['__balance']}] at [{day} {reading['Time']}] "
                             f"moved [{(after - before) / 100}] more than held transactions explain, fewest in flight assumed",
                         )
-                        explained_before = set(explained)
+                        explained_before, capped_before = set(explained), capped
+                    elif explained_before is None:
+                        explained_before, capped_before = set(explained), capped
                     else:
-                        explained_before = set(explained) if explained_before is None else explained.keys() & explained_before
+                        explained_before, capped_before = explained.keys() & explained_before, capped_before or capped
                     reading_before = reading
         self.print_log(f"Accounts checked with [{len(errors) - checked_errors}] problems", started=started_time)
 

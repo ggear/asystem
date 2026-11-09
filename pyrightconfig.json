@@ -69,6 +69,9 @@
   "exclude": [
     "**/__pycache__"
   ],
+  "ignore": [
+    "**/*.ipynb"
+  ],
   "deprecateTypingAliases": true,
   "reportDeprecated": "error",
   "reportUnnecessaryCast": "error",

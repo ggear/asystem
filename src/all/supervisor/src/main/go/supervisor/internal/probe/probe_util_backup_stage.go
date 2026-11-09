@@ -110,11 +110,6 @@ func runStage(ctx context.Context, request stageRequest) error {
 			}
 		}
 	}()
-	defer func() {
-		stopBackground()
-		<-backgroundDone
-	}()
-
 	counters := &stageCounters{}
 	var result stageResult
 	var runErr error
@@ -128,6 +123,9 @@ func runStage(ctx context.Context, request stageRequest) error {
 	default:
 		runErr = fmt.Errorf("unknown stage [%s]", request.Stage)
 	}
+
+	stopBackground()
+	<-backgroundDone
 
 	cause := context.Cause(stageCtx)
 	if _, err := os.Stat(filepath.Join(stagePath, stageTimedOutMarker)); cause == nil && err == nil {
@@ -374,9 +372,10 @@ const (
 	scriptPathPattern = config.DirInstall + `/[a-z0-9_-]*/` + config.DirInstallLatestLink + `/` + scriptLeaf
 )
 
+var stageLivenessInterval = 10 * time.Second
+
 const (
 	stageExpiredGrace     = time.Minute
-	stageLivenessInterval = 10 * time.Second
 	stageStopPoll         = time.Second
 	stageLivenessGrace    = time.Hour
 	stageHeartbeatRefresh = 10 * time.Minute

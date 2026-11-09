@@ -159,8 +159,9 @@ the 4 weekday ones of 19 and 20 Oct (found 27 Oct) with the 12 before them.
     positive, so add it by hand on Drive; the error clears on the next run.
   - **False positive, likely causes:** Redbark listing a transaction more than a week after the balance moved (raise
     `BALANCES_RECONCILE_SETTLE_DAYS`); a pre-authorisation held in the balance for over a week then released (a break and its
-    reversal, a few days apart, same amount); more than 12 transactions in flight on one day, where the check falls back to all or
-    none (`BALANCES_RECONCILE_IN_FLIGHT`). Nothing acknowledges an entry: it stands until its readings pass the 35-day window or the
+    reversal, a few days apart, same amount); more than 16 transactions in flight on one day, where the check falls back to all or
+    none (`BALANCES_RECONCILE_IN_FLIGHT`) and a break is raised as the warning `BALANCE_UNRECONCILED_UNJUDGED`, not an error: check it
+    against the bank's export like an error. Nothing acknowledges an entry: it stands until its readings pass the 35-day window or the
     data is fixed, so fix the data or tune the constant rather than ignore it.
   - **False negative, possible causes:** a missing amount matched by chance by a subset of that day's in-flight transactions; a
     missing and a spurious transaction cancelling out; a drop older than the 35-day window or before an account's first reading;

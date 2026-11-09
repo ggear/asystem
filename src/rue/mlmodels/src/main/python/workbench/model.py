@@ -392,7 +392,10 @@ def register_project(project_dir, name, tracking_uri, aliases=(PROJECT_ALIAS_PRE
 def register_preview(project_dir, name, tracking_uri, target, snapshot_version=None):
     if target["kind"] != "served":
         return None
-    return register_project(project_dir, name, tracking_uri, aliases=(PROJECT_ALIAS_PREVIEW,), snapshot_version=snapshot_version)
+    version = register_project(project_dir, name, tracking_uri, aliases=(PROJECT_ALIAS_PREVIEW,), snapshot_version=snapshot_version)
+    print(f"model [{tracking_uri}/#/models/{name}]")
+    print(f"version [{tracking_uri}/#/models/{name}/versions/{version}]")
+    return version
 
 
 def registry_client(tracking_uri):

@@ -136,6 +136,31 @@ func TestProbeUtilBackupStage_RunStageWritesTheVerdictItResolved(t *testing.T) {
 	}
 }
 
+func TestProbeUtilBackupStage_RunStageNeverLetsALivenessBeatOverwriteTheFinalDocument(t *testing.T) {
+	previous := stageLivenessInterval
+	stageLivenessInterval = 50 * time.Microsecond
+	t.Cleanup(func() { stageLivenessInterval = previous })
+	home := t.TempDir()
+	t.Setenv(config.BackupHomeEnvVar, home)
+	configPath := filepath.Join(home, "config.json")
+	if err := os.WriteFile(configPath, []byte(`{"asystem":{"host":"testhost"}}`), 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	for attempt := range 200 {
+		runPath := filepath.Join(home, "supervisor", "backup", "2026-09-22_01-00-00")
+		request := stageRequest{Stage: metric.BackupStagePrimary, RunID: "2026-09-22_01-00-00", RunPath: runPath,
+			Trigger: metric.BackupTriggerManual, ConfigPath: configPath, Expires: time.Now().Add(time.Hour)}
+		if err := runStage(t.Context(), request); err != nil {
+			t.Fatalf("runStage() attempt [%d] error = %v", attempt, err)
+		}
+		time.Sleep(200 * time.Microsecond)
+		document := readBackupSummary(stageStatusPath(runPath, metric.BackupStagePrimary))
+		if document == nil || document.State != metric.BackupStateSuccess || document.ExpiresTS != "" {
+			t.Fatalf("attempt [%d] document = %+v, want the final success document left untouched", attempt, document)
+		}
+	}
+}
+
 func TestProbeUtilBackupStage_RealStageStreamTakesTheExitStatusOfACommandLeavingAChildOnItsPipes(t *testing.T) {
 	out, code, abandoned := realStageStream(context.Background(), nil, "sh", "-c", "echo started; sleep 3 & exit 0")
 	if code != 0 || abandoned {
