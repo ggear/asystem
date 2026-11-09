@@ -50,7 +50,7 @@ def require_replay(project_dir):
         raise GateError("Package", "replay", "; ".join(f"{rule} {message}" for rule, message in findings))
 
 
-def model_predict(model_path, flavour, signature):
+def evaluate_predict(model_path, flavour, signature):
     loaders = {"wasm": run_wasm.load_wasm, "onnx": run_onnx.load_onnx, "pyfunc": run_pyfunc.load_pyfunc}
     return loaders[flavour](model_path, json.dumps(signature))
 
@@ -58,4 +58,4 @@ def model_predict(model_path, flavour, signature):
 def _loader(project_dir, manifest, signature):
     if manifest["flavour"] == "static":
         return run_static.load_static(json.dumps(manifest["constants"]), json.dumps(signature))
-    return model_predict(join(project_dir, manifest["model"]), manifest["flavour"], signature)
+    return evaluate_predict(join(project_dir, manifest["model"]), manifest["flavour"], signature)

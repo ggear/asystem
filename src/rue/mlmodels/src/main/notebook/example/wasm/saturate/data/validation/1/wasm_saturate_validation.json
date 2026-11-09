@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "split": "validation",
+  "run": 1,
+  "name": "wasm_saturate_validation",
+  "source": "builder",
+  "query": null,
+  "database": null,
+  "captured": "2026-11-04_19-52-47",
+  "rows": 5,
+  "sha256": "cc5063f58a276b2d65913790168f00fc1a7312b8f1e4d4486e5cfdcede807c5e"
+}

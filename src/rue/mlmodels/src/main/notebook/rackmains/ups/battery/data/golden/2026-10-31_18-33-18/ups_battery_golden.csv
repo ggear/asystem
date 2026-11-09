@@ -1,5 +1,0 @@
-case,expect,rackmains_clock_epoch_seconds,rackmains_output_utilisation_pct,rackmains_ups_on_battery,rackmains_battery_replace,rackmains_model_state_in
-first call with no state,ok,1793355300.0,13,1,0,
-mid-drain with state,ok,1793355330.0,13,1,0,0.0 1235.0 0.0 1.0 1.0 1793355329.0
-replace flag raised,ok,1793355360.0,12,0,1,0.0 0.0 600.0 0.0 1.0 1793355359.0
-required input missing,error,1793355390.0,,1,0,

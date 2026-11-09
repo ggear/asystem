@@ -9,3 +9,4 @@ matplotlib
 onnx
 onnxruntime
 wasmtime
+adbc-driver-postgresql

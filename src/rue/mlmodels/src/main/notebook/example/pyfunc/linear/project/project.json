@@ -7,14 +7,14 @@
   "provenance": {
     "source": "manual",
     "trained_on": "synthetic line, training split",
-    "inputs": ["example/pyfunc/linear/data/training/2026-11-03_16-40-55/pyfunc_linear_training_2026-11-03_2026-11-03.csv", "example/pyfunc/linear/data/golden/2026-11-03_16-40-55/pyfunc_linear_golden.csv"],
+    "inputs": ["example/pyfunc/linear/data/training/1/pyfunc_linear_training.csv"],
     "notes": "least squares line, gain and offset built into model.py",
     "implementation": "mlflow.pyfunc model.py, requires mlflow, pandas and polars"
   },
   "files": {
-    "signature.json": "6db4fd879553b5bda859f2221735a2faee5c07e3fd5eb254d346fae2743db3de",
-    "golden.json": "8fa97470bda2f82c8323bf91b3e9ecff0b2ff4126cca1116b0405e349887a881",
-    "evaluation.json": "f3b98d90ccb19bb0a69acb4c44a10a7af222aff378686aebca6b5f5cf985d97e",
-    "model.py": "af19c78e203bccdb3fffd41153f4ef71f54c657df0511a8a5150640c4927ebdc"
+    "signature.json": "bc19930453e28a33484e79a50d99d7dbbadec31d481014158044e220f77595cd",
+    "golden.json": "1d2541007cb5d41f9b1fdfe88d2f9931b7cb7e75c1d519f75fd7548edc792546",
+    "evaluation.json": "413a67c4c01bdee1ea89f223a29f4479b0afeb04d1c46556e63b8c021b1b8770",
+    "model.py": "b4d4aaeb83b4e8df0a9cc7c1ed07a995396000952a4028e79d4550687b045ebd"
   }
 }

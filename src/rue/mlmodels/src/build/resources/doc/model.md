@@ -26,7 +26,7 @@ The key words MUST, MUST NOT, SHOULD and MAY are to be read as in RFC 2119.
 | Served | Run by MLServer behind the V2 inference API |
 | Embedded | Run in the consumer's own process |
 | Local | Run only in the notebook that fits it: never registered, served, embedded or released, though a notebook MAY read its constants from the committed project |
-| Split | One of `training`, `validation`, `backtest` or `golden`, naming the purpose of a dataset |
+| Split | One of `training`, `validation`, `backtest` or `monitoring`, naming the purpose of a dataset |
 | Acceptance | The check a notebook defines and runs through the shipped runtime, whose outcome is recorded in `evaluation.json`, and which a project must pass to be released |
 | Budget | A dimensionless score for an acceptance check, being how much of its limit the measurement used. Every check passes at a budget of 1 or less, whatever the model |
 | Parity gate | Replay of golden sequences through the reference consumer its target names, which MUST reproduce every response and state exactly or within the golden tolerance |
@@ -75,7 +75,7 @@ A project is a directory read the same way by every environment and written and 
 
 #### 3.1.1 The workspace signature
 
-A workspace holds `signature.json` beside its notebook. It is the one place the names, units, datatypes and descriptions of the inputs, outputs and state are declared, it is committed, and it holds no value, so it is safe where `project/` is git-ignored. The notebook calls `load_signature(WORKSPACE)` and `signature_names(signature)` and refers to its inputs and outputs only through those names, never by a literal string; `package_project` writes the same document into the project, and MD003 fails the notebook if the two differ. `init_env()` prints the names and units at the head of every run, and the file is part of `inputs_sha256`, so editing it re-runs the notebook. `metadata.json` does not repeat the names.
+A workspace holds `signature.json` beside its notebook. It is the one place the names, units, datatypes and descriptions of the inputs, outputs and state are declared, it is committed, and it holds no value, so it is safe where `project/` is git-ignored. The notebook calls `setup_workspace` and refers to its inputs and outputs only through `ws.inputs` and `ws.outputs`, never by a literal string; `package_project` writes the same document into the project, and MD003 fails the notebook if the two differ. The file is part of `inputs_sha256`, so editing it re-runs the notebook. `metadata.json` does not repeat the names.
 
 The manifest's provenance `implementation` MUST name what is inside the container for every flavour but `static`: the builder of a `wasm` module, the converter and opset of an `onnx` graph, or the pinned requirements of a `pyfunc` model. The manifest's provenance `source` MUST be `static`, `manual` or `mlflow`, and `provenance.inputs` MUST list the data files used. A
 manifest MAY carry `constants`; they MUST name signature outputs and are merged into every response.
@@ -164,7 +164,7 @@ MD005 fails the notebook if a requirements file is missing, stale or different f
 
 A `wasm` project is a WebAssembly module, `model.wasm`, that satisfies one ABI. Python, Rust and Go run the same bytes in a WebAssembly
 host and produce the same numbers. The specification fixes the ABI and the determinism rules; how a module is made is the choice of the
-project that needs it. A module is hand-written, or produced by `build_wasm` in `workbench`, which writes a compiled module per model from a small expression tree (constants, features, named intermediate values, arithmetic, `min`, `max` and a select on a comparison) and compiles it with `wasmtime`. A notebook builds the tree with the helpers of `workbench.wasm`, such as `add`, `mul`, `lt` and `select`, or traces it from an ordinary Python function (4.4). The
+project that needs it. A module is hand-written, or produced by `train_wasm_build` in `workbench`, which writes a compiled module per model from a small expression tree (constants, features, named intermediate values, arithmetic, `min`, `max` and a select on a comparison) and compiles it with `wasmtime`. A notebook builds the tree with the helpers of `workbench.wasm`, such as `add`, `mul`, `lt` and `select`, or traces it from an ordinary Python function (4.4). The
 manifest's `provenance.implementation` names what made it, and no implementation has a name in this specification.
 
 ### 4.1 ABI
@@ -217,16 +217,16 @@ The vocabulary is scikit-learn's, mapped onto MLServer's and MLflow's:
 
 - Each project MUST record the hash of its `model.wasm`, so every host runs the same bytes.
 - A new ABI version or a new host runtime version MUST be a code release of the runtime and every consumer (R10). A refit replaces `model.wasm` only.
-- The builder is `workbench.wasm.build_wasm` in the `mlmodels` module. Third-party libraries fit the numbers that go into the module, and the fitted values are built in as constants.
+- The builder is `workbench.wasm.train_wasm_build` in the `mlmodels` module. Third-party libraries fit the numbers that go into the module, and the fitted values are built in as constants.
 
 ### 4.4 Tracing a function into a module
 
-`workbench.wasm.trace(function, features)` calls an ordinary Python function with one symbolic value per feature and returns the output expressions for `build_wasm`, so a formula is written once and serves the fit, the plots, the golden samples and the module.
+`workbench.wasm.train_wasm_trace(function, features)` calls an ordinary Python function with one symbolic value per feature and returns the output expressions for `train_wasm_build`, so a formula is written once and serves the fit, the plots, the golden samples and the module.
 
 - The helpers of `workbench.wasm` (`add`, `atan`, `exp`, `select`, `clip`, `minimum`, `floor` and the rest) take either symbolic values or numbers and arrays. On a symbolic value they build the expression; on a number or a numpy array they compute with numpy and return IEEE results, which is the result a host gives, so `curve_fit` and the plots can call the same function.
 - A symbolic value supports `+`, `-`, `*`, `/`, unary `-`, `abs`, `**` and the comparisons `<`, `<=`, `>` and `>=`. A `**` by an integer from 2 to 8 is written as multiplications, and any other power imports `pow`. A comparison is valid only as the condition of `select`.
-- A function MUST NOT use Python control flow on a symbolic value (`if`, `and`, `or`, `while`): converting one to a truth value raises, and a branch is `select(condition, taken, otherwise)`, which evaluates both arms. A function MUST NOT call numpy or `math` functions on a symbolic value, but the same-named helper of `workbench.wasm`. Fitted values are bound before tracing, as `trace(lambda x: curve(x, *fitted), 1)`.
-- A function is traced to a tree with no shared subexpressions: a subexpression used twice is emitted twice, and `build_wasm`'s `lets` name one that matters. Floor division is not supported, and a step is written `floor(x / step) * step`, which is identical in the traced and the plain call.
+- A function MUST NOT use Python control flow on a symbolic value (`if`, `and`, `or`, `while`): converting one to a truth value raises, and a branch is `select(condition, taken, otherwise)`, which evaluates both arms. A function MUST NOT call numpy or `math` functions on a symbolic value, but the same-named helper of `workbench.wasm`. Fitted values are bound before tracing, as `train_wasm_trace(lambda x: curve(x, *fitted), 1)`.
+- A function is traced to a tree with no shared subexpressions: a subexpression used twice is emitted twice, and `train_wasm_build`'s `lets` name one that matters. Floor division is not supported, and a step is written `floor(x / step) * step`, which is identical in the traced and the plain call.
 - A traced function MUST be checked against the module: the golden samples replayed through the module, or a plain call compared with the module over a sweep that includes the bounds, is the check. The plain call differs from a host only at the tolerance of 4.2, and numpy's `pow` differs from C99 for a base of negative zero or negative infinity.
 
 ### 4.5 A maths function in the module
@@ -282,27 +282,19 @@ its flavour: `static` needs none, `wasm` needs one small host per language, `onn
 
 ### 6.1 Naming
 
-Every name MUST follow the module and dimension style the metrics use: `<module>_<dimension>[_<dimension>...]`.
+- A name MUST use lowercase letters, digits and underscores only.
+- A workspace is `<module>/<model>/<notebook>`. The module is the one that consumes the model, such as `rackmains`, `homeassistant` or `wrangle`, or `example` for a worked example. A model groups related notebooks. A model and a notebook MUST be named for the quantity they output, in its standard term, and never for how they are built, so `portfolio/withdrawal` and not `portfolio/annuity`. A worked example is named for the flavour it shows.
+- A name a source publishes MUST be used as published wherever it appears: the entity id without its domain, which is the `entity_id` in InfluxDB and the same name in PostgreSQL. A dataset column, a query, a signature input and a signature output that carry its value MUST use that name unchanged, so data maps from a source, through a dataset and a model, and back without a lookup. A served model's output MUST be named for the entity that holds it at the source without its `mlserver_` prefix. A name that is wrong MUST be changed at the source and then everywhere, and MUST NOT be bridged by an alias.
+- A name no source publishes MUST NOT start with the module. It is made of dimensions, from general to specific, normally led by the model. A numeric measure MUST end with a unit suffix, such as `_volts`, `_hertz`, `_pct`, `_seconds`, `_wh` or `_celsius`, and the same quantity MUST use the same words in every project.
 
-- A name MUST use lowercase letters, digits and underscores only. It MUST NOT use hyphens, spaces or camel case.
-- The first token MUST be the module that owns the thing named, such as `rackmains`, `weewx` or `homeassistant`, or `example` for a worked example.
-- The following tokens are dimensions, from general to specific. A numeric measure MUST end with a unit suffix, such as `_volts`,
-  `_hertz`, `_pct`, `_seconds`, `_wh` or `_celsius`.
-- A name a service already publishes MUST be used as published. A model MUST NOT rename a service's metric.
-- A workspace has three levels, so several models can sit under one module and several notebooks under one model: the module, the model
-  (a group of related notebooks) and the notebook.
-- A model and a notebook MUST be named for the quantity they output, using its standard term, and never for how they are built: `portfolio/withdrawal` and not `portfolio/annuity`, `portfolio/return` and not `portfolio/bootstrap`. A signature name MUST use the same words, so a withdrawal rate is `withdrawal_rate_pct` in every project that takes or gives one. A worked example is the exception, since it is named for the flavour it shows.
-
-| What | Form | Examples |
+| What | Form | Example |
 |---|---|---|
-| Module Directory | `<module>`, or `example` for a worked example | `rackmains`, `weewx`, `homeassistant`, `example` |
-| Model Directory | `<model>`, a group of related notebooks | `ups`, `console`, `forecast`, `hotwater`, `static` |
-| Notebook Directory | `<notebook>`, one notebook per directory, the notebook itself being `notebook.ipynb` | `battery`, `roof`, `temp`, `constant` |
-| Registered Model | `<module>_<model>_<notebook>`, also the name `mlserver` serves it under | `rackmains_ups_battery`, `weewx_console_battery`, `weewx_forecast_roof`, `homeassistant_hotwater_temp`, `example_static_constant` |
-| Dataset | `<model>_<notebook>_<dimension>...`, ending `_<start>_<end>` with the first and last date it covers unless it is `golden` | `console_battery_voltage_2024-06-06_2024-10-25`, `ups_battery_golden` |
-| Signature Input | The owning service's metric name, unchanged | `weatherstation_console_battery_voltage` |
-| Signature Output, State Slot or Constant | `<module>_<dimension>...` with a unit suffix | `weewx_console_battery_capacity_pct`, `rackmains_battery_remaining_seconds` |
-| Split | One of `training`, `validation`, `backtest`, `golden` | `training` |
+| Workspace | `<module>/<model>/<notebook>`, one `notebook.ipynb` per directory | `homeassistant/hotwater/temp` |
+| Registered Model | `<module>_<model>_<notebook>`, also the name `mlserver` serves it under | `homeassistant_hotwater_temp` |
+| Signature Name | The published name, otherwise dimensions with no module prefix | `weatherstation_console_battery_voltage`, `hotwater_out`, `guard_shed_max_seconds` |
+| Dataset | `<model>_<notebook>_<dimension>...`, with no date, since the range a run covers is in its `params` and its query | `weatherstation_battery_voltage` |
+| Dataset Column | A signature or source name unchanged, and `time` for the reading time | `weatherstation_console_battery_voltage`, `time` |
+| Split | One of `training`, `validation`, `backtest`, `monitoring` | `training` |
 | Project Flavour | The lowercase flavour value | `wasm` |
 | Timestamp | `YYYY-MM-DD_HH-MM-SS`, Perth time | `2026-10-31_15-17-42` |
 
@@ -320,7 +312,8 @@ src/rue/mlmodels/src/main/notebook/<module>/<model>/<notebook>/data/<split>/<tim
 - A notebook directory MUST hold one notebook named `notebook.ipynb`, its `metadata.json` and `project/` once released, its `data`, at most one model file (`model.wasm`, `model.onnx` or `model.py`, as the flavour requires), and nothing else. The data belongs to
   the notebook and MUST NOT be shared between notebooks.
 - There is no `plan.md`. The notebook's title cell holds its intent, data, status and future, `signature.json` its signature, and its Evaluate section its comparisons (6.7). WS003 rejects a `plan.md`.
-- `<timestamp>` names one capture. The same timestamp MAY appear under several splits so a capture can be split across them.
+- `<run>` is an integer numbered from 1 without gaps, per workspace and split. A run is one version of that split's data and MAY hold several datasets. A notebook pins the run it was written against, as the `run` literal of its `data_load` call (6.7.2), so a later run never changes a result.
+- Every `<dataset>.csv` has a `<dataset>.json` beside it, written with the csv, which records the `source`, the `query`, the `database`, the capture time, the row count and the SHA-256 of the csv (WS008).
 - A file under a split is source. It MUST be committed like a project, so a dataset is reproducible and a re-query is a diff.
 
 ### 6.3 Splits
@@ -330,7 +323,7 @@ src/rue/mlmodels/src/main/notebook/<module>/<model>/<notebook>/data/<split>/<tim
 | `training` | Fitting the model | Judging the result |
 | `validation` | Tuning the choices around the fit, and a first error estimate on unseen data | Fitting |
 | `backtest` | Replaying whole recorded history through a finished model, sample by sample, as the service would | Fitting |
-| `golden` | Fixed inputs with exact expected outputs, checked on every runtime and architecture | Fitting or tuning |
+| `monitoring` | What a released model saw and produced in production, one row per prediction with its inputs, its outputs and the released `version`, to watch input drift, output distribution and change between versions | Fitting, tuning or judging a candidate |
 
 A run held out for `validation` or `backtest` MUST NOT be moved into `training` after it has been used to make a decision.
 
@@ -339,14 +332,14 @@ A run held out for `validation` or `backtest` MUST NOT be moved into `training` 
 | Path | What It Is | Written by | Read by |
 |---|---|---|---|
 | `<module>/<model>/<notebook>/notebook.ipynb` | The notebook, committed without outputs | By hand | `notebook.sh <module>/<model>/<notebook>` or the IDE |
-| `<module>/<model>/<notebook>/model.wasm`, `model.onnx` | The model, committed so a refit is a reviewable diff | The notebook's Fit and Package cells | `write_project`, which copies it into the project, and a person reviewing the diff |
+| `<module>/<model>/<notebook>/model.wasm`, `model.onnx` | The model, committed so a refit is a reviewable diff | The notebook's Train and Package cells | `write_project`, which copies it into the project, and a person reviewing the diff |
 | `<module>/<model>/<notebook>/model.py` | The Python model | By hand, or by the notebook when it builds the fitted attributes in | `write_project`, which copies it into the project, and `ruff` |
-| `<module>/<model>/<notebook>/signature.json` | The declared names, units and datatypes of the inputs, outputs and state; committed, no values (3.1.1) | By hand, or the skeleton from `notebook.sh new` | `load_signature` in the notebook, `init_env`, and MD003 |
+| `<module>/<model>/<notebook>/signature.json` | The declared names, units and datatypes of the inputs, outputs and state; committed, no values (3.1.1) | By hand, or the skeleton from `notebook.sh new` | `setup_workspace` in the notebook, and MD003 |
 | `<module>/<model>/<notebook>/py_deps.txt`, `cargo_deps.txt`, `go_deps.txt` | The library names the project's target needs in its language, no versions (3.6) | `record_project` | `fab pull`, for the Python one, and a person for the others |
-| `<module>/<model>/<notebook>/data/training/<ts>/<dataset>.csv` | Rows the fit sees | `query_influxdb3(..., "training", ...)`, or by hand | The notebook's fit cells |
-| `<module>/<model>/<notebook>/data/validation/<ts>/<dataset>.csv` | Rows held out for tuning and a first error estimate | `query_influxdb3(..., "validation", ...)` | The notebook's evaluate cells |
-| `<module>/<model>/<notebook>/data/backtest/<ts>/<dataset>.csv` | Whole recorded runs | Copied from the consumer, or a query | The evaluate and replay cells, and the consumer's replay test |
-| `<module>/<model>/<notebook>/data/golden/<ts>/<dataset>.csv` | Fixed inputs with exact expected outputs | Generated from the shipped runtime, then committed | `write_project` (becomes `golden.json`) and the consumer's golden test |
+| `<module>/<model>/<notebook>/data/training/<run>/<dataset>.csv` | Rows the fit sees | `data_load(..., "training", ...)`, or by hand | The notebook's Train cells |
+| `<module>/<model>/<notebook>/data/validation/<run>/<dataset>.csv` | Rows held out for tuning and a first error estimate | `data_load(..., "validation", ...)` | The notebook's evaluate cells |
+| `<module>/<model>/<notebook>/data/backtest/<run>/<dataset>.csv` | Whole recorded runs | Copied from the consumer, or a query | The evaluate and replay cells, and the consumer's replay test |
+| `<module>/<model>/<notebook>/data/monitoring/<run>/<dataset>.csv` | Production inputs and the outputs the released `version` gave | `data_load(..., "monitoring", ...)`, or by hand | A monitoring notebook, never a fitting cell |
 | `src/rue/mlmodels/target/notebook/<module>/<model>/<notebook>/notebook.ipynb` | An executed notebook | `notebook.sh`; not committed | A person reading the run |
 | MLflow Run and Registered Model `<name>` | The logged project and the aliases `preview` and `release` | The notebooks' register function sets `preview`; the `mlmodels` release function sets `release` | The `mlserver` sync loop, and a system test through `<name>_preview` |
 | `<consumer>/src/build/resources/model/` | The embedded copy of the released `project/`, committed | The consumer's `generate.sh`, through `python -m workbench.model embed` | The consumer's build, tests and image |
@@ -354,14 +347,15 @@ A run held out for `validation` or `backtest` MUST NOT be moved into `training` 
 
 ### 6.5 The data cache
 
-`query_influxdb3(env, query, workspace, split, name, timestamp=None, database=None, force=False)`, where `workspace` is `<module>/<model>/<notebook>`:
-- MUST read `data/<split>/<timestamp>/<name>.csv` if it is present, and MUST NOT touch the network in that case.
-- MUST otherwise query and write the file through a temporary file renamed into place, so a failed query writes nothing.
-- MUST use the newest capture of that name when no `timestamp` is given, or start a new one.
-- MUST query again and overwrite the file when `force` is true.
-- MUST accept only the four splits.
-
-`data_path(workspace, split, name, timestamp=None)` returns the same path, for a file that did not come from a query.
+`data_load(ws, split, name, *, run, source=None, query=None, params=None, database=None, csv=None, build=None, force=False)`, where `ws` is the workspace `setup_workspace` returned, returns the polars frame and the path of `data/<split>/<run>/<name>.csv`:
+- `source` is one of `influxdb3`, `postgres`, `csv` (copy a local file in) or `builder` (a function the notebook gives, for synthetic data), and is required only when the csv is absent.
+- `params` is a dict of the notebook's own literals, such as a time range, that is formatted into the `{name}` placeholders of `query` before it runs, so one query text serves several datasets and runs; it MUST NOT come from outside the notebook. The json records the formatted `query` and the `params`.
+- MUST read the csv if it is present, and MUST NOT touch the network in that case.
+- MUST otherwise capture and write the csv through a temporary file renamed into place, so a failed query writes nothing, and then write the json beside it.
+- MUST raise a `GateError` when a cached csv was captured with another `source`, `query` or `params` than the call gives, since stale data must not pass silently.
+- MUST capture again into the same run and overwrite the files when `force` is true.
+- MUST accept only the four splits and a `run` that is an integer from 1.
+- MUST read the `postgres` connection from the module environment, which needs `postgres` in `run_deps.txt`.
 
 Real personal financial data MUST NOT enter git (`wrangle`'s rule, applied here). The `data/` captures of a workspace that holds it MUST be git-ignored in the root `.gitignore`, and so MUST its `project/` when its constants are derived from it. `metadata.json` holds the version, hashes, target and release record and no value, so it stays committed; a checkout without the `project/` rebuilds it with `fab unittest`, and a release stops with a `GateError` until it has. A committed dataset or project in such a workspace MUST be synthetic, and the notebook rebuilds it when absent so a fresh checkout still runs. Such a workspace MUST say so in the Data dot points of its title cell, the first opening with `Personal data` and naming what is git-ignored, the `data/` captures and, when the constants derive from them, the `project/`, as git says it is (NB014).
 
@@ -370,9 +364,9 @@ Real personal financial data MUST NOT enter git (`wrangle`'s rule, applied here)
 What a model notebook does. How it is laid out is section 6.7.
 
 A model notebook:
-- MUST declare the model name, version and dataset names as constants in the Setup cell, and for a `pyfunc` also `PYTHON_DEPS`, the packages its `model.py` imports beyond the base (3.5).
+- MUST NOT declare the model name, a dataset name, a run or a query as a constant, since `setup_workspace` takes the name from the workspace and `data_load` takes the rest as literals, and for a `pyfunc` MUST declare `PYTHON_DEPS`, the packages its `model.py` imports beyond the base (3.5), in the Setup cell.
 - MUST fit only on `training`, and MAY load `validation` to check the fit.
-- MUST write its golden inputs and expected outputs under the `golden` split and build `golden.json` from that file.
+- MUST build `golden.json` in its Package section from golden inputs defined in the notebook, with the expected outputs taken from the shipped runtime. Golden is a project file (3.1), not a split, so no golden dataset is kept under `data/`.
 - MUST list the data files used in `provenance.inputs`.
 - SHOULD keep logic in `workbench` and keep cells thin.
 - MUST run with the `asystem (Python 3.12)` kernel, never the Conda Python.
@@ -382,12 +376,12 @@ A model notebook:
 **File**
 - A notebook MUST be Jupyter notebook format 4 and MUST be committed without outputs and without execution counts. Committed outputs bloat
   diffs, can leak data and are not reproducible.
-- A notebook MUST NOT contain secrets, absolute paths or notebook magics. Paths MUST come from `data_path` and `NOTEBOOK_DIR`.
+- A notebook MUST NOT contain secrets, absolute paths or notebook magics. Paths MUST come from `data_load` and the workspace `ws.path`.
 - A notebook MUST be deterministic: a random operation MUST use a fixed seed.
 
 **Cell order**
 1. The title cell, a markdown cell.
-2. One markdown section cell per section, each followed by the code cells of that section.
+2. One markdown section cell per section, each followed by at most one code cell, which holds the whole of that section.
 
 **The title cell**
 - MUST hold the heading `# <module> / <model> / <notebook>`, the only level-one heading in the notebook, and then only bold labels on their own line, each followed by short dot points. The labels are Intent, Data, Status and Future, SHOULD come in that order, and Intent and Data MUST be present. A dot point is a short sentence of at most 25 words (NB004), and MAY have sub-bullets indented two spaces, each also a short sentence, which Future uses for its points, since every top-level Future dot point MUST open with `Overall:` or `Phase <n>:`, end with a colon, and group its points as sub-bullets. `Overall:` comes first and applies to every phase, and a notebook with no natural phases uses only `Overall:`. It MUST NOT open with a label and a colon, restate another dot point, or state the flavour, the target or the runtime, which `init_env()` prints from `metadata.json` and the project at the head of every run.
@@ -399,7 +393,7 @@ A model notebook:
 | Status | When unfinished or compared | What is a placeholder, undefined or not yet loaded, what the model gives up, and, when the notebook compares candidate models, which is selected for release and the measured reason |
 | Future | When planned | A change already prepared or intended and not yet used, the to do it needs, the decisions still open, and when the data for it can be had |
 
-- The Intent dot points MUST name every output of the workspace `signature.json`, in backticks, as a name, a brace list `finance_x_{low,high}_pct` or a pattern `example_wasm_*`, and MUST NOT name an input or output the signature lacks (NB013). The Intent cannot then drift from the signature. A scaffold name that stands in for an undefined signature is named and said to be one.
+- The Intent dot points MUST name every output of the workspace `signature.json`, in backticks, as a name, a brace list `x_{low,high}_pct` or a pattern `wasm_*`, and MUST NOT name an input or output the signature lacks (NB013). The Intent cannot then drift from the signature. A scaffold name that stands in for an undefined signature is named and said to be one.
 - A dot point MUST NOT describe `golden` beyond what is particular to it, since 6.6 already requires it. The title cell holds no table, no prose and no label other than the four.
 - A notebook that compares candidates MUST say in Status which is selected for release and why, against the acceptance limits of 6.8, and its Evaluate section MUST show the comparison; a reviewer checks it, since no tool can tell a candidate from a variant.
 - The to do of a notebook is its Future dot points, and nothing outside the notebook records it.
@@ -409,17 +403,18 @@ A model notebook:
   does not apply MUST be omitted and the order kept.
 - A section cell MUST hold the heading and nothing else. What the section is for, its stage and what it holds are stated once, in its subsection, and the notebook's own purpose is the title cell's Intent.
 - A section MUST NOT use a heading deeper than level two.
-- A code cell MUST do one thing, and SHOULD be no longer than a screen.
+- A `workbench` function a notebook calls MUST be named `<section>_<what>` for the section it is called from, in lowercase: `setup_workspace`, `data_load`, `train_wasm_build`, `evaluate_check`, `package_workspace`, `register_workspace`. The symbolic maths of `workbench.wasm` (`tanh`, `add`, `const`), which a traced function is written in, are the model's own vocabulary and keep their plain names.
+- A section MUST hold at most one code cell (NB015), so a section is one block of code that does the one thing the section is for.
 
 **Code**
 - A notebook MUST import from `workbench.<module>` by name, never with `*`, and MUST NOT extend `sys.path`. The kernel carries the
   `PYTHONPATH`: `notebook.sh` installs it and the IDE source roots provide it.
 - Python MUST be formatted with `ruff format` at the repo line length of 200 and MUST NOT be hand-wrapped; the formatter decides the layout.
-- Constants MUST be UPPER_CASE (`WORKSPACE`, `MODEL_NAME`, `TRAINING`, `VALIDATION`, `GOLDEN`). A notebook MUST NOT carry a flag
-  that switches the network on, since `query_influxdb3` reads the committed file when it is present (6.5).
+- Constants MUST be UPPER_CASE (`WORKSPACE`, `MODEL_NAME`, `TRAINING`, `VALIDATION`). A notebook MUST NOT carry a flag
+  that switches the network on, since `data_load` reads the committed file when it is present (6.5). The one exception is `force=True` on a run kept live, which makes every execution query the source and rewrite that run, so a notebook that has one needs the source reachable wherever it runs, and nothing it fits, evaluates or packages may read that run.
 - MUST run through its Package section from committed data (R15). The Register section, and anything after it, writes to the registry, and a check must not write, so `notebook.sh` stops before it
   unless `REGISTER=1`. An acceptance that fails is recorded as the verdict and does not stop the run.
-- MUST write its project only through `scratch_project_dir`, which `model.sh` redirects to `target/model-output` with `MODEL_OUTPUT_DIR`, and never into a consumer's tree.
+- MUST write its project only through `ws.project_dir`, which `setup_workspace` takes from `scratch_project_dir` and `model.sh` redirects to `target/model-output` with `MODEL_OUTPUT_DIR`, and never into a consumer's tree.
 - A polars frame SHOULD be named with the suffix `_pl` and a path with the suffix `_path`.
 - Imports SHOULD sit at the top of the cell that first needs them.
 - A comment MUST NOT restate the code; narrative belongs in the section's markdown cell.
@@ -443,19 +438,19 @@ line. Notebooks are not run by `fab build`; `notebook.sh` runs one headless, and
 
 #### 6.7.1 Setup
 
-It is not a stage of 7.1. Required: always. The `workbench` imports, `env` and the constants: the model name, version and dataset names (6.6).
+It is not a stage of 7.1. Required: always. One `setup_workspace` call, which returns the workspace with its environment, signature, input and output names and project directory (3.1.1).
 
-#### 6.7.2 Capture Data
+#### 6.7.2 Data
 
-It is stage 1 of 7.1. Required: when the notebook reads data. Queries and loads, through `query_influxdb3` and `data_path`. Files are written only when absent (6.5).
+It is stage 1 of 7.1. Required: when the notebook reads data. Queries and loads, through `data_load`. Files are written only when absent (6.5). Each `data_load` call is self contained: it gives the split, the dataset name, the `run`, the `source` and, for a query, the query text, as literals, so a data run is defined in one place and nothing in another cell or constant changes it.
 
 #### 6.7.3 Explore
 
 It is stage 2 of 7.1. Required: may. Plots and checks. Nothing reported from it ships (R4).
 
-#### 6.7.4 Fit
+#### 6.7.4 Train
 
-It is stage 3 of 7.1. Required: when the model is fitted. The fit, on `training` only (R6).
+It is stage 3 of 7.1. Required: when the model is fitted. Fits on `training` only (R6).
 
 #### 6.7.5 Evaluate
 
@@ -479,13 +474,13 @@ A gate that is not met raises (11.5), so a failed acceptance fails the run as we
 
 Each notebook owns what its model must achieve and how it is measured, and the library enforces that it was done and records the outcome the same way for every model type. This mirrors the golden builder: the notebook defines a function with no arguments, as `golden_samples` is for `golden_data`, and the library validates and stores what it returns.
 
-- A notebook of a non-`static` flavour MUST define `acceptance_checks()`, measure the shipped model on `validation` or `backtest` data inside it, and return a non-empty list of checks. It passes the function and the dataset paths to `evaluate_acceptance(check, datasets)`, then hands the result to `package_project` as `evaluation`. A project without one fails AC001.
+- A notebook of a non-`static` flavour MUST define `acceptance_checks()`, measure the shipped model on `validation` or `backtest` data inside it, and return a non-empty list of checks. It passes the function and the dataset paths to `evaluate_check(check, datasets)`, then hands the result to `package_project` as `evaluation`. A project without one fails AC001.
 - A check is `split` (`validation` or `backtest`), `output` (a signature output), `name` (the naming style), `value` (a number, or null when it could not be measured), `limit`, `direction` (`max` for a value that must not exceed the limit, `min` for one that must not fall below it) and optionally `gate`, which defaults to true. A `training` check does not exist, since the fit is not judged on its own data, and `golden` is judged by exact parity.
-- The library, not the notebook, decides the outcome: a check passes when its value is within its limit, and a null value fails. `measure(truth, predicted)` is an optional helper with the scikit-learn names `rmse`, `mae`, `max_abs_error`, `bias`, `p95_abs_error`, `r2` and `pearson_r`. A notebook MAY compute anything else, such as a one-sided error, a recall or a worst run.
+- The library, not the notebook, decides the outcome: a check passes when its value is within its limit, and a null value fails. `evaluate_measure(truth, predicted)` is an optional helper with the scikit-learn names `rmse`, `mae`, `max_abs_error`, `bias`, `p95_abs_error`, `r2` and `pearson_r`. A notebook MAY compute anything else, such as a one-sided error, a recall or a worst run.
 - Every required scalar output MUST have a gating check. A `backtest` check SHOULD gate, and a `validation` check gates only for a model with no `backtest` run yet, which its title cell MUST say.
 - The budget is the standard score, the same for every model type: for a `max` check it is the value divided by the limit, floored at zero, and for a `min` check it is the limit divided by the value. A check passes exactly when its budget is 1 or less. The evaluation records the worst budget of the gating checks, or null if any gating check could not be measured. A lower budget means a larger margin. It compares a model with its own limits, not one model's accuracy with another's.
 - `register_project` logs the run metrics `acceptance_passed` (1 or 0) and `acceptance_budget`, each measured value as `<split>/<output>/<name>`, each dataset with `mlflow.log_input` under the split as its context, and the tags `acceptance` and `acceptance_budget`. The release function copies both tags onto the released version.
-- `evaluate_acceptance` prints the verdict and the worst budget and returns the evaluation, and `write_project` raises `GateError` when a gating check failed, so a failed verdict is visible in a log and the run still fails.
+- `evaluate_check` returns the evaluation, and `write_project` raises `GateError` when a gating check failed, so the run fails.
 - The limits live in the notebook's function, so a changed limit is a change to that notebook, and the release review reads that diff. A notebook owns its limits, and a limit loosened there is accepted unless a review catches it: no tool compares limits between versions. The evaluation does not need to say what was required, only that the enforced checks passed.
 
 ### 6.9 Worked examples
@@ -511,9 +506,9 @@ exactly or within the golden tolerance, and exits 0, or exits 1 on a difference 
 
 | # | Stage | Who Runs It | Command or Hook | Output | Gate to the Next Stage |
 |---|---|---|---|---|---|
-| 1 | Capture data | Notebook | `query_influxdb3(...)`, or a file saved with `data_path` | `data/<split>/<ts>/<name>.csv` | The split is right and each run is wholly in one split |
+| 1 | Data | Notebook | `data_load(...)` | `data/<split>/<run>/<name>.csv` and its json | The split is right and each run is wholly in one split |
 | 2 | Explore | Notebook | Plain Python | Ideas, plots | None |
-| 3 | Fit | Notebook | A builder (`wasm`), `skl2onnx` (`onnx`), `model.py` (`pyfunc`) | Fitted attributes | Fit error on `training` is sane |
+| 3 | Train | Notebook | A builder (`wasm`), `skl2onnx` (`onnx`), `model.py` (`pyfunc`) | Fitted attributes | Fit error on `training` is sane |
 | 4 | Evaluate | Notebook | Shipped runtime over `validation` and `backtest` | Metrics, `evaluation.json`, golden sequences | Every gating acceptance check passes |
 | 5 | Package | Notebook | `package_project`, `record_project` | `project/` and `metadata.json` in the workspace | Manifest, hashes, signature and golden agree, and the signature only grew |
 | 6 | Register | Notebook | `register_preview(...)` | A registry version with the alias `preview`, for a project with a `served` target | The registry shows it with its tags |
@@ -532,7 +527,7 @@ Each task includes the ones before it.
 | `build` (Default) | The loader compiles against the signature |
 | `unittest` | `model.sh unittest` runs the notebooks to Package and writes `project/` and the hashes (11.5), then the unit tests of every module |
 | `systest` | `model.sh systest` registers the previews, `fab` packages the `mlmodels` image, then the system tests run, `mlmodels`'s against the production services (11.5) |
-| `package` | Builds the `mlmodels` image through the shared packaging step, with the `PINS` build argument from `model.sh docker-args`. `execute` has nothing to run for `mlmodels`, whose `Dockerfile` is a test environment |
+| `package_workspace` | Builds the `mlmodels` image through the shared packaging step, with the `PINS` build argument from `model.sh docker-args`. `execute` has nothing to run for `mlmodels`, whose `Dockerfile` is a test environment |
 | `release` | `check-release` on a consumer's embedded project, then `model.sh release <version>` for `mlmodels` (11.6) |
 | `pull` | Backs up git-ignored files, `git pull --all`, merges each project's requirements files into the modules that take them and installs the pinned dependencies. It does not pull models |
 | `deploy` | `mlmodels`'s `deploy.sh` runs `model.sh publish` and `status` |
@@ -550,9 +545,9 @@ Each task includes the ones before it.
 2. Create `src/rue/mlmodels/src/main/notebook/<module>/<model>/<notebook>/` with `python -m workbench.notebook new`, and name it as section 6.1 requires, adding `--local` for a project that is to stay in its notebook (the `target` rule of 11.2).
 3. Write `signature.json` beside the notebook (`notebook.sh new` writes a skeleton), with the names, units, datatypes and descriptions of the inputs, outputs and state, and load it in Setup with `load_signature`. An input name MUST be a metric name
    from its owning service, required outputs MUST be the ones the consumer cannot act without, and state slots are numbered in order.
-4. Put data under splits, with `query_influxdb3`, `read_data`, `golden_data` or `data_path`.
+4. Put data under splits, with `data_load`, giving the run, name and query in the call.
 5. Write the notebook to sections 6.6 and 6.7, and fit on `training`.
-6. Evaluate on `validation` and `backtest` through the shipped runtime, define `acceptance_checks` to section 6.8 and run it with `evaluate_acceptance`, and generate the golden sequences from it. The golden sequences
+6. Evaluate on `validation` and `backtest` through the shipped runtime, define `acceptance_checks` to section 6.8 and run it with `evaluate_check`, and generate the golden sequences from it. The golden sequences
    include a first call with no state, boundary values, a missing input that gives a signature error and a long gap. Build each step with
    `golden_step` and the document with `golden_document`.
 7. Package with `package_project` and `record_project`, which copy the model file and the evaluation into the project, run `verify_project` and so every project check of section 10, and write `project/` and `metadata.json` with the target the project is for.
@@ -582,7 +577,7 @@ MLflow owns data and lifecycle, MLServer only serves, and nothing is shared by a
 | Thing | Where | Requirement |
 |---|---|---|
 | Notebooks and Their Data | `mlmodels` module, `src/main/notebook/<module>/<model>/<notebook>` | Fitting and registering MUST sit in the `mlmodels` module, apart from the tracking and serving containers; notebooks MUST be thin |
-| The `library` Package | `mlmodels` module, `src/main/python/workbench` | MUST have one module per concern (`config`, `env`, `data`, `project`, `plot`), an `__init__.py` holding only the shared path, and no logic in notebooks that belongs here |
+| The `library` Package | `mlmodels` module, `src/main/python/workbench` | MUST have one module per concern (`config`, `stage`, `data`, `project`), an `__init__.py` holding only the shared path, and no logic in notebooks that belongs here |
 | Project Code | `mlmodels` module, `workbench.model` | One implementation, unit tested, and also a command: `python -m workbench.model` |
 | Tracking DB, Registry, Artifact Storage | `mlflow` only | MUST run `--serve-artifacts` with `--artifacts-destination` on its own volume and `--default-artifact-root mlflow-artifacts:/`, so no client writes a path or needs a share |
 | Allowed Hosts | `mlflow` `.env_all` | MUST set `--allowed-hosts` and `--cors-allowed-origins`, since MLflow 3 rejects an unknown `Host` header |
@@ -618,7 +613,7 @@ both run by `fab build`.
 | PJ003 | Every file the flavour requires, `signature.json`, `golden.json` and the `model` file, is in `files`, exists, and matches its SHA-256 | R1 |
 | PJ004 | The project name follows the naming style and equals the signature name | R12 |
 | PJ006 | The signature is complete: datatype, shape, unit, required flag and description on every input and output, unique names, state slots numbered from 0 | R1 |
-| PJ007 | Every output starts with the module and ends with the unit suffix of its unit | R12 |
+| PJ007 | Every output ends with the unit suffix of its unit | R12 |
 | PJ008 | Constants name signature outputs, and a `static` project gives a constant for every required output | R8 |
 | PJ010 | Every golden step has a response or an error, names only signature inputs and outputs, and gives every required input and output | R3, R4 |
 | PJ011 | The golden holds a step that expects a signature error, and a first call with no state when the signature has state | R8 |
@@ -637,12 +632,13 @@ both run by `fab build`.
 | NB005 | The sections are the names of 6.7, in order, none deeper than level two, with Setup present | R13 |
 | NB006 | Every section cell is only its heading, with the link to its 6.7 subsection | R13 |
 | NB007 | A code cell has no magics, shell lines, absolute paths or literal secrets | R13 |
-| NB008 | `WORKSPACE` and `MODEL_NAME` are the workspace and the registered name that 6.1 requires | R12 |
+| NB008 | `setup_workspace` is called with the workspace, which fixes the registered name that 6.1 requires | R12 |
 | NB009 | No table cell is bold | R13 |
+| NB015 | A section holds at most one code cell | R13 |
 | NB014 | The first Data dot point of a workspace whose `data/` captures or `project/` git ignores opens with `Personal data`, and for the `project/` a Data dot point names it | R13 |
 | NB011 | A notebook imports from `workbench.<module>` by name and never with `*` | R13 |
 | NB012 | A notebook does not extend `sys.path`, since the kernel carries it | R13 |
-| NB013 | The Intent names every output of the workspace `signature.json`, as a name, a brace list `name_{a,b}_x` or a pattern `prefix_*`, and no name with the module prefix that the signature lacks | R13 |
+| NB013 | The Intent names every output of the workspace `signature.json`, as a name, a brace list `name_{a,b}_x` or a pattern `prefix_*`, and no name with the model prefix that the signature lacks | R13 |
 | PM004 | The project has an evaluation and every gating criterion passed, which `check_release` also applies to a consumer's embedded project | R14, R15 |
 | RP001 | A replayed step that expects a signature error does not supply every required input | R8 |
 | RP002 | A replayed step supplies every required input | R8 |
@@ -656,9 +652,10 @@ both run by `fab build`.
 | WS002 | A notebook directory holds exactly one notebook, named `notebook.ipynb` | R13 |
 | WS003 | A notebook directory holds only the notebook, `signature.json`, `metadata.json`, the requirements files, `project`, `data` and a model file | R13 |
 | WS004 | The data directory holds only the four splits | R6 |
-| WS005 | A split holds only timestamp directories | R6 |
-| WS006 | A dataset is a csv named `<model>_<notebook>_...`, and one that is not `golden` ends with its date range | R12 |
+| WS005 | A split holds only run directories numbered from 1 without gaps | R6 |
+| WS006 | A dataset is a csv named `<model>_<notebook>_...`, and with a json of the same name | R12 |
 | WS007 | A notebook directory holds at most one model file of `model.wasm`, `model.onnx` and `model.py` | R13 |
+| WS008 | Every csv has a json beside it that names its split, run and name and holds the SHA-256 of the csv | R6 |
 
 The identifiers, the flavours of 3.2, the splits of 6.3 and the sections of 6.7 are mirrored in code, and a test fails if the specification
 and the code disagree in either direction.
@@ -679,16 +676,16 @@ Common operations are in two places, so a notebook states what it means and not 
 | `workbench.model` | `register_preview`, `registry_client` | Register a project with the alias `preview` when it has a served target, and open the registry client every registry call shares |
 | `workbench.model` | `registry_address` | Resolves the registry address, through `release`, `publish` and `status` |
 | `workbench.model` | `render_rust` | Generate Rust request and response types from `signature.json`, through `python -m workbench.model generate` |
-| `workbench.model` | `measure`, `evaluate_acceptance` | Measures a prediction against its truth with numpy, and runs a notebook's acceptance check into `evaluation.json` with the outcome and budget of each check |
+| `workbench.model` | `evaluate_measure`, `evaluate_check` | Measures a prediction against its truth with numpy, and runs a notebook's acceptance check into `evaluation.json` with the outcome and budget of each check |
 | `workbench.model` | `check_release` | Check that a project verifies and its acceptance passed, which a consumer's embedded project must also satisfy |
-| `workbench.replay` | `replay_project`, `require_replay`, `model_predict` | Replay a project's golden through its runtime in process and compare every response exactly or within the golden tolerance (RP001 to RP005), raising `GateError` when it differs, and load a model file as a predict function |
+| `workbench.replay` | `replay_project`, `require_replay`, `evaluate_predict` | Replay a project's golden through its runtime in process and compare every response exactly or within the golden tolerance (RP001 to RP005), raising `GateError` when it differs, and load a model file as a predict function |
 | `workbench.metadata`, `workbench.release` | `record_project`, `lint_metadata`, `derived_requirements`, `requirements`, `release_workspaces`, `publish_workspace`, `embed_consumer`, `status_lines` | Write `project/`, `metadata.json` and the requirements files, lint the metadata, derive and report requirements, release and publish workspaces, embed a consumer and report drift, through `python -m workbench.model` |
 | `workbench.notebook`, `workbench.workspace` | `lint_notebook`, `fix_notebook`, `lint_workspace` | Report the findings of 10.1 for a notebook or a workspace, and strip a notebook's outputs |
 | `workbench.notebook` | `scaffold_notebook` | Writes a notebook and the data directories that already pass section 10, through `python -m workbench.notebook new <module> <model> <notebook> <flavour>` |
-| `workbench.data` | `data_path`, `read_data`, `ensure_data`, `golden_data`, `query_influxdb3` | Resolves a dataset path, reads one, reads or writes a dataset when it is absent, and queries with the cache |
+| `workbench.data` | `data_load` | Reads a dataset run from its csv, or captures it from `influxdb3`, `postgres`, a csv or a builder and writes the csv with its json |
 | `workbench.project` | `scratch_project_dir`, `provenance`, `record_project`, `load_signature`, `signature_names` | Resolves a scratch project directory, or the same under `MODEL_OUTPUT_DIR`, builds `provenance` from data paths, records the project and its hashes in the workspace, and loads the workspace signature and its input and output names |
 | `workbench.document` | `write_json` | Writes a JSON document in the one layout of section 3, which every writer of `metadata.json` and of a project's documents uses |
-| `workbench.env`, `workbench.plot` | `init_env`, `show_plot`, `show_error_plot` | Loads the module environment and prints the workspace's recorded flavour, target, runtime and version, plots a series, and plots an error against its limit with a pass or fail verdict, a bias line and a marker sized by the readings it stands for |
+| `workbench.stage` | `setup_workspace`, `package_workspace`, `register_workspace` | Return the workspace of a notebook with its environment, signature, names and project directory, then build, replay and record the project, then register its preview |
 
 A notebook SHOULD use these helpers and MUST NOT reimplement them.
 
@@ -704,14 +701,14 @@ Enforces column of 10.1 disagree.
 | R3 | PJ010 |
 | R4 | PJ010, PJ012, PJ016 |
 | R5 | PJ015, RP003 |
-| R6 | WS004, WS005 |
+| R6 | WS004, WS005, WS008 |
 | R7 | CP004 |
 | R8 | PJ008, PJ011, RP001, RP002 |
 | R9 | Review |
 | R10 | Review |
 | R11 | PJ017, MD005 |
 | R12 | NB008, PJ004, PJ007, WS001, WS006 |
-| R13 | NB001, NB002, NB003, NB004, NB005, NB006, NB007, NB009, NB011, NB012, NB013, NB014, WS002, WS003, WS007 |
+| R13 | NB001, NB002, NB003, NB004, NB005, NB006, NB007, NB009, NB011, NB012, NB013, NB014, NB015, WS002, WS003, WS007 |
 | R14 | AC001, AC002, AC003, PM004 |
 | R15 | PM004 |
 | R16 | Review |
@@ -724,7 +721,7 @@ Every run of a notebook, a unit test or a system test, in any flavour and langua
 ```
 === RUN   notebook example/wasm/saturate
     setup        ... done (0.44s)
-    fit          ... done (0.00s)
+    train        ... done (0.00s)
     requirements ... done [0 to add] (0.00s)
     metadata     ... done [wasm] (0.00s)
 --- PASS: notebook example/wasm/saturate (1.34s)
@@ -791,8 +788,8 @@ Every run of a notebook, a unit test or a system test, in any flavour and langua
 - A run on another architecture is a run of `fab systest` on a host of that architecture. The specification requires no emulation.
 - A passed target is not recorded. `fab release` runs `fab systest` first and stops at the first failed gate, so a release is only reached by content that passed, and `model.sh release` MUST be run only through `fab release`.
 - **Gates fail loudly.** Every gate in the notebook library MUST raise `GateError` when it is not met: the notebook lint and layout, the project lint and verify, the acceptance check, the golden replay, the signature compatibility check, the comparison with a consumer's `default` slot, and each step of `fab systest`. A gate MUST NOT print a verdict and carry on, return a flag for the notebook to test, or be left to an assertion in a cell, and a notebook MUST NOT assert a gate itself.
-  - A `GateError` MUST carry the stage, the gate and the cause. The stage is a notebook section (Setup, Capture Data, Explore, Fit, Evaluate, Package, Register) or a system-test step (notebooks, mlflow, mlserver, target). The cause names the rule codes and the values. The message MUST bracket every interpolated value.
-  - `evaluate_acceptance` MUST write `evaluation.json` and print the standard acceptance line, and then raise when a gating check failed or could not be measured, so the verdict can be read and the run still fails. 
+  - A `GateError` MUST carry the stage, the gate and the cause. The stage is a notebook section (Setup, Data, Explore, Train, Evaluate, Package, Register) or a system-test step (notebooks, mlflow, mlserver, target). The cause names the rule codes and the values. The message MUST bracket every interpolated value.
+  - `evaluate_check` MUST write `evaluation.json` and then raise when a gating check failed or could not be measured, so the verdict can be read and the run still fails. 
   - `fab unittest` and `fab systest` MUST run every notebook and target to its first failed gate, MUST NOT run a later stage of the one that failed, and MUST finish by listing each failure with the notebook or target, the stage, the gate and the cause, and fail.
   - The release MUST NOT proceed past a failed gate.
 

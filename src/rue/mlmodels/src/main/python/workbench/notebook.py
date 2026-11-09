@@ -15,7 +15,7 @@ NOTEBOOK_FORMAT = 4
 HEADER_LABELS = ("Intent", "Data", "Status", "Future")
 HEADER_REQUIRED = ("Intent", "Data")
 HEADER_WORDS = 25
-NOTEBOOK_SECTIONS = ("Setup", "Capture Data", "Explore", "Fit", "Evaluate", "Package", "Register", "Pull")
+NOTEBOOK_SECTIONS = ("Setup", "Data", "Explore", "Train", "Evaluate", "Package", "Register", "Pull")
 NOTEBOOK_SPEC = "https://github.com/ggear/asystem/blob/master/src/rue/mlmodels/src/build/resources/doc/model.md"
 NOTEBOOK_ABSOLUTE_PATH = re.compile(r"""["'](/Users/|/home/|/private/|[A-Za-z]:\\)""")
 NOTEBOOK_SECRET = re.compile(r"""(?i)\b(token|password|passwd|secret|api_?key)\w*\s*=\s*["'][^"']+["']""")
@@ -43,7 +43,7 @@ def lint_notebook(path):
         if cell["cell_type"] == "code" and (cell.get("outputs") or cell.get("execution_count") is not None):
             add("NB002", "outputs and execution counts must be stripped", index)
     findings.extend(_lint_structure(cells, module, model, name))
-    findings.extend(_lint_intent(cells, notebook_dir, module))
+    findings.extend(_lint_intent(cells, notebook_dir, model))
     for index, cell in enumerate(cells):
         text = _source(cell)
         if cell["cell_type"] == "code":
@@ -109,8 +109,8 @@ def scaffold_notebook(root, module, model, notebook, flavour, local=False):
         notebook_file.write("\n")
     signature = build_signature(
         name,
-        [signature_input(f"{module}_{model}_in", "none", "An input.")],
-        [signature_output(f"{module}_{model}_out", "none", "An output.", datatype="FP64")],
+        [signature_input(f"{model}_in", "none", "An input.")],
+        [signature_output(f"{model}_out", "none", "An output.", datatype="FP64")],
     )
     write_json(created[1], signature)
     return created
@@ -163,38 +163,27 @@ def _scaffold_notebook(module, model, notebook, name, flavour, local):
     target = '{"kind": "local"}' if local else '{"kind": "served"}'
     cells = [
         markdown(
-            f"# {module} / {model} / {notebook}\n\n**Intent**\n- Takes `{module}_{model}_in`.\n- Outputs `{module}_{model}_out`.\n- State what the outputs are intended to be, with their units.\n\n"
+            f"# {module} / {model} / {notebook}\n\n**Intent**\n- Takes `{model}_in`.\n- Outputs `{model}_out`.\n- State what the outputs are intended to be, with their units.\n\n"
             "**Data**\n- `golden` is the fixed samples and expected outputs.\n\n**Status**\n- Scaffolded, so the intent, the signature and the data are still to be written."
         ),
         section("Setup"),
-        code(
-            f"import json\n\nfrom workbench.data import golden_data\nfrom workbench.env import init_env\nfrom workbench.project import load_signature, provenance, record_project, scratch_project_dir, signature_names\n\nenv = init_env()\n\n"
-            f'WORKSPACE = "{module}/{model}/{notebook}"\nMODEL_NAME = "{name}"\nTARGET = {target}\nGOLDEN = "{model}_{notebook}_golden"\n'
-            "signature = load_signature(WORKSPACE)\nINPUTS, OUTPUTS = signature_names(signature)\nCONSTANTS = {OUTPUTS[0]: 1}\n"
-        ),
+        code(f'from workbench import setup_workspace\n\nws = setup_workspace("{module}/{model}/{notebook}", {target})\nCONSTANTS = {{ws.outputs[0]: 1}}\n'),
     ]
     if not static:
         cells += [
-            section("Capture Data"),
-            section("Fit"),
+            section("Data"),
+            section("Train"),
             section("Evaluate"),
         ]
     cells += [
         section("Package"),
         code(
-            "from workbench.model import package_project\n" + ("from workbench.replay import require_replay\n" if static else "") + "\n"
-            'golden_pl, golden_path = golden_data(WORKSPACE, GOLDEN, lambda: {INPUTS[0]: [1.0, None], "expect": ["ok", "error"]})\n\n'
-            "project_dir = scratch_project_dir(WORKSPACE)\n"
-            + (
-                'manifest = package_project(project_dir, MODEL_NAME, "static", signature, golden_pl.iter_rows(named=True), provenance("manual", "none", [golden_path], "scaffold"), constants=CONSTANTS)\n'
-                "print(json.dumps(manifest, indent=2))\n"
-                "require_replay(project_dir)\nrecord_project(WORKSPACE, project_dir, TARGET)\n"
-                if static
-                else 'print("no model is fitted yet, so nothing is packaged")\n'
-            )
+            'from workbench import package_workspace\n\npackage_workspace(ws, "static", {ws.inputs[0]: [1.0, None], "expect": ["ok", "error"]}, trained_on="none", notes="scaffold", constants=CONSTANTS)\n'
+            if static
+            else 'print("no model is fitted yet, so nothing is packaged")\n'
         ),
         section("Register"),
-        code('from workbench.model import register_preview\n\nversion = register_preview(project_dir, MODEL_NAME, env["MLFLOW_TRACKING_URI"], TARGET)\nprint("registered version", version)'),
+        code("from workbench import register_workspace\n\nregister_workspace(ws)"),
     ]
     if local:
         cells = cells[:-2]
@@ -206,7 +195,7 @@ def _scaffold_notebook(module, model, notebook, name, flavour, local):
     }
 
 
-def _lint_intent(cells, notebook_dir, module):
+def _lint_intent(cells, notebook_dir, model):
     signature_path = join(notebook_dir, SIGNATURE_FILE)
     intent = " ".join(_title_blocks(_title_text(cells))[0].get("Intent", [])) or None
     if not isfile(signature_path) or intent is None:
@@ -224,7 +213,7 @@ def _lint_intent(cells, notebook_dir, module):
     findings.extend(
         ("NB013", f"the Intent names [{token}] which the signature does not have", None)
         for token in sorted(tokens)
-        if token.startswith(f"{module}_") and "/" not in token and not any(fnmatch(name, token) for name in [*inputs, *outputs])
+        if token.startswith(f"{model}_") and "/" not in token and not any(fnmatch(name, token) for name in [*inputs, *outputs])
     )
     return findings
 
@@ -279,10 +268,20 @@ def _lint_structure(cells, module, model, name):
         findings.append(("NB005", f"sections must be in the order {list(NOTEBOOK_SECTIONS)} found {sections}", None))
     if "Setup" not in sections:
         findings.append(("NB005", "section [Setup] is required", None))
+    section_codes = {}
+    current = None
+    for index, cell in enumerate(cells):
+        text = _source(cell)
+        if cell["cell_type"] == "markdown" and text.startswith("## "):
+            current = text[3:].split(" (")[0].strip()
+            section_codes[current] = 0
+        elif cell["cell_type"] == "code" and current is not None:
+            section_codes[current] += 1
+            if section_codes[current] == 2:
+                findings.append(("NB015", f"section [{current}] must hold one code cell", index))
     setup = "\n".join(_source(cell) for cell in cells if cell["cell_type"] == "code")
-    for constant, value in (("WORKSPACE", f"{module}/{model}/{name}"), ("MODEL_NAME", f"{module}_{model}_{name}")):
-        if not re.search(rf"""^{constant}\s*=\s*["']{re.escape(value)}["']""", setup, re.MULTILINE):
-            findings.append(("NB008", f"constant [{constant}] must be [{value}]", None))
+    if not re.search(rf"""\bsetup_workspace\(\s*["']{re.escape(f"{module}/{model}/{name}")}["']""", setup):
+        findings.append(("NB008", f"setup_workspace must be called with the workspace [{module}/{model}/{name}]", None))
     return findings
 
 

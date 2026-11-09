@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "name": "wrangle_portfolio_allocation",
+  "platform": "mlserver",
+  "parameters": {"signature_version": 1, "state": []},
+  "inputs": [
+    {
+      "name": "portfolio_allocation_volatility_pct",
+      "datatype": "FP64",
+      "shape": [1],
+      "parameters": {"unit": "percent", "required": true, "description": "Annualised volatility of the risky assets, percent."}
+    }
+  ],
+  "outputs": [
+    {
+      "name": "portfolio_allocation_risky_pct",
+      "datatype": "FP64",
+      "shape": [1],
+      "parameters": {"unit": "percent", "required": true, "description": "Share of the portfolio to hold in risky assets that maximises utility, 0 to 100 percent."}
+    },
+    {
+      "name": "portfolio_allocation_riskadjusted_pct",
+      "datatype": "FP64",
+      "shape": [1],
+      "parameters": {"unit": "percent", "required": true, "description": "Excess return over cash less the charge for volatility, percent per year."}
+    }
+  ]
+}

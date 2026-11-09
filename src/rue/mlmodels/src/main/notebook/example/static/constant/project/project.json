@@ -2,7 +2,7 @@
   "schema": 2,
   "name": "example_static_constant",
   "flavour": "static",
-  "constants": {"example_static_out": 7},
-  "provenance": {"source": "manual", "trained_on": "none", "inputs": ["example/static/constant/data/golden/2026-11-02_18-04-26/static_constant_golden.csv"], "notes": "register path smoke test"},
-  "files": {"signature.json": "97a7c9ee745b067ffef124b7c8bbe91f17a1ba6364d47637b4b84588403c463e", "golden.json": "25436ebb23bdc2c797b2ce57728a869fd7d5920f4df46d959ebfd480721672ac"}
+  "constants": {"static_out": 7},
+  "provenance": {"source": "manual", "trained_on": "none", "inputs": [], "notes": "register path smoke test"},
+  "files": {"signature.json": "06010b5a36ea39bf824304e4ea00cfab47a1986d8bf39d0eaadc9da375d897b2", "golden.json": "13555c981c3d176485da8b8350e4a39b2d5775bd831f9c88a753ebca95a4bc13"}
 }

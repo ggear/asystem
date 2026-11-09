@@ -1,0 +1,8 @@
+{
+  "schema": 2,
+  "version": "10.200.2004-SNAPSHOT",
+  "content_sha256": "62d2f573c69830fc9fd5b69eeebf456ff6661392c95af84945facdf41ccb66f1",
+  "inputs_sha256": "3bbb1b5d035d2f65dec5c81eff19bcbde632489ca265663abebde6b0bc3e3fb6",
+  "target": {"kind": "local"},
+  "release": null
+}

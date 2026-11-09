@@ -3,8 +3,8 @@ import polars as pl
 from mlflow.models import set_model
 from mlflow.pyfunc import PythonModel
 
-INPUT = "example_pyfunc_in"
-OUTPUT = "example_pyfunc_out"
+INPUT = "pyfunc_in"
+OUTPUT = "pyfunc_out"
 GAIN = 2.5
 OFFSET = 1.0
 

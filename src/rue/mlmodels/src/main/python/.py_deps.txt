@@ -9,3 +9,4 @@ matplotlib==3.11.2
 onnx==1.23.2
 onnxruntime==1.31.1
 wasmtime==50.0.1
+adbc-driver-postgresql==1.13.0

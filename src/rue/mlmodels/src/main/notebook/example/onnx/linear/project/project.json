@@ -6,14 +6,14 @@
   "provenance": {
     "source": "manual",
     "trained_on": "synthetic line, training split",
-    "inputs": ["example/onnx/linear/data/training/2026-11-03_16-40-53/onnx_linear_training_2026-11-03_2026-11-03.csv", "example/onnx/linear/data/golden/2026-11-03_16-40-53/onnx_linear_golden.csv"],
+    "inputs": ["example/onnx/linear/data/training/1/onnx_linear_training.csv"],
     "notes": "least squares line, gain and offset built into the graph",
     "implementation": "onnx.helper graph, opset 21, ir version 10"
   },
   "files": {
-    "signature.json": "f32a8b4b4d410c40a030f7dfec07775a434effe08bea61406f5d1e91a7755fd3",
-    "golden.json": "a96c2637d4f2d44230e60928b5852f84885dcbf2e6300046b0d0a4a71c08d263",
-    "evaluation.json": "96868ddf172d73647072c3c17d140d77e8400a591c8e42103db703456338e6b5",
-    "model.onnx": "2cd8d1696ddfd5b1d26adbe7b6f2f252a545a88e5b90df2b1f95a31df7e9e1cc"
+    "signature.json": "c3fd66ff99b8d1781b41679a9dba3950e17c71fa0220f8f70ee4617eb225d93b",
+    "golden.json": "b3c3640e64b4394b366fb256f536cb00c91efca47aa0cfec7da6c1b73e94889b",
+    "evaluation.json": "dd4b75fbac33bedfacf26ba9a69f3c4b8c3401e81782df43a59b016fc555d3ba",
+    "model.onnx": "ea83553f9f263e17093fd9d4d8606715388c41d2340973512a06dbfdbfaa3838"
   }
 }

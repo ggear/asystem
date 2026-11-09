@@ -5,7 +5,7 @@ from os.path import dirname, join
 
 
 def demo_project(flavour, golden_out=None, tolerance=None):
-    from workbench.model import build_signature, evaluate_acceptance, package_project, signature_input, signature_output
+    from workbench.model import build_signature, evaluate_check, package_project, signature_input, signature_output
 
     work_dir = tempfile.mkdtemp()
     model_path = join(work_dir, {"wasm": "model.wasm", "onnx": "model.onnx", "pyfunc": "model.py"}[flavour])
@@ -54,7 +54,7 @@ def demo_project(flavour, golden_out=None, tolerance=None):
     os.makedirs(dirname(dataset))
     with open(dataset, "w") as dataset_file:
         dataset_file.write("a,b\n1,2\n")
-    evaluation = evaluate_acceptance(lambda: [{"split": "backtest", "output": "demo_out", "name": "rmse", "value": 0.0, "limit": 1, "direction": "max"}], {"backtest": [dataset]})
+    evaluation = evaluate_check(lambda: [{"split": "backtest", "output": "demo_out", "name": "rmse", "value": 0.0, "limit": 1, "direction": "max"}], {"backtest": [dataset]})
     samples = [
         {"demo_in": 1.5, "demo_out": 3.0 if golden_out is None else golden_out},
         {"demo_in": -2.0, "demo_out": -4.0},

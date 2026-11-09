@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "passed": true,
+  "budget": 2.8775980407629587e-05,
+  "datasets": {
+    "validation": [
+      {"path": "1/portfolio_withdrawal_validation.csv", "sha256": "bd053eb5c8a2ec103df77a58298b001743d7a6252045f9b993e6fe1c56865287"}
+    ],
+    "backtest": [
+      {"path": "1/portfolio_withdrawal_backtest.csv", "sha256": "85353bd7ac0128d0e94376c8ffd6294ac10b29428e36385fbba0d6c6ce81780d"}
+    ]
+  },
+  "checks": [
+    {
+      "split": "validation",
+      "output": "portfolio_withdrawal_rate_pct",
+      "name": "rmse",
+      "value": 2.8775980407629587e-07,
+      "limit": 0.01,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 2.8775980407629587e-05
+    },
+    {
+      "split": "backtest",
+      "output": "portfolio_withdrawal_rate_pct",
+      "name": "rmse",
+      "value": 2.4524413881402743e-07,
+      "limit": 0.01,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 2.4524413881402743e-05
+    }
+  ]
+}

@@ -7,14 +7,14 @@
   "provenance": {
     "source": "manual",
     "trained_on": "synthetic curve, training split",
-    "inputs": ["example/wasm/saturate/data/training/2026-11-04_19-52-47/wasm_saturate_training_2026-11-03_2026-11-03.csv", "example/wasm/saturate/data/golden/2026-11-04_19-52-47/wasm_saturate_golden.csv"],
+    "inputs": ["example/wasm/saturate/data/training/1/wasm_saturate_training.csv"],
     "notes": "least squares tanh curve, height and rate built into the module",
-    "implementation": "WebAssembly traced from the fitted Python function by workbench.wasm.trace and built by build_wasm, importing tanh from asystem_math"
+    "implementation": "WebAssembly traced from the fitted Python function by workbench.wasm.trace and built by train_wasm_build, importing tanh from asystem_math"
   },
   "files": {
-    "signature.json": "69ec46d126f9e19e7bfad42c13917bc7df0ff741af8fa209e1ba7846066b4ce9",
-    "golden.json": "1e296dbc7725e7413b94cb13407d710f10a86bc6b6737869c55527ab91a37b96",
-    "evaluation.json": "e1e5a135c4734138400d752bdee7975f44a4e05794ba517a84c2035ac3ad1a0b",
+    "signature.json": "98cfa742aec03dc3810615d9c36034971c375c1c31eb771b57ea36fde39189d8",
+    "golden.json": "7f168d1151670cd162debfc525c3c221300f8a4893b3c58a65e76cfa67548392",
+    "evaluation.json": "81d5e786c475f38e86eebcc6e9e4c21c42adb4552df9442d739be05e770130e1",
     "model.wasm": "fa18cbf7d18b08da974a72f165d88948df523dbc12cf7d45bd281e0347b0ec25"
   }
 }

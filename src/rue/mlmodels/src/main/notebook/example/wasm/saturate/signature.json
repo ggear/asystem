@@ -5,7 +5,7 @@
   "parameters": {"signature_version": 1, "state": []},
   "inputs": [
     {
-      "name": "example_saturate_in",
+      "name": "saturate_in",
       "datatype": "FP64",
       "shape": [1],
       "parameters": {"unit": "none", "required": true, "description": "A number to squash."}
@@ -13,7 +13,7 @@
   ],
   "outputs": [
     {
-      "name": "example_saturate_out",
+      "name": "saturate_out",
       "datatype": "FP64",
       "shape": [1],
       "parameters": {"unit": "none", "required": true, "description": "The fitted height times the hyperbolic tangent of the fitted rate times the input."}

@@ -1,0 +1,20 @@
+{
+  "schema": 2,
+  "name": "homeassistant_weatherstation_battery",
+  "flavour": "pyfunc",
+  "model": "model.py",
+  "runtime": {"python": []},
+  "provenance": {
+    "source": "mlflow",
+    "trained_on": "weatherstation_console_battery_voltage, training split",
+    "inputs": ["homeassistant/weatherstation/battery/data/training/1/weatherstation_battery_voltage.csv"],
+    "notes": "arctan fit with a fixed width, a plateau shelf, steps of 5",
+    "implementation": "mlflow.pyfunc model.py, requires mlflow and pandas"
+  },
+  "files": {
+    "signature.json": "7510ac2ee0ea0d88426d0cb460ffd87e0f9c08290e2e122558b6d731c723e1b6",
+    "golden.json": "b6d8f3feb65953bcb19d0b5859ee23f11e92e075316ac2b76fe2d6e91e584b0e",
+    "evaluation.json": "8abdcd923796d2f825bbbde8d82b27232bd36bd48941d155a87649c125190b18",
+    "model.py": "63877725f78ac47614a45263e80111eca7c1963c2a2d50ab2f97855bbcb476c8"
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "passed": true,
+  "budget": 2.7158883509390102e-05,
+  "datasets": {
+    "validation": [
+      {"path": "1/portfolio_allocation_validation.csv", "sha256": "4fe31e33290b4ea4d5a5c0db9f992c2ec609f4af5ae2f315b32354737e5a2ea5"}
+    ],
+    "backtest": [
+      {"path": "1/portfolio_allocation_backtest.csv", "sha256": "2c9b4d0df88c61fb13c3397cd909ce35cbd4a94b04601419d79b4428dfe47ffb"}
+    ]
+  },
+  "checks": [
+    {
+      "split": "validation",
+      "output": "portfolio_allocation_risky_pct",
+      "name": "rmse",
+      "value": 1.8422739836662978e-07,
+      "limit": 0.01,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 1.842273983666298e-05
+    },
+    {
+      "split": "validation",
+      "output": "portfolio_allocation_riskadjusted_pct",
+      "name": "rmse",
+      "value": 4.440892098500626e-16,
+      "limit": 0.01,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 4.440892098500626e-14
+    },
+    {
+      "split": "backtest",
+      "output": "portfolio_allocation_risky_pct",
+      "name": "rmse",
+      "value": 2.7158883509390103e-07,
+      "limit": 0.01,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 2.7158883509390102e-05
+    },
+    {
+      "split": "backtest",
+      "output": "portfolio_allocation_riskadjusted_pct",
+      "name": "rmse",
+      "value": 1.3452724074111524e-15,
+      "limit": 0.01,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 1.3452724074111523e-13
+    }
+  ]
+}

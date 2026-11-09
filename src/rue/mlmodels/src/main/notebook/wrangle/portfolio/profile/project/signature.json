@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "name": "wrangle_portfolio_profile",
+  "platform": "mlserver",
+  "parameters": {"signature_version": 1, "state": []},
+  "inputs": [
+    {
+      "name": "portfolio_profile_risky_share_pct",
+      "datatype": "FP64",
+      "shape": [1],
+      "parameters": {"unit": "percent", "required": true, "description": "Share of the portfolio held in risky assets, 0 to 100 percent."}
+    },
+    {
+      "name": "portfolio_profile_withdrawal_rate_pct",
+      "datatype": "FP64",
+      "shape": [1],
+      "parameters": {"unit": "percent", "required": true, "description": "Initial annual withdrawal as a percent of wealth, constant in real terms."}
+    }
+  ],
+  "outputs": [
+    {
+      "name": "portfolio_profile_return_pct",
+      "datatype": "FP64",
+      "shape": [1],
+      "parameters": {"unit": "percent", "required": true, "description": "Expected real return of the mix, percent per year."}
+    },
+    {
+      "name": "portfolio_profile_volatility_pct",
+      "datatype": "FP64",
+      "shape": [1],
+      "parameters": {"unit": "percent", "required": true, "description": "Annualised volatility of the mix, percent."}
+    },
+    {
+      "name": "portfolio_profile_shortfall_probability_pct",
+      "datatype": "FP64",
+      "shape": [1],
+      "parameters": {"unit": "percent", "required": true, "description": "Probability, in percent, that the portfolio runs out of money within 30 years."}
+    }
+  ]
+}

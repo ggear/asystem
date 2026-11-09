@@ -90,7 +90,7 @@ From the manual kept at `src/build/resources/doc/powershield_psdr800_user_manual
 
 **Expected NUT status per state** (from memory of the Megatec status byte; only `OL` and `OB DISCHRG` have been seen).
 `OL` normal; `OL` with `BOOST` or `TRIM` is information; `OB` is the trigger; `OB LB` is a last-resort override; `OFF` is a
-silent failure (the outlets are unprotected) and alerts at once; a test flag is ignored because the shed waits `rackmains_guard_shed_max_seconds`. The beeper is audible only,
+silent failure (the outlets are unprotected) and alerts at once; a test flag is ignored because the shed waits `guard_shed_max_seconds`. The beeper is audible only,
 so the guard reads `ups.status`, never the alarm.
 
 **What can be trusted today**
@@ -131,16 +131,16 @@ below follow its order, and a name that is not in it is not a metric.
 
 | Group | What it is | Metric names, in payload and CSV order |
 |---|---|---|
-| `clock` | the poll time as a number | `rackmains_clock_epoch_seconds` |
+| `clock` | the poll time as a number | `clock_epoch_seconds` |
 | `mains` | the supply at the UPS input | `rackmains_mains_input_volts`, `rackmains_mains_input_fault_volts` |
-| `output` | what the UPS delivers to the rack | `rackmains_output_volts`, `rackmains_output_hertz`, `rackmains_output_utilisation_pct` |
-| `battery` | the battery | `rackmains_battery_volts`, `rackmains_battery_charge_pct`, `rackmains_battery_charging`, `rackmains_battery_low`, `rackmains_battery_replace`, `rackmains_battery_remaining_pct`, `rackmains_battery_remaining_seconds` |
-| `ups` | the unit's own state | `rackmains_ups_status`, `rackmains_ups_on_battery`, `rackmains_ups_problem`, `rackmains_ups_calibrating`, `rackmains_ups_boost`, `rackmains_ups_trim` |
-| `guard` | the shutdown guard | `rackmains_guard_state`, `rackmains_guard_live`, `rackmains_guard_mains_seconds`, `rackmains_guard_battery_seconds` |
-| `model` | the fitted model's own outputs and state | `rackmains_model_energy_used_wh`, `rackmains_model_history_known`, `rackmains_model_recalibrate`, `rackmains_model_state` |
+| `output` | what the UPS delivers to the rack | `rackmains_output_volts`, `rackmains_output_hertz`, `output_utilisation_pct` |
+| `battery` | the battery | `rackmains_battery_volts`, `rackmains_battery_charge_pct`, `rackmains_battery_charging`, `rackmains_battery_low`, `battery_replace`, `battery_remaining_pct`, `battery_remaining_seconds` |
+| `ups` | the unit's own state | `rackmains_ups_status`, `ups_on_battery`, `rackmains_ups_problem`, `rackmains_ups_calibrating`, `rackmains_ups_boost`, `rackmains_ups_trim` |
+| `guard` | the shutdown guard | `guard_state`, `guard_live`, `guard_mains_seconds`, `guard_battery_seconds` |
+| `model` | the fitted model's own outputs and state | `model_energy_used_wh`, `model_history_known`, `model_recalibrate`, `model_state` |
 
 Bools are the integers `1` and `0`, never JSON `true` and `false`, in the payload and the CSV alike. `_pct` and `_seconds` values are
-integers too (NUT reports `ups.load` and `battery.charge` as whole numbers), and `_volts`, `_hertz` and `rackmains_clock_epoch_seconds` are floats, and `rackmains_model_state` is text holding a JSON object of the model's
+integers too (NUT reports `ups.load` and `battery.charge` as whole numbers), and `_volts`, `_hertz` and `clock_epoch_seconds` are floats, and `model_state` is text holding a JSON object of the model's
 state slots by name, recorded in the CSV and the log only. The envelope is not a metric and has no prefix: MQTT `timestamp` and `period_ms`;
 CSV `timestamp`, `elapsed_seconds`, `event` and `detail`. A key is absent from the payload when its variable is unreported, and its
 CSV cell is blank. `ups.load` is published as *utilisation* so it is never mistaken for the watts of Powercalc's `Home Load`.
@@ -149,19 +149,19 @@ CSV cell is blank. `ups.load` is published as *utilisation* so it is never mista
 {
   "timestamp": "2026-10-30T12:00:00+08:00",
   "period_ms": 2000,
-  "rackmains_clock_epoch_seconds": 1793332800.0,
+  "clock_epoch_seconds": 1793332800.0,
   "rackmains_mains_input_volts": 241.4,
   "rackmains_mains_input_fault_volts": 241.4,
   "rackmains_output_volts": 241.4,
   "rackmains_output_hertz": 50.1,
-  "rackmains_output_utilisation_pct": 13,
+  "output_utilisation_pct": 13,
   "rackmains_battery_volts": 13.4,
   "rackmains_battery_charge_pct": 100,
   "rackmains_battery_charging": 0,
   "rackmains_battery_low": 0,
-  "rackmains_battery_replace": 0,
+  "battery_replace": 0,
   "rackmains_ups_status": "OL",
-  "rackmains_ups_on_battery": 0,
+  "ups_on_battery": 0,
   "rackmains_ups_problem": 0,
   "rackmains_ups_calibrating": 0,
   "rackmains_ups_boost": 0,
@@ -169,14 +169,14 @@ CSV cell is blank. `ups.load` is published as *utilisation* so it is never mista
 }
 ```
 
-The `rackmains_guard_*` keys join it, in the same position, when the guard exists, and the model's keys (`rackmains_battery_remaining_*`
-and the `rackmains_model_*` ones) when a fitted model returns them; the default model returns none of them. The payload no longer has a `samples` object or the old `rack_*_<unit>` keys. The code, `schema.rs`, `system_test.py`, the health check
+The `guard_*` keys join it, in the same position, when the guard exists, and the model's keys (`battery_remaining_*`
+and the `model_*` ones) when a fitted model returns them; the default model returns none of them. The payload no longer has a `samples` object or the old `rack_*_<unit>` keys. The code, `schema.rs`, `system_test.py`, the health check
 and the workbook templates all move to these names when built.
 
 **Cadence (proposed).**
 - **On mains.** Poll the NUT socket every 2 s, so a status flip is seen. Publish every 5 minutes (retained) and at once on any change
   of `rackmains_ups_status` or a derived flag, so the start and end of a dip reach Home Assistant within about 2 s. Nothing is written to a file.
-- **On battery**, from the first `rackmains_ups_on_battery` until `rackmains_guard_mains_stable_seconds` of unbroken `OL`. Poll every 1 s, publish every poll, and
+- **On battery**, from the first `ups_on_battery` until `guard_mains_stable_seconds` of unbroken `OL`. Poll every 1 s, publish every poll, and
   write one CSV row every 5 s and on every event. The driver itself refreshes values only every `pollfreq` (4 s on `max`), so a
   faster poll repeats values and the gain is bounded; lowering `pollfreq` is a host-config change left until trial data shows it is
   needed.
@@ -188,37 +188,37 @@ and the workbook templates all move to these names when built.
 
 | Name | Source | MQTT | CSV | Log |
 |---|---|---|---|---|
-| `rackmains_clock_epoch_seconds` | the poll time as seconds since the epoch, converted at source from `timestamp` | yes | yes | DEBUG per poll |
+| `clock_epoch_seconds` | the poll time as seconds since the epoch, converted at source from `timestamp` | yes | yes | DEBUG per poll |
 | `rackmains_mains_input_volts` | `input.voltage` | yes | yes | DEBUG per poll |
 | `rackmains_mains_input_fault_volts` | `input.voltage.fault` | yes | yes | DEBUG per poll |
 | `rackmains_output_volts` | `output.voltage` | yes | yes | DEBUG per poll |
 | `rackmains_output_hertz` | `output.frequency` | yes | yes | DEBUG per poll |
-| `rackmains_output_utilisation_pct` | `ups.load` | yes | yes | DEBUG per poll; derived in `end`: peak and mean while on battery |
+| `output_utilisation_pct` | `ups.load` | yes | yes | DEBUG per poll; derived in `end`: peak and mean while on battery |
 | `rackmains_battery_volts` | `battery.voltage` | yes | yes | DEBUG per poll; derived in the CSV `end` row: minimum and when, the sag at transfer, the last value |
 | `rackmains_battery_charge_pct` | `battery.charge` | yes | yes | DEBUG per poll; derived in `end`: charge at start and end |
 | `rackmains_battery_charging` | `CHRG` | yes | yes | DEBUG on change |
 | `rackmains_battery_low` | `LB` | yes | yes | INFO on change, with the seconds since `OB` and the voltage |
-| `rackmains_battery_replace` | `RB` | yes | yes | INFO on change |
-| `rackmains_battery_remaining_pct` | the model, an optional output | yes, once a fitted model returns it | yes | DEBUG per call, beside what actually happened |
-| `rackmains_battery_remaining_seconds` | the model, an optional output | yes, once a fitted model returns it | yes | DEBUG per call; INFO when it falls to a lead threshold |
+| `battery_replace` | `RB` | yes | yes | INFO on change |
+| `battery_remaining_pct` | the model, an optional output | yes, once a fitted model returns it | yes | DEBUG per call, beside what actually happened |
+| `battery_remaining_seconds` | the model, an optional output | yes, once a fitted model returns it | yes | DEBUG per call; INFO when it falls to a lead threshold |
 | `rackmains_ups_status` | `ups.status` flags, text | yes | yes | INFO on every change: the flags before and after, with the derived bools |
-| `rackmains_ups_on_battery` | `OB` and not `CAL` | yes | yes | INFO on change; starts and ends the outage CSV; derived: time on battery |
+| `ups_on_battery` | `OB` and not `CAL` | yes | yes | INFO on change; starts and ends the outage CSV; derived: time on battery |
 | `rackmains_ups_problem` | `OFF` `OVER` `BYPASS` `FSD` `ALARM` | yes | yes | INFO on change |
 | `rackmains_ups_calibrating` | `CAL` | yes | yes | INFO on change |
 | `rackmains_ups_boost` | `BOOST` | yes | yes | DEBUG on change |
 | `rackmains_ups_trim` | `TRIM` | yes | yes | DEBUG on change |
-| `rackmains_guard_state` | the guard, text | yes | yes | INFO on every transition, with the inputs and the threshold compared (a `decision` row); derived: seconds to each step |
-| `rackmains_guard_live` | the guard | yes | yes | in the `start` row's detail; in dry-run every command is logged as would-run |
-| `rackmains_guard_mains_seconds` | the guard | yes | yes | `note` rows counting down to `rackmains_guard_mains_stable_seconds` |
-| `rackmains_guard_battery_seconds` | the guard | yes | yes | on every `decision` row |
-| `rackmains_model_energy_used_wh` | the model, an optional output | yes, once a fitted model returns it | yes | DEBUG per call |
-| `rackmains_model_history_known` | the model, an optional output | yes, once a fitted model returns it | yes | INFO on change |
-| `rackmains_model_recalibrate` | the model, an optional output | yes, once the model returns it | yes | WARN on a change to 1, with the reason from the response `parameters` |
-| `rackmains_model_state` | the model's state as one JSON text of the named state slots | no, not published | yes, on the `start` and `end` rows and on a restart, reset or project change, blank otherwise | INFO on those rows; DEBUG on every call when the debug switch is on |
+| `guard_state` | the guard, text | yes | yes | INFO on every transition, with the inputs and the threshold compared (a `decision` row); derived: seconds to each step |
+| `guard_live` | the guard | yes | yes | in the `start` row's detail; in dry-run every command is logged as would-run |
+| `guard_mains_seconds` | the guard | yes | yes | `note` rows counting down to `guard_mains_stable_seconds` |
+| `guard_battery_seconds` | the guard | yes | yes | on every `decision` row |
+| `model_energy_used_wh` | the model, an optional output | yes, once a fitted model returns it | yes | DEBUG per call |
+| `model_history_known` | the model, an optional output | yes, once a fitted model returns it | yes | INFO on change |
+| `model_recalibrate` | the model, an optional output | yes, once the model returns it | yes | WARN on a change to 1, with the reason from the response `parameters` |
+| `model_state` | the model's state as one JSON text of the named state slots | no, not published | yes, on the `start` and `end` rows and on a restart, reset or project change, blank otherwise | INFO on those rows; DEBUG on every call when the debug switch is on |
 | `timestamp`, `period_ms` | the poll | yes | `timestamp`, `elapsed_seconds` | DEBUG per poll |
 | events: transitions, decisions, commands, notes, summary | rackmains, the guard | **never** | yes, the `event` and `detail` columns | INFO. Command timings and host results (`asleep`, `awake`, `shutdown.return`: start, `RESULT` status, `took`) live only here and in the CSV. The `end` row holds the summary: duration on battery, minimum voltage and when, peak utilisation, whether `LB` raised, steps reached, hosts shed |
 | service health, the `Service Rackmains` switch | the container's health check, from a heartbeat file and independent of MQTT | none from rackmains, supervisor publishes it | no | none here, supervisor logs it |
-| outage count | dropped | no | no | the `end` row's duration for that outage; a count is a query over `rackmains_ups_on_battery` |
+| outage count | dropped | no | no | the `end` row's duration for that outage; a count is a query over `ups_on_battery` |
 | `ups.temperature` | not reported by the unit | no | no | no |
 | plug watts | not collected | no | no | no |
 | read failures | the poll | no | a `note` row during an outage | WARN per failed read, INFO on a reinit |
@@ -249,19 +249,19 @@ state and a failed read never reads as an outage or a problem.
 
 | NUT token | Resolves to | Logged |
 |---|---|---|
-| `OL` | `rackmains_ups_on_battery` 0 | no |
-| `OB` | `rackmains_ups_on_battery` 1, unless `CAL` is present | INFO on change |
+| `OL` | `ups_on_battery` 0 | no |
+| `OB` | `ups_on_battery` 1, unless `CAL` is present | INFO on change |
 | `LB` | `rackmains_battery_low` | INFO on change |
-| `RB` | `rackmains_battery_replace` | INFO on change |
+| `RB` | `battery_replace` | INFO on change |
 | `OFF`, `OVER`, `BYPASS`, `FSD`, `ALARM` | `rackmains_ups_problem` | INFO on change |
-| `CAL` | `rackmains_ups_calibrating`, and suppresses `rackmains_ups_on_battery` so a deliberate calibration is not an outage | INFO on change |
+| `CAL` | `rackmains_ups_calibrating`, and suppresses `ups_on_battery` so a deliberate calibration is not an outage | INFO on change |
 | `CHRG` | `rackmains_battery_charging` | DEBUG on change |
 | `BOOST`, `TRIM` | `rackmains_ups_boost`, `rackmains_ups_trim` | DEBUG on change |
 | `DISCHRG`, `HB` | nothing | DEBUG |
 | any other token | nothing | WARN once per new token |
 
-Decisions behind it (2026-10-30). `rackmains_ups_on_battery` and `rackmains_ups_problem` are separate so each entity means one thing and `BYPASS` never
-reads as a power cut. `CAL` suppresses `rackmains_ups_on_battery` so a calibration does not add an outage or start the guard's time-on-battery
+Decisions behind it (2026-10-30). `ups_on_battery` and `rackmains_ups_problem` are separate so each entity means one thing and `BYPASS` never
+reads as a power cut. `CAL` suppresses `ups_on_battery` so a calibration does not add an outage or start the guard's time-on-battery
 clock, at the cost of masking a real cut during one, which `LB` and the input voltage would still show. The `OB` test moves out of
 the Home Assistant template and into the service, which gives it one owner and a test; this reverses the module `CLAUDE.md` line
 "Home Assistant tests for the `OB` token", to be updated when built.
@@ -276,15 +276,15 @@ one string.
 
 **The outage CSV**, on the data dir the compose file already mounts (`${SERVICE_DATA_DIR}` on the host, `/asystem/mnt/outage/` in
 the container), so it is on the host's disk and survives Docker stopping.
-- **Name and span.** `rackmains_outage_<portable timestamp of the first OB>.csv`. An outage starts at the first `rackmains_ups_on_battery` and
-  ends after `rackmains_guard_mains_stable_seconds` of unbroken `OL`, the guard's own clock, so dips closer together than that are one file.
+- **Name and span.** `rackmains_outage_<portable timestamp of the first OB>.csv`. An outage starts at the first `ups_on_battery` and
+  ends after `guard_mains_stable_seconds` of unbroken `OL`, the guard's own clock, so dips closer together than that are one file.
 - **Columns.** `timestamp`, `elapsed_seconds`, `event`, `detail`, then every metric above in table order, headed by its canonical
   name. Every row repeats the last known value of every metric, so a row stands alone and a blank cell means never reported. `event`
   is empty on a plain sample and otherwise one of `start`, `status`, `decision`, `command`, `note`, `end`; `detail` is free text,
   quoted as RFC 4180, on one line. `start` carries the version, the model version and whether the guard is dry-run or
   live. A row is written every 5 s on battery, on every change of status or flag, and for each guard decision, command and note. A row with no
   event, or a `start` or `status` event, is also **one model call**: its numbers are the request and the outputs are in the row. The state
-  is recorded as `rackmains_model_state` only on the `start` row (the state in), the `end` row (the state out) and on a restart, reset or
+  is recorded as `model_state` only on the `start` row (the state in), the `end` row (the state out) and on a restart, reset or
   project change, and is blank elsewhere, an exception to the rule that a row repeats the last values. The state between is a deterministic
   fold of the calls, so a replay regenerates it. The `decision`, `command`, `note` and `end` rows repeat the last values, and a
   replay skips them.
@@ -297,7 +297,7 @@ the container), so it is on the host's disk and survives Docker stopping.
   - **Numbers.** A numeric sensor is a single float `value`. The CSV writes the same number the payload carries, through the one
     formatter the payload uses (Rust's shortest round-trip form), so the CSV and the published value never differ by rounding. `*_pct`
     stay whole numbers.
-  - **Text.** `rackmains_ups_status` and `rackmains_guard_state` are not numeric, so Home Assistant stores them as a text `state` only.
+  - **Text.** `rackmains_ups_status` and `guard_state` are not numeric, so Home Assistant stores them as a text `state` only.
     The CSV writes the same string, on one line, quoted.
   - **Gaps.** An absent key leaves Home Assistant on its last state, so each CSV row repeats the last known value and a blank cell
     means never reported. Home Assistant drops `unavailable` and `unknown` states and writes only on change, while the CSV writes a
@@ -341,20 +341,20 @@ the container), so it is on the host's disk and survives Docker stopping.
 **Short outages (decided 2026-10-28, revised 2026-10-30).** A one-second cut at 18:05:25 showed as `OB DISCHRG` in one 2 s recorder
 sample and was gone by the next, so a slow poll would usually miss it. The poll is therefore 2 s even on mains, and any status
 change publishes at once, so Home Assistant's history records the start and end of every dip the driver saw. A dip that falls
-between two driver polls is still unseen. Outages are counted from Home Assistant's history of `rackmains_ups_on_battery`, not in the
+between two driver polls is still unseen. Outages are counted from Home Assistant's history of `ups_on_battery`, not in the
 service.
 
 `rackmains_battery_charge_pct` is NUT's coarse estimate, from the battery voltage against `battery.voltage.low` and `.high`; the guard
 never uses it.
 
 **Guard metrics.** The guard's metrics join the payload when the guard exists, and each gets its own workbook row, `Enabled` for the
-dry-run release, so nothing is added later by surprise. `rackmains_guard_state` is one of `idle`, `waiting`, `shedding`, `holding`,
-`halting`, `restoring`; `rackmains_guard_live` is off while in dry-run; `rackmains_guard_mains_seconds` is the seconds on line since
-the previous outage ended, absent when unknown; `rackmains_guard_battery_seconds` is the guard's accumulated time on battery.
+dry-run release, so nothing is added later by surprise. `guard_state` is one of `idle`, `waiting`, `shedding`, `holding`,
+`halting`, `restoring`; `guard_live` is off while in dry-run; `guard_mains_seconds` is the seconds on line since
+the previous outage ended, absent when unknown; `guard_battery_seconds` is the guard's accumulated time on battery.
 
 ## Workbook rows to add to `entity_metadata.xlsx`
 
-Every payload metric except `rackmains_clock_epoch_seconds` (in the payload, the CSV and the log only) and `rackmains_model_state` (in the
+Every payload metric except `clock_epoch_seconds` (in the payload, the CSV and the log only) and `model_state` (in the
 CSV and the log only) gets a row, `Enabled`, all `device_via_device` **`RackMains`**, in
 `src/all/_/src/build/resources/metadata/entity_metadata.xlsx`, with `unique_id` the canonical name and the payload key the same string.
 Tell me when they are in and I run `fab generate`; I do not edit the workbook. Fill each new row **down from a `TempStat` row** so the
@@ -370,27 +370,27 @@ example `sensor.rackmains_battery_volts`, so the InfluxDB `entity_id` tag equals
 | `rackmains_mains_input_fault_volts` | `sensor` | V | `voltage` |
 | `rackmains_output_volts` | `sensor` | V | `voltage` |
 | `rackmains_output_hertz` | `sensor` | Hz | `frequency` |
-| `rackmains_output_utilisation_pct` | `sensor` | % | |
+| `output_utilisation_pct` | `sensor` | % | |
 | `rackmains_battery_volts` | `sensor` | V | `voltage` |
 | `rackmains_battery_charge_pct` | `sensor` | % | `battery` |
 | `rackmains_battery_charging` | `binary_sensor` | | `battery_charging` |
 | `rackmains_battery_low` | `binary_sensor` | | `battery`, on means low |
-| `rackmains_battery_replace` | `binary_sensor` | | `problem` |
-| `rackmains_battery_remaining_pct` | `sensor`, with the model | % | |
-| `rackmains_battery_remaining_seconds` | `sensor`, with the model | s | `duration` |
+| `battery_replace` | `binary_sensor` | | `problem` |
+| `battery_remaining_pct` | `sensor`, with the model | % | |
+| `battery_remaining_seconds` | `sensor`, with the model | s | `duration` |
 | `rackmains_ups_status` | `sensor`, text | | |
-| `rackmains_ups_on_battery` | `binary_sensor` | | |
+| `ups_on_battery` | `binary_sensor` | | |
 | `rackmains_ups_problem` | `binary_sensor` | | `problem` |
 | `rackmains_ups_calibrating` | `binary_sensor` | | `running` |
 | `rackmains_ups_boost` | `binary_sensor` | | |
 | `rackmains_ups_trim` | `binary_sensor` | | |
-| `rackmains_guard_state` | `sensor`, text, with the guard | | |
-| `rackmains_guard_live` | `binary_sensor`, with the guard | | |
-| `rackmains_guard_mains_seconds` | `sensor`, with the guard | s | `duration` |
-| `rackmains_guard_battery_seconds` | `sensor`, with the guard | s | `duration` |
-| `rackmains_model_energy_used_wh` | `sensor`, with the model | Wh | `energy` |
-| `rackmains_model_history_known` | `binary_sensor`, with the model | | |
-| `rackmains_model_recalibrate` | `binary_sensor`, with the model | | `problem` |
+| `guard_state` | `sensor`, text, with the guard | | |
+| `guard_live` | `binary_sensor`, with the guard | | |
+| `guard_mains_seconds` | `sensor`, with the guard | s | `duration` |
+| `guard_battery_seconds` | `sensor`, with the guard | s | `duration` |
+| `model_energy_used_wh` | `sensor`, with the model | Wh | `energy` |
+| `model_history_known` | `binary_sensor`, with the model | | |
+| `model_recalibrate` | `binary_sensor`, with the model | | `problem` |
 
 Shared by every row, mirroring `TempStat`: `entity_status` `Enabled`, `unique_id_device` `macmini-max`, `entity_domain`
 `Device Conditions Rack`, `entity_group` `Diagnostics`, `device_suggested_area` `Rack`, `_device_name_suffix` `Mains`,
@@ -410,7 +410,7 @@ is absent, re-emits its own current state as an integer. No existing MQTT `binar
 binary sensors in the workbook are template, UniFi, Sonoff and SenseMe entities), so there is no sibling to copy them from:
 
 ```
-{{ value_json['rackmains_ups_on_battery'] if value_json['rackmains_ups_on_battery'] is defined else (1 if is_state('binary_sensor.rackmains_ups_on_battery', 'on') else 0) }}
+{{ value_json['ups_on_battery'] if value_json['ups_on_battery'] is defined else (1 if is_state('binary_sensor.ups_on_battery', 'on') else 0) }}
 ```
 
 The key each template reads must match the canonical name the service declares.
@@ -471,20 +471,20 @@ image, one health check, and no change elsewhere.
 **Steps (first version, timers and flags only).** The host actions are `asleep` and `awake` from the `system` module (the
 next section). A host is never powered off.
 1. **Watch.** Polls at the module's rate, 2 s on mains and 1 s on battery. Time on battery accumulates from the first `OB`, so a short blip simply never reaches
-   `rackmains_guard_shed_max_seconds`, and resets to zero only after `rackmains_guard_mains_stable_seconds` of continuous `OL`, so a grid that flaps with dips under that apart cannot keep the
+   `guard_shed_max_seconds`, and resets to zero only after `guard_mains_stable_seconds` of continuous `OL`, so a grid that flaps with dips under that apart cannot keep the
    servers up.
-2. **Shed.** At `rackmains_guard_shed_max_seconds` on battery, or `LB`: run `asleep --deep` on the followers in parallel, `meg` last so Home
+2. **Shed.** At `guard_shed_max_seconds` on battery, or `LB`: run `asleep --deep` on the followers in parallel, `meg` last so Home
    Assistant and the broker outlast the rest, each over ssh with a key whose `authorized_keys` forces the command (`restrict`,
    no shell; see the forced-command test), each call synchronous, so it is done when the call returns, and `0` means it completed cleanly. Any other code (1 error, 4 timeout,
    5 unclean) is logged and alerted and the guard moves on; it never retries in a loop. On `max`, run `asleep --shallow`
    stopping every container but rackmains (supervisor first, it binds `/`). A shed is not undone by the voltage rebound when
-   the load drops, only by `rackmains_guard_mains_stable_seconds` of mains.
-3. **Halt.** At `rackmains_guard_halt_max_seconds` on battery, or on `LB`, whether or not every follower has finished (a halt implies a shed,
+   the load drops, only by `guard_mains_stable_seconds` of mains.
+3. **Halt.** At `guard_halt_max_seconds` on battery, or on `LB`, whether or not every follower has finished (a halt implies a shed,
    so an `LB` runs both at once, with no staging): send `shutdown.return` first, with `ups.delay.shutdown` set to
-   `rackmains_guard_halt_delay_seconds` (30 s by default), which the fit sets to cover `max`'s `asleep --deep` plus a margin, then start `asleep --deep` on `max` detached. It stops rackmains and the guard
+   `guard_halt_delay_seconds` (30 s by default), which the fit sets to cover `max`'s `asleep --deep` plus a margin, then start `asleep --deep` on `max` detached. It stops rackmains and the guard
    with it, so its result is only in `/run/asleep.log` on `max`, and `shutdown.stop` cannot be sent afterwards. The UPS then
    cuts and restores, and every host boots on AC restore (power-on-after-cut test, below).
-4. **Mains returns first.** After `rackmains_guard_mains_stable_seconds` of continuous `OL`, run `awake` on `max` to restart what was
+4. **Mains returns first.** After `guard_mains_stable_seconds` of continuous `OL`, run `awake` on `max` to restart what was
    stopped, and on each follower the state file lists once its `asleep` has returned, in the reverse of the shed order: `max`
    first, then `meg`, then the remaining followers in parallel (decided 2026-10-30). Each call is synchronous and its exit status says whether the host came back
    healthy (`6` is a container not running or healthy). `asleep` is undone by `awake`, so unlike
@@ -545,8 +545,8 @@ take the JSON from "The model signature, inputs, outputs and thresholds" in the 
 **Nothing computed here is a feature.** rackmains sends the poll time, the utilisation, the on-battery flag and the replace flag, exactly
 the numbers it records, plus the state the model returned last time. Every feature is inside the model's graph. The row and the outputs
 are recorded identically in MQTT, the CSV and the log, and the state is recorded in the CSV and the log at the start and end of an
-outage (`rackmains_model_state`, JSON text), so a recorded outage is a complete fold and can be replayed through any project. Text and the timestamp are never sent: the
-status becomes the flags and the time becomes `rackmains_clock_epoch_seconds` at source, here, in Rust.
+outage (`model_state`, JSON text), so a recorded outage is a complete fold and can be replayed through any project. Text and the timestamp are never sent: the
+status becomes the flags and the time becomes `clock_epoch_seconds` at source, here, in Rust.
 
 **The Rust seam.** A `model.rs` in the library holds the V2 request and response types and a `Model` trait with one method,
 `infer(request) -> response`. `StaticModel` loads the default project (`project.json` of flavour `static`) from the image at start, checks its
@@ -586,9 +586,9 @@ must give a signature error). It is embedded into `src/build/resources/model/` b
 with the loader, the validator, copying the project into the image at `/asystem/etc/model/`, and the guard's
 refusal of live mode on a failed validation.
 
-**Starting values, the default model.** Constants only: `rackmains_guard_shed_max_seconds` 120, inside the 145 s already held at service
-load with no knee; `rackmains_guard_halt_max_seconds` 450; `rackmains_guard_mains_stable_seconds` 300; and
-`rackmains_guard_halt_delay_seconds` 120, a placeholder until `max`'s `asleep --deep` is timed. They shed early on short outages and so
+**Starting values, the default model.** Constants only: `guard_shed_max_seconds` 120, inside the 145 s already held at service
+load with no knee; `guard_halt_max_seconds` 450; `guard_mains_stable_seconds` 300; and
+`guard_halt_delay_seconds` 120, a placeholder until `max`'s `asleep --deep` is timed. They shed early on short outages and so
 waste battery, but never outrun what is proven. The exact manifest is in "First pass: a default model, on day one" in the model plan. A refit replaces the project, which is a release.
 
 ## Deploy and the vernemq release lifecycle
@@ -784,7 +784,7 @@ Version reviewed: none yet, the final review has not run.
 
 ## Remaining phases
 
-Decided 2026-10-28: rollout A starts inside the proven 145 s (`rackmains_guard_shed_max_seconds` 120, `rackmains_guard_halt_max_seconds` from the measured shed
+Decided 2026-10-28: rollout A starts inside the proven 145 s (`guard_shed_max_seconds` 120, `guard_halt_max_seconds` from the measured shed
 times); trial 5 goes to the voltage floor once; the trials are cut at the plug by hand; and there is **one
 first release carrying the publisher and the guard in dry-run**, not a publisher alone.
 
@@ -796,7 +796,7 @@ first release carrying the publisher and the guard in dry-run**, not a publisher
    `checkhealthy.sh`, the model seam with the default model project ("First pass: a default model, on day one" in the model plan, whose project is built; the Rust loader is not), the module
    `CLAUDE.md` update; then the review above.
 3. **Run the forced-command test and the `asleep` timing** (yours, on the hosts, tests 3 and 4 in "Tests still needed" in the model plan), recording each result there; they
-   fix `rackmains_guard_halt_max_seconds`.
+   fix `guard_halt_max_seconds`.
 4. **Build the guard, dry-run only**: restructure `run` so the poll, the CSV writer and the guard start before, and never wait on, the broker connect, generate the host file
    and the default model project, the model seam, config and state, the ssh runners for `asleep` and `awake`, the state machine with mock sequences, the heartbeat in the
    health check; then review it as above.
@@ -804,7 +804,7 @@ first release carrying the publisher and the guard in dry-run**, not a publisher
    resources, simplification, `tempstat` style, guidelines, names, comments, tests, ordering, operability and packaging) over everything built, with the findings table filled in and the gates green. The release in step 6
    waits for it.
 6. **Add the workbook rows (yours), release publisher and guard in dry-run** and confirm `rackmains/status` is `online`, the
-   entities appear, and a short cut at the plug turns `rackmains_ups_on_battery` on within one poll and back off when mains returns.
+   entities appear, and a short cut at the plug turns `ups_on_battery` on within one poll and back off when mains returns.
 7. **Trial 1, then drop the recorder** (the publisher must have agreed with it through the long cut), **then the restart tests
    (5 and 6), then trials 2 to 4 live** (see "Trials" in the model plan), recording each result there.
 8. **Trial 5 once per battery** ("Trials" in the model plan), fit the model's outputs offline (a new project, later the model), release the measured thresholds.
@@ -823,7 +823,7 @@ first release carrying the publisher and the guard in dry-run**, not a publisher
 - **Call timeout.** Decided as 30 s and recorded as an ssh connect and silence timeout, not a cap on the whole call (see "Calling
   `asleep` and `awake`"). Confirm that reading: if a 30 s cap on the whole call was meant, a deep shed would be cut short. No deep
   run has been timed yet, so the whole-call length is still unmeasured (test 4 in "Tests still needed" in the model plan).
-- **Switch or binary sensor.** `rackmains_ups_on_battery` is a read-only `binary_sensor`; revisit if a command is ever wired.
+- **Switch or binary sensor.** `ups_on_battery` is a read-only `binary_sensor`; revisit if a command is ever wired.
 - **Who sends the final UPS command**, the guard (read-write socket) or the host.
 - **Restart shape.** Decided: `awake` when mains returns early, `AFTERG3_EN` after a cut; the power-on-after-cut test (5)
   confirms it per host.

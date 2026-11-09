@@ -4,14 +4,14 @@
   "budget": 0.06633249580710594,
   "datasets": {
     "validation": [
-      {"path": "2026-11-03_16-40-53/onnx_linear_validation_2026-11-03_2026-11-03.csv", "sha256": "ce61c3d3c2c11e44ee5fba565deb5518f2645ea6cd047b7f987d70d2e7d16b74"}
+      {"path": "1/onnx_linear_validation.csv", "sha256": "aea0b34e8999573feebd9e3db50949c80107fa15178efd96b1e5d2151ef870f3"}
     ],
     "backtest": [
-      {"path": "2026-11-03_16-40-53/onnx_linear_backtest_2026-11-03_2026-11-03.csv", "sha256": "d4e242479ac4a12666defc1585cbc0060fe613cead78fd239eb045edce51dd34"}
+      {"path": "1/onnx_linear_backtest.csv", "sha256": "0c6f54f7cd16c1b5d588b9751aebed54ab2b96856c1f0a3440552d3456a330b2"}
     ]
   },
   "checks": [
-    {"split": "validation", "output": "example_onnx_out", "name": "rmse", "value": 0.03316624790355297, "limit": 0.5, "direction": "max", "gate": true, "passed": true, "budget": 0.06633249580710594},
-    {"split": "backtest", "output": "example_onnx_out", "name": "rmse", "value": 0.03301514803843781, "limit": 0.5, "direction": "max", "gate": true, "passed": true, "budget": 0.06603029607687562}
+    {"split": "validation", "output": "onnx_out", "name": "rmse", "value": 0.03316624790355297, "limit": 0.5, "direction": "max", "gate": true, "passed": true, "budget": 0.06633249580710594},
+    {"split": "backtest", "output": "onnx_out", "name": "rmse", "value": 0.03301514803843781, "limit": 0.5, "direction": "max", "gate": true, "passed": true, "budget": 0.06603029607687562}
   ]
 }

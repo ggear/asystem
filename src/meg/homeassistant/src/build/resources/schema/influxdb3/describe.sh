@@ -317,6 +317,18 @@ WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
+    'input_number'                   AS relation,
+    'entity_id/unit_of_measurement*' AS dimension,
+    2                                AS measures,
+    '<on-change>'                    AS cadence,
+    count(*)                         AS rows,
+    CAST(min(time) AS VARCHAR)       AS oldest,
+    CAST(max(time) AS VARCHAR)       AS newest
+FROM input_number
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
     'light'                    AS relation,
     'entity_id*'               AS dimension,
     2                          AS measures,
@@ -1145,6 +1157,46 @@ WHERE
         'direction_str', 'entity_id', 'module', 'percentage', 'percentage_str', 'state',
         'time', 'value'
     )
+UNION ALL
+SELECT
+    'input_number'                                                    AS relation,
+    'initial_str'                                                     AS measure,
+    'str'                                                             AS kind,
+    '-'                                                               AS unit,
+    '<on-change>'                                                     AS period,
+    count(initial_str)                                                AS rows,
+    CAST(min(time) FILTER (WHERE initial_str IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE initial_str IS NOT NULL) AS VARCHAR) AS newest
+FROM input_number
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
+    'input_number'                                              AS relation,
+    'value'                                                     AS measure,
+    'float'                                                     AS kind,
+    '-'                                                         AS unit,
+    '<on-change>'                                               AS period,
+    count(value)                                                AS rows,
+    CAST(min(time) FILTER (WHERE value IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE value IS NOT NULL) AS VARCHAR) AS newest
+FROM input_number
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
+    '-'                   AS relation,
+    column_name           AS measure,
+    '-'                   AS kind,
+    '-'                   AS unit,
+    '-'                   AS period,
+    CAST(NULL AS BIGINT)  AS rows,
+    CAST(NULL AS VARCHAR) AS oldest,
+    CAST(NULL AS VARCHAR) AS newest
+FROM information_schema.columns
+WHERE
+    table_name = 'input_number'
+    AND column_name NOT IN ('entity_id', 'initial_str', 'module', 'time', 'unit_of_measurement', 'value')
 UNION ALL
 SELECT
     'light'                                                     AS relation,
@@ -2126,6 +2178,19 @@ FROM fan
 WHERE
     module = 'homeassistant'
 GROUP BY entity_id
+UNION ALL
+SELECT
+    'input_number'                              AS relation,
+    'entity_id/unit_of_measurement*'            AS dimension,
+    concat(entity_id, '/', unit_of_measurement) AS entity,
+    '-'                                         AS declared,
+    count(*)                                    AS rows,
+    CAST(min(time) AS VARCHAR)                  AS oldest,
+    CAST(max(time) AS VARCHAR)                  AS newest
+FROM input_number
+WHERE
+    module = 'homeassistant'
+GROUP BY concat(entity_id, '/', unit_of_measurement)
 UNION ALL
 SELECT
     'light'                    AS relation,

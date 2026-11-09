@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "name": "wrangle_household_networth",
+  "platform": "mlserver",
+  "parameters": {"signature_version": 1, "state": []},
+  "inputs": [
+    {
+      "name": "household_networth_in",
+      "datatype": "FP64",
+      "shape": [1],
+      "parameters": {"unit": "none", "required": true, "description": "Unused input."}
+    }
+  ],
+  "outputs": [
+    {
+      "name": "household_networth_current_dollars",
+      "datatype": "FP64",
+      "shape": [1],
+      "parameters": {"unit": "none", "required": true, "description": "Net worth at the latest month end, dollars."}
+    },
+    {
+      "name": "household_networth_savings_rate_pct",
+      "datatype": "FP64",
+      "shape": [1],
+      "parameters": {"unit": "percent", "required": true, "description": "Share of income not spent over the period, percent."}
+    }
+  ]
+}

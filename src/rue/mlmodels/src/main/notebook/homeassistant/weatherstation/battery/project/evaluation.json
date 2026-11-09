@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "passed": true,
+  "budget": 0.7514807031670689,
+  "datasets": {
+    "backtest": [
+      {"path": "1/weatherstation_battery_incumbent.csv", "sha256": "1ef9e9df8ef7b545f1c07ccfacd702c5b1077f382e678b259d99e2ce16d31ab4"}
+    ]
+  },
+  "checks": [
+    {
+      "split": "backtest",
+      "output": "weatherstation_console_battery_capacity_pct",
+      "name": "rmse",
+      "value": 3.7574035158353447,
+      "limit": 5,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 0.7514807031670689
+    },
+    {"split": "backtest", "output": "weatherstation_console_battery_capacity_pct", "name": "bounce", "value": 45.0, "limit": 60, "direction": "max", "gate": true, "passed": true, "budget": 0.75}
+  ]
+}

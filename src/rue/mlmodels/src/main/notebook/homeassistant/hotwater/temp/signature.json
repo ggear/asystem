@@ -8,7 +8,7 @@
   },
   "inputs": [
     {
-      "name": "homeassistant_hotwater_in",
+      "name": "hotwater_in",
       "datatype": "FP64",
       "shape": [
         1
@@ -22,7 +22,7 @@
   ],
   "outputs": [
     {
-      "name": "homeassistant_hotwater_out",
+      "name": "hotwater_out",
       "datatype": "FP64",
       "shape": [
         1

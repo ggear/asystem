@@ -10,15 +10,15 @@ sensor:
     radius: 30
     url: https://api.emergency.wa.gov.au/v1/rss/incidents?region=METRO%20NORTH%20EAST
   #####################################################################################
-  # TODO: Enable with the stateful weewx_console_battery model once it is released and served by mlserver,
+  # TODO: Enable with the stateful homeassistant_weatherstation_battery model once it is released and served by mlserver,
   #       restore model_version to influxdb tags_attributes and outputs to influxdb ignore_attributes,
   #       uncomment the rest sensor below and the update action in the automation at the end of this file,
   #       moving that action to its own automation triggered by a state change of the reported helper,
   #       so the model is queried once per report. A restart loses the model state.
   #- platform: rest
-  #  name: mlserver_weewx_console_battery_capacity_pct
-  #  unique_id: mlserver_weewx_console_battery_capacity_pct
-  #  resource: https://mlserver.proxy.janeandgraham.com/v2/models/weewx_console_battery/infer
+  #  name: mlserver_weatherstation_console_battery_capacity_pct
+  #  unique_id: mlserver_weatherstation_console_battery_capacity_pct
+  #  resource: https://mlserver.proxy.janeandgraham.com/v2/models/homeassistant_weatherstation_battery/infer
   #  method: POST
   #  headers:
   #    Content-Type: application/json
@@ -43,7 +43,7 @@ sensor:
   #          "shape": [1],
   #          "data": [{{ now().timestamp() | int }}]
   #        }
-  #        {%- set saved = state_attr('sensor.mlserver_weewx_console_battery_capacity_pct', 'outputs') | default([], true) | selectattr('name', 'eq', 'weewx_console_battery_state_out') | map(attribute='data') | first | default([], true) %}
+  #        {%- set saved = state_attr('sensor.mlserver_weatherstation_console_battery_capacity_pct', 'outputs') | default([], true) | selectattr('name', 'eq', 'weewx_console_battery_state_out') | map(attribute='data') | first | default([], true) %}
   #        {%- if saved | length == 4 %},
   #        {
   #          "name": "weewx_console_battery_state_in",
@@ -55,7 +55,7 @@ sensor:
   #      ]
   #    }
   #  value_template: >-
-  #    {{ (value_json.outputs | selectattr('name', 'eq', 'weewx_console_battery_capacity_pct') | first).data[0] }}
+  #    {{ (value_json.outputs | selectattr('name', 'eq', 'weatherstation_console_battery_capacity_pct') | first).data[0] }}
   #  json_attributes:
   #    - model_version
   #    - outputs
@@ -94,5 +94,5 @@ automation:
           value: "{{ as_timestamp(states.sensor.weatherstation_console_battery_voltage.last_reported) | int }}"
       #- action: homeassistant.update_entity
       #  target:
-      #    entity_id: sensor.mlserver_weewx_console_battery_capacity_pct
+      #    entity_id: sensor.mlserver_weatherstation_console_battery_capacity_pct
 #######################################################################################

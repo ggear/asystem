@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "split": "validation",
+  "run": 1,
+  "name": "wasm_accumulate_validation",
+  "source": "builder",
+  "query": null,
+  "database": null,
+  "captured": "2026-11-03_16-40-51",
+  "rows": 5,
+  "sha256": "947c9f6ff20fe82fb7e67853c8019846745568f4af555b32c71267486a726b1e"
+}

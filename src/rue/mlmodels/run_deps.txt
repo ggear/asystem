@@ -1,3 +1,4 @@
 mlflow
 mlserver
 influxdb3
+postgres

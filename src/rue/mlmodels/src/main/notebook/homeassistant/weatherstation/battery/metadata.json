@@ -1,0 +1,8 @@
+{
+  "schema": 2,
+  "version": "10.200.2004-SNAPSHOT",
+  "content_sha256": "b0c37dab2db6b9646a4f9168d93f1f103a4a6202ae55e0b104ade54b10c1c965",
+  "inputs_sha256": "c8e6c409dc07eb35c91dddd1aad6864a95b856995b3719b80e34fdf62690eada",
+  "target": {"kind": "served"},
+  "release": null
+}

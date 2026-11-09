@@ -2,7 +2,9 @@
 
 The backup and restore plan closed on 2026-11-06. This holds what it left open, in the order it can be done. Delete this file when everything is done or dropped.
 
-Already passed and removed from this list: the Saturday 2026-11-07 run on `macmini-mad` and `macmini-may` (all verdicts `success`, `baseline` the previous run, `evidence` empty; influxdb3 took a full because the pre-install full `2026-11-06_15-41-54` carries `source_version` `10.200.1994` and a delta chains only to a full of the running version, which happens once per release) and the influx prune across the 3.12.1 to 3.12.2 change (`cluster_1/backups` holds only `full-2026-11-07_01-00-59`).
+Already passed and removed from this list: the Saturday 2026-11-07 run on `macmini-mad` and `macmini-may` (all verdicts `success`, `baseline` the previous run, `evidence` empty; influxdb3 took a full because the pre-install full `2026-11-06_15-41-54` carries `source_version` `10.200.1994` and a delta chains only to a full of the running version, which happens once per release) and the influx prune across the 3.12.1 to 3.12.2 change (`cluster_1/backups` holds only `full-2026-11-07_01-00-59`), and B1: the Sunday 2026-11-08 influxdb3 point on `macmini-may` is a delta with `parent` `2026-11-07_01-00-59`, verdict `success`, `baseline` the previous run and `evidence` empty.
+
+The Monday 2026-11-09 `macmini-may` run showed a false red: its secondary stage did the work and logged `success`, but a liveness beat overwrote the final stage document with `running` and the reaper later stamped `timeout`. Fixed in `runStage`, which now stops the liveness goroutine before writing the final document, and released as supervisor 10.200.2003 to every host. A manual run on `may` afterwards resolved `success` on all three stages. The supervisor systest (`fab st`) and the full Go suite passed. The stuck run `2026-11-09_01-00-59` (secondary `timeout`, result `running`) cannot be stopped because it has no live stage. The live topics and dashboards read the newest run and are green, but `abackup list` keeps the row until it ages out of the keep set, unless it is deleted by hand from primary and `/share/30/backup/supervisor/macmini-may`.
 
 ## A. Can be done now, by hand
 
@@ -25,15 +27,11 @@ Make one backup fail on purpose (an unwritable target, or the container stopped 
 
 ## B. Waits for a scheduled run
 
-### B1. Sunday 2026-11-08 at 01:00
+### B1. First weekly drill, Monday 2026-11-09
 
-On `macmini-may`, influxdb3 takes a delta whose `parent` is `2026-11-07_01-00-59`, with verdict `success`, `baseline` the previous run and `evidence` empty.
+**What it is.** On the first nightly run of each ISO week, secondary drills the sparse points it keeps (`drillSecondaryServices`). It has run in production only for catch-up drills (5 Nov). It has never selected a point because the week turned. It drilled the newest point of the closed week, the Sunday 2026-11-08 one, on mad, meg, max and jen, all `success`. `may` drilled its influxdb3 2026-11-07 point, `success`. The 2026-11-07 points of the other modules have no `drill.json`, which looks expected since the Sunday points were drilled instead, though the drill selection code was not read to confirm it.
 
-### B2. First weekly drill, Monday 2026-11-09
-
-**What it is.** On the first nightly run of each ISO week, secondary drills the sparse points it keeps (`drillSecondaryServices`). It has run in production only for catch-up drills (5 Nov). It has never selected a point because the week turned. This is also the first time the 2026-11-07 points get a `drill.json`: no drill ran on Saturday, so their absence until now is expected.
-
-**Check, on Monday morning, on each of `macmini-mad`, `macmini-meg`, `macmini-may`, `macmini-max` and `raspbpi-jen`:**
+**Check, on Monday morning (passed on every host except `may`, whose run was the false red above, so repeat it there on Tuesday 2026-11-10, with `2026-11-10_01-*` in the `ls` below), on each of `macmini-mad`, `macmini-meg`, `macmini-may`, `macmini-max` and `raspbpi-jen`:**
 
 ```
 ssh root@<host>
@@ -47,7 +45,7 @@ for f in $r/stage/primary/service/*/status.json; do echo "$(basename $(dirname $
 - the run `state` is `success` and each service has `success_bool` true and no `drill_failed_bool`
 - there are no `faulting`, `WARN`, `ERROR` or `refused` lines
 - a `verified` line is expected only where a sparse point lacked a verdict (a point drills once, so there may be none, which is fine: every existing point was drilled on 5 Nov)
-- each `drill.json` for the 2026-11-07 points is `success`, or `skipped` only for a point the software did not take
+- each `drill.json` for the newest point of the closed week is `success`, or `skipped` only for a point the software did not take
 - `Fail BKP` reads 0 on every host's dashboard
 
 **If it fails:** read `<share>/backup/<svc>/<run>/.meta/secondary/drill.json` and the failed service's `output.log`, then hand drill the same point: `/var/lib/asystem/install/<svc>/latest/restore.sh --mode=drill --from=<run> --runs=<share dir>`. A hand drill that passes while the stage failed means the fault is in the stage (`probe_util_backup_stage_drill.go`), not the backup.
@@ -110,4 +108,4 @@ for f in $r/stage/primary/service/*/status.json; do echo "$(basename $(dirname $
 
 ## Done when
 
-A, B1 and B2 pass on every host they name, and C1 passes or is dropped by decision. Then delete this file.
+A and B1 pass on every host they name, and C1 passes or is dropped by decision. Then delete this file.

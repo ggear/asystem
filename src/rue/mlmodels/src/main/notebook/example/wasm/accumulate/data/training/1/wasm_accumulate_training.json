@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "split": "training",
+  "run": 1,
+  "name": "wasm_accumulate_training",
+  "source": "builder",
+  "query": null,
+  "database": null,
+  "captured": "2026-11-03_16-40-51",
+  "rows": 10,
+  "sha256": "dc26c3f26171737340d636433341f9e4f7c97d847734abfd89b207ffe0d0e0a0"
+}

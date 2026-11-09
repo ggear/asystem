@@ -1,66 +1,206 @@
+import json
 import os
 import sys
 import tempfile
 import unittest
 from os.path import abspath, dirname, join, realpath
+from types import SimpleNamespace
 from unittest import mock
 
 sys.path.append("../../../main/python")
 
 import workbench.data
 from asystem.report import run_pytest
-from workbench.env import init_env
+from workbench.errors import GateError
+from workbench.stage import setup_workspace
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
 
-class WrangleTest(unittest.TestCase):
-    def test_init_env(self):
-        self.assertTrue(init_env()["MLFLOW_TRACKING_URI"].startswith("http"))
+class SetupWorkspaceTest(unittest.TestCase):
+    def test_setup_workspace_reads_the_env_and_the_signature(self):
+        ws = setup_workspace("example/static/constant", {"kind": "embedded", "language": "rust"})
+        self.assertTrue(ws.env["MLFLOW_TRACKING_URI"].startswith("http"))
+        self.assertEqual("example_static_constant", ws.model_name)
+        self.assertEqual(["static_in"], ws.inputs)
 
 
-class QueryInfluxdb3Test(unittest.TestCase):
+class DataLoadTest(unittest.TestCase):
     def setUp(self):
-        self.data_dir = tempfile.mkdtemp()
-        self.env = {"INFLUXDB3_IP_PROD": "host", "INFLUXDB3_API_PORT": "1", "INFLUXDB3_TOKEN_ADMIN": "token", "INFLUXDB3_DATABASE_HOME": "home"}
+        self.ws = SimpleNamespace(
+            path=join(tempfile.mkdtemp(), "demo"), env={"INFLUXDB3_IP_PROD": "host", "INFLUXDB3_API_PORT": "1", "INFLUXDB3_TOKEN_ADMIN": "token", "INFLUXDB3_DATABASE_HOME": "home"}
+        )
 
     def response(self, text, ok=True):
         return mock.Mock(ok=ok, status_code=200 if ok else 400, text=text)
 
-    def query(self, post, **kwargs):
+    def query(self, post, query="SELECT 1", run=1, **kwargs):
         with mock.patch.object(workbench.data, "post", post):
-            return workbench.data.query_influxdb3(self.env, "SELECT 1", "demo_model", "training", "demo", notebook_dir=self.data_dir, **kwargs)
+            return workbench.data.data_load(self.ws, "training", "demo_2026-01-01_2026-01-31", run=run, source="influxdb3", query=query, **kwargs)
 
-    def test_writes_csv_when_absent_then_reads_it(self):
+    def sidecar(self, run=1):
+        with open(join(self.ws.path, "data", "training", str(run), "demo_2026-01-01_2026-01-31.json")) as sidecar_file:
+            return json.load(sidecar_file)
+
+    def test_a_query_is_captured_when_the_csv_is_absent_and_never_again(self):
         post = mock.Mock(return_value=self.response("time,value\n2026-01-01T00:00:00,1.5\n"))
-        first = self.query(post)
-        second = self.query(post)
-        self.assertEqual(first, second)
+        first, path = self.query(post)
+        second, _ = self.query(post)
         self.assertEqual(1, post.call_count)
-        self.assertEqual("1.5", first[0][1])
+        self.assertEqual(first.to_dicts(), second.to_dicts())
+        self.assertEqual(1.5, first["value"][0])
+        self.assertTrue(path.endswith("data/training/1/demo_2026-01-01_2026-01-31.csv"))
+        self.assertEqual(("influxdb3", "SELECT 1", 1), (self.sidecar()["source"], self.sidecar()["query"], self.sidecar()["rows"]))
 
-    def test_force_overrides_the_present_file(self):
+    def test_force_captures_the_same_run_again(self):
         self.query(mock.Mock(return_value=self.response("time,value\n2026-01-01T00:00:00,1.5\n")))
-        rows = self.query(mock.Mock(return_value=self.response("time,value\n2026-01-01T00:00:00,2.5\n")), force=True)
-        self.assertEqual("2.5", rows[0][1])
-        path = workbench.data.data_path("demo_model", "training", "demo", notebook_dir=self.data_dir)
-        with open(path) as data_file:
-            self.assertIn("2.5", data_file.read())
-        self.assertEqual(1, len(os.listdir(os.path.join(self.data_dir, "demo_model", "data", "training"))))
+        frame, _ = self.query(mock.Mock(return_value=self.response("time,value\n2026-01-01T00:00:00,2.5\n")), force=True)
+        self.assertEqual(2.5, frame["value"][0])
+        self.assertEqual(["1"], os.listdir(join(self.ws.path, "data", "training")))
 
-    def test_shared_timestamp_dir(self):
+    def test_a_changed_query_over_a_cached_run_is_a_gate_error(self):
+        self.query(mock.Mock(return_value=self.response("time,value\n2026-01-01T00:00:00,1.5\n")))
+        with self.assertRaises(GateError):
+            self.query(mock.Mock(), query="SELECT 2")
+
+    def test_params_are_formatted_into_the_query_and_recorded(self):
+        post = mock.Mock(return_value=self.response("time,value\n2026-01-01T00:00:00,1.5\n"))
+        self.query(post, query="SELECT 1 WHERE time >= '{start}'", params={"start": "2026-01-01"})
+        self.assertEqual("SELECT 1 WHERE time >= '2026-01-01'", self.sidecar()["query"])
+        self.assertEqual({"start": "2026-01-01"}, self.sidecar()["params"])
+        self.assertIn("2026-01-01", post.call_args.kwargs["json"]["q"])
+        with self.assertRaises(GateError):
+            self.query(mock.Mock(), query="SELECT 1 WHERE time >= '{start}'", params={"start": "2026-02-01"})
+
+    def test_a_load_logs_its_split_run_source_cache_state_and_timing_with_bracketed_values(self):
+        post = mock.Mock(return_value=self.response("time,value\n2026-01-01T00:00:00,1.5\n"))
+        with self.assertLogs("workbench.data", level="INFO") as captured:
+            self.query(post, query="SELECT   1\nFROM demo")
+            self.query(post, query="SELECT   1\nFROM demo")
+        lines = [record.getMessage() for record in captured.records]
+        self.assertEqual(2, len(lines))
+        for expected in ("split [training]", "run [1]", "source [influxdb3]", "cached [False]", "rows [1]", "seconds ["):
+            self.assertIn(expected, lines[0])
+        self.assertIn("cached [True]", lines[1])
+        self.assertTrue(all("SELECT" not in line and "host" not in line for line in lines))
+
+    def test_runs_are_numbered_directories_per_split(self):
         post = mock.Mock(return_value=self.response("time,value\n"))
-        self.query(post, timestamp="2026-01-01_00-00-00")
-        self.assertTrue(os.path.isfile(os.path.join(self.data_dir, "demo_model", "data", "training", "2026-01-01_00-00-00", "demo.csv")))
+        self.query(post, run=1)
+        self.query(post, run=2)
+        self.assertEqual(["1", "2"], sorted(os.listdir(join(self.ws.path, "data", "training"))))
 
-    def test_unknown_label_fails(self):
+    def test_an_unknown_split_or_run_fails(self):
         with self.assertRaises(ValueError):
-            workbench.data.data_path("demo_model", "testing", "demo", notebook_dir=self.data_dir)
+            workbench.data.data_load(self.ws, "testing", "demo", run=1, source="builder", build=dict)
+        for run in (0, "1", True):
+            with self.assertRaises(ValueError):
+                workbench.data.data_load(self.ws, "training", "demo", run=run, source="builder", build=dict)
 
-    def test_failed_query_writes_nothing(self):
+    def test_a_query_that_returns_no_rows_is_captured_as_an_empty_run(self):
+        query = "SELECT time, value\nFROM demo"
+        frame, _ = self.query(mock.Mock(return_value=self.response("")), query=query)
+        self.assertEqual((0, 2), frame.shape)
+        again, _ = self.query(mock.Mock(), query=query)
+        self.assertEqual(["time", "value"], again.columns)
+        self.assertEqual(0, self.sidecar()["rows"])
+
+    def test_a_failed_query_writes_nothing(self):
         with self.assertRaises(RuntimeError):
             self.query(mock.Mock(return_value=self.response("bad", ok=False)))
-        self.assertFalse(os.path.isdir(os.path.join(self.data_dir, "demo_model", "data", "training")))
+        self.assertFalse(os.path.isdir(join(self.ws.path, "data", "training")))
+
+    def test_a_builder_runs_once_and_then_the_csv_is_read(self):
+        builds = []
+
+        def build():
+            builds.append(1)
+            return {"x": [1.0, 2.0]}
+
+        first, path = workbench.data.data_load(self.ws, "training", "demo_training_2026-01-01_2026-01-31", run=1, source="builder", build=build)
+        second, _ = workbench.data.data_load(self.ws, "training", "demo_training_2026-01-01_2026-01-31", run=1)
+        self.assertEqual(1, len(builds))
+        self.assertEqual(first.to_dicts(), second.to_dicts())
+        self.assertTrue(os.path.isfile(path))
+
+    def test_an_absent_dataset_without_a_source_is_an_error(self):
+        with self.assertRaises(ValueError):
+            workbench.data.data_load(self.ws, "backtest", "demo_backtest", run=1)
+
+    def test_a_csv_source_copies_the_file_into_the_run(self):
+        source = join(tempfile.mkdtemp(), "in.csv")
+        with open(source, "w") as source_file:
+            source_file.write("a,b\n1,2\n")
+        frame, path = workbench.data.data_load(self.ws, "validation", "demo_2026-01-01_2026-01-31", run=1, source="csv", csv=source)
+        self.assertEqual([{"a": 1, "b": 2}], frame.to_dicts())
+        self.assertTrue(os.path.isfile(path))
+
+
+class ExplorePlotTest(unittest.TestCase):
+    def test_each_plot_starts_a_figure_unless_it_overlays_the_last(self):
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        import polars as pl
+
+        from workbench.plot import explore_plot
+
+        frame = pl.DataFrame({"x": [1.0, 2.0], "y": [3.0, 4.0]})
+        plt.close("all")
+        explore_plot("one", frame, "x", "y")
+        explore_plot("two", frame, "x", "y")
+        explore_plot("overlay", frame, "x", "y", "o", overlay=True)
+        self.assertEqual(2, len(plt.get_fignums()))
+        self.assertEqual(2, len(plt.gcf().axes[0].lines))
+        plt.close("all")
+
+
+class DataPlotTest(unittest.TestCase):
+    def test_runs_are_plotted_on_one_figure_labelled_from_their_json(self):
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        from workbench.plot import data_plot
+
+        directory = tempfile.mkdtemp()
+        paths = []
+        for run, rows in ((1, "time,value\n2026-01-01T00:00:00,1.5\n2026-01-02T00:00:00,2.5\n"), (2, "")):
+            path = join(directory, f"demo_{run}.csv")
+            with open(path, "w") as data_file:
+                data_file.write(rows)
+            with open(join(directory, f"demo_{run}.json"), "w") as meta_file:
+                json.dump({"split": "training" if run == 1 else "validation", "name": f"demo_{run}", "run": run, "source": "influxdb3", "rows": rows.count("\n") - 1 if rows else 0}, meta_file)
+            paths.append(path)
+        plt.close("all")
+        data_plot(*paths, align="start")
+        self.assertEqual(1, len(plt.get_fignums()))
+        labels = [text.get_text() for text in plt.gca().get_legend().get_texts()]
+        self.assertEqual(["training run 1, demo_1", "validation run 2, demo_2, no readings"], labels)
+        self.assertEqual([0.0, 1.0], list(plt.gca().lines[0].get_xdata()))
+        plt.close("all")
+
+    def test_only_one_column_is_plotted_the_first_numeric_unless_one_is_named(self):
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        from workbench.plot import data_plot
+
+        path = join(tempfile.mkdtemp(), "demo.csv")
+        with open(path, "w") as data_file:
+            data_file.write("time,volts,percent\n2026-01-01T00:00:00,3.5,90\n2026-01-02T00:00:00,3.4,80\n")
+        plt.close("all")
+        data_plot(path)
+        self.assertEqual(([3.5, 3.4], "volts"), (list(plt.gca().lines[0].get_ydata()), plt.gca().get_ylabel()))
+        self.assertEqual(1, len(plt.gca().lines))
+        plt.close("all")
+        data_plot(path, column="percent")
+        self.assertEqual([90, 80], list(plt.gca().lines[0].get_ydata()))
+        plt.close("all")
 
 
 class BuildWasmTest(unittest.TestCase):
@@ -85,9 +225,9 @@ class BuildWasmTest(unittest.TestCase):
         return [list(values[index : index + outputs]) for index in range(0, len(values), outputs)]
 
     def test_a_built_module_matches_a_hand_written_module(self):
-        from workbench.wasm import add, build_wasm, const, feature, mul, var
+        from workbench.wasm import add, const, feature, mul, train_wasm_build, var
 
-        built = build_wasm(2, [var("out"), add(feature(1), var("out"))], lets=[("out", add(mul(feature(0), const(2.5)), const(1.0)))])
+        built = train_wasm_build(2, [var("out"), add(feature(1), var("out"))], lets=[("out", add(mul(feature(0), const(2.5)), const(1.0)))])
         import wasmtime
 
         example = wasmtime.wat2wasm(
@@ -116,19 +256,19 @@ class BuildWasmTest(unittest.TestCase):
         self.assertEqual(self.run_module(example, rows, 2), self.run_module(built, rows, 2))
 
     def test_a_select_chooses_by_comparison(self):
-        from workbench.wasm import build_wasm, const, feature, lt, select
+        from workbench.wasm import const, feature, lt, select, train_wasm_build
 
-        built = build_wasm(1, [select(lt(feature(0), const(20.0)), const(1.0), const(2.0))])
+        built = train_wasm_build(1, [select(lt(feature(0), const(20.0)), const(1.0), const(2.0))])
         self.assertEqual([[1.0], [2.0], [2.0]], self.run_module(built, [[19.5], [20.0], [30.0]], 1))
 
     def test_a_maths_function_is_imported_and_runs_through_the_python_hosts(self):
         import math
 
         from workbench.model import build_signature, signature_input, signature_output
-        from workbench.replay import model_predict
-        from workbench.wasm import add, atan, build_wasm, const, exp, feature, log, mul, tanh
+        from workbench.replay import evaluate_predict
+        from workbench.wasm import add, atan, const, exp, feature, log, mul, tanh, train_wasm_build
 
-        built = build_wasm(1, [add(mul(atan(feature(0)), const(2.0)), const(1.0)), exp(feature(0)), log(feature(0)), tanh(feature(0))])
+        built = train_wasm_build(1, [add(mul(atan(feature(0)), const(2.0)), const(1.0)), exp(feature(0)), log(feature(0)), tanh(feature(0))])
         path = join(tempfile.mkdtemp(), "model.wasm")
         with open(path, "wb") as model_file:
             model_file.write(built)
@@ -137,7 +277,7 @@ class BuildWasmTest(unittest.TestCase):
             [signature_input("demo_in_seconds", "seconds", "Input.")],
             [signature_output(name, "seconds", "Output.", datatype="FP64") for name in ("demo_a_seconds", "demo_b_seconds", "demo_c_seconds", "demo_d_seconds")],
         )
-        predict = model_predict(path, "wasm", signature)
+        predict = evaluate_predict(path, "wasm", signature)
         for value in (0.0, 0.5, 3.25, -2.0):
             answer = predict({"demo_in_seconds": [value]})
             self.assertEqual(math.atan(value) * 2.0 + 1.0, answer["demo_a_seconds"][0])
@@ -149,27 +289,27 @@ class BuildWasmTest(unittest.TestCase):
 
     def predictor(self, built, names):
         from workbench.model import build_signature, signature_input, signature_output
-        from workbench.replay import model_predict
+        from workbench.replay import evaluate_predict
 
         path = join(tempfile.mkdtemp(), "model.wasm")
         with open(path, "wb") as model_file:
             model_file.write(built)
         signature = build_signature("demo_calc", [signature_input("demo_in_seconds", "seconds", "Input.")], [signature_output(name, "seconds", "Output.", datatype="FP64") for name in names])
-        return model_predict(path, "wasm", signature)
+        return evaluate_predict(path, "wasm", signature)
 
     def test_a_traced_function_gives_the_same_answers_as_a_plain_call_and_as_the_module(self):
         import math
 
         import numpy
 
-        from workbench.wasm import atan, build_wasm, clip, floor, select, trace
+        from workbench.wasm import atan, clip, floor, select, train_wasm_build, train_wasm_trace
 
         def capacity(voltage, scale, width, centre, offset):
             raw = scale * atan(width * (voltage - centre)) + offset
             return select(voltage < 3.0, 0.0, select(voltage > 3.9, 100.0, floor(clip(raw, 0.0, 100.0) / 5.0) * 5.0))
 
-        outputs = trace(lambda voltage: capacity(voltage, 40.5, 9.5, 3.76, 56.7), 1)
-        predict = self.predictor(build_wasm(1, outputs), ["demo_out_seconds"])
+        outputs = train_wasm_trace(lambda voltage: capacity(voltage, 40.5, 9.5, 3.76, 56.7), 1)
+        predict = self.predictor(train_wasm_build(1, outputs), ["demo_out_seconds"])
         for value in (*numpy.linspace(2.5, 4.2, 60).tolist(), 3.0, 3.9, float("inf"), float("-inf")):
             expected = capacity(value, 40.5, 9.5, 3.76, 56.7)
             self.assertEqual(expected, predict({"demo_in_seconds": [value]})["demo_out_seconds"][0], value)
@@ -177,25 +317,27 @@ class BuildWasmTest(unittest.TestCase):
         self.assertEqual([capacity(value, 40.5, 9.5, 3.76, 56.7) for value in (2.0, 3.5, 4.0)], numpy.asarray(capacity(numpy.array([2.0, 3.5, 4.0]), 40.5, 9.5, 3.76, 56.7)).tolist())
 
     def test_operators_build_the_same_tree_as_the_helpers(self):
-        from workbench.wasm import absolute, add, build_wasm, const, div, mul, neg, power, sub, trace
+        from workbench.wasm import absolute, add, const, div, mul, neg, power, sub, train_wasm_build, train_wasm_trace
 
-        by_operators = trace(lambda x: [2.0 * x + 1.0 - x / 4.0, -x, x**3, 2.0**x, abs(x) + (1.0 - x)], 1)
-        by_helpers = trace(lambda x: [sub(add(mul(const(2.0), x), const(1.0)), div(x, const(4.0))), neg(x), mul(mul(x, x), x), power(const(2.0), x), add(absolute(x), sub(const(1.0), x))], 1)
+        by_operators = train_wasm_trace(lambda x: [2.0 * x + 1.0 - x / 4.0, -x, x**3, 2.0**x, abs(x) + (1.0 - x)], 1)
+        by_helpers = train_wasm_trace(
+            lambda x: [sub(add(mul(const(2.0), x), const(1.0)), div(x, const(4.0))), neg(x), mul(mul(x, x), x), power(const(2.0), x), add(absolute(x), sub(const(1.0), x))], 1
+        )
         self.assertEqual([entry.node for entry in by_helpers], [entry.node for entry in by_operators])
         names = ["a_seconds", "b_seconds", "c_seconds", "d_seconds", "e_seconds"]
-        answer = self.predictor(build_wasm(1, by_operators), names)({"demo_in_seconds": [3.0]})
+        answer = self.predictor(train_wasm_build(1, by_operators), names)({"demo_in_seconds": [3.0]})
         self.assertEqual([6.0 + 1.0 - 0.75, -3.0, 27.0, 8.0, 3.0 + -2.0], [answer[name][0] for name in names])
 
     def test_a_traced_function_may_return_several_outputs_and_take_several_features(self):
-        from workbench.wasm import build_wasm, trace
+        from workbench.wasm import train_wasm_build, train_wasm_trace
 
         def accumulate(x, total):
             out = 2.5 * x + 1.0
             return out, total + out
 
-        outputs = trace(accumulate, 2)
+        outputs = train_wasm_trace(accumulate, 2)
         self.assertEqual(2, len(outputs))
-        answer = self.run_module(build_wasm(2, outputs), [[2.0, 10.0], [0.0, 0.0]], 2)
+        answer = self.run_module(train_wasm_build(2, outputs), [[2.0, 10.0], [0.0, 0.0]], 2)
         self.assertEqual([[6.0, 16.0], [1.0, 1.0]], answer)
 
     def test_an_expression_refuses_python_control_flow_and_numpy_functions(self):
@@ -225,7 +367,7 @@ class BuildWasmTest(unittest.TestCase):
             function = getattr(wasm, "power" if name == "pow" else name)
             for right in rights if arity == 2 else [None]:
                 arguments = [wasm.feature(0), wasm.const(right)] if arity == 2 else [wasm.feature(0)]
-                predict = self.predictor(wasm.build_wasm(1, [function(*arguments)]), ["demo_out_seconds"])
+                predict = self.predictor(wasm.train_wasm_build(1, [function(*arguments)]), ["demo_out_seconds"])
                 for value in edges:
                     if name == "pow" and (value == float("-inf") or str(value) == "-0.0"):
                         continue
@@ -240,18 +382,18 @@ class BuildWasmTest(unittest.TestCase):
                             self.assertEqual(math.copysign(1.0, expected), math.copysign(1.0, got), label)
 
     def test_a_bad_expression_is_refused(self):
-        from workbench.wasm import build_wasm
+        from workbench.wasm import train_wasm_build
 
         with self.assertRaises(ValueError):
-            build_wasm(1, [("x", 1)])
+            train_wasm_build(1, [("x", 1)])
         with self.assertRaises(ValueError):
-            build_wasm(1, [("var", "missing")])
+            train_wasm_build(1, [("var", "missing")])
         with self.assertRaises(ValueError):
-            build_wasm(1, [("const", float("nan"))])
+            train_wasm_build(1, [("const", float("nan"))])
         with self.assertRaises(ValueError):
-            build_wasm(1, [("cbrt", ("x", 0))])
+            train_wasm_build(1, [("cbrt", ("x", 0))])
         with self.assertRaises(ValueError):
-            build_wasm(1, [("pow", ("x", 0))])
+            train_wasm_build(1, [("pow", ("x", 0))])
 
 
 class ScratchProjectDirTest(unittest.TestCase):
@@ -270,30 +412,6 @@ class ScratchProjectDirTest(unittest.TestCase):
         open(join(stale, "old.json"), "w").close()
         self.assertEqual(stale, scratch_project_dir("demo/calc/run", output_dir))
         self.assertFalse(os.path.exists(stale))
-
-
-class EnsureDataTest(unittest.TestCase):
-    def test_a_dataset_is_built_once_and_then_read(self):
-        from workbench.data import ensure_data
-
-        notebook_dir = tempfile.mkdtemp()
-        builds = []
-
-        def build():
-            builds.append(1)
-            return {"x": [1.0, 2.0]}
-
-        first, path = ensure_data("demo/calc/run", "training", "demo_training", build, "2026-11-03_10-00-00", notebook_dir)
-        second, _ = ensure_data("demo/calc/run", "training", "demo_training", build, "2026-11-03_10-00-00", notebook_dir)
-        self.assertEqual(1, len(builds))
-        self.assertEqual(first.to_dicts(), second.to_dicts())
-        self.assertTrue(os.path.isfile(path))
-
-    def test_an_absent_dataset_without_a_builder_is_an_error(self):
-        from workbench.data import ensure_data
-
-        with self.assertRaises(FileNotFoundError):
-            ensure_data("demo/calc/run", "backtest", "demo_backtest", None, "2026-11-03_10-00-00", tempfile.mkdtemp())
 
 
 class ReplayRunnerTest(unittest.TestCase):
@@ -316,7 +434,7 @@ class ReplayRunnerTest(unittest.TestCase):
     def project(self, flavour, model_bytes=None, samples=None, tolerance=None):
         import wasmtime
 
-        from workbench.model import build_signature, evaluate_acceptance, package_project, signature_input, signature_output
+        from workbench.model import build_signature, evaluate_check, package_project, signature_input, signature_output
 
         work_dir = tempfile.mkdtemp()
         model_path = None
@@ -342,7 +460,7 @@ class ReplayRunnerTest(unittest.TestCase):
             dataset_file.write("a,b\n1,2\n")
         evaluation = None
         if flavour != "static":
-            evaluation = evaluate_acceptance(lambda: [{"split": "backtest", "output": "demo_out", "name": "rmse", "value": 0.0, "limit": 1, "direction": "max"}], {"backtest": [dataset]})
+            evaluation = evaluate_check(lambda: [{"split": "backtest", "output": "demo_out", "name": "rmse", "value": 0.0, "limit": 1, "direction": "max"}], {"backtest": [dataset]})
         first = 4.0 if constants else 3.0
         samples = samples or [{"demo_in": 1.5, "demo_out": first}, {"demo_in": 2.0, "demo_out": 4.0}, {"demo_in": None, "expect": "error"}]
         project_dir = join(work_dir, "project")
@@ -398,10 +516,10 @@ class ReplayRunnerTest(unittest.TestCase):
     def test_each_runner_provides_the_maths_functions_within_a_stated_tolerance(self):
         import math
 
-        from workbench.wasm import atan, build_wasm, feature
+        from workbench.wasm import atan, feature, train_wasm_build
 
         samples = [{"demo_in": 1.5, "demo_out": math.atan(1.5)}, {"demo_in": 2.0, "demo_out": math.atan(2.0)}, {"demo_in": None, "expect": "error"}]
-        project_dir = self.project("wasm", model_bytes=build_wasm(1, [atan(feature(0))]), samples=samples, tolerance={"demo_out": {"absolute": 1e-12}})
+        project_dir = self.project("wasm", model_bytes=train_wasm_build(1, [atan(feature(0))]), samples=samples, tolerance={"demo_out": {"absolute": 1e-12}})
         for host in self.runners:
             completed = self.run_runner(host, project_dir)
             self.assertEqual(0, completed.returncode, f"{host} {completed.stderr}")
@@ -414,7 +532,7 @@ class ReplayRunnerTest(unittest.TestCase):
             function = getattr(wasm, "power" if name == "pow" else name)
             tree = function(wasm.feature(0), wasm.const(1.5)) if arity == 2 else function(wasm.feature(0))
             samples = [{"demo_in": value, "demo_out": function(value, 1.5) if arity == 2 else function(value)} for value in (0.25, 0.5, 0.9)]
-            project_dir = self.project("wasm", model_bytes=wasm.build_wasm(1, [tree]), samples=[*samples, {"demo_in": None, "expect": "error"}], tolerance={"demo_out": {"absolute": 1e-12}})
+            project_dir = self.project("wasm", model_bytes=wasm.train_wasm_build(1, [tree]), samples=[*samples, {"demo_in": None, "expect": "error"}], tolerance={"demo_out": {"absolute": 1e-12}})
             for host in self.runners:
                 completed = self.run_runner(host, project_dir)
                 self.assertEqual(0, completed.returncode, f"{name} {host} {completed.stdout} {completed.stderr}")

@@ -32,7 +32,7 @@ PYFUNC_BASE_IMPORTS = ("mlflow", "numpy", "pandas")
 PYFUNC_IMPORT_NAMES = {"scikit_learn": "sklearn", "python_dateutil": "dateutil", "pyyaml": "yaml", "pillow": "PIL"}
 PROJECT_ALIAS_PREVIEW = "preview"
 PROJECT_ALIAS_RELEASE = "release"
-PROJECT_SPLITS = ("training", "validation", "backtest", "golden")
+PROJECT_SPLITS = ("training", "validation", "backtest", "monitoring")
 PROJECT_NAME = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)*$")
 PROJECT_DATATYPES = ("FP64", "INT64")
 PROJECT_UNIT_SUFFIXES = {"seconds": "_seconds", "percent": "_pct", "volts": "_volts", "hertz": "_hertz", "watt hours": "_wh", "celsius": "_celsius"}
@@ -117,7 +117,7 @@ def golden_from_samples(signature, samples, sequence="golden", constants=None, t
     return golden_document([(sequence, steps)], tolerance)
 
 
-def measure(y_true, y_pred):
+def evaluate_measure(y_true, y_pred):
     import numpy
 
     truth = numpy.asarray(y_true, dtype=float)
@@ -138,7 +138,7 @@ def measure(y_true, y_pred):
     }
 
 
-def evaluate_acceptance(check, datasets):
+def evaluate_check(check, datasets):
     entries = check()
     if not isinstance(entries, list) or not entries:
         raise ValueError("the acceptance check must return a non-empty list of checks")
@@ -746,11 +746,8 @@ def _lint_signature(manifest, signature):
         findings.append(("PJ006", "state slots must be numbered from 0 in order"))
     if len({slot.get("name") for slot in slots}) != len(slots):
         findings.append(("PJ006", "state slot names must be unique"))
-    module = name.split("_")[0]
     for entry in signature["outputs"]:
         unit = entry.get("parameters", {}).get("unit")
-        if not entry["name"].startswith(f"{module}_"):
-            findings.append(("PJ007", f"output [{entry['name']}] must start with the module [{module}_]"))
         if unit in PROJECT_UNIT_SUFFIXES and not entry["name"].endswith(PROJECT_UNIT_SUFFIXES[unit]):
             findings.append(("PJ007", f"output [{entry['name']}] with unit [{unit}] must end with [{PROJECT_UNIT_SUFFIXES[unit]}]"))
     output_names = {entry["name"] for entry in signature["outputs"]}

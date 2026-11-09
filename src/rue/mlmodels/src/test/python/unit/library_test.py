@@ -232,7 +232,7 @@ class ModelProjectTest(unittest.TestCase):
         return path
 
     def evaluation(self, passing=True, output="demo_limit_seconds", checks=None):
-        from workbench.model import evaluate_acceptance
+        from workbench.model import evaluate_check
 
         dataset_dir = join(tempfile.mkdtemp(), "2026-11-03_10-00-00")
         os.makedirs(dataset_dir)
@@ -240,23 +240,23 @@ class ModelProjectTest(unittest.TestCase):
         with open(dataset, "w") as dataset_file:
             dataset_file.write("a,b\n1,2\n")
         value = 0.5 if passing else 9.0
-        return evaluate_acceptance(lambda: checks or [{"split": "backtest", "output": output, "name": "rmse", "value": value, "limit": 1.0, "direction": "max"}], {"backtest": [dataset]})
+        return evaluate_check(lambda: checks or [{"split": "backtest", "output": output, "name": "rmse", "value": value, "limit": 1.0, "direction": "max"}], {"backtest": [dataset]})
 
     def test_measure_matches_the_definitions(self):
-        from workbench.model import measure
+        from workbench.model import evaluate_measure
 
-        measures = measure([1.0, 2.0, 3.0, 4.0], [1.0, 2.0, 3.0, 6.0])
+        measures = evaluate_measure([1.0, 2.0, 3.0, 4.0], [1.0, 2.0, 3.0, 6.0])
         self.assertAlmostEqual(1.0, measures["rmse"])
         self.assertAlmostEqual(0.5, measures["mae"])
         self.assertAlmostEqual(2.0, measures["max_abs_error"])
         self.assertAlmostEqual(0.5, measures["bias"])
         self.assertAlmostEqual(1.0 - 4.0 / 5.0, measures["r2"])
         self.assertAlmostEqual(8.0 / 70.0**0.5, measures["pearson_r"])
-        constant = measure([2.0, 2.0], [2.0, 3.0])
+        constant = evaluate_measure([2.0, 2.0], [2.0, 3.0])
         self.assertIsNone(constant["r2"])
         self.assertIsNone(constant["pearson_r"])
         with self.assertRaises(ValueError):
-            measure([1.0], [1.0, 2.0])
+            evaluate_measure([1.0], [1.0, 2.0])
 
     def test_outcome_and_budget_follow_the_value_limit_and_direction(self):
         evaluation = self.evaluation()
@@ -280,7 +280,7 @@ class ModelProjectTest(unittest.TestCase):
         base = {"split": "backtest", "output": "demo_limit_seconds", "name": "rmse", "value": 1.0, "limit": 1.0, "direction": "max"}
         for checks in ([], None, [{**base, "direction": "avg"}], [{**base, "limit": -1.0}], [{**base, "direction": "min", "limit": 0}], [{**base, "limit": "1"}]):
             with self.assertRaises(ValueError, msg=checks):
-                self.evaluation(checks=checks) if checks else __import__("workbench.model", fromlist=["x"]).evaluate_acceptance(lambda checks=checks: checks, {})
+                self.evaluation(checks=checks) if checks else __import__("workbench.model", fromlist=["x"]).evaluate_check(lambda checks=checks: checks, {})
 
     def test_project_with_an_evaluation_has_no_findings(self):
         manifest = self.write(evaluation=self.evaluation())
@@ -393,11 +393,11 @@ class ModelProjectTest(unittest.TestCase):
         self.assertNotEqual(first, register_project(self.project_dir, "demo_calc", uri))
 
     def test_a_measured_check_needs_a_recorded_dataset(self):
-        from workbench.model import evaluate_acceptance
+        from workbench.model import evaluate_check
 
-        measured = evaluate_acceptance(lambda: [{"split": "backtest", "output": "demo_limit_seconds", "name": "rmse", "value": 0.1, "limit": 1.0, "direction": "max"}], {"backtest": []})
+        measured = evaluate_check(lambda: [{"split": "backtest", "output": "demo_limit_seconds", "name": "rmse", "value": 0.1, "limit": 1.0, "direction": "max"}], {"backtest": []})
         self.assertIn("AC003", self.rules(evaluation=measured))
-        unmeasured = evaluate_acceptance(lambda: [{"split": "backtest", "output": "demo_limit_seconds", "name": "rmse", "value": None, "limit": 1.0, "direction": "max"}], {"backtest": []})
+        unmeasured = evaluate_check(lambda: [{"split": "backtest", "output": "demo_limit_seconds", "name": "rmse", "value": None, "limit": 1.0, "direction": "max"}], {"backtest": []})
         self.assertNotIn("AC003", self.rules(evaluation=unmeasured))
 
     def test_static_flavour_refuses_a_model_file(self):
@@ -410,7 +410,7 @@ class ModelProjectTest(unittest.TestCase):
     def test_name_must_match_signature_and_style(self):
         self.assertIn("PJ004", self.rules(name="Demo-Calc"))
 
-    def test_output_must_be_module_prefixed_with_a_unit_suffix(self):
+    def test_output_must_end_with_the_unit_suffix(self):
         self.signature["outputs"][0]["name"] = "other_limit"
         self.assertIn("PJ007", self.rules(constants={"other_limit": 5}))
 
@@ -769,29 +769,24 @@ class ReleaseTest(unittest.TestCase):
         self.assertIsNone(self.record(target={}))
         self.assertFalse(os.path.isfile(join(self.workspace, METADATA_FILE)))
 
-    def test_init_env_prints_the_recorded_metadata_of_the_workspace_it_runs_in(self):
+    def test_setup_workspace_prints_the_recorded_metadata_of_the_workspace(self):
         import contextlib
         import io
 
-        from workbench.env import init_env
+        from workbench.stage import setup_workspace
 
         self.record(target={"kind": "embedded", "language": "go"})
         shutil.copy(join(self.workspace, "project", "signature.json"), join(self.workspace, "signature.json"))
+        notebook_dir = tempfile.mkdtemp()
+        shutil.copytree(self.workspace, join(notebook_dir, "demo", "calc", "run"))
         output = io.StringIO()
-        previous = os.getcwd()
-        os.chdir(self.workspace)
-        try:
-            with contextlib.redirect_stdout(output):
-                env = init_env()
-        finally:
-            os.chdir(previous)
+        with contextlib.redirect_stdout(output):
+            ws = setup_workspace("demo/calc/run", {"kind": "embedded", "language": "go"}, notebook_dir)
         printed = output.getvalue()
-        self.assertTrue(env["MLFLOW_TRACKING_URI"].startswith("http"))
+        self.assertTrue(ws.env["MLFLOW_TRACKING_URI"].startswith("http"))
+        self.assertEqual("demo_calc_run", ws.model_name)
         for expected in ("flavour   wasm", "target    embedded go", "runtime   none", "inputs    ", "outputs   "):
             self.assertIn(expected, printed)
-        with contextlib.redirect_stdout(output := io.StringIO()):
-            init_env()
-        self.assertEqual("", output.getvalue())
 
     def test_every_json_document_starts_with_its_schema(self):
         from workbench.metadata import METADATA_FILE
@@ -1048,9 +1043,9 @@ class PlotTest(unittest.TestCase):
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
 
-        from workbench.plot import show_curves
+        from workbench.plot import evaluate_curves
 
-        show_curves([("first", [1, 2], [3, 4], {"color": "black"}), ("second", [1, 2], [4, 3], {"linestyle": "--"})], "x", "y", band=(1.2, 1.8), band_label="band")
+        evaluate_curves([("first", [1, 2], [3, 4], {"color": "black"}), ("second", [1, 2], [4, 3], {"linestyle": "--"})], "x", "y", band=(1.2, 1.8), band_label="band")
         legend = plt.gca().get_legend()
         assert legend is not None
         self.assertEqual(["band", "first", "second"], [text.get_text() for text in legend.get_texts()])
@@ -1061,13 +1056,13 @@ class PlotTest(unittest.TestCase):
         matplotlib.use("Agg")
         import polars
 
-        from workbench.plot import show_error_plot
+        from workbench.plot import evaluate_error_plot
 
         data = polars.DataFrame({"x": [1.0, 1.0, 2.0, 3.0], "error": [1.0, 1.0, -2.0, 6.0]})
-        summary = show_error_plot("demo", data, "x", "error", 5)
+        summary = evaluate_error_plot("demo", data, "x", "error", 5)
         self.assertEqual((True, 75.0), (summary["passed"], summary["within_pct"]))
         self.assertAlmostEqual(1.5, summary["bias"])
-        self.assertFalse(show_error_plot("demo", data, "x", "error", 2)["passed"])
+        self.assertFalse(evaluate_error_plot("demo", data, "x", "error", 2)["passed"])
 
 
 class RegistryToolsTest(unittest.TestCase):
@@ -1103,7 +1098,13 @@ class NotebookLintTest(unittest.TestCase):
         cells = [
             {"cell_type": "markdown", "metadata": {}, "source": title},
             {"cell_type": "markdown", "metadata": {}, "source": _section_heading("Setup")},
-            {"cell_type": "code", "metadata": {}, "execution_count": None, "outputs": [], "source": 'WORKSPACE = "demo/calc/run"\nMODEL_NAME = "demo_calc_run"\n'},
+            {
+                "cell_type": "code",
+                "metadata": {},
+                "execution_count": None,
+                "outputs": [],
+                "source": 'from workbench import setup_workspace\n\nws = setup_workspace("demo/calc/run", {"kind": "served"})\n',
+            },
             {"cell_type": "markdown", "metadata": {}, "source": _section_heading("Package")},
         ]
         notebook = {"cells": cells, "metadata": {}, "nbformat": 4, "nbformat_minor": 5}
@@ -1181,19 +1182,19 @@ class NotebookLintTest(unittest.TestCase):
 
         signature = build_signature(
             "demo_calc_run",
-            [signature_input("demo_calc_in", "none", "An input.")],
-            [signature_output("demo_calc_out_low", "none", "Low.", datatype="FP64"), signature_output("demo_calc_out_high", "none", "High.", datatype="FP64")],
+            [signature_input("calc_in", "none", "An input.")],
+            [signature_output("calc_out_low", "none", "Low.", datatype="FP64"), signature_output("calc_out_high", "none", "High.", datatype="FP64")],
         )
         with open(join(self.notebook_dir, "signature.json"), "w") as signature_file:
             json.dump(signature, signature_file)
         base = "# demo / calc / run\n\n**Intent**\n- {}\n\n**Data**\n- `golden`"
         for intent, expected in (
-            ("Output `demo_calc_out_low` and `demo_calc_out_high`.", []),
-            ("Output `demo_calc_out_{low,high}`.", []),
-            ("Output `demo_calc_out_*`.", []),
-            ("Output `demo_calc_out_low`.", ["NB013"]),
-            ("Output `demo_calc_out_{low,high}` and `demo_calc_old`.", ["NB013"]),
-            ("Output `demo_calc_nothing_*` and `demo_calc_out_{low,high}`.", ["NB013"]),
+            ("Output `calc_out_low` and `calc_out_high`.", []),
+            ("Output `calc_out_{low,high}`.", []),
+            ("Output `calc_out_*`.", []),
+            ("Output `calc_out_low`.", ["NB013"]),
+            ("Output `calc_out_{low,high}` and `calc_old`.", ["NB013"]),
+            ("Output `calc_nothing_*` and `calc_out_{low,high}`.", ["NB013"]),
         ):
             notebook = self.notebook()
             notebook["cells"][0]["source"] = base.format(intent)
@@ -1220,7 +1221,7 @@ class NotebookLintTest(unittest.TestCase):
 
     def test_wrong_model_name_is_found(self):
         notebook = self.notebook()
-        notebook["cells"][2]["source"] = 'WORKSPACE = "demo/calc/run"\nMODEL_NAME = "demo"\n'
+        notebook["cells"][2]["source"] = 'from workbench import setup_workspace\n\nws = setup_workspace("demo/calc", {"kind": "served"})\n'
         self.notebook(cells=notebook["cells"])
         self.assertEqual(["NB008"], self.rules())
 
@@ -1269,7 +1270,7 @@ class NotebookLintTest(unittest.TestCase):
         self.assertEqual([], lint_notebook(join(root, "example", "calc", "kept", "notebook.ipynb")))
         with open(join(root, "example", "calc", "kept", "notebook.ipynb")) as kept_file:
             kept = json.load(kept_file)
-        self.assertIn('TARGET = {"kind": "local"}', "".join("".join(cell["source"]) for cell in kept["cells"]))
+        self.assertIn('{"kind": "local"}', "".join("".join(cell["source"]) for cell in kept["cells"]))
         self.assertNotIn("Register", [cell["source"][0] for cell in kept["cells"] if cell["cell_type"] == "markdown"])
         with self.assertRaises(ValueError):
             scaffold_notebook(root, "example", "calc", "static", "static")
@@ -1280,11 +1281,26 @@ class NotebookLintTest(unittest.TestCase):
 
 
 class WorkspaceLintTest(unittest.TestCase):
+    NAME = "calc_run_voltage"
+
     def setUp(self):
         self.notebook_dir = join(tempfile.mkdtemp(), "demo", "calc", "run")
-        os.makedirs(join(self.notebook_dir, "data/golden/2026-01-01_00-00-00"))
-        for path in ("notebook.ipynb", "data/golden/2026-01-01_00-00-00/calc_run_golden.csv", "data/golden/.gitkeep"):
-            open(join(self.notebook_dir, path), "w").close()
+        os.makedirs(join(self.notebook_dir, "data/training/1"))
+        open(join(self.notebook_dir, "notebook.ipynb"), "w").close()
+        open(join(self.notebook_dir, "data/training/.gitkeep"), "w").close()
+        self.write_run("training", 1, self.NAME)
+
+    def write_run(self, split, run, name):
+        import hashlib
+
+        directory = join(self.notebook_dir, "data", split, str(run))
+        os.makedirs(directory, exist_ok=True)
+        with open(join(directory, f"{name}.csv"), "w") as data_file:
+            data_file.write("a\n1\n")
+        with open(join(directory, f"{name}.csv"), "rb") as data_file:
+            digest = hashlib.sha256(data_file.read()).hexdigest()
+        with open(join(directory, f"{name}.json"), "w") as sidecar_file:
+            json.dump({"schema": 1, "split": split, "run": run, "name": name, "sha256": digest}, sidecar_file)
 
     def rules(self):
         from workbench.workspace import lint_workspace
@@ -1313,23 +1329,28 @@ class WorkspaceLintTest(unittest.TestCase):
         os.makedirs(join(self.notebook_dir, "data/testing"))
         self.assertEqual(["WS004"], self.rules())
 
-    def test_non_timestamp_directory_is_found(self):
-        os.makedirs(join(self.notebook_dir, "data/golden/latest"))
+    def test_a_directory_that_is_not_a_run_number_is_found(self):
+        os.makedirs(join(self.notebook_dir, "data/training/latest"))
         self.assertEqual(["WS005"], self.rules())
 
+    def test_runs_must_be_numbered_from_1_without_gaps(self):
+        self.write_run("training", 3, self.NAME)
+        self.assertEqual(["WS005"], self.rules())
+        self.write_run("training", 2, self.NAME)
+        self.assertEqual([], self.rules())
+
     def test_dataset_must_be_a_csv_named_for_the_model_and_notebook(self):
-        open(join(self.notebook_dir, "data/golden/2026-01-01_00-00-00/other_golden.csv"), "w").close()
-        open(join(self.notebook_dir, "data/golden/2026-01-01_00-00-00/calc_run_golden.txt"), "w").close()
+        open(join(self.notebook_dir, "data/training/1/other_voltage.csv"), "w").close()
+        open(join(self.notebook_dir, "data/training/1/calc_run_voltage.txt"), "w").close()
         self.assertEqual(["WS006"], self.rules())
 
-    def test_readings_must_end_with_their_date_range(self):
-        os.makedirs(join(self.notebook_dir, "data/training/2026-01-01_00-00-00"))
-        path = join(self.notebook_dir, "data/training/2026-01-01_00-00-00")
-        open(join(path, "calc_run_voltage.csv"), "w").close()
-        self.assertEqual(["WS006"], self.rules())
-        os.remove(join(path, "calc_run_voltage.csv"))
-        open(join(path, "calc_run_voltage_2026-01-01_2026-01-31.csv"), "w").close()
-        self.assertEqual([], self.rules())
+    def test_a_csv_needs_a_sidecar_that_describes_it(self):
+        os.remove(join(self.notebook_dir, "data/training/1", f"{self.NAME}.json"))
+        self.assertEqual(["WS008"], self.rules())
+        self.write_run("training", 1, self.NAME)
+        with open(join(self.notebook_dir, "data/training/1", f"{self.NAME}.csv"), "a") as data_file:
+            data_file.write("2\n")
+        self.assertEqual(["WS008"], self.rules())
 
     def test_bad_notebook_name_is_found(self):
         bad = join(os.path.dirname(self.notebook_dir), "Run-Two")
@@ -1373,6 +1394,14 @@ class SpecSyncTest(unittest.TestCase):
         self.assertTrue(enforced and coverage and defined)
         self.assertEqual(defined, set(coverage))
         self.assertEqual({requirement: ids for requirement, ids in coverage.items() if ids}, enforced)
+
+    def test_every_function_a_notebook_calls_is_named_for_its_section(self):
+        from workbench import WORKBENCH_API
+        from workbench.notebook import NOTEBOOK_SECTIONS
+
+        prefixes = tuple(f"{section.lower()}_" for section in NOTEBOOK_SECTIONS)
+        self.assertTrue(WORKBENCH_API)
+        self.assertEqual([], [name for name in WORKBENCH_API if not name.startswith(prefixes)])
 
     def test_flavours_splits_and_sections_agree(self):
 

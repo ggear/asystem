@@ -1,14 +1,15 @@
 import argparse
+import hashlib
+import json
 import re
 import sys
 from os import listdir
-from os.path import basename, dirname, isdir, join, splitext
+from os.path import basename, dirname, isdir, isfile, join, splitext
 
 from workbench.metadata import METADATA_FILE, PROJECT_DIR, REQUIREMENT_FILES, SIGNATURE_FILE
 from workbench.model import PROJECT_MODEL_FILES, PROJECT_NAME, PROJECT_SPLITS
 
-WORKSPACE_TIMESTAMP = re.compile(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$")
-WORKSPACE_DATE_RANGE = re.compile(r"_\d{4}-\d{2}-\d{2}_\d{4}-\d{2}-\d{2}$")
+WORKSPACE_RUN = re.compile(r"^[1-9][0-9]*$")
 WORKSPACE_IGNORED = (".gitkeep",)
 WORKSPACE_NOTEBOOK = "notebook.ipynb"
 
@@ -55,21 +56,37 @@ def main(arguments=None):
 
 def _lint_split(model, notebook, split_dir, split):
     findings = []
-    for timestamp in sorted(listdir(split_dir)):
-        if timestamp in WORKSPACE_IGNORED:
-            continue
-        path = join(split_dir, timestamp)
-        if not isdir(path) or not WORKSPACE_TIMESTAMP.match(timestamp):
-            findings.append(("WS005", f"[data/{split}/{timestamp}] is not a timestamp directory YYYY-MM-DD_HH-MM-SS"))
+    runs = sorted(entry for entry in listdir(split_dir) if entry not in WORKSPACE_IGNORED)
+    for run in runs:
+        path = join(split_dir, run)
+        if not isdir(path) or not WORKSPACE_RUN.match(run):
+            findings.append(("WS005", f"[data/{split}/{run}] is not a run directory numbered from 1"))
             continue
         for file_name in sorted(listdir(path)):
             name, extension = splitext(file_name)
             owned = name == f"{model}_{notebook}" or name.startswith(f"{model}_{notebook}_")
-            if extension != ".csv" or not PROJECT_NAME.match(name.replace("-", "_")) or not owned:
-                findings.append(("WS006", f"[data/{split}/{timestamp}/{file_name}] must be a csv named [{model}_{notebook}_<dimension>...]"))
-            elif split != "golden" and not WORKSPACE_DATE_RANGE.search(name):
-                findings.append(("WS006", f"[data/{split}/{timestamp}/{file_name}] must end with the first and last date it covers, _YYYY-MM-DD_YYYY-MM-DD"))
+            if extension not in (".csv", ".json") or not PROJECT_NAME.match(name.replace("-", "_")) or not owned:
+                findings.append(("WS006", f"[data/{split}/{run}/{file_name}] must be a csv and its json named [{model}_{notebook}_<dimension>...]"))
+            elif extension == ".csv":
+                findings.extend(_lint_sidecar(path, split, run, name))
+            elif name + ".csv" not in listdir(path):
+                findings.append(("WS008", f"[data/{split}/{run}/{file_name}] describes no csv"))
+    numbers = sorted(int(run) for run in runs if WORKSPACE_RUN.match(run))
+    if numbers != list(range(1, len(numbers) + 1)):
+        findings.append(("WS005", f"[data/{split}] runs must be numbered from 1 without gaps found {numbers}"))
     return findings
+
+
+def _lint_sidecar(path, split, run, name):
+    sidecar = join(path, f"{name}.json")
+    if not isfile(sidecar):
+        return [("WS008", f"[data/{split}/{run}/{name}.json] is missing, the csv has no record of its source")]
+    with open(sidecar) as sidecar_file:
+        meta = json.load(sidecar_file)
+    with open(join(path, f"{name}.csv"), "rb") as data_file:
+        digest = hashlib.sha256(data_file.read()).hexdigest()
+    expected = {"split": split, "run": int(run), "name": name, "sha256": digest}
+    return [("WS008", f"[data/{split}/{run}/{name}.json] has {key} [{meta.get(key)}] and the csv gives [{value}]") for key, value in expected.items() if meta.get(key) != value]
 
 
 def _names(directory, extension):

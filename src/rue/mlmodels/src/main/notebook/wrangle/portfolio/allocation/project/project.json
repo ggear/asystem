@@ -1,0 +1,20 @@
+{
+  "schema": 2,
+  "name": "wrangle_portfolio_allocation",
+  "flavour": "pyfunc",
+  "model": "model.py",
+  "runtime": {"python": []},
+  "provenance": {
+    "source": "manual",
+    "trained_on": "synthetic risk-adjusted returns and risky shares, training split",
+    "inputs": ["wrangle/portfolio/allocation/data/training/1/portfolio_allocation_training.csv"],
+    "notes": "least squares on the variance",
+    "implementation": "mlflow.pyfunc model.py, requires mlflow, pandas and the standard library"
+  },
+  "files": {
+    "signature.json": "1bdf46e5ff54f20be04057ebc82e729a04c6b3f6cbf67a5e3142cd7947c2d565",
+    "golden.json": "724b3988dab8ad092a26ed02b8fd9d3681bfcba55c52bba037fb6f2f1b852972",
+    "evaluation.json": "7ad0056b3592fff3515827c02a5b2bd79ee5b4cc8087ad293a68afbc827ea76b",
+    "model.py": "ef1553ba4fa048986e36a08410dbf76d6394b3e69767792dc8139f76afffb636"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "schema": 2,
+  "name": "wrangle_portfolio_profile",
+  "flavour": "pyfunc",
+  "model": "model.py",
+  "runtime": {"python": []},
+  "provenance": {
+    "source": "manual",
+    "trained_on": "synthetic two asset blend and seeded simulation, training split",
+    "inputs": ["wrangle/portfolio/profile/data/training/1/portfolio_profile_training.csv"],
+    "notes": "line and quadratic for the mix, logistic curve for the shortfall",
+    "implementation": "mlflow.pyfunc model.py, requires mlflow, pandas and the standard library"
+  },
+  "files": {
+    "signature.json": "a53e933896c887d77ddbae5c1ccb9585b28f3371a5e4ab18ddd3b4bb5b408442",
+    "golden.json": "6b870a26e556386999f6ec68bc837685b2b7ba8dab9a4d20e35f735ab678e17a",
+    "evaluation.json": "2d6a1924ccd68d91bddf976fa689f4cfca77a65b43586aad398fb7508121fab4",
+    "model.py": "9cd434784aab2a8b18427ed2353f1f6ff1c393b423862cdea2617dd1ac83ea5c"
+  }
+}

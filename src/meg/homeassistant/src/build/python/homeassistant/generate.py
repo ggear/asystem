@@ -1351,8 +1351,8 @@ template:
   #####################################################################################
   - sensor:
       #################################################################################
-      - unique_id: weatherstation_console_battery_percent_int
-        default_entity_id: sensor.template_weatherstation_console_battery_percent_int
+      - unique_id: weatherstation_console_battery_capacity_pct
+        default_entity_id: sensor.template_weatherstation_console_battery_capacity_pct
         device_class: battery
         state_class: measurement
         unit_of_measurement: "%"

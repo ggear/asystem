@@ -8,7 +8,7 @@
   },
   "inputs": [
     {
-      "name": "homeassistant_airquality_in",
+      "name": "airquality_in",
       "datatype": "FP64",
       "shape": [
         1
@@ -22,7 +22,7 @@
   ],
   "outputs": [
     {
-      "name": "homeassistant_airquality_out",
+      "name": "airquality_out",
       "datatype": "FP64",
       "shape": [
         1

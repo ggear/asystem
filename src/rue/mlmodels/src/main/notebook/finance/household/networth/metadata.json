@@ -1,8 +1,0 @@
-{
-  "schema": 2,
-  "version": "10.200.1991-SNAPSHOT",
-  "content_sha256": "83627c9b0014f060221568e811ac147cf93c0fc73c5450338ad379286372576f",
-  "inputs_sha256": "d71d3d62abc26c94d95a546e59d24ae79b7e0f993237e54c8b8930c1fb9a288c",
-  "target": {"kind": "local"},
-  "release": null
-}

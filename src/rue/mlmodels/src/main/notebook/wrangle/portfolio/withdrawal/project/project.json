@@ -1,0 +1,20 @@
+{
+  "schema": 2,
+  "name": "wrangle_portfolio_withdrawal",
+  "flavour": "pyfunc",
+  "model": "model.py",
+  "runtime": {"python": []},
+  "provenance": {
+    "source": "manual",
+    "trained_on": "synthetic annuity withdrawal rates, training split",
+    "inputs": ["wrangle/portfolio/withdrawal/data/training/1/portfolio_withdrawal_training.csv"],
+    "notes": "least squares real return",
+    "implementation": "mlflow.pyfunc model.py, requires mlflow and pandas"
+  },
+  "files": {
+    "signature.json": "0441667e3d1dcf46d241bb1c6f3219136d8e5d412cbeb8d70cbebb8b1aa0e316",
+    "golden.json": "4a54501d7125b8417d14d95fa04e00b6aef47478b84c36aa812d7752d7af7a44",
+    "evaluation.json": "c082996431652f4fd8e45251d24080e950bd4f2c8d2cba41b21cf538830156e4",
+    "model.py": "7eb329f269d5276409899a07a74b803b5bd4a420edcbc5f59550397175115944"
+  }
+}

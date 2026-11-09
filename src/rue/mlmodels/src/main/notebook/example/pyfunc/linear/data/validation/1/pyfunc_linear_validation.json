@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "split": "validation",
+  "run": 1,
+  "name": "pyfunc_linear_validation",
+  "source": "builder",
+  "query": null,
+  "database": null,
+  "captured": "2026-11-03_16-40-55",
+  "rows": 5,
+  "sha256": "01304052523c4a8ab25bc74c40f1f727244c1dfb6130066ff8a91972a12b0585"
+}

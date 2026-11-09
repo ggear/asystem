@@ -56,6 +56,7 @@
               "water_heating_turn_on_towel_rails",
               "water_heating_turn_on_water_heater_booster",
               "weather_station_query_console_battery_capacity_model",
+              "weather_station_record_console_battery_voltage_report_time_2",
               "weather_station_save_console_battery_model_state"
             ]
           }
@@ -581,6 +582,50 @@
           },
           {
             "key": "state",
+            "kind": "str",
+            "unit": "",
+            "description": "Home Assistant value",
+            "persist": true,
+            "period": "",
+            "levels": null
+          },
+          {
+            "key": "value",
+            "kind": "float",
+            "unit": "",
+            "description": "Home Assistant value",
+            "persist": true,
+            "period": "",
+            "levels": null
+          }
+        ]
+      },
+      {
+        "path": "input_number",
+        "description": "Home Assistant input_number",
+        "cadence": "<on-change>",
+        "entities": [],
+        "dimensions": [
+          {
+            "key": "entity_id",
+            "description": "Home Assistant entity_id",
+            "subject": false,
+            "entities": [
+              "weatherstation_console_battery_reported"
+            ]
+          },
+          {
+            "key": "unit_of_measurement",
+            "description": "Home Assistant unit_of_measurement",
+            "subject": true,
+            "entities": [
+              "s"
+            ]
+          }
+        ],
+        "measures": [
+          {
+            "key": "initial_str",
             "kind": "str",
             "unit": "",
             "description": "Home Assistant value",

@@ -15,19 +15,19 @@
   },
   "inputs": [
     {
-      "name": "rackmains_clock_epoch_seconds",
+      "name": "clock_epoch_seconds",
       "datatype": "FP64",
       "shape": [1],
       "parameters": {"unit": "seconds", "required": true, "description": "Time of the poll as seconds since the Unix epoch. The ISO text timestamp stays beside it in the record and is not sent."}
     },
     {
-      "name": "rackmains_output_utilisation_pct",
+      "name": "output_utilisation_pct",
       "datatype": "INT64",
       "shape": [1],
       "parameters": {"unit": "percent", "required": true, "description": "Load on the UPS output as a whole percent of its rated capacity. Not watts: whether the rating is volt-amperes or watts is not known."}
     },
     {
-      "name": "rackmains_ups_on_battery",
+      "name": "ups_on_battery",
       "datatype": "INT64",
       "shape": [1],
       "parameters": {
@@ -37,13 +37,13 @@
       }
     },
     {
-      "name": "rackmains_battery_replace",
+      "name": "battery_replace",
       "datatype": "INT64",
       "shape": [1],
       "parameters": {"unit": "flag", "required": true, "description": "1 while the UPS reports the battery needs replacing."}
     },
     {
-      "name": "rackmains_model_state_in",
+      "name": "model_state_in",
       "datatype": "FP64",
       "shape": [-1],
       "parameters": {
@@ -55,31 +55,31 @@
   ],
   "outputs": [
     {
-      "name": "rackmains_guard_shed_max_seconds",
+      "name": "guard_shed_max_seconds",
       "datatype": "INT64",
       "shape": [1],
       "parameters": {"unit": "seconds", "required": true, "description": "Seconds on battery after which the guard puts the follower servers to sleep, whatever else is estimated."}
     },
     {
-      "name": "rackmains_guard_halt_max_seconds",
+      "name": "guard_halt_max_seconds",
       "datatype": "INT64",
       "shape": [1],
       "parameters": {"unit": "seconds", "required": true, "description": "Seconds on battery after which the guard halts max and has the UPS cut and restore its output. Later than the shed time."}
     },
     {
-      "name": "rackmains_guard_mains_stable_seconds",
+      "name": "guard_mains_stable_seconds",
       "datatype": "INT64",
       "shape": [1],
       "parameters": {"unit": "seconds", "required": true, "description": "Seconds of unbroken mains after which the on-battery clock resets and any server put to sleep is woken."}
     },
     {
-      "name": "rackmains_guard_halt_delay_seconds",
+      "name": "guard_halt_delay_seconds",
       "datatype": "INT64",
       "shape": [1],
       "parameters": {"unit": "seconds", "required": true, "description": "Seconds the UPS waits before cutting its output after the guard asks it to shut down. Long enough for max to finish going to sleep."}
     },
     {
-      "name": "rackmains_guard_shed_lead_seconds",
+      "name": "guard_shed_lead_seconds",
       "datatype": "INT64",
       "shape": [1],
       "parameters": {
@@ -89,25 +89,25 @@
       }
     },
     {
-      "name": "rackmains_guard_halt_lead_seconds",
+      "name": "guard_halt_lead_seconds",
       "datatype": "INT64",
       "shape": [1],
       "parameters": {"unit": "seconds", "required": false, "description": "Optional. Halt max when the estimated run time left falls to this: the measured time the halt takes plus a margin."}
     },
     {
-      "name": "rackmains_battery_remaining_pct",
+      "name": "battery_remaining_pct",
       "datatype": "INT64",
       "shape": [1],
       "parameters": {"unit": "percent", "required": false, "description": "Optional. Estimated usable battery left as a whole percent, 100 when full, rounded down. Informational: the guard does not act on it."}
     },
     {
-      "name": "rackmains_battery_remaining_seconds",
+      "name": "battery_remaining_seconds",
       "datatype": "INT64",
       "shape": [1],
       "parameters": {"unit": "seconds", "required": false, "description": "Optional. Estimated run time left at the current load, rounded down, so it never overstates."}
     },
     {
-      "name": "rackmains_model_energy_used_wh",
+      "name": "model_energy_used_wh",
       "datatype": "FP64",
       "shape": [1],
       "parameters": {
@@ -117,13 +117,13 @@
       }
     },
     {
-      "name": "rackmains_model_history_known",
+      "name": "model_history_known",
       "datatype": "INT64",
       "shape": [1],
       "parameters": {"unit": "flag", "required": false, "description": "Optional. 1 once the model knows the battery had recovered before this outage, 0 while it is assuming a partly drained battery."}
     },
     {
-      "name": "rackmains_model_recalibrate",
+      "name": "model_recalibrate",
       "datatype": "INT64",
       "shape": [1],
       "parameters": {
@@ -133,7 +133,7 @@
       }
     },
     {
-      "name": "rackmains_model_state_out",
+      "name": "model_state_out",
       "datatype": "FP64",
       "shape": [-1],
       "parameters": {"unit": "state", "required": false, "description": "Optional. The state to carry to the next call, in the order the signature lists. Absent for a model with no state."}

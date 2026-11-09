@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "passed": true,
+  "budget": 0.00025600892834279647,
+  "datasets": {
+    "validation": [
+      {"path": "1/portfolio_utility_validation.csv", "sha256": "92bd83790b4b21c04676790e186b8ab9db98cc83b7d9d55f90884bedb12cdc46"}
+    ],
+    "backtest": [
+      {"path": "1/portfolio_utility_backtest.csv", "sha256": "7ace44aa8380e8d3525f867c4e5113510b383342db56d36d7b9324570016a481"}
+    ]
+  },
+  "checks": [
+    {
+      "split": "validation",
+      "output": "portfolio_utility_value",
+      "name": "rmse",
+      "value": 2.4280355747583327e-07,
+      "limit": 0.001,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 0.00024280355747583325
+    },
+    {
+      "split": "backtest",
+      "output": "portfolio_utility_value",
+      "name": "rmse",
+      "value": 2.5600892834279646e-07,
+      "limit": 0.001,
+      "direction": "max",
+      "gate": true,
+      "passed": true,
+      "budget": 0.00025600892834279647
+    }
+  ]
+}

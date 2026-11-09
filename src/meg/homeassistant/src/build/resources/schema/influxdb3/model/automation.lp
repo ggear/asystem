@@ -46,6 +46,7 @@
 #     water_heating_turn_on_towel_rails,
 #     water_heating_turn_on_water_heater_booster,
 #     weather_station_query_console_battery_capacity_model,
+#     weather_station_record_console_battery_voltage_report_time_2,
 #     weather_station_save_console_battery_model_state]
 #   field last_triggered - <on-change> [Home Assistant value]
 #   field last_triggered_str - <on-change> [Home Assistant value]

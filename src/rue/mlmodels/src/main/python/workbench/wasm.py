@@ -11,7 +11,7 @@ UNARY = {"neg": "f64.neg", "abs": "f64.abs", "sqrt": "f64.sqrt", "floor": "f64.f
 COMPARE = {"lt": "f64.lt", "le": "f64.le", "gt": "f64.gt", "ge": "f64.ge", "eq": "f64.eq", "ne": "f64.ne"}
 
 
-def build_wasm(features, outputs, lets=()):
+def train_wasm_build(features, outputs, lets=()):
     names = [name for name, _ in lets]
     if len(set(names)) != len(names):
         raise ValueError(f"duplicate let name in [{names}]")
@@ -116,7 +116,7 @@ class Sym:
         return ge(self, other)
 
 
-def trace(function, features):
+def train_wasm_trace(function, features):
     result = function(*[feature(index) for index in range(features)])
     outputs = list(result) if isinstance(result, list | tuple) else [result]
     return [Sym(_node(output)) for output in outputs]

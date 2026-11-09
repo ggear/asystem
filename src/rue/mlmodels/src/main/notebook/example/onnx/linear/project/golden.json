@@ -8,14 +8,14 @@
           "request": {
             "id": "s1-0",
             "inputs": [
-              {"name": "example_onnx_in", "datatype": "FP64", "shape": [1], "data": [-1.0]}
+              {"name": "onnx_in", "datatype": "FP64", "shape": [1], "data": [-1.0]}
             ]
           },
           "response": {
             "model_name": "example_onnx_linear",
             "id": "s1-0",
             "outputs": [
-              {"name": "example_onnx_out", "datatype": "FP64", "shape": [1], "data": [-1.5]}
+              {"name": "onnx_out", "datatype": "FP64", "shape": [1], "data": [-1.5]}
             ]
           }
         },
@@ -23,14 +23,14 @@
           "request": {
             "id": "s1-1",
             "inputs": [
-              {"name": "example_onnx_in", "datatype": "FP64", "shape": [1], "data": [0.0]}
+              {"name": "onnx_in", "datatype": "FP64", "shape": [1], "data": [0.0]}
             ]
           },
           "response": {
             "model_name": "example_onnx_linear",
             "id": "s1-1",
             "outputs": [
-              {"name": "example_onnx_out", "datatype": "FP64", "shape": [1], "data": [1.0]}
+              {"name": "onnx_out", "datatype": "FP64", "shape": [1], "data": [1.0]}
             ]
           }
         },
@@ -38,14 +38,14 @@
           "request": {
             "id": "s1-2",
             "inputs": [
-              {"name": "example_onnx_in", "datatype": "FP64", "shape": [1], "data": [0.25]}
+              {"name": "onnx_in", "datatype": "FP64", "shape": [1], "data": [0.25]}
             ]
           },
           "response": {
             "model_name": "example_onnx_linear",
             "id": "s1-2",
             "outputs": [
-              {"name": "example_onnx_out", "datatype": "FP64", "shape": [1], "data": [1.625]}
+              {"name": "onnx_out", "datatype": "FP64", "shape": [1], "data": [1.625]}
             ]
           }
         },
@@ -53,14 +53,14 @@
           "request": {
             "id": "s1-3",
             "inputs": [
-              {"name": "example_onnx_in", "datatype": "FP64", "shape": [1], "data": [1.0]}
+              {"name": "onnx_in", "datatype": "FP64", "shape": [1], "data": [1.0]}
             ]
           },
           "response": {
             "model_name": "example_onnx_linear",
             "id": "s1-3",
             "outputs": [
-              {"name": "example_onnx_out", "datatype": "FP64", "shape": [1], "data": [3.5]}
+              {"name": "onnx_out", "datatype": "FP64", "shape": [1], "data": [3.5]}
             ]
           }
         },
@@ -68,14 +68,14 @@
           "request": {
             "id": "s1-4",
             "inputs": [
-              {"name": "example_onnx_in", "datatype": "FP64", "shape": [1], "data": [2.5]}
+              {"name": "onnx_in", "datatype": "FP64", "shape": [1], "data": [2.5]}
             ]
           },
           "response": {
             "model_name": "example_onnx_linear",
             "id": "s1-4",
             "outputs": [
-              {"name": "example_onnx_out", "datatype": "FP64", "shape": [1], "data": [7.25]}
+              {"name": "onnx_out", "datatype": "FP64", "shape": [1], "data": [7.25]}
             ]
           }
         },
@@ -83,14 +83,14 @@
           "request": {
             "id": "s1-5",
             "inputs": [
-              {"name": "example_onnx_in", "datatype": "FP64", "shape": [1], "data": [10.0]}
+              {"name": "onnx_in", "datatype": "FP64", "shape": [1], "data": [10.0]}
             ]
           },
           "response": {
             "model_name": "example_onnx_linear",
             "id": "s1-5",
             "outputs": [
-              {"name": "example_onnx_out", "datatype": "FP64", "shape": [1], "data": [26.0]}
+              {"name": "onnx_out", "datatype": "FP64", "shape": [1], "data": [26.0]}
             ]
           }
         },
@@ -102,6 +102,6 @@
     }
   ],
   "tolerance": {
-    "example_onnx_out": {"absolute": 1e-09}
+    "onnx_out": {"absolute": 1e-09}
   }
 }
