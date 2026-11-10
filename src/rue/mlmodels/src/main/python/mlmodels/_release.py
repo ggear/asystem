@@ -61,7 +61,7 @@ def release_workspaces(source_dir, version, tracking_uri=None, mlserver_url=None
         with open(join(directory, PROJECT_DIR, PROJECT_MANIFEST)) as manifest_file:
             manifest = json.load(manifest_file)
         target = " ".join(str(metadata["target"][key]) for key in ("kind", "language") if key in metadata["target"])
-        LOG.info("Release workspace [%s] model [%s] [%s] as [%s] at version [%s] %s", name, manifest.get("model_id"), manifest["provenance"]["notes"], target, metadata["version"], outcome)
+        LOG.info("Release workspace [%s] model [%s] [%s] as [%s] at version [%s] %s", name, manifest.get("model_id"), manifest["provenance"].get("notes", "none"), target, metadata["version"], outcome)
         released.append(name)
         if tracking_uri is not None and metadata["target"]["kind"] == "served":
             publish_workspace(name, directory, tracking_uri, mlserver_url)

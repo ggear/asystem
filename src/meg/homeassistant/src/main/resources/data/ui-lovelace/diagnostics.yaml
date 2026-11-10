@@ -173,6 +173,8 @@
       name: Sonoff Front Door Sensor
     - entity: sensor.template_weatherstation_console_battery_capacity_pct
       name: Davis Console
+    - entity: sensor.mlserver_weatherstation_console_battery_capacity_pct
+      name: Davis Console
     - entity: sensor.office_pantry_battery
       name: Netatmo Pantry
     - entity: sensor.office_lounge_battery

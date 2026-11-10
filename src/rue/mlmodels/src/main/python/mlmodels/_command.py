@@ -11,11 +11,14 @@ from mlmodels._errors import GateError
 from mlmodels._lint_notebook import fix_notebook, lint_notebook
 from mlmodels._lint_project import fix_hints, lint_project, verify_project
 from mlmodels._lint_workspace import lint_workspace
+from mlmodels._log import configure_log
 from mlmodels._project import write_text
 from mlmodels._registry import check_release, registry_address
 from mlmodels._runner import ANSI, run_notebook
 from mlmodels._scaffold import scaffold_notebook
 from mlmodels._signature import render_rust
+
+LOG = logging.getLogger(__name__)
 
 
 def model_command(arguments=None):
@@ -102,11 +105,12 @@ def model_command(arguments=None):
             from mlmodels._metadata import read_metadata
             from mlmodels._release import publish_workspace, workspaces
 
+            configure_log()
             tracking_uri = registry_address(os.environ.get("MLFLOW_TRACKING_URI"))
             for name, directory in workspaces(options.source_dir).items():
                 metadata = read_metadata(directory) if isfile(join(directory, "metadata.json")) else None
                 if metadata is not None and metadata["release"] is not None and metadata["target"]["kind"] == "served":
-                    print(f"published model [{name}] [{publish_workspace(name, directory, tracking_uri, options.mlserver)}]")
+                    publish_workspace(name, directory, tracking_uri, options.mlserver)
         elif options.command == "status":
             from mlmodels._release import status_lines
 
