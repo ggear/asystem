@@ -24,13 +24,13 @@ sensor:
             "name": "weatherstation_console_battery_voltage",
             "datatype": "FP64",
             "shape": [1],
-            "data": [{{ states('sensor.weatherstation_console_battery_voltage') | float }}]
+            "data": [{{ states('sensor.weatherstation_console_battery_voltage') | float(none) | tojson }}]
           },
           {
             "name": "weatherstation_console_battery_reported",
             "datatype": "FP64",
             "shape": [1],
-            "data": [{{ states('input_number.weatherstation_console_battery_reported') | float }}]
+            "data": [{{ states('input_number.weatherstation_console_battery_reported') | float(none) | tojson }}]
           },
           {
             "name": "clock_epoch_seconds",
