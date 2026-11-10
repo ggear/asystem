@@ -17,7 +17,7 @@ sensor:
     method: POST
     headers:
       Content-Type: application/json
-    payload: |-
+    payload_template: |-
       {
         "inputs": [
           {
