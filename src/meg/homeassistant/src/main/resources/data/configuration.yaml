@@ -75,6 +75,7 @@ influxdb:
     domain: ''
   tags_attributes:
     - 'unit_of_measurement'
+    - 'model_version'
   exclude:
     domains: !include custom_config/influxdb/ignore_domains.yaml
     entity_globs: !include custom_config/influxdb/ignore_entity_globs.yaml

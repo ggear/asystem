@@ -92,9 +92,10 @@ def model_command(arguments=None):
         elif options.command == "release":
             from mlmodels._release import release_workspaces, stale_consumers
 
+            configure_log()
             tracking_uri = registry_address(os.environ.get("MLFLOW_TRACKING_URI"))
             released = release_workspaces(options.source_dir, options.version, tracking_uri, options.mlserver)
-            print(f"released workspaces {released}")
+            LOG.info("Release version [%s] of [%s] workspaces", options.version, len(released))
             for consumer in stale_consumers(options.source_dir):
                 print(f"WARN consumer embeds an older release [{relpath(consumer, options.source_dir)}]", file=sys.stderr)
         elif options.command == "publish":

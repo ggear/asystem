@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import shutil
 import time
@@ -12,6 +13,8 @@ from mlmodels._errors import GateError
 from mlmodels._metadata import LOCAL_TARGET, METADATA_FILE, PROJECT_DIR, content_sha256, read_metadata, write_metadata
 from mlmodels._registry import register_project, registry_client
 from mlmodels._signature import registered_name
+
+LOG = logging.getLogger(__name__)
 
 NOTEBOOK_ROOT = "rue/mlmodels/src/main/notebook"
 
@@ -38,16 +41,27 @@ def release_workspaces(source_dir, version, tracking_uri=None, mlserver_url=None
     now = (clock or (lambda: datetime.now(UTC)))().strftime("%Y-%m-%dT%H:%M:%SZ")
     released = []
     for name, directory in workspaces(source_dir).items():
-        if name.startswith(RELEASE_FIXTURES + "_") or not isfile(join(directory, METADATA_FILE)):
+        if name.startswith(RELEASE_FIXTURES + "_"):
+            LOG.info("Release workspace [%s] skipped as [fixture]", name)
+            continue
+        if not isfile(join(directory, METADATA_FILE)):
+            LOG.info("Release workspace [%s] skipped as [unpackaged]", name)
             continue
         metadata = read_metadata(directory)
         if metadata["target"] == LOCAL_TARGET:
+            LOG.info("Release workspace [%s] skipped as [local]", name)
             continue
         _require_project(name, directory)
+        outcome = "kept"
         if metadata["release"] is None:
             with open(join(directory, PROJECT_DIR, "signature.json")) as signature_file:
                 metadata = {**metadata, "version": version, "release": {"timestamp": now, "signature": json.load(signature_file)}}
             write_metadata(directory, metadata)
+            outcome = "released"
+        with open(join(directory, PROJECT_DIR, PROJECT_MANIFEST)) as manifest_file:
+            manifest = json.load(manifest_file)
+        target = " ".join(str(metadata["target"][key]) for key in ("kind", "language") if key in metadata["target"])
+        LOG.info("Release workspace [%s] model [%s] [%s] as [%s] at version [%s] %s", name, manifest.get("model_id"), manifest["provenance"]["notes"], target, metadata["version"], outcome)
         released.append(name)
         if tracking_uri is not None and metadata["target"]["kind"] == "served":
             publish_workspace(name, directory, tracking_uri, mlserver_url)
@@ -75,9 +89,12 @@ def publish_workspace(name, directory, tracking_uri, mlserver_url=None):
     client.set_registered_model_alias(name, PROJECT_ALIAS_RELEASE, version.version)
     if PROJECT_ALIAS_PREVIEW in client.get_registered_model(name).aliases:
         client.delete_registered_model_alias(name, PROJECT_ALIAS_PREVIEW)
-    if mlserver_url is not None:
-        return wait_served(mlserver_url, name, metadata["version"])
-    return "published"
+    LOG.info("Release workspace [%s] published as registry version [%s] with alias [release]", name, version.version)
+    if mlserver_url is None:
+        return "published"
+    served = wait_served(mlserver_url, name, metadata["version"])
+    LOG.info("Release workspace [%s] served by mlserver as [%s]", name, served)
+    return served
 
 
 def clear_preview(name, tracking_uri):
