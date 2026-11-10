@@ -8,11 +8,11 @@ sys.path.append("../../../main/python")
 sys.path.append("../../../../../../all/_/src/build/python")
 
 from asystem.report import run_pytest, stage
-from workbench.config import VERSION_PATH
-from workbench.errors import GateError
-from workbench.metadata import METADATA_FILE, PROJECT_DIR, read_metadata
-from workbench.model import PROJECT_ALIAS_PREVIEW
-from workbench.release import clear_preview, wait_served, workspaces
+from mlmodels._config import VERSION_PATH
+from mlmodels._constants import PROJECT_ALIAS_PREVIEW
+from mlmodels._errors import GateError
+from mlmodels._metadata import METADATA_FILE, PROJECT_DIR, read_metadata
+from mlmodels._release import clear_preview, wait_served, workspaces
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 DIR_SOURCE = abspath(join(DIR_ROOT, "../.."))
@@ -78,11 +78,11 @@ def test_the_declared_target_runs_its_project(name, directory, target, env, imag
         with stage("serve") as entry:
             wait_served(server, f"{name}_preview", f"preview-{metadata['content_sha256'][:8]}")
             entry.detail = f"{name}_preview"
-        output = _run(image, "python", ["-m", "consumer.main", "/project", server, f"{name}_preview"], project_dir)
+        output = _run(image, "python", ["-m", "mlmodels.runtime", "/project", server, f"{name}_preview"], project_dir)
     else:
         with stage("compile") as entry:
             entry.detail = "interpreted" if target["language"] == "python" else "prebuilt"
-        output = _run(image, target["language"], ["-m", "consumer.main", "/project"] if target["language"] == "python" else ["/project"], project_dir)
+        output = _run(image, target["language"], ["-m", "mlmodels.runtime", "/project"] if target["language"] == "python" else ["/project"], project_dir)
     print(output.stdout, end="", flush=True)
     if output.returncode != 0:
         raise GateError("target", _label(target), f"workspace [{name}] output [{(output.stderr or output.stdout).strip()}]")

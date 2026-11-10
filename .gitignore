@@ -72,10 +72,12 @@ src/mad/wrangle/src/test/resources/repos/release/bank/*/data/*
 !src/mad/wrangle/src/test/resources/repos/*/*/*/data/.gitkeep
 !src/mad/wrangle/src/test/resources/repos/local/bank/*/data/*
 # mlmodels notebooks that hold real personal financial data, and what is derived from it
-src/rue/mlmodels/src/main/notebook/wrangle/household/*/data/*/*/
+src/rue/mlmodels/src/main/notebook/wrangle/household/*/data/*/
 src/rue/mlmodels/src/main/notebook/wrangle/household/*/project/
-src/rue/mlmodels/src/main/notebook/wrangle/portfolio/*/data/*/*/
+src/rue/mlmodels/src/main/notebook/wrangle/household/*/model/
+src/rue/mlmodels/src/main/notebook/wrangle/portfolio/*/data/*/
 src/rue/mlmodels/src/main/notebook/wrangle/portfolio/return/project/
+src/rue/mlmodels/src/main/notebook/wrangle/portfolio/return/model/
 **/monary/**
 *.mbox
 

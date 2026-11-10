@@ -1,4 +1,4 @@
 target
 .go
 src/main/notebook
-src/main/rust/consumer/target
+src/main/rust/runtime/target

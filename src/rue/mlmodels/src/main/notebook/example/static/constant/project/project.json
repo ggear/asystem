@@ -2,7 +2,8 @@
   "schema": 2,
   "name": "example_static_constant",
   "flavour": "static",
+  "model_id": 1000,
   "constants": {"static_out": 7},
-  "provenance": {"source": "manual", "trained_on": "none", "inputs": [], "notes": "register path smoke test"},
+  "provenance": {"source": "static", "trained_on": "none", "inputs": [], "notes": "The constant 7"},
   "files": {"signature.json": "06010b5a36ea39bf824304e4ea00cfab47a1986d8bf39d0eaadc9da375d897b2", "golden.json": "13555c981c3d176485da8b8350e4a39b2d5775bd831f9c88a753ebca95a4bc13"}
 }

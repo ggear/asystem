@@ -881,9 +881,9 @@ def _build(context, filter_module=None, filter_host=None, is_release=False):
             _run_local(context, f"ruff check --fix {notebook_paths}", module)
             _run_local(context, f"ruff format {notebook_paths}", module)
             model_python_path = join(ROOT_MODULE_DIR, MODEL_MODULE, "src/main/python")
-            _run_local(context, f"PYTHONPATH={model_python_path} python -W ignore -m workbench.notebook --fix {notebook_paths}", module)
+            _run_local(context, f"PYTHONPATH={model_python_path} python -W ignore -m mlmodels notebook --fix {notebook_paths}", module)
             workspace_paths = " ".join(relpath(path, join(ROOT_MODULE_DIR, module)) for path in sorted(glob.glob(join(ROOT_MODULE_DIR, module, "src/main/notebook/*/*/*/"))))
-            _run_local(context, f"PYTHONPATH={model_python_path} python -W ignore -m workbench.workspace {workspace_paths}", module)
+            _run_local(context, f"PYTHONPATH={model_python_path} python -W ignore -m mlmodels workspace {workspace_paths}", module)
         if isfile(join(ROOT_MODULE_DIR, module, "src/setup.py")):
             _run_local(context, "python setup.py sdist", join(module, "target/package"))
         module_go_main_path = join(ROOT_MODULE_DIR, module, "src/main/go", _get_service(module))
@@ -1061,7 +1061,7 @@ def _release_models(context, module):
     model_python_path = join(ROOT_MODULE_DIR, MODEL_MODULE, "src/main/python")
     if isfile(join(ROOT_MODULE_DIR, module, "src/build/resources/model/project.json")):
         _print_line("Checking release model ...")
-        _run_local(context, f"PYTHONPATH={model_python_path} python -W ignore -m workbench.model check-release src/build/resources/model --source-dir {ROOT_MODULE_DIR}", module)
+        _run_local(context, f"PYTHONPATH={model_python_path} python -W ignore -m mlmodels check-release src/build/resources/model --source-dir {ROOT_MODULE_DIR}", module)
     if isfile(join(ROOT_MODULE_DIR, module, "src/build/resources/model.sh")):
         _print_line("Releasing models ...")
         _run_local(context, f"src/build/resources/model.sh release {_get_versions_next()[0]}", module)

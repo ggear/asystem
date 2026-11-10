@@ -1,0 +1,13 @@
+{
+  "schema": 2,
+  "run": 1000,
+  "label": "Ten labelled points on a line with fixed noise",
+  "live": false,
+  "name": "onnx_linear_training",
+  "source": "builder",
+  "query": null,
+  "database": null,
+  "captured": "2026-11-03_16-40-53",
+  "rows": 10,
+  "sha256": "e5949dc3d9d7a5dd4ebcfcd92d37c2053449fc502e12c5bddd8c61888c0c7b18"
+}

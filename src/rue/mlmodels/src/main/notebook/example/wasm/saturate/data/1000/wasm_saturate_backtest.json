@@ -1,0 +1,13 @@
+{
+  "schema": 2,
+  "run": 1000,
+  "label": "Ten further points on the curve held back for acceptance",
+  "live": false,
+  "name": "wasm_saturate_backtest",
+  "source": "builder",
+  "query": null,
+  "database": null,
+  "captured": "2026-11-04_19-52-47",
+  "rows": 10,
+  "sha256": "76b9cdb2f7e96f7ea8d1f9b09ee050979daffde256bcd26aafcf6e76bd34c4bb"
+}

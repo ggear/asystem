@@ -2,19 +2,20 @@
   "schema": 2,
   "name": "example_wasm_accumulate",
   "flavour": "wasm",
+  "model_id": 1000,
   "model": "model.wasm",
   "runtime": {"wasm": ["acos", "asin", "atan", "atan2", "cos", "cosh", "exp", "log", "log10", "log2", "pow", "sin", "sinh", "tan", "tanh"]},
   "provenance": {
     "source": "manual",
-    "trained_on": "synthetic line, training split",
-    "inputs": ["example/wasm/accumulate/data/training/1/wasm_accumulate_training.csv"],
-    "notes": "least squares line, gain and offset built into the module",
-    "implementation": "WebAssembly traced from a Python function by workbench.wasm.trace and built by train_wasm_build, importing every asystem_math function"
+    "trained_on": "runs [1000]",
+    "inputs": ["example/wasm/accumulate/data/1000/wasm_accumulate_training.csv"],
+    "notes": "Least squares line with every maths function and a running total and peak",
+    "implementation": "WebAssembly traced and built by define_model, model 1000"
   },
   "files": {
     "signature.json": "e479aecf2d921f32a1b5558bf803329986c8c28845d1a75fa5ffcf1889db175b",
-    "golden.json": "768c518f8ceef1191940885f7fa7710bb5b96f1939282af8b28e5d315a7997fd",
-    "evaluation.json": "c4a7a05a84bf47881183756f163e8382e9638771b012e6e12e6da2eca1cd5305",
+    "golden.json": "b55f8a30ec90c3afe39825ac6f9bbb5a9f2f89e3903f103541698189e1e71f75",
+    "evaluation.json": "ad01df5885179195300c3bb3d1fff178cee24a8489622d3d6888902a1bb05780",
     "model.wasm": "2a0aaf01188c3a3695b7527418ec0e67b46dc8c163519ea57dd2a9610c1bf2a5"
   }
 }

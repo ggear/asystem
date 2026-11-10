@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "model": 1000,
+  "label": "Least squares tanh curve, height and rate built in",
+  "flavour": "wasm",
+  "runs": [1000],
+  "sha256": "fa18cbf7d18b08da974a72f165d88948df523dbc12cf7d45bd281e0347b0ec25"
+}

@@ -2,19 +2,20 @@
   "schema": 2,
   "name": "wrangle_portfolio_utility",
   "flavour": "pyfunc",
+  "model_id": 1000,
   "model": "model.py",
   "runtime": {"python": []},
   "provenance": {
     "source": "manual",
-    "trained_on": "synthetic constant relative risk aversion utilities, training split",
-    "inputs": ["wrangle/portfolio/utility/data/training/1/portfolio_utility_training.csv"],
-    "notes": "least squares risk aversion",
-    "implementation": "mlflow.pyfunc model.py, requires mlflow and pandas"
+    "trained_on": "runs [1000]",
+    "inputs": ["wrangle/portfolio/utility/data/1000/portfolio_utility_training.csv"],
+    "notes": "Constant relative risk aversion utility, least squares risk aversion",
+    "implementation": "mlflow.pyfunc model.py, model 1000"
   },
   "files": {
     "signature.json": "81632a177e13ee8a7da86014c84899e0f6585f1818cccec70dcac90dcf6634ca",
-    "golden.json": "feee3e8c2cc0a46153599da1ead7f46ca6407ddabafb40b7b9dca0bcb1e0a589",
-    "evaluation.json": "345bdfa40752fb7394d26d0f8f34934ba4c4351911a2d8efe4103efbe728a026",
-    "model.py": "4dabc67bf9ae6683c1e2791126379230ef8db96f977150a9c0492bf7f98e04e7"
+    "golden.json": "2d628f7a5f742711613a62272acd2e34ba3d99bfc7bf637088ef058eaab575c2",
+    "evaluation.json": "e0a34ebdb5f816982f2eccbe8757ca7e393ac65e96ca829366499c223b1e922a",
+    "model.py": "b0eeefeb1063dee7686bbdcb7ea4e3458b39c6ec293b46ac1196d730e15dd872"
   }
 }

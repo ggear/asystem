@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "model": 1000,
+  "label": "Merton share and risk adjusted return, least squares on the variance",
+  "flavour": "pyfunc",
+  "runs": [1000],
+  "sha256": "e941b553fb41b32f1766a957493c23e967ea2919c7d41d185bfdcc533a654f6f"
+}

@@ -1,0 +1,13 @@
+{
+  "schema": 2,
+  "run": 1000,
+  "label": "Ten further points on the line held back for acceptance",
+  "live": false,
+  "name": "pyfunc_linear_backtest",
+  "source": "builder",
+  "query": null,
+  "database": null,
+  "captured": "2026-11-03_16-40-55",
+  "rows": 10,
+  "sha256": "12b35c57696021696e4c52ae508b9104e2151c355e604183fd88e6ca417bbd63"
+}

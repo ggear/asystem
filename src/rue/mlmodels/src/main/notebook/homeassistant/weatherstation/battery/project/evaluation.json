@@ -1,24 +1,46 @@
 {
   "schema": 1,
   "passed": true,
-  "budget": 0.7514807031670689,
+  "budget": 0.6833333333333333,
+  "independent": false,
   "datasets": {
-    "backtest": [
-      {"path": "1/weatherstation_battery_incumbent.csv", "sha256": "1ef9e9df8ef7b545f1c07ccfacd702c5b1077f382e678b259d99e2ce16d31ab4"}
+    "validation": [
+      {"path": "1001/weatherstation_battery.csv", "sha256": "104cb0a7bcc0bb102036b790091234c1c54c88931c7f144a5cddca2e359321c3", "rows": 813}
     ]
   },
   "checks": [
     {
-      "split": "backtest",
+      "split": "validation",
       "output": "weatherstation_console_battery_capacity_pct",
-      "name": "rmse",
-      "value": 3.7574035158353447,
-      "limit": 5,
+      "name": "bounce",
+      "value": 41.0,
+      "limit": 60,
       "direction": "max",
       "gate": true,
       "passed": true,
-      "budget": 0.7514807031670689
+      "budget": 0.6833333333333333
     },
-    {"split": "backtest", "output": "weatherstation_console_battery_capacity_pct", "name": "bounce", "value": 45.0, "limit": 60, "direction": "max", "gate": true, "passed": true, "budget": 0.75}
+    {
+      "split": "validation",
+      "output": "weatherstation_console_battery_capacity_pct",
+      "name": "rmse_incumbent",
+      "value": 4.37664044100215,
+      "limit": 5,
+      "direction": "max",
+      "gate": false,
+      "passed": true,
+      "budget": 0.8753280882004301
+    },
+    {
+      "split": "validation",
+      "output": "weatherstation_console_battery_capacity_pct",
+      "name": "linearity",
+      "value": 0.7573047965524737,
+      "limit": 0.9,
+      "direction": "min",
+      "gate": false,
+      "passed": false,
+      "budget": 1.1884250622696788
+    }
   ]
 }

@@ -4,7 +4,7 @@ The backup and restore plan closed on 2026-11-06. This holds what it left open, 
 
 Already passed and removed from this list: the Saturday 2026-11-07 run on `macmini-mad` and `macmini-may` (all verdicts `success`, `baseline` the previous run, `evidence` empty; influxdb3 took a full because the pre-install full `2026-11-06_15-41-54` carries `source_version` `10.200.1994` and a delta chains only to a full of the running version, which happens once per release) and the influx prune across the 3.12.1 to 3.12.2 change (`cluster_1/backups` holds only `full-2026-11-07_01-00-59`), and B1: the Sunday 2026-11-08 influxdb3 point on `macmini-may` is a delta with `parent` `2026-11-07_01-00-59`, verdict `success`, `baseline` the previous run and `evidence` empty.
 
-The Monday 2026-11-09 `macmini-may` run showed a false red: its secondary stage did the work and logged `success`, but a liveness beat overwrote the final stage document with `running` and the reaper later stamped `timeout`. Fixed in `runStage`, which now stops the liveness goroutine before writing the final document, and released as supervisor 10.200.2003 to every host. A manual run on `may` afterwards resolved `success` on all three stages. The supervisor systest (`fab st`) and the full Go suite passed. The stuck run `2026-11-09_01-00-59` (secondary `timeout`, result `running`) cannot be stopped because it has no live stage. The live topics and dashboards read the newest run and are green, but `abackup list` keeps the row until it ages out of the keep set, unless it is deleted by hand from primary and `/share/30/backup/supervisor/macmini-may`.
+The Monday 2026-11-09 `macmini-may` run showed a false red: its secondary stage did the work and logged `success`, but a liveness beat overwrote the final stage document with `running` and the reaper later stamped `timeout`. Fixed in `runStage`, which now stops the liveness goroutine before writing the final document, and released as supervisor 10.200.2003 to every host. A manual run on `may` afterwards resolved `success` on all three stages. The supervisor systest (`fab st`) and the full Go suite passed. The stuck run `2026-11-09_01-00-59` (secondary `timeout`, result `running`) cannot be stopped because it has no live stage. The live topics and dashboards read the newest run and are green, but `abackup list` keeps the row until it ages out of the keep set. Decision 2026-11-10: leave it to age out, no hand deletion.
 
 ## A. Can be done now, by hand
 
@@ -27,28 +27,9 @@ Make one backup fail on purpose (an unwritable target, or the container stopped 
 
 ## B. Waits for a scheduled run
 
-### B1. First weekly drill, Monday 2026-11-09
+### B1. First weekly drill, Monday 2026-11-09: done 2026-11-10
 
-**What it is.** On the first nightly run of each ISO week, secondary drills the sparse points it keeps (`drillSecondaryServices`). It has run in production only for catch-up drills (5 Nov). It has never selected a point because the week turned. It drilled the newest point of the closed week, the Sunday 2026-11-08 one, on mad, meg, max and jen, all `success`. `may` drilled its influxdb3 2026-11-07 point, `success`. The 2026-11-07 points of the other modules have no `drill.json`, which looks expected since the Sunday points were drilled instead, though the drill selection code was not read to confirm it.
-
-**Check, on Monday morning (passed on every host except `may`, whose run was the false red above, so repeat it there on Tuesday 2026-11-10, with `2026-11-10_01-*` in the `ls` below), on each of `macmini-mad`, `macmini-meg`, `macmini-may`, `macmini-max` and `raspbpi-jen`:**
-
-```
-ssh root@<host>
-r=$(ls -1d /home/asystem/supervisor/backup/2026-11-09_01-* | head -1)
-grep -E 'verified|faulting|WARN|ERROR|refused' $r/run.log
-jq -c '{state,success_bool}' $r/status.json
-for f in $r/stage/primary/service/*/status.json; do echo "$(basename $(dirname $f)) $(jq -c '{state,success_bool,drill_failed_bool}' $f)"; done
-```
-
-**Pass:**
-- the run `state` is `success` and each service has `success_bool` true and no `drill_failed_bool`
-- there are no `faulting`, `WARN`, `ERROR` or `refused` lines
-- a `verified` line is expected only where a sparse point lacked a verdict (a point drills once, so there may be none, which is fine: every existing point was drilled on 5 Nov)
-- each `drill.json` for the newest point of the closed week is `success`, or `skipped` only for a point the software did not take
-- `Fail BKP` reads 0 on every host's dashboard
-
-**If it fails:** read `<share>/backup/<svc>/<run>/.meta/secondary/drill.json` and the failed service's `output.log`, then hand drill the same point: `/var/lib/asystem/install/<svc>/latest/restore.sh --mode=drill --from=<run> --runs=<share dir>`. A hand drill that passes while the stage failed means the fault is in the stage (`probe_util_backup_stage_drill.go`), not the backup.
+Passed on every host. The Monday run drilled the newest point of the closed week on mad, meg, max and jen (all `success`) and `may` drilled its influxdb3 2026-11-07 point (`success`). The Tuesday 2026-11-10 `01:00` run on all five hosts resolved `success` with every service `success_bool` true, no `drill_failed_bool` and no `faulting`, `WARN`, `ERROR` or `refused` lines. The only `verified` lines were mad (wrangle `2026-11-09_08-22-00`) and meg (homeassistant `2026-11-09_11-26-32`), each releasing a drill as `success`. The `Fail BKP` dashboard reading was not checked.
 
 **Known and fine:** postgres points 09-30, 10-18 and 10-25 carry failed verdicts because they predate the TimescaleDB update. They stay red in their own `drill.json` and the engine ignores them. 10-18 and 10-25 age out of the weekly tier around 17 to 23 Nov. 09-30 stays as September's monthly point for about a year unless deleted by hand from `/share/10/backup/postgres`.
 
@@ -108,4 +89,4 @@ for f in $r/stage/primary/service/*/status.json; do echo "$(basename $(dirname $
 
 ## Done when
 
-A and B1 pass on every host they name, and C1 passes or is dropped by decision. Then delete this file.
+A (A3 outstanding) and B1 (passed) on every host they name, and C1 passes or is dropped by decision. Then delete this file.

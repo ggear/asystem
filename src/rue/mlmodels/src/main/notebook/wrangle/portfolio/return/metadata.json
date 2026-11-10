@@ -1,8 +1,8 @@
 {
   "schema": 2,
-  "version": "10.200.2004-SNAPSHOT",
-  "content_sha256": "ce34ead3d995627485db5abb4bb87cc0aed8b505cf38cd079b64a3e6f4223516",
-  "inputs_sha256": "873438d61f6341cdc37f51d7df64257ed47d7612f391fd32e79ff3045aa40065",
-  "target": {"kind": "served"},
+  "version": "10.200.2005-SNAPSHOT",
+  "content_sha256": "41c37f06e82308ae3785328f989937d4368e855524ccd72983d1a61e90316961",
+  "inputs_sha256": "80271c64792b7643a78e5b57617bcf65388cf0504819b9230dbf87cf06854a5b",
+  "target": {"kind": "local"},
   "release": null
 }

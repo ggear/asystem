@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "model": 1000,
+  "label": "Least squares line as a graph, gain and offset built in",
+  "flavour": "onnx",
+  "runs": [1000],
+  "sha256": "ea83553f9f263e17093fd9d4d8606715388c41d2340973512a06dbfdbfaa3838"
+}

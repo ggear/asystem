@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "model": 1000,
+  "label": "Least squares line with every maths function and a running total and peak",
+  "flavour": "wasm",
+  "runs": [1000],
+  "sha256": "2a0aaf01188c3a3695b7527418ec0e67b46dc8c163519ea57dd2a9610c1bf2a5"
+}

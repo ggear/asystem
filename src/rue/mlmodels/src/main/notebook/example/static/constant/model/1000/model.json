@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "model": 1000,
+  "label": "The constant 7",
+  "flavour": "static",
+  "runs": [],
+  "sha256": "06ade8eb36cb03f30dbeca8aef741ba1e3ead65f13273b8f3ea36690f475eb77",
+  "constants": {"static_out": 7}
+}

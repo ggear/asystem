@@ -1,17 +1,24 @@
 import pandas as pd
-import polars as pl
 from mlflow.models import set_model
 from mlflow.pyfunc import PythonModel
 
-INPUT = "pyfunc_in"
-OUTPUT = "pyfunc_out"
 GAIN = 2.5
 OFFSET = 1.0
 
+def linear(pyfunc_in):
+    return GAIN * pyfunc_in + OFFSET
 
-class Linear(PythonModel):
+
+INPUTS = ['pyfunc_in']
+OUTPUTS = ['pyfunc_out']
+
+
+class Model(PythonModel):
     def predict(self, context, model_input: pd.DataFrame, params=None):
-        return pd.DataFrame({OUTPUT: (pl.Series(model_input[INPUT].to_list()) * GAIN + OFFSET).to_list()})
+        results = [linear(*values) for values in zip(*(model_input[column] for column in INPUTS), strict=True)]
+        if len(OUTPUTS) == 1:
+            results = [(result,) for result in results]
+        return pd.DataFrame({column: [result[index] for result in results] for index, column in enumerate(OUTPUTS)})
 
 
-set_model(Linear())
+set_model(Model())

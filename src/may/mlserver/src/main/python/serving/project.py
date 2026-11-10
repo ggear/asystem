@@ -2,7 +2,10 @@ import hashlib
 import json
 from os.path import isfile, join
 
-from . import run_onnx, run_pyfunc, run_static, run_wasm
+from .onnx import load_onnx
+from .pyfunc import load_pyfunc
+from .static import load_static
+from .wasm import load_wasm
 
 
 class Project:
@@ -53,8 +56,8 @@ def load_project(directory):
 def _predictor(manifest, directory, signature_json):
     flavour = manifest["flavour"]
     if flavour == "static":
-        return run_static.load_static(json.dumps(manifest["constants"]), signature_json)
-    loaders = {"wasm": run_wasm.load_wasm, "onnx": run_onnx.load_onnx, "pyfunc": run_pyfunc.load_pyfunc}
+        return load_static(json.dumps(manifest["constants"]), signature_json)
+    loaders = {"wasm": load_wasm, "onnx": load_onnx, "pyfunc": load_pyfunc}
     if flavour not in loaders:
         raise ValueError(f"no consumer for flavour [{flavour}]")
     return loaders[flavour](join(directory, manifest["model"]), signature_json)

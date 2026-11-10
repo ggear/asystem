@@ -32,21 +32,21 @@ sensor:
   #          "data": [{{ states('sensor.weatherstation_console_battery_voltage') | float }}]
   #        },
   #        {
-  #          "name": "weewx_console_battery_reported_epoch_seconds",
+  #          "name": "weatherstation_console_battery_reported",
   #          "datatype": "FP64",
   #          "shape": [1],
   #          "data": [{{ states('input_number.weatherstation_console_battery_reported') | float }}]
   #        },
   #        {
-  #          "name": "weewx_console_battery_clock_epoch_seconds",
+  #          "name": "clock_epoch_seconds",
   #          "datatype": "FP64",
   #          "shape": [1],
   #          "data": [{{ now().timestamp() | int }}]
   #        }
-  #        {%- set saved = state_attr('sensor.mlserver_weatherstation_console_battery_capacity_pct', 'outputs') | default([], true) | selectattr('name', 'eq', 'weewx_console_battery_state_out') | map(attribute='data') | first | default([], true) %}
+  #        {%- set saved = state_attr('sensor.mlserver_weatherstation_console_battery_capacity_pct', 'outputs') | default([], true) | selectattr('name', 'eq', 'state_out') | map(attribute='data') | first | default([], true) %}
   #        {%- if saved | length == 4 %},
   #        {
-  #          "name": "weewx_console_battery_state_in",
+  #          "name": "state_in",
   #          "datatype": "FP64",
   #          "shape": [4],
   #          "data": [{{ saved | join(', ') }}]

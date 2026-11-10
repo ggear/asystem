@@ -9,6 +9,18 @@
       "datatype": "FP64",
       "shape": [1],
       "parameters": {"unit": "volts", "required": true, "description": "Voltage of the weather station console's battery as Home Assistant reports it."}
+    },
+    {
+      "name": "weatherstation_console_battery_reported",
+      "datatype": "FP64",
+      "shape": [1],
+      "parameters": {"unit": "seconds", "required": false, "description": "Epoch seconds of the last report of the voltage, from the Home Assistant helper of this name. Absent until the stateful model uses it."}
+    },
+    {
+      "name": "clock_epoch_seconds",
+      "datatype": "FP64",
+      "shape": [1],
+      "parameters": {"unit": "seconds", "required": false, "description": "Epoch seconds when the model is called. Absent until the stateful model uses it."}
     }
   ],
   "outputs": [

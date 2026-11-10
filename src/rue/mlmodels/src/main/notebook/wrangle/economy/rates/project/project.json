@@ -2,6 +2,7 @@
   "schema": 2,
   "name": "wrangle_economy_rates",
   "flavour": "static",
+  "model_id": 1000,
   "constants": {
     "economy_rates_inflation_low_pct": 2.7,
     "economy_rates_inflation_base_pct": 2.91,
@@ -14,10 +15,10 @@
     "economy_rates_real_high_pct": 1.76
   },
   "provenance": {
-    "source": "manual",
-    "trained_on": "synthetic window means of the bank rate, inflation and real cash return, training split",
-    "inputs": ["wrangle/economy/rates/data/training/1/economy_rates_training.csv"],
-    "notes": "smallest, mean and largest of the window means"
+    "source": "static",
+    "trained_on": "runs [1000]",
+    "inputs": ["wrangle/economy/rates/data/1000/economy_rates_training.csv"],
+    "notes": "Window summaries of the bank rate, inflation and real cash return"
   },
   "files": {"signature.json": "0469897efb9d711716708715c67a4430405d4f41f92f6fae3ddb5461c5c6f32a", "golden.json": "e261ab4fa0e8e70fd2941f82a66fb9ff3d2505a17e3f6045dc6a27950580db7d"}
 }

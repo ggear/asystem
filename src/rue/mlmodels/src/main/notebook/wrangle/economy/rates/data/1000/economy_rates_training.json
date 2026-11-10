@@ -1,0 +1,13 @@
+{
+  "schema": 2,
+  "run": 1000,
+  "label": "Synthetic window means of the bank rate, inflation and real return of cash",
+  "live": false,
+  "name": "economy_rates_training",
+  "source": "builder",
+  "query": null,
+  "database": null,
+  "captured": "2026-11-06_11-08-27",
+  "rows": 4,
+  "sha256": "0a13f9a212a1c3072d6590eb7539a445feba57a8c7fd723f828b6f1fba988008"
+}

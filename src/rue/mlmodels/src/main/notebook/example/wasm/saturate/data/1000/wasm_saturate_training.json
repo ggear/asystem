@@ -1,0 +1,13 @@
+{
+  "schema": 2,
+  "run": 1000,
+  "label": "Ten labelled points on the curve 4 tanh(0.5x) with fixed noise",
+  "live": false,
+  "name": "wasm_saturate_training",
+  "source": "builder",
+  "query": null,
+  "database": null,
+  "captured": "2026-11-04_19-52-47",
+  "rows": 10,
+  "sha256": "48c982e91b68de66c90a7162857a9a01bbbc4ddfcf928825fb54e4ca1992d0bb"
+}

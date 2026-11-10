@@ -1,0 +1,14 @@
+{
+  "schema": 2,
+  "run": 1003,
+  "label": "2026-11-08 to 2026-11-09, batteries swap, measured",
+  "live": false,
+  "name": "weatherstation_battery",
+  "source": "influxdb3",
+  "query": "SELECT\n  time,\n  weatherstation_console_battery_voltage,\n  CASE WHEN ABS(reported_next - CAST(to_unixtime(time) AS DOUBLE)) <= 120 THEN reported_next END AS weatherstation_console_battery_reported,\n  template_weatherstation_console_battery_capacity_pct,\n  mlserver_weatherstation_console_battery_capacity_pct\nFROM (\n  SELECT\n    time,\n    source,\n    voltage AS weatherstation_console_battery_voltage,\n    first_value(reported) IGNORE NULLS OVER (ORDER BY time, source ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) AS reported_next,\n    last_value(template) IGNORE NULLS OVER (ORDER BY time, source ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS template_weatherstation_console_battery_capacity_pct,\n    last_value(mlserver) IGNORE NULLS OVER (ORDER BY time, source ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS mlserver_weatherstation_console_battery_capacity_pct\n  FROM (\n    SELECT time, 3 AS source, value AS voltage, CAST(NULL AS DOUBLE) AS reported, CAST(NULL AS DOUBLE) AS template, CAST(NULL AS DOUBLE) AS mlserver\n    FROM sensor__voltage\n    WHERE module = 'homeassistant'\n      AND entity_id = 'weatherstation_console_battery_voltage'\n      AND time >= '2026-11-08T00:00:00Z'\n      AND time < '2026-11-10T00:00:00Z'\n    UNION ALL\n    SELECT time, 2 AS source, CAST(NULL AS DOUBLE) AS voltage, value AS reported, CAST(NULL AS DOUBLE) AS template, CAST(NULL AS DOUBLE) AS mlserver\n    FROM input_number\n    WHERE entity_id = 'weatherstation_console_battery_reported'\n      AND time < '2026-11-10T00:00:00Z'\n    UNION ALL\n    SELECT time, 1 AS source, CAST(NULL AS DOUBLE) AS voltage, CAST(NULL AS DOUBLE) AS reported, CAST(NULL AS DOUBLE) AS template, CAST(value AS DOUBLE) AS mlserver\n    FROM sensor__battery\n    WHERE entity_id = 'mlserver_weatherstation_console_battery_capacity_pct'\n      AND time < '2026-11-10T00:00:00Z'\n    UNION ALL\n    SELECT time, 0 AS source, CAST(NULL AS DOUBLE) AS voltage, CAST(NULL AS DOUBLE) AS reported, CAST(value AS DOUBLE) AS template, CAST(NULL AS DOUBLE) AS mlserver\n    FROM sensor__battery\n    WHERE entity_id = 'template_weatherstation_console_battery_capacity_pct'\n      AND time < '2026-11-10T00:00:00Z'\n  )\n  ORDER BY time, source\n)\nWHERE source = 3\nORDER BY time",
+  "params": {"start": "2026-11-08T00:00:00Z", "end": "2026-11-10T00:00:00Z"},
+  "database": null,
+  "captured": "2026-11-09_20-16-32",
+  "rows": 20,
+  "sha256": "ae83cfb5848b3a0355eacc2dfe5aa3e6448820e23295024dc57567de841cba44"
+}

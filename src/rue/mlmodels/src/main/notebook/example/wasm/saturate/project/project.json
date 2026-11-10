@@ -2,19 +2,20 @@
   "schema": 2,
   "name": "example_wasm_saturate",
   "flavour": "wasm",
+  "model_id": 1000,
   "model": "model.wasm",
   "runtime": {"wasm": ["tanh"]},
   "provenance": {
     "source": "manual",
-    "trained_on": "synthetic curve, training split",
-    "inputs": ["example/wasm/saturate/data/training/1/wasm_saturate_training.csv"],
-    "notes": "least squares tanh curve, height and rate built into the module",
-    "implementation": "WebAssembly traced from the fitted Python function by workbench.wasm.trace and built by train_wasm_build, importing tanh from asystem_math"
+    "trained_on": "runs [1000]",
+    "inputs": ["example/wasm/saturate/data/1000/wasm_saturate_training.csv"],
+    "notes": "Least squares tanh curve, height and rate built in",
+    "implementation": "WebAssembly traced and built by define_model, model 1000"
   },
   "files": {
     "signature.json": "98cfa742aec03dc3810615d9c36034971c375c1c31eb771b57ea36fde39189d8",
-    "golden.json": "7f168d1151670cd162debfc525c3c221300f8a4893b3c58a65e76cfa67548392",
-    "evaluation.json": "81d5e786c475f38e86eebcc6e9e4c21c42adb4552df9442d739be05e770130e1",
+    "golden.json": "7b74a066044a7647fa8767205266fbde547f3a2e66267f4c8fc0eb9901a3f0f5",
+    "evaluation.json": "a857f08526d95b512e7e72f1b684a2aee3e3ad6cc666703a8223d9901e20ace8",
     "model.wasm": "fa18cbf7d18b08da974a72f165d88948df523dbc12cf7d45bd281e0347b0ec25"
   }
 }

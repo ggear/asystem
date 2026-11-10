@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "model": 1005,
+  "label": "Fixed-width arctan with plateau shelf, steps of 5",
+  "flavour": "pyfunc",
+  "runs": [1000],
+  "sha256": "5552f329cd04004622f8996b8c1d81b4b2a62dd59c8ad11827295aded416576c"
+}

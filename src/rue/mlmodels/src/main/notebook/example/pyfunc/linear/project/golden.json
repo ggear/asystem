@@ -2,7 +2,7 @@
   "schema": 1,
   "sequences": [
     {
-      "name": "across zero, fractions and a larger value",
+      "name": "golden",
       "steps": [
         {
           "request": {

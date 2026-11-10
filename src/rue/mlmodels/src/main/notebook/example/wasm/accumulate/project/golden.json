@@ -2,7 +2,7 @@
   "schema": 1,
   "sequences": [
     {
-      "name": "a running total and peak over six calls",
+      "name": "golden",
       "steps": [
         {
           "request": {
@@ -274,7 +274,12 @@
           }
         },
         {
-          "request": {"id": "s1-6", "inputs": []},
+          "request": {
+            "id": "s1-6",
+            "inputs": [
+              {"name": "wasm_state_in", "datatype": "FP64", "shape": [2], "data": [101.0, 36.0]}
+            ]
+          },
           "error": "signature"
         }
       ]

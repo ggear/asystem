@@ -2,19 +2,20 @@
   "schema": 2,
   "name": "example_pyfunc_linear",
   "flavour": "pyfunc",
+  "model_id": 1000,
   "model": "model.py",
-  "runtime": {"python": ["polars"]},
+  "runtime": {"python": []},
   "provenance": {
     "source": "manual",
-    "trained_on": "synthetic line, training split",
-    "inputs": ["example/pyfunc/linear/data/training/1/pyfunc_linear_training.csv"],
-    "notes": "least squares line, gain and offset built into model.py",
-    "implementation": "mlflow.pyfunc model.py, requires mlflow, pandas and polars"
+    "trained_on": "runs [1000]",
+    "inputs": ["example/pyfunc/linear/data/1000/pyfunc_linear_training.csv"],
+    "notes": "Least squares line, gain and offset built in",
+    "implementation": "mlflow.pyfunc model.py, model 1000"
   },
   "files": {
     "signature.json": "bc19930453e28a33484e79a50d99d7dbbadec31d481014158044e220f77595cd",
-    "golden.json": "1d2541007cb5d41f9b1fdfe88d2f9931b7cb7e75c1d519f75fd7548edc792546",
-    "evaluation.json": "413a67c4c01bdee1ea89f223a29f4479b0afeb04d1c46556e63b8c021b1b8770",
-    "model.py": "b4d4aaeb83b4e8df0a9cc7c1ed07a995396000952a4028e79d4550687b045ebd"
+    "golden.json": "902bdc41576dfa95595006cab0943ae43dd3ebf6eb35623a28014ab06713e5cf",
+    "evaluation.json": "ea3d17022c85e7352d457c9299ae7ed75122ea587abae9509dd0a0c38c1cb5ad",
+    "model.py": "08546bcff404b38d0e150117a02a0a80b4b526c6c34a7b0e6693d9efc02c1261"
   }
 }

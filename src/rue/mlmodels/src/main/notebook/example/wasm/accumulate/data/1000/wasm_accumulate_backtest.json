@@ -1,0 +1,13 @@
+{
+  "schema": 2,
+  "run": 1000,
+  "label": "Ten further points on the line held back for acceptance",
+  "live": false,
+  "name": "wasm_accumulate_backtest",
+  "source": "builder",
+  "query": null,
+  "database": null,
+  "captured": "2026-11-03_16-40-51",
+  "rows": 10,
+  "sha256": "ac63d22f6d917227dd40299f36a36cb0222c20563c4f171d32f38698a56bb05e"
+}

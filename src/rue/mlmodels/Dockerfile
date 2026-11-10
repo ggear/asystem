@@ -25,8 +25,8 @@ RUN curl -fsSL "https://go.dev/dl/go${ASYSTEM_GO_VERSION}.linux-${TARGETARCH}.ta
 RUN ONNXRUNTIME_ARCH="$([ "${TARGETARCH}" = "arm64" ] && echo aarch64 || echo x64)" && \
     curl -fsSL "https://github.com/microsoft/onnxruntime/releases/download/v${ASYSTEM_ONNXRUNTIME_VERSION}/onnxruntime-linux-${ONNXRUNTIME_ARCH}-${ASYSTEM_ONNXRUNTIME_VERSION}.tgz" | tar -C /tmp -xz && \
     mkdir -p /build/onnxruntime && cp -L /tmp/onnxruntime-linux-${ONNXRUNTIME_ARCH}-${ASYSTEM_ONNXRUNTIME_VERSION}/lib/libonnxruntime.so /build/onnxruntime/libonnxruntime.so
-COPY src/main/go/consumer /build/go
-COPY src/main/rust/consumer /build/rust
+COPY src/main/go/runtime /build/go
+COPY src/main/rust/runtime /build/rust
 RUN cd /build/go && go build -o /build/consumer-go . && \
     cd /build/rust && CARGO_TARGET_DIR=/build/target cargo build --release --locked && cp /build/target/release/consumer /build/consumer-rust
 
@@ -36,6 +36,7 @@ RUN pip install --no-cache-dir ${PINS}
 COPY --from=image_base /build/onnxruntime /asystem/bin/onnxruntime
 COPY --from=image_base /build/consumer-go /asystem/bin/go
 COPY --from=image_base /build/consumer-rust /asystem/bin/rust
-COPY src/main/python/consumer /asystem/bin/python/consumer
+COPY src/main/python/mlmodels/__init__.py /asystem/bin/python/mlmodels/__init__.py
+COPY src/main/python/mlmodels/runtime /asystem/bin/python/mlmodels/runtime
 ENV ONNXRUNTIME_LIB=/asystem/bin/onnxruntime/libonnxruntime.so
 WORKDIR /asystem/bin/python

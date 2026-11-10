@@ -6,32 +6,32 @@ open decisions, and MUST NOT restate the specification. Each notebook's own inte
 ## 1. Implemented
 
 - The vocabulary is scikit-learn's, mapped onto MLServer's and MLflow's (`model.md` 4.1): a project has a flavour and a signature (`signature.json`,
-  the V2 model metadata), and `workbench.model`, `workbench.notebook`, the notebooks and the committed rackmains default project use those
+  the V2 model metadata), and `mlmodels`, the notebooks and the committed rackmains default project use those
   words. The `wasm` flavour's module ABI is `predict(X) -> y`, with state carried as the `state_in` and `state_out` vectors.
 - A workspace holds `notebook.ipynb`, `data` and at most one model file (WS007), and `write_project` copies that file into the project
   and hashes it. Every non-`static` project names its `provenance.implementation` (PJ002).
-- The checks of `model.md` section 10: `lint_project` and `verify_project` (PJ001 to PJ012), `workbench.notebook` (NB001 to NB010) and
-  `workbench.workspace` (WS001 to WS007), with unit tests that plant each fault, run in `fab build`, and a test that fails when the
+- The checks of `model.md` section 10: `lint_project` and `verify_project` (PJ001 to PJ012), `mlmodels notebook` (NB001 to NB010) and
+  `mlmodels workspace` (WS001 to WS007), with unit tests that plant each fault, run in `fab build`, and a test that fails when the
   specification and the code disagree on the identifiers, flavours, splits or sections.
-- The helpers of `model.md` 10.2 in `workbench.model`, `workbench.notebook` and the `workbench` package, used by all the notebooks. `workbench` is one module per
+- The helpers of `model.md` 10.2 in the `mlmodels` package, used by all the notebooks. `mlmodels` is one module per
   concern (`config`, `env`, `data`, `project`, `plot`) with an `__init__.py` that holds only the shared path, as `wrangle` is laid out.
 - Notebooks carry no path block and no star import: `notebook.sh` installs the `asystem` kernel with the `PYTHONPATH`, and the IDE source roots
   provide it (NB011, NB012).
-- `package_project`, which replaces the golden-to-steps loop in every Package cell, and `python -m workbench.model lint`, which prints every
+- `package_project`, which replaces the golden-to-steps loop in every Package cell, and `python -m mlmodels lint`, which prints every
   finding with its identifier.
-- `python -m workbench.notebook new <module> <model> <notebook> <flavour>`, which scaffolds a notebook, a plan and the data directories that already pass
+- `python -m mlmodels notebook new <module> <model> <notebook> <flavour>`, which scaffolds a notebook, a plan and the data directories that already pass
   `model.md` section 10.
-- `python -m workbench.model generate`, which writes Rust request and response
+- `python -m mlmodels generate`, which writes Rust request and response
   types from `signature.json` (rackmains' `contract.rs`). A Go generator was removed, since no Go consumer exists.
 - Acceptance (`model.md` 6.8, R14): a notebook-defined `acceptance_checks` function run by `evaluate_check`, which computes each check's outcome and budget from its value, limit and direction, writes `evaluation.json` into the project (AC001 to AC003, PM004), and has `register_project` log `acceptance_passed`, `acceptance_budget` and each measured value. `homeassistant/weatherstation/battery` uses it and records a failed verdict until a labelled `backtest` run exists.
 - `register_project` registers a non-`pyfunc` project through `create_model_version` on the run's artifact path, since MLflow 3 refuses `register_model` for plain artifacts.
 - `model.sh unittest` (R15), run by `fab unittest`: it runs every notebook whose inputs changed through Package, writes `project/` and `metadata.json`, and checks the metadata. `fab release` runs `check-release` on a consumer's embedded project and `model.sh release` for the workspaces.
 - Version-free projects (`model.md` 3.4, R16): identity is the SHA-256 of `project.json`, the release version is a label in `metadata.json` and the registry tags, and the registry holds the aliases `preview` and `release`.
 - A test that fails when the requirements and their checks (`model.md` 10.1 and 10.3) disagree.
-- Notebook lint in `fab build`: `ruff` on the code cells, then `workbench.notebook` and `workbench.workspace` (`model.md` 6.7).
+- Notebook lint in `fab build`: `ruff` on the code cells, then `mlmodels notebook` and `mlmodels workspace` (`model.md` 6.7).
 - The `mlflow` and `mlserver` modules, with the artifact mount removed, `--serve-artifacts`, allowed hosts, real health checks, `exec`
   with `pipefail` and a 30 s stop grace.
-- `workbench.model` in `mlmodels` (write, verify, register, pull, and the command), with unit tests.
+- `mlmodels` in `mlmodels` (write, verify, register, pull, and the command), with unit tests.
 - The per-model layout, the data cache and its unit tests, and `notebook.sh`.
 - The `mlserver` bootstrap pull into a local model directory.
 - `src/max/rackmains/generate.sh` as the first consumer `generate.sh`, which embeds the released project (`model.md` 8.1).
@@ -42,7 +42,7 @@ open decisions, and MUST NOT restate the specification. Each notebook's own inte
 - Worked examples for every flavour under the module `example` (`model.md` 6.9): `static/constant`, `wasm/accumulate`, `wasm/saturate` (binds the host `tanh`), `onnx/linear` and `pyfunc/linear`, each with a plan,
   data under every split, a passing acceptance check and a golden file. `onnx` stamping (`metadata_props`) and the `wasm` ABI (`memory`, `predict(x, n, y)`) are built, and
   `onnx`, `onnxruntime` and `wasmtime` are pinned in `py_deps_prod.txt`.
-- Replay through the reference consumers: `python -m workbench.model replay` in process, and the Python, Go and Rust consumers under `src/main/python/consumer`, `src/main/go/consumer` and `src/main/rust/consumer`, each with a `run_` file per flavour.
+- Replay through the reference consumers: `python -m mlmodels replay` in process, and the Python, Go and Rust consumers under `src/main/python/mlmodels/runtime`, `src/main/go/runtime` and `src/main/rust/runtime`, each with a `load_` file per flavour.
 - `src/max/rackmains/src/main/rust/rackmains/src/contract.rs` is generated from the embedded project's `signature.json` by `generate.sh`.
 - The notebook libraries and `jupyterlab` live in `mlmodels`, not in the `mlflow` image.
 
@@ -50,7 +50,7 @@ open decisions, and MUST NOT restate the specification. Each notebook's own inte
 
 | Notebook | `training` | `validation` | `backtest` | Golden | Registers |
 |---|---|---|---|---|---|
-| `homeassistant/weatherstation/battery` | `weatherstation_battery_voltage`, the 2024 run | `weatherstation_battery_voltage`, the 2026 run, used to check the fit | None | In the notebook | `weewx_console_battery`, a `coefficients` project, registered with `preview` once it has a `served` target |
+| `homeassistant/weatherstation/battery` | `weatherstation_battery`, the 2024 run | `weatherstation_battery`, the 2026 run, used to check the fit | None | In the notebook | `weewx_console_battery`, a `coefficients` project, registered with `preview` once it has a `served` target |
 | `example/static/constant` | None | None | None | In the notebook | `example_static_constant`, a `static` project, then pulls it back and compares |
 | `rackmains/ups/battery` | None yet; discharges to the floor | None yet; a repeat at another load | None yet; the outage CSV files from `max` | In the notebook, four rows | `rackmains_ups_battery`, the `static` default, embedded only, never registered |
 | `homeassistant/hotwater/temp` | None yet | None yet | None yet | None yet | A placeholder |
@@ -61,10 +61,10 @@ open decisions, and MUST NOT restate the specification. Each notebook's own inte
 In order. Each item is done when its worked example (4) runs and passes.
 
 1. The first release, run by a person: release `mlserver`, then `mlmodels`, then read `model.sh status`. It registers every workspace that has a `served` target and publishes it.
-2. A rehearsal of `fab systest` end to end, which sets `preview` in the production registry. Only the container runs of the consumers, the stub-server runs of `run_served` and the unit tests are done.
+2. A rehearsal of `fab systest` end to end, which sets `preview` in the production registry. Only the container runs of the consumers, the stub-server runs of `load_served` and the unit tests are done.
 3. `homeassistant/weatherstation/battery` passes acceptance and can be served. Its arctan is now fitted to the 2024 training run and the 36 control points of the incumbent Home Assistant curve (a degree 3 `compensation`), the two sources weighted equally in total, and scored on the `backtest` run, the 2026 readings labelled by that curve, which is held out. The rmse is 4.04 against the limit of 5 (budget 0.81). It still reads up to 6 points above the incumbent between 3.80 and 3.88 V, which the Evaluate plots show. The check measures agreement with what runs today, not battery truth. Open: register and release it, which needs the `nginx` release (the proxy body limit) first.
-4. The Rust loader in `rackmains`, copied from the Rust reference consumer's `run_` files, and the first release of `rackmains/ups/battery`, which `rackmains` embeds.
-5. The `wasm` builder is built (`workbench.wasm.train_wasm_build`, section 7), with the maths imports of `model.md` 4.1 (thirteen one-argument functions and `atan2` and `pow`) and a tracing layer (`workbench.wasm.trace`, `model.md` 4.4) that turns an ordinary Python function into the tree. Built in the Python host (`workbench.replay`), the `run_wasm` files that `mlserver` carries, and the Go and Rust reference consumers. The Go (`wazero`) and Rust (`wasmi`) reference consumers provide them too. A test asserts the three hosts and `WASM_MATH_FUNCTIONS` list the same names and arities. To do: write the maths functions that matter in the module itself (`model.md` 4.5) where the host differences prove significant, which no builder does yet; move `homeassistant/weatherstation/battery` from `pyfunc` to `wasm` with `train_wasm_trace` and a golden tolerance on its arctan output; use the builder in `homeassistant/hotwater/temp`, the first project that needs it. The ABI (`model.md` 4.1) and the `wasmtime`, `wasmi` and `wazero` hosts are built, and `example/wasm/accumulate` and `example/wasm/saturate` are traced from Python functions (`model.md` 4.4).
+4. The Rust loader in `rackmains`, copied from the Rust reference runtime's flavour files, and the first release of `rackmains/ups/battery`, which `rackmains` embeds.
+5. The `wasm` builder is built (`mlmodels.train.train_wasm_build`, section 7), with the maths imports of `model.md` 4.1 (thirteen one-argument functions and `atan2` and `pow`) and a tracing layer (`mlmodels.wasm.trace`, `model.md` 4.4) that turns an ordinary Python function into the tree. Built in the Python host (`mlmodels.replay`), the `load_wasm` files that `mlserver` carries, and the Go and Rust reference consumers. The Go (`wazero`) and Rust (`wasmi`) reference consumers provide them too. A test asserts the three hosts and `WASM_MATH_FUNCTIONS` list the same names and arities. To do: write the maths functions that matter in the module itself (`model.md` 4.5) where the host differences prove significant, which no builder does yet; move `homeassistant/weatherstation/battery` from `pyfunc` to `wasm` with `train_wasm_trace` and a golden tolerance on its arctan output; use the builder in `homeassistant/hotwater/temp`, the first project that needs it. The ABI (`model.md` 4.1) and the `wasmtime`, `wasmi` and `wazero` hosts are built, and `example/wasm/accumulate` and `example/wasm/saturate` are traced from Python functions (`model.md` 4.4).
 6. The serving runtime in `mlserver`: built. Open: the `ProjectRuntime` serves one row per request, as the signature has no batch dimension, and gRPC is untested.
 7. `register_project` logs a `pyfunc` project with `mlflow.pyfunc.log_model` (the project in `artifacts`, a column signature from `signature.json`) and every other flavour as plain artifacts. It refuses a `pyfunc` signature with a state vector, since MLflow's column signature has no vector. MLServer's MLflow runtime loading it is untested.
 8. Existing experiments keep their pre-proxy artifact location, the laptop path of the share, so their artifacts are not reachable
@@ -72,7 +72,7 @@ In order. Each item is done when its worked example (4) runs and passes.
 
 ## 3a. Built
 
-Built and tested as of 2026-11-04: the `mlserver` sync loop (poll, fall back, remember failures, unload, labels) with its own unit and system tests; the `mlflow` system test; `metadata.json`, the target, the inputs hash and the version-free project; `model.sh` (`unittest`, which skips a notebook whose inputs are unchanged, `systest`, `release`, `publish`, `status`); the reference consumers in Python, Go and Rust, one `run_` file per flavour and one entry point, `load`, built into one `Dockerfile` image and run for `static`, `wasm` and `onnx` in all three languages; `deploy.sh`; the fab hooks; the embed; and the `mlmodels` system test of the target.
+Built and tested as of 2026-11-04: the `mlserver` sync loop (poll, fall back, remember failures, unload, labels) with its own unit and system tests; the `mlflow` system test; `metadata.json`, the target, the inputs hash and the version-free project; `model.sh` (`unittest`, which skips a notebook whose inputs are unchanged, `systest`, `release`, `publish`, `status`); the reference consumers in Python, Go and Rust, one `load_` file per flavour and one entry point, `load`, built into one `Dockerfile` image and run for `static`, `wasm` and `onnx` in all three languages; `deploy.sh`; the fab hooks; the embed; and the `mlmodels` system test of the target.
 
 Decided on 2026-11-04 and not to be revisited without cause: no emulated second architecture (a second architecture is a `fab systest` on a host of that architecture); no static floor or second copy in a consumer; `mlmodels` uses the production `mlflow` and `mlserver` as `supervisor` uses `vernemq`; a breaking signature change is a new model name.
 
@@ -82,7 +82,7 @@ The required behaviour is `model.md` section 11 and is not restated here. This s
 
 ### Tree
 
-`src/rue/mlmodels/`: no `.group`; `run_deps.txt` listing `mlflow`, `mlserver` and `influxdb3`; `deploy.sh`; `Dockerfile` with `docker_deps_base.txt` and `docker_deps_build.txt` (the reference consumers' test image, never released); `CLAUDE.md`; `src/main/python/{workbench,consumer}` and `py_deps.txt`; `src/main/{go,rust}/consumer`; `src/main/notebook/<module>/<model>/<notebook>/` (notebook, `data/`, model file, `project/`, `metadata.json`); `src/build/resources/{model.sh,notebook.sh,doc,plans}`; `src/test/python/unit` and `src/test/python/system`. `mlflow` keeps its container files, `.env_all`, `.env_prod`, `generate.sh` and the nginx body-limit key, and has its own system test; the notebook libraries moved out of its image.
+`src/rue/mlmodels/`: no `.group`; `run_deps.txt` listing `mlflow`, `mlserver` and `influxdb3`; `deploy.sh`; `Dockerfile` with `docker_deps_base.txt` and `docker_deps_build.txt` (the reference consumers' test image, never released); `CLAUDE.md`; `src/main/python/{mlmodels,consumer}` and `py_deps.txt`; `src/main/{go,rust}/consumer`; `src/main/notebook/<module>/<model>/<notebook>/` (notebook, `data/`, model file, `project/`, `metadata.json`); `src/build/resources/{model.sh,notebook.sh,doc,plans}`; `src/test/python/unit` and `src/test/python/system`. `mlflow` keeps its container files, `.env_all`, `.env_prod`, `generate.sh` and the nginx body-limit key, and has its own system test; the notebook libraries moved out of its image.
 
 ### Verified, and decisions the tests produced
 
@@ -123,7 +123,7 @@ model and not a snippet, so it proves the spec by passing its own golden and rep
 | Embedded release | Any | Any released model | A consumer `generate.sh` | R7: embed from the committed `project/`, verify on every build, a stale consumer is selected for release |
 | Served sync | Any | Any released model | The `mlserver` sync loop | R7: poll the aliases, reload without a restart, fall back to the previous release |
 | Promotion | Any | Any model | The registry | R5: `preview` to `release` only after the gates and `fab release` |
-| Data splits and cache | Any | Any notebook | `query_influxdb3`, `data_path` | R6: one split per dataset, a re-query is a diff, `force` overwrites |
+| Data splits and cache | Any | Any notebook | `query_influxdb3`, `data_path` | R6: one split per dataset, a re-query is a diff, `live` recaptures |
 | Failure paths | Any | A deliberately bad project | Each consumer | R8, R9, R10: an invalid project is refused, a signature change fails the pull, every decision records the version and hash |
 
 ### 4.1 Candidate worked examples
@@ -185,7 +185,7 @@ Rust through `ort`.
 
 ## 7. Decisions and open decisions
 
-Decided on 2026-11-04: the `wasm` builder is Python in `workbench` (`wasm.py`, `train_wasm_build`), and emits a compiled module per model, with the fitted values built in as constants. It writes WebAssembly text from a small expression tree (`const`, `x`, `var`, arithmetic, `min`, `max`, `select` on a comparison) and compiles it with `wasmtime.wat2wasm`, so it adds no toolchain. Only `model.wasm` ships; consumers never build. A second project that needs the same builder is the point to move it to `_`, and logic too large for an expression tree is the point to write a Rust crate. Added on 2026-11-05: a notebook MAY write the formula once as a Python function and trace it (`train_wasm_trace`, operators on symbolic values, `select`, `clip`), the same function serving `curve_fit`; the tree helpers take numbers and arrays as well, with numpy giving the IEEE result a host gives. Subexpressions are not shared and floor division is not traced.
+Decided on 2026-11-04: the `wasm` builder is Python in `mlmodels` (`wasm.py`, `train_wasm_build`), and emits a compiled module per model, with the fitted values built in as constants. It writes WebAssembly text from a small expression tree (`const`, `x`, `var`, arithmetic, `min`, `max`, `select` on a comparison) and compiles it with `wasmtime.wat2wasm`, so it adds no toolchain. Only `model.wasm` ships; consumers never build. A second project that needs the same builder is the point to move it to `_`, and logic too large for an expression tree is the point to write a Rust crate. Added on 2026-11-05: a notebook MAY write the formula once as a Python function and trace it (`train_wasm_trace`, operators on symbolic values, `select`, `clip`), the same function serving `curve_fit`; the tree helpers take numbers and arrays as well, with numpy giving the IEEE result a host gives. Subexpressions are not shared and floor division is not traced.
 
 Open:
 

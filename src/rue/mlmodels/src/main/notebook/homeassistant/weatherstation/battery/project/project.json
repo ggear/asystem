@@ -2,19 +2,20 @@
   "schema": 2,
   "name": "homeassistant_weatherstation_battery",
   "flavour": "pyfunc",
+  "model_id": 1005,
   "model": "model.py",
   "runtime": {"python": []},
   "provenance": {
-    "source": "mlflow",
-    "trained_on": "weatherstation_console_battery_voltage, training split",
-    "inputs": ["homeassistant/weatherstation/battery/data/training/1/weatherstation_battery_voltage.csv"],
-    "notes": "arctan fit with a fixed width, a plateau shelf, steps of 5",
-    "implementation": "mlflow.pyfunc model.py, requires mlflow and pandas"
+    "source": "manual",
+    "trained_on": "runs [1000]",
+    "inputs": ["homeassistant/weatherstation/battery/data/1000/weatherstation_battery.csv"],
+    "notes": "Fixed-width arctan with plateau shelf, steps of 5",
+    "implementation": "mlflow.pyfunc model.py, model 1005"
   },
   "files": {
-    "signature.json": "7510ac2ee0ea0d88426d0cb460ffd87e0f9c08290e2e122558b6d731c723e1b6",
-    "golden.json": "b6d8f3feb65953bcb19d0b5859ee23f11e92e075316ac2b76fe2d6e91e584b0e",
-    "evaluation.json": "8abdcd923796d2f825bbbde8d82b27232bd36bd48941d155a87649c125190b18",
-    "model.py": "63877725f78ac47614a45263e80111eca7c1963c2a2d50ab2f97855bbcb476c8"
+    "signature.json": "219332f9e89ac98b79778078bfe0334b260882c4906661d2f656f569e2c77835",
+    "golden.json": "661fd7ee79cb730db78cb9c3bfbcb0b7f99d62103f051a839d0aa708dbeeedb5",
+    "evaluation.json": "8c367db329fa10791a233587db51650de60c2aa900c4eb7f9037e7ad1920d53f",
+    "model.py": "5552f329cd04004622f8996b8c1d81b4b2a62dd59c8ad11827295aded416576c"
   }
 }

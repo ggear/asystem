@@ -1,4 +1,5 @@
 import contextlib
+import glob
 import json
 import os
 import re
@@ -16,14 +17,14 @@ sys.path.insert(0, join(ROOT, "rue/mlmodels/src/main/python"))
 class ModelProjectTest(unittest.TestCase):
     def setUp(self):
         self.enterContext(contextlib.chdir(fresh_mlruns_dir()))
-        from workbench.model import build_signature, golden_document, golden_step, signature_input, signature_output, signature_state
+        from mlmodels._signature import build_signature, golden_document, golden_step, signature_input, signature_output
 
         self.project_dir = join(tempfile.mkdtemp(), "project")
         self.signature = build_signature(
             "demo_calc",
             [signature_input("demo_clock_seconds", "seconds", "Time of the call."), signature_input("demo_state_in", "state", "Carried state.", required=False, shape=[-1])],
             [signature_output("demo_limit_seconds", "seconds", "A limit."), signature_output("demo_state_out", "state", "Next state.", required=False, shape=[-1])],
-            state=[signature_state("last_seconds", "seconds", "The previous call.")],
+            state=[{"name": "last_seconds", "unit": "seconds", "description": "The previous call."}],
         )
         steps = [
             golden_step(self.signature, "s-0", {"demo_clock_seconds": 10.0}, {"demo_limit_seconds": 5}),
@@ -33,7 +34,7 @@ class ModelProjectTest(unittest.TestCase):
         self.golden = golden_document([("calls", steps)])
 
     def write(self, **overrides):
-        from workbench.model import write_project
+        from mlmodels._project import write_project
 
         arguments = {
             "project_dir": self.project_dir,
@@ -47,7 +48,7 @@ class ModelProjectTest(unittest.TestCase):
         return write_project(**{**arguments, **overrides})
 
     def rules(self, **overrides):
-        from workbench.model import lint_project
+        from mlmodels._lint_project import lint_project
 
         with contextlib.suppress(ValueError):
             self.write(**overrides)
@@ -61,7 +62,7 @@ class ModelProjectTest(unittest.TestCase):
         self.write()
         with open(join(self.project_dir, "golden.json"), "a") as golden:
             golden.write(" ")
-        from workbench.model import lint_project
+        from mlmodels._lint_project import lint_project
 
         self.assertEqual(["PJ003"], sorted({rule for rule, _ in lint_project(self.project_dir)}))
 
@@ -93,7 +94,7 @@ class ModelProjectTest(unittest.TestCase):
     def test_a_wasm_module_may_import_only_the_maths_functions(self):
         import wasmtime
 
-        from workbench.model import lint_project
+        from mlmodels._lint_project import lint_project
 
         def rules(wat):
             project_dir = demo_project("wasm")
@@ -125,7 +126,7 @@ class ModelProjectTest(unittest.TestCase):
     def test_a_wasm_runtime_must_equal_the_module_imports(self):
         import wasmtime
 
-        from workbench.model import lint_project
+        from mlmodels._lint_project import lint_project
 
         project_dir = demo_project("wasm")
         with open(join(project_dir, "model.wasm"), "wb") as model_file:
@@ -147,12 +148,13 @@ class ModelProjectTest(unittest.TestCase):
             manifest = json.load(manifest_file)
         with open(join(self.project_dir, "project.json"), "w") as manifest_file:
             json.dump({**manifest, "runtime": {"python": []}}, manifest_file)
-        from workbench.model import lint_project
+        from mlmodels._lint_project import lint_project
 
         self.assertEqual(["PJ017"], sorted({rule for rule, _ in lint_project(self.project_dir)}))
 
     def test_pyfunc_project_is_registered_as_a_pyfunc_model(self):
-        from workbench.model import build_signature, golden_document, golden_step, pull_model, register_project, signature_input, signature_output
+        from mlmodels._registry import register_project, registry_pull
+        from mlmodels._signature import build_signature, golden_document, golden_step, signature_input, signature_output
 
         signature = build_signature(
             "demo_calc",
@@ -195,13 +197,13 @@ class ModelProjectTest(unittest.TestCase):
         assert input_schema is not None
         columns = {column.name: column.required for column in input_schema.inputs}
         self.assertEqual({"demo_in_seconds": True, "demo_extra_seconds": False}, columns)
-        pulled = pull_model("demo_calc", "preview", join(root_dir, "pulled"), uri)
+        pulled = registry_pull("demo_calc", "preview", join(root_dir, "pulled"), uri)
         assert pulled is not None
         self.assertEqual("pyfunc", pulled["flavour"])
         self.assertEqual("1", str(version))
 
     def test_pyfunc_registration_refuses_a_state_vector_signature(self):
-        from workbench.model import register_project
+        from mlmodels._registry import register_project
 
         model_path = self.model_file()
         self.write(
@@ -232,7 +234,7 @@ class ModelProjectTest(unittest.TestCase):
         return path
 
     def evaluation(self, passing=True, output="demo_limit_seconds", checks=None):
-        from workbench.model import evaluate_check
+        from mlmodels._project import evaluation_build
 
         dataset_dir = join(tempfile.mkdtemp(), "2026-11-03_10-00-00")
         os.makedirs(dataset_dir)
@@ -240,23 +242,61 @@ class ModelProjectTest(unittest.TestCase):
         with open(dataset, "w") as dataset_file:
             dataset_file.write("a,b\n1,2\n")
         value = 0.5 if passing else 9.0
-        return evaluate_check(lambda: checks or [{"split": "backtest", "output": output, "name": "rmse", "value": value, "limit": 1.0, "direction": "max"}], {"backtest": [dataset]})
+        return evaluation_build(lambda: checks or [{"split": "backtest", "output": output, "name": "rmse", "value": value, "limit": 1.0, "direction": "max"}], {"backtest": [dataset]})
+
+    def test_folds_in_an_evaluation_are_well_formed_and_their_metrics_gated_by_mean_and_worst(self):
+        folds = [{"fold": index, "scheme": "forward", "gap": 1, "training": 10, "validation": 5, "rmse": 0.5 + index} for index in range(3)]
+        checks = [{"split": "backtest", "output": "demo_limit_seconds", "name": name, "value": 0.5, "limit": 1.0, "direction": "max"} for name in ("rmse", "rmse_mean", "rmse_worst")]
+        evaluation = self.evaluation(checks=checks)
+        self.assertNotIn("AC004", self.rules(evaluation={**evaluation, "folds": folds}))
+        self.assertIn("AC004", self.rules(evaluation={**evaluation, "folds": [{**folds[0], "fold": 1}, *folds[1:]]}))
+        self.assertIn("AC004", self.rules(evaluation={**evaluation, "folds": [{**folds[0], "scheme": "shuffled"}, *folds[1:]]}))
+        self.assertIn("AC004", self.rules(evaluation={**evaluation, "folds": [{**folds[0], "gap": -1}, *folds[1:]]}))
+        self.assertIn("AC004", self.rules(evaluation={**evaluation, "folds": [{**folds[0], "mae": 1.0}, *folds[1:]]}))
+        ungated = self.evaluation(checks=[checks[0], checks[1]])
+        self.assertIn("AC004", self.rules(evaluation={**ungated, "folds": folds}))
+        self.assertIn("AC004", self.rules(evaluation={**evaluation, "folds": []}))
+
+    def test_an_evaluation_says_whether_it_is_independent_and_a_validation_gate_needs_no_backtest(self):
+        import json as _json
+
+        from mlmodels._project import evaluation_build
+
+        dataset = join(tempfile.mkdtemp(), "1", "demo_calc_limit.csv")
+        os.makedirs(os.path.dirname(dataset))
+        with open(dataset, "w") as dataset_file:
+            dataset_file.write("a,b\n1,2\n")
+
+        def build(split, gate, datasets):
+            return evaluation_build(lambda: [{"split": split, "output": "demo_limit_seconds", "name": "rmse", "value": 0.5, "limit": 1.0, "direction": "max", "gate": gate}], datasets)
+
+        validation_only = build("validation", True, {"validation": [dataset]})
+        self.assertIs(False, validation_only["independent"])
+        self.assertNotIn("AC005", self.rules(evaluation=validation_only))
+        both = build("backtest", True, {"validation": [dataset], "backtest": [dataset]})
+        self.assertIs(True, both["independent"])
+        self.assertNotIn("AC005", self.rules(evaluation=both))
+        gated_validation = build("validation", True, {"validation": [dataset], "backtest": [dataset]})
+        self.assertIn("AC005", self.rules(evaluation=gated_validation))
+        self.assertNotIn("AC005", self.rules(evaluation=build("validation", False, {"validation": [dataset], "backtest": [dataset]})))
+        self.assertIn("AC005", self.rules(evaluation={**validation_only, "independent": True}))
+        self.assertIn("AC005", self.rules(evaluation=_json.loads(_json.dumps({k: v for k, v in both.items() if k != "independent"}))))
 
     def test_measure_matches_the_definitions(self):
-        from workbench.model import evaluate_measure
+        from mlmodels.workflow.evaluate import evaluate_metrics
 
-        measures = evaluate_measure([1.0, 2.0, 3.0, 4.0], [1.0, 2.0, 3.0, 6.0])
+        measures = evaluate_metrics([1.0, 2.0, 3.0, 4.0], [1.0, 2.0, 3.0, 6.0])
         self.assertAlmostEqual(1.0, measures["rmse"])
         self.assertAlmostEqual(0.5, measures["mae"])
         self.assertAlmostEqual(2.0, measures["max_abs_error"])
         self.assertAlmostEqual(0.5, measures["bias"])
         self.assertAlmostEqual(1.0 - 4.0 / 5.0, measures["r2"])
         self.assertAlmostEqual(8.0 / 70.0**0.5, measures["pearson_r"])
-        constant = evaluate_measure([2.0, 2.0], [2.0, 3.0])
+        constant = evaluate_metrics([2.0, 2.0], [2.0, 3.0])
         self.assertIsNone(constant["r2"])
         self.assertIsNone(constant["pearson_r"])
         with self.assertRaises(ValueError):
-            evaluate_measure([1.0], [1.0, 2.0])
+            evaluate_metrics([1.0], [1.0, 2.0])
 
     def test_outcome_and_budget_follow_the_value_limit_and_direction(self):
         evaluation = self.evaluation()
@@ -280,7 +320,7 @@ class ModelProjectTest(unittest.TestCase):
         base = {"split": "backtest", "output": "demo_limit_seconds", "name": "rmse", "value": 1.0, "limit": 1.0, "direction": "max"}
         for checks in ([], None, [{**base, "direction": "avg"}], [{**base, "limit": -1.0}], [{**base, "direction": "min", "limit": 0}], [{**base, "limit": "1"}]):
             with self.assertRaises(ValueError, msg=checks):
-                self.evaluation(checks=checks) if checks else __import__("workbench.model", fromlist=["x"]).evaluate_check(lambda checks=checks: checks, {})
+                self.evaluation(checks=checks) if checks else __import__("mlmodels._project", fromlist=["x"]).evaluation_build(lambda checks=checks: checks, {})
 
     def test_project_with_an_evaluation_has_no_findings(self):
         manifest = self.write(evaluation=self.evaluation())
@@ -321,7 +361,7 @@ class ModelProjectTest(unittest.TestCase):
 
     def test_registration_logs_metrics_datasets_and_the_verdict(self):
         import mlflow
-        from workbench.model import register_project
+        from mlmodels._registry import register_project
 
         self.write(evaluation=self.evaluation())
         uri = f"sqlite:///{join(tempfile.mkdtemp(), 'mlflow.db')}"
@@ -350,7 +390,8 @@ class ModelProjectTest(unittest.TestCase):
         }
 
     def test_release_check_needs_a_passing_evaluation(self):
-        from workbench.model import GateError, check_release
+        from mlmodels._errors import GateError
+        from mlmodels._registry import check_release
 
         self.write()
         self.assertEqual(["PM004"], [rule for rule, _ in check_release(self.project_dir)])
@@ -363,7 +404,7 @@ class ModelProjectTest(unittest.TestCase):
 
     def test_a_project_registers_again_after_its_experiment_and_model_were_deleted(self):
         import mlflow
-        from workbench.model import register_project
+        from mlmodels._registry import register_project
 
         self.write()
         uri = f"sqlite:///{join(tempfile.mkdtemp(), 'mlflow.db')}"
@@ -379,7 +420,7 @@ class ModelProjectTest(unittest.TestCase):
 
     def test_registering_an_unchanged_project_creates_nothing_new(self):
         import mlflow
-        from workbench.model import register_project
+        from mlmodels._registry import register_project
 
         self.write()
         uri = f"sqlite:///{join(tempfile.mkdtemp(), 'mlflow.db')}"
@@ -393,11 +434,11 @@ class ModelProjectTest(unittest.TestCase):
         self.assertNotEqual(first, register_project(self.project_dir, "demo_calc", uri))
 
     def test_a_measured_check_needs_a_recorded_dataset(self):
-        from workbench.model import evaluate_check
+        from mlmodels._project import evaluation_build
 
-        measured = evaluate_check(lambda: [{"split": "backtest", "output": "demo_limit_seconds", "name": "rmse", "value": 0.1, "limit": 1.0, "direction": "max"}], {"backtest": []})
+        measured = evaluation_build(lambda: [{"split": "backtest", "output": "demo_limit_seconds", "name": "rmse", "value": 0.1, "limit": 1.0, "direction": "max"}], {"backtest": []})
         self.assertIn("AC003", self.rules(evaluation=measured))
-        unmeasured = evaluate_check(lambda: [{"split": "backtest", "output": "demo_limit_seconds", "name": "rmse", "value": None, "limit": 1.0, "direction": "max"}], {"backtest": []})
+        unmeasured = evaluation_build(lambda: [{"split": "backtest", "output": "demo_limit_seconds", "name": "rmse", "value": None, "limit": 1.0, "direction": "max"}], {"backtest": []})
         self.assertNotIn("AC003", self.rules(evaluation=unmeasured))
 
     def test_static_flavour_refuses_a_model_file(self):
@@ -435,7 +476,8 @@ class ModelProjectTest(unittest.TestCase):
         self.assertEqual(["PJ012"], self.rules())
 
     def test_package_project_builds_golden_from_samples(self):
-        from workbench.model import lint_project, package_project
+        from mlmodels._lint_project import lint_project
+        from mlmodels._project import package_project
 
         rows = [
             {"demo_clock_seconds": 10.0, "expect": "ok"},
@@ -447,7 +489,7 @@ class ModelProjectTest(unittest.TestCase):
         self.assertEqual([], lint_project(self.project_dir))
 
     def test_render_rust_names_every_tensor_with_optional_fields(self):
-        from workbench.model import render_rust
+        from mlmodels._signature import render_rust
 
         rust = render_rust(self.signature)
         self.assertIn("pub demo_clock_seconds: f64,", rust)
@@ -455,7 +497,7 @@ class ModelProjectTest(unittest.TestCase):
         self.assertIn('pub const REQUIRED_OUTPUT_NAMES: &[&str] = &["demo_limit_seconds"];', rust)
 
     def test_registered_name_and_check_name(self):
-        from workbench.model import check_name, registered_name
+        from mlmodels._signature import check_name, registered_name
 
         self.assertEqual("rackmains_ups_battery", registered_name("rackmains", "ups", "battery"))
         self.assertEqual("example_static_constant", registered_name("example", "static", "constant"))
@@ -465,19 +507,19 @@ class ModelProjectTest(unittest.TestCase):
 
 class ReplayTest(unittest.TestCase):
     def test_each_flavour_replays_its_golden_exactly(self):
-        from workbench.replay import replay_project
+        from mlmodels._replay import replay_project
 
         for flavour in ("pyfunc", "wasm", "onnx"):
             self.assertEqual([], replay_project(demo_project(flavour)), flavour)
 
     def test_a_response_that_differs_from_the_golden_is_a_finding(self):
-        from workbench.replay import replay_project
+        from mlmodels._replay import replay_project
 
         for flavour in ("pyfunc", "wasm", "onnx"):
             self.assertEqual(["RP003"], [rule for rule, _ in replay_project(demo_project(flavour, golden_out=3.5))], flavour)
 
     def test_a_stated_tolerance_accepts_a_small_difference_and_rejects_a_large_one(self):
-        from workbench.replay import replay_project
+        from mlmodels._replay import replay_project
 
         bounds = {"demo_out": {"absolute": 1e-3}}
         for flavour in ("pyfunc", "wasm", "onnx"):
@@ -486,7 +528,7 @@ class ReplayTest(unittest.TestCase):
             self.assertEqual(["RP003"], [rule for rule, _ in replay_project(demo_project(flavour, golden_out=3.0000001))], flavour)
 
     def test_a_relative_tolerance_scales_with_the_expected_value(self):
-        from workbench.replay import replay_project
+        from mlmodels._replay import replay_project
 
         self.assertEqual([], replay_project(demo_project("pyfunc", golden_out=3.003, tolerance={"demo_out": {"relative": 0.002}})))
         self.assertEqual(["RP003"], [rule for rule, _ in replay_project(demo_project("pyfunc", golden_out=3.01, tolerance={"demo_out": {"relative": 0.002}}))])
@@ -512,7 +554,7 @@ class MetadataTest(unittest.TestCase):
             json.dump({"cells": [{"cell_type": "code", "source": code}, {"cell_type": "markdown", "source": markdown}]}, notebook_file)
 
     def metadata(self, **changes):
-        from workbench.metadata import METADATA_SCHEMA, content_sha256
+        from mlmodels._metadata import METADATA_SCHEMA, content_sha256
 
         return {
             "schema": METADATA_SCHEMA,
@@ -525,14 +567,14 @@ class MetadataTest(unittest.TestCase):
         }
 
     def place(self, metadata):
-        from workbench.metadata import PROJECT_DIR, write_metadata
+        from mlmodels._metadata import PROJECT_DIR, write_metadata
 
         shutil.copytree(self.project_dir, join(self.workspace, PROJECT_DIR), dirs_exist_ok=True)
         write_metadata(self.workspace, metadata)
         self.write_requirements(metadata)
 
     def write_requirements(self, metadata):
-        from workbench.metadata import REQUIREMENT_FILES, derived_requirements, read_runtime
+        from mlmodels._metadata import REQUIREMENT_FILES, derived_requirements, read_runtime
 
         derived = derived_requirements(read_runtime(self.workspace), "wasm", metadata["target"])
         for language, file_name in REQUIREMENT_FILES.items():
@@ -544,7 +586,7 @@ class MetadataTest(unittest.TestCase):
                 os.remove(path)
 
     def rules(self):
-        from workbench.metadata import lint_metadata
+        from mlmodels._metadata import lint_metadata
 
         return sorted({rule for rule, _ in lint_metadata(self.workspace, "wasm")})
 
@@ -557,7 +599,7 @@ class MetadataTest(unittest.TestCase):
         self.place(self.metadata())
         shutil.rmtree(join(self.workspace, "project"))
         self.assertEqual(["MD003"], self.rules())
-        from workbench.metadata import METADATA_SCHEMA, write_metadata
+        from mlmodels._metadata import METADATA_SCHEMA, write_metadata
 
         write_metadata(self.workspace, {"schema": METADATA_SCHEMA})
         self.assertEqual(["MD002"], self.rules())
@@ -565,7 +607,7 @@ class MetadataTest(unittest.TestCase):
         self.assertEqual(["MD001"], self.rules())
 
     def test_a_python_dependency_with_no_pin_is_a_finding(self):
-        from workbench.metadata import lint_metadata
+        from mlmodels._metadata import lint_metadata
 
         with open(join(self.project_dir, "project.json")) as manifest_file:
             manifest = json.load(manifest_file)
@@ -593,7 +635,7 @@ class MetadataTest(unittest.TestCase):
         self.assertEqual(["MD003"], self.rules())
 
     def test_load_signature_and_signature_names_read_the_workspace_signature(self):
-        from workbench.project import load_signature, signature_names
+        from mlmodels._workspace import load_signature, signature_names
 
         self.place(self.metadata())
         shutil.copy(join(self.workspace, "project", "signature.json"), join(self.workspace, "signature.json"))
@@ -604,7 +646,7 @@ class MetadataTest(unittest.TestCase):
         self.assertTrue(inputs and outputs)
 
     def test_a_requirements_file_that_differs_from_the_derived_names_is_a_finding(self):
-        from workbench.metadata import LOCAL_TARGET, REQUIREMENT_FILES
+        from mlmodels._metadata import LOCAL_TARGET, REQUIREMENT_FILES
 
         self.place(self.metadata(target={"kind": "served"}))
         self.assertEqual([], self.rules())
@@ -621,7 +663,7 @@ class MetadataTest(unittest.TestCase):
         self.assertEqual(["MD005"], self.rules())
 
     def test_requirements_report_an_unpinned_python_name_and_what_an_embedded_host_lacks(self):
-        from workbench.metadata import requirements
+        from mlmodels._metadata import requirements
 
         with open(join(self.project_dir, "project.json")) as manifest_file:
             manifest = json.load(manifest_file)
@@ -655,7 +697,7 @@ class MetadataTest(unittest.TestCase):
         import contextlib
         import io
 
-        from workbench.model import main
+        from mlmodels._command import main
 
         pins_path = join(self.workspace, "py_deps.txt")
         with open(pins_path, "w") as pins_file:
@@ -668,7 +710,7 @@ class MetadataTest(unittest.TestCase):
             return output.getvalue().strip()
 
         self.assertEqual("unpackaged", state())
-        self.write_notebook(["manifest = package_project(project_dir)\n"], ["# a heading\n"])
+        self.write_notebook(["manifest = package_model(ws, 1000, golden)\n"], ["# a heading\n"])
         self.assertEqual("changed", state())
 
     def test_a_project_that_differs_from_its_hash_is_a_finding(self):
@@ -699,7 +741,7 @@ class MetadataTest(unittest.TestCase):
         self.assertEqual(["MD002"], self.rules())
 
     def test_the_inputs_hash_moves_with_code_data_and_pins_but_not_with_markdown(self):
-        from workbench.metadata import inputs_sha256
+        from mlmodels._metadata import inputs_sha256
 
         pins = {"numpy": "2.0"}
         before = inputs_sha256(self.workspace, pins)
@@ -713,8 +755,23 @@ class MetadataTest(unittest.TestCase):
             data_file.write("2\n")
         self.assertNotEqual(before, inputs_sha256(self.workspace, pins))
 
+    def test_the_inputs_hash_ignores_a_live_run_and_follows_a_frozen_one(self):
+        from mlmodels._metadata import inputs_sha256
+
+        directory = join(self.workspace, "data", "1000")
+        os.makedirs(directory)
+        for live in (True, False):
+            with open(join(directory, "a.json"), "w") as sidecar_file:
+                json.dump({"live": live}, sidecar_file)
+            with open(join(directory, "a.csv"), "w") as data_file:
+                data_file.write("x\n1\n")
+            before = inputs_sha256(self.workspace, {})
+            with open(join(directory, "a.csv"), "a") as data_file:
+                data_file.write("2\n")
+            self.assertEqual(live, before == inputs_sha256(self.workspace, {}))
+
     def test_the_pins_are_read_for_the_named_runtime_packages_only(self):
-        from workbench.metadata import read_pins
+        from mlmodels._metadata import read_pins
 
         path = join(tempfile.mkdtemp(), "py_deps_prod.txt")
         with open(path, "w") as pins_file:
@@ -725,7 +782,7 @@ class MetadataTest(unittest.TestCase):
 class ReleaseTest(unittest.TestCase):
     def setUp(self):
         self.enterContext(contextlib.chdir(fresh_mlruns_dir()))
-        from workbench.release import NOTEBOOK_ROOT
+        from mlmodels._release import NOTEBOOK_ROOT
 
         self.TARGET = {"kind": "served"}
 
@@ -743,7 +800,7 @@ class ReleaseTest(unittest.TestCase):
         shutil.copytree(demo_project("wasm", golden_out=3.5), self.slot)
 
     def record(self, project_dir=None, target=None):
-        from workbench.metadata import record_project
+        from mlmodels._metadata import record_project
 
         return record_project(self.workspace, project_dir or demo_project("wasm"), self.TARGET if target is None else target, self.pins)
 
@@ -754,12 +811,12 @@ class ReleaseTest(unittest.TestCase):
         return path
 
     def release(self, version="10.200.1", **options):
-        from workbench.release import release_workspaces
+        from mlmodels._release import release_workspaces
 
         return release_workspaces(self.source, version, **options)
 
     def test_a_project_is_recorded_and_a_workspace_with_no_target_is_not(self):
-        from workbench.metadata import METADATA_FILE
+        from mlmodels._metadata import METADATA_FILE
 
         recorded = self.record()
         assert recorded is not None
@@ -773,7 +830,7 @@ class ReleaseTest(unittest.TestCase):
         import contextlib
         import io
 
-        from workbench.stage import setup_workspace
+        from mlmodels.workflow.setup import setup_workspace
 
         self.record(target={"kind": "embedded", "language": "go"})
         shutil.copy(join(self.workspace, "project", "signature.json"), join(self.workspace, "signature.json"))
@@ -781,16 +838,16 @@ class ReleaseTest(unittest.TestCase):
         shutil.copytree(self.workspace, join(notebook_dir, "demo", "calc", "run"))
         output = io.StringIO()
         with contextlib.redirect_stdout(output):
-            ws = setup_workspace("demo/calc/run", {"kind": "embedded", "language": "go"}, notebook_dir)
+            ws = setup_workspace("demo/calc/run", notebook_dir)
         printed = output.getvalue()
         self.assertTrue(ws.env["MLFLOW_TRACKING_URI"].startswith("http"))
         self.assertEqual("demo_calc_run", ws.model_name)
-        for expected in ("flavour   wasm", "target    embedded go", "runtime   none", "inputs    ", "outputs   "):
+        for expected in ("Target    embedded go", "Runtime   none", "Inputs    ", "Outputs   "):
             self.assertIn(expected, printed)
 
     def test_every_json_document_starts_with_its_schema(self):
-        from workbench.metadata import METADATA_FILE
-        from workbench.model import lint_project
+        from mlmodels._lint_project import lint_project
+        from mlmodels._metadata import METADATA_FILE
 
         self.record()
         for path in (join(self.workspace, METADATA_FILE), *(join(self.workspace, "project", name) for name in ("project.json", "signature.json", "golden.json"))):
@@ -804,7 +861,7 @@ class ReleaseTest(unittest.TestCase):
         self.assertIn("PJ001", {rule for rule, _ in lint_project(join(self.workspace, "project"))})
 
     def test_a_workspace_whose_project_is_not_checked_out_cannot_be_released(self):
-        from workbench.errors import GateError
+        from mlmodels._errors import GateError
 
         self.record()
         shutil.rmtree(join(self.workspace, "project"))
@@ -812,7 +869,7 @@ class ReleaseTest(unittest.TestCase):
             self.release()
 
     def test_a_local_project_is_recorded_and_never_released(self):
-        from workbench.metadata import LOCAL_TARGET, lint_metadata, read_metadata
+        from mlmodels._metadata import LOCAL_TARGET, lint_metadata, read_metadata
 
         recorded = self.record(target=LOCAL_TARGET)
         assert recorded is not None
@@ -821,22 +878,20 @@ class ReleaseTest(unittest.TestCase):
         self.assertEqual([], self.release())
         self.assertIsNone(read_metadata(self.workspace)["release"])
 
-    def test_a_recorded_project_writes_the_requirements_of_its_target_and_removes_the_rest(self):
-        from workbench.metadata import LOCAL_TARGET, REQUIREMENT_FILES
+    def test_a_recorded_project_writes_the_python_requirements_of_its_target_and_removes_them_for_another_language(self):
+        from mlmodels._metadata import LOCAL_TARGET, REQUIREMENT_FILES
 
         self.record(target={"kind": "served"})
         with open(join(self.workspace, REQUIREMENT_FILES["python"])) as python_file:
             self.assertEqual("wasmtime\n", python_file.read())
         self.record(target={"kind": "embedded", "language": "go"})
-        with open(join(self.workspace, REQUIREMENT_FILES["go"])) as go_file:
-            self.assertEqual("wazero\n", go_file.read())
         self.assertFalse(os.path.exists(join(self.workspace, REQUIREMENT_FILES["python"])))
-        self.assertFalse(os.path.exists(join(self.workspace, REQUIREMENT_FILES["rust"])))
+        self.record(target={"kind": "served"})
         self.record(target=LOCAL_TARGET)
         self.assertEqual([], [name for name in REQUIREMENT_FILES.values() if os.path.exists(join(self.workspace, name))])
 
     def test_a_runtime_with_no_pin_is_refused_before_the_workspace_changes(self):
-        from workbench.errors import GateError
+        from mlmodels._errors import GateError
 
         project_dir = demo_project("wasm")
         with open(join(project_dir, "project.json")) as manifest_file:
@@ -851,7 +906,7 @@ class ReleaseTest(unittest.TestCase):
     def test_the_image_pins_are_the_consumer_base_plus_the_declared_runtime_and_an_unpinned_one_is_refused(self):
         import io
 
-        from workbench.model import main
+        from mlmodels._command import main
 
         self.record()
         manifest_path = join(self.workspace, "project", "project.json")
@@ -874,7 +929,7 @@ class ReleaseTest(unittest.TestCase):
         self.assertEqual("", printed.getvalue())
 
     def test_a_release_keeps_the_version_while_content_is_unchanged(self):
-        from workbench.metadata import read_metadata
+        from mlmodels._metadata import read_metadata
 
         self.record()
         self.assertEqual(["demo_replay_double"], self.release())
@@ -886,7 +941,7 @@ class ReleaseTest(unittest.TestCase):
         self.assertIsNone(read_metadata(self.workspace)["release"])
 
     def test_an_unreleased_project_carries_the_snapshot_until_its_content_changes_or_it_is_released(self):
-        from workbench.metadata import read_metadata, record_project
+        from mlmodels._metadata import read_metadata, record_project
 
         def record(project_dir, version):
             recorded = record_project(self.workspace, project_dir, self.TARGET, self.pins, self.version_file(version))
@@ -904,18 +959,18 @@ class ReleaseTest(unittest.TestCase):
         self.assertEqual("10.200.1", record(demo_project("wasm"), "10.200.1955-SNAPSHOT")["version"])
 
     def test_the_fixtures_module_is_never_released(self):
-        from workbench.release import NOTEBOOK_ROOT
+        from mlmodels._release import NOTEBOOK_ROOT
 
         fixture = join(self.source, NOTEBOOK_ROOT, "example", "replay", "double")
         os.makedirs(join(fixture, "data"))
         shutil.copy(join(self.workspace, "notebook.ipynb"), fixture)
-        from workbench.metadata import record_project
+        from mlmodels._metadata import record_project
 
         record_project(fixture, demo_project("wasm"), self.TARGET, self.pins)
         self.assertEqual([], self.release())
 
     def test_a_consumer_embeds_the_released_project_and_is_stale_until_it_does(self):
-        from workbench.release import embed_consumer, slot_findings, stale_consumers
+        from mlmodels._release import embed_consumer, slot_findings, stale_consumers
 
         self.record()
         self.assertEqual("none", embed_consumer(self.consumer, self.source, "demo_replay_double"))
@@ -930,7 +985,7 @@ class ReleaseTest(unittest.TestCase):
         self.assertEqual("embedded", embed_consumer(self.consumer, self.source, "demo_replay_double"))
 
     def test_inputs_change_with_the_pins(self):
-        from workbench.metadata import inputs_changed
+        from mlmodels._metadata import inputs_changed
 
         self.assertTrue(inputs_changed(self.workspace, self.pins))
         self.record()
@@ -940,13 +995,13 @@ class ReleaseTest(unittest.TestCase):
         self.assertTrue(inputs_changed(self.workspace, self.pins))
 
     def test_an_embedded_only_project_is_not_registered(self):
-        from workbench.model import register_preview
+        from mlmodels._registry import register_preview
 
         self.assertIsNone(register_preview(demo_project("wasm"), "demo_replay_double", "http://127.0.0.1:9", {"kind": "embedded", "language": "rust"}))
 
     def test_the_signature_may_grow_but_not_change_what_was_released(self):
-        from workbench.errors import GateError
-        from workbench.metadata import read_metadata, signature_findings
+        from mlmodels._errors import GateError
+        from mlmodels._metadata import read_metadata, signature_findings
 
         self.record()
         self.release()
@@ -978,12 +1033,12 @@ class ReleaseTest(unittest.TestCase):
 
     def test_publishing_registers_by_content_sets_the_tags_moves_release_and_clears_preview(self):
         from mlflow import MlflowClient
-        from workbench.release import clear_preview, publish_workspace, wait_served
+        from mlmodels._release import clear_preview, publish_workspace, wait_served
 
         self.record()
         self.release()
         uri = f"sqlite:///{join(tempfile.mkdtemp(), 'mlflow.db')}"
-        from workbench.model import register_project
+        from mlmodels._registry import register_project
 
         previewed = register_project(join(self.workspace, "project"), "demo_replay_double", uri)
         self.assertEqual("published", publish_workspace("demo_replay_double", self.workspace, uri))
@@ -1000,7 +1055,7 @@ class ReleaseTest(unittest.TestCase):
         self.assertEqual("unreachable", wait_served("http://127.0.0.1:9", "demo_replay_double", "10.200.1", timeout=1))
 
     def test_status_names_a_stale_consumer_and_nothing_else_when_everything_matches(self):
-        from workbench.release import embed_consumer, status_lines
+        from mlmodels._release import embed_consumer, status_lines
 
         self.record()
         self.release()
@@ -1011,7 +1066,7 @@ class ReleaseTest(unittest.TestCase):
 
 class DocumentTest(unittest.TestCase):
     def test_a_document_keeps_its_order_and_puts_scalar_lists_and_flat_objects_on_one_line(self):
-        from workbench.document import write_json
+        from mlmodels._document import write_json
 
         document = {
             "schema": 2,
@@ -1036,38 +1091,9 @@ class DocumentTest(unittest.TestCase):
             self.assertGreater(len(document_file.read().splitlines()), 40)
 
 
-class PlotTest(unittest.TestCase):
-    def test_curves_are_drawn_with_their_labels_and_the_band(self):
-        import matplotlib
-
-        matplotlib.use("Agg")
-        import matplotlib.pyplot as plt
-
-        from workbench.plot import evaluate_curves
-
-        evaluate_curves([("first", [1, 2], [3, 4], {"color": "black"}), ("second", [1, 2], [4, 3], {"linestyle": "--"})], "x", "y", band=(1.2, 1.8), band_label="band")
-        legend = plt.gca().get_legend()
-        assert legend is not None
-        self.assertEqual(["band", "first", "second"], [text.get_text() for text in legend.get_texts()])
-
-    def test_an_error_plot_reports_the_verdict_against_the_limit(self):
-        import matplotlib
-
-        matplotlib.use("Agg")
-        import polars
-
-        from workbench.plot import evaluate_error_plot
-
-        data = polars.DataFrame({"x": [1.0, 1.0, 2.0, 3.0], "error": [1.0, 1.0, -2.0, 6.0]})
-        summary = evaluate_error_plot("demo", data, "x", "error", 5)
-        self.assertEqual((True, 75.0), (summary["passed"], summary["within_pct"]))
-        self.assertAlmostEqual(1.5, summary["bias"])
-        self.assertFalse(evaluate_error_plot("demo", data, "x", "error", 2)["passed"])
-
-
 class RegistryToolsTest(unittest.TestCase):
     def test_the_registry_address_must_be_the_proxy_name_and_not_a_published_port(self):
-        from workbench.model import registry_address
+        from mlmodels._registry import registry_address
 
         self.assertEqual("https://mlflow.proxy.example.com", registry_address("https://mlflow.proxy.example.com"))
         for uri in ("http://macmini-may.local:32413", "", None):
@@ -1075,7 +1101,7 @@ class RegistryToolsTest(unittest.TestCase):
                 registry_address(uri)
 
     def test_a_finding_maps_to_one_hint_and_a_repeat_is_not_repeated(self):
-        from workbench.model import fix_hints
+        from mlmodels._lint_project import fix_hints
 
         self.assertEqual(1, len(fix_hints(["PJ003", "PJ013", "PJ015"])))
         self.assertEqual(2, len(fix_hints(["PJ003", "CP004"])))
@@ -1092,20 +1118,20 @@ class NotebookLintTest(unittest.TestCase):
     def notebook(self, **changes):
         import json
 
-        from workbench.notebook import _section_heading
+        from mlmodels._lint_notebook import stage_heading
 
         title = "# demo / calc / run\n\n**Intent**\n- Output a calculation\n\n**Data**\n- `golden`: the samples"
         cells = [
             {"cell_type": "markdown", "metadata": {}, "source": title},
-            {"cell_type": "markdown", "metadata": {}, "source": _section_heading("Setup")},
+            {"cell_type": "markdown", "metadata": {}, "source": stage_heading("Setup")},
             {
                 "cell_type": "code",
                 "metadata": {},
                 "execution_count": None,
                 "outputs": [],
-                "source": 'from workbench import setup_workspace\n\nws = setup_workspace("demo/calc/run", {"kind": "served"})\n',
+                "source": 'from mlmodels import setup_workspace\n\nws = setup_workspace("demo/calc/run", {"kind": "served"})\n',
             },
-            {"cell_type": "markdown", "metadata": {}, "source": _section_heading("Package")},
+            {"cell_type": "markdown", "metadata": {}, "source": stage_heading("Package")},
         ]
         notebook = {"cells": cells, "metadata": {}, "nbformat": 4, "nbformat_minor": 5}
         notebook.update(changes)
@@ -1114,7 +1140,7 @@ class NotebookLintTest(unittest.TestCase):
         return notebook
 
     def rules(self):
-        from workbench.notebook import lint_notebook
+        from mlmodels._lint_notebook import lint_notebook
 
         return sorted({rule for rule, _, _ in lint_notebook(self.path)})
 
@@ -1123,7 +1149,7 @@ class NotebookLintTest(unittest.TestCase):
         self.assertEqual([], self.rules())
 
     def test_outputs_are_found_and_stripped(self):
-        from workbench.notebook import fix_notebook
+        from mlmodels._lint_notebook import fix_notebook
 
         notebook = self.notebook()
         notebook["cells"][2]["outputs"] = [{"output_type": "stream"}]
@@ -1178,7 +1204,7 @@ class NotebookLintTest(unittest.TestCase):
         self.assertEqual(["NB004"], self.rules())
 
     def test_an_intent_must_name_every_output_of_the_signature_and_nothing_it_lacks(self):
-        from workbench.model import build_signature, signature_input, signature_output
+        from mlmodels._signature import build_signature, signature_input, signature_output
 
         signature = build_signature(
             "demo_calc_run",
@@ -1201,13 +1227,13 @@ class NotebookLintTest(unittest.TestCase):
             self.notebook(cells=notebook["cells"])
             self.assertEqual(expected, self.rules(), intent)
 
-    def test_section_without_stage_is_found(self):
+    def test_a_stage_heading_with_extra_text_is_found(self):
         notebook = self.notebook()
         notebook["cells"][3]["source"] = "## Package\n\n- **Intent:** Do it."
         self.notebook(cells=notebook["cells"])
         self.assertEqual(["NB006"], self.rules())
 
-    def test_sections_out_of_order_are_found(self):
+    def test_stages_out_of_order_are_found(self):
         notebook = self.notebook()
         notebook["cells"][1], notebook["cells"][3] = notebook["cells"][3], notebook["cells"][1]
         self.notebook(cells=notebook["cells"])
@@ -1221,7 +1247,7 @@ class NotebookLintTest(unittest.TestCase):
 
     def test_wrong_model_name_is_found(self):
         notebook = self.notebook()
-        notebook["cells"][2]["source"] = 'from workbench import setup_workspace\n\nws = setup_workspace("demo/calc", {"kind": "served"})\n'
+        notebook["cells"][2]["source"] = 'from mlmodels import setup_workspace\n\nws = setup_workspace("demo/calc", {"kind": "served"})\n'
         self.notebook(cells=notebook["cells"])
         self.assertEqual(["NB008"], self.rules())
 
@@ -1242,12 +1268,42 @@ class NotebookLintTest(unittest.TestCase):
 
     def test_star_import_and_sys_path_are_found(self):
         notebook = self.notebook()
-        notebook["cells"][2]["source"] += "from workbench.data import *\nimport sys\nsys.path.append('x')\n"
+        notebook["cells"][2]["source"] += "from mlmodels.data import *\nimport sys\nsys.path.append('x')\n"
         self.notebook(cells=notebook["cells"])
         self.assertEqual(["NB011", "NB012"], self.rules())
 
+    def test_a_rename_is_found_and_an_added_column_is_not(self):
+        notebook = self.notebook()
+        notebook["cells"][2]["source"] += "frame = frame.with_columns(x=1)\n"
+        self.notebook(cells=notebook["cells"])
+        self.assertEqual([], self.rules())
+        notebook["cells"][2]["source"] += "frame = frame.rename({'a': 'b'})\n"
+        self.notebook(cells=notebook["cells"])
+        self.assertEqual(["NB017"], self.rules())
+
+    def test_a_name_bound_in_one_stage_is_not_read_by_a_later_one(self):
+        notebook = self.notebook()
+        notebook["cells"][2]["source"] += "gain = 2.0\n\n\ndef scale(value):\n    return value * 3\n"
+        self.notebook(cells=notebook["cells"])
+        self.assertEqual([], self.rules())
+        notebook["cells"].append({"cell_type": "code", "id": "later", "metadata": {}, "outputs": [], "execution_count": None, "source": "print(gain, scale(1))\n"})
+        self.notebook(cells=notebook["cells"])
+        self.assertEqual(["NB018"], self.rules())
+        notebook["cells"][-1]["source"] = "gain = ws.params['gain']\nprint(gain, scale(1))\n"
+        self.notebook(cells=notebook["cells"])
+        self.assertEqual([], self.rules())
+
+    def test_a_plotting_cell_must_collapse_its_output(self):
+        notebook = self.notebook()
+        notebook["cells"][2]["source"] += "prepare_plot(ws)\n"
+        self.notebook(cells=notebook["cells"])
+        self.assertEqual(["NB016"], self.rules())
+        notebook["cells"][2]["metadata"] = {"jupyter": {"outputs_hidden": True}}
+        self.notebook(cells=notebook["cells"])
+        self.assertEqual([], self.rules())
+
     def test_command_line_accepts_new_and_lint_and_the_old_lint_form(self):
-        from workbench.notebook import main
+        from mlmodels._command import notebook_command as main
 
         root = tempfile.mkdtemp()
         self.assertEqual(0, main(["new", "egcli", "calc", "run", "static", "--root", root]))
@@ -1257,8 +1313,9 @@ class NotebookLintTest(unittest.TestCase):
         self.assertEqual(1, main(["new", "egcli", "calc", "run", "static", "--root", root]))
 
     def test_scaffold_passes_every_check_and_refuses_to_overwrite(self):
-        from workbench.notebook import lint_notebook, scaffold_notebook
-        from workbench.workspace import lint_workspace
+        from mlmodels._lint_notebook import lint_notebook
+        from mlmodels._lint_workspace import lint_workspace
+        from mlmodels._scaffold import scaffold_notebook
 
         root = tempfile.mkdtemp()
         for flavour in ("static", "wasm"):
@@ -1285,30 +1342,37 @@ class WorkspaceLintTest(unittest.TestCase):
 
     def setUp(self):
         self.notebook_dir = join(tempfile.mkdtemp(), "demo", "calc", "run")
-        os.makedirs(join(self.notebook_dir, "data/training/1"))
+        os.makedirs(join(self.notebook_dir, "data"))
         open(join(self.notebook_dir, "notebook.ipynb"), "w").close()
-        open(join(self.notebook_dir, "data/training/.gitkeep"), "w").close()
-        self.write_run("training", 1, self.NAME)
+        open(join(self.notebook_dir, "data/.gitkeep"), "w").close()
+        self.write_run(1000, self.NAME)
 
-    def write_run(self, split, run, name):
+    def write_run(self, run, name):
         import hashlib
 
-        directory = join(self.notebook_dir, "data", split, str(run))
+        directory = join(self.notebook_dir, "data", str(run))
         os.makedirs(directory, exist_ok=True)
         with open(join(directory, f"{name}.csv"), "w") as data_file:
             data_file.write("a\n1\n")
         with open(join(directory, f"{name}.csv"), "rb") as data_file:
             digest = hashlib.sha256(data_file.read()).hexdigest()
         with open(join(directory, f"{name}.json"), "w") as sidecar_file:
-            json.dump({"schema": 1, "split": split, "run": run, "name": name, "sha256": digest}, sidecar_file)
+            json.dump({"schema": 2, "run": run, "label": "demo", "live": False, "name": name, "sha256": digest}, sidecar_file)
 
     def rules(self):
-        from workbench.workspace import lint_workspace
+        from mlmodels._lint_workspace import lint_workspace
 
         return sorted({rule for rule, _ in lint_workspace(self.notebook_dir)})
 
     def test_valid_workspace_has_no_findings(self):
         self.assertEqual([], self.rules())
+
+    def test_the_single_command_reaches_the_workspace_lint(self):
+        from mlmodels.__main__ import main
+
+        self.assertEqual(0, main(["workspace", self.notebook_dir]))
+        open(join(self.notebook_dir, "notes.txt"), "w").close()
+        self.assertEqual(1, main(["workspace", self.notebook_dir]))
 
     def test_a_plan_file_is_a_finding_since_the_notebook_header_holds_the_plan(self):
         open(join(self.notebook_dir, "plan.md"), "w").close()
@@ -1319,36 +1383,87 @@ class WorkspaceLintTest(unittest.TestCase):
         open(join(self.notebook_dir, "other.ipynb"), "w").close()
         self.assertEqual(["WS002", "WS003"], self.rules())
 
-    def test_two_model_files_are_found(self):
-        open(join(self.notebook_dir, "model.wasm"), "w").close()
-        self.assertEqual([], self.rules())
-        open(join(self.notebook_dir, "model.onnx"), "w").close()
-        self.assertEqual(["WS007"], self.rules())
+    def test_a_model_directory_needs_its_document_and_the_file_the_document_hashes(self):
+        import hashlib
 
-    def test_unknown_label_is_found(self):
-        os.makedirs(join(self.notebook_dir, "data/testing"))
-        self.assertEqual(["WS004"], self.rules())
+        directory = join(self.notebook_dir, "model/1000")
+        os.makedirs(directory)
+        self.assertEqual(["WS011"], self.rules())
+        with open(join(directory, "model.py"), "w") as model_file:
+            model_file.write("x = 1\n")
+        digest = hashlib.sha256(b"x = 1\n").hexdigest()
+        document = {"schema": 1, "model": 1000, "label": "demo", "flavour": "pyfunc", "runs": [], "sha256": digest}
+        with open(join(directory, "model.json"), "w") as document_file:
+            json.dump(document, document_file)
+        self.assertEqual([], self.rules())
+        with open(join(directory, "model.py"), "a") as model_file:
+            model_file.write("y = 2\n")
+        self.assertEqual(["WS011"], self.rules())
 
     def test_a_directory_that_is_not_a_run_number_is_found(self):
-        os.makedirs(join(self.notebook_dir, "data/training/latest"))
+        os.makedirs(join(self.notebook_dir, "data/training"))
         self.assertEqual(["WS005"], self.rules())
 
-    def test_runs_must_be_numbered_from_1_without_gaps(self):
-        self.write_run("training", 3, self.NAME)
+    def test_runs_are_numbered_from_1000_and_may_have_gaps(self):
+        self.write_run(999, self.NAME)
         self.assertEqual(["WS005"], self.rules())
-        self.write_run("training", 2, self.NAME)
+        shutil.rmtree(join(self.notebook_dir, "data/999"))
+        self.write_run(1003, self.NAME)
         self.assertEqual([], self.rules())
 
+    def test_a_run_needs_a_label_and_a_live_flag(self):
+        sidecar = join(self.notebook_dir, "data/1000", f"{self.NAME}.json")
+        with open(sidecar) as sidecar_file:
+            meta = json.load(sidecar_file)
+        del meta["label"], meta["live"]
+        with open(sidecar, "w") as sidecar_file:
+            json.dump(meta, sidecar_file)
+        self.assertEqual(["WS008"], self.rules())
+
+    def test_a_required_input_must_be_a_column_of_every_dataset_of_a_workspace_with_a_fitted_model(self):
+        directory = join(self.notebook_dir, "model/1000")
+        os.makedirs(directory)
+        with open(join(directory, "model.json"), "w") as document_file:
+            json.dump({"schema": 1, "model": 1000, "label": "demo", "flavour": "static", "runs": [], "sha256": "x", "constants": {}}, document_file)
+        with open(join(self.notebook_dir, "signature.json"), "w") as signature_file:
+            json.dump({"inputs": [{"name": "b", "parameters": {"required": True}}, {"name": "c", "parameters": {"required": False}}], "outputs": []}, signature_file)
+        self.assertEqual([], self.rules())
+        with open(join(directory, "model.json"), "w") as document_file:
+            json.dump({"schema": 1, "model": 1000, "label": "demo", "flavour": "pyfunc", "runs": [], "sha256": "x"}, document_file)
+        with open(join(directory, "model.py"), "w") as model_file:
+            model_file.write("x")
+        self.assertEqual(["WS011", "WS012"], self.rules())
+
     def test_dataset_must_be_a_csv_named_for_the_model_and_notebook(self):
-        open(join(self.notebook_dir, "data/training/1/other_voltage.csv"), "w").close()
-        open(join(self.notebook_dir, "data/training/1/calc_run_voltage.txt"), "w").close()
+        open(join(self.notebook_dir, "data/1000/other_voltage.csv"), "w").close()
+        open(join(self.notebook_dir, "data/1000/calc_run_voltage.txt"), "w").close()
         self.assertEqual(["WS006"], self.rules())
 
+    def test_every_run_of_a_dataset_must_share_its_columns(self):
+        self.write_run(1001, self.NAME)
+        self.assertEqual([], self.rules())
+        with open(join(self.notebook_dir, "data/1001", f"{self.NAME}.csv"), "w") as data_file:
+            data_file.write("a,b\n1,2\n")
+        self.assertIn("WS009", self.rules())
+
+    def test_an_inferred_column_must_exist_in_the_csv(self):
+        sidecar = join(self.notebook_dir, "data/1000", f"{self.NAME}.json")
+        with open(sidecar) as sidecar_file:
+            meta = json.load(sidecar_file)
+        meta["inferred"] = ["a"]
+        with open(sidecar, "w") as sidecar_file:
+            json.dump(meta, sidecar_file)
+        self.assertEqual([], self.rules())
+        meta["inferred"] = ["missing"]
+        with open(sidecar, "w") as sidecar_file:
+            json.dump(meta, sidecar_file)
+        self.assertEqual(["WS010"], self.rules())
+
     def test_a_csv_needs_a_sidecar_that_describes_it(self):
-        os.remove(join(self.notebook_dir, "data/training/1", f"{self.NAME}.json"))
+        os.remove(join(self.notebook_dir, "data/1000", f"{self.NAME}.json"))
         self.assertEqual(["WS008"], self.rules())
-        self.write_run("training", 1, self.NAME)
-        with open(join(self.notebook_dir, "data/training/1", f"{self.NAME}.csv"), "a") as data_file:
+        self.write_run(1000, self.NAME)
+        with open(join(self.notebook_dir, "data/1000", f"{self.NAME}.csv"), "a") as data_file:
             data_file.write("2\n")
         self.assertEqual(["WS008"], self.rules())
 
@@ -1375,8 +1490,8 @@ class SpecSyncTest(unittest.TestCase):
 
         in_spec = set(re.findall(r"^\| ((?:PJ|NB|WS|PM|AC|CP|RP|MD)\d{3}) \|", self.spec, re.MULTILINE))
         in_code = set()
-        for module in ("model", "notebook", "replay", "workspace", "metadata", "release"):
-            with open(join(ROOT, f"rue/mlmodels/src/main/python/workbench/{module}.py")) as source:
+        for module in sorted(glob.glob(join(ROOT, "rue/mlmodels/src/main/python/mlmodels/*.py"))):
+            with open(module) as source:
                 in_code |= set(re.findall(r'"((?:PJ|NB|WS|PM|AC|CP|RP|MD)\d{3})"', source.read()))
         self.assertTrue(in_spec and in_code)
         self.assertEqual(in_spec, in_code)
@@ -1395,30 +1510,29 @@ class SpecSyncTest(unittest.TestCase):
         self.assertEqual(defined, set(coverage))
         self.assertEqual({requirement: ids for requirement, ids in coverage.items() if ids}, enforced)
 
-    def test_every_function_a_notebook_calls_is_named_for_its_section(self):
-        from workbench import WORKBENCH_API
-        from workbench.notebook import NOTEBOOK_SECTIONS
+    def test_every_function_a_notebook_calls_is_named_for_its_stage(self):
+        from mlmodels import MLMODELS_API
+        from mlmodels._constants import NOTEBOOK_STAGES
 
-        prefixes = tuple(f"{section.lower()}_" for section in NOTEBOOK_SECTIONS)
-        self.assertTrue(WORKBENCH_API)
-        self.assertEqual([], [name for name in WORKBENCH_API if not name.startswith(prefixes)])
+        prefixes = tuple(f"{stage.lower()}_" for stage in NOTEBOOK_STAGES)
+        self.assertTrue(MLMODELS_API)
+        self.assertEqual([], [name for name in MLMODELS_API if name != "GateError" and not name.startswith(prefixes)])
 
-    def test_flavours_splits_and_sections_agree(self):
+    def test_flavours_splits_and_stages_agree(self):
 
-        from workbench.model import PROJECT_FLAVOURS, PROJECT_SPLITS
-        from workbench.notebook import NOTEBOOK_SECTIONS
+        from mlmodels._constants import NOTEBOOK_STAGES, PROJECT_FLAVOURS, PROJECT_SPLITS
 
         flavours = re.findall(r"^\| `(\w+)` \|", self.section("### 3.2 Flavours"), re.MULTILINE)
         splits = re.findall(r"^\| `(\w+)` \|", self.section("### 6.3 Splits"), re.MULTILINE)
-        sections = re.findall(r"^#### 6\.7\.\d ([A-Z][A-Za-z ]+)$", self.spec, re.MULTILINE)
-        self.assertTrue(flavours and splits and sections)
+        stages = re.findall(r"^#### 6\.7\.\d+ ([A-Z][A-Za-z ]+)$", self.spec, re.MULTILINE)
+        self.assertTrue(flavours and splits and stages)
         self.assertEqual(sorted(PROJECT_FLAVOURS), sorted(flavours))
         self.assertEqual(sorted(PROJECT_SPLITS), sorted(splits))
-        self.assertEqual(list(NOTEBOOK_SECTIONS), sections)
+        self.assertEqual(list(NOTEBOOK_STAGES), stages)
 
 
 def demo_project(*arguments, **options):
-    from workbench.demo import demo_project as build
+    from mlmodels._demo import demo_project as build
 
     return build(*arguments, **options)
 

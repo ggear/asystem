@@ -1,17 +1,18 @@
 {
   "schema": 1,
   "passed": true,
-  "budget": 0.06633249580710594,
+  "budget": 0.06603029607687562,
+  "independent": true,
   "datasets": {
     "validation": [
-      {"path": "1/pyfunc_linear_validation.csv", "sha256": "01304052523c4a8ab25bc74c40f1f727244c1dfb6130066ff8a91972a12b0585"}
+      {"path": "1000/pyfunc_linear_validation.csv", "sha256": "01304052523c4a8ab25bc74c40f1f727244c1dfb6130066ff8a91972a12b0585", "rows": 5}
     ],
     "backtest": [
-      {"path": "1/pyfunc_linear_backtest.csv", "sha256": "12b35c57696021696e4c52ae508b9104e2151c355e604183fd88e6ca417bbd63"}
+      {"path": "1000/pyfunc_linear_backtest.csv", "sha256": "12b35c57696021696e4c52ae508b9104e2151c355e604183fd88e6ca417bbd63", "rows": 10}
     ]
   },
   "checks": [
-    {"split": "validation", "output": "pyfunc_out", "name": "rmse", "value": 0.03316624790355297, "limit": 0.5, "direction": "max", "gate": true, "passed": true, "budget": 0.06633249580710594},
-    {"split": "backtest", "output": "pyfunc_out", "name": "rmse", "value": 0.03301514803843781, "limit": 0.5, "direction": "max", "gate": true, "passed": true, "budget": 0.06603029607687562}
+    {"split": "validation", "gate": false, "output": "pyfunc_out", "name": "rmse", "value": 0.03316624790355297, "limit": 0.5, "direction": "max", "passed": true, "budget": 0.06633249580710594},
+    {"split": "backtest", "gate": true, "output": "pyfunc_out", "name": "rmse", "value": 0.03301514803843781, "limit": 0.5, "direction": "max", "passed": true, "budget": 0.06603029607687562}
   ]
 }

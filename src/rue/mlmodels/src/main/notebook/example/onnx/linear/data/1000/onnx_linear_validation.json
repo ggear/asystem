@@ -1,0 +1,14 @@
+{
+  "schema": 2,
+  "run": 1000,
+  "label": "Five more points on the line",
+  "live": false,
+  "name": "onnx_linear_validation",
+  "source": "builder",
+  "query": null,
+  "params": null,
+  "database": null,
+  "captured": "2026-11-09_11-33-18",
+  "rows": 5,
+  "sha256": "aea0b34e8999573feebd9e3db50949c80107fa15178efd96b1e5d2151ef870f3"
+}

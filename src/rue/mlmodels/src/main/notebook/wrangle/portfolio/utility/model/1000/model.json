@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "model": 1000,
+  "label": "Constant relative risk aversion utility, least squares risk aversion",
+  "flavour": "pyfunc",
+  "runs": [1000],
+  "sha256": "b0eeefeb1063dee7686bbdcb7ea4e3458b39c6ec293b46ac1196d730e15dd872"
+}

@@ -25,20 +25,20 @@ systest() {
 
 release() {
   local version="${1:?usage: model.sh release <version>}"
-  MLFLOW_TRACKING_URI="$(env_value MLFLOW_TRACKING_URI)" "${PYENV_BIN}/python" -W ignore -m workbench.model release "${SOURCE_DIR}" \
+  MLFLOW_TRACKING_URI="$(env_value MLFLOW_TRACKING_URI)" "${PYENV_BIN}/python" -W ignore -m mlmodels release "${SOURCE_DIR}" \
     --version "${version}" --mlserver "$(mlserver_url)"
 }
 
 publish() {
-  MLFLOW_TRACKING_URI="$(env_value MLFLOW_TRACKING_URI)" "${PYENV_BIN}/python" -W ignore -m workbench.model publish "${SOURCE_DIR}" --mlserver "$(mlserver_url)"
+  MLFLOW_TRACKING_URI="$(env_value MLFLOW_TRACKING_URI)" "${PYENV_BIN}/python" -W ignore -m mlmodels publish "${SOURCE_DIR}" --mlserver "$(mlserver_url)"
 }
 
 docker_args() {
-  "${PYENV_BIN}/python" -W ignore -m workbench.model docker-args "${SOURCE_DIR}" "${SOURCE_DIR}/../.py_deps_prod.txt"
+  "${PYENV_BIN}/python" -W ignore -m mlmodels docker-args "${SOURCE_DIR}" "${SOURCE_DIR}/../.py_deps_prod.txt"
 }
 
 status() {
-  MLFLOW_TRACKING_URI="$(env_value MLFLOW_TRACKING_URI)" "${PYENV_BIN}/python" -W ignore -m workbench.model status "${SOURCE_DIR}" --mlserver "$(mlserver_url)"
+  MLFLOW_TRACKING_URI="$(env_value MLFLOW_TRACKING_URI)" "${PYENV_BIN}/python" -W ignore -m mlmodels status "${SOURCE_DIR}" --mlserver "$(mlserver_url)"
 }
 
 run_notebooks() {
@@ -48,7 +48,7 @@ run_notebooks() {
     local target="${notebook_dir#"${ROOT_DIR}/src/main/notebook/"}"
     target="${target%/}"
     local state
-    state="$("${PYENV_BIN}/python" -W ignore -m workbench.model changed "${notebook_dir}" "${SOURCE_DIR}/../.py_deps_prod.txt")"
+    state="$("${PYENV_BIN}/python" -W ignore -m mlmodels changed "${notebook_dir}" "${SOURCE_DIR}/../.py_deps_prod.txt")"
     if [[ "${state}" == "unpackaged" ]]; then
       echo "--- SKIP: notebook ${target} (nothing packaged)"
       continue

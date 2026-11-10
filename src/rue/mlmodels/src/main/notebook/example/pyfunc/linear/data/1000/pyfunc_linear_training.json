@@ -1,0 +1,13 @@
+{
+  "schema": 2,
+  "run": 1000,
+  "label": "Ten labelled points on a line with fixed noise",
+  "live": false,
+  "name": "pyfunc_linear_training",
+  "source": "builder",
+  "query": null,
+  "database": null,
+  "captured": "2026-11-03_16-40-55",
+  "rows": 10,
+  "sha256": "d2516ae3e003b29e03b951669270edda3c0909e759076c8987f594797bfeee07"
+}

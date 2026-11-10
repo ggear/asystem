@@ -2,7 +2,7 @@
   "schema": 1,
   "sequences": [
     {
-      "name": "from early to past the horizon",
+      "name": "golden",
       "steps": [
         {
           "request": {

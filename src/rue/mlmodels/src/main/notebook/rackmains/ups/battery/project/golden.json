@@ -2,7 +2,7 @@
   "schema": 1,
   "sequences": [
     {
-      "name": "baseline calls",
+      "name": "golden",
       "steps": [
         {
           "request": {

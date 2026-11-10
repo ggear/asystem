@@ -2,58 +2,59 @@
   "schema": 1,
   "passed": true,
   "budget": 0.6489905607020179,
+  "independent": true,
   "datasets": {
     "validation": [
-      {"path": "1/portfolio_profile_validation.csv", "sha256": "051f19146106861544bf2c72f619c385f25cfb0ee5491ffb956f8d71b54a8951"}
+      {"path": "1000/portfolio_profile_validation.csv", "sha256": "051f19146106861544bf2c72f619c385f25cfb0ee5491ffb956f8d71b54a8951", "rows": 20}
     ],
     "backtest": [
-      {"path": "1/portfolio_profile_backtest.csv", "sha256": "1c1aa6e4b638dfd85128ff20a973d6bf86f09660bde12494b017eec0b877dcfb"}
+      {"path": "1000/portfolio_profile_backtest.csv", "sha256": "1c1aa6e4b638dfd85128ff20a973d6bf86f09660bde12494b017eec0b877dcfb", "rows": 20}
     ]
   },
   "checks": [
-    {"split": "validation", "output": "portfolio_profile_return_pct", "name": "rmse", "value": 0.0, "limit": 0.05, "direction": "max", "gate": true, "passed": true, "budget": 0.0},
+    {"split": "validation", "gate": false, "output": "portfolio_profile_return_pct", "name": "rmse", "value": 0.0, "limit": 0.05, "direction": "max", "passed": true, "budget": 0.0},
     {
       "split": "validation",
+      "gate": false,
       "output": "portfolio_profile_volatility_pct",
       "name": "rmse",
       "value": 2.3247797958682808e-07,
       "limit": 0.05,
       "direction": "max",
-      "gate": true,
       "passed": true,
       "budget": 4.649559591736561e-06
     },
     {
       "split": "validation",
+      "gate": false,
       "output": "portfolio_profile_shortfall_probability_pct",
       "name": "rmse",
       "value": 5.174055259600104,
       "limit": 10.0,
       "direction": "max",
-      "gate": true,
       "passed": true,
       "budget": 0.5174055259600104
     },
-    {"split": "backtest", "output": "portfolio_profile_return_pct", "name": "rmse", "value": 0.0, "limit": 0.05, "direction": "max", "gate": true, "passed": true, "budget": 0.0},
+    {"split": "backtest", "gate": true, "output": "portfolio_profile_return_pct", "name": "rmse", "value": 0.0, "limit": 0.05, "direction": "max", "passed": true, "budget": 0.0},
     {
       "split": "backtest",
+      "gate": true,
       "output": "portfolio_profile_volatility_pct",
       "name": "rmse",
       "value": 2.672366328598713e-07,
       "limit": 0.05,
       "direction": "max",
-      "gate": true,
       "passed": true,
       "budget": 5.344732657197426e-06
     },
     {
       "split": "backtest",
+      "gate": true,
       "output": "portfolio_profile_shortfall_probability_pct",
       "name": "rmse",
       "value": 6.489905607020179,
       "limit": 10.0,
       "direction": "max",
-      "gate": true,
       "passed": true,
       "budget": 0.6489905607020179
     }

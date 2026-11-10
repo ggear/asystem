@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "model": 1000,
+  "label": "A conservative starting set of guard times, not fitted",
+  "flavour": "static",
+  "runs": [],
+  "sha256": "49b13668be2d8492172dc02b9018950fbaec4ce65186bcc7cc7a871a9cbcc0e1",
+  "constants": {"guard_shed_max_seconds": 120, "guard_halt_max_seconds": 450, "guard_mains_stable_seconds": 300, "guard_halt_delay_seconds": 120}
+}

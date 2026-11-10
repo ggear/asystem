@@ -2,18 +2,19 @@
   "schema": 2,
   "name": "example_onnx_linear",
   "flavour": "onnx",
+  "model_id": 1000,
   "model": "model.onnx",
   "provenance": {
     "source": "manual",
-    "trained_on": "synthetic line, training split",
-    "inputs": ["example/onnx/linear/data/training/1/onnx_linear_training.csv"],
-    "notes": "least squares line, gain and offset built into the graph",
-    "implementation": "onnx.helper graph, opset 21, ir version 10"
+    "trained_on": "runs [1000]",
+    "inputs": ["example/onnx/linear/data/1000/onnx_linear_training.csv"],
+    "notes": "Least squares line as a graph, gain and offset built in",
+    "implementation": "ONNX graph built by the notebook, model 1000"
   },
   "files": {
     "signature.json": "c3fd66ff99b8d1781b41679a9dba3950e17c71fa0220f8f70ee4617eb225d93b",
-    "golden.json": "b3c3640e64b4394b366fb256f536cb00c91efca47aa0cfec7da6c1b73e94889b",
-    "evaluation.json": "dd4b75fbac33bedfacf26ba9a69f3c4b8c3401e81782df43a59b016fc555d3ba",
+    "golden.json": "48dbd6be72245da9f93a4ed86858c9938f64e7492de66b2f151de6b27f1288fa",
+    "evaluation.json": "f4ba9faa7e3695a8fb97fc670bb1f4ca01da2db15591e3428050e713f593d499",
     "model.onnx": "ea83553f9f263e17093fd9d4d8606715388c41d2340973512a06dbfdbfaa3838"
   }
 }

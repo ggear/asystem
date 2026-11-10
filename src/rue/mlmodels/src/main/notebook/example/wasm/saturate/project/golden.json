@@ -2,7 +2,7 @@
   "schema": 1,
   "sequences": [
     {
-      "name": "across zero, both signs and the saturated tail",
+      "name": "golden",
       "steps": [
         {
           "request": {
@@ -15,7 +15,7 @@
             "model_name": "example_wasm_saturate",
             "id": "s1-0",
             "outputs": [
-              {"name": "saturate_out", "datatype": "FP64", "shape": [1], "data": [-3.620593014579466]}
+              {"name": "saturate_out", "datatype": "FP64", "shape": [1], "data": [-3.6205930145794656]}
             ]
           }
         },

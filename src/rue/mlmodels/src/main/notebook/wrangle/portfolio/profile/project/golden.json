@@ -2,7 +2,7 @@
   "schema": 1,
   "sequences": [
     {
-      "name": "across the range of the inputs",
+      "name": "golden",
       "steps": [
         {
           "request": {

@@ -2,7 +2,7 @@
   "schema": 1,
   "sequences": [
     {
-      "name": "across the fitted voltage range and beyond it",
+      "name": "golden",
       "steps": [
         {
           "request": {
@@ -480,7 +480,7 @@
             "model_name": "homeassistant_weatherstation_battery",
             "id": "s1-31",
             "outputs": [
-              {"name": "weatherstation_console_battery_capacity_pct", "datatype": "INT64", "shape": [1], "data": [40]}
+              {"name": "weatherstation_console_battery_capacity_pct", "datatype": "INT64", "shape": [1], "data": [45]}
             ]
           }
         },
@@ -555,7 +555,7 @@
             "model_name": "homeassistant_weatherstation_battery",
             "id": "s1-36",
             "outputs": [
-              {"name": "weatherstation_console_battery_capacity_pct", "datatype": "INT64", "shape": [1], "data": [75]}
+              {"name": "weatherstation_console_battery_capacity_pct", "datatype": "INT64", "shape": [1], "data": [80]}
             ]
           }
         },
@@ -570,7 +570,7 @@
             "model_name": "homeassistant_weatherstation_battery",
             "id": "s1-37",
             "outputs": [
-              {"name": "weatherstation_console_battery_capacity_pct", "datatype": "INT64", "shape": [1], "data": [85]}
+              {"name": "weatherstation_console_battery_capacity_pct", "datatype": "INT64", "shape": [1], "data": [90]}
             ]
           }
         },
@@ -585,7 +585,7 @@
             "model_name": "homeassistant_weatherstation_battery",
             "id": "s1-38",
             "outputs": [
-              {"name": "weatherstation_console_battery_capacity_pct", "datatype": "INT64", "shape": [1], "data": [90]}
+              {"name": "weatherstation_console_battery_capacity_pct", "datatype": "INT64", "shape": [1], "data": [95]}
             ]
           }
         },
@@ -600,7 +600,7 @@
             "model_name": "homeassistant_weatherstation_battery",
             "id": "s1-39",
             "outputs": [
-              {"name": "weatherstation_console_battery_capacity_pct", "datatype": "INT64", "shape": [1], "data": [95]}
+              {"name": "weatherstation_console_battery_capacity_pct", "datatype": "INT64", "shape": [1], "data": [100]}
             ]
           }
         },
@@ -645,7 +645,7 @@
             "model_name": "homeassistant_weatherstation_battery",
             "id": "s1-42",
             "outputs": [
-              {"name": "weatherstation_console_battery_capacity_pct", "datatype": "INT64", "shape": [1], "data": [55]}
+              {"name": "weatherstation_console_battery_capacity_pct", "datatype": "INT64", "shape": [1], "data": [60]}
             ]
           }
         },

@@ -1,8 +1,152 @@
 {
   "schema": 2,
-  "version": "10.200.2004-SNAPSHOT",
-  "content_sha256": "251b0d0fabf72c37e6bbe7b7e34ee08fcf7307154ecfaddd1420045c13ddd846",
-  "inputs_sha256": "be193b2c07aa43726b8a1ec3c179e29e10e36ea1f25438ef3885abf635775d8a",
+  "version": "10.200.2005",
+  "content_sha256": "1bb4818b26dbecc74c83a3195fbb2d9dc4c548e2893ba3ee646db7b0cdce693d",
+  "inputs_sha256": "19ea8bce954fd59d4202e7f629fee09207d266e16ebf9e0035198aab1105771a",
   "target": {"kind": "embedded", "language": "rust"},
-  "release": null
+  "release": {
+    "timestamp": "2026-11-10T04:27:06Z",
+    "signature": {
+      "schema": 1,
+      "name": "rackmains_ups_battery",
+      "platform": "mlserver",
+      "parameters": {
+        "signature_version": 1,
+        "state": [
+          {"slot": 0, "name": "unrecovered_pct_seconds", "unit": "percent seconds", "description": "Utilisation integrated over the time on battery in earlier outages and not yet recovered."},
+          {"slot": 1, "name": "outage_pct_seconds", "unit": "percent seconds", "description": "Utilisation integrated over the time on battery in the current outage."},
+          {"slot": 2, "name": "mains_seconds", "unit": "seconds", "description": "Seconds on mains since the last outage ended."},
+          {"slot": 3, "name": "was_on_battery", "unit": "flag", "description": "1 if the previous call was on battery, 0 otherwise."},
+          {"slot": 4, "name": "history_known", "unit": "flag", "description": "1 once the battery is known to have recovered, 0 until then."},
+          {"slot": 5, "name": "last_epoch_seconds", "unit": "seconds", "description": "The time of the previous call, 0 before the first."}
+        ]
+      },
+      "inputs": [
+        {
+          "name": "clock_epoch_seconds",
+          "datatype": "FP64",
+          "shape": [1],
+          "parameters": {"unit": "seconds", "required": true, "description": "Time of the poll as seconds since the Unix epoch. The ISO text timestamp stays beside it in the record and is not sent."}
+        },
+        {
+          "name": "output_utilisation_pct",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {"unit": "percent", "required": true, "description": "Load on the UPS output as a whole percent of its rated capacity. Not watts: whether the rating is volt-amperes or watts is not known."}
+        },
+        {
+          "name": "ups_on_battery",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {
+            "unit": "flag",
+            "required": true,
+            "description": "1 while the UPS is running from its battery because the mains has failed, 0 on mains. Held at 0 during a deliberate battery calibration. The status text it is derived from stays beside it and is not sent."
+          }
+        },
+        {
+          "name": "battery_replace",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {"unit": "flag", "required": true, "description": "1 while the UPS reports the battery needs replacing."}
+        },
+        {
+          "name": "model_state_in",
+          "datatype": "FP64",
+          "shape": [-1],
+          "parameters": {
+            "unit": "state",
+            "required": false,
+            "description": "The state the model returned on the previous call, carried unchanged by the caller. Absent on the first call, when the model starts from its initial state with the history unknown."
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "guard_shed_max_seconds",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {"unit": "seconds", "required": true, "description": "Seconds on battery after which the guard puts the follower servers to sleep, whatever else is estimated."}
+        },
+        {
+          "name": "guard_halt_max_seconds",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {"unit": "seconds", "required": true, "description": "Seconds on battery after which the guard halts max and has the UPS cut and restore its output. Later than the shed time."}
+        },
+        {
+          "name": "guard_mains_stable_seconds",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {"unit": "seconds", "required": true, "description": "Seconds of unbroken mains after which the on-battery clock resets and any server put to sleep is woken."}
+        },
+        {
+          "name": "guard_halt_delay_seconds",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {"unit": "seconds", "required": true, "description": "Seconds the UPS waits before cutting its output after the guard asks it to shut down. Long enough for max to finish going to sleep."}
+        },
+        {
+          "name": "guard_shed_lead_seconds",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {
+            "unit": "seconds",
+            "required": false,
+            "description": "Optional. Put the follower servers to sleep when the estimated run time left falls to this: the measured time the shed takes plus a margin."
+          }
+        },
+        {
+          "name": "guard_halt_lead_seconds",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {"unit": "seconds", "required": false, "description": "Optional. Halt max when the estimated run time left falls to this: the measured time the halt takes plus a margin."}
+        },
+        {
+          "name": "battery_remaining_pct",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {"unit": "percent", "required": false, "description": "Optional. Estimated usable battery left as a whole percent, 100 when full, rounded down. Informational: the guard does not act on it."}
+        },
+        {
+          "name": "battery_remaining_seconds",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {"unit": "seconds", "required": false, "description": "Optional. Estimated run time left at the current load, rounded down, so it never overstates."}
+        },
+        {
+          "name": "model_energy_used_wh",
+          "datatype": "FP64",
+          "shape": [1],
+          "parameters": {
+            "unit": "watt hours",
+            "required": false,
+            "description": "Optional. Energy the model counts as used since the battery was last full, in the current outage and the unrecovered part of earlier ones."
+          }
+        },
+        {
+          "name": "model_history_known",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {"unit": "flag", "required": false, "description": "Optional. 1 once the model knows the battery had recovered before this outage, 0 while it is assuming a partly drained battery."}
+        },
+        {
+          "name": "model_recalibrate",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {
+            "unit": "flag",
+            "required": false,
+            "description": "Optional. 1 when the fit should be redone because it is old, the battery has been replaced or observed drains no longer match its predictions. The reason is in the response parameters."
+          }
+        },
+        {
+          "name": "model_state_out",
+          "datatype": "FP64",
+          "shape": [-1],
+          "parameters": {"unit": "state", "required": false, "description": "Optional. The state to carry to the next call, in the order the signature lists. Absent for a model with no state."}
+        }
+      ]
+    }
+  }
 }
