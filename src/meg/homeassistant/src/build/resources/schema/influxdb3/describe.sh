@@ -413,13 +413,13 @@ WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
-    'sensor__battery'                AS relation,
-    'entity_id*/unit_of_measurement' AS dimension,
-    1                                AS measures,
-    '<on-change>'                    AS cadence,
-    count(*)                         AS rows,
-    CAST(min(time) AS VARCHAR)       AS oldest,
-    CAST(max(time) AS VARCHAR)       AS newest
+    'sensor__battery'                              AS relation,
+    'entity_id*/model_version/unit_of_measurement' AS dimension,
+    1                                              AS measures,
+    '<on-change>'                                  AS cadence,
+    count(*)                                       AS rows,
+    CAST(min(time) AS VARCHAR)                     AS oldest,
+    CAST(max(time) AS VARCHAR)                     AS newest
 FROM sensor__battery
 WHERE
     module = 'homeassistant'
@@ -1558,7 +1558,7 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'sensor__battery'
-    AND column_name NOT IN ('entity_id', 'module', 'time', 'unit_of_measurement', 'value')
+    AND column_name NOT IN ('entity_id', 'model_version', 'module', 'time', 'unit_of_measurement', 'value')
 UNION ALL
 SELECT
     'sensor__carbon_dioxide'                                    AS relation,
@@ -2284,17 +2284,17 @@ WHERE
 GROUP BY concat(entity_id, '/', unit_of_measurement)
 UNION ALL
 SELECT
-    'sensor__battery'                           AS relation,
-    'entity_id*/unit_of_measurement'            AS dimension,
-    concat(entity_id, '/', unit_of_measurement) AS entity,
-    '-'                                         AS declared,
-    count(*)                                    AS rows,
-    CAST(min(time) AS VARCHAR)                  AS oldest,
-    CAST(max(time) AS VARCHAR)                  AS newest
+    'sensor__battery'                                               AS relation,
+    'entity_id*/model_version/unit_of_measurement'                  AS dimension,
+    concat(entity_id, '/', model_version, '/', unit_of_measurement) AS entity,
+    '-'                                                             AS declared,
+    count(*)                                                        AS rows,
+    CAST(min(time) AS VARCHAR)                                      AS oldest,
+    CAST(max(time) AS VARCHAR)                                      AS newest
 FROM sensor__battery
 WHERE
     module = 'homeassistant'
-GROUP BY concat(entity_id, '/', unit_of_measurement)
+GROUP BY concat(entity_id, '/', model_version, '/', unit_of_measurement)
 UNION ALL
 SELECT
     'sensor__carbon_dioxide'                    AS relation,

@@ -7,6 +7,7 @@
 SELECT
     date_bin(INTERVAL '1 day', time + INTERVAL '480 minute') AS "Bucket",
     entity_id                                                AS "Entity Id",
+    model_version                                            AS "Model Version",
     unit_of_measurement                                      AS "Unit Of Measurement",
     count(*)                                                 AS "Rows",
     min(time) + INTERVAL '480 minute'                        AS "Oldest",
@@ -21,5 +22,5 @@ WHERE
     module = 'homeassistant'
     AND time >= now() - INTERVAL '100 day'
     AND time >= (SELECT max(time) FROM sensor__battery) - INTERVAL '1 day'
-GROUP BY "Bucket", entity_id, unit_of_measurement
-ORDER BY "Bucket", entity_id, unit_of_measurement;
+GROUP BY "Bucket", entity_id, model_version, unit_of_measurement
+ORDER BY "Bucket", entity_id, model_version, unit_of_measurement;
