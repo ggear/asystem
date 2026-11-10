@@ -3,7 +3,6 @@
   "name": "homeassistant_hotwater_temp",
   "platform": "mlserver",
   "parameters": {
-    "signature_version": 1,
     "state": []
   },
   "inputs": [

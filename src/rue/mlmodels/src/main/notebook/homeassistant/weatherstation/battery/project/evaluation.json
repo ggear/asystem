@@ -5,10 +5,11 @@
   "independent": false,
   "datasets": {
     "validation": [
-      {"path": "1001/weatherstation_battery.csv", "sha256": "104cb0a7bcc0bb102036b790091234c1c54c88931c7f144a5cddca2e359321c3", "rows": 813}
+      {"path": "1001/weatherstation_battery.csv", "sha256": "4cd41a0bce7abc0e4e64f831b6e44405527eaa6566c62d0d4c2044ccca3be44d", "rows": 813}
     ]
   },
   "checks": [
+    {"split": "validation", "output": "weatherstation_console_battery_capacity_pct_valid", "name": "flagged", "value": 0.0, "limit": 0, "direction": "max", "gate": true, "passed": true, "budget": 0.0},
     {
       "split": "validation",
       "output": "weatherstation_console_battery_capacity_pct",

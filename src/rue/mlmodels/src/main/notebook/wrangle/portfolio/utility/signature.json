@@ -2,7 +2,7 @@
   "schema": 1,
   "name": "wrangle_portfolio_utility",
   "platform": "mlserver",
-  "parameters": {"signature_version": 1, "state": []},
+  "parameters": {"state": []},
   "inputs": [
     {
       "name": "portfolio_utility_wealth",

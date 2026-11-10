@@ -19,12 +19,12 @@ def signature_output(name, unit, description, datatype="INT64", required=True, s
     return _signature_tensor(name, unit, description, datatype, required, shape)
 
 
-def build_signature(name, inputs, outputs, state=(), signature_version=1):
+def build_signature(name, inputs, outputs, state=()):
     return {
         "schema": PROJECT_SCHEMA,
         "name": name,
         "platform": "mlserver",
-        "parameters": {"signature_version": signature_version, "state": [{"slot": slot, **entry} for slot, entry in enumerate(state)]},
+        "parameters": {"state": [{"slot": slot, **entry} for slot, entry in enumerate(state)]},
         "inputs": list(inputs),
         "outputs": list(outputs),
     }

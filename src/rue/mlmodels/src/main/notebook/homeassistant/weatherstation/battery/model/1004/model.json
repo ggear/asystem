@@ -1,1 +1,1 @@
-{"schema": 1, "model": 1004, "label": "Fixed-width arctan, steps of 5", "flavour": "pyfunc", "runs": [1000], "sha256": "256fe3f225af5fd37470408ebde3959bae174cc848323a181f4fe57a034629f9"}
+{"schema": 1, "model": 1004, "label": "Fixed-width arctan, steps of 5", "flavour": "pyfunc", "runs": [1000], "sha256": "6471096a1ec7a224db2a69dc70ef31eb4a69cc48f70a4f3f9f436a79ba1b7adb"}

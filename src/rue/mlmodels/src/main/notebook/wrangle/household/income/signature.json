@@ -3,7 +3,6 @@
   "name": "wrangle_household_income",
   "platform": "mlserver",
   "parameters": {
-    "signature_version": 1,
     "state": []
   },
   "inputs": [

@@ -3,7 +3,6 @@
   "name": "rackmains_ups_battery",
   "platform": "mlserver",
   "parameters": {
-    "signature_version": 1,
     "state": [
       {"slot": 0, "name": "unrecovered_pct_seconds", "unit": "percent seconds", "description": "Utilisation integrated over the time on battery in earlier outages and not yet recovered."},
       {"slot": 1, "name": "outage_pct_seconds", "unit": "percent seconds", "description": "Utilisation integrated over the time on battery in the current outage."},

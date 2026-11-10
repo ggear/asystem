@@ -1,22 +1,28 @@
 {
   "schema": 2,
-  "version": "10.200.2005",
-  "content_sha256": "a2360bacffbfed4753bfbc7d9096f9e6b788313131af9ccf602a0f4666d84fe3",
-  "inputs_sha256": "66f7a98ca7e66e8acf9e36bdc1f90143e45dabad535d9eecf8282cbfb8b450a8",
+  "version": "10.200.2012",
+  "content_sha256": "5c5c9b849db9a21d833ee4731546c6d65271eb1cd048c95145d301151a1537f5",
+  "inputs_sha256": "0d8a535262a04c1544045fdd4cce53e04f3662f8ef510a7f93ce1bc1cb660acb",
   "target": {"kind": "served"},
   "release": {
-    "timestamp": "2026-11-10T04:27:06Z",
+    "timestamp": "2026-11-10T07:21:55Z",
     "signature": {
       "schema": 1,
       "name": "homeassistant_weatherstation_battery",
       "platform": "mlserver",
-      "parameters": {"signature_version": 1, "state": []},
+      "parameters": {"state": []},
       "inputs": [
         {
           "name": "weatherstation_console_battery_voltage",
           "datatype": "FP64",
           "shape": [1],
           "parameters": {"unit": "volts", "required": true, "description": "Voltage of the weather station console's battery as Home Assistant reports it."}
+        },
+        {
+          "name": "weatherstation_console_battery_voltage_valid",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {"unit": "flag", "required": false, "description": "1 when the voltage reading is available, else 0. Absent means 1. The voltage is then 0.0."}
         },
         {
           "name": "weatherstation_console_battery_reported",
@@ -27,6 +33,12 @@
             "required": false,
             "description": "Epoch seconds of the last report of the voltage, from the Home Assistant helper of this name. Absent until the stateful model uses it."
           }
+        },
+        {
+          "name": "weatherstation_console_battery_reported_valid",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {"unit": "flag", "required": false, "description": "1 when the reported time is available, else 0. Absent means 1. Absent until the stateful model uses it."}
         },
         {
           "name": "clock_epoch_seconds",
@@ -41,6 +53,12 @@
           "datatype": "INT64",
           "shape": [1],
           "parameters": {"unit": "percent", "required": true, "description": "Estimated battery capacity left, in steps of 5, 0 to 100, one level across the 3.77 to 3.83 V plateau."}
+        },
+        {
+          "name": "weatherstation_console_battery_capacity_pct_valid",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {"unit": "flag", "required": true, "description": "1 when the capacity is a prediction, 0 when the voltage was flagged not valid and the capacity is 0."}
         }
       ]
     }

@@ -4,5 +4,5 @@
   "label": "Annuity withdrawal rate, least squares real return",
   "flavour": "pyfunc",
   "runs": [1000],
-  "sha256": "3e69f93a2b40d9b81181faeb2d88e5f82cd8069aa8238d705eb27d6fde49923f"
+  "sha256": "d34b9ee8edbd78adc028e54768318a3069c22428fe83e9d28c9d7b9cdede1e62"
 }

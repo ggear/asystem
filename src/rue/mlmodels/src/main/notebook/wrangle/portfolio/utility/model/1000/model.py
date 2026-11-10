@@ -16,7 +16,8 @@ OUTPUTS = ['portfolio_utility_value']
 
 class Model(PythonModel):
     def predict(self, context, model_input: pd.DataFrame, params=None):
-        results = [utility_model(*values) for values in zip(*(model_input[column] for column in INPUTS), strict=True)]
+        columns = [model_input[column] if column in model_input else [None] * len(model_input) for column in INPUTS]
+        results = [utility_model(*values) for values in zip(*columns, strict=True)]
         if len(OUTPUTS) == 1:
             results = [(result,) for result in results]
         return pd.DataFrame({column: [result[index] for result in results] for index, column in enumerate(OUTPUTS)})

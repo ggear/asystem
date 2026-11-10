@@ -344,6 +344,10 @@ def reads_a_global(demo_in_seconds):
     return SCALE * demo_in_seconds
 
 
+def optional_gain(demo_in_seconds, demo_gain):
+    return demo_in_seconds if demo_gain is None else demo_in_seconds * demo_gain
+
+
 SHIFT = 3.0
 
 
@@ -369,6 +373,19 @@ class DefineModelTest(ModelWorkspaceCase):
         self.assertEqual((1000, "pyfunc", [1000], file_sha256(join(self.path, "model/1000/model.py"))), (document["model"], document["flavour"], document["runs"], document["sha256"]))
         with open(join(self.path, "model/1000/model.py")) as model_file:
             self.assertIn("GAIN = 2.5", model_file.read())
+
+    def test_an_optional_input_the_request_omits_reaches_the_function_as_none(self):
+        from mlmodels._model import model_content
+        from mlmodels.runtime.pyfunc import load_pyfunc
+
+        stub = SimpleNamespace(inputs=["demo_in_seconds", "demo_gain"], outputs=["demo_out_seconds"])
+        _, content, _ = model_content(stub, "pyfunc", optional_gain, {})
+        with tempfile.TemporaryDirectory() as directory:
+            with open(join(directory, "model.py"), "wb") as model_file:
+                model_file.write(content or b"")
+            predict = load_pyfunc(join(directory, "model.py"), json.dumps({"outputs": [{"name": "demo_out_seconds", "datatype": "FP64"}]}))
+        self.assertEqual([3.0], predict({"demo_in_seconds": [3.0]})["demo_out_seconds"])
+        self.assertEqual([6.0], predict({"demo_in_seconds": [3.0], "demo_gain": [2.0]})["demo_out_seconds"])
 
     def test_a_rerun_writes_the_same_bytes(self):
         self.define()

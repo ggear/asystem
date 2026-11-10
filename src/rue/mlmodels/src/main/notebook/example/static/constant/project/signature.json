@@ -2,7 +2,7 @@
   "schema": 1,
   "name": "example_static_constant",
   "platform": "mlserver",
-  "parameters": {"signature_version": 1, "state": []},
+  "parameters": {"state": []},
   "inputs": [
     {
       "name": "static_in",

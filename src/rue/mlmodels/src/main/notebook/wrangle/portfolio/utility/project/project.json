@@ -13,9 +13,9 @@
     "implementation": "mlflow.pyfunc model.py, model 1000"
   },
   "files": {
-    "signature.json": "81632a177e13ee8a7da86014c84899e0f6585f1818cccec70dcac90dcf6634ca",
+    "signature.json": "9c36ce1293154d5618c187d70c9f48d958aac3f528c622f955dd2c0bca52c420",
     "golden.json": "2d628f7a5f742711613a62272acd2e34ba3d99bfc7bf637088ef058eaab575c2",
     "evaluation.json": "e0a34ebdb5f816982f2eccbe8757ca7e393ac65e96ca829366499c223b1e922a",
-    "model.py": "b0eeefeb1063dee7686bbdcb7ea4e3458b39c6ec293b46ac1196d730e15dd872"
+    "model.py": "42fc356417682096647ba1583585342b5ae119e7176775831d13e051d02a4000"
   }
 }

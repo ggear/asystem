@@ -2,7 +2,7 @@
   "schema": 1,
   "name": "wrangle_portfolio_allocation",
   "platform": "mlserver",
-  "parameters": {"signature_version": 1, "state": []},
+  "parameters": {"state": []},
   "inputs": [
     {
       "name": "portfolio_allocation_volatility_pct",

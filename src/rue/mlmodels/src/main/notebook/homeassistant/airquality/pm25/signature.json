@@ -3,7 +3,6 @@
   "name": "homeassistant_airquality_pm25",
   "platform": "mlserver",
   "parameters": {
-    "signature_version": 1,
     "state": []
   },
   "inputs": [

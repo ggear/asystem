@@ -20,5 +20,5 @@
     "inputs": ["wrangle/economy/rates/data/1000/economy_rates_training.csv"],
     "notes": "Window summaries of the bank rate, inflation and real cash return"
   },
-  "files": {"signature.json": "0469897efb9d711716708715c67a4430405d4f41f92f6fae3ddb5461c5c6f32a", "golden.json": "e261ab4fa0e8e70fd2941f82a66fb9ff3d2505a17e3f6045dc6a27950580db7d"}
+  "files": {"signature.json": "a293d3f5a51ba3d896931f53113833dfd237fdd20c5785a2e6c03c5564b0c9ac", "golden.json": "e261ab4fa0e8e70fd2941f82a66fb9ff3d2505a17e3f6045dc6a27950580db7d"}
 }

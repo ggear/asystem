@@ -4,5 +4,5 @@
   "label": "Two asset blend with a logistic shortfall curve",
   "flavour": "pyfunc",
   "runs": [1000],
-  "sha256": "49a7362d075e4d5ab74311bef4d6294f731330d7ba43d91659d55f69c0643f0b"
+  "sha256": "ca7637a3486d173ff262cd5f9bc70e4a20153fd093cefdff561553e3ac70d3fa"
 }

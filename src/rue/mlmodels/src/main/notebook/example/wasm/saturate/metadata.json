@@ -1,8 +1,8 @@
 {
   "schema": 2,
-  "version": "10.200.2005-SNAPSHOT",
-  "content_sha256": "14b7267b0bd51a8961741229b0f0ef9357e1a334a4d5c76a9631eaf8f175e225",
-  "inputs_sha256": "96ffb8937dcc98ce3d060ae24910b111fc2affacb5242801f057c47dafe6771f",
+  "version": "10.200.2012-SNAPSHOT",
+  "content_sha256": "2e7815c2938973f80e7bb4a24429e83e05f6e2d44e780662b4252a1b8c00fa50",
+  "inputs_sha256": "468e2fbc36727921daf0c891808e8751d7e052a177c915671339d7bd08b89af6",
   "target": {"kind": "embedded", "language": "go"},
   "release": null
 }

@@ -2,7 +2,7 @@
   "schema": 1,
   "name": "wrangle_portfolio_profile",
   "platform": "mlserver",
-  "parameters": {"signature_version": 1, "state": []},
+  "parameters": {"state": []},
   "inputs": [
     {
       "name": "portfolio_profile_risky_share_pct",

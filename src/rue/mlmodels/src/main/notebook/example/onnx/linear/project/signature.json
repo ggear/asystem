@@ -2,7 +2,7 @@
   "schema": 1,
   "name": "example_onnx_linear",
   "platform": "mlserver",
-  "parameters": {"signature_version": 1, "state": []},
+  "parameters": {"state": []},
   "inputs": [
     {
       "name": "onnx_in",

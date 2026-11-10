@@ -1,17 +1,16 @@
 {
   "schema": 2,
-  "version": "10.200.2005",
-  "content_sha256": "1bb4818b26dbecc74c83a3195fbb2d9dc4c548e2893ba3ee646db7b0cdce693d",
-  "inputs_sha256": "19ea8bce954fd59d4202e7f629fee09207d266e16ebf9e0035198aab1105771a",
+  "version": "10.200.2012",
+  "content_sha256": "c0547c3deec2e6b300444dab3117d7a5e68d9082d021f3ef2670e0f2ee172262",
+  "inputs_sha256": "22e66e7a4cdf9e1e949e91ddb585381dd469c8dd12556dd5aa165b7bcd10cde3",
   "target": {"kind": "embedded", "language": "rust"},
   "release": {
-    "timestamp": "2026-11-10T04:27:06Z",
+    "timestamp": "2026-11-10T07:21:55Z",
     "signature": {
       "schema": 1,
       "name": "rackmains_ups_battery",
       "platform": "mlserver",
       "parameters": {
-        "signature_version": 1,
         "state": [
           {"slot": 0, "name": "unrecovered_pct_seconds", "unit": "percent seconds", "description": "Utilisation integrated over the time on battery in earlier outages and not yet recovered."},
           {"slot": 1, "name": "outage_pct_seconds", "unit": "percent seconds", "description": "Utilisation integrated over the time on battery in the current outage."},

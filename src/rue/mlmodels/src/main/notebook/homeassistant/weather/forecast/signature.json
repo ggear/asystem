@@ -3,7 +3,6 @@
   "name": "homeassistant_weather_forecast",
   "platform": "mlserver",
   "parameters": {
-    "signature_version": 1,
     "state": []
   },
   "inputs": [

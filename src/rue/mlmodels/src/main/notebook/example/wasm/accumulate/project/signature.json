@@ -3,7 +3,6 @@
   "name": "example_wasm_accumulate",
   "platform": "mlserver",
   "parameters": {
-    "signature_version": 1,
     "state": [
       {"slot": 0, "name": "total", "unit": "none", "description": "The sum of every output since the first call."},
       {"slot": 1, "name": "peak", "unit": "none", "description": "The largest output since the first call."}
