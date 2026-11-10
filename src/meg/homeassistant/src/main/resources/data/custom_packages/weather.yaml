@@ -52,8 +52,10 @@ rest:
     sensor:
       - name: mlserver_weatherstation_console_battery_capacity_pct
         unique_id: mlserver_weatherstation_console_battery_capacity_pct
+        availability: >-
+          {{ value_json is defined and (value_json.outputs | default([]) | length) > 0 }}
         value_template: >-
-          {% if value_json is defined and value_json.outputs is defined %}{{ (value_json.outputs | selectattr('name', 'eq', 'weatherstation_console_battery_capacity_pct') | map(attribute='data') | first | default([none]))[0] }}{% endif %}
+          {{ (value_json.outputs | selectattr('name', 'eq', 'weatherstation_console_battery_capacity_pct') | map(attribute='data') | first)[0] }}
         json_attributes:
           - model_version
           - outputs
