@@ -9,14 +9,14 @@ sensor:
     name: DFES Incidents Metro South East
     radius: 30
     url: https://api.emergency.wa.gov.au/v1/rss/incidents?region=METRO%20NORTH%20EAST
-  #####################################################################################
-  - platform: rest
-    name: mlserver_weatherstation_console_battery_capacity_pct
-    unique_id: mlserver_weatherstation_console_battery_capacity_pct
-    resource: https://mlserver.proxy.janeandgraham.com/v2/models/homeassistant_weatherstation_battery/infer
+#######################################################################################
+rest:
+  - resource: https://mlserver.proxy.janeandgraham.com/v2/models/homeassistant_weatherstation_battery/infer
     method: POST
     headers:
       Content-Type: application/json
+    timeout: 10
+    scan_interval: 300
     payload_template: |-
       {
         "inputs": [
@@ -49,16 +49,17 @@ sensor:
           {%- endif %}
         ]
       }
-    value_template: >-
-      {{ (value_json.outputs | selectattr('name', 'eq', 'weatherstation_console_battery_capacity_pct') | first).data[0] }}
-    json_attributes:
-      - model_version
-      - outputs
-    device_class: battery
-    state_class: measurement
-    unit_of_measurement: "%"
-    timeout: 10
-    scan_interval: 300
+    sensor:
+      - name: mlserver_weatherstation_console_battery_capacity_pct
+        unique_id: mlserver_weatherstation_console_battery_capacity_pct
+        value_template: >-
+          {% if value_json is defined and value_json.outputs is defined %}{{ (value_json.outputs | selectattr('name', 'eq', 'weatherstation_console_battery_capacity_pct') | map(attribute='data') | first | default([none]))[0] }}{% endif %}
+        json_attributes:
+          - model_version
+          - outputs
+        device_class: battery
+        state_class: measurement
+        unit_of_measurement: "%"
 #######################################################################################
 input_number:
   #####################################################################################
