@@ -1236,7 +1236,8 @@
             "description": "Home Assistant model_version",
             "subject": false,
             "entities": [
-              "10.200.2005"
+              "10.200.2005",
+              "10.200.2012"
             ]
           },
           {

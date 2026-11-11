@@ -9,8 +9,9 @@ from os.path import abspath, dirname, join, realpath
 import pytest
 
 sys.path.append("../../../../../../rue/mlmodels/src/main/python")
+sys.path.append("../../../../../../rue/mlmodels/src/test/python")
 
-from mlmodels._demo import demo_project
+from fixtures import fixture_project
 from mlmodels._registry import register_project
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
@@ -45,14 +46,14 @@ def test_the_server_is_alive_and_ready():
 
 def test_a_release_is_served_a_broken_newer_release_falls_back_and_a_preview_is_served_apart(registry):
     uri, client = registry
-    good = register_project(demo_project("wasm"), NAME, uri, aliases=())
+    good = register_project(fixture_project("wasm"), NAME, uri, aliases=())
     _release(client, good, "1.0.0")
     _wait(lambda: _index().get(NAME) == ("1.0.0", "READY"))
     broken = _broken_version(uri, client)
     client.set_registered_model_alias(NAME, "release", broken)
     time.sleep(8)
     assert _index().get(NAME) == ("1.0.0", "READY")
-    preview = register_project(demo_project("wasm", golden_out=3.5), NAME, uri, aliases=("preview",))
+    preview = register_project(fixture_project("wasm", golden_out=3.5), NAME, uri, aliases=("preview",))
     assert preview not in (good, broken)
     _wait(lambda: _index().get(NAME + "_preview", ("", ""))[0].startswith("preview-"))
     assert _call(f"/v2/models/{NAME}_preview/infer", {"inputs": [{"name": "demo_in", "shape": [1], "datatype": "FP64", "data": [1.5]}]})["outputs"][0]["data"] == [3.0]
@@ -65,7 +66,7 @@ def test_a_release_is_served_a_broken_newer_release_falls_back_and_a_preview_is_
 def _broken_version(uri, client):
     import mlflow
 
-    project_dir = demo_project("wasm")
+    project_dir = fixture_project("wasm")
     with open(join(project_dir, "model.wasm"), "ab") as model_file:
         model_file.write(b"\0")
     mlflow.set_tracking_uri(uri)

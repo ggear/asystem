@@ -12,6 +12,7 @@ from os.path import basename, dirname, join, realpath
 
 ROOT = realpath(join(dirname(__file__), "../../../../../.."))
 sys.path.insert(0, join(ROOT, "rue/mlmodels/src/main/python"))
+sys.path.insert(0, join(ROOT, "rue/mlmodels/src/test/python"))
 
 
 class ModelProjectTest(unittest.TestCase):
@@ -97,7 +98,7 @@ class ModelProjectTest(unittest.TestCase):
         from mlmodels._lint_project import lint_project
 
         def rules(wat):
-            project_dir = demo_project("wasm")
+            project_dir = fixture_project("wasm")
             with open(join(project_dir, "model.wasm"), "wb") as model_file:
                 model_file.write(wasmtime.wat2wasm(wat))
             return {rule for rule, _ in lint_project(project_dir)}
@@ -128,7 +129,7 @@ class ModelProjectTest(unittest.TestCase):
 
         from mlmodels._lint_project import lint_project
 
-        project_dir = demo_project("wasm")
+        project_dir = fixture_project("wasm")
         with open(join(project_dir, "model.wasm"), "wb") as model_file:
             model_file.write(wasmtime.wat2wasm('(module (import "asystem_math" "tanh" (func (param f64) (result f64))) (memory (export "memory") 1) (func (export "predict") (param i32 i32 i32)))'))
         with open(join(project_dir, "project.json")) as manifest_file:
@@ -391,10 +392,14 @@ class ModelProjectTest(unittest.TestCase):
 
     def test_release_check_needs_a_passing_evaluation(self):
         from mlmodels._errors import GateError
+        from mlmodels._project import check_acceptance
         from mlmodels._registry import check_release
 
         self.write()
-        self.assertEqual(["PM004"], [rule for rule, _ in check_release(self.project_dir)])
+        self.assertEqual([], check_release(self.project_dir))
+        unevaluated = fixture_project("wasm")
+        os.remove(join(unevaluated, "evaluation.json"))
+        self.assertEqual(["PM004"], [rule for rule, _ in check_acceptance(unevaluated)])
         with self.assertRaises(GateError) as raised:
             self.write(**self.fitted_overrides(passing=False))
         self.assertEqual(("Evaluate", "acceptance"), (raised.exception.stage, raised.exception.gate))
@@ -496,6 +501,20 @@ class ModelProjectTest(unittest.TestCase):
         self.assertIn("pub demo_state_in: Option<Vec<f64>>,", rust)
         self.assertIn('pub const REQUIRED_OUTPUT_NAMES: &[&str] = &["demo_limit_seconds"];', rust)
 
+    def test_render_go_and_python_name_every_tensor_with_optional_fields(self):
+        from mlmodels._signature import render_go, render_python
+
+        go = render_go(self.signature, "contract")
+        self.assertIn("package contract", go)
+        self.assertIn('DemoClockSeconds float64 `json:"demo_clock_seconds"`', go)
+        self.assertIn('DemoStateIn []float64 `json:"demo_state_in,omitempty"`', go)
+        self.assertIn('var RequiredOutputNames = []string{"demo_limit_seconds"}', go)
+        python = render_python(self.signature)
+        compile(python, "contract", "exec")
+        self.assertIn("    demo_clock_seconds: float\n", python)
+        self.assertIn("    demo_state_in: list[float] | None = None\n", python)
+        self.assertIn('REQUIRED_OUTPUT_NAMES = ("demo_limit_seconds", )', python)
+
     def test_registered_name_and_check_name(self):
         from mlmodels._signature import check_name, registered_name
 
@@ -505,38 +524,133 @@ class ModelProjectTest(unittest.TestCase):
             check_name("Bad-Name")
 
 
+class AuthoringLoadTest(unittest.TestCase):
+    def test_a_candidate_integer_output_is_truncated_while_the_shipped_loader_refuses_it(self):
+        from mlmodels._replay import load_model
+        from mlmodels._signature import build_signature, signature_input, signature_output
+        from mlmodels.runtime.loader import ModelError, load_static
+
+        signature = build_signature("demo_calc", [signature_input("demo_in", "none", "A number.")], [signature_output("demo_out", "none", "A count.", datatype="INT64")])
+        self.assertEqual({"demo_out": [125]}, load_model("", "static", signature, {"demo_out": 125.7})({"demo_in": [1.0]}))
+        from mlmodels.runtime.loader import Model, Project
+
+        strict = Model("", Project({"name": "demo_calc", "flavour": "static"}, json.dumps(signature), ""), load_static(json.dumps({"demo_out": 125.7}), json.dumps(signature)))
+        with self.assertRaises(ModelError):
+            strict.predict({"demo_in": [1.0]})
+
+
+class LoaderTest(unittest.TestCase):
+    def test_a_project_loads_and_verifies_for_every_flavour(self):
+        from mlmodels.runtime.loader import load
+
+        static = join(ROOT, "rue/mlmodels/src/main/notebook/example/static/constant/project")
+        for flavour, directory in (("pyfunc", fixture_project("pyfunc")), ("wasm", fixture_project("wasm")), ("onnx", fixture_project("onnx")), ("static", static)):
+            model = load(directory)
+            model.verify()
+            self.assertEqual(flavour, model.info().flavour)
+
+    def test_a_malformed_project_is_a_load_error_and_never_another_exception(self):
+        from mlmodels.runtime.loader import ModelError, load
+
+        def damaged(change):
+            directory = fixture_project("wasm")
+            change(directory)
+            return directory
+
+        def truncate(directory):
+            with open(join(directory, "project.json"), "r+") as file:
+                file.truncate(10)
+
+        def append(directory):
+            with open(join(directory, "model.wasm"), "ab") as file:
+                file.write(b"\0")
+
+        def delete(name):
+            return lambda directory: os.remove(join(directory, name))
+
+        for change in (truncate, append, delete("model.wasm"), delete("signature.json"), delete("evaluation.json"), delete("project.json")):
+            with self.assertRaises(ModelError) as raised:
+                load(damaged(change))
+            self.assertEqual("Load", raised.exception.kind)
+
+    def test_a_request_missing_a_required_input_is_a_signature_error(self):
+        from mlmodels.runtime.loader import ModelError, load
+
+        with self.assertRaises(ModelError) as raised:
+            load(fixture_project("wasm")).predict({})
+        self.assertEqual("Signature", raised.exception.kind)
+
+    def test_an_integer_output_that_is_not_an_integer_is_a_runtime_error(self):
+        from mlmodels.runtime.loader import Model, ModelError, Project
+
+        signature = {"inputs": [], "outputs": [{"name": "y", "datatype": "INT64", "shape": [1]}], "parameters": {}}
+        for bad in (float("nan"), 1.5, 2.0**60):
+            model = Model("", Project({"name": "demo", "flavour": "static"}, json.dumps(signature), ""), lambda _inputs, bad=bad: {"y": [bad]})
+            with self.assertRaises(ModelError) as raised:
+                model.predict({})
+            self.assertEqual("Runtime", raised.exception.kind)
+        self.assertEqual({"y": [3]}, Model("", Project({"name": "demo", "flavour": "static"}, json.dumps(signature), ""), lambda _inputs: {"y": [3.0]}).predict({}))
+
+    def test_a_golden_difference_is_a_verify_error(self):
+        from mlmodels.runtime.loader import ModelError, load
+
+        with self.assertRaises(ModelError) as raised:
+            load(fixture_project("wasm", golden_out=9.5)).verify()
+        self.assertEqual("Verify", raised.exception.kind)
+
+
+class EmbedLoaderTest(unittest.TestCase):
+    def test_the_loader_is_written_once_and_a_repeat_writes_nothing(self):
+        from mlmodels._embed import embed_loader
+
+        consumer = join(tempfile.mkdtemp(), "mlserver")
+        self.assertEqual(["loader.py", "__init__.py", "vocabulary.py"], embed_loader(consumer, "python"))
+        self.assertEqual([], embed_loader(consumer, "python"))
+        with open(join(consumer, "src/main/python/serving/model/loader.py")) as written, open(join(ROOT, "rue/mlmodels/src/main/python/mlmodels/runtime/loader.py")) as source:
+            self.assertTrue(written.read().endswith(source.read()))
+        with open(join(consumer, "src/main/python/serving/model/loader.py"), "a") as written:
+            written.write("#")
+        self.assertEqual(["loader.py"], embed_loader(consumer, "python"))
+
+    def test_a_language_without_a_loader_is_refused(self):
+        from mlmodels._embed import embed_loader
+
+        with self.assertRaises(ValueError):
+            embed_loader(tempfile.mkdtemp(), "cobol")
+
+
 class ReplayTest(unittest.TestCase):
     def test_each_flavour_replays_its_golden_exactly(self):
         from mlmodels._replay import replay_project
 
         for flavour in ("pyfunc", "wasm", "onnx"):
-            self.assertEqual([], replay_project(demo_project(flavour)), flavour)
+            self.assertEqual([], replay_project(fixture_project(flavour)), flavour)
 
     def test_a_response_that_differs_from_the_golden_is_a_finding(self):
         from mlmodels._replay import replay_project
 
         for flavour in ("pyfunc", "wasm", "onnx"):
-            self.assertEqual(["RP003"], [rule for rule, _ in replay_project(demo_project(flavour, golden_out=3.5))], flavour)
+            self.assertEqual(["RP003"], [rule for rule, _ in replay_project(fixture_project(flavour, golden_out=3.5))], flavour)
 
     def test_a_stated_tolerance_accepts_a_small_difference_and_rejects_a_large_one(self):
         from mlmodels._replay import replay_project
 
         bounds = {"demo_out": {"absolute": 1e-3}}
         for flavour in ("pyfunc", "wasm", "onnx"):
-            self.assertEqual([], replay_project(demo_project(flavour, golden_out=3.0000001, tolerance=bounds)), flavour)
-            self.assertEqual(["RP003"], [rule for rule, _ in replay_project(demo_project(flavour, golden_out=3.5, tolerance=bounds))], flavour)
-            self.assertEqual(["RP003"], [rule for rule, _ in replay_project(demo_project(flavour, golden_out=3.0000001))], flavour)
+            self.assertEqual([], replay_project(fixture_project(flavour, golden_out=3.0000001, tolerance=bounds)), flavour)
+            self.assertEqual(["RP003"], [rule for rule, _ in replay_project(fixture_project(flavour, golden_out=3.5, tolerance=bounds))], flavour)
+            self.assertEqual(["RP003"], [rule for rule, _ in replay_project(fixture_project(flavour, golden_out=3.0000001))], flavour)
 
     def test_a_relative_tolerance_scales_with_the_expected_value(self):
         from mlmodels._replay import replay_project
 
-        self.assertEqual([], replay_project(demo_project("pyfunc", golden_out=3.003, tolerance={"demo_out": {"relative": 0.002}})))
-        self.assertEqual(["RP003"], [rule for rule, _ in replay_project(demo_project("pyfunc", golden_out=3.01, tolerance={"demo_out": {"relative": 0.002}}))])
+        self.assertEqual([], replay_project(fixture_project("pyfunc", golden_out=3.003, tolerance={"demo_out": {"relative": 0.002}})))
+        self.assertEqual(["RP003"], [rule for rule, _ in replay_project(fixture_project("pyfunc", golden_out=3.01, tolerance={"demo_out": {"relative": 0.002}}))])
 
     def test_a_malformed_tolerance_is_a_finding(self):
         for bounds in ({"demo_other": {"absolute": 1}}, {"demo_out": {"absolute": -1}}, {"demo_out": {}}, {"demo_out": {"scale": 1}}, {"demo_out": {"absolute": True}}):
             with self.assertRaises(ValueError) as refused:
-                demo_project("pyfunc", tolerance=bounds)
+                fixture_project("pyfunc", tolerance=bounds)
             self.assertIn("PJ015", str(refused.exception), bounds)
 
 
@@ -547,7 +661,7 @@ class MetadataTest(unittest.TestCase):
         with open(join(self.workspace, "data", "training", "2026-01-01_00-00-00", "a.csv"), "w") as data_file:
             data_file.write("x\n1\n")
         self.write_notebook(["x = 1\n"], ["# a heading\n"])
-        self.project_dir = demo_project("wasm")
+        self.project_dir = fixture_project("wasm")
 
     def write_notebook(self, code, markdown):
         with open(join(self.workspace, "notebook.ipynb"), "w") as notebook_file:
@@ -795,14 +909,14 @@ class ReleaseTest(unittest.TestCase):
         with open(self.pins, "w") as pins_file:
             pins_file.write("numpy==2.0\n")
         self.consumer = join(self.source, "max", "consumer")
-        self.slot = join(self.consumer, "src", "build", "resources", "model")
+        self.slot = join(self.consumer, "src", "build", "resources", "model", "double")
         os.makedirs(dirname(self.slot))
-        shutil.copytree(demo_project("wasm", golden_out=3.5), self.slot)
+        shutil.copytree(fixture_project("wasm", golden_out=3.5), self.slot)
 
     def record(self, project_dir=None, target=None):
         from mlmodels._metadata import record_project
 
-        return record_project(self.workspace, project_dir or demo_project("wasm"), self.TARGET if target is None else target, self.pins)
+        return record_project(self.workspace, project_dir or fixture_project("wasm"), self.TARGET if target is None else target, self.pins)
 
     def version_file(self, text):
         path = join(tempfile.mkdtemp(), ".version")
@@ -842,7 +956,7 @@ class ReleaseTest(unittest.TestCase):
         printed = output.getvalue()
         self.assertTrue(ws.env["MLFLOW_TRACKING_URI"].startswith("http"))
         self.assertEqual("demo_calc_run", ws.model_name)
-        for expected in ("Target    embedded go", "Runtime   none", "Inputs    ", "Outputs   "):
+        for expected in ("Target    embedded go", "Requires  []", "Inputs    ", "Outputs   "):
             self.assertIn(expected, printed)
 
     def test_every_json_document_starts_with_its_schema(self):
@@ -893,7 +1007,7 @@ class ReleaseTest(unittest.TestCase):
     def test_a_runtime_with_no_pin_is_refused_before_the_workspace_changes(self):
         from mlmodels._errors import GateError
 
-        project_dir = demo_project("wasm")
+        project_dir = fixture_project("wasm")
         with open(join(project_dir, "project.json")) as manifest_file:
             manifest = json.load(manifest_file)
         manifest["runtime"] = {"python": ["unpinned_package"]}
@@ -937,7 +1051,7 @@ class ReleaseTest(unittest.TestCase):
         self.record()
         self.release("10.200.2")
         self.assertEqual("10.200.1", read_metadata(self.workspace)["version"])
-        self.record(project_dir=demo_project("wasm", golden_out=3.5))
+        self.record(project_dir=fixture_project("wasm", golden_out=3.5))
         self.assertIsNone(read_metadata(self.workspace)["release"])
 
     def test_an_unreleased_project_carries_the_snapshot_until_its_content_changes_or_it_is_released(self):
@@ -948,15 +1062,15 @@ class ReleaseTest(unittest.TestCase):
             assert recorded is not None
             return recorded
 
-        self.assertEqual("10.200.1951-SNAPSHOT", record(demo_project("wasm"), "10.200.1951-SNAPSHOT\n")["version"])
-        self.assertEqual("10.200.1951-SNAPSHOT", record(demo_project("wasm"), "10.200.1952-SNAPSHOT")["version"])
-        self.assertEqual("10.200.1952-SNAPSHOT", record(demo_project("wasm", golden_out=3.5), "10.200.1952-SNAPSHOT")["version"])
-        self.assertEqual("10.200.1952-SNAPSHOT", record(demo_project("wasm", golden_out=3.5), "10.200.1953")["version"])
-        self.assertIsNone(record(demo_project("wasm", golden_out=4.5), "10.200.1953")["version"])
-        record(demo_project("wasm"), "10.200.1954-SNAPSHOT")
+        self.assertEqual("10.200.1951-SNAPSHOT", record(fixture_project("wasm"), "10.200.1951-SNAPSHOT\n")["version"])
+        self.assertEqual("10.200.1951-SNAPSHOT", record(fixture_project("wasm"), "10.200.1952-SNAPSHOT")["version"])
+        self.assertEqual("10.200.1952-SNAPSHOT", record(fixture_project("wasm", golden_out=3.5), "10.200.1952-SNAPSHOT")["version"])
+        self.assertEqual("10.200.1952-SNAPSHOT", record(fixture_project("wasm", golden_out=3.5), "10.200.1953")["version"])
+        self.assertIsNone(record(fixture_project("wasm", golden_out=4.5), "10.200.1953")["version"])
+        record(fixture_project("wasm"), "10.200.1954-SNAPSHOT")
         self.release()
         self.assertEqual("10.200.1", read_metadata(self.workspace)["version"])
-        self.assertEqual("10.200.1", record(demo_project("wasm"), "10.200.1955-SNAPSHOT")["version"])
+        self.assertEqual("10.200.1", record(fixture_project("wasm"), "10.200.1955-SNAPSHOT")["version"])
 
     def test_the_fixtures_module_is_never_released(self):
         from mlmodels._release import NOTEBOOK_ROOT
@@ -966,11 +1080,12 @@ class ReleaseTest(unittest.TestCase):
         shutil.copy(join(self.workspace, "notebook.ipynb"), fixture)
         from mlmodels._metadata import record_project
 
-        record_project(fixture, demo_project("wasm"), self.TARGET, self.pins)
+        record_project(fixture, fixture_project("wasm"), self.TARGET, self.pins)
         self.assertEqual([], self.release())
 
     def test_a_consumer_embeds_the_released_project_and_is_stale_until_it_does(self):
-        from mlmodels._release import embed_consumer, slot_findings, stale_consumers
+        from mlmodels._embed import embed_consumer, stale_consumers
+        from mlmodels._release import slot_findings
 
         self.record()
         self.assertEqual("none", embed_consumer(self.consumer, self.source, "demo_replay_double"))
@@ -983,6 +1098,180 @@ class ReleaseTest(unittest.TestCase):
             manifest_file.write(" ")
         self.assertEqual(["CP004"], [rule for rule, _ in slot_findings(self.slot, self.source)])
         self.assertEqual("embedded", embed_consumer(self.consumer, self.source, "demo_replay_double"))
+
+    def test_a_python_consumer_gets_a_loader_root_and_model_file_that_load_and_replay(self):
+        import importlib
+
+        from mlmodels._embed import embed_consumer, loader_findings, stale_consumers
+
+        self.record(target={"kind": "embedded", "language": "python"})
+        self.release()
+        self.assertEqual([self.consumer], stale_consumers(self.source))
+        self.assertEqual("embedded", embed_consumer(self.consumer, self.source, "demo_replay_double"))
+        self.assertEqual(("unchanged", [], []), (embed_consumer(self.consumer, self.source, "demo_replay_double"), stale_consumers(self.source), loader_findings(self.consumer, self.source)))
+        package = join(self.consumer, "src/main/python/consumer/model")
+        self.assertEqual(["__init__.py", "double.py", "loader.py"], sorted(os.listdir(package)))
+        sys.path.insert(0, join(self.consumer, "src/main/python"))
+        self.addCleanup(sys.path.remove, join(self.consumer, "src/main/python"))
+        self.addCleanup(lambda: [sys.modules.pop(name) for name in [name for name in sys.modules if name == "consumer" or name.startswith("consumer.")]])
+        generated = importlib.import_module("consumer.model.double")
+        model = generated.load(self.slot)
+        model.verify()
+        response = generated.Response.from_tensors(model.predict(generated.Request(demo_in=1.5).to_tensors()))
+        self.assertEqual(generated.Response(demo_out=3.0), response)
+        with self.assertRaises(generated.loader.ModelError):
+            generated.Response.from_tensors({})
+        with open(join(package, "double.py"), "a") as model_file:
+            model_file.write("# edited\n")
+        self.assertEqual([], loader_findings(self.consumer, self.source))
+        with open(join(package, "loader.py"), "a") as loader_file:
+            loader_file.write("#")
+        self.assertEqual(["CP005"], [rule for rule, _ in loader_findings(self.consumer, self.source)])
+        self.assertEqual("embedded", embed_consumer(self.consumer, self.source, "demo_replay_double"))
+        self.assertEqual([], loader_findings(self.consumer, self.source))
+
+    def test_a_language_with_no_embedding_is_refused_before_the_slot_is_touched(self):
+        from mlmodels._embed import embed_consumer
+        from mlmodels._errors import GateError
+        from mlmodels._metadata import content_sha256
+
+        self.record(target={"kind": "embedded", "language": "java"})
+        self.release()
+        before = content_sha256(self.slot)
+        with self.assertRaises(GateError):
+            embed_consumer(self.consumer, self.source, "demo_replay_double")
+        self.assertEqual(before, content_sha256(self.slot))
+
+    def test_a_rust_consumer_gets_a_loader_root_and_model_file_that_compile_and_replay(self):
+        import unittest.mock
+
+        from mlmodels._embed import embed_consumer, loader_findings
+        from mlmodels._errors import GateError
+
+        home = os.path.expanduser("~/.rust/versions/asystem")
+        env = {"CARGO_HOME": home, "RUSTUP_HOME": home, "PATH": f"{home}/bin:{os.environ['PATH']}", "CARGO_TARGET_DIR": join(ROOT, "rue/mlmodels/target/rust-embed")}
+        crate = join(self.consumer, "src/main/rust/consumer")
+        os.makedirs(join(crate, "src"))
+        reference = join(ROOT, "rue/mlmodels/src/main/rust/mlmodels")
+        with open(join(reference, "Cargo.toml")) as cargo_file:
+            cargo = "".join(line for line in cargo_file if not line.startswith("ureq")).replace('name = "consumer"', 'name = "embedded"')
+        with open(join(crate, "Cargo.toml"), "w") as cargo_file:
+            cargo_file.write(cargo)
+        shutil.copy(join(reference, "Cargo.lock"), crate)
+        with open(join(crate, "src/lib.rs"), "w") as lib_file:
+            lib_file.write(
+                "pub mod model;\n\n#[cfg(test)]\nmod tests {\n    use std::path::Path;\n\n    use crate::model::double::{load, Request, Response};\n\n"
+                '    #[test]\n    fn the_embedded_model_replays_and_converts() {\n        let model = load(Path::new(&std::env::var("PROJECT_DIR").unwrap())).unwrap();\n'
+                "        model.verify().unwrap();\n        let response = Response::try_from(model.predict(&Request { demo_in: 1.5 }.into()).unwrap()).unwrap();\n"
+                "        assert_eq!(Response { demo_out: 3.0 }, response);\n    }\n}\n"
+            )
+        self.record(target={"kind": "embedded", "language": "rust"})
+        self.release()
+        with unittest.mock.patch.dict(os.environ, env):
+            self.assertEqual("embedded", embed_consumer(self.consumer, self.source, "demo_replay_double"))
+            self.assertEqual("unchanged", embed_consumer(self.consumer, self.source, "demo_replay_double"))
+            completed = subprocess.run(["cargo", "test", "--offline", "--quiet"], cwd=crate, env={**os.environ, "PROJECT_DIR": self.slot}, capture_output=True, text=True, timeout=900, check=False)
+            self.assertEqual(0, completed.returncode, completed.stdout + completed.stderr)
+            self.assertEqual([], loader_findings(self.consumer, self.source))
+            with open(join(crate, "src/model/loader.rs"), "a") as loader_file:
+                loader_file.write("// edit\n")
+            self.assertEqual(["CP005"], [rule for rule, _ in loader_findings(self.consumer, self.source)])
+            with open(join(crate, "src/model/double.rs")) as model_file:
+                original = model_file.read()
+            with open(join(crate, "src/model/double.rs"), "w") as model_file:
+                model_file.write(original.replace("project demo_replay_double", "project another_double"))
+            self.assertIn("CP005", [rule for rule, _ in loader_findings(self.consumer, self.source)])
+            self.assertEqual("embedded", embed_consumer(self.consumer, self.source, "demo_replay_double"))
+            with open(join(crate, "src/model/double.rs")) as model_file:
+                self.assertEqual(original, model_file.read())
+            with open(join(crate, "src/model/old_double.rs"), "w") as model_file:
+                model_file.write("// a model file from an earlier version\n")
+            self.assertEqual(["CP006"], [rule for rule, _ in loader_findings(self.consumer, self.source)])
+            self.assertEqual("embedded", embed_consumer(self.consumer, self.source, "demo_replay_double"))
+            self.assertEqual(["double.rs", "loader.rs", "mod.rs"], sorted(os.listdir(join(crate, "src/model"))))
+            self.assertEqual([], loader_findings(self.consumer, self.source))
+            with open(join(self.slot, "project.json")) as manifest_file:
+                manifest = json.load(manifest_file)
+            manifest["name"] = "another_double"
+            with open(join(self.slot, "project.json"), "w") as manifest_file:
+                json.dump(manifest, manifest_file)
+            with self.assertRaises(GateError):
+                embed_consumer(self.consumer, self.source, "demo_replay_double")
+            manifest["name"] = "demo_replay_double"
+            with open(join(self.slot, "project.json"), "w") as manifest_file:
+                json.dump(manifest, manifest_file)
+            with open(join(crate, "Cargo.toml"), "w") as cargo_file:
+                cargo_file.write(cargo.replace('sha2 = "0.11.1"', 'sha2 = "0.10"'))
+            with self.assertRaises(GateError) as raised:
+                embed_consumer(self.consumer, self.source, "demo_replay_double")
+            self.assertIn("sha2", raised.exception.cause)
+
+    def test_a_go_consumer_gets_a_loader_and_a_model_package_that_compile_and_replay(self):
+        import unittest.mock
+
+        from mlmodels._embed import embed_consumer
+        from mlmodels._errors import GateError
+
+        goroot = os.path.expanduser("~/.goenv/versions/1.27.0")
+        env = {"GOROOT": goroot, "GOPATH": join(ROOT, "../.go"), "PATH": f"{goroot}/bin:{os.environ['PATH']}", "GOFLAGS": "-mod=mod", "GOPROXY": "off"}
+        crate = join(self.consumer, "src/main/go/consumer")
+        os.makedirs(crate)
+        reference = join(ROOT, "rue/mlmodels/src/main/go/mlmodels")
+        with open(join(reference, "go.mod")) as mod_file:
+            mod = mod_file.read().replace("module consumer", "module embedded")
+        with open(join(crate, "go.mod"), "w") as mod_file:
+            mod_file.write(mod)
+        shutil.copy(join(reference, "go.sum"), crate)
+        self.record(target={"kind": "embedded", "language": "go"})
+        self.release()
+        with unittest.mock.patch.dict(os.environ, env):
+            self.assertEqual("embedded", embed_consumer(self.consumer, self.source, "demo_replay_double"))
+            self.assertEqual("unchanged", embed_consumer(self.consumer, self.source, "demo_replay_double"))
+            with open(join(crate, "model/double/double_test.go"), "w") as test_file:
+                test_file.write(
+                    'package double\n\nimport (\n\t"os"\n\t"testing"\n)\n\nfunc TestEmbedded(t *testing.T) {\n\tmodel, err := Load(os.Getenv("PROJECT_DIR"))\n\tif err != nil {\n\t\tt.Fatal(err)\n\t}\n'
+                    "\tif err := model.Verify(); err != nil {\n\t\tt.Fatal(err)\n\t}\n\toutputs, err := model.Predict(Request{DemoIn: 1.5}.ToTensors())\n\tif err != nil {\n\t\tt.Fatal(err)\n\t}\n"
+                    '\tresponse, err := FromTensors(outputs)\n\tif err != nil || response.DemoOut != 3 {\n\t\tt.Fatalf("got %v %v", response, err)\n\t}\n}\n'
+                )
+            completed = subprocess.run(["go", "test", "./..."], cwd=crate, env={**os.environ, "PROJECT_DIR": self.slot}, capture_output=True, text=True, timeout=900, check=False)
+            self.assertEqual(0, completed.returncode, completed.stdout + completed.stderr)
+            vetted = subprocess.run(["go", "vet", "./..."], cwd=crate, capture_output=True, text=True, timeout=300, check=False)
+            self.assertEqual(0, vetted.returncode, vetted.stdout + vetted.stderr)
+            with open(join(crate, "model/loader.go"), "a") as loader_file:
+                loader_file.write("//\n")
+            self.assertEqual("embedded", embed_consumer(self.consumer, self.source, "demo_replay_double"))
+            with open(join(crate, "go.mod"), "w") as mod_file:
+                mod_file.write(mod.replace("wazero v1.12.0", "wazero v1.0.0"))
+            with self.assertRaises(GateError) as raised:
+                embed_consumer(self.consumer, self.source, "demo_replay_double")
+            self.assertIn("wazero", raised.exception.cause)
+
+    def test_a_served_project_makes_mlserver_stale_until_its_loader_is_current(self):
+        from mlmodels._embed import embed_loader, stale_consumers
+
+        mlserver = join(self.source, "may", "mlserver")
+        os.makedirs(mlserver)
+        self.record()
+        self.release()
+        self.assertEqual([self.consumer, mlserver], stale_consumers(self.source))
+        embed_loader(mlserver, "python")
+        self.assertEqual([self.consumer], stale_consumers(self.source))
+        with open(join(mlserver, "src/main/python/serving/model/loader.py"), "a") as loader_file:
+            loader_file.write("#")
+        self.assertEqual([self.consumer, mlserver], stale_consumers(self.source))
+        embed_loader(mlserver, "python")
+        self.assertEqual([self.consumer], stale_consumers(self.source))
+        with open(join(mlserver, "src/main/python/serving/model/vocabulary.py"), "a") as vocabulary_file:
+            vocabulary_file.write("PROJECT_ALIAS_RELEASE = 'other'\n")
+        self.assertEqual([self.consumer, mlserver], stale_consumers(self.source))
+        embed_loader(mlserver, "python")
+        os.makedirs(join(mlserver, "src/main/python/serving/model/__pycache__"))
+        with open(join(mlserver, "src/main/python/serving/model/project.py"), "w") as old_file:
+            old_file.write("# a file from an earlier version\n")
+        self.assertEqual([self.consumer, mlserver], stale_consumers(self.source))
+        self.assertEqual(["project.py"], embed_loader(mlserver, "python"))
+        self.assertEqual(["__init__.py", "__pycache__", "loader.py", "vocabulary.py"], sorted(os.listdir(join(mlserver, "src/main/python/serving/model"))))
+        self.assertEqual([self.consumer], stale_consumers(self.source))
 
     def test_inputs_change_with_the_pins(self):
         from mlmodels._metadata import inputs_changed
@@ -997,7 +1286,7 @@ class ReleaseTest(unittest.TestCase):
     def test_an_embedded_only_project_is_not_registered(self):
         from mlmodels._registry import register_preview
 
-        self.assertIsNone(register_preview(demo_project("wasm"), "demo_replay_double", "http://127.0.0.1:9", {"kind": "embedded", "language": "rust"}))
+        self.assertIsNone(register_preview(fixture_project("wasm"), "demo_replay_double", "http://127.0.0.1:9", {"kind": "embedded", "language": "rust"}))
 
     def test_the_signature_may_grow_but_not_change_what_was_released(self):
         from mlmodels._errors import GateError
@@ -1023,7 +1312,7 @@ class ReleaseTest(unittest.TestCase):
         self.assertEqual(("Package", "signature"), (raised.exception.stage, raised.exception.gate))
 
     def project_with_signature(self, change):
-        project_dir = demo_project("wasm")
+        project_dir = fixture_project("wasm")
         with open(join(project_dir, "signature.json")) as signature_file:
             signature = json.load(signature_file)
         change(signature)
@@ -1033,7 +1322,7 @@ class ReleaseTest(unittest.TestCase):
 
     def test_publishing_registers_by_content_sets_the_tags_moves_release_and_clears_preview(self):
         from mlflow import MlflowClient
-        from mlmodels._release import clear_preview, publish_workspace, wait_served
+        from mlmodels._release import publish_workspace, wait_served
 
         self.record()
         self.release()
@@ -1050,12 +1339,13 @@ class ReleaseTest(unittest.TestCase):
         self.assertEqual(json.loads(tags["metadata"])["release"]["timestamp"], tags["released_at"])
         self.assertEqual("published", publish_workspace("demo_replay_double", self.workspace, uri))
         register_project(join(self.workspace, "project"), "demo_replay_double", uri)
-        clear_preview("demo_replay_double", uri)
+        client.delete_registered_model_alias("demo_replay_double", "preview")
         self.assertNotIn("preview", client.get_registered_model("demo_replay_double").aliases)
         self.assertEqual("unreachable", wait_served("http://127.0.0.1:9", "demo_replay_double", "10.200.1", timeout=1))
 
     def test_status_names_a_stale_consumer_and_nothing_else_when_everything_matches(self):
-        from mlmodels._release import embed_consumer, status_lines
+        from mlmodels._embed import embed_consumer
+        from mlmodels._release import status_lines
 
         self.record()
         self.release()
@@ -1342,6 +1632,8 @@ class WorkspaceLintTest(unittest.TestCase):
 
     def setUp(self):
         self.notebook_dir = join(tempfile.mkdtemp(), "demo", "calc", "run")
+        self.source_dir = tempfile.mkdtemp()
+        os.makedirs(join(self.source_dir, "max", "demo"))
         os.makedirs(join(self.notebook_dir, "data"))
         open(join(self.notebook_dir, "notebook.ipynb"), "w").close()
         open(join(self.notebook_dir, "data/.gitkeep"), "w").close()
@@ -1362,7 +1654,7 @@ class WorkspaceLintTest(unittest.TestCase):
     def rules(self):
         from mlmodels._lint_workspace import lint_workspace
 
-        return sorted({rule for rule, _ in lint_workspace(self.notebook_dir)})
+        return sorted({rule for rule, _ in lint_workspace(self.notebook_dir, self.source_dir)})
 
     def test_valid_workspace_has_no_findings(self):
         self.assertEqual([], self.rules())
@@ -1373,6 +1665,45 @@ class WorkspaceLintTest(unittest.TestCase):
         self.assertEqual(0, main(["workspace", self.notebook_dir]))
         open(join(self.notebook_dir, "notes.txt"), "w").close()
         self.assertEqual(1, main(["workspace", self.notebook_dir]))
+
+    def test_a_notebook_name_is_unique_per_module_and_loader_language(self):
+        module_dir = dirname(dirname(self.notebook_dir))
+
+        def write_target(model, target):
+            directory = join(module_dir, model, "run")
+            os.makedirs(directory, exist_ok=True)
+            with open(join(directory, "metadata.json"), "w") as metadata_file:
+                json.dump({"target": target}, metadata_file)
+
+        write_target("calc", {"kind": "embedded", "language": "rust"})
+        write_target("other", {"kind": "embedded", "language": "python"})
+        self.assertEqual([], self.rules())
+        write_target("other", {"kind": "embedded", "language": "rust"})
+        self.assertEqual(["WS013"], self.rules())
+        write_target("other", {"kind": "local"})
+        self.assertEqual([], self.rules())
+        write_target("calc", {"kind": "served"})
+        write_target("other", {"kind": "served"})
+        self.assertEqual(["WS013"], self.rules())
+
+    def test_an_embedded_workspace_needs_a_module_of_its_name_except_the_examples(self):
+        def write_target(kind):
+            with open(join(self.notebook_dir, "metadata.json"), "w") as metadata_file:
+                json.dump({"target": {"kind": kind, "language": "rust"}}, metadata_file)
+
+        write_target("embedded")
+        self.assertEqual([], self.rules())
+        os.rmdir(join(self.source_dir, "max", "demo"))
+        self.assertEqual(["WS014"], self.rules())
+        write_target("local")
+        self.assertEqual([], self.rules())
+        write_target("embedded")
+        example_dir = join(dirname(dirname(dirname(self.notebook_dir))), "example", "calc", "run")
+        os.makedirs(example_dir)
+        shutil.copy(join(self.notebook_dir, "metadata.json"), example_dir)
+        from mlmodels._lint_workspace import lint_workspace
+
+        self.assertNotIn("WS014", [rule for rule, _ in lint_workspace(example_dir, self.source_dir)])
 
     def test_a_plan_file_is_a_finding_since_the_notebook_header_holds_the_plan(self):
         open(join(self.notebook_dir, "plan.md"), "w").close()
@@ -1490,7 +1821,7 @@ class SpecSyncTest(unittest.TestCase):
 
         in_spec = set(re.findall(r"^\| ((?:PJ|NB|WS|PM|AC|CP|RP|MD)\d{3}) \|", self.spec, re.MULTILINE))
         in_code = set()
-        for module in sorted(glob.glob(join(ROOT, "rue/mlmodels/src/main/python/mlmodels/*.py"))):
+        for module in sorted(glob.glob(join(ROOT, "rue/mlmodels/src/main/python/mlmodels/*.py")) + glob.glob(join(ROOT, "rue/mlmodels/src/main/python/mlmodels/runtime/*.py"))):
             with open(module) as source:
                 in_code |= set(re.findall(r'"((?:PJ|NB|WS|PM|AC|CP|RP|MD)\d{3})"', source.read()))
         self.assertTrue(in_spec and in_code)
@@ -1531,8 +1862,8 @@ class SpecSyncTest(unittest.TestCase):
         self.assertEqual(list(NOTEBOOK_STAGES), stages)
 
 
-def demo_project(*arguments, **options):
-    from mlmodels._demo import demo_project as build
+def fixture_project(*arguments, **options):
+    from fixtures import fixture_project as build
 
     return build(*arguments, **options)
 

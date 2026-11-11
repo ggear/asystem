@@ -35,6 +35,7 @@ FROM image_upstream AS image_runtime
 COPY --from=image_base /asystem/bin/rackmains/target/release/rackmains /asystem/bin/rackmains
 COPY --from=image_base /asystem/bin/rackmains/target/release/mockdriver /asystem/bin/mockdriver
 COPY src/main/resources/image /asystem/etc
+COPY src/build/resources/model/battery /asystem/etc/model
 WORKDIR /asystem/etc
 ENV RACKMAINS_DEVICE=/run/nut/nutdrv_qx-powershield
 ENV RACKMAINS_POLL_PERIOD=10s

@@ -2,7 +2,7 @@
   "schema": 2,
   "version": "10.200.2012",
   "content_sha256": "c0547c3deec2e6b300444dab3117d7a5e68d9082d021f3ef2670e0f2ee172262",
-  "inputs_sha256": "22e66e7a4cdf9e1e949e91ddb585381dd469c8dd12556dd5aa165b7bcd10cde3",
+  "inputs_sha256": "782fe6d4d43919c83c1db64c7cb22f1bfeb1f272c5e6457f7d9475995c3547ad",
   "target": {"kind": "embedded", "language": "rust"},
   "release": {
     "timestamp": "2026-11-10T07:21:55Z",

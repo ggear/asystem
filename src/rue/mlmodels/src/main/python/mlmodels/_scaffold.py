@@ -2,10 +2,9 @@ import json
 import os
 from os.path import isfile, join
 
-from mlmodels._constants import PROJECT_FLAVOURS
+from mlmodels._constants import PROJECT_FLAVOURS, PROJECT_SIGNATURE, RUN_FIRST
 from mlmodels._document import write_json
 from mlmodels._lint_notebook import stage_heading
-from mlmodels._metadata import SIGNATURE_FILE
 from mlmodels._signature import build_signature, check_name, registered_name, signature_input, signature_output
 
 
@@ -20,7 +19,7 @@ def scaffold_notebook(root, module, model, notebook, flavour, local=False):
         raise ValueError(f"notebook already exists [{notebook_path}]")
     name = registered_name(module, model, notebook)
     os.makedirs(join(notebook_dir, "data"), exist_ok=True)
-    created = [notebook_path, join(notebook_dir, SIGNATURE_FILE)]
+    created = [notebook_path, join(notebook_dir, PROJECT_SIGNATURE)]
     keep = join(notebook_dir, "data", ".gitkeep")
     if not isfile(keep):
         open(keep, "w").close()
@@ -61,18 +60,18 @@ def _scaffold_notebook(module, model, notebook, name, flavour, local):
         cells += [stage("Collect"), stage("Prepare"), stage("Explore"), stage("Train")]
     cells += [stage("Define")]
     if static:
-        cells += [code('from mlmodels import define_model\n\nCONSTANTS = {ws.outputs[0]: 1}\ndefine_model(ws, model=1000, flavour="static", source=CONSTANTS, label="scaffold constants")\n')]
+        cells += [code(f'from mlmodels import define_model\n\nCONSTANTS = {{ws.outputs[0]: 1}}\ndefine_model(ws, model={RUN_FIRST}, flavour="static", source=CONSTANTS, label="scaffold constants")\n')]
     else:
         cells += [stage("Evaluate")]
     cells += [
         stage("Package"),
         code(
-            f'from mlmodels import package_model\n\npackage_model(ws, 1000, {{ws.inputs[0]: [1.0, None], "expect": ["ok", "error"]}}, target={target})\n'
+            f'from mlmodels import package_model\n\npackage_model(ws, {RUN_FIRST}, {{ws.inputs[0]: [1.0, None], "expect": ["ok", "error"]}}, target={target})\n'
             if static
             else 'print("no model is defined yet, so nothing is packaged")\n'
         ),
         stage("Register"),
-        code("from mlmodels import register_model\n\nregister_model(ws, 1000)" if static else 'print("no model is defined yet, so nothing is registered")'),
+        code(f"from mlmodels import register_model\n\nregister_model(ws, {RUN_FIRST})" if static else 'print("no model is defined yet, so nothing is registered")'),
     ]
     if local:
         cells = cells[:-2]

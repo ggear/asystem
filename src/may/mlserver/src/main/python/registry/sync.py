@@ -8,11 +8,18 @@ import urllib.error
 import urllib.request
 from os.path import isdir, join
 
-from serving.project import load_project
+from serving.model.loader import load
+from serving.model.vocabulary import (
+    PROJECT_ALIAS_PREVIEW,
+    PROJECT_ALIAS_RELEASE,
+    PROJECT_LABEL_PREVIEW,
+    PROJECT_LABEL_RELEASE,
+    PROJECT_PREVIEW_SUFFIX,
+    PROJECT_TAG_CONTENT_SHA256,
+    PROJECT_TAG_FLAVOUR,
+    PROJECT_TAG_RELEASE_VERSION,
+)
 
-ALIAS_RELEASE = "release"
-ALIAS_PREVIEW = "preview"
-PREVIEW_SUFFIX = "_preview"
 RUNTIME = "serving.runtime.ProjectRuntime"
 SERVER_SETTINGS = {"host": "0.0.0.0", "http_port": 8080, "grpc_port": 8081, "parallel_workers": 0}
 SETTINGS_FILE = "model-settings.json"
@@ -84,21 +91,21 @@ def _wanted(models):
     wanted = {}
     for model in models:
         versions, aliases = model["versions"], model["aliases"]
-        released = aliases.get(ALIAS_RELEASE)
+        released = aliases.get(PROJECT_ALIAS_RELEASE)
         if released is not None and _is_mlmodels(versions.get(str(released))):
             tags = versions[str(released)]
-            older = sorted((int(version) for version, other in versions.items() if "release_version" in other and int(version) < int(released)), reverse=True)
-            wanted[model["name"]] = [(str(released), tags, tags.get("release_version") or f"release-{tags['content_sha256'][:8]}")]
-            wanted[model["name"]] += [(str(number), versions[str(number)], versions[str(number)]["release_version"]) for number in older]
-        previewed = aliases.get(ALIAS_PREVIEW)
+            older = sorted((int(version) for version, other in versions.items() if PROJECT_TAG_RELEASE_VERSION in other and int(version) < int(released)), reverse=True)
+            wanted[model["name"]] = [(str(released), tags, tags.get(PROJECT_TAG_RELEASE_VERSION) or f"{PROJECT_LABEL_RELEASE}{tags[PROJECT_TAG_CONTENT_SHA256][:8]}")]
+            wanted[model["name"]] += [(str(number), versions[str(number)], versions[str(number)][PROJECT_TAG_RELEASE_VERSION]) for number in older]
+        previewed = aliases.get(PROJECT_ALIAS_PREVIEW)
         if previewed is not None and str(previewed) != str(released) and _is_mlmodels(versions.get(str(previewed))):
             tags = versions[str(previewed)]
-            wanted[model["name"] + PREVIEW_SUFFIX] = [(str(previewed), tags, f"preview-{tags['content_sha256'][:8]}")]
+            wanted[model["name"] + PROJECT_PREVIEW_SUFFIX] = [(str(previewed), tags, f"{PROJECT_LABEL_PREVIEW}{tags[PROJECT_TAG_CONTENT_SHA256][:8]}")]
     return wanted
 
 
 def _is_mlmodels(tags):
-    return tags is not None and "content_sha256" in tags and "project_flavour" in tags
+    return tags is not None and PROJECT_TAG_CONTENT_SHA256 in tags and PROJECT_TAG_FLAVOUR in tags
 
 
 def _held(models_dir):
@@ -112,11 +119,11 @@ def _held(models_dir):
 
 
 def _serve(registry, models_dir, served, candidates, held, failed, call):
-    name = served.removesuffix(PREVIEW_SUFFIX)
+    name = served.removesuffix(PROJECT_PREVIEW_SUFFIX)
     for version, tags, label in candidates:
         if (served, version) in failed:
             continue
-        if held is not None and held.get("registry_version") == version and held.get("content_sha256") == tags["content_sha256"]:
+        if held is not None and held.get("registry_version") == version and held.get("content_sha256") == tags[PROJECT_TAG_CONTENT_SHA256]:
             return
         try:
             _swap(registry, models_dir, served, name, version, tags, label, call)
@@ -137,13 +144,13 @@ def _swap(registry, models_dir, served, name, version, tags, label, call):
         project_dir = next((root for root, _, files in os.walk(staging_dir) if "project.json" in files), None)
         if project_dir is None:
             raise ValueError("no project in the pulled model")
-        project = load_project(project_dir)
+        model = load(project_dir)
         settings = {
             "name": served,
             "implementation": RUNTIME,
-            "parameters": {"version": label, "extra": {"registry_version": version, "content_sha256": tags["content_sha256"]}},
-            "inputs": [{key: entry[key] for key in ("name", "datatype", "shape")} for entry in project.signature["inputs"]],
-            "outputs": [{key: entry[key] for key in ("name", "datatype", "shape")} for entry in project.signature["outputs"]],
+            "parameters": {"version": label, "extra": {"registry_version": version, "content_sha256": tags[PROJECT_TAG_CONTENT_SHA256]}},
+            "inputs": [{key: entry[key] for key in ("name", "datatype", "shape")} for entry in model.signature()["inputs"]],
+            "outputs": [{key: entry[key] for key in ("name", "datatype", "shape")} for entry in model.signature()["outputs"]],
         }
         with open(join(project_dir, SETTINGS_FILE), "w") as settings_file:
             json.dump(settings, settings_file, indent=2, sort_keys=True)

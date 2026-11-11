@@ -6,6 +6,7 @@ from mlmodels._constants import PROJECT_MANIFEST
 from mlmodels._errors import GateError
 from mlmodels._metadata import read_metadata
 from mlmodels._registry import register_preview
+from mlmodels._tracking import tracking_context
 
 LOG = logging.getLogger(__name__)
 
@@ -16,7 +17,7 @@ def register_model(ws, model):
     if packaged != model:
         raise GateError("Register", "model", f"model [{model}] is not the packaged model [{packaged}]")
     metadata = read_metadata(ws.path)
-    version = register_preview(ws.project_dir, ws.model_name, ws.env["MLFLOW_TRACKING_URI"], metadata["target"], metadata["version"])
+    version = register_preview(ws.project_dir, ws.model_name, ws.env["MLFLOW_TRACKING_URI"], metadata["target"], metadata["version"], tracking_context(ws, ws.models[model]))
     if version is None:
         LOG.info("Register model [%s] not registered as the target is not served", model)
     else:

@@ -100,18 +100,6 @@ class CollectRunTest(unittest.TestCase):
         with self.assertRaises(GateError):
             self.query(mock.Mock(), query="SELECT 1 WHERE time >= '{start}'", params={"start": "2026-02-01"})
 
-    def test_a_collect_logs_its_run_label_rows_cache_state_and_timing_with_bracketed_values(self):
-        post = mock.Mock(return_value=self.response("time,value\n2026-01-01T00:00:00,1.5\n"))
-        with self.assertLogs("mlmodels._collect", level="INFO") as captured:
-            self.query(post, query="SELECT   1\nFROM demo")
-            self.query(post, query="SELECT   1\nFROM demo")
-        lines = [record.getMessage() for record in captured.records]
-        self.assertEqual(2, len(lines))
-        for expected in ("Collect run [1000]", "with rows [     1]", "cached [False]", "seconds ["):
-            self.assertIn(expected, lines[0])
-        self.assertIn("cached [True]", lines[1])
-        self.assertTrue(all("SELECT" not in line and "host" not in line for line in lines))
-
     def test_runs_are_numbered_directories(self):
         post = mock.Mock(return_value=self.response("time,value\n"))
         self.query(post, run=1000)
@@ -376,7 +364,7 @@ class DefineModelTest(ModelWorkspaceCase):
 
     def test_an_optional_input_the_request_omits_reaches_the_function_as_none(self):
         from mlmodels._model import model_content
-        from mlmodels.runtime.pyfunc import load_pyfunc
+        from mlmodels.runtime.loader import load_pyfunc
 
         stub = SimpleNamespace(inputs=["demo_in_seconds", "demo_gain"], outputs=["demo_out_seconds"])
         _, content, _ = model_content(stub, "pyfunc", optional_gain, {})
@@ -489,6 +477,13 @@ class EvaluateStateTest(ModelWorkspaceCase):
         totals = {sequence["name"]: [step["response"]["outputs"][0]["data"][0] for step in sequence["steps"] if "response" in step] for sequence in document["sequences"]}
         self.assertEqual({"a": [1.0, 3.0, 6.0], "b": [10.0, 30.0]}, totals)
 
+    def test_a_check_that_could_not_be_measured_fails_and_the_run_continues(self):
+        from mlmodels.workflow.evaluate import evaluate_gate
+
+        self.define_total()
+        evaluation = evaluate_gate(self.ws, 1000, lambda: [{"split": "validation", "output": "demo_out_seconds", "name": "rmse", "value": None, "limit": 1.0, "direction": "max"}])
+        self.assertEqual((False, None), (evaluation["passed"], evaluation["budget"]))
+
 
 class PackageModelTest(ModelWorkspaceCase):
     def define(self, source=linear):
@@ -500,6 +495,28 @@ class PackageModelTest(ModelWorkspaceCase):
         from mlmodels.workflow.evaluate import evaluate_gate
 
         evaluate_gate(self.ws, 1000, lambda: [{"split": "validation", "output": "demo_out_seconds", "name": "rmse", "value": 1.0, "limit": limit, "direction": "max"}])
+
+    def test_registration_records_params_dataset_schema_figures_tables_and_a_description(self):
+        import mlflow
+        from mlmodels.workflow.evaluate import evaluate_plot
+        from mlmodels.workflow.register import register_model
+
+        self.define()
+        self.gate(1.0)
+        evaluate_plot(self.ws, [1000], "validation")
+        self.package()
+        uri = f"sqlite:///{join(tempfile.mkdtemp(), 'mlflow.db')}"
+        self.ws.env["MLFLOW_TRACKING_URI"] = uri
+        register_model(self.ws, 1000)
+        mlflow.set_tracking_uri(uri)
+        run = mlflow.search_runs(experiment_names=["demo_calc_run"], output_format="list")[0]
+        self.assertEqual(("1000", "A line", "3"), (run.data.params["model"], run.data.params["label"], run.data.params["rows.training"]))
+        self.assertEqual("2.5", run.data.params["constant.GAIN"])
+        assert run.inputs is not None
+        self.assertIn("demo_in_seconds", str(run.inputs.dataset_inputs[0].dataset.schema))
+        client = mlflow.MlflowClient()
+        self.assertEqual({"figures", "evaluation"} <= {entry.path for entry in client.list_artifacts(run.info.run_id)}, True)
+        self.assertIn("demo_out_seconds", str(client.get_model_version_by_alias("demo_calc_run", "preview").description))
 
     def package(self, golden=None, model=1000):
         from mlmodels.workflow.package import package_model
@@ -808,8 +825,8 @@ class ReplayRunnerTest(unittest.TestCase):
         env_fab = join(DIR_ROOT, "../../../.env_fab")
         script = (
             f". {env_fab} && export CARGO_HOME=$HOME/.rust/versions/asystem RUSTUP_HOME=$HOME/.rust/versions/asystem PATH=$HOME/.rust/versions/asystem/bin:$PATH "
-            f"CARGO_TARGET_DIR={DIR_ROOT}/target/rust && (cd {DIR_ROOT}/src/main/rust/runtime && cargo build --quiet) && "
-            f'(cd {DIR_ROOT}/src/main/go/runtime && "$GOROOT/bin/go" build -o {DIR_ROOT}/target/go/consumer .)'
+            f"CARGO_TARGET_DIR={DIR_ROOT}/target/rust && (cd {DIR_ROOT}/src/main/rust/mlmodels && cargo build --quiet) && "
+            f'(cd {DIR_ROOT}/src/main/go/mlmodels && "$GOROOT/bin/go" build -o {DIR_ROOT}/target/go/consumer .)'
         )
         build = subprocess.run(["bash", "-c", script], capture_output=True, text=True, timeout=900, check=False)
         cls.native = {"rust": join(DIR_ROOT, "target/rust/debug/consumer"), "go": join(DIR_ROOT, "target/go/consumer")}
@@ -966,7 +983,7 @@ class PyfuncLoaderTest(unittest.TestCase):
     BODY = "\n\nclass Model(PythonModel):\n    def predict(self, context, model_input, params=None):\n        return pd.DataFrame({'y': [1.0 for _ in model_input['x']]})\n\n\nset_model(Model())\n"
 
     def load(self, extra=""):
-        from mlmodels.runtime.pyfunc import load_pyfunc
+        from mlmodels.runtime.loader import load_pyfunc
 
         path = join(tempfile.mkdtemp(), "model.py")
         with open(path, "w") as model_file:
@@ -996,14 +1013,14 @@ class ConsumerSourceTest(unittest.TestCase):
             with open(join(DIR_ROOT, path)) as source_file:
                 return source_file.read()
 
-        go = {name: 2 if name in ("atan2", "pow") else 1 for name in re.findall(r'"(\w+)": math\.', read("src/main/go/runtime/webassembly.go"))}
-        rust_source = read("src/main/rust/runtime/src/wasm.rs")
+        go = {name: 2 if name in ("atan2", "pow") else 1 for name in re.findall(r'"(\w+)": math\.', read("src/main/go/mlmodels/runtime/loader.go"))}
+        rust_source = read("src/main/rust/mlmodels/src/runtime/loader.rs")
         rust = {
             name: arity
             for arity, kind in ((1, "unary"), (2, "binary"))
             for name in re.findall(r'\("(\w+)", f64::\w+\)', rust_source.split(f"let {kind}:")[1].split("];")[0] if kind == "unary" else rust_source.split(f"let {kind}:")[1].split(";\n")[0])
         }
-        python = dict(re.findall(r'"(\w+)": (\d)', read("src/main/python/mlmodels/runtime/wasm.py").split("arities = ")[1].split("}")[0]))
+        python = dict(re.findall(r'"(\w+)": (\d)', read("src/main/python/mlmodels/runtime/loader.py").split("arities = ")[1].split("}")[0]))
         python = {name: int(arity) for name, arity in python.items()}
         for host, found in (("go", go), ("rust", rust), ("python", python)):
             self.assertTrue(found, host)
@@ -1027,8 +1044,8 @@ class ConsumerSourceTest(unittest.TestCase):
         self.assertEqual(["verify", "load", "replay"], [match.group(1) for match in matches if match])
         self.assertEqual(3, len(matches))
         for path, forms in (
-            ("src/main/go/runtime/main.go", ('report("verify"', 'report("load"', 'report("replay"', '"    %-12s ... done [%s] (%.2fs)\\n"')),
-            ("src/main/rust/runtime/src/main.rs", ('report("verify"', 'report("load"', 'report("replay"', '"    {stage:<12} ... done [{detail}] ({:.2}s)"')),
+            ("src/main/go/mlmodels/main.go", ('report("verify"', 'report("load"', 'report("replay"', '"    %-12s ... done [%s] (%.2fs)\\n"')),
+            ("src/main/rust/mlmodels/src/main.rs", ('report("verify"', 'report("load"', 'report("replay"', '"    {stage:<12} ... done [{detail}] ({:.2}s)"')),
         ):
             with open(join(DIR_ROOT, path)) as source_file:
                 source = re.sub(r"\s+", "", source_file.read())

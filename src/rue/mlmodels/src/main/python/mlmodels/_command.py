@@ -4,7 +4,7 @@ import logging
 import os
 import re
 import sys
-from os.path import isfile, join, relpath
+from os.path import abspath, dirname, isfile, join, relpath
 
 from mlmodels._constants import PROJECT_MANIFEST, PROJECT_SIGNATURE
 from mlmodels._errors import GateError
@@ -16,7 +16,7 @@ from mlmodels._project import write_text
 from mlmodels._registry import check_release, registry_address
 from mlmodels._runner import ANSI, run_notebook
 from mlmodels._scaffold import scaffold_notebook
-from mlmodels._signature import render_rust
+from mlmodels._signature import render_go, render_python, render_rust
 
 LOG = logging.getLogger(__name__)
 
@@ -30,6 +30,9 @@ def model_command(arguments=None):
     generate = commands.add_parser("generate")
     generate.add_argument("project_dir")
     generate.add_argument("--rust")
+    generate.add_argument("--go")
+    generate.add_argument("--go-package", default="contract")
+    generate.add_argument("--python")
     check_release_parser = commands.add_parser("check-release")
     check_release_parser.add_argument("project_dir")
     check_release_parser.add_argument("--source-dir")
@@ -56,22 +59,25 @@ def model_command(arguments=None):
     embed.add_argument("consumer_dir")
     embed.add_argument("source_dir")
     embed.add_argument("name")
+    embed_loader = commands.add_parser("embed-loader")
+    embed_loader.add_argument("consumer_dir")
+    embed_loader.add_argument("--language", required=True)
     options = parser.parse_args(arguments)
 
     def hints(rules):
         for hint in fix_hints(rules):
-            print(f"HINT {hint}", file=sys.stderr)
+            print(f"HINT [{hint}]", file=sys.stderr)
 
     def hints_in(text):
-        hints(re.findall(r"\b((?:PJ|NB|WS|PM|AC|CP|RP|MD)\d{3})\b", text))
+        hints(re.findall(r"\b([A-Z]{2}\d{3})\b", text))
 
     try:
         if options.command == "verify":
-            print(f"verified model [{verify_project(options.project_dir)['name']}]")
+            print(f"Verified model [{verify_project(options.project_dir)['name']}]")
         elif options.command == "lint":
             findings = lint_project(options.project_dir)
             for rule, message in findings:
-                print(f"{options.project_dir} {rule} {message}", file=sys.stderr)
+                print(f"[{options.project_dir}] {rule} [{message}]", file=sys.stderr)
             hints(rule for rule, _ in findings)
             return 1 if findings else 0
         elif options.command == "changed":
@@ -89,11 +95,12 @@ def model_command(arguments=None):
             with open(join(options.workspace_dir, PROJECT_DIR, PROJECT_MANIFEST)) as manifest_file:
                 findings = lint_metadata(options.workspace_dir, json.load(manifest_file)["flavour"], options.pins_path)
             for rule, message in findings:
-                print(f"{options.workspace_dir} {rule} {message}", file=sys.stderr)
+                print(f"[{options.workspace_dir}] {rule} [{message}]", file=sys.stderr)
             hints(rule for rule, _ in findings)
             return 1 if findings else 0
         elif options.command == "release":
-            from mlmodels._release import release_workspaces, stale_consumers
+            from mlmodels._embed import stale_consumers
+            from mlmodels._release import release_workspaces
 
             configure_log()
             tracking_uri = registry_address(os.environ.get("MLFLOW_TRACKING_URI"))
@@ -115,7 +122,7 @@ def model_command(arguments=None):
             from mlmodels._release import status_lines
 
             for level, message in status_lines(options.source_dir, os.environ.get("MLFLOW_TRACKING_URI") and registry_address(os.environ["MLFLOW_TRACKING_URI"]), options.mlserver):
-                print(f"{level} {message}", file=sys.stderr)
+                print(f"{level} [{message}]", file=sys.stderr)
         elif options.command == "docker-args":
             from mlmodels._metadata import CONSUMER_PINS, package_key, read_pins, read_runtime
             from mlmodels._release import workspaces
@@ -130,17 +137,23 @@ def model_command(arguments=None):
             wanted = dict.fromkeys((*(package_key(pin) for pin in CONSUMER_PINS if package_key(pin) in pins), *declared))
             print(f'--build-arg "PINS={" ".join(f"{pins[key][0]}=={pins[key][1]}" for key in wanted)}"')
         elif options.command == "embed":
-            from mlmodels._release import embed_consumer
+            from mlmodels._embed import embed_consumer
 
-            print(f"embed [{embed_consumer(options.consumer_dir, options.source_dir, options.name)}] consumer [{options.consumer_dir}]")
+            print(f"Embed [{embed_consumer(options.consumer_dir, options.source_dir, options.name)}] consumer [{options.consumer_dir}]")
+        elif options.command == "embed-loader":
+            from mlmodels._embed import embed_loader
+
+            written = embed_loader(options.consumer_dir, options.language)
+            print(f"Embed loader [{','.join(written) if written else 'unchanged'}] consumer [{options.consumer_dir}]")
         elif options.command == "check-release":
             findings = check_release(options.project_dir)
             if options.source_dir:
+                from mlmodels._embed import loader_findings
                 from mlmodels._release import slot_findings
 
-                findings = [*findings, *slot_findings(options.project_dir, options.source_dir)]
+                findings = [*findings, *slot_findings(options.project_dir, options.source_dir), *loader_findings(dirname(dirname(dirname(dirname(abspath(options.project_dir))))), options.source_dir)]
             for rule, message in findings:
-                print(f"{options.project_dir} {rule} {message}", file=sys.stderr)
+                print(f"[{options.project_dir}] {rule} [{message}]", file=sys.stderr)
             hints(rule for rule, _ in findings)
             return 1 if findings else 0
         elif options.command == "replay":
@@ -148,16 +161,20 @@ def model_command(arguments=None):
 
             findings = replay_project(options.project_dir)
             for rule, message in findings:
-                print(f"ERROR {rule} {message}", file=sys.stderr)
+                print(f"ERROR {rule} [{message}]", file=sys.stderr)
             hints(rule for rule, _ in findings)
             if findings:
                 return 1
-            print(f"replayed project [{options.project_dir}]")
+            print(f"Replayed project [{options.project_dir}]")
         elif options.command == "generate":
             with open(join(options.project_dir, PROJECT_SIGNATURE)) as signature_file:
                 signature = json.load(signature_file)
             if options.rust:
                 write_text(options.rust, render_rust(signature))
+            if options.go:
+                write_text(options.go, render_go(signature, options.go_package))
+            if options.python:
+                write_text(options.python, render_python(signature))
     except GateError as error:
         print(f"FAILED stage [{error.stage}] gate [{error.gate}] [{error.cause}]", file=sys.stderr)
         hints_in(error.cause)
@@ -187,7 +204,7 @@ def notebook_command(arguments=None):
     if options.command == "new":
         try:
             for path in scaffold_notebook(options.root, options.module, options.model, options.notebook, options.flavour, options.local):
-                print(f"created [{path}]")
+                print(f"Created [{path}]")
         except ValueError as error:
             print(f"ERROR notebook command failed [new] [{error}]", file=sys.stderr)
             return 1
@@ -195,10 +212,10 @@ def notebook_command(arguments=None):
     failed = False
     for path in options.paths:
         if options.fix and fix_notebook(path):
-            print(f"stripped outputs [{path}]")
+            print(f"Stripped outputs [{path}]")
         for rule, message, cell in lint_notebook(path):
             failed = True
-            print(f"{path} [{'cell ' + str(cell) if cell is not None else 'notebook'}] {rule} {message}", file=sys.stderr)
+            print(f"[{path}] [{'cell ' + str(cell) if cell is not None else 'notebook'}] {rule} [{message}]", file=sys.stderr)
     return 1 if failed else 0
 
 
@@ -212,7 +229,7 @@ def run_command(arguments=None):
     try:
         run_notebook(workspace_dir, output_dir, register == "1", pins_path, source_dir)
     except Exception as error:
-        print(f"ERROR {ANSI.sub('', str(error))}", file=sys.stderr)
+        print(f"ERROR [{ANSI.sub('', str(error))}]", file=sys.stderr)
         return 1
     return 0
 
@@ -225,7 +242,7 @@ def workspace_command(arguments=None):
     for path in options.paths:
         for rule, message in lint_workspace(path):
             failed = True
-            print(f"{path} {rule} {message}", file=sys.stderr)
+            print(f"[{path}] {rule} [{message}]", file=sys.stderr)
     return 1 if failed else 0
 
 

@@ -1,14 +1,22 @@
 import json
 import logging
 import os
-import shutil
 import time
 import urllib.error
 import urllib.request
 from datetime import UTC, datetime
 from os.path import isdir, isfile, join
 
-from mlmodels._constants import CONSUMER_MODEL_PATH, PROJECT_ALIAS_PREVIEW, PROJECT_ALIAS_RELEASE, PROJECT_MANIFEST, PROJECT_NAME
+from mlmodels._constants import (
+    CONSUMER_MODEL_PATH,
+    PROJECT_ALIAS_PREVIEW,
+    PROJECT_ALIAS_RELEASE,
+    PROJECT_MANIFEST,
+    PROJECT_NAME,
+    PROJECT_SIGNATURE,
+    PROJECT_TAG_CONTENT_SHA256,
+    PROJECT_TAG_RELEASE_VERSION,
+)
 from mlmodels._errors import GateError
 from mlmodels._metadata import LOCAL_TARGET, METADATA_FILE, PROJECT_DIR, content_sha256, read_metadata, write_metadata
 from mlmodels._registry import register_project, registry_client
@@ -54,7 +62,7 @@ def release_workspaces(source_dir, version, tracking_uri=None, mlserver_url=None
         _require_project(name, directory)
         outcome = "kept"
         if metadata["release"] is None:
-            with open(join(directory, PROJECT_DIR, "signature.json")) as signature_file:
+            with open(join(directory, PROJECT_DIR, PROJECT_SIGNATURE)) as signature_file:
                 metadata = {**metadata, "version": version, "release": {"timestamp": now, "signature": json.load(signature_file)}}
             write_metadata(directory, metadata)
             outcome = "released"
@@ -75,9 +83,9 @@ def publish_workspace(name, directory, tracking_uri, mlserver_url=None):
         raise GateError("Release", "publish", f"workspace [{name}] has no released version")
     register_project(join(directory, PROJECT_DIR), name, tracking_uri, aliases=())
     client = registry_client(tracking_uri)
-    version = next(candidate for candidate in client.search_model_versions(f"name = '{name}'") if candidate.tags.get("content_sha256") == metadata["content_sha256"])
+    version = next(candidate for candidate in client.search_model_versions(f"name = '{name}'") if candidate.tags.get(PROJECT_TAG_CONTENT_SHA256) == metadata["content_sha256"])
     tags = {
-        "release_version": metadata["version"],
+        PROJECT_TAG_RELEASE_VERSION: metadata["version"],
         "inputs_sha256": metadata["inputs_sha256"],
         "released_at": metadata["release"]["timestamp"],
         "metadata": json.dumps(metadata, sort_keys=True, separators=(",", ":")),
@@ -95,12 +103,6 @@ def publish_workspace(name, directory, tracking_uri, mlserver_url=None):
     served = wait_served(mlserver_url, name, metadata["version"])
     LOG.info("Release workspace [%s] served by mlserver as [%s]", name, served)
     return served
-
-
-def clear_preview(name, tracking_uri):
-    client = registry_client(tracking_uri)
-    if PROJECT_ALIAS_PREVIEW in client.get_registered_model(name).aliases:
-        client.delete_registered_model_alias(name, PROJECT_ALIAS_PREVIEW)
 
 
 def wait_served(mlserver_url, served_name, label, timeout=SERVED_TIMEOUT_SECONDS):
@@ -133,31 +135,20 @@ def consumers(source_dir):
         for module_dir in sorted(os.listdir(source_dir))
         if isdir(join(source_dir, module_dir))
         for service in sorted(os.listdir(join(source_dir, module_dir)))
-        if isfile(join(source_dir, module_dir, service, CONSUMER_MODEL_PATH, PROJECT_MANIFEST))
+        if slots(join(source_dir, module_dir, service))
     ]
 
 
-def embed_consumer(consumer_dir, source_dir, name):
-    metadata = _released(source_dir, name)
-    if metadata is None:
-        return "none"
-    slot = join(consumer_dir, CONSUMER_MODEL_PATH)
-    if isfile(join(slot, PROJECT_MANIFEST)) and content_sha256(slot) == metadata["content_sha256"]:
-        return "unchanged"
-    shutil.rmtree(slot, ignore_errors=True)
-    shutil.copytree(join(workspaces(source_dir)[name], PROJECT_DIR), slot)
-    return "embedded"
+def slots(consumer_dir):
+    root = join(consumer_dir, CONSUMER_MODEL_PATH)
+    return [join(root, entry) for entry in sorted(os.listdir(root)) if isfile(join(root, entry, PROJECT_MANIFEST))] if isdir(root) else []
 
 
 def slot_findings(slot_dir, source_dir):
-    metadata = _released(source_dir, _slot_name(slot_dir))
+    metadata = released_metadata(source_dir, slot_name(slot_dir))
     if metadata is not None and content_sha256(slot_dir) != metadata["content_sha256"]:
         return [("CP004", f"the slot is not the released project [{content_sha256(slot_dir)}] and the released one is [{metadata['content_sha256']}]")]
     return []
-
-
-def stale_consumers(source_dir):
-    return [consumer for consumer in consumers(source_dir) if _stale(consumer, source_dir)]
 
 
 def status_lines(source_dir, tracking_uri=None, mlserver_url=None):
@@ -178,22 +169,26 @@ def status_lines(source_dir, tracking_uri=None, mlserver_url=None):
                 lines.append(("WARN", f"registry release differs from metadata model [{name}]"))
             if registry is not None and PROJECT_ALIAS_PREVIEW in registry.get(name, {}):
                 lines.append(("WARN", f"a preview alias remains model [{name}]"))
+    from mlmodels._embed import stale_consumers
+
     lines.extend(("WARN", f"consumer embeds an older release module [{os.path.relpath(consumer, source_dir)}]") for consumer in stale_consumers(source_dir))
     return lines
 
 
-def _stale(consumer_dir, source_dir):
-    slot = join(consumer_dir, CONSUMER_MODEL_PATH)
-    metadata = _released(source_dir, _slot_name(slot))
-    return metadata is not None and content_sha256(slot) != metadata["content_sha256"]
+def stale_slots(consumer_dir, source_dir):
+    for slot in slots(consumer_dir):
+        metadata = released_metadata(source_dir, slot_name(slot))
+        if metadata is not None and content_sha256(slot) != metadata["content_sha256"]:
+            return True
+    return False
 
 
-def _slot_name(slot_dir):
+def slot_name(slot_dir):
     with open(join(slot_dir, PROJECT_MANIFEST)) as manifest_file:
         return json.load(manifest_file)["name"]
 
 
-def _released(source_dir, name):
+def released_metadata(source_dir, name):
     directory = workspaces(source_dir).get(name)
     if directory is None or not isfile(join(directory, METADATA_FILE)):
         return None
@@ -205,10 +200,10 @@ def _registry_state(tracking_uri):
     client = registry_client(tracking_uri)
     state = {}
     for model in client.search_registered_models():
-        state[model.name] = {alias: client.get_model_version(model.name, version).tags.get("content_sha256") for alias, version in model.aliases.items()}
+        state[model.name] = {alias: client.get_model_version(model.name, version).tags.get(PROJECT_TAG_CONTENT_SHA256) for alias, version in model.aliases.items()}
     return state
 
 
 def _require_project(name, directory):
-    if not isfile(join(directory, PROJECT_DIR, "project.json")):
+    if not isfile(join(directory, PROJECT_DIR, PROJECT_MANIFEST)):
         raise GateError("Release", "project", f"workspace [{name}] has no project beside its metadata, run fab unittest first")

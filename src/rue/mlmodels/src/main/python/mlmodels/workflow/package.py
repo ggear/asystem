@@ -10,7 +10,7 @@ from mlmodels._lint_project import file_sha256
 from mlmodels._metadata import record_project
 from mlmodels._model import model_orphans, model_python_deps
 from mlmodels._project import write_project
-from mlmodels._replay import require_replay
+from mlmodels._replay import replay_project
 from mlmodels._signature import cell, golden_document, golden_step
 
 LOG = logging.getLogger(__name__)
@@ -81,7 +81,9 @@ def package_model(ws, model, golden, *, target, tolerance=None):
     )
     if model_path is not None and file_sha256(model_path) != file_sha256(join(ws.project_dir, record.file)):
         raise GateError("Package", "candidate", f"the project model file differs from model [{model}]")
-    require_replay(ws.project_dir)
+    findings = replay_project(ws.project_dir)
+    if findings:
+        raise GateError("Package", "replay", "; ".join(f"{rule} {message}" for rule, message in findings))
     ws.target = target
     record_project(ws.path, ws.project_dir, target, PINS_PATH, VERSION_PATH)
     LOG.info("Package model [%s] [%s] as [%s] to target [%s] with project [%s]", model, record.label, record.flavour, target["kind"], file_sha256(join(ws.project_dir, PROJECT_MANIFEST))[:12])

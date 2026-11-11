@@ -6,13 +6,12 @@ import shutil
 from glob import glob
 from os.path import dirname, isfile, join, normpath, relpath
 
+from mlmodels._constants import PROJECT_MANIFEST, PROJECT_SIGNATURE
 from mlmodels._document import write_json
 from mlmodels._errors import GateError
+from mlmodels._lint_project import file_sha256
 
 METADATA_FILE = "metadata.json"
-
-
-SIGNATURE_FILE = "signature.json"
 
 
 PROJECT_DIR = "project"
@@ -85,11 +84,9 @@ def inputs_sha256(workspace_dir, pins):
             if path in live:
                 continue
             digest.update(relpath(path, data_dir).encode())
-            with open(path, "rb") as data_file:
-                digest.update(hashlib.sha256(data_file.read()).digest())
-    if isfile(join(workspace_dir, SIGNATURE_FILE)):
-        with open(join(workspace_dir, SIGNATURE_FILE), "rb") as signature_file:
-            digest.update(hashlib.sha256(signature_file.read()).digest())
+            digest.update(bytes.fromhex(file_sha256(path)))
+    if isfile(join(workspace_dir, PROJECT_SIGNATURE)):
+        digest.update(bytes.fromhex(file_sha256(join(workspace_dir, PROJECT_SIGNATURE))))
     digest.update(json.dumps({name: pins.get(name) for name in RUNTIME_PINS}, sort_keys=True).encode())
     return digest.hexdigest()
 
@@ -124,11 +121,11 @@ def record_project(workspace_dir, project_dir, target, pins_path, version_path=N
         return None
     previous = read_metadata(workspace_dir) if isfile(join(workspace_dir, METADATA_FILE)) else {}
     released_before = previous.get("release")
-    with open(join(project_dir, "signature.json")) as signature_file:
+    with open(join(project_dir, PROJECT_SIGNATURE)) as signature_file:
         findings = signature_findings(None if released_before is None else released_before["signature"], json.load(signature_file))
     if findings:
         raise GateError("Package", "signature", "; ".join(findings))
-    with open(join(project_dir, "project.json")) as manifest_file:
+    with open(join(project_dir, PROJECT_MANIFEST)) as manifest_file:
         manifest = json.load(manifest_file)
     runtime = manifest.get("runtime", {})
     pinned = {package_key(name) for name in read_pins(pins_path, None)}
@@ -165,7 +162,7 @@ def record_project(workspace_dir, project_dir, target, pins_path, version_path=N
 
 
 def read_runtime(workspace_dir):
-    manifest_path = join(workspace_dir, PROJECT_DIR, "project.json")
+    manifest_path = join(workspace_dir, PROJECT_DIR, PROJECT_MANIFEST)
     if not isfile(manifest_path):
         return {}
     with open(manifest_path) as manifest_file:
@@ -190,7 +187,7 @@ def signature_findings(released, new):
 
 
 def inputs_changed(workspace_dir, pins_path):
-    if not isfile(join(workspace_dir, METADATA_FILE)) or not isfile(join(workspace_dir, PROJECT_DIR, "project.json")):
+    if not isfile(join(workspace_dir, METADATA_FILE)) or not isfile(join(workspace_dir, PROJECT_DIR, PROJECT_MANIFEST)):
         return True
     return read_metadata(workspace_dir).get("inputs_sha256") != inputs_sha256(workspace_dir, read_pins(pins_path))
 
@@ -218,17 +215,17 @@ def lint_metadata(workspace_dir, flavour, pins_path=None):
             findings.append(("MD002", "release field missing or of the wrong type [timestamp] [signature]"))
         if metadata["version"] is None or not RELEASE_VERSION.match(metadata["version"]):
             findings.append(("MD002", f"a released project has a version that is not a release version [{metadata['version']}]"))
-    manifest_path = join(workspace_dir, PROJECT_DIR, "project.json")
+    manifest_path = join(workspace_dir, PROJECT_DIR, PROJECT_MANIFEST)
     if not isfile(manifest_path):
         findings.append(("MD003", f"project missing beside the metadata [{workspace_dir}]"))
         return findings
     if content_sha256(join(workspace_dir, PROJECT_DIR)) != metadata["content_sha256"]:
         findings.append(("MD003", f"project differs from the metadata content hash [{metadata['content_sha256']}]"))
-    signature_path = join(workspace_dir, SIGNATURE_FILE)
+    signature_path = join(workspace_dir, PROJECT_SIGNATURE)
     if isfile(signature_path):
-        with open(signature_path) as workspace_file, open(join(workspace_dir, PROJECT_DIR, SIGNATURE_FILE)) as project_file:
+        with open(signature_path) as workspace_file, open(join(workspace_dir, PROJECT_DIR, PROJECT_SIGNATURE)) as project_file:
             if json.load(workspace_file) != json.load(project_file):
-                findings.append(("MD003", f"the signature of the workspace differs from the signature of the project [{SIGNATURE_FILE}]"))
+                findings.append(("MD003", f"the signature of the workspace differs from the signature of the project [{PROJECT_SIGNATURE}]"))
     runtime = read_runtime(workspace_dir)
     if pins_path is not None:
         pinned = {package_key(name) for name in read_pins(pins_path, None)}
@@ -269,7 +266,7 @@ def requirements(workspace_dir, flavour, pins_path, source_dir):
         summary.append("python " + " ".join(line.split()[1] for line in lines))
     if target["kind"] == "embedded" and target["language"] != "python":
         needed = derived_requirements(runtime, flavour, target).get(target["language"], [])
-        paths = glob(join(source_dir, "*", host, HOST_FILES[target["language"]].format(host="runtime" if host == "mlmodels" else host)))
+        paths = glob(join(source_dir, "*", host, HOST_FILES[target["language"]].format(host=host)))
         declared = ""
         if len(paths) == 1:
             with open(paths[0]) as host_file:
@@ -285,8 +282,7 @@ def requirements(workspace_dir, flavour, pins_path, source_dir):
 
 
 def content_sha256(project_dir):
-    with open(join(project_dir, "project.json"), "rb") as manifest_file:
-        return hashlib.sha256(manifest_file.read()).hexdigest()
+    return file_sha256(join(project_dir, PROJECT_MANIFEST))
 
 
 def _target_findings(flavour, target):

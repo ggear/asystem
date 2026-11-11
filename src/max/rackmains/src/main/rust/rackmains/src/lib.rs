@@ -1,11 +1,12 @@
 pub mod broker;
-pub mod contract;
 pub mod mock;
+pub mod model;
 pub mod nut;
+pub mod policy;
 pub mod schema;
 
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 use std::thread;
 use std::time::{Duration, Instant, SystemTime};
@@ -30,6 +31,7 @@ const REINIT_DELAY_MIN: Duration = Duration::from_secs(1);
 const REINIT_DELAY_MAX: Duration = Duration::from_secs(60);
 pub const DEFAULT_POLL_PERIOD: &str = "0";
 pub const DEFAULT_DEVICE: &str = "/run/nut/nutdrv_qx-powershield";
+pub const DEFAULT_MODEL_DIR: &str = "/asystem/etc/model";
 
 #[derive(Debug, Parser)]
 #[command(
@@ -47,6 +49,14 @@ pub struct Cli {
         default_value = DEFAULT_DEVICE
     )]
     pub device: String,
+    #[arg(
+        short = 'M',
+        long = "model-dir",
+        value_name = "DIR",
+        env = "RACKMAINS_MODEL_DIR",
+        default_value = DEFAULT_MODEL_DIR
+    )]
+    pub model_dir: String,
     #[arg(short = 'T', long = "timeout", value_name = "PERIOD", default_value = "1s")]
     pub timeout: String,
     #[arg(
@@ -103,6 +113,8 @@ impl Cli {
                 )
             })
             .try_init();
+        let policy = policy::load_policy(Path::new(&self.model_dir))?;
+        info!("{}", log_line("guard policy", &format!("{policy:?}")));
         let timeout = parse_duration(&self.timeout)?;
         debug!(
             "timeout [{timeout:?}], poll period [{period:?}], broker [{}:{}]",

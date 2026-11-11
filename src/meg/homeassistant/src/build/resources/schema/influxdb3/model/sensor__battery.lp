@@ -33,7 +33,8 @@
 #     template_weatherstation_console_battery_capacity_pct,
 #     template_weatherstation_console_battery_percent_int]
 #   tag model_version [Home Assistant model_version:
-#     10.200.2005]
+#     10.200.2005,
+#     10.200.2012]
 #   tag unit_of_measurement [Home Assistant unit_of_measurement:
 #     %]
 #   field value - <on-change> [Home Assistant value]
@@ -41,7 +42,7 @@
 sensor__battery,
   module=homeassistant,
   entity_id=<string>,
-  model_version=10.200.2005,
+  model_version=<string>,
   unit_of_measurement=%
     value=<float>
   <timestamp>

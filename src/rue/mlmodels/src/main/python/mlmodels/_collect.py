@@ -1,8 +1,6 @@
 import io
-import logging
 import os.path
 import re
-import time
 from dataclasses import dataclass
 
 import polars as pl
@@ -10,18 +8,12 @@ from requests import post
 
 from mlmodels._errors import GateError
 
-LOG = logging.getLogger(__name__)
-
 
 @dataclass
 class RunData:
     frame: object
     path: str
     live: bool
-
-
-def log_run(run, label, cached, rows, started):
-    LOG.info("Collect run [%s] [%s] with rows [%6s] cached [%s] seconds [%.2f]", run, label, rows, cached, time.perf_counter() - started)
 
 
 def capture_source(ws, source, query, database, csv, build):
@@ -64,7 +56,7 @@ def capture_source(ws, source, query, database, csv, build):
             ws.env[f"POSTGRES_USER_{suffix}"], ws.env[f"POSTGRES_PASSWORD_{suffix}"], ws.env["POSTGRES_IP_PROD"], ws.env["POSTGRES_API_PORT"], ws.env[f"POSTGRES_DATABASE_{suffix}"]
         )
     except KeyError as error:
-        raise GateError("Data", "connection", f"env is missing [{error.args[0]}] so declare postgres in run_deps.txt and run fab generate") from error
+        raise GateError("Collect", "connection", f"env is missing [{error.args[0]}] so declare postgres in run_deps.txt and run fab generate") from error
     return pl.read_database_uri(query, uri, engine="adbc")
 
 

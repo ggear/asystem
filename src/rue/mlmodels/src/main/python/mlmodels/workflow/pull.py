@@ -10,7 +10,7 @@ from mlmodels._registry import registry_pull
 
 def pull_model(ws, model):
     if read_metadata(ws.path)["target"]["kind"] != "served":
-        print("not pulled, the target is not served")
+        print("Not pulled, the target is not served")
         return None
     pulled = registry_pull(ws.model_name, "preview", join(tempfile.mkdtemp(), "pulled"), ws.env["MLFLOW_TRACKING_URI"])
     if pulled is None:
@@ -19,5 +19,5 @@ def pull_model(ws, model):
         local = json.load(manifest_file)
     if pulled.get("model_id") != model or pulled["files"] != local["files"]:
         raise GateError("Pull", "content", f"the registry preview differs from the project of model [{model}]")
-    print(f"pulled model [{model}] files [{len(pulled['files'])}] identical to the project")
+    print(f"Pulled model [{model}] files [{len(pulled['files'])}] identical to the project")
     return pulled

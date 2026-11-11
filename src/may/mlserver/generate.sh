@@ -5,9 +5,8 @@
 
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
-for FLAVOUR in static wasm onnx pyfunc; do
-  cp "${ROOT_DIR}/../../rue/mlmodels/src/main/python/mlmodels/runtime/${FLAVOUR}.py" "${ROOT_DIR}/src/main/python/serving/${FLAVOUR}.py" || exit $?
-done
+export PYTHONPATH="${ROOT_DIR}/../../rue/mlmodels/src/main/python${PYTHONPATH:+:${PYTHONPATH}}"
+python -m mlmodels embed-loader "${ROOT_DIR}" --language python || exit $?
 
 # DEFINED: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
 VERSION=${MLSERVER_VERSION}

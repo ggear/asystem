@@ -63,6 +63,24 @@ PROJECT_ALIAS_PREVIEW = "preview"
 PROJECT_ALIAS_RELEASE = "release"
 
 
+PROJECT_PREVIEW_SUFFIX = "_preview"
+
+
+PROJECT_TAG_CONTENT_SHA256 = "content_sha256"
+
+
+PROJECT_TAG_FLAVOUR = "project_flavour"
+
+
+PROJECT_TAG_RELEASE_VERSION = "release_version"
+
+
+PROJECT_LABEL_PREVIEW = "preview-"
+
+
+PROJECT_LABEL_RELEASE = "release-"
+
+
 PROJECT_SPLITS = ("training", "validation", "backtest", "monitoring")
 
 
@@ -126,4 +144,4 @@ NOTEBOOK_SYS_PATH = re.compile(r"\bsys\.path\b")
 MODEL_DIR = "model"
 MODEL_DOCUMENT = "model.json"
 MODEL_SCHEMA = 1
-MODEL_FIRST = 1000
+RUN_FIRST = 1000

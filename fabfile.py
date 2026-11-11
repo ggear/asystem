@@ -1059,9 +1059,10 @@ def _deploy(context):
 
 def _release_models(context, module):
     model_python_path = join(ROOT_MODULE_DIR, MODEL_MODULE, "src/main/python")
-    if isfile(join(ROOT_MODULE_DIR, module, "src/build/resources/model/project.json")):
+    for slot_manifest in sorted(glob.glob(join(ROOT_MODULE_DIR, module, "src/build/resources/model/*/project.json"))):
         _print_line("Checking release model ...")
-        _run_local(context, f"PYTHONPATH={model_python_path} python -W ignore -m mlmodels check-release src/build/resources/model --source-dir {ROOT_MODULE_DIR}", module)
+        slot = relpath(dirname(slot_manifest), join(ROOT_MODULE_DIR, module))
+        _run_local(context, f"PYTHONPATH={model_python_path} python -W ignore -m mlmodels check-release {slot} --source-dir {ROOT_MODULE_DIR}", module)
     if isfile(join(ROOT_MODULE_DIR, module, "src/build/resources/model.sh")):
         _print_line("Releasing models ...")
         _run_local(context, f"src/build/resources/model.sh release {_get_versions_next()[0]}", module)

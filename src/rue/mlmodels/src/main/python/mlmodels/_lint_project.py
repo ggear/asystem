@@ -100,10 +100,7 @@ def lint_project(project_dir):
                     findings.append(("PJ017", f"runtime wasm differs from the module imports runtime {listed} module {actual}"))
             elif model_file is not None and isfile(model_file):
                 with open(model_file) as source_file:
-                    tree = ast.parse(source_file.read())
-                imported = {alias.name.split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.Import) for alias in node.names}
-                imported |= {node.module.split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.ImportFrom) and node.level == 0 and node.module}
-                needed = imported - set(sys.stdlib_module_names) - set(PYFUNC_BASE_IMPORTS)
+                    needed = pyfunc_imports(source_file.read())
                 declared = {PYFUNC_IMPORT_NAMES.get(re.sub(r"[-_.]+", "_", name.lower()), re.sub(r"[-_.]+", "_", name.lower())): name for name in listed}
                 findings.extend(("PJ017", f"model imports a package that runtime python does not declare [{name}]") for name in sorted(needed - set(declared)))
                 findings.extend(("PJ017", f"runtime python declares a package the model does not need [{declared[name]}]") for name in sorted(set(declared) - needed))
@@ -310,6 +307,13 @@ def _lint_golden(manifest, signature, golden):
     if signature["parameters"].get("state") and not has_stateless_ok:
         findings.append(("PJ011", "golden needs a first call with no state"))
     return findings
+
+
+def pyfunc_imports(text):
+    tree = ast.parse(text)
+    imported = {alias.name.split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.Import) for alias in node.names}
+    imported |= {node.module.split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.ImportFrom) and node.level == 0 and node.module}
+    return imported - set(sys.stdlib_module_names) - set(PYFUNC_BASE_IMPORTS)
 
 
 def file_sha256(path):

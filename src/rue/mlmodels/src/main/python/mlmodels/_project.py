@@ -40,6 +40,9 @@ def evaluation_build(check, datasets):
 def check_acceptance(project_dir):
     evaluation_path = join(project_dir, PROJECT_EVALUATION)
     if not isfile(evaluation_path):
+        with open(join(project_dir, PROJECT_MANIFEST)) as manifest_file:
+            if json.load(manifest_file)["flavour"] == "static":
+                return []
         return [("PM004", "the project has no acceptance evaluation")]
     with open(evaluation_path) as evaluation_file:
         evaluation = json.load(evaluation_file)
@@ -97,4 +100,4 @@ def write_project(project_dir, name, flavour, signature, golden, provenance, con
 def write_text(path, text):
     with open(path, "w") as target:
         target.write(text)
-    print(f"wrote [{path}]")
+    print(f"Wrote [{path}]")

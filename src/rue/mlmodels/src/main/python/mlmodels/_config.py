@@ -30,4 +30,3 @@ DATA_TIMESTAMP_FORMAT = "%Y-%m-%d_%H-%M-%S"
 
 DATA_TIMEZONE = ZoneInfo("Australia/Perth")
 DATA_SCHEMA = 2
-DATA_RUN_FIRST = 1000

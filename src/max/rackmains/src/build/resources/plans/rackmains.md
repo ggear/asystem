@@ -6,10 +6,9 @@ publishes `rackmains/{data,status}` to the broker, and ships with a mock driver 
 (`tools/outage`) was deleted on 2026-10-30; a test cut is made by hand at the plug. The host side of the shutdown is built and tested
 on `max`, in the `system` module (`asleep`, `awake` and the restart-after-power-loss setting). Waiting on you: the 25 metric rows
 and the service switch row ("Workbook rows to add"), the release, and the power-on-after-cut tests. The shutdown guard is designed and not built.
-The battery model is designed and not released (the model plan, `src/rue/mlmodels/src/main/notebook/rackmains/ups/battery/plan.md`):
-the `static` project `rackmains_ups_battery` is written by the `ups_battery` notebook in `mlmodels` from the guard thresholds, with four golden steps,
-and `generate.sh` embeds it into `src/build/resources/model/` once released. There is no default, floor or second copy. The Rust loader that reads it,
-its place in the image and the guard's validation at start are not built.
+The battery model is built and released as a constants project (the `ups/battery` notebook in `mlmodels`, whose title cell holds its intent, status and future):
+the `static` project `rackmains_ups_battery` is written by the `ups_battery` notebook from the guard thresholds, with four golden steps, and `generate.sh` embeds it into
+`src/build/resources/model/battery/`, with the loader and model file in `src/model/`. There is no default, floor or second copy. The guard's validation at start is not built.
 
 **Decided 2026-10-30, not built.** Every metric is published on MQTT for Home Assistant and, during a battery drain, also written to a
 CSV in the home dir; there is no InfluxDB writer. Polling speeds up on battery and publishing is rare on mains, and health no longer
@@ -17,8 +16,8 @@ depends on MQTT (see "Metrics, MQTT and the outage CSV"). The module `CLAUDE.md`
 is built.
 
 This file holds the status, what the code cannot say, the review and phases, and the open decisions for the service; the code and
-the module `CLAUDE.md` say how the publisher works. Fitting and serving the battery model, tuning the guard's thresholds, and the
-trials and tests that supply the data are in the model plan, which refers back here for the unit, the metrics and the guard.
+the module `CLAUDE.md` say how the publisher works. Fitting the battery model and tuning the guard's thresholds are the Intent and Future of the `ups/battery` notebook title cell in `mlmodels`, which refers back here for the unit, the metrics and the guard.
+The trials and tests that supply the data are an open decision below.
 
 ---
 
@@ -30,7 +29,7 @@ trials and tests that supply the data are in the model plan, which refers back h
    returns in time. Designed; a thread inside this container.
 
 **Simple and consistent.** rackmains only ever produces data. Nothing in the running service measures, fits or learns the
-battery. Thresholds are outputs of a model that is fitted offline (see "The model signature, inputs, outputs and thresholds" in the model plan); until a fitted model exists a default model project (flavour `static`) ships in the image from the first release, and changing it is a release.
+battery. Thresholds are outputs of a model that is fitted offline (the Intent of the `ups/battery` notebook title cell); until a fitted model exists the constants project (flavour `static`) is the released model, and changing it is a release.
 
 **Out of scope, deliberately**
 
@@ -63,7 +62,7 @@ runs as root and a `:ro` bind mount still connects. The socket accepts every com
 
 A transient unit `ups-recorder` on `max` runs `src/build/resources/validation/ups_recorder.py`: one JSON line every 2 s to
 `/var/tmp/ups_status.jsonl` with the NUT variables, about 8 MB a day. It is a validation
-aid independent of rackmains; `systemctl stop ups-recorder` ends it. **It is dropped after trial 1** ("Trials" in the model plan), once the new publisher has
+aid independent of rackmains; `systemctl stop ups-recorder` ends it. **It is dropped after trial 1** (see Open decisions), once the new publisher has
 agreed with it through a long cut and real data is being captured: stop the unit, delete `ups_recorder.py` and the `validation/` directory, and rely on the published entities in
 Home Assistant's history and the outage CSV files on `max`. The HID fields it also logged are dropped from the design (see the HID verdict below).
 
@@ -490,13 +489,13 @@ next section). A host is never powered off.
    healthy (`6` is a container not running or healthy). `asleep` is undone by `awake`, so unlike
    a `poweroff` there is nothing to wait on being down. If the halt has started there is nothing to cancel.
 
-**Safety rails.** It ships in dry-run, logging the exact commands it would run, and goes live only after the trials ("Trials" in the model plan) show the
+**Safety rails.** It ships in dry-run, logging the exact commands it would run, and goes live only after the trials (see Open decisions) show the
 conservative timers fit. It honours its hard override (`LB`) in dry-run too. The keys can
 power off and nothing else. Any status flag that is not `OL` is surfaced; an alarm or fault flag raises an alert in Home
 Assistant.
 
 **Later.** The decision (reading and history in, action out) stays a pure function apart from the state machine and the
-runners, so the timer policy is replaceable; if a better policy is ever wanted it is fitted offline like the thresholds ("Thresholds, fitted offline" in the model plan).
+runners, so the timer policy is replaceable; if a better policy is ever wanted it is fitted offline like the thresholds (the Future of the `ups/battery` notebook title cell).
 
 **Residual risk.** One USB link is one source of truth. A power cut with a failure of `max`, of Docker or of the guard leaves
 the others running until the UPS is flat. A read-only `upsd` on the LAN with a dead-man timer on each follower would cover it
@@ -527,7 +526,7 @@ after a clean `poweroff`, so the guard quiesces a host and leaves it running.
   `0xa4`, [the method](https://gist.github.com/coldie/072d8e97dfad89d424ba91641641511d)) on every install; `max`, `may` and
   `meg` (Macmini7,1) read `1c08`. `mad` is a Mac mini M2 Pro under Asahi with no Linux knob on kernel 6.14: the setting lives
   in the SMC and is set once from macOS ([AsahiLinux/docs#156](https://github.com/AsahiLinux/docs/issues/156)), which is
-  **yours to do by hand** (test 5 in "Tests still needed" in the model plan). Whether any host boots after a cut is **not yet tested**.
+  **yours to do by hand** (test 5, see Open decisions). Whether any host boots after a cut is **not yet tested**.
 - **Tested on `max`, 2026-10-29.** Argument and precondition codes; dry runs that leave the host unchanged; a real shallow
   cycle with supervisor left running, returning 0 and restoring the host exactly; an unclean cycle (a container that ignores
   SIGTERM) returning 5 with exit code 137 reported; `awake` error paths returning 1 and 6; and a read-only remount round trip
@@ -536,11 +535,9 @@ after a clean `poweroff`, so the guard quiesces a host and leaves it running.
 
 ## The model seam, in rackmains
 
-The model, its JSON signature, its training and the plan for fitting it are in the sections from "Design tenets, and the chosen design" in the model plan. What rackmains
+The model, its signature, its training and the plan for fitting it are the `ups/battery` notebook in `mlmodels`: its title cell holds the intent, status and future, and the `signature.json` beside it the signature. What rackmains
 must build is the seam: how it builds a request from numbers it already records, carries and persists the model's state, validates and
-applies a response, and the default model it ships from day one. Implement the rules in "The model signature, inputs, outputs and thresholds" in the model plan under "How a response is used", and
-take the JSON from "The model signature, inputs, outputs and thresholds" in the model plan. The signature is built by the notebook with `build_signature` and is committed as
-`src/build/resources/model/signature.json`, the embedded released project.
+applies a response, and the constants model it ships from day one. The signature is declared once, in that `signature.json` (the notebook reads it through `ws.inputs` and `ws.outputs`), and the embedded released project is `src/build/resources/model/battery/`.
 
 **Nothing computed here is a feature.** rackmains sends the poll time, the utilisation, the on-battery flag and the replace flag, exactly
 the numbers it records, plus the state the model returned last time. Every feature is inside the model's graph. The row and the outputs
@@ -548,14 +545,8 @@ are recorded identically in MQTT, the CSV and the log, and the state is recorded
 outage (`model_state`, JSON text), so a recorded outage is a complete fold and can be replayed through any project. Text and the timestamp are never sent: the
 status becomes the flags and the time becomes `clock_epoch_seconds` at source, here, in Rust.
 
-**The Rust seam.** A `model.rs` in the library holds the V2 request and response types and a `Model` trait with one method,
-`infer(request) -> response`. `StaticModel` loads the default project (`project.json` of flavour `static`) from the image at start, checks its
-hashes and returns its constants for every valid request. A later `EmbeddedModel` loads `model.onnx` with `ort` (pinned exactly, one thread,
-loading the shared library taken from the pinned wheel MLServer uses), builds the tensors from the row and the state, runs the step,
-merges the constants and returns a V2 response; a later `MlServerModel` posts to the endpoint named in the module's `.env_*` files, a run-dependency connection
-setting like the broker's. A fallback wrapper tries the chosen model, then the last valid answer, then the shipped release project, then
-the default project. One validator turns a response into a typed `Policy` and the estimates, and the guard sees only those, never JSON, so
-replacing the default model with a fitted one changes one constructor and nothing downstream.
+**The Rust seam.** The model is the bundled loader (`mlmodels` `model.md` 11.9), written by `python -m mlmodels embed` into `src/model/` as `loader.rs`, `battery.rs` (the name constants, `Request`, `Response` and their conversions, and a `load` that checks the signature against them) and `mod.rs`. `model::battery::load` checks every hash and returns a `Model` whose `predict` gives the constants for every valid request; `policy.rs` turns the `Response` into the guard's `Policy`. A later ONNX project needs no new type: the same loader builds its driver with `ort` (pinned exactly, one thread, loading the shared library taken from the pinned wheel MLServer uses) and `predict` takes the row and the state and returns the response. There is no served model and no fallback project: a project that fails to load makes rackmains broken (`mlmodels` `model.md` R8), and its build and tests catch that. A failed call keeps the last valid answer. One validator turns a response into a typed `Policy` and the estimates, and the guard sees only those, never JSON, so
+replacing the constants project with a fitted one changes one constructor and nothing downstream.
 
 **State.** The state in the answer in use is carried to the next call and persisted, with the project hash and model version, in the guard's
 state file, **written atomically on every call**, which is how state survives a crash (its format and location are an open decision below). A state from a different project is discarded, and a lost state
@@ -567,29 +558,27 @@ ONNX Runtime shared library for each architecture, taken from the pinned wheel a
 memory limit (measured at 34 MB for the engine on the laptop; about 96 MB suggested in place of 32 MB, to re-measure on Linux).
 
 **Calls.** One every 5 s on battery, at each transition and every 5 minutes on mains. A call never blocks the poll or the guard; a failed
-call falls back to the next answer in the order above and is a `note` row.
+call keeps the last valid answer and is a `note` row.
 
 **Tests.** The validator against a table of good and bad responses; the shipped project loads, validates and matches its hashes; the names
-in `signature.json` equal the validator's, checked both ways; the golden sequences replayed through `StaticModel` (and later
-`EmbeddedModel`), carrying the state, give exact responses; a **replay test** feeds a recorded outage CSV through the model and requires
+in `signature.json` equal the validator's, checked both ways; the golden sequences replayed through `model::battery::load` (and later every fitted project), carrying the state, give exact responses; a **replay test** feeds a recorded outage CSV through the model and requires
 every recorded output to be reproduced from the `start` row's state and the final state to equal the `end` row's; a state from another
-project is discarded; and a failed call falls back.
+project is discarded; and a failed call keeps the last valid answer.
 
 **The shipped model** lives in the image as the embedded project (`project.json`, `signature.json` and `golden.json`), so
-changing it is a release. The first release is the `static` day-one project ("First pass: a default model, on day one" in the model plan) and a fitted
+changing it is a release. The first release is the `static` day-one project and a fitted
 project later replaces it; there is no floor beside it. The guard validates it at start, checks its hashes, and **refuses live mode** if it fails; it stays in dry-run and says so.
 Dry-run versus live is deployment config in `.env_prod`, never in a model document.
 
-**What is implemented (2026-11-05).** The project is written by the notebook and passes every project check of `model.md` section 10 (the five inputs, twelve outputs and six state slots of the model plan, and a golden file with a first
+**What is implemented (2026-11-05).** The project is written by the notebook and passes every project check of `model.md` section 10 (the five inputs, twelve outputs and six state slots of `signature.json`, and a golden file with a first
 call with no state, a row mid-drain with state, a row with the replace flag raised, and a request with the utilisation missing that
-must give a signature error). It is embedded into `src/build/resources/model/` by `generate.sh` once released, and not before. **Not built:** the first release, `model.rs`
-with the loader, the validator, copying the project into the image at `/asystem/etc/model/`, and the guard's
+must give a signature error). It is embedded into `src/build/resources/model/battery/` by `generate.sh` once released, and not before. **Implemented (2026-11-11):** the first release is embedded, with the loader and model file in `src/model/`, `policy.rs` and its tests, and the project copied into the image at `/asystem/etc/model/`. **Not built:** the guard's
 refusal of live mode on a failed validation.
 
 **Starting values, the default model.** Constants only: `guard_shed_max_seconds` 120, inside the 145 s already held at service
 load with no knee; `guard_halt_max_seconds` 450; `guard_mains_stable_seconds` 300; and
 `guard_halt_delay_seconds` 120, a placeholder until `max`'s `asleep --deep` is timed. They shed early on short outages and so
-waste battery, but never outrun what is proven. The exact manifest is in "First pass: a default model, on day one" in the model plan. A refit replaces the project, which is a release.
+waste battery, but never outrun what is proven. The values are the constants of the notebook's `define_model` call. A refit replaces the project, which is a release.
 
 ## Deploy and the vernemq release lifecycle
 
@@ -780,7 +769,7 @@ Version reviewed: none yet, the final review has not run.
 | 2 | the recorder's 2 s data and independent check go | kept until after trial 1 (decided); superseded 2026-10-30: poll 2 s on mains and 1 s on battery, publish every poll on battery and every 5 minutes on mains, and the outage CSV records every 5 s on battery |
 | 3 | the dry-run release is invisible in Home Assistant | every candidate metric gets a workbook row (decided) |
 | 4 | ssh key provisioning is unplanned | a step: forced-command key on all four hosts including `max`, private key mounted read-only from a root-only directory on `max`, `known_hosts` pinned; yours to install, the forced-command test (3) proves it |
-| 5 | rollout A protects nothing | stated: the rack is exactly as exposed as it is today until rollout B ("Setting the thresholds, in rollout steps" in the model plan) is live |
+| 5 | rollout A protects nothing | stated: the rack is exactly as exposed as it is today until rollout B (the rollout steps, see Open decisions) is live |
 
 ## Remaining phases
 
@@ -793,9 +782,9 @@ first release carrying the publisher and the guard in dry-run**, not a publisher
 2. **Metrics and the outage CSV** (decided 2026-10-30): the `nut.rs` flag function and `SAMPLES` with the canonical names, the flat
    MQTT payload and the poll and publish cadence, the outage CSV writer and its backup enrolment (`backup.sh`,
    `write_container_backup()`, the `.env_all` keep values), the workbook rows (yours), the heartbeat file and an MQTT-independent
-   `checkhealthy.sh`, the model seam with the default model project ("First pass: a default model, on day one" in the model plan, whose project is built; the Rust loader is not), the module
+   `checkhealthy.sh`, the model seam with the constants project (the project and the Rust loader are built), the module
    `CLAUDE.md` update; then the review above.
-3. **Run the forced-command test and the `asleep` timing** (yours, on the hosts, tests 3 and 4 in "Tests still needed" in the model plan), recording each result there; they
+3. **Run the forced-command test and the `asleep` timing** (yours, on the hosts, tests 3 and 4, see Open decisions), recording each result there; they
    fix `guard_halt_max_seconds`.
 4. **Build the guard, dry-run only**: restructure `run` so the poll, the CSV writer and the guard start before, and never wait on, the broker connect, generate the host file
    and the default model project, the model seam, config and state, the ssh runners for `asleep` and `awake`, the state machine with mock sequences, the heartbeat in the
@@ -806,11 +795,12 @@ first release carrying the publisher and the guard in dry-run**, not a publisher
 6. **Add the workbook rows (yours), release publisher and guard in dry-run** and confirm `rackmains/status` is `online`, the
    entities appear, and a short cut at the plug turns `ups_on_battery` on within one poll and back off when mains returns.
 7. **Trial 1, then drop the recorder** (the publisher must have agreed with it through the long cut), **then the restart tests
-   (5 and 6), then trials 2 to 4 live** (see "Trials" in the model plan), recording each result there.
-8. **Trial 5 once per battery** ("Trials" in the model plan), fit the model's outputs offline (a new project, later the model), release the measured thresholds.
+   (5 and 6), then trials 2 to 4 live** (see Open decisions), recording each result there.
+8. **Trial 5 once per battery** (see Open decisions), fit the model's outputs offline (a new project, later the model), release the measured thresholds.
 
 ## Open decisions
 
+- **Trials, tests and rollout steps.** The numbered trials (1 to 5), the numbered tests (3 to 6) and the rollout steps (A and B) were written in the model plan, which is no longer kept, and the `ups/battery` notebook title cell holds none of them. Restate each here, or in that notebook's Future, before this plan is deleted; until then the references to them above are only their numbers.
 - **Poll and publish cadence.** Proposed: poll 2 s on mains and 1 s on battery; publish every 5 minutes on mains and at once on a
   change, and every poll on battery; one CSV row every 5 s on battery. Health no longer depends on the publish interval, so the 5 minutes only sets how stale a Home Assistant value can look. The model is called every 5 s on battery, at transitions and every
   5 minutes on mains.
@@ -822,7 +812,7 @@ first release carrying the publisher and the guard in dry-run**, not a publisher
   temporary file, fsync, rename), on every call, not backed up. The format, location and versioning remain to be decided.
 - **Call timeout.** Decided as 30 s and recorded as an ssh connect and silence timeout, not a cap on the whole call (see "Calling
   `asleep` and `awake`"). Confirm that reading: if a 30 s cap on the whole call was meant, a deep shed would be cut short. No deep
-  run has been timed yet, so the whole-call length is still unmeasured (test 4 in "Tests still needed" in the model plan).
+  run has been timed yet, so the whole-call length is still unmeasured (test 4, see Open decisions).
 - **Switch or binary sensor.** `ups_on_battery` is a read-only `binary_sensor`; revisit if a command is ever wired.
 - **Who sends the final UPS command**, the guard (read-write socket) or the host.
 - **Restart shape.** Decided: `awake` when mains returns early, `AFTERG3_EN` after a cut; the power-on-after-cut test (5)
@@ -866,8 +856,8 @@ This plan can be deleted once the publisher, the outage CSV, the health check an
 deleting, check:
 1. **The module `CLAUDE.md` matches the code.** Today it is accurate for the built publisher. When the metrics work lands, update its
    payload, health check and "Home Assistant tests for the `OB` token" lines, and replace "MQTT only" with MQTT plus the outage CSV
-   (there is still no database and no InfluxDB writer). Point future modelling work at the model plan.
-2. **Nothing open is lost.** Every open decision here is either settled in the code or `CLAUDE.md`, or copied into the model plan.
+   (there is still no database and no InfluxDB writer). Point future modelling work at the `ups/battery` notebook title cell.
+2. **Nothing open is lost.** Every open decision here is either settled in the code or `CLAUDE.md`, or copied into the Future of the `ups/battery` notebook title cell.
 3. **The final review has run.** Its findings table is empty or every row is fixed or accepted with a reason, and the gates are green.
-4. **the model plan has what it needs.** It outlives this plan, so its references back to the unit, the metric names and the outage CSV
+4. **The notebook title cell has what it needs.** It outlives this plan, so its references back to the unit, the metric names and the outage CSV
    are replaced by that content, or by `CLAUDE.md`, before this file goes.

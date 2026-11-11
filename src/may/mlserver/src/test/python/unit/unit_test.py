@@ -10,10 +10,20 @@ import pytest
 
 sys.path.append("../../../main/python")
 sys.path.append("../../../../../../rue/mlmodels/src/main/python")
+sys.path.append("../../../../../../rue/mlmodels/src/test/python")
 
-from mlmodels._demo import demo_project
-from registry.sync import ALIAS_PREVIEW, ALIAS_RELEASE, sync
-from serving.project import load_project
+from fixtures import fixture_project
+from registry.sync import sync
+from serving.model.loader import ModelError, load
+from serving.model.vocabulary import (
+    PROJECT_ALIAS_PREVIEW,
+    PROJECT_ALIAS_RELEASE,
+    PROJECT_LABEL_PREVIEW,
+    PROJECT_PREVIEW_SUFFIX,
+    PROJECT_TAG_CONTENT_SHA256,
+    PROJECT_TAG_FLAVOUR,
+    PROJECT_TAG_RELEASE_VERSION,
+)
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 NAME = "demo_replay_double"
@@ -37,12 +47,12 @@ class SyncTest(unittest.TestCase):
         self.registry.add(1, "1.0.0", released=True)
         self.registry.add(2, None, previewed=True)
         self.sync()
-        self.assertTrue(isdir(join(self.models_dir, NAME + "_preview")))
-        self.assertTrue(self.held(NAME + "_preview")[0]["parameters"]["version"].startswith("preview-"))
-        self.registry.alias(NAME, ALIAS_PREVIEW, 1)
+        self.assertTrue(isdir(join(self.models_dir, NAME + PROJECT_PREVIEW_SUFFIX)))
+        self.assertTrue(self.held(NAME + PROJECT_PREVIEW_SUFFIX)[0]["parameters"]["version"].startswith(PROJECT_LABEL_PREVIEW))
+        self.registry.alias(NAME, PROJECT_ALIAS_PREVIEW, 1)
         self.sync()
-        self.assertFalse(isdir(join(self.models_dir, NAME + "_preview")))
-        self.assertIn(("unload", NAME + "_preview"), self.calls)
+        self.assertFalse(isdir(join(self.models_dir, NAME + PROJECT_PREVIEW_SUFFIX)))
+        self.assertIn(("unload", NAME + PROJECT_PREVIEW_SUFFIX), self.calls)
 
     def test_a_model_without_the_mlmodels_tags_is_ignored(self):
         self.registry.add(1, "1.0.0", released=True, tagged=False)
@@ -87,7 +97,7 @@ class SyncTest(unittest.TestCase):
         self.registry.add(1, "1.0.0")
         self.registry.add(2, "2.0.0", released=True)
         self.sync()
-        self.registry.alias(NAME, ALIAS_RELEASE, 1)
+        self.registry.alias(NAME, PROJECT_ALIAS_RELEASE, 1)
         self.sync()
         self.assertEqual(["1.0.0"], [settings["parameters"]["version"] for settings in self.held(NAME)])
 
@@ -117,7 +127,7 @@ class SyncTest(unittest.TestCase):
     def test_a_model_that_loses_its_alias_is_unloaded_and_removed(self):
         self.registry.add(1, "1.0.0", released=True)
         self.sync()
-        self.registry.remove_alias(NAME, ALIAS_RELEASE)
+        self.registry.remove_alias(NAME, PROJECT_ALIAS_RELEASE)
         self.sync()
         self.assertFalse(isdir(join(self.models_dir, NAME)))
         self.assertIn(("unload", NAME), self.calls)
@@ -141,20 +151,20 @@ class ServingRuntimeTest(unittest.TestCase):
         from mlmodels._replay import replay_project
 
         for flavour in ("pyfunc", "wasm", "onnx"):
-            project_dir = demo_project(flavour)
+            project_dir = fixture_project(flavour)
             self.assertEqual([], replay_project(project_dir), flavour)
-            self.assertEqual({"demo_out": [3.0]}, load_project(project_dir).predict({"demo_in": [1.5]}), flavour)
+            self.assertEqual({"demo_out": [3.0]}, load(project_dir).predict({"demo_in": [1.5]}), flavour)
 
     def test_a_missing_required_input_is_refused(self):
-        with self.assertRaises(ValueError):
-            load_project(demo_project("wasm")).predict({})
+        with self.assertRaises(ModelError):
+            load(fixture_project("wasm")).predict({})
 
     def test_a_changed_file_is_not_loaded(self):
-        project_dir = demo_project("wasm")
+        project_dir = fixture_project("wasm")
         with open(join(project_dir, "model.wasm"), "ab") as model_file:
             model_file.write(b"\0")
-        with self.assertRaises(ValueError):
-            load_project(project_dir)
+        with self.assertRaises(ModelError):
+            load(project_dir)
 
 
 class FakeRegistry:
@@ -167,19 +177,19 @@ class FakeRegistry:
 
     def add(self, version, release_version, released=False, previewed=False, broken=False, tagged=True, name=NAME):
         model = self.model_list.setdefault(name, {"name": name, "aliases": {}, "versions": {}})
-        project_dir = demo_project("wasm")
+        project_dir = fixture_project("wasm")
         if broken:
             with open(join(project_dir, "model.wasm"), "ab") as model_file:
                 model_file.write(b"\0")
-        tags = {"content_sha256": f"{version:064d}", "project_flavour": "wasm"} if tagged else {}
+        tags = {PROJECT_TAG_CONTENT_SHA256: f"{version:064d}", PROJECT_TAG_FLAVOUR: "wasm"} if tagged else {}
         if release_version is not None:
-            tags["release_version"] = release_version
+            tags[PROJECT_TAG_RELEASE_VERSION] = release_version
         model["versions"][str(version)] = tags
         self.projects[(name, str(version))] = project_dir
         if released:
-            model["aliases"][ALIAS_RELEASE] = version
+            model["aliases"][PROJECT_ALIAS_RELEASE] = version
         if previewed:
-            model["aliases"][ALIAS_PREVIEW] = version
+            model["aliases"][PROJECT_ALIAS_PREVIEW] = version
 
     def alias(self, name, alias, version):
         self.model_list[name]["aliases"][alias] = version

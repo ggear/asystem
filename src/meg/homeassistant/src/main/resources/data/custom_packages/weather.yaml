@@ -48,7 +48,7 @@ rest:
           },
           {
             "name": "clock_epoch_seconds",
-            "datatype": "INT64",
+            "datatype": "FP64",
             "shape": [1],
             "data": [{{ now().timestamp() | int }}]
           }

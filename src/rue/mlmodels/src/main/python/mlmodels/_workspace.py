@@ -5,8 +5,8 @@ import tempfile
 from dataclasses import dataclass, field
 
 from mlmodels._config import NOTEBOOK_DIR
-from mlmodels._constants import MODEL_DIR, MODEL_DOCUMENT, PROJECT_SPLITS
-from mlmodels._metadata import METADATA_FILE, SIGNATURE_FILE, read_runtime
+from mlmodels._constants import MODEL_DIR, MODEL_DOCUMENT, PROJECT_SIGNATURE, PROJECT_SPLITS
+from mlmodels._metadata import METADATA_FILE, read_runtime
 from mlmodels._selection import Selection
 
 
@@ -20,7 +20,7 @@ def scratch_project_dir(workspace, output_dir=None):
 
 
 def load_signature(workspace, notebook_dir=NOTEBOOK_DIR):
-    with open(os.path.join(notebook_dir, workspace, SIGNATURE_FILE)) as signature_file:
+    with open(os.path.join(notebook_dir, workspace, PROJECT_SIGNATURE)) as signature_file:
         return json.load(signature_file)
 
 
@@ -71,11 +71,11 @@ def describe_workspace(workspace_dir, signature):
     if os.path.isfile(metadata_path):
         with open(metadata_path) as metadata_file:
             metadata = json.load(metadata_file)
-        runtime = ", ".join(f"{kind} {' '.join(names)}" for kind, names in read_runtime(workspace_dir).items() if names)
+        runtime = ", ".join(f"{kind} [{', '.join(names)}]" for kind, names in read_runtime(workspace_dir).items() if names)
         rows = [
             ("Workspace", "/".join(workspace_dir.rstrip("/").split("/")[-3:])),
             ("Target", " ".join(metadata["target"][key] for key in ("kind", "language") if key in metadata["target"])),
-            ("Runtime", runtime or "none"),
+            ("Requires", runtime or "[]"),
             ("Version", f"{metadata['version']} ({'released' if metadata['release'] else 'unreleased'})" if metadata["version"] else "none"),
         ]
     for kind in ("inputs", "outputs"):

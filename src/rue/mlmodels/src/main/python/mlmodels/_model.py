@@ -1,4 +1,3 @@
-import ast
 import builtins
 import hashlib
 import inspect
@@ -6,17 +5,16 @@ import json
 import os
 import shutil
 import symtable
-import sys
 import textwrap
 import types
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from os.path import join
 
 from mlmodels import maths
-from mlmodels._constants import MODEL_DIR, MODEL_DOCUMENT, MODEL_SCHEMA, PROJECT_MODEL_FILES, PYFUNC_BASE_IMPORTS, PYFUNC_IMPORT_NAMES
+from mlmodels._constants import MODEL_DIR, MODEL_DOCUMENT, MODEL_SCHEMA, PROJECT_MODEL_FILES, PYFUNC_IMPORT_NAMES
 from mlmodels._document import write_json
 from mlmodels._errors import GateError
-from mlmodels._lint_project import file_sha256
+from mlmodels._lint_project import file_sha256, pyfunc_imports
 from mlmodels._replay import load_model
 from mlmodels._wasm import wasm_build, wasm_trace
 
@@ -58,6 +56,9 @@ class ModelRecord:
     constants: dict | None
     predict: object
     evaluation: dict | None = None
+    fitted: dict = field(default_factory=dict)
+    figures: dict = field(default_factory=dict)
+    predictions: dict = field(default_factory=dict)
 
 
 def model_content(ws, flavour, source, constants):
@@ -126,11 +127,8 @@ def model_orphans(ws):
 
 
 def model_python_deps(text):
-    tree = ast.parse(text)
-    imported = {alias.name.split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.Import) for alias in node.names}
-    imported |= {node.module.split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.ImportFrom) and node.level == 0 and node.module}
     packages = {module: package for package, module in PYFUNC_IMPORT_NAMES.items()}
-    return sorted(packages.get(name, name).replace("_", "-") for name in imported - set(sys.stdlib_module_names) - set(PYFUNC_BASE_IMPORTS))
+    return sorted(packages.get(name, name).replace("_", "-") for name in pyfunc_imports(text))
 
 
 def _named_function(source):

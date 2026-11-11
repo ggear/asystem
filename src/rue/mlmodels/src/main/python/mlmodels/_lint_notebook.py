@@ -20,8 +20,9 @@ from mlmodels._constants import (
     NOTEBOOK_STAGES,
     NOTEBOOK_STAR_IMPORT,
     NOTEBOOK_SYS_PATH,
+    PROJECT_SIGNATURE,
+    RUN_FIRST,
 )
-from mlmodels._metadata import SIGNATURE_FILE
 
 
 def lint_notebook(path):
@@ -84,7 +85,7 @@ def lint_notebook(path):
         elif any(row.startswith("|") and "**" in row for row in text.split("\n")):
             add("NB009", "bold in a table cell", index)
     data = _title_blocks(_title_text(cells))[0].get("Data", [])
-    ignored_data = _ignored(notebook_dir, "data", "1000", "file.csv")
+    ignored_data = _ignored(notebook_dir, "data", str(RUN_FIRST), "file.csv")
     ignored_project = _ignored(notebook_dir, "project", "file")
     if (ignored_data or ignored_project) and not (data and data[0].startswith("Personal data")):
         add("NB014", "the first Data point of a workspace with git-ignored data must open with [Personal data]")
@@ -110,7 +111,7 @@ def fix_notebook(path):
 
 
 def _lint_intent(cells, notebook_dir, model):
-    signature_path = join(notebook_dir, SIGNATURE_FILE)
+    signature_path = join(notebook_dir, PROJECT_SIGNATURE)
     intent = " ".join(_title_blocks(_title_text(cells))[0].get("Intent", [])) or None
     if not isfile(signature_path) or intent is None:
         return []

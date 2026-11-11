@@ -34,13 +34,16 @@ def evaluate_model(ws, model, split):
         if state_out and state_out[0] in answer:
             state = answer[state_out[0]]
     kept = [name for name in frame.columns if name == "time" or (name not in ws.inputs and name not in ws.outputs)]
-    return pl.DataFrame(
+    result = pl.DataFrame(
         {
             **{name: frame[name] for name in kept if name == "time"},
             **{name: pl.Series(name, values, dtype=pl.Float64) for name, values in predicted.items()},
             **{name: frame[name] for name in kept if name != "time"},
         }
     )
+    if split in ACCEPTANCE_SPLITS:
+        record.predictions[split] = result
+    return result
 
 
 def evaluate_metrics(truth, predicted):
@@ -75,7 +78,7 @@ def evaluate_gate(ws, model, checks):
             record.label,
             entry["split"],
             entry["name"],
-            round(entry["value"], 2),
+            entry["value"] if entry["value"] is None else round(entry["value"], 2),
             entry["limit"],
             entry["passed"],
         )
@@ -112,6 +115,8 @@ def evaluate_plot(ws, models, split, *, reference=None, title=None):
         axes.grid(alpha=0.3)
         axes.legend(loc="best")
     figure.tight_layout()
+    for model in models:
+        _record(ws, model).figures[f"evaluate_{split}"] = figure
 
 
 def _verdict(record):

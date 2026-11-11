@@ -25,8 +25,8 @@ RUN curl -fsSL "https://go.dev/dl/go${ASYSTEM_GO_VERSION}.linux-${TARGETARCH}.ta
 RUN ONNXRUNTIME_ARCH="$([ "${TARGETARCH}" = "arm64" ] && echo aarch64 || echo x64)" && \
     curl -fsSL "https://github.com/microsoft/onnxruntime/releases/download/v${ASYSTEM_ONNXRUNTIME_VERSION}/onnxruntime-linux-${ONNXRUNTIME_ARCH}-${ASYSTEM_ONNXRUNTIME_VERSION}.tgz" | tar -C /tmp -xz && \
     mkdir -p /build/onnxruntime && cp -L /tmp/onnxruntime-linux-${ONNXRUNTIME_ARCH}-${ASYSTEM_ONNXRUNTIME_VERSION}/lib/libonnxruntime.so /build/onnxruntime/libonnxruntime.so
-COPY src/main/go/runtime /build/go
-COPY src/main/rust/runtime /build/rust
+COPY src/main/go/mlmodels /build/go
+COPY src/main/rust/mlmodels /build/rust
 RUN cd /build/go && go build -o /build/consumer-go . && \
     cd /build/rust && CARGO_TARGET_DIR=/build/target cargo build --release --locked && cp /build/target/release/consumer /build/consumer-rust
 

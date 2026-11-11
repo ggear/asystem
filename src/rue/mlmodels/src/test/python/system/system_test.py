@@ -1,6 +1,6 @@
 import subprocess
 import sys
-from os.path import abspath, dirname, isfile, join, realpath
+from os.path import abspath, dirname, isfile, join, realpath, relpath
 
 import pytest
 
@@ -9,10 +9,11 @@ sys.path.append("../../../../../../all/_/src/build/python")
 
 from asystem.report import run_pytest, stage
 from mlmodels._config import VERSION_PATH
-from mlmodels._constants import PROJECT_ALIAS_PREVIEW
+from mlmodels._constants import PROJECT_ALIAS_PREVIEW, PROJECT_LABEL_PREVIEW, PROJECT_PREVIEW_SUFFIX
 from mlmodels._errors import GateError
 from mlmodels._metadata import METADATA_FILE, PROJECT_DIR, read_metadata
-from mlmodels._release import clear_preview, wait_served, workspaces
+from mlmodels._registry import registry_client
+from mlmodels._release import consumers, slot_name, slots, wait_served, workspaces
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 DIR_SOURCE = abspath(join(DIR_ROOT, "../.."))
@@ -59,8 +60,10 @@ def image():
 def previews(env):
     registered = set()
     yield registered
+    client = registry_client(env["MLFLOW_TRACKING_URI"])
     for name in sorted(registered):
-        clear_preview(name, env["MLFLOW_TRACKING_URI"])
+        if PROJECT_ALIAS_PREVIEW in client.get_registered_model(name).aliases:
+            client.delete_registered_model_alias(name, PROJECT_ALIAS_PREVIEW)
 
 
 @pytest.mark.parametrize(("name", "directory", "target"), _targets())
@@ -75,14 +78,22 @@ def test_the_declared_target_runs_its_project(name, directory, target, env, imag
             _wait_registry(name, metadata["content_sha256"], env["MLFLOW_TRACKING_URI"])
             entry.detail = PROJECT_ALIAS_PREVIEW
         server = f"http://{env['MLSERVER_SERVICE_PROD']}:{env['MLSERVER_HTTP_PORT']}"
+        served_name, label = (name, metadata["version"]) if metadata["release"] is not None else (f"{name}{PROJECT_PREVIEW_SUFFIX}", f"{PROJECT_LABEL_PREVIEW}{metadata['content_sha256'][:8]}")
         with stage("serve") as entry:
-            wait_served(server, f"{name}_preview", f"preview-{metadata['content_sha256'][:8]}")
-            entry.detail = f"{name}_preview"
-        output = _run(image, "python", ["-m", "mlmodels.runtime", "/project", server, f"{name}_preview"], project_dir)
+            wait_served(server, served_name, label)
+            entry.detail = served_name
+        output = _run(image, "python", ["-m", "mlmodels.runtime", "/project", server, served_name], project_dir)
     else:
         with stage("compile") as entry:
             entry.detail = "interpreted" if target["language"] == "python" else "prebuilt"
-        output = _run(image, target["language"], ["-m", "mlmodels.runtime", "/project"] if target["language"] == "python" else ["/project"], project_dir)
+        arguments = ["-m", "mlmodels.runtime", "/project"] if target["language"] == "python" else ["/project"]
+        output = _run(image, target["language"], arguments, project_dir)
+        for slot in [slot for consumer in consumers(DIR_SOURCE) for slot in slots(consumer) if slot_name(slot) == name]:
+            with stage("embedded") as entry:
+                entry.detail = relpath(slot, DIR_SOURCE)
+            slot_output = _run(image, target["language"], arguments, slot)
+            if slot_output.returncode != 0:
+                raise GateError("target", _label(target), f"workspace [{name}] embedded copy [{relpath(slot, DIR_SOURCE)}] output [{(slot_output.stderr or slot_output.stdout).strip()}]")
     print(output.stdout, end="", flush=True)
     if output.returncode != 0:
         raise GateError("target", _label(target), f"workspace [{name}] output [{(output.stderr or output.stdout).strip()}]")
