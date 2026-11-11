@@ -2,7 +2,7 @@
 // WARNING: This file is written by the build process, any manual edits will be lost!
 ////////////////////////////////////////////////////////////////////////////////
 
-// project rackmains_ups_battery sha256 c0547c3deec2e6b300444dab3117d7a5e68d9082d021f3ef2670e0f2ee172262
+// project rackmains_ups_battery sha256 5ebf415e02c9f03a21930e8e119b331ed85584bfc50e5e9362e595f7cf489e32
 
 use std::path::Path;
 
@@ -21,11 +21,8 @@ pub const INPUT_NAMES: &[&str] = &[
 ];
 pub const OUTPUT_NAMES: &[&str] = &[
     "guard_shed_max_seconds",
-    "guard_halt_max_seconds",
     "guard_mains_stable_seconds",
-    "guard_halt_delay_seconds",
     "guard_shed_lead_seconds",
-    "guard_halt_lead_seconds",
     "battery_remaining_pct",
     "battery_remaining_seconds",
     "model_energy_used_wh",
@@ -39,12 +36,7 @@ pub const REQUIRED_INPUT_NAMES: &[&str] = &[
     "ups_on_battery",
     "battery_replace",
 ];
-pub const REQUIRED_OUTPUT_NAMES: &[&str] = &[
-    "guard_shed_max_seconds",
-    "guard_halt_max_seconds",
-    "guard_mains_stable_seconds",
-    "guard_halt_delay_seconds",
-];
+pub const REQUIRED_OUTPUT_NAMES: &[&str] = &["guard_shed_max_seconds", "guard_mains_stable_seconds"];
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Request {
@@ -59,13 +51,9 @@ pub struct Request {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Response {
     pub guard_shed_max_seconds: i64,
-    pub guard_halt_max_seconds: i64,
     pub guard_mains_stable_seconds: i64,
-    pub guard_halt_delay_seconds: i64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub guard_shed_lead_seconds: Option<i64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub guard_halt_lead_seconds: Option<i64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub battery_remaining_pct: Option<i64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -124,16 +112,6 @@ impl TryFrom<Tensors> for Response {
                     })
                 }
             },
-            guard_halt_max_seconds: match tensors.get("guard_halt_max_seconds").map(Vec::as_slice) {
-                Some([value]) => *value as i64,
-                _ => {
-                    return Err(ModelError {
-                        kind: Kind::Signature,
-                        gate: "response".to_string(),
-                        cause: "output [guard_halt_max_seconds] is absent or not one value".to_string(),
-                    })
-                }
-            },
             guard_mains_stable_seconds: match tensors.get("guard_mains_stable_seconds").map(Vec::as_slice) {
                 Some([value]) => *value as i64,
                 _ => {
@@ -141,16 +119,6 @@ impl TryFrom<Tensors> for Response {
                         kind: Kind::Signature,
                         gate: "response".to_string(),
                         cause: "output [guard_mains_stable_seconds] is absent or not one value".to_string(),
-                    })
-                }
-            },
-            guard_halt_delay_seconds: match tensors.get("guard_halt_delay_seconds").map(Vec::as_slice) {
-                Some([value]) => *value as i64,
-                _ => {
-                    return Err(ModelError {
-                        kind: Kind::Signature,
-                        gate: "response".to_string(),
-                        cause: "output [guard_halt_delay_seconds] is absent or not one value".to_string(),
                     })
                 }
             },
@@ -162,17 +130,6 @@ impl TryFrom<Tensors> for Response {
                         kind: Kind::Signature,
                         gate: "response".to_string(),
                         cause: "output [guard_shed_lead_seconds] is absent or not one value".to_string(),
-                    })
-                }
-            },
-            guard_halt_lead_seconds: match tensors.get("guard_halt_lead_seconds").map(Vec::as_slice) {
-                None => None,
-                Some([value]) => Some(*value as i64),
-                _ => {
-                    return Err(ModelError {
-                        kind: Kind::Signature,
-                        gate: "response".to_string(),
-                        cause: "output [guard_halt_lead_seconds] is absent or not one value".to_string(),
                     })
                 }
             },
