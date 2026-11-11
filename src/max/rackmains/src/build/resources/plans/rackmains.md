@@ -10,6 +10,13 @@ The battery model is built and released as a constants project (the `ups/battery
 the `static` project `rackmains_ups_battery` is written by the `ups_battery` notebook from the guard thresholds, with four golden steps, and `generate.sh` embeds it into
 `src/build/resources/model/battery/`, with the loader and model file in `src/model/`. There is no default, floor or second copy. The guard's validation at start is not built.
 
+**Decided 2026-11-11, not built: no final UPS command, run to failure.** The guard sheds the followers and then does nothing more. `max` stays up in
+`asleep --shallow` with rackmains and the guard recording until the UPS cuts its own output at its low-battery cutoff, and every host boots on AC restore. There is no
+`shutdown.return`, no `ups.delay.shutdown`, no halt step, no `asleep --deep` on `max`, and no host helper or socket write: nothing in this module ever writes anything but
+`DUMPALL`. This removes a state, two thresholds and an open decision. The cost, accepted: the battery runs to its cutoff on every outage long enough to shed, and
+`max` is cut while running. The one fact it rests on, that the PSDR800 restores its output by itself after a depletion cutoff, is not in the manual and is observed in trial 5
+("Residual risk").
+
 **Decided 2026-10-30, not built.** Every metric is published on MQTT for Home Assistant and, during a battery drain, also written to a
 CSV in the home dir; there is no InfluxDB writer. Polling speeds up on battery and publishing is rare on mains, and health no longer
 depends on MQTT (see "Metrics, MQTT and the outage CSV"). The module `CLAUDE.md`'s payload and health descriptions change when that
@@ -25,8 +32,8 @@ The trials and tests that supply the data are an open decision below.
 
 1. **Publish** the rack UPS's mains and battery state to Home Assistant over MQTT, so an outage or a failing battery is
    visible and automatable there. Built.
-2. **Guard** the rack: on a power cut, shut the other servers down early, `max` last, and bring the others back if mains
-   returns in time. Designed; a thread inside this container.
+2. **Guard** the rack: on a power cut, shed the other servers early, and bring them back if mains returns. `max` keeps
+   running to the end and the UPS runs to failure. Designed; a thread inside this container.
 
 **Simple and consistent.** rackmains only ever produces data. Nothing in the running service measures, fits or learns the
 battery. Thresholds are outputs of a model that is fitted offline (the Intent of the `ups/battery` notebook title cell); until a fitted model exists the constants project (flavour `static`) is the released model, and changing it is a release.
@@ -37,7 +44,7 @@ battery. Thresholds are outputs of a model that is fitted offline (the Intent of
   and during an outage the CSV files hold the complete record.
 - **No supervisor integration.** The guard lives here, so supervisor needs no UPS plugin. Two passive links: supervisor's
   generated config for `macmini-max` picks up the `rackmains` container on its next generate (which also gives Home Assistant its
-  `Service Rackmains` switch, from the container's health check), and a host the guard powers off has its supervisor publish
+  `Service Rackmains` switch, from the container's health check), and a host the guard sheds has its supervisor publish
   `offline`. A cut during the 01:00 nightly backup interrupts it; the guard does not coordinate.
 - **No `upsmon` or `upssched`.** They stay disabled; see the designs left out.
 - **No in-process calibration.** No runtime `calibrate` tool, no reloaded `calibration.json`, no battery-model `calibrating` flag (unrelated to the NUT `CAL` status, which is `rackmains_ups_calibrating`), no
@@ -58,7 +65,7 @@ The USB chip `0665:5161` has two HID interfaces. `nutdrv_qx` drives interface 0 
 
 The driver socket is `/run/nut/nutdrv_qx-powershield`, `0660` `nut:nut` in a `nut:dialout` `0770` directory; the container
 runs as root and a `:ro` bind mount still connects. The socket accepts every command `upscmd -l` lists, among them `load.off`,
-`shutdown.*` and `driver.killpower`, and `:ro` does not stop them, so the publisher only ever writes `DUMPALL`.
+`shutdown.*` and `driver.killpower`, and `:ro` does not stop them, so nothing in the module ever writes anything but `DUMPALL`.
 
 A transient unit `ups-recorder` on `max` runs `src/build/resources/validation/ups_recorder.py`: one JSON line every 2 s to
 `/var/tmp/ups_status.jsonl` with the NUT variables, about 8 MB a day. It is a validation
@@ -103,7 +110,7 @@ so the guard reads `ups.status`, never the alarm.
 | Battery current, output current, watts | **not reported** | neither NUT (only a fixed `output.current.nominal` of 3.0) nor the HID interface (none of its 153 fields) has a current or power reading; any amperage in this plan is inferred from `ups.load` of 480 W and about 12 V (roughly 4.5 to 6 A at 11 to 15% load, before inverter losses). The only measured wattage is the plug's 81 to 100 W, which includes the UPS's own losses and charging |
 | NUT `battery.charge` | no | NUT's own estimate from voltage against 10.4 and 13.0 V; 100 to 58 in a minute |
 | Unit capacity, unit runtime, LCD "bat" figure | no | smoothed model outputs; capacity fell 90 to 40 in 145 s with the voltage flat and rebounded 40 to 65 in 20 s; runtime falls at most 1 s/s, rises about a third of that, wanders 870 to 1766 s on mains |
-| `LB` | untested | never raised in 145 s; only a run to failure will show if and how long before the cutoff |
+| `LB` | untested | never raised in 145 s; only a run to failure will show if and how long before the cutoff, and whether output restores on its own when mains returns (trial 5) |
 
 **HID metrics and `usbhid-ups`: dropped (decided 2026-10-28).** Nothing from the HID interface is collected, published or used.
 The unit's own capacity and runtime are model outputs that lag; its `Discharging` and `ACPresent` flags lead NUT's `OB` by about
@@ -215,7 +222,7 @@ and the workbook templates all move to these names when built.
 | `model_recalibrate` | the model, an optional output | yes, once the model returns it | yes | WARN on a change to 1, with the reason from the response `parameters` |
 | `model_state` | the model's state as one JSON text of the named state slots | no, not published | yes, on the `start` and `end` rows and on a restart, reset or project change, blank otherwise | INFO on those rows; DEBUG on every call when the debug switch is on |
 | `timestamp`, `period_ms` | the poll | yes | `timestamp`, `elapsed_seconds` | DEBUG per poll |
-| events: transitions, decisions, commands, notes, summary | rackmains, the guard | **never** | yes, the `event` and `detail` columns | INFO. Command timings and host results (`asleep`, `awake`, `shutdown.return`: start, `RESULT` status, `took`) live only here and in the CSV. The `end` row holds the summary: duration on battery, minimum voltage and when, peak utilisation, whether `LB` raised, steps reached, hosts shed |
+| events: transitions, decisions, commands, notes, summary | rackmains, the guard | **never** | yes, the `event` and `detail` columns | INFO. Command timings and host results (`asleep`, `awake`: start, `RESULT` status, `took`) live only here and in the CSV. The `end` row holds the summary: duration on battery, minimum voltage and when, peak utilisation, whether `LB` raised, steps reached, hosts shed |
 | service health, the `Service Rackmains` switch | the container's health check, from a heartbeat file and independent of MQTT | none from rackmains, supervisor publishes it | no | none here, supervisor logs it |
 | outage count | dropped | no | no | the `end` row's duration for that outage; a count is a query over `ups_on_battery` |
 | `ups.temperature` | not reported by the unit | no | no | no |
@@ -305,9 +312,7 @@ the container), so it is on the host's disk and survives Docker stopping.
     InfluxDB time is when Home Assistant fired the event.
 - **Safe write.** The whole file is rebuilt from the in-memory rows, written to `<name>.tmp` in the same directory, fsynced, renamed
   over the final name, and the directory fsynced, so the file on disk is always the whole previous version or the whole new one,
-  never torn. A write happens at most every 5 s, except that an event row writes at once, and the `decision` to halt and the
-  `shutdown.return` command are written, fsynced and waited for (bounded, 5 s) *before* the command is sent, so they are on disk
-  before `max` quiesces. A run to failure therefore loses at most the rows since the last rename.
+  never torn. A write happens at most every 5 s, except that an event row writes at once. A run to failure therefore loses at most the rows since the last rename.
 - **Small.** About 300 bytes a row, so 1 MB holds about 3,300 rows, or 4.6 hours at one row every 5 s. Past 1 MB the file continues
   in `..._2.csv`, so no rewrite is ever larger than that.
 - **Works with everything else asleep.** It needs only this container and a writable data dir. `asleep --shallow` on `max` leaves
@@ -333,7 +338,7 @@ the container), so it is on the host's disk and survives Docker stopping.
   a spreadsheet or pandas. It is the failure record for real outages and for by-hand test cuts alike.
 - **Tests.** A failed rename leaves the previous file intact; a failed write does not block the poll thread and the next write holds
   every row; recovery marks an unfinished file `interrupted` and deletes a stray `.tmp`; the prune keeps the newest and never the
-  current file; the pre-halt row is on disk before its command is sent; the header equals the canonical names the payload
+  current file; the header equals the canonical names the payload
   declares, checked both ways; a table test deriving the `end` summary from a sequence of statuses and samples; and the process polls, writes the CSV and stays
   healthy with the broker unreachable, including at start.
 
@@ -348,7 +353,7 @@ never uses it.
 
 **Guard metrics.** The guard's metrics join the payload when the guard exists, and each gets its own workbook row, `Enabled` for the
 dry-run release, so nothing is added later by surprise. `guard_state` is one of `idle`, `waiting`, `shedding`, `holding`,
-`halting`, `restoring`; `guard_live` is off while in dry-run; `guard_mains_seconds` is the seconds on line since
+`restoring`; `guard_live` is off while in dry-run; `guard_mains_seconds` is the seconds on line since
 the previous outage ended, absent when unknown; `guard_battery_seconds` is the guard's accumulated time on battery.
 
 ## Workbook rows to add to `entity_metadata.xlsx`
@@ -434,8 +439,7 @@ machine with hysteresis and a restart mid-sequence is easy to test in Rust again
 image, one health check, and no change elsewhere.
 - Its loop never touches MQTT, has its own clock and shares no blocking state with the publisher. `run` today connects to the
   broker before it polls; that order changes, so the guard is already running when the broker is unreachable (`meg` down).
-- It reads the socket and, if it sends the final UPS command itself, writes to it (the mount then stops being `:ro`); otherwise
-  the host sends it. The publisher's path writes only `DUMPALL`, held by discipline and a test of that path.
+- It reads the socket and writes only `DUMPALL`, so the mount stays `:ro`; no UPS command is ever sent, by the guard or by a host helper.
 - It needs the ssh keys (a dedicated key, mounted read-only from a root-only directory on `max`, `known_hosts` pinned,
   `openssh-client` pinned in the image), the generated host list, the model's policy, and a state file under `/asystem/mnt` so a
   restart mid-sequence knows who it already shut down. It reconciles with that file on every start.
@@ -454,8 +458,7 @@ image, one health check, and no change elsewhere.
   `RESULT <command> status=… reason=…` gives the reason, and an ssh status of `255` is a host that could not be reached.
 - **Parallel when asked.** The guard's runner takes a list of hosts, a command and whether to run them in parallel. A parallel request
   starts one worker per host, each making its own blocking call, and joins them as they return; a sequential one runs them in order.
-  Workers report over a channel, so the guard's own loop keeps polling and deciding while a shed or a wake is running, and a halt
-  that falls due before every follower has returned does not wait for them. Each result is a `command` row in the outage CSV (host,
+  Workers report over a channel, so the guard's own loop keeps polling and deciding while a shed or a wake is running. Each result is a `command` row in the outage CSV (host,
   command, exit status, reason, how long it took) and an entry in the state file. A non-zero result is logged and alerted and never
   retried in a loop.
 - **One call per host at a time.** The state file records which host has a call in flight, and the guard never starts `awake` on a
@@ -478,32 +481,39 @@ next section). A host is never powered off.
    5 unclean) is logged and alerted and the guard moves on; it never retries in a loop. On `max`, run `asleep --shallow`
    stopping every container but rackmains (supervisor first, it binds `/`). A shed is not undone by the voltage rebound when
    the load drops, only by `guard_mains_stable_seconds` of mains.
-3. **Halt.** At `guard_halt_max_seconds` on battery, or on `LB`, whether or not every follower has finished (a halt implies a shed,
-   so an `LB` runs both at once, with no staging): send `shutdown.return` first, with `ups.delay.shutdown` set to
-   `guard_halt_delay_seconds` (30 s by default), which the fit sets to cover `max`'s `asleep --deep` plus a margin, then start `asleep --deep` on `max` detached. It stops rackmains and the guard
-   with it, so its result is only in `/run/asleep.log` on `max`, and `shutdown.stop` cannot be sent afterwards. The UPS then
-   cuts and restores, and every host boots on AC restore (power-on-after-cut test, below).
+3. **Run to failure.** Nothing more is done after the shed. rackmains and the guard stay up on `max` (shallow) and keep polling and
+   recording until the UPS cuts its own output at its low-battery cutoff, and every host then boots on AC restore (power-on-after-cut
+   test, below). If mains returns at any point before the cut, step 4 runs as normal, because nothing was ever past the point of return.
 4. **Mains returns first.** After `guard_mains_stable_seconds` of continuous `OL`, run `awake` on `max` to restart what was
    stopped, and on each follower the state file lists once its `asleep` has returned, in the reverse of the shed order: `max`
    first, then `meg`, then the remaining followers in parallel (decided 2026-10-30). Each call is synchronous and its exit status says whether the host came back
    healthy (`6` is a container not running or healthy). `asleep` is undone by `awake`, so unlike
-   a `poweroff` there is nothing to wait on being down. If the halt has started there is nothing to cancel.
-
+   a `poweroff` there is nothing to wait on being down.
 **Safety rails.** It ships in dry-run, logging the exact commands it would run, and goes live only after the trials (see Open decisions) show the
 conservative timers fit. It honours its hard override (`LB`) in dry-run too. The keys can
-power off and nothing else. Any status flag that is not `OL` is surfaced; an alarm or fault flag raises an alert in Home
+run `asleep` and `awake` and nothing else. Any status flag that is not `OL` is surfaced; an alarm or fault flag raises an alert in Home
 Assistant.
 
 **Later.** The decision (reading and history in, action out) stays a pure function apart from the state machine and the
 runners, so the timer policy is replaceable; if a better policy is ever wanted it is fitted offline like the thresholds (the Future of the `ups/battery` notebook title cell).
+
+**Residual risk of running to failure (decided 2026-11-11).**
+- **Output may not restore after a depletion cutoff.** The manual says only that the unit starts by itself when plugged in, that "Standby" is
+  connected to utility with outlets **not supplied**, and, under troubleshooting, to recharge for at least 6 hours and start again after a low battery. If the PSDR800 comes
+  back from a depletion in Standby, no host boots and the rack stays dark until someone presses the button. Trial 5 observes this: after the
+  cutoff restore mains and record whether the outlets are supplied without a button press, and how long it takes. If they are not, revisit by
+  adding a host-side helper that sends `shutdown.return` over a forced-command ssh key, since that is the only command that guarantees a power cycle.
+- **Battery wear.** A 9Ah sealed lead-acid battery runs to the unit's own cutoff on every outage past the shed point. The shed point is the only limit on how often.
+- **`max` is cut while running.** Only rackmains runs there and the CSV is written by write, fsync and rename, so the cut is survivable, but `/home` is writable
+  and root is not unmounted.
 
 **Residual risk.** One USB link is one source of truth. A power cut with a failure of `max`, of Docker or of the guard leaves
 the others running until the UPS is flat. A read-only `upsd` on the LAN with a dead-man timer on each follower would cover it
 and is left out for now. Root login with a password is enabled on the followers, so the guard's keys are only as safe as that.
 
 **Restart.** Decided: no wake packets and no Wake on LAN. If mains returns before the UPS is flat the guard runs `awake`; if the
-UPS cuts, every host boots on AC restore from the state `asleep` left it in. That second path is the one still to prove (the
-power-on-after-cut test).
+UPS cuts, every host boots on AC restore from the state `asleep` left it in. The cut is now only the UPS's own depletion cutoff, so that second path
+needs two things proved: the hosts boot after a cut (the power-on-after-cut test) and the UPS supplies its outlets again when mains returns (trial 5).
 
 ## The host side, the `system` module (built)
 
@@ -576,9 +586,10 @@ must give a signature error). It is embedded into `src/build/resources/model/bat
 refusal of live mode on a failed validation.
 
 **Starting values, the default model.** Constants only: `guard_shed_max_seconds` 120, inside the 145 s already held at service
-load with no knee; `guard_halt_max_seconds` 450; `guard_mains_stable_seconds` 300; and
-`guard_halt_delay_seconds` 120, a placeholder until `max`'s `asleep --deep` is timed. They shed early on short outages and so
+load with no knee; and `guard_mains_stable_seconds` 300. They shed early on short outages and so
 waste battery, but never outrun what is proven. The values are the constants of the notebook's `define_model` call. A refit replaces the project, which is a release.
+The released project and `policy.rs` still carry `guard_halt_max_seconds` and `guard_halt_delay_seconds`, which the guard now ignores. A signature may only grow, so
+removing them is a breaking change and waits for the next model name, made in the `ups/battery` notebook in `mlmodels`; nothing here edits the embedded project.
 
 ## Deploy and the vernemq release lifecycle
 
@@ -773,8 +784,7 @@ Version reviewed: none yet, the final review has not run.
 
 ## Remaining phases
 
-Decided 2026-10-28: rollout A starts inside the proven 145 s (`guard_shed_max_seconds` 120, `guard_halt_max_seconds` from the measured shed
-times); trial 5 goes to the voltage floor once; the trials are cut at the plug by hand; and there is **one
+Decided 2026-10-28: rollout A starts inside the proven 145 s (`guard_shed_max_seconds` 120); trial 5 goes to the voltage floor once and also observes the cutoff and whether output restores on its own when mains returns; the trials are cut at the plug by hand; and there is **one
 first release carrying the publisher and the guard in dry-run**, not a publisher alone.
 
 1. **Run the review above** on `rackmains`, `mockdriver`, `tools/schema` and the
@@ -785,7 +795,7 @@ first release carrying the publisher and the guard in dry-run**, not a publisher
    `checkhealthy.sh`, the model seam with the constants project (the project and the Rust loader are built), the module
    `CLAUDE.md` update; then the review above.
 3. **Run the forced-command test and the `asleep` timing** (yours, on the hosts, tests 3 and 4, see Open decisions), recording each result there; they
-   fix `guard_halt_max_seconds`.
+   show that a deep shed finishes well inside the battery's run, which bounds `guard_shed_max_seconds` from below.
 4. **Build the guard, dry-run only**: restructure `run` so the poll, the CSV writer and the guard start before, and never wait on, the broker connect, generate the host file
    and the default model project, the model seam, config and state, the ssh runners for `asleep` and `awake`, the state machine with mock sequences, the heartbeat in the
    health check; then review it as above.
@@ -800,23 +810,45 @@ first release carrying the publisher and the guard in dry-run**, not a publisher
 
 ## Open decisions
 
-- **Trials, tests and rollout steps.** The numbered trials (1 to 5), the numbered tests (3 to 6) and the rollout steps (A and B) were written in the model plan, which is no longer kept, and the `ups/battery` notebook title cell holds none of them. Restate each here, or in that notebook's Future, before this plan is deleted; until then the references to them above are only their numbers.
-- **Poll and publish cadence.** Proposed: poll 2 s on mains and 1 s on battery; publish every 5 minutes on mains and at once on a
-  change, and every poll on battery; one CSV row every 5 s on battery. Health no longer depends on the publish interval, so the 5 minutes only sets how stale a Home Assistant value can look. The model is called every 5 s on battery, at transitions and every
-  5 minutes on mains.
-- **Outage CSV numbers.** 5 s between rows, the 100 file bound and the 1 MB cap are my proposals. The file is a whole-document
-  rewrite for each write, as asked, which is cheap at these sizes; an append-only file with an fsync per line would be tail-friendly,
-  but it is not what was asked for, and it can leave a torn last line after a power cut.
-- **The guard's state file.** It is referenced throughout and not yet defined. It must hold the heartbeat, the guard's clocks, which hosts are
-  shed and which calls are in flight, and the model's state with the project hash and version it came from. Written like the CSV (a
-  temporary file, fsync, rename), on every call, not backed up. The format, location and versioning remain to be decided.
-- **Call timeout.** Decided as 30 s and recorded as an ssh connect and silence timeout, not a cap on the whole call (see "Calling
-  `asleep` and `awake`"). Confirm that reading: if a 30 s cap on the whole call was meant, a deep shed would be cut short. No deep
-  run has been timed yet, so the whole-call length is still unmeasured (test 4, see Open decisions).
-- **Switch or binary sensor.** `ups_on_battery` is a read-only `binary_sensor`; revisit if a command is ever wired.
-- **Who sends the final UPS command**, the guard (read-write socket) or the host.
-- **Restart shape.** Decided: `awake` when mains returns early, `AFTERG3_EN` after a cut; the power-on-after-cut test (5)
-  confirms it per host.
+Consolidated 2026-11-11. Each has the question, why it matters now, and the recommendation to accept or change. Answered ones move into the sections above.
+
+**Guard design**
+1. **Maintenance inhibit.** There is no override short of a release that flips dry-run, so cutting the plug on purpose (maintenance, a plug change, trial 1) sheds the rack once
+   `guard_shed_max_seconds` passes, and with run to failure the UPS then runs flat. Recommended: an MQTT switch with auto-expiry; the publisher subscribes to the command topic
+   and writes the inhibit and its expiry into the state file, which the guard reads one way; `LB` overrides it; a `guard_inhibited` metric and a switch workbook row.
+2. **Model promotion.** The model now decides only `guard_shed_max_seconds` and `guard_mains_stable_seconds`, but the shed point is the only limit on battery wear. Recommended: three modes, `static`
+   (the released constants), `shadow` (acts on static, logs what the fitted model would have decided as `decision` rows) and `live`; `guard_mode` replaces `guard_live`, set in `.env_prod`.
+3. **The guard's state file.** Referenced throughout and undefined. After a hard cut the hosts boot fresh while the file still lists them as shed. Recommended: define it now, one versioned JSON file
+   under `/asystem/mnt` holding the heartbeat, the clocks, hosts shed, calls in flight, the inhibit, the mode and the model state with its project hash; written like the CSV, not backed up; an
+   unknown version is discarded and logged; on start the guard probes each host rather than trusting the file.
+
+**Home Assistant and health**
+4. **Alerting.** Non-zero host results and alarm flags are said to be alerted, with no mechanism. Recommended: no new publisher; Home Assistant automations on `guard_state`,
+   `rackmains_battery_low`, `rackmains_ups_problem`, `battery_replace`, `model_recalibrate` and `Service Rackmains`, plus a new `guard_failed_hosts` count, since events never go to MQTT.
+5. **Health from the UPS.** Today only a stale read or heartbeat is unhealthy. Recommended: `rackmains_ups_problem`, `battery_replace` and `model_recalibrate` also make the container unhealthy; `OB` never does.
+6. **Switch or binary sensor** for `ups_on_battery`. Recommended: stays a read-only `binary_sensor`; the inhibit (1) is its own `switch` row.
+
+**Testing**
+7. **Scripted outage helper.** Trials are cut at the plug by hand since `tools/outage` was deleted 2026-10-30; trial 5 now also records the restore after the cutoff. Recommended: a host script in the install
+   dir on `max` that records the plug readings, cuts for a given time, restores, and logs into the `outage/` dir; it never touches the guard. Needs the plug's control and reading interface named.
+8. **Monthly calibration.** A deliberate monthly drain is a run to failure on one 9Ah battery, and the manual lists no self-test. Recommended: keep calibration out of rackmains; only `model_recalibrate` feeds health (5).
+9. **Trials, tests and rollout steps.** Trials 1 to 5, tests 3 to 6 and rollout steps A and B were written in a plan that is no longer kept. Recommended: restate each here before this plan is deleted.
+10. **Does the PSDR800 supply its outlets again by itself after a depletion cutoff?** Not in the manual; trial 5 observes it. If not, the fallback is a host-side `shutdown.return` helper (see "Residual risk of running to failure").
+
+**Numbers and wording to confirm**
+11. **Call timeout.** 30 s as an ssh connect and silence timeout, not a cap on the whole call, so a deep shed is not cut short; no deep run has been timed (test 4). Recommended: confirm that reading.
+12. **Poll and publish cadence.** Poll 2 s on mains and 1 s on battery; publish every 5 minutes on mains and at once on a change, and every poll on battery; one CSV row every 5 s on battery; the model is called every 5 s on battery, at
+    transitions and every 5 minutes on mains. Recommended: accept.
+13. **Outage CSV numbers.** 5 s between rows, 100 files kept, 1 MB per file, whole-document rewrite rather than an fsynced append. Recommended: accept.
+14. **What is reachable during a drain.** Not written down. Recommended: add a short list: ssh to `max` and `docker logs -f rackmains` yes, `meg`, the broker and Home Assistant no after the shed.
+
+**Cannot map, need your words**
+15. **"Turn off patriot auto", "calibrate fan by MPTT home assistance".** Neither word is in the repo and the plan has no fans. Recommended: leave out until explained.
+16. **"Make unhealthy driven from Estates from UPS".** Recommended: read as UPS status, which is 5.
+
+**Decided, kept for reference**
+- **Restart shape.** `awake` when mains returns early, `AFTERG3_EN` after a cut; the power-on-after-cut test (5) confirms it per host.
+- **No final UPS command, run to failure** (2026-11-11), see the top of this file.
 
 ## Designs considered and left out
 
@@ -841,6 +873,9 @@ first release carrying the publisher and the guard in dry-run**, not a publisher
 - **Followers deciding for themselves from a LAN-readable `upsd`.** Resilient to `max` failing, but it spreads UPS logic across
   hosts, exposes `upsd`, and cannot keep `max` last.
 
+- **A final UPS command and a deep `asleep` on `max` (`shutdown.return`, `ups.delay.shutdown`, a halt step).** Dropped 2026-11-11. It guaranteed a power cycle
+  and a clean unmount of `max` before the cut, but needed either a read-write socket or a host helper, two more thresholds and a state, and left the rack asleep
+  with nothing to wake it if mains returned after the halt. Running to failure needs none of them, at the cost of battery wear and a hard cut of `max`.
 - **Powering hosts off (`systemctl poweroff`).** A Mac mini that is shut down stays off when power returns; it restarts after a
   cut only from a running state. Replaced by `asleep`, which quiesces a host and leaves it running.
 - **Wake on LAN.** Needed only to restart hosts that `poweroff` had left off, and it wants the container on the host network. Dropped

@@ -7,7 +7,7 @@ RUN apk update && \
     apk add --upgrade --no-cache coreutils=9.11-r0 && \
     apk add --upgrade --no-cache less=702-r0 && \
     apk add --upgrade --no-cache curl=8.23.0-r0 && \
-    apk add --upgrade --no-cache vim=9.2.1202-r0 && \
+    apk add --upgrade --no-cache vim=9.2.1310-r0 && \
     apk add --upgrade --no-cache jq=1.8.2-r0 && \
     apk add --upgrade --no-cache python3=3.14.10-r1 && \
     apk add --upgrade --no-cache py3-pip=26.1.2-r0 && \
