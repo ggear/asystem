@@ -630,7 +630,7 @@ durations with unit suffixes, kebab-case long flags with a short form for the co
 `backup module restore`). `auto` with no argument queries, `tail` follows, `list` shows recent runs, and `stop` is the pair of the command that starts a run.
 
 ```
-rackmains [-v|--version] [--data-dir <dir>]     root flags, inherited by every command; --data-dir is /asystem/mnt, env RACKMAINS_DATA_DIR
+rackmains [-V|--version] [--data-dir <dir>]     root flags, inherited by every command; --data-dir is /asystem/mnt, env RACKMAINS_DATA_DIR
 
 rackmains serve [options]                       run the reader, publisher and guard
 rackmains check                                 validate the model, host file, ssh keys, data dir and driver socket, then exit
@@ -644,7 +644,7 @@ rackmains guard list                            show the recent outages and how 
 ```
 
 - **Conventions taken from supervisor.**
-  - `-v/--version` prints `SERVICE_VERSION_ABSOLUTE` and exits.
+  - `-V/--version` (clap's, as `tempstat`'s; supervisor's is `-v`) prints `SERVICE_VERSION_ABSOLUTE` and exits.
   - `-L/--log-level [debug, info, warn, error]` on `serve`, default `info`, its default overridable by `RACKMAINS_LOG_LEVEL` as supervisor's is by its environment variable. Supervisor's source, subject and action log filters
     are not copied, since rackmains has no such vocabulary.
   - A short list of common flags is shown and the rest are advanced, hidden behind `--help-all`. Shown on `serve`: `-P`, `-B`, `--heartbeat-period`, `--live`, `-L`. Advanced: `-D`, `-M`, `-T`, `--broker-port`,
@@ -652,6 +652,10 @@ rackmains guard list                            show the recent outages and how 
   - Errors go to stderr and exit `1`; a command that has already reported its failure returns a reported error so it is not printed twice; a command that must exit with its own code (a `drill` aborted with mains restored)
     returns an exit error carrying it. The codes themselves are still open decision T4 (recommended: mirror `asleep`).
   - The `guard` verbs are one table (name, usage, help, argument count), as `backupVerbs`, not separate handlers.
+- **Crate: `clap` 4 with `derive` and `env`, already a dependency (4.6.7 locked), and nothing new is added.** The root is a `Parser` with a `Subcommand` enum, `guard` a nested `Subcommand` enum, and the root flags `global = true`.
+  Advanced flags use `hide_short_help = true`, so `-h` omits them and `--help` shows them, which replaces supervisor's `--help-all` without custom code. Choices use the existing `PossibleValuesParser`. Durations (`<dur>`, the
+  period flags) use `humantime`, also already a dependency. Version stays clap's `-V/--version`, as `tempstat`'s, not supervisor's `-v`. The typed `drain` confirmation reads one line from stdin, with no prompt crate. Exit
+  codes come from a typed error matched in `main`. No completion crate.
 - **`serve` options.** The existing flags move across unchanged (`-P/--poll-period`, `-D/--device`, `-M/--model-dir`, `-T/--timeout`, `-B/--broker-host`, `--broker-port`, `--broker-token`, `-L/--log-level`). Added:
 
   | Option | Default | Meaning |
