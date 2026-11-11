@@ -1833,7 +1833,7 @@ class SpecSyncTest(unittest.TestCase):
             for requirement in re.findall(r"R\d+", requirements):
                 enforced.setdefault(requirement, set()).add(identifier)
         coverage = {}
-        for requirement, checked_by in re.findall(r"^\| (R\d+) \| ([^|]+) \|$", self.section("### 10.3 Coverage of the requirements"), re.MULTILINE):
+        for requirement, checked_by in re.findall(r"^\| (R\d+) \| ([^|]+) \|$", self.section("### 9.2 Coverage of the requirements"), re.MULTILINE):
             coverage[requirement] = set() if checked_by.strip() == "Review" else {item.strip() for item in checked_by.split(",")}
         defined = set(re.findall(r"^\| (R\d+) \| (?:Standard|Parity|Delivery|Change) \|", self.spec, re.MULTILINE))
         self.assertTrue(enforced and coverage and defined)
