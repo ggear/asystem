@@ -710,6 +710,10 @@ and the code disagree in either direction.
 
 A notebook states what it means and not how it is done, through the stage functions of 6.7, imported from `mlmodels` by name. The `_` prefixed modules behind them are the library, and what each does is read from the code. One command, `python -m mlmodels <command>`, runs the checks, the release steps and the notebook tools.
 
+`mlmodels.testing` is the one public module beside them, for tests and not for notebooks: `example_project` copies a committed worked example (6.9) for a consumer's tests, such as `mlserver`'s, to serve and replay, and `build_project` packages a small project of any flavour when a test needs a variant of one, so no consumer needs a copy of a project or an import of a `_` module.
+
+`mlmodels.testing` is the one public module beside them, for tests and not for notebooks: `example_project` copies a committed worked example (6.9) for a consumer's tests, such as `mlserver`'s, to serve and replay, and `build_project` packages a small project of any flavour when a test needs a variant of one, so no consumer needs a copy of a project or an import of a `_` module.
+
 A notebook SHOULD use these functions and MUST NOT reimplement them. The `embed`, `embed-loader` and `verify` commands write and check a consumer's loader, model files and project slot, and `check-release` runs CP004, CP005 and CP006 on them.
 
 ### 10.3 Coverage of the requirements

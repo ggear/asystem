@@ -12,7 +12,6 @@ from os.path import basename, dirname, join, realpath
 
 ROOT = realpath(join(dirname(__file__), "../../../../../.."))
 sys.path.insert(0, join(ROOT, "rue/mlmodels/src/main/python"))
-sys.path.insert(0, join(ROOT, "rue/mlmodels/src/test/python"))
 
 
 class ModelProjectTest(unittest.TestCase):
@@ -98,7 +97,7 @@ class ModelProjectTest(unittest.TestCase):
         from mlmodels._lint_project import lint_project
 
         def rules(wat):
-            project_dir = fixture_project("wasm")
+            project_dir = build_project("wasm")
             with open(join(project_dir, "model.wasm"), "wb") as model_file:
                 model_file.write(wasmtime.wat2wasm(wat))
             return {rule for rule, _ in lint_project(project_dir)}
@@ -129,7 +128,7 @@ class ModelProjectTest(unittest.TestCase):
 
         from mlmodels._lint_project import lint_project
 
-        project_dir = fixture_project("wasm")
+        project_dir = build_project("wasm")
         with open(join(project_dir, "model.wasm"), "wb") as model_file:
             model_file.write(wasmtime.wat2wasm('(module (import "asystem_math" "tanh" (func (param f64) (result f64))) (memory (export "memory") 1) (func (export "predict") (param i32 i32 i32)))'))
         with open(join(project_dir, "project.json")) as manifest_file:
@@ -397,7 +396,7 @@ class ModelProjectTest(unittest.TestCase):
 
         self.write()
         self.assertEqual([], check_release(self.project_dir))
-        unevaluated = fixture_project("wasm")
+        unevaluated = build_project("wasm")
         os.remove(join(unevaluated, "evaluation.json"))
         self.assertEqual(["PM004"], [rule for rule, _ in check_acceptance(unevaluated)])
         with self.assertRaises(GateError) as raised:
@@ -544,7 +543,7 @@ class LoaderTest(unittest.TestCase):
         from mlmodels.runtime.loader import load
 
         static = join(ROOT, "rue/mlmodels/src/main/notebook/example/static/constant/project")
-        for flavour, directory in (("pyfunc", fixture_project("pyfunc")), ("wasm", fixture_project("wasm")), ("onnx", fixture_project("onnx")), ("static", static)):
+        for flavour, directory in (("pyfunc", build_project("pyfunc")), ("wasm", build_project("wasm")), ("onnx", build_project("onnx")), ("static", static)):
             model = load(directory)
             model.verify()
             self.assertEqual(flavour, model.info().flavour)
@@ -553,7 +552,7 @@ class LoaderTest(unittest.TestCase):
         from mlmodels.runtime.loader import ModelError, load
 
         def damaged(change):
-            directory = fixture_project("wasm")
+            directory = build_project("wasm")
             change(directory)
             return directory
 
@@ -577,7 +576,7 @@ class LoaderTest(unittest.TestCase):
         from mlmodels.runtime.loader import ModelError, load
 
         with self.assertRaises(ModelError) as raised:
-            load(fixture_project("wasm")).predict({})
+            load(build_project("wasm")).predict({})
         self.assertEqual("Signature", raised.exception.kind)
 
     def test_an_integer_output_that_is_not_an_integer_is_a_runtime_error(self):
@@ -595,7 +594,7 @@ class LoaderTest(unittest.TestCase):
         from mlmodels.runtime.loader import ModelError, load
 
         with self.assertRaises(ModelError) as raised:
-            load(fixture_project("wasm", golden_out=9.5)).verify()
+            load(build_project("wasm", golden_out=9.5)).verify()
         self.assertEqual("Verify", raised.exception.kind)
 
 
@@ -624,33 +623,33 @@ class ReplayTest(unittest.TestCase):
         from mlmodels._replay import replay_project
 
         for flavour in ("pyfunc", "wasm", "onnx"):
-            self.assertEqual([], replay_project(fixture_project(flavour)), flavour)
+            self.assertEqual([], replay_project(build_project(flavour)), flavour)
 
     def test_a_response_that_differs_from_the_golden_is_a_finding(self):
         from mlmodels._replay import replay_project
 
         for flavour in ("pyfunc", "wasm", "onnx"):
-            self.assertEqual(["RP003"], [rule for rule, _ in replay_project(fixture_project(flavour, golden_out=3.5))], flavour)
+            self.assertEqual(["RP003"], [rule for rule, _ in replay_project(build_project(flavour, golden_out=3.5))], flavour)
 
     def test_a_stated_tolerance_accepts_a_small_difference_and_rejects_a_large_one(self):
         from mlmodels._replay import replay_project
 
         bounds = {"demo_out": {"absolute": 1e-3}}
         for flavour in ("pyfunc", "wasm", "onnx"):
-            self.assertEqual([], replay_project(fixture_project(flavour, golden_out=3.0000001, tolerance=bounds)), flavour)
-            self.assertEqual(["RP003"], [rule for rule, _ in replay_project(fixture_project(flavour, golden_out=3.5, tolerance=bounds))], flavour)
-            self.assertEqual(["RP003"], [rule for rule, _ in replay_project(fixture_project(flavour, golden_out=3.0000001))], flavour)
+            self.assertEqual([], replay_project(build_project(flavour, golden_out=3.0000001, tolerance=bounds)), flavour)
+            self.assertEqual(["RP003"], [rule for rule, _ in replay_project(build_project(flavour, golden_out=3.5, tolerance=bounds))], flavour)
+            self.assertEqual(["RP003"], [rule for rule, _ in replay_project(build_project(flavour, golden_out=3.0000001))], flavour)
 
     def test_a_relative_tolerance_scales_with_the_expected_value(self):
         from mlmodels._replay import replay_project
 
-        self.assertEqual([], replay_project(fixture_project("pyfunc", golden_out=3.003, tolerance={"demo_out": {"relative": 0.002}})))
-        self.assertEqual(["RP003"], [rule for rule, _ in replay_project(fixture_project("pyfunc", golden_out=3.01, tolerance={"demo_out": {"relative": 0.002}}))])
+        self.assertEqual([], replay_project(build_project("pyfunc", golden_out=3.003, tolerance={"demo_out": {"relative": 0.002}})))
+        self.assertEqual(["RP003"], [rule for rule, _ in replay_project(build_project("pyfunc", golden_out=3.01, tolerance={"demo_out": {"relative": 0.002}}))])
 
     def test_a_malformed_tolerance_is_a_finding(self):
         for bounds in ({"demo_other": {"absolute": 1}}, {"demo_out": {"absolute": -1}}, {"demo_out": {}}, {"demo_out": {"scale": 1}}, {"demo_out": {"absolute": True}}):
             with self.assertRaises(ValueError) as refused:
-                fixture_project("pyfunc", tolerance=bounds)
+                build_project("pyfunc", tolerance=bounds)
             self.assertIn("PJ015", str(refused.exception), bounds)
 
 
@@ -661,7 +660,7 @@ class MetadataTest(unittest.TestCase):
         with open(join(self.workspace, "data", "training", "2026-01-01_00-00-00", "a.csv"), "w") as data_file:
             data_file.write("x\n1\n")
         self.write_notebook(["x = 1\n"], ["# a heading\n"])
-        self.project_dir = fixture_project("wasm")
+        self.project_dir = build_project("wasm")
 
     def write_notebook(self, code, markdown):
         with open(join(self.workspace, "notebook.ipynb"), "w") as notebook_file:
@@ -911,12 +910,12 @@ class ReleaseTest(unittest.TestCase):
         self.consumer = join(self.source, "max", "consumer")
         self.slot = join(self.consumer, "src", "build", "resources", "model", "double")
         os.makedirs(dirname(self.slot))
-        shutil.copytree(fixture_project("wasm", golden_out=3.5), self.slot)
+        shutil.copytree(build_project("wasm", golden_out=3.5), self.slot)
 
     def record(self, project_dir=None, target=None):
         from mlmodels._metadata import record_project
 
-        return record_project(self.workspace, project_dir or fixture_project("wasm"), self.TARGET if target is None else target, self.pins)
+        return record_project(self.workspace, project_dir or build_project("wasm"), self.TARGET if target is None else target, self.pins)
 
     def version_file(self, text):
         path = join(tempfile.mkdtemp(), ".version")
@@ -1007,7 +1006,7 @@ class ReleaseTest(unittest.TestCase):
     def test_a_runtime_with_no_pin_is_refused_before_the_workspace_changes(self):
         from mlmodels._errors import GateError
 
-        project_dir = fixture_project("wasm")
+        project_dir = build_project("wasm")
         with open(join(project_dir, "project.json")) as manifest_file:
             manifest = json.load(manifest_file)
         manifest["runtime"] = {"python": ["unpinned_package"]}
@@ -1051,7 +1050,7 @@ class ReleaseTest(unittest.TestCase):
         self.record()
         self.release("10.200.2")
         self.assertEqual("10.200.1", read_metadata(self.workspace)["version"])
-        self.record(project_dir=fixture_project("wasm", golden_out=3.5))
+        self.record(project_dir=build_project("wasm", golden_out=3.5))
         self.assertIsNone(read_metadata(self.workspace)["release"])
 
     def test_an_unreleased_project_carries_the_snapshot_until_its_content_changes_or_it_is_released(self):
@@ -1062,15 +1061,15 @@ class ReleaseTest(unittest.TestCase):
             assert recorded is not None
             return recorded
 
-        self.assertEqual("10.200.1951-SNAPSHOT", record(fixture_project("wasm"), "10.200.1951-SNAPSHOT\n")["version"])
-        self.assertEqual("10.200.1951-SNAPSHOT", record(fixture_project("wasm"), "10.200.1952-SNAPSHOT")["version"])
-        self.assertEqual("10.200.1952-SNAPSHOT", record(fixture_project("wasm", golden_out=3.5), "10.200.1952-SNAPSHOT")["version"])
-        self.assertEqual("10.200.1952-SNAPSHOT", record(fixture_project("wasm", golden_out=3.5), "10.200.1953")["version"])
-        self.assertIsNone(record(fixture_project("wasm", golden_out=4.5), "10.200.1953")["version"])
-        record(fixture_project("wasm"), "10.200.1954-SNAPSHOT")
+        self.assertEqual("10.200.1951-SNAPSHOT", record(build_project("wasm"), "10.200.1951-SNAPSHOT\n")["version"])
+        self.assertEqual("10.200.1951-SNAPSHOT", record(build_project("wasm"), "10.200.1952-SNAPSHOT")["version"])
+        self.assertEqual("10.200.1952-SNAPSHOT", record(build_project("wasm", golden_out=3.5), "10.200.1952-SNAPSHOT")["version"])
+        self.assertEqual("10.200.1952-SNAPSHOT", record(build_project("wasm", golden_out=3.5), "10.200.1953")["version"])
+        self.assertIsNone(record(build_project("wasm", golden_out=4.5), "10.200.1953")["version"])
+        record(build_project("wasm"), "10.200.1954-SNAPSHOT")
         self.release()
         self.assertEqual("10.200.1", read_metadata(self.workspace)["version"])
-        self.assertEqual("10.200.1", record(fixture_project("wasm"), "10.200.1955-SNAPSHOT")["version"])
+        self.assertEqual("10.200.1", record(build_project("wasm"), "10.200.1955-SNAPSHOT")["version"])
 
     def test_the_fixtures_module_is_never_released(self):
         from mlmodels._release import NOTEBOOK_ROOT
@@ -1080,7 +1079,7 @@ class ReleaseTest(unittest.TestCase):
         shutil.copy(join(self.workspace, "notebook.ipynb"), fixture)
         from mlmodels._metadata import record_project
 
-        record_project(fixture, fixture_project("wasm"), self.TARGET, self.pins)
+        record_project(fixture, build_project("wasm"), self.TARGET, self.pins)
         self.assertEqual([], self.release())
 
     def test_a_consumer_embeds_the_released_project_and_is_stale_until_it_does(self):
@@ -1286,7 +1285,7 @@ class ReleaseTest(unittest.TestCase):
     def test_an_embedded_only_project_is_not_registered(self):
         from mlmodels._registry import register_preview
 
-        self.assertIsNone(register_preview(fixture_project("wasm"), "demo_replay_double", "http://127.0.0.1:9", {"kind": "embedded", "language": "rust"}))
+        self.assertIsNone(register_preview(build_project("wasm"), "demo_replay_double", "http://127.0.0.1:9", {"kind": "embedded", "language": "rust"}))
 
     def test_the_signature_may_grow_but_not_change_what_was_released(self):
         from mlmodels._errors import GateError
@@ -1312,7 +1311,7 @@ class ReleaseTest(unittest.TestCase):
         self.assertEqual(("Package", "signature"), (raised.exception.stage, raised.exception.gate))
 
     def project_with_signature(self, change):
-        project_dir = fixture_project("wasm")
+        project_dir = build_project("wasm")
         with open(join(project_dir, "signature.json")) as signature_file:
             signature = json.load(signature_file)
         change(signature)
@@ -1862,8 +1861,8 @@ class SpecSyncTest(unittest.TestCase):
         self.assertEqual(list(NOTEBOOK_STAGES), stages)
 
 
-def fixture_project(*arguments, **options):
-    from fixtures import fixture_project as build
+def build_project(*arguments, **options):
+    from mlmodels.testing import build_project as build
 
     return build(*arguments, **options)
 

@@ -178,7 +178,7 @@ def _setup(context):
         ' | grep -v "both GOPATH and GOROOT are the same directory" >&2 || true;'
         'goenv use "${GO_VERSION}" --global > /dev/null;'
         "go install gotest.tools/gotestsum@latest;"
-        "go install golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@latest;"
+        "go install golang.org/x/tools/go/analysis/passes/modernize/cmd/modernize@latest;"
         'echo "Installed go-${GO_VERSION} at [${GOROOT}]"',
     )
     if _run_local(context, '[[ "$(go version)" == *"go${GO_VERSION}"* ]] && echo true || echo false', hide="out").stdout.strip() != "true":

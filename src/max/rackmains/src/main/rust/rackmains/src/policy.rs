@@ -57,6 +57,7 @@ pub fn load_policy(directory: &Path) -> Result<Policy, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::model::loader::Kind;
 
     fn embedded() -> std::path::PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../build/resources/model/battery")
@@ -102,6 +103,39 @@ mod tests {
     #[test]
     fn a_negative_threshold_is_refused() {
         assert!(Policy::try_from(response(-1)).is_err());
+    }
+
+    #[test]
+    fn a_signature_that_differs_from_the_compiled_constants_is_refused() {
+        use serde_json::Value;
+        use sha2::{Digest, Sha256};
+        use std::fmt::Write;
+
+        let directory = std::env::temp_dir().join(format!("rackmains-signature-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&directory);
+        std::fs::create_dir_all(&directory).unwrap();
+        for entry in std::fs::read_dir(embedded()).unwrap() {
+            let path = entry.unwrap().path();
+            std::fs::copy(&path, directory.join(path.file_name().unwrap())).unwrap();
+        }
+        let mut signature: Value =
+            serde_json::from_slice(&std::fs::read(directory.join("signature.json")).unwrap()).unwrap();
+        let mut extra = signature["inputs"][0].clone();
+        extra["name"] = Value::from("extra_in");
+        signature["inputs"].as_array_mut().unwrap().push(extra);
+        let bytes = serde_json::to_vec(&signature).unwrap();
+        std::fs::write(directory.join("signature.json"), &bytes).unwrap();
+        let mut manifest: Value =
+            serde_json::from_slice(&std::fs::read(directory.join("project.json")).unwrap()).unwrap();
+        let digest = Sha256::digest(&bytes).iter().fold(String::new(), |mut out, byte| {
+            let _ = write!(out, "{byte:02x}");
+            out
+        });
+        manifest["files"]["signature.json"] = Value::from(digest);
+        std::fs::write(directory.join("project.json"), serde_json::to_vec(&manifest).unwrap()).unwrap();
+        let error = load(&directory).err().unwrap();
+        std::fs::remove_dir_all(&directory).unwrap();
+        assert_eq!((Kind::Signature, "contract"), (error.kind, error.gate.as_str()));
     }
 
     #[test]

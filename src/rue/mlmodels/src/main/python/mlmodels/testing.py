@@ -1,12 +1,20 @@
 import os
+import shutil
 import tempfile
 import textwrap
 from os.path import dirname, join
 
+from mlmodels._config import NOTEBOOK_DIR
 from mlmodels._constants import PROJECT_MODEL_FILES
 
 
-def fixture_project(flavour, golden_out=None, tolerance=None):
+def example_project(workspace):
+    project_dir = join(tempfile.mkdtemp(), "project")
+    shutil.copytree(join(NOTEBOOK_DIR, "example", workspace, "project"), project_dir)
+    return project_dir
+
+
+def build_project(flavour, golden_out=None, tolerance=None):
     from mlmodels._project import evaluation_build, package_project
     from mlmodels._signature import build_signature, signature_input, signature_output
 

@@ -1,4 +1,5 @@
 import copy
+import json
 import os
 import shutil
 import sys
@@ -10,9 +11,8 @@ import pytest
 
 sys.path.append("../../../main/python")
 sys.path.append("../../../../../../rue/mlmodels/src/main/python")
-sys.path.append("../../../../../../rue/mlmodels/src/test/python")
 
-from fixtures import fixture_project
+from mlmodels.testing import example_project
 from registry.sync import sync
 from serving.model.loader import ModelError, load
 from serving.model.vocabulary import (
@@ -150,17 +150,24 @@ class ServingRuntimeTest(unittest.TestCase):
     def test_every_flavour_serves_what_replay_computes(self):
         from mlmodels._replay import replay_project
 
-        for flavour in ("pyfunc", "wasm", "onnx"):
-            project_dir = fixture_project(flavour)
-            self.assertEqual([], replay_project(project_dir), flavour)
-            self.assertEqual({"demo_out": [3.0]}, load(project_dir).predict({"demo_in": [1.5]}), flavour)
+        for example in ("static/constant", "wasm/accumulate", "wasm/saturate", "onnx/linear", "pyfunc/linear"):
+            project_dir = example_project(example)
+            self.assertEqual([], replay_project(project_dir), example)
+            with open(join(project_dir, "golden.json")) as golden_file:
+                step = next(step for sequence in json.load(golden_file)["sequences"] for step in sequence["steps"] if "response" in step)
+            served = load(project_dir).predict({entry["name"]: entry["data"] for entry in step["request"]["inputs"]})
+            expected = {entry["name"]: entry["data"] for entry in step["response"]["outputs"]}
+            self.assertEqual(expected.keys(), served.keys(), example)
+            for name, values in expected.items():
+                for value, actual in zip(values, served[name], strict=True):
+                    self.assertAlmostEqual(value, actual, places=9, msg=f"{example} {name}")
 
     def test_a_missing_required_input_is_refused(self):
         with self.assertRaises(ModelError):
-            load(fixture_project("wasm")).predict({})
+            load(example_project("wasm/accumulate")).predict({})
 
     def test_a_changed_file_is_not_loaded(self):
-        project_dir = fixture_project("wasm")
+        project_dir = example_project("wasm/accumulate")
         with open(join(project_dir, "model.wasm"), "ab") as model_file:
             model_file.write(b"\0")
         with self.assertRaises(ModelError):
@@ -177,7 +184,7 @@ class FakeRegistry:
 
     def add(self, version, release_version, released=False, previewed=False, broken=False, tagged=True, name=NAME):
         model = self.model_list.setdefault(name, {"name": name, "aliases": {}, "versions": {}})
-        project_dir = fixture_project("wasm")
+        project_dir = example_project("wasm/accumulate")
         if broken:
             with open(join(project_dir, "model.wasm"), "ab") as model_file:
                 model_file.write(b"\0")
