@@ -13,5 +13,5 @@ psycopg[binary]==3.3.8
 python-calamine==0.9.1
 adbc-driver-postgresql==1.13.0
 gspread==6.2.1
-google-auth==2.62.1
-google-api-python-client==2.201.0
+google-auth==2.62.2
+google-api-python-client==2.202.0
