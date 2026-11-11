@@ -16,7 +16,7 @@ rest:
     headers:
       Content-Type: application/json
     timeout: 10
-    scan_interval: 300
+    scan_interval: 900
     payload_template: |-
       {%- set voltage = states('sensor.weatherstation_console_battery_voltage') | float(none) %}
       {%- set reported = states('input_number.weatherstation_console_battery_reported') | float(none) %}
@@ -104,15 +104,4 @@ automation:
           entity_id: input_number.weatherstation_console_battery_reported
         data:
           value: "{{ as_timestamp(states.sensor.weatherstation_console_battery_voltage.last_reported) | int }}"
-  #####################################################################################
-  - id: weatherstation_console_battery_capacity_update
-    alias: "Weather Station: Query the mlserver console battery capacity on each report"
-    mode: queued
-    triggers:
-      - trigger: state
-        entity_id: input_number.weatherstation_console_battery_reported
-    actions:
-      - action: homeassistant.update_entity
-        target:
-          entity_id: sensor.mlserver_weatherstation_console_battery_capacity_pct
 #######################################################################################

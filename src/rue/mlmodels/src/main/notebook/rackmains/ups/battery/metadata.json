@@ -1,11 +1,11 @@
 {
   "schema": 2,
-  "version": "10.200.2012",
-  "content_sha256": "c0547c3deec2e6b300444dab3117d7a5e68d9082d021f3ef2670e0f2ee172262",
-  "inputs_sha256": "782fe6d4d43919c83c1db64c7cb22f1bfeb1f272c5e6457f7d9475995c3547ad",
+  "version": "10.200.2019",
+  "content_sha256": "5ebf415e02c9f03a21930e8e119b331ed85584bfc50e5e9362e595f7cf489e32",
+  "inputs_sha256": "267137c722b3a1fc1fb8e27c46da72a23cd4931bf3ac2a00e3301b52b7c71366",
   "target": {"kind": "embedded", "language": "rust"},
   "release": {
-    "timestamp": "2026-11-10T07:21:55Z",
+    "timestamp": "2026-11-11T08:29:50Z",
     "signature": {
       "schema": 1,
       "name": "rackmains_ups_battery",
@@ -68,22 +68,10 @@
           "parameters": {"unit": "seconds", "required": true, "description": "Seconds on battery after which the guard puts the follower servers to sleep, whatever else is estimated."}
         },
         {
-          "name": "guard_halt_max_seconds",
-          "datatype": "INT64",
-          "shape": [1],
-          "parameters": {"unit": "seconds", "required": true, "description": "Seconds on battery after which the guard halts max and has the UPS cut and restore its output. Later than the shed time."}
-        },
-        {
           "name": "guard_mains_stable_seconds",
           "datatype": "INT64",
           "shape": [1],
           "parameters": {"unit": "seconds", "required": true, "description": "Seconds of unbroken mains after which the on-battery clock resets and any server put to sleep is woken."}
-        },
-        {
-          "name": "guard_halt_delay_seconds",
-          "datatype": "INT64",
-          "shape": [1],
-          "parameters": {"unit": "seconds", "required": true, "description": "Seconds the UPS waits before cutting its output after the guard asks it to shut down. Long enough for max to finish going to sleep."}
         },
         {
           "name": "guard_shed_lead_seconds",
@@ -94,12 +82,6 @@
             "required": false,
             "description": "Optional. Put the follower servers to sleep when the estimated run time left falls to this: the measured time the shed takes plus a margin."
           }
-        },
-        {
-          "name": "guard_halt_lead_seconds",
-          "datatype": "INT64",
-          "shape": [1],
-          "parameters": {"unit": "seconds", "required": false, "description": "Optional. Halt max when the estimated run time left falls to this: the measured time the halt takes plus a margin."}
         },
         {
           "name": "battery_remaining_pct",

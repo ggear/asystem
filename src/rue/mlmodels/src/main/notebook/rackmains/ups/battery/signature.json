@@ -60,22 +60,10 @@
       "parameters": {"unit": "seconds", "required": true, "description": "Seconds on battery after which the guard puts the follower servers to sleep, whatever else is estimated."}
     },
     {
-      "name": "guard_halt_max_seconds",
-      "datatype": "INT64",
-      "shape": [1],
-      "parameters": {"unit": "seconds", "required": true, "description": "Seconds on battery after which the guard halts max and has the UPS cut and restore its output. Later than the shed time."}
-    },
-    {
       "name": "guard_mains_stable_seconds",
       "datatype": "INT64",
       "shape": [1],
       "parameters": {"unit": "seconds", "required": true, "description": "Seconds of unbroken mains after which the on-battery clock resets and any server put to sleep is woken."}
-    },
-    {
-      "name": "guard_halt_delay_seconds",
-      "datatype": "INT64",
-      "shape": [1],
-      "parameters": {"unit": "seconds", "required": true, "description": "Seconds the UPS waits before cutting its output after the guard asks it to shut down. Long enough for max to finish going to sleep."}
     },
     {
       "name": "guard_shed_lead_seconds",
@@ -86,12 +74,6 @@
         "required": false,
         "description": "Optional. Put the follower servers to sleep when the estimated run time left falls to this: the measured time the shed takes plus a margin."
       }
-    },
-    {
-      "name": "guard_halt_lead_seconds",
-      "datatype": "INT64",
-      "shape": [1],
-      "parameters": {"unit": "seconds", "required": false, "description": "Optional. Halt max when the estimated run time left falls to this: the measured time the halt takes plus a margin."}
     },
     {
       "name": "battery_remaining_pct",

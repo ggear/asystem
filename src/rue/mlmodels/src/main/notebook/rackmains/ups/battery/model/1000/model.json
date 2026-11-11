@@ -4,6 +4,6 @@
   "label": "A conservative starting set of guard times, not fitted",
   "flavour": "static",
   "runs": [],
-  "sha256": "49b13668be2d8492172dc02b9018950fbaec4ce65186bcc7cc7a871a9cbcc0e1",
-  "constants": {"guard_shed_max_seconds": 120, "guard_halt_max_seconds": 450, "guard_mains_stable_seconds": 300, "guard_halt_delay_seconds": 120}
+  "sha256": "9a40acec798c123131fb866a3ab4a15bc72796f09b6a4df05d7c6a292e913f69",
+  "constants": {"guard_shed_max_seconds": 120, "guard_mains_stable_seconds": 300}
 }

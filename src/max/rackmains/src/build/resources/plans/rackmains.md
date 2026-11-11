@@ -3,7 +3,7 @@
 **Status, 2026-10-31.** Built and tested locally, not released. The publisher is done: it reads the NUT driver socket,
 publishes `rackmains/{data,status}` to the broker, and ships with a mock driver and a mock-backed system test. The host setup
 (`install_prep.sh`, `install_pre.sh`) is written and unit tested. The tool that cut the rack's mains through its smart plug
-(`tools/outage`) was deleted on 2026-10-30; a test cut is made by hand at the plug. The host side of the shutdown is built and tested
+(`tools/outage`) was deleted on 2026-10-30; a test cut is made by hand at the plug until `rackmains guard drill` (designed 2026-11-11, below) exists. The host side of the shutdown is built and tested
 on `max`, in the `system` module (`asleep`, `awake` and the restart-after-power-loss setting). Waiting on you: the 25 metric rows
 and the service switch row ("Workbook rows to add"), the release, and the power-on-after-cut tests. The shutdown guard is designed and not built.
 The battery model is built and released as a constants project (the `ups/battery` notebook in `mlmodels`, whose title cell holds its intent, status and future):
@@ -67,11 +67,7 @@ The driver socket is `/run/nut/nutdrv_qx-powershield`, `0660` `nut:nut` in a `nu
 runs as root and a `:ro` bind mount still connects. The socket accepts every command `upscmd -l` lists, among them `load.off`,
 `shutdown.*` and `driver.killpower`, and `:ro` does not stop them, so nothing in the module ever writes anything but `DUMPALL`.
 
-A transient unit `ups-recorder` on `max` runs `src/build/resources/validation/ups_recorder.py`: one JSON line every 2 s to
-`/var/tmp/ups_status.jsonl` with the NUT variables, about 8 MB a day. It is a validation
-aid independent of rackmains; `systemctl stop ups-recorder` ends it. **It is dropped after trial 1** (see Open decisions), once the new publisher has
-agreed with it through a long cut and real data is being captured: stop the unit, delete `ups_recorder.py` and the `validation/` directory, and rely on the published entities in
-Home Assistant's history and the outage CSV files on `max`. The HID fields it also logged are dropped from the design (see the HID verdict below).
+The 2 s `ups-recorder` validation unit was stopped and its script deleted on 2026-11-11, before trial 1. The raw recording it made from 2026-10-28, `/var/tmp/ups_status.jsonl` on `max`, is the only record of the outages behind the numbers in this plan; the published entities in Home Assistant's history and the outage CSV files replace it from now on.
 
 ## The unit, PowerShield Defender RackMount 800 (PSDR800)
 
@@ -119,8 +115,8 @@ alarm flags (`NeedReplacement`, `BelowRemainingCapacityLimit`, `ShutdownImminent
 and stay unknown; and reading any of it needs a second reader of the chip. `usbhid-ups` has no subdriver for the ID and leaves
 interface 1 detached when it exits (fix: `echo 1-7:1.1 > /sys/bus/usb/drivers/usbhid/bind`). The per-subdriver results, every
 dynamic HID field, the raw descriptor and a field snapshot stay as reference only in `src/build/resources/doc/usbhid_ups_reference.md`,
-`hid_report_descriptor.hex` and `hid_fields_snapshot.txt`; nothing in the code or the workbook refers to them. The recorder's
-`hid.*` fields are not carried into any later logger.
+`hid_report_descriptor.hex` and `hid_fields_snapshot.txt`; nothing in the code or the workbook refers to them. The `hid.*` fields the
+earlier recorder logged are not carried into any later logger.
 
 ## Metrics, MQTT and the outage CSV
 
@@ -142,7 +138,7 @@ below follow its order, and a name that is not in it is not a metric.
 | `output` | what the UPS delivers to the rack | `rackmains_output_volts`, `rackmains_output_hertz`, `output_utilisation_pct` |
 | `battery` | the battery | `rackmains_battery_volts`, `rackmains_battery_charge_pct`, `rackmains_battery_charging`, `rackmains_battery_low`, `battery_replace`, `battery_remaining_pct`, `battery_remaining_seconds` |
 | `ups` | the unit's own state | `rackmains_ups_status`, `ups_on_battery`, `rackmains_ups_problem`, `rackmains_ups_calibrating`, `rackmains_ups_boost`, `rackmains_ups_trim` |
-| `guard` | the shutdown guard | `guard_state`, `guard_live`, `guard_mains_seconds`, `guard_battery_seconds` |
+| `guard` | the shutdown guard | `guard_state`, `guard_live`, `guard_auto`, `guard_auto_expires`, `guard_mains_seconds`, `guard_battery_seconds` |
 | `model` | the fitted model's own outputs and state | `model_energy_used_wh`, `model_history_known`, `model_recalibrate`, `model_state` |
 
 Bools are the integers `1` and `0`, never JSON `true` and `false`, in the payload and the CSV alike. `_pct` and `_seconds` values are
@@ -217,6 +213,8 @@ and the workbook templates all move to these names when built.
 | `guard_live` | the guard | yes | yes | in the `start` row's detail; in dry-run every command is logged as would-run |
 | `guard_mains_seconds` | the guard | yes | yes | `note` rows counting down to `guard_mains_stable_seconds` |
 | `guard_battery_seconds` | the guard | yes | yes | on every `decision` row |
+| `guard_auto` | `auto.json`, read by the guard and mirrored by the publisher | yes, `1` armed and `0` paused | yes | INFO on change, with `set_by` and the deadline |
+| `guard_auto_expires` | `auto.json` | yes, ISO text, absent when armed | yes | in the same line |
 | `model_energy_used_wh` | the model, an optional output | yes, once a fitted model returns it | yes | DEBUG per call |
 | `model_history_known` | the model, an optional output | yes, once a fitted model returns it | yes | INFO on change |
 | `model_recalibrate` | the model, an optional output | yes, once the model returns it | yes | WARN on a change to 1, with the reason from the response `parameters` |
@@ -241,7 +239,7 @@ every outage.
   (written to a `.tmp` and renamed, no fsync, since a lost heartbeat is harmless) and the file's age is the health signal. A failed or
   stale read (`DATASTALE`, an unplugged UPS) does not touch it, so the container turns unhealthy by the same path as before.
 - **`checkhealthy.sh`** tests that the heartbeat is younger than about 30 s (a few polls, unrelated to the 5 minute mains publish)
-  and, once the guard exists, that the guard's own heartbeat in the state file is too. It no longer runs `mosquitto_sub` or `jq`,
+  and, once the guard exists, that the guard's own `guard_heartbeat` is too. It no longer runs `mosquitto_sub` or `jq`,
   and needs neither the broker nor a payload.
 - **MQTT trouble is reported, not fatal.** A broker that is down at start does not stop the process or the poll loop, and a lost
   connection never counts toward `MAX_CONSECUTIVE_FAILURES` or a reinit. Publishing is best effort through a bounded queue that
@@ -329,7 +327,7 @@ the container), so it is on the host's disk and survives Docker stopping.
   the current or newest one; pruning is safe because the backup below is additive. The `outage/` directory is created at start, since
   the backup's include list fails on an absent directory.
 - **Backed up, as the other modules are.** rackmains enrols with `write_container_backup()` and a `src/build/resources/backup.sh`
-  whose include list is `outage` and whose excludes are `*.tmp` and the guard state file. Supervisor's policy then applies:
+  whose include list is `outage` and whose excludes are `*.tmp`, the guard state file, `auto.json` and `drill.json` (a restore must never bring back a stale pause). Supervisor's policy then applies:
   primary under `/home/asystem/rackmains/backup/<run>/`, secondary GFS, tertiary mirror, and each release backs rackmains up first
   and abandons the install if that fails. Add `RACKMAINS_BACKUP_KEEP_{DAILY,WEEKLY,MONTHLY}` to `.env_all`; the files are small,
   so keep monthly points for a long time.
@@ -392,6 +390,8 @@ example `sensor.rackmains_battery_volts`, so the InfluxDB `entity_id` tag equals
 | `guard_live` | `binary_sensor`, with the guard | | |
 | `guard_mains_seconds` | `sensor`, with the guard | s | `duration` |
 | `guard_battery_seconds` | `sensor`, with the guard | s | `duration` |
+| `guard_auto` | `switch`, with the guard; `state_on` `1`, `state_off` `0`, `payload_on` `ON`, `payload_off` `OFF`, command topic `rackmains/command` (the one row that uses it) | | |
+| `guard_auto_expires` | `sensor`, with the guard | | `timestamp` |
 | `model_energy_used_wh` | `sensor`, with the model | Wh | `energy` |
 | `model_history_known` | `binary_sensor`, with the model | | |
 | `model_recalibrate` | `binary_sensor`, with the model | | `problem` |
@@ -480,7 +480,7 @@ next section). A host is never powered off.
    no shell; see the forced-command test), each call synchronous, so it is done when the call returns, and `0` means it completed cleanly. Any other code (1 error, 4 timeout,
    5 unclean) is logged and alerted and the guard moves on; it never retries in a loop. On `max`, run `asleep --shallow`
    stopping every container but rackmains (supervisor first, it binds `/`). A shed is not undone by the voltage rebound when
-   the load drops, only by `guard_mains_stable_seconds` of mains.
+   the load drops, only by `guard_mains_stable_seconds` of mains. While `guard_auto` is paused the timer shed is withheld (next section).
 3. **Run to failure.** Nothing more is done after the shed. rackmains and the guard stay up on `max` (shallow) and keep polling and
    recording until the UPS cuts its own output at its low-battery cutoff, and every host then boots on AC restore (power-on-after-cut
    test, below). If mains returns at any point before the cut, step 4 runs as normal, because nothing was ever past the point of return.
@@ -514,6 +514,214 @@ and is left out for now. Root login with a password is enabled on the followers,
 **Restart.** Decided: no wake packets and no Wake on LAN. If mains returns before the UPS is flat the guard runs `awake`; if the
 UPS cuts, every host boots on AC restore from the state `asleep` left it in. The cut is now only the UPS's own depletion cutoff, so that second path
 needs two things proved: the hosts boot after a cut (the power-on-after-cut test) and the UPS supplies its outlets again when mains returns (trial 5).
+
+## Control plane, what talks over what (decided 2026-11-11)
+
+**The rule.** MQTT is used only when the cluster is in normal operation: it mirrors state to Home Assistant and carries one convenience command. Everything a guard action or a trial needs works with
+`meg`, the broker and Home Assistant shed: files in the data dir, the Tasmota plug's local HTTP, ssh to the hosts, and the driver socket. Health is the heartbeat file. The data dir is on `max`'s `/home`, which
+stays writable under `asleep --shallow`, and the tool runs in the same container (`docker exec`), so no network is involved between the tool and the main program.
+
+| Channel | Direction | Carries | Needs the broker |
+|---|---|---|---|
+| `auto.json` | CLI, Home Assistant (via the publisher) or `guard drill` to the guard | the pause | no, except the Home Assistant route |
+| `drill.json` | the drill to the guard | the marker and its `id` | no |
+| `guard_state.json` | guard to tool and publisher | the effective configuration, hosts, clocks, the ack, the model state | no |
+| `guard_heartbeat` | guard to `checkhealthy.sh`, tool and publisher | liveness | no |
+| the outage CSV | guard to tool, read-only | the live record | no |
+| the Tasmota plug HTTP | tool to plug | cut, restore, readings, deadman | no |
+| `rackmains/command`, `rackmains/data` | Home Assistant and publisher | the pause convenience command, the mirror | yes, normal operation only |
+
+With `meg` down the Home Assistant switch cannot pause the guard; `docker exec rackmains rackmains guard auto off` over ssh to `max` is the route.
+
+**Request and reply over files, without a listener.** A file has no reply, so the reply is an echo the tool checks.
+- The marker carries an `id`. The guard reads it on its next poll (at most 2 s on mains) and writes `ack = {id, accepted, reason, acked_ts}` into `guard_state.json`. The tool waits at most 10 s and **will not cut
+  unless the ack carries its own `id` and `accepted`**; a rejection (an outage in progress, the guard not ready) prints its reason. No ack in 10 s means no cut.
+- `rackmains guard drill` without `--force` prints the `effective` section of `guard_state.json`, so what the operator reads is what the process that will act has loaded, not a recomputation by the tool.
+- Liveness is `guard_heartbeat` (a `seq` and a timestamp, replaced every guard iteration, no fsync, as the publisher's is). The tool refuses to cut if `seq` has not moved for a few polls, which is the proof a socket
+  would give.
+
+**Marker staleness.** The guard honours a marker only if it acked that `id` **before** the first `OB` of the outage and the marker is unexpired; a marker that appears after `OB`, was never acked, or has expired marks nothing.
+Its expiry is the planned cut plus the hold plus the after-restore cap plus a margin. The tool deletes the marker on exit, the guard never deletes it (one writer per document), and a leftover marker is therefore harmless.
+
+**Restart mid-trial.** The marker, `auto.json` and `guard_state.json` survive on disk. On start the guard rereads an unexpired marker and re-issues the same ack, the new CSV `start` row records `drill` and the mode
+as for any outage, and the interrupted file is closed `interrupted` as usual.
+
+**`guard_state.json`** (the guard thread is its only writer; the publisher and the tool only read it). Written to a temporary file, fsynced and renamed on every change, and at the CSV cadence while on battery, so a reader
+sees a whole previous or whole new version and needs no lock; a reader that fails to parse simply reads again. Not backed up.
+
+```
+{
+  "version": 1,
+  "written_ts": "...",
+  "effective": { "guard_live", "model": {"name", "version", "hash"}, "guard_shed_max_seconds", "guard_mains_stable_seconds",
+                 "poll_mains_s", "poll_battery_s", "csv_row_s", "ssh_timeout_s", "shed_order": [...], "auto": {"state", "expires_ts", "run_to_failure", "set_by"} },
+  "clocks": { "battery_seconds", "mains_seconds" },
+  "hosts": { "<host>": { "shed", "call": null | {"command", "started_ts"}, "last": {"command", "status", "reason", "took_s"} } },
+  "ack": null | { "id", "accepted", "reason", "acked_ts" },
+  "model": { "project_hash", "version", "state": {...} }
+}
+```
+
+A version it does not know is discarded and logged. On start the guard probes each host instead of trusting `hosts`, because after a hard cut the hosts boot fresh while the file still lists them as shed.
+`guard_heartbeat` is separate so that liveness costs no fsync per poll.
+
+**Why not a socket or an API.** A unix socket (or HTTP over one) would give a synchronous reply, but the pause and the marker still need files to survive a restart, so it would be an addition, not a replacement, and
+it adds an always-on server to a module whose surface is deliberately small. A TCP REST API adds a LAN listener and authentication, which the plan already rejected for `upsd`, and nothing off-host needs it. Health
+stays on the heartbeat, because a server thread can answer while the poll loop is hung, whereas the heartbeat is written by the loop itself. If a live request and reply is wanted later, add a unix socket for it.
+
+## The pause switch, `guard_auto` (designed 2026-11-11, not built)
+
+Modelled on supervisor's `backup auto` (the reaper switch), with the same polarity: **`ON` is armed, `OFF` is paused until a deadline.** It is the one way to stop the
+guard shedding for a deliberate cut (maintenance, a plug change, a `drill` that must not shed), replacing a release that flips dry-run.
+
+- **The truth is a file, not the broker.** `auto.json` in the data dir: `state` (`ON`/`OFF`), `expires_ts` (RFC 3339), `run_to_failure` (bool), `set_by` (`ha`, `cli` or `drill`),
+  `set_ts`. The guard reads it every poll and never touches MQTT, so a pause survives the broker or `meg` going away. The publisher mirrors it to Home Assistant from the
+  file, so a vernemq flush can neither lose nor invent a pause. It is a separate file from the guard's state file so the guard never read-modify-writes operator input, and it is
+  excluded from the backup.
+- **Fail-safe armed.** Only an explicit `OFF` with an unexpired `expires_ts` pauses. A missing, corrupt, expired or `ON` file, an `OFF` with no deadline, or a deadline beyond
+  `RACKMAINS_GUARD_AUTO_PAUSE_MAX` (6 h, a guard against a stepped clock) is armed.
+- **Setting it.** Three callers, one atomic write function (temporary file, fsync, rename), last writer wins and `set_by` says who:
+  - the Home Assistant switch publishes `ON`/`OFF` to `rackmains/command`; the **publisher**, not the guard, subscribes, and `OFF` pauses for `RACKMAINS_GUARD_AUTO_PAUSE`
+    (30 min); **retained commands are ignored**, so a stale `OFF` cannot re-pause the guard after a restart
+  - `docker exec rackmains rackmains guard auto [on|off [<dur>] [--run-to-failure]]` (default 30 min, cap 6 h); with no argument it prints the state
+  - `rackmains guard drill ... --no-shed`
+- **Guard behaviour when paused.** It still polls, accumulates time on battery, records the CSV and publishes. Only the timer shed is withheld: at `guard_shed_max_seconds` it
+  writes a `decision` row naming the deadline and `guard_state` stays `waiting`; there is no new state. When the pause expires mid-outage the guard resumes with the
+  accumulated battery time and sheds at once. A pause set after the shed has started stops further shed steps but never the restore, which is always safe.
+- **Low battery.** `LB` sheds even when paused, since waiting protects nothing. `--run-to-failure` (stored as `run_to_failure`) withholds that too, for a deliberate run to the cutoff
+  with the whole rack on.
+- **Home Assistant.** `guard_auto` and `guard_auto_expires` are in `rackmains/data` and count as derived flags, so a change, including the flip back to armed at expiry, publishes at
+  once. No new topic and no formula change. Alert on `guard_auto` off for longer than a threshold. `RACKMAINS_GUARD_AUTO_PAUSE` (30 min) is shorter than the battery's run
+  so a forgotten pause cannot outlast it; the duration argument extends it for longer maintenance.
+- **Tests.** Table over the file contents (missing, corrupt, expired, over the cap, `ON` with a deadline, `OFF` without one, valid) giving armed or paused; a pause withholds the
+  timer shed, expiry mid-outage sheds at once, `LB` sheds while paused and not with `run_to_failure`; a retained command is ignored; the pause survives a restart and a broker
+  outage; restore runs while paused. Each rule is deleted once to prove its test fails.
+
+## The guard CLI and the test command, `rackmains guard drill` (designed 2026-11-11, not built)
+
+The `rackmains` binary becomes a multi-command CLI as supervisor's is (`backup start|stop|auto`, noun then verb, safe by default). `drill` cuts the rack's mains through its plug, collects data, and restores before
+exhaustion or runs to the cutoff. It replaces the deleted `tools/outage`. It is a subcommand of the one binary, run as `docker exec -it rackmains rackmains guard drill`, not a second binary, so it uses the same typed
+readers of the outage CSV, `auto.json` and the model policy as the service and there is one CLI to build, parse and test. `mockdriver` stays a separate crate, being a test double. `main.rs` stays a thin shim over the library's `Cli`, which becomes a root with subcommands as
+supervisor's is: `serve` runs the service with the flags it has today (moved under it), `guard` holds the operator commands, `check` validates, and a bare `rackmains` prints help, so a stray `docker exec rackmains rackmains` cannot
+start a second reader. The container entrypoint and compose command become `rackmains serve`. That is a deliberate deviation from `tempstat`, to be recorded in the final review.
+
+**The plug.** `rack_outlet_plug` ("Server Rack") is a Tasmota at `10.0.4.102` (not `rack_backup_plug`, which is supervisor's backup-disk plug). The tool uses its local HTTP
+(`/cm?cmnd=...`, as `tasmota_config.sh` does), never MQTT or Home Assistant, because `meg` is shed during a drain. It reads `Power` back and `Status 8` for watts; the plug's clock reads
+1970, so the tool stamps readings with its own clock. A plug-side **deadman** is armed before the cut and disarmed after a clean finish, a one-shot rule that restores mains by itself
+if the tool, ssh or `max` dies:
+
+```
+Rule1 ON Power1#State=0 DO RuleTimer1 <max_seconds> ENDON ON Rules#Timer=1 DO Backlog Power1 1; Rule1 0 ENDON
+```
+
+It is unproven until tried on the spare plug (Remaining phases, step 3). `PowerOnState 1` only covers the plug itself losing power. In drain mode the deadman is what restores mains after
+the cutoff, so the report on that run comes from the outage CSV afterwards, not from the tool, which dies with `max`.
+
+**Interaction with the main program, by files in the data dir and never MQTT.**
+- The drill writes `drill.json` (mode, hold, planned cut, expiry) atomically before the cut. The main program reads it at the first `ob`, notes `drill` and the mode in the `start` row
+  and otherwise behaves as for any outage. An expired or absent marker marks nothing. The tool deletes it on exit.
+- The guard answers in `guard_state.json` with an `ack` that echoes the marker's `id` (see "Control plane"); the tool will not cut until it sees its own `id` accepted, which also proves the guard is alive.
+- The tool reads the guard state file and tails the outage CSV, and never writes the CSV. The main program names, writes and rotates it (timestamped name, temporary file and rename), so a run cannot
+  overwrite an earlier one. Plug readings go to a sidecar `<same stem>.plug.csv` beside it, created exclusively and written the same safe way, with its own clock.
+- A maintenance pause and a `drill` that must not shed share one mechanism, `auto.json`; the marker only marks the run.
+
+**CLI.** Follows supervisor's pattern (`cmd.go`, `cmd_serve.go`, `cmd_backup.go`): a root with subcommands, noun then verb, verbs held in one table, help lines lowercase and verb first, optional positionals in brackets,
+durations with unit suffixes, kebab-case long flags with a short form for the common ones, choices listed as `[a, b]`, and a command that acts on the real system shows its plan without `--force` (as
+`backup module restore`). `auto` with no argument queries, `tail` follows, `list` shows recent runs, and `stop` is the pair of the command that starts a run.
+
+```
+rackmains [-v|--version] [--data-dir <dir>]     root flags, inherited by every command; --data-dir is /asystem/mnt, env RACKMAINS_DATA_DIR
+
+rackmains serve [options]                       run the reader, publisher and guard
+rackmains check                                 validate the model, host file, ssh keys, data dir and driver socket, then exit
+rackmains guard auto [on|off [<dur>]]           query or set the guard's automatic shedding; off pauses it, default 30m, cap 6h
+                     [--run-to-failure]         with off, also skip the low-battery shed
+rackmains guard drill [<dur>|drain]             rehearse a power cut: print the plan without --force; default hold is the shed point plus 120s
+                      [--no-shed] [--force]     --no-shed pauses the guard for the run; --force cuts mains
+rackmains guard stop                            abort the active drill: mains on, deadman disarmed, guard re-armed if the drill paused it
+rackmains guard tail [<file>]                   follow the newest outage CSV, or the given file, as rows arrive
+rackmains guard list                            show the recent outages and how each ended
+```
+
+- **Conventions taken from supervisor.**
+  - `-v/--version` prints `SERVICE_VERSION_ABSOLUTE` and exits.
+  - `-L/--log-level [debug, info, warn, error]` on `serve`, default `info`, its default overridable by `RACKMAINS_LOG_LEVEL` as supervisor's is by its environment variable. Supervisor's source, subject and action log filters
+    are not copied, since rackmains has no such vocabulary.
+  - A short list of common flags is shown and the rest are advanced, hidden behind `--help-all`. Shown on `serve`: `-P`, `-B`, `--heartbeat-period`, `--live`, `-L`. Advanced: `-D`, `-M`, `-T`, `--broker-port`,
+    `--broker-token`, `--battery-poll-period`, `--csv-period`, `--outage-keep`.
+  - Errors go to stderr and exit `1`; a command that has already reported its failure returns a reported error so it is not printed twice; a command that must exit with its own code (a `drill` aborted with mains restored)
+    returns an exit error carrying it. The codes themselves are still open decision T4 (recommended: mirror `asleep`).
+  - The `guard` verbs are one table (name, usage, help, argument count), as `backupVerbs`, not separate handlers.
+- **`serve` options.** The existing flags move across unchanged (`-P/--poll-period`, `-D/--device`, `-M/--model-dir`, `-T/--timeout`, `-B/--broker-host`, `--broker-port`, `--broker-token`, `-L/--log-level`). Added:
+
+  | Option | Default | Meaning |
+  |---|---|---|
+  | `--battery-poll-period` | `1s` | poll period on battery; `-P` is the mains period (`2s`); uses unit suffixes [s, m, h] |
+  | `--heartbeat-period` | `5m` | publish on mains even if unchanged, supervisor's name for it; no short form, `-B` is the broker |
+  | `--csv-period` | `5s` | one outage CSV row on battery |
+  | `--outage-keep` | `100`, env `OUTAGE_LOG_KEEP` | newest outage files kept |
+  | `--live` | off, set in `.env_prod` | the guard sheds for real; without it the guard is in dry-run; refused if `check` fails |
+
+  No flag sets `guard_shed_max_seconds` or `guard_mains_stable_seconds`: thresholds come from the released model, never from flags or constants.
+- **`check`** loads the model and verifies its hashes and signature, reads the generated host file and checks the ssh keys exist with the right modes, the data dir is writable and the driver socket reachable, then exits `0`
+  or non-zero. `fab systest`, the install hook and an operator can run it, and `--live` uses the same checks, so the guard's "refuses live mode if the model fails" has one implementation.
+- **`guard tail`** and **`guard list`** are read-only and share the one typed outage CSV reader. `tail` is what follows an outage after the drill has gone (a `drain` ends with `max` dying, and the record is read afterwards);
+  `list` prints each recent outage with its start, duration, minimum battery voltage, hosts shed and whether it was a real outage or a `drill`, taken from the `start` and `end` rows.
+- **`<dur>` or `drain`** is one positional on `drill`. `drain` keeps mains off until the UPS cuts its own output.
+- **`--no-shed`** writes the pause to `auto.json` and re-arms on every exit path. `drain --no-shed` hard-cuts every host with writable disks, so it sets `run_to_failure` itself and still needs a typed `drain` even with
+  `--force`. There is no separate run-to-failure option on `drill`.
+- **No `plan` or `run` command, no `--yes`, no `--label`:** a bare `drill` is the plan and `--force` acts. `drill` follows its own run and keeps following after Ctrl-C; `docker logs -f rackmains` carries the same events at INFO.
+- **From the environment, not flags:** `RACKMAINS_PLUG_HOST` (`10.0.4.102`), set in `.env_all`.
+- **Fixed, not options:** recording continues after restore until the outage CSV's `end` row, capped at 30 min; the plug deadman is hold plus 5 min, or 3 h for `drain` until the first measured run (open decision 9). Changing
+  either is a release.
+- **Container-free fallback.** If Docker or the rackmains container is down, `guard stop` cannot run; the plug deadman is the backstop and the operator command is
+  `curl 'http://10.0.4.102/cm?cmnd=Power%20On'` followed by `curl 'http://10.0.4.102/cm?cmnd=Rule1%200'` to disarm the rule.
+- **Detached sessions.** `docker exec -it` is not detached; if the ssh session drops, the plug is left to the deadman. That is accepted, because the deadman exists for exactly this case.
+
+**What it prints before cutting**, in three blocks so the drain is clearly understood:
+1. the tool's settings (mode, hold, after, deadman, guard posture, plug);
+2. what the main program will observe, read live from the state file and policy (dry-run or live, version, model project and mode, `guard_shed_max_seconds`, `guard_mains_stable_seconds`,
+   the poll and CSV row intervals, the ssh timeout, the shed order, and the `guard_auto` state with its deadline and `set_by`);
+3. the derived timeline (T+0 plug off, about T+2 `OB`, T+120 shed, T+hold plug on, T+hold+300 `awake`, `end`), with a loud warning if hold is under the shed point (the guard will not shed)
+   or the guard is in dry-run (the test proves nothing about the shed), and the preflight results.
+
+**While running.** It tails the CSV by row count (the file is replaced every 5 s and continues in `_2.csv`, so `tail -F` is no use) and prints one line per new row: elapsed, status, volts,
+utilisation, `guard_state`, host results and plug watts. The hold is counted from the first `OB` row, not from the command. It also stops early in hold mode if `LB` is raised.
+
+**Exit paths.** On Ctrl-C, SIGTERM or SIGHUP the plug goes on first, a second Ctrl-C is ignored until the plug reads back `ON`, then `auto.json` is re-armed if the tool paused it, the marker becomes
+`aborted`, and the tool says the main program will run `awake` after `guard_mains_stable_seconds` of mains and keeps following until `end`. After a normal restore it verifies `OL` within a bound and
+retries, alarming loudly with `rackmains guard stop` and the container-free fallback otherwise. After the plug reports off it requires `ups_on_battery` in the CSV within 10 s, else it restores and fails. The tool runs
+detached from the ssh session.
+
+**Preflight** refuses on: an outage in progress, an existing marker, a stale guard heartbeat, an unreachable host, the 01:00 backup window, and a paused guard without `--no-shed` (the run would test
+nothing). It **warns only** when the last outage ended under 6 hours ago (the manual's recharge time) or the battery is not at 100%. `--no-shed` writes a pause ending 60 s after the deadman,
+capped at the maximum, and re-arms on every exit path; the plug deadman and the pause expiry are independent, so neither depends on the tool. If `auto.json` changes during a run the tool warns and never overrides it.
+`drain --no-shed` would hard-cut every host with writable disks, so it needs the typed `drain`.
+
+**Interaction tests** (the system test with the mock driver and a mock plug):
+| # | Scenario | Expected |
+|---|---|---|
+| 1 | hold 240 s, guard armed | shed at 120 s, plug on at 240 s, `awake` after 300 s of mains, `end` |
+| 2 | run while the guard is paused | preflight refuses |
+| 3 | `--no-shed`, hold 240 s | no shed commands, a withheld `decision` row, tool re-arms at restore |
+| 4 | Ctrl-C during `--no-shed` | plug on first, then re-armed, marker `aborted` |
+| 5 | `kill -9` the tool during `--no-shed` | the deadman restores mains and the pause expires |
+| 6 | pause set from Home Assistant during a default (armed) run | guard pauses, tool warns and does not override |
+| 7 | pause expires mid-outage | immediate shed |
+| 8 | pause set after the shed started | no more steps, restore still runs |
+| 9 | low battery while paused | shed, unless `run_to_failure` |
+| 10 | broker or `meg` down, a vernemq flush, a container restart while paused | pause survives |
+| 11 | missing, corrupt, expired or over-cap `auto.json` | armed |
+| 12 | retained `OFF` command on the broker | ignored |
+| 13 | dry-run guard | pause has no effect but is shown |
+| 14 | `drain --no-shed` without the typed confirmation | refused |
+| 15 | an ack with another `id`, a rejected ack, no ack within 10 s, or a `guard_heartbeat` whose `seq` has stopped | the tool does not cut |
+| 16 | a marker that was never acked, appears after `OB`, or has expired | marks no outage |
+| 17 | the guard restarts mid-trial | the marker is honoured, the same ack is re-issued, the new `start` row records `drill` |
+| 18 | `guard_state.json` is read while being replaced | the reader sees a whole old or new version |
+
+Risks accepted: a forgotten pause costs protection until its deadline (30 min default, plus the alert); two callers can overwrite `auto.json` (`set_by` makes it visible); the wall-clock deadline depends on
+`max`'s clock (the cap bounds it).
 
 ## The host side, the `system` module (built)
 
@@ -628,7 +836,7 @@ guideline disagree, the guideline wins and the difference is noted here.
 
 **While writing**
 - **Match `tempstat`.** Same layout (thin `main.rs` shim, logic in the library), same `Cli` flags and short letters
-  (`-P -D -T -B -L`, `--broker-*`), same duration parsing, log format, `log_line` labels, reinit backoff, error enums and
+  (`-P -D -T -B -L`, `--broker-*`, now under `serve`), same duration parsing, log format, `log_line` labels, reinit backoff, error enums and
   `Display`, test module shape and naming. A new tool reuses the library's helpers rather than copying them.
 - **Rust best practice.** No `unwrap`/`expect` outside tests, errors as typed values carried with `?`, no needless clones or
   allocations, iterators over index loops, `Duration`/`Instant` over raw integers, no shared mutable state a channel or a
@@ -777,14 +985,14 @@ Version reviewed: none yet, the final review has not run.
 | # | Gap | Closed by |
 |---|---|---|
 | 1 | `awake` must not race a running `asleep` | the restore runs `awake` only once each host's `asleep` has returned (exit code and `RESULT` line), and a non-zero `asleep` is surfaced |
-| 2 | the recorder's 2 s data and independent check go | kept until after trial 1 (decided); superseded 2026-10-30: poll 2 s on mains and 1 s on battery, publish every poll on battery and every 5 minutes on mains, and the outage CSV records every 5 s on battery |
+| 2 | the recorder's 2 s data and independent check go | the recorder was stopped and deleted 2026-11-11 without waiting for trial 1; poll 2 s on mains and 1 s on battery, publish every poll on battery and every 5 minutes on mains, and the outage CSV records every 5 s on battery |
 | 3 | the dry-run release is invisible in Home Assistant | every candidate metric gets a workbook row (decided) |
 | 4 | ssh key provisioning is unplanned | a step: forced-command key on all four hosts including `max`, private key mounted read-only from a root-only directory on `max`, `known_hosts` pinned; yours to install, the forced-command test (3) proves it |
 | 5 | rollout A protects nothing | stated: the rack is exactly as exposed as it is today until rollout B (the rollout steps, see Open decisions) is live |
 
 ## Remaining phases
 
-Decided 2026-10-28: rollout A starts inside the proven 145 s (`guard_shed_max_seconds` 120); trial 5 goes to the voltage floor once and also observes the cutoff and whether output restores on its own when mains returns; the trials are cut at the plug by hand; and there is **one
+Decided 2026-10-28: rollout A starts inside the proven 145 s (`guard_shed_max_seconds` 120); trial 5 goes to the voltage floor once and also observes the cutoff and whether output restores on its own when mains returns; the trials are cut with `rackmains guard drill` (designed 2026-11-11, replacing the by-hand cut at the plug); and there is **one
 first release carrying the publisher and the guard in dry-run**, not a publisher alone.
 
 1. **Run the review above** on `rackmains`, `mockdriver`, `tools/schema` and the
@@ -795,60 +1003,61 @@ first release carrying the publisher and the guard in dry-run**, not a publisher
    `checkhealthy.sh`, the model seam with the constants project (the project and the Rust loader are built), the module
    `CLAUDE.md` update; then the review above.
 3. **Run the forced-command test and the `asleep` timing** (yours, on the hosts, tests 3 and 4, see Open decisions), recording each result there; they
-   show that a deep shed finishes well inside the battery's run, which bounds `guard_shed_max_seconds` from below.
+   show that a deep shed finishes well inside the battery's run, which bounds `guard_shed_max_seconds` from below. Also: prove the Tasmota rule-timer deadman on the spare
+   `rack_screen_plug` (`10.0.4.109`) before trusting it on the rack plug, check the broker holds no retained `cmnd/POWER` for `rack_outlet_plug`, and check the container reaches `10.0.4.102`.
 4. **Build the guard, dry-run only**: restructure `run` so the poll, the CSV writer and the guard start before, and never wait on, the broker connect, generate the host file
    and the default model project, the model seam, config and state, the ssh runners for `asleep` and `awake`, the state machine with mock sequences, the heartbeat in the
-   health check; then review it as above.
+   health check, `guard_auto` (`auto.json`, the publisher's command subscription, the `rackmains guard auto` CLI) and `rackmains guard drill`, and the root CLI (`serve`, `check`, `guard`), with the image entrypoint and compose command changed to `rackmains serve`; then review it as above.
 5. **Final review of the whole module** (see "Final review stage" above): the full pass (correctness, failure injection, safety,
    resources, simplification, `tempstat` style, guidelines, names, comments, tests, ordering, operability and packaging) over everything built, with the findings table filled in and the gates green. The release in step 6
    waits for it.
 6. **Add the workbook rows (yours), release publisher and guard in dry-run** and confirm `rackmains/status` is `online`, the
-   entities appear, and a short cut at the plug turns `ups_on_battery` on within one poll and back off when mains returns.
-7. **Trial 1, then drop the recorder** (the publisher must have agreed with it through the long cut), **then the restart tests
+   entities appear, and a short `drill` (or a cut at the plug) turns `ups_on_battery` on within one poll and back off when mains returns.
+7. **Trial 1, then the restart tests
    (5 and 6), then trials 2 to 4 live** (see Open decisions), recording each result there.
-8. **Trial 5 once per battery** (see Open decisions), fit the model's outputs offline (a new project, later the model), release the measured thresholds.
+8. **Trial 5 once per battery** (see Open decisions), run with `rackmains guard drill drain --force`, fit the model's outputs offline (a new project, later the model), release the measured thresholds.
 
 ## Open decisions
 
-Consolidated 2026-11-11. Each has the question, why it matters now, and the recommendation to accept or change. Answered ones move into the sections above.
+Consolidated 2026-11-11. Each has the question, why it matters, and the recommendation to accept or change. Answered ones are in the sections above.
 
-**Guard design**
-1. **Maintenance inhibit.** There is no override short of a release that flips dry-run, so cutting the plug on purpose (maintenance, a plug change, trial 1) sheds the rack once
-   `guard_shed_max_seconds` passes, and with run to failure the UPS then runs flat. Recommended: an MQTT switch with auto-expiry; the publisher subscribes to the command topic
-   and writes the inhibit and its expiry into the state file, which the guard reads one way; `LB` overrides it; a `guard_inhibited` metric and a switch workbook row.
-2. **Model promotion.** The model now decides only `guard_shed_max_seconds` and `guard_mains_stable_seconds`, but the shed point is the only limit on battery wear. Recommended: three modes, `static`
-   (the released constants), `shadow` (acts on static, logs what the fitted model would have decided as `decision` rows) and `live`; `guard_mode` replaces `guard_live`, set in `.env_prod`.
-3. **The guard's state file.** Referenced throughout and undefined. After a hard cut the hosts boot fresh while the file still lists them as shed. Recommended: define it now, one versioned JSON file
-   under `/asystem/mnt` holding the heartbeat, the clocks, hosts shed, calls in flight, the inhibit, the mode and the model state with its project hash; written like the CSV, not backed up; an
-   unknown version is discarded and logged; on start the guard probes each host rather than trusting the file.
-
-**Home Assistant and health**
-4. **Alerting.** Non-zero host results and alarm flags are said to be alerted, with no mechanism. Recommended: no new publisher; Home Assistant automations on `guard_state`,
+1. **Model promotion: resolved 2026-11-11, see Decided.** There are no static, shadow or live modes.
+2. **The guard's state file: format confirmed 2026-11-11** ("Control plane"). Still open inside it are T1 and the exact `effective` fields once the policy type is final.
+3. **Alerting.** Non-zero host results and alarm flags are said to be alerted, with no mechanism. Recommended: no new publisher; Home Assistant automations on `guard_state`, `guard_auto` off too long,
    `rackmains_battery_low`, `rackmains_ups_problem`, `battery_replace`, `model_recalibrate` and `Service Rackmains`, plus a new `guard_failed_hosts` count, since events never go to MQTT.
-5. **Health from the UPS.** Today only a stale read or heartbeat is unhealthy. Recommended: `rackmains_ups_problem`, `battery_replace` and `model_recalibrate` also make the container unhealthy; `OB` never does.
-6. **Switch or binary sensor** for `ups_on_battery`. Recommended: stays a read-only `binary_sensor`; the inhibit (1) is its own `switch` row.
+4. **Health from the UPS.** Today only a stale read or heartbeat is unhealthy. Recommended: `rackmains_ups_problem`, `battery_replace` and `model_recalibrate` also make the container unhealthy; `OB` never does.
+5. **Monthly calibration.** A deliberate monthly drain is a run to failure on one 9Ah battery, and the manual lists no self-test. Recommended: keep calibration out of rackmains; only `model_recalibrate` feeds health (4). A scripted drain is now one command (`rackmains guard drill drain --force`), which makes a monthly one easy to run and does not change its cost.
+6. **Trials, tests and rollout steps.** Trials 1 to 5, tests 3 to 6 and rollout steps A and B were written in a plan that is no longer kept. Recommended: restate each here before this plan is deleted, each written as the `guard drill` command that runs it (trial 5 is `rackmains guard drill drain --force`).
+7. **Does the PSDR800 supply its outlets again by itself after a depletion cutoff?** Not in the manual; trial 5 observes it. If not, the fallback is a host-side `shutdown.return` helper (see "Residual risk of running to failure").
+8. **Three checks before `guard drill` is trusted:** the rule-timer deadman on the spare plug, no retained `cmnd/POWER` for `rack_outlet_plug` on the broker, and the container reaching `10.0.4.102`.
+9. **The `drain` deadman length: decided 2026-11-11, see Decided.** Open only as to the value after the first measured run.
+10. **Call timeout.** 30 s as an ssh connect and silence timeout, not a cap on the whole call, so a deep shed is not cut short; no deep run has been timed (test 4). Recommended: confirm that reading.
+11. **Poll and publish cadence.** Poll 2 s on mains and 1 s on battery; publish every 5 minutes on mains and at once on a change, and every poll on battery; one CSV row every 5 s on battery; the model is
+    called every 5 s on battery, at transitions and every 5 minutes on mains. Recommended: accept.
+12. **Outage CSV numbers.** 5 s between rows, 100 files kept, 1 MB per file, whole-document rewrite rather than an fsynced append. Recommended: accept.
+13. **What is reachable during a drain.** Not written down. Recommended: add a short list: ssh to `max` and `docker logs -f rackmains` yes, `meg`, the broker and Home Assistant no after the shed.
+14. **Cannot map, need your words:** "Turn off patriot auto" and "calibrate fan by MPTT home assistance" (neither word is in the repo and the plan has no fans), and "Make unhealthy driven from Estates from UPS"
+    (recommended: read as UPS status, which is 4). Leave out until explained.
 
-**Testing**
-7. **Scripted outage helper.** Trials are cut at the plug by hand since `tools/outage` was deleted 2026-10-30; trial 5 now also records the restore after the cutoff. Recommended: a host script in the install
-   dir on `max` that records the plug readings, cuts for a given time, restores, and logs into the `outage/` dir; it never touches the guard. Needs the plug's control and reading interface named.
-8. **Monthly calibration.** A deliberate monthly drain is a run to failure on one 9Ah battery, and the manual lists no self-test. Recommended: keep calibration out of rackmains; only `model_recalibrate` feeds health (5).
-9. **Trials, tests and rollout steps.** Trials 1 to 5, tests 3 to 6 and rollout steps A and B were written in a plan that is no longer kept. Recommended: restate each here before this plan is deleted.
-10. **Does the PSDR800 supply its outlets again by itself after a depletion cutoff?** Not in the manual; trial 5 observes it. If not, the fallback is a host-side `shutdown.return` helper (see "Residual risk of running to failure").
-
-**Numbers and wording to confirm**
-11. **Call timeout.** 30 s as an ssh connect and silence timeout, not a cap on the whole call, so a deep shed is not cut short; no deep run has been timed (test 4). Recommended: confirm that reading.
-12. **Poll and publish cadence.** Poll 2 s on mains and 1 s on battery; publish every 5 minutes on mains and at once on a change, and every poll on battery; one CSV row every 5 s on battery; the model is called every 5 s on battery, at
-    transitions and every 5 minutes on mains. Recommended: accept.
-13. **Outage CSV numbers.** 5 s between rows, 100 files kept, 1 MB per file, whole-document rewrite rather than an fsynced append. Recommended: accept.
-14. **What is reachable during a drain.** Not written down. Recommended: add a short list: ssh to `max` and `docker logs -f rackmains` yes, `meg`, the broker and Home Assistant no after the shed.
-
-**Cannot map, need your words**
-15. **"Turn off patriot auto", "calibrate fan by MPTT home assistance".** Neither word is in the repo and the plan has no fans. Recommended: leave out until explained.
-16. **"Make unhealthy driven from Estates from UPS".** Recommended: read as UPS status, which is 5.
+**Tool design details (`guard drill`, `guard_auto`, control plane), added 2026-11-11.** Each is a small constant or default; the recommendation stands unless you change it.
+- **T1. State file split.** Does the model state live in `guard_state.json` or its own file? It is rewritten every 5 s on battery. Recommended: its own file, so the configuration and the ack are not rewritten at that rate. The exact `effective` fields wait for the final policy type (decision 2).
+- **T3. Alerting.** Is a `guard_auto` pause, a failed `drill` or a deadman firing alerted? Recommended: alert on `guard_auto` off for more than 30 min only.
+- **T4. Exit codes.** Recommended: mirror `asleep` (`0` ok, `1` error, `2` usage, `4` timeout) plus one code for "aborted, mains restored".
+- **T5. Bare `rackmains guard drill`.** Decided: it prints the plan; `--force` acts.
+- **T6. Constants.** The ack timeout is 10 s and a stalled heartbeat is 3 polls without a `seq` change. The marker expiry is the planned cut plus hold plus the after-restore cap plus 5 min. `RACKMAINS_GUARD_AUTO_PAUSE_MAX` is 6 h.
+- **T7. Plug sampling.** `Status 8` every 5 s, the CSV row cadence; the plug reports whole watts only. Sidecar columns: `timestamp`, `elapsed_seconds`, `plug_power_state`, `plug_watts`, `plug_volts`, `plug_amps`, `plug_energy_today_wh`, rewritten whole like the CSV.
+- **T8. Dry-run guard.** Allow `drill --force` with a loud warning (trial 1 runs in dry-run), or refuse. Recommended: allow.
+- **T9. Backup window.** Is the 01:00 refusal a fixed window (00:45 to 01:45) or tied to supervisor's run state? Recommended: fixed, with no coupling to supervisor.
+- **T10. Recharge warning.** Warn only when the last outage ended under 6 h ago or the battery charge is under 100%. Recommended: both warn only, never refuse.
 
 **Decided, kept for reference**
+- **Model promotion (2026-11-11).** The first release ships the constants project, so a model is always present, and later releases replace it with a fitted one as part of the codebase once data is collected. There are no `static`, `shadow` or `live` modes and no `guard_mode`; `guard_live` (dry-run or live) stays deployment config in `.env_prod`. A refit is a release, as already stated.
+- **Guard state file format (2026-11-11).** `guard_state.json` with a separate `guard_heartbeat`, as written in "Control plane".
+- **`drain` deadman (2026-11-11).** 3 h for the first run with the guard armed, printed in the plan, then set from the measured time to cutoff plus a margin.
 - **Restart shape.** `awake` when mains returns early, `AFTERG3_EN` after a cut; the power-on-after-cut test (5) confirms it per host.
 - **No final UPS command, run to failure** (2026-11-11), see the top of this file.
+- **`ups_on_battery` stays a read-only `binary_sensor`;** `guard_auto` is the one `switch` row.
+- **`rackmains guard drill`, `guard_auto`, 30 min default pause, `LB` sheds while paused unless `--run-to-failure` (on `rackmains guard auto`; implied by `guard drill drain --no-shed`), the supervisor-style CLI (`guard auto|drill|stop`; plan-only without `--force`; one binary; fixed after-restore and deadman), plug sidecar CSV, warn only on a short recharge gap, record after restore until the CSV `end` row capped at 30 min** (2026-11-11).
 
 ## Designs considered and left out
 
@@ -881,9 +1090,12 @@ Consolidated 2026-11-11. Each has the question, why it matters now, and the reco
 - **Wake on LAN.** Needed only to restart hosts that `poweroff` had left off, and it wants the container on the host network. Dropped
   without testing (`mad` also reports `Wake-on: d`).
 - **A smart plug per host** (new hardware) to restart hosts.
-
-sed: 1: "1i\\
-": extra characters after \ at the end of i command
+- **MQTT between the tool and the guard.** The broker is on `meg`, which is shed first, so it is unusable exactly when the tool needs it.
+- **A unix socket or REST API for the tool and for health.** See "Control plane": files carry the state that must survive a restart, and the heartbeat is the honest health signal.
+- **The pause held as a retained MQTT topic** (supervisor's reaper keeps its state there). Dropped 2026-11-11 for `guard_auto`: the guard must work with the broker and `meg` shed, so the file is the truth and MQTT is a mirror.
+- **A test tool as a host script or in Python.** A second reader of the outage CSV, `auto.json` and the policy, which can drift from the guard's own; replaced by a Rust binary sharing the library.
+- **Commanding the plug through Home Assistant or MQTT.** `meg` is shed during a drain, so `drill` uses the Tasmota's local HTTP and an on-device deadman.
+- **Pausing the guard by releasing with dry-run flipped.** Too slow and too coarse for maintenance and for trials.
 
 ## Deleting this plan
 
@@ -894,5 +1106,6 @@ deleting, check:
    (there is still no database and no InfluxDB writer). Point future modelling work at the `ups/battery` notebook title cell.
 2. **Nothing open is lost.** Every open decision here is either settled in the code or `CLAUDE.md`, or copied into the Future of the `ups/battery` notebook title cell.
 3. **The final review has run.** Its findings table is empty or every row is fixed or accepted with a reason, and the gates are green.
-4. **The notebook title cell has what it needs.** It outlives this plan, so its references back to the unit, the metric names and the outage CSV
+4. **The module `CLAUDE.md` describes the pause and the drill.** the `serve`, `check` and `guard` commands and the `rackmains serve` entrypoint, `guard_auto` and `auto.json`, the publisher's `rackmains/command` subscription (it currently says nothing subscribes), `rackmains guard drill`, the plug sidecar CSV and the `drill.json` marker.
+5. **The notebook title cell has what it needs.** It outlives this plan, so its references back to the unit, the metric names and the outage CSV
    are replaced by that content, or by `CLAUDE.md`, before this file goes.
