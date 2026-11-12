@@ -107,6 +107,19 @@ The control is `rackmains/ups/battery`, embedded, which changes nothing.
 3. **Second version, a test only.** The model does not change and is not made stateful. Bump `signature_version` to 1001 and reword the description of one input in `signature.json`. Rewording is a change to a released entry, so today's check calls it breaking, which proves the check is skipped at a higher version. The bump is not required by any real change and exists to exercise the scheme. Run `fab unittest` and `fab systest`, where `_1001_preview` serves beside `_1000`, then `fab release`. Expect `_1000` and `_1001` `READY`, the legacy model unloaded by retirement, `status` clean except the pin warning on `_1000`. Version 1001 is then permanent, since a version is never reused, and 1000 retires when 1002 ships.
 4. **Move the client.** HA pins `_1001`, is released, and the warning clears.
 5. **Not done live.** A third version is covered by the retirement tests and is not released for the trial.
+6. **Clean up.** Section 7.1, after the legacy model is retired.
+
+### 7.1 Cleanup after the trial
+
+Done as one small change once the legacy unsuffixed model has lost its `release` alias (the trial retires it, or it is removed by hand) and no client calls it. Until then retirement itself needs the first item.
+
+1. `live_signatures` and `served_pins` (`_release.py`): drop the optional `_<digits>` group, so a family is `<stem>_<digits>` only and the unsuffixed model no longer ranks as version 0.
+2. `signature_findings` and `served_name`: drop the default of 1000 for a signature with no `signature_version`, so a missing one is an error. This needs the fixtures that build projects without a version, such as `mlmodels.testing.build_project`, to pass one.
+3. `record_project`: drop the seed of `baseline` from `release.signature`. `fab release` writes `baseline` for every served release, so a released served workspace always has one.
+4. Tests and spec: delete the test that seeds `baseline` and the legacy case of the live-version ranking test, and remove the sentence about seeding from 10.2 and rule 2 above.
+5. Check by searching the repo for the unsuffixed model name and for `1000` defaults, running the unit tests of `mlmodels` and `mlserver`, and showing that each removed rule's test now fails.
+
+Not part of this cleanup: the registry versions of the legacy model are kept, as a version that has carried `release` is never deleted. The `weewx_console_battery_preview` model in the index is a separate leftover.
 
 ## 8. Order and acceptance
 
