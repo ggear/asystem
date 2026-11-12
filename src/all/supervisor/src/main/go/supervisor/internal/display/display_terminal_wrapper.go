@@ -20,7 +20,11 @@ func newTerminalWrapper(theme Theme) TerminalFactory {
 				return nil, err
 			}
 		}
-		screen, err := tcell.NewScreen()
+		var options []tcell.TerminfoScreenOption
+		if !useUnicode {
+			options = append(options, tcell.OptColors(16))
+		}
+		screen, err := tcell.NewScreen(options...)
 		if err != nil {
 			return nil, err
 		}
