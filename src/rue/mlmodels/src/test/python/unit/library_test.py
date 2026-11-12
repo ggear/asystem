@@ -1421,13 +1421,13 @@ class ReleaseTest(unittest.TestCase):
         index = json.dumps([{"name": name, "version": "10.200.1", "state": "READY"} for name in names]).encode()
 
         class Handler(http.server.BaseHTTPRequestHandler):
-            def do_POST(handler):
-                handler.send_response(200)
-                handler.send_header("Content-Type", "application/json")
-                handler.end_headers()
-                handler.wfile.write(index)
+            def do_POST(self):
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(index)
 
-            def log_message(handler, *arguments):
+            def log_message(self, format, *args):
                 pass
 
         server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)

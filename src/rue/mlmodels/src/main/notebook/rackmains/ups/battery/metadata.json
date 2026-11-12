@@ -1,8 +1,216 @@
 {
   "schema": 2,
-  "version": "10.200.2024-SNAPSHOT",
+  "version": "10.200.2025",
   "content_sha256": "11e9c6b4b77e3c89292bc0eda2f2bdf12d4a95dde82794b6d89a74dd4862bed9",
   "inputs_sha256": "35f918971e62cf1060c56ad346e73148f40421aa07efe1660ab608c457f6c2fc",
   "target": {"kind": "embedded", "language": "rust"},
-  "release": null
+  "release": {
+    "timestamp": "2026-11-12T08:51:34Z",
+    "signature": {
+      "schema": 1,
+      "signature_version": 1000,
+      "name": "rackmains_ups_battery",
+      "platform": "mlserver",
+      "parameters": {
+        "state": [
+          {"slot": 0, "name": "unrecovered_load_pct_seconds", "unit": "percent seconds", "description": "Load integrated over the time on battery in earlier outages and not yet recovered."},
+          {"slot": 1, "name": "outage_load_pct_seconds", "unit": "percent seconds", "description": "Load integrated over the time on battery in the current outage."},
+          {"slot": 2, "name": "mains_seconds", "unit": "seconds", "description": "Seconds on mains since the last outage ended."},
+          {"slot": 3, "name": "was_mains_failed", "unit": "flag", "description": "1 if the mains input had failed on the previous call, 0 otherwise."},
+          {"slot": 4, "name": "history_known", "unit": "flag", "description": "1 once the battery is known to have recovered, 0 until then. A consumer does not read it."},
+          {"slot": 5, "name": "last_clock_epoch_seconds", "unit": "seconds", "description": "The time of the previous call, 0 before the first."}
+        ]
+      },
+      "inputs": [
+        {
+          "name": "clock_epoch_seconds",
+          "datatype": "FP64",
+          "shape": [1],
+          "parameters": {
+            "unit": "seconds",
+            "required": true,
+            "description": "Time of the poll as seconds since the Unix epoch, with sub-second precision, identical to the value in the outage record. It is the wall clock and can step, so a model treats a step back as zero seconds elapsed. The text time beside it in the record is not sent."
+          }
+        },
+        {
+          "name": "rackmains_output_load_pct",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {
+            "unit": "percent",
+            "required": true,
+            "description": "Load on the UPS output as a whole percent of its rated capacity, as the UPS driver reports it. Not watts: whether the rating is in volt-amperes or watts is not known. When rackmains_read_failures is above 0 it is the last value read."
+          }
+        },
+        {
+          "name": "rackmains_mains_failed",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {
+            "unit": "flag",
+            "required": true,
+            "description": "1 while the UPS is running from its battery because the mains input has failed, 0 on mains. Also 0 during a deliberate battery calibration, when the unit runs from its battery with the mains healthy. Derived by rackmains from the UPS status, which is not sent."
+          }
+        },
+        {
+          "name": "rackmains_ups_calibrating",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {
+            "unit": "flag",
+            "required": false,
+            "description": "1 during a deliberate battery calibration, when rackmains_mains_failed is held at 0. The battery is discharging when this or rackmains_mains_failed is 1. Absent means 0."
+          }
+        },
+        {
+          "name": "rackmains_battery_low",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {
+            "unit": "flag",
+            "required": false,
+            "description": "1 while the UPS reports its battery low, meaning it is about to shut down. Not yet observed on this unit: a run to failure will show whether it is raised before the cutoff. Absent means 0."
+          }
+        },
+        {
+          "name": "rackmains_battery_volts",
+          "datatype": "FP64",
+          "shape": [1],
+          "parameters": {
+            "unit": "volts",
+            "required": false,
+            "description": "Battery voltage as the UPS driver reports it, refreshed on each driver poll, every 4 seconds on this host. It sags under load, rebounds when the load drops and sits flat on the plateau until the knee. Absent when the UPS does not report it."
+          }
+        },
+        {
+          "name": "rackmains_battery_replace_due",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {
+            "unit": "flag",
+            "required": false,
+            "description": "1 while the UPS reports that the battery needs replacing. It does not say the battery was replaced: rackmains_battery_age_days does. Absent means 0."
+          }
+        },
+        {
+          "name": "rackmains_battery_age_days",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {
+            "unit": "days",
+            "required": false,
+            "description": "Whole days since the battery's install date at the poll, back to 0 when that date is edited on a replacement. Absent when the install date is unknown."
+          }
+        },
+        {
+          "name": "rackmains_read_failures",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {
+            "unit": "count",
+            "required": false,
+            "description": "Consecutive failed reads of the UPS driver, 0 after a good read. Above 0 the readings sent are the last good ones, so the state keeps integrating while the driver is unreachable. Absent means 0."
+          }
+        },
+        {
+          "name": "rackmains_battery_state_in",
+          "datatype": "FP64",
+          "shape": [-1],
+          "parameters": {
+            "unit": "state",
+            "required": false,
+            "description": "The state the model returned on the previous call, carried unchanged by the caller. Absent on the first call, when it arrives as the all-zero vector, which is the initial state with the battery history unknown."
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "rackmains_guard_shed_battery_seconds",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {
+            "unit": "seconds",
+            "required": true,
+            "description": "Seconds on battery, accumulated across short dips until the mains has been stable, after which the guard puts the follower servers to sleep. Compared with rackmains_guard_battery_seconds."
+          }
+        },
+        {
+          "name": "rackmains_guard_restore_mains_seconds",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {
+            "unit": "seconds",
+            "required": true,
+            "description": "Seconds of unbroken mains after which the on-battery clock resets and every server put to sleep is woken. Compared with rackmains_guard_mains_seconds."
+          }
+        },
+        {
+          "name": "rackmains_guard_shed_runtime_seconds",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {
+            "unit": "seconds",
+            "required": false,
+            "description": "Optional. Put the follower servers to sleep when rackmains_battery_runtime_remaining_seconds falls to this: the measured time the shed takes plus a margin. Never above rackmains_guard_shed_battery_seconds."
+          }
+        },
+        {
+          "name": "rackmains_battery_runtime_remaining_seconds",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {
+            "unit": "seconds",
+            "required": false,
+            "description": "Optional. Estimated run time left at the current load, rounded down so it never overstates and capped at 86400 seconds. The guard acts on it only with rackmains_guard_shed_runtime_seconds."
+          }
+        },
+        {
+          "name": "rackmains_battery_energy_remaining_pct",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {
+            "unit": "percent",
+            "required": false,
+            "description": "Optional. Estimated usable battery energy left as a whole percent, 100 when full, rounded down. Informational: the guard does not act on it. Not the UPS driver's own charge estimate, rackmains_battery_charge_pct."
+          }
+        },
+        {
+          "name": "rackmains_battery_energy_used_wh",
+          "datatype": "FP64",
+          "shape": [1],
+          "parameters": {
+            "unit": "watt hours",
+            "required": false,
+            "description": "Optional. Energy the model counts as used since the battery was last full, in the current outage and the unrecovered part of earlier ones."
+          }
+        },
+        {
+          "name": "rackmains_model_refit_due",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {
+            "unit": "flag",
+            "required": false,
+            "description": "Optional. 1 when the fit should be redone because it is old, the battery has been replaced or observed drains no longer match its predictions, 0 otherwise. Unrelated to the UPS battery calibration. The reason is rackmains_model_refit_reason_code."
+          }
+        },
+        {
+          "name": "rackmains_model_refit_reason_code",
+          "datatype": "INT64",
+          "shape": [1],
+          "parameters": {
+            "unit": "code",
+            "required": false,
+            "description": "Optional. Why rackmains_model_refit_due is 1: 1 the fit is old, 2 the battery was replaced, 3 observed drains no longer match its predictions. 0 when it is not raised."
+          }
+        },
+        {
+          "name": "rackmains_battery_state_out",
+          "datatype": "FP64",
+          "shape": [-1],
+          "parameters": {"unit": "state", "required": false, "description": "Optional. The state to carry to the next call, finite numbers in the slot order of the signature. Absent for a model with no state."}
+        }
+      ]
+    }
+  }
 }
