@@ -40,10 +40,7 @@ pub fn parse_duration(raw: &str) -> Result<Duration, String> {
 }
 
 pub fn log_line(label: &str, value: &str) -> String {
-    let leader = format!(
-        "{} ",
-        label.strip_prefix("rackmains_").unwrap_or(label).replace('_', " ")
-    );
+    let leader = format!("{} ", label.replace("rackmains_", "").replace('_', " "));
     format!("{leader:.<LOG_LABEL_WIDTH$} [{value}]")
 }
 
@@ -91,5 +88,6 @@ mod tests {
         assert!(line.starts_with("label ."));
         assert!(line.ends_with("[value]"));
         assert!(log_line("rackmains_battery_volts", "13.4").starts_with("battery volts ."));
+        assert!(log_line("progress rackmains_battery_volts", "13.4").starts_with("progress battery volts ."));
     }
 }

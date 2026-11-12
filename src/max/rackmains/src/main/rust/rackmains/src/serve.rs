@@ -611,6 +611,12 @@ impl Poller {
                     metrics::BATTERY_RUNTIME_REMAINING_SECONDS,
                     shown(metrics::BATTERY_RUNTIME_REMAINING_SECONDS),
                 ),
+                (
+                    "battery remaining",
+                    self.last
+                        .number(metrics::BATTERY_RUNTIME_REMAINING_SECONDS)
+                        .map_or_else(|| "unknown".to_string(), |seconds| format!("{}s", seconds as i64)),
+                ),
                 (metrics::GUARD_STATE, shown(metrics::GUARD_STATE)),
             ] {
                 info!("{}", log_line(&format!("progress {name}"), &value));
