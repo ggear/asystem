@@ -542,6 +542,7 @@ func TestProbeUtilBackup_StopReturnsOnlyOnceTheRunHasReleasedItsLock(t *testing.
 func TestProbeUtilBackup_RunStageSequence(t *testing.T) {
 	failure := errors.New("the stage failed")
 	regressed := fmt.Errorf("stage [primary] %w", errStageRegressed)
+	servicesFailed := fmt.Errorf("stage [primary] %w", errStageServicesFailed)
 	tests := []struct {
 		name          string
 		outcomes      map[metric.BackupStage]error
@@ -550,6 +551,8 @@ func TestProbeUtilBackup_RunStageSequence(t *testing.T) {
 	}{
 		{name: "every_stage_succeeds", expectedRan: backupStages},
 		{name: "a_regression_fails_the_run_but_never_halts_it", outcomes: map[metric.BackupStage]error{metric.BackupStagePrimary: regressed}, expectedRan: backupStages, expectedError: errStageRegressed},
+		{name: "failed_services_fail_the_run_but_never_halt_it", outcomes: map[metric.BackupStage]error{metric.BackupStagePrimary: servicesFailed}, expectedRan: backupStages, expectedError: errStageServicesFailed},
+		{name: "failed_services_outrank_a_later_regression", outcomes: map[metric.BackupStage]error{metric.BackupStagePrimary: servicesFailed, metric.BackupStageSecondary: regressed}, expectedRan: backupStages, expectedError: errStageServicesFailed},
 		{name: "a_failure_halts_the_run", outcomes: map[metric.BackupStage]error{metric.BackupStagePrimary: failure}, expectedRan: backupStages[:1], expectedError: failure},
 		{name: "a_later_failure_outranks_an_earlier_regression", outcomes: map[metric.BackupStage]error{metric.BackupStagePrimary: regressed, metric.BackupStageSecondary: failure}, expectedRan: backupStages[:2], expectedError: failure},
 	}

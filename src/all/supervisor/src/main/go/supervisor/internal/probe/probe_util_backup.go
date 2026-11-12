@@ -162,18 +162,20 @@ func runBackupStart(ctx context.Context, request BackupRequest) error {
 }
 
 func runStageSequence(stages []metric.BackupStage, run func(metric.BackupStage) error) error {
-	var regressed error
+	var deferred error
 	for _, stage := range stages {
 		err := run(stage)
-		if errors.Is(err, errStageRegressed) {
-			regressed = err
+		if errors.Is(err, errStageServicesFailed) || errors.Is(err, errStageRegressed) {
+			if deferred == nil || !errors.Is(deferred, errStageServicesFailed) {
+				deferred = err
+			}
 			continue
 		}
 		if err != nil {
 			return err
 		}
 	}
-	return regressed
+	return deferred
 }
 
 func runBackupStop(ctx context.Context, request BackupRequest) error {

@@ -438,10 +438,10 @@ func TestProbeUtilBackupStageTertiary_SnapshotsAreThinnedByTheConfiguredWindow(t
 				t.Fatal(err)
 			}
 			loaded := config.Load(configPath)
-			err := pruneBackupRuns(t.Context(), scribe.SubjectStage(metric.BackupStageTertiary), snapshots,
+			pruneBackupRuns(t.Context(), scribe.SubjectStage(metric.BackupStageTertiary), snapshots,
 				backupKeepPolicy{daily: loaded.BackupKeepDaily(), weekly: loaded.BackupKeepWeekly(), monthly: loaded.BackupKeepMonthly()})
-			if actual := backupRuns(snapshots); err != nil || !slices.Equal(actual, testCase.expected) {
-				t.Errorf("pruneBackupRuns() = error [%v] and snapshots %v, want %v", err, actual, testCase.expected)
+			if actual := backupRuns(snapshots); !slices.Equal(actual, testCase.expected) {
+				t.Errorf("pruneBackupRuns() = snapshots %v, want %v", actual, testCase.expected)
 			}
 		})
 	}

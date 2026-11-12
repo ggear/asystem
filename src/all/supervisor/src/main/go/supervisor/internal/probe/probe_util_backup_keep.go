@@ -13,11 +13,11 @@ import (
 	"supervisor/internal/scribe"
 )
 
-func pruneBackupRuns(ctx context.Context, subject scribe.Subject, dir string, policy backupKeepPolicy) error {
+func pruneBackupRuns(ctx context.Context, subject scribe.Subject, dir string, policy backupKeepPolicy) {
 	if policy.window <= 0 && policy.daily+policy.weekly+policy.monthly <= 0 {
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionRemove).Warnf("excluded", time.Now(),
 			"[%s] is not pruned, the config declares no retention window so only the newest runs would be kept", dir)
-		return nil
+		return
 	}
 	runs := readBackupKeepRuns(dir)
 	kept := backupKeepSet(runs, policy, time.Now())
@@ -28,12 +28,12 @@ func pruneBackupRuns(ctx context.Context, subject scribe.Subject, dir string, po
 		}
 	}
 	if len(doomed) == 0 {
-		return nil
+		return
 	}
-	if len(doomed)*2 > len(runs) {
-		err := fmt.Errorf("prune of [%s] refused, [%d] of [%d] runs fall outside the keep set which is more than half", dir, len(doomed), len(runs))
-		scribe.Log(scribe.SourceBackup, subject, scribe.ActionRemove).Errorf("faulting", time.Now(), "[%s] refused with [%d] of [%d] runs outside the keep set", dir, len(doomed), len(runs))
-		return err
+	if limit := len(runs) / 2; len(doomed) > limit {
+		scribe.Log(scribe.SourceBackup, subject, scribe.ActionRemove).Warnf("faulting", time.Now(),
+			"[%s] holds [%d] of [%d] runs outside the keep set, so only the oldest [%d] are pruned this pass", dir, len(doomed), len(runs), limit)
+		doomed = doomed[:limit]
 	}
 	for _, name := range doomed {
 		path := filepath.Join(dir, name)
@@ -46,7 +46,6 @@ func pruneBackupRuns(ctx context.Context, subject scribe.Subject, dir string, po
 		}
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionRemove).Infof("expunged", time.Now(), "[%s] pruned from [%s] outside the keep set", name, dir)
 	}
-	return nil
 }
 
 func readBackupKeepRuns(dir string) []backupKeepRun {

@@ -55,8 +55,11 @@ func runPrimaryStage(ctx context.Context, request stageRequest, counters *stageC
 	for _, service := range enrolled {
 		failed += reportReleaseDrills(service)
 	}
+	if err := ctx.Err(); err != nil {
+		return stageResult{}, err
+	}
 	if failed > 0 {
-		return stageResult{}, fmt.Errorf("[%d] of [%d] service backups failed", failed, len(enrolled))
+		return stageResult{}, fmt.Errorf("[%d] of [%d] service backups %w", failed, len(enrolled), errStageServicesFailed)
 	}
 	if regressed > 0 {
 		return stageResult{}, fmt.Errorf("[%d] of [%d] service backups %w", regressed, len(enrolled), errStageRegressed)
@@ -119,9 +122,8 @@ func runOneService(ctx context.Context, request stageRequest, loaded *config.Con
 	runErr := command.Run()
 
 	ok := runErr == nil
-	var pruneErr error
 	if ok {
-		pruneErr = pruneBackupRuns(ctx, subject, backupDir, backupKeepPolicy{window: time.Duration(loaded.BackupWindowOf(service).RetainDays) * 24 * time.Hour})
+		pruneBackupRuns(ctx, subject, backupDir, backupKeepPolicy{window: time.Duration(loaded.BackupWindowOf(service).RetainDays) * 24 * time.Hour})
 	}
 	state, newest := backupOutcome(ok, previous, newestBackupDir(backupDir))
 	var evidence []string
@@ -166,9 +168,6 @@ func runOneService(ctx context.Context, request stageRequest, loaded *config.Con
 	}
 	if !ok {
 		return fmt.Errorf("service [%s] backup script exited non-zero", service)
-	}
-	if pruneErr != nil {
-		return fmt.Errorf("service [%s] %w", service, pruneErr)
 	}
 	if regressed {
 		return fmt.Errorf("service [%s] %w", service, errServiceRegressed)

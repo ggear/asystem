@@ -131,16 +131,15 @@ func TestProbeUtilBackupKeep_KeepSet(t *testing.T) {
 func TestProbeUtilBackupKeep_PruneBackupRuns(t *testing.T) {
 	daily := []string{"2026-10-01_01-00-00", "2026-10-02_01-00-00", "2026-10-03_01-00-00", "2026-10-04_01-00-00", "2026-10-05_01-00-00", "2026-10-06_01-00-00"}
 	tests := []struct {
-		name          string
-		runs          []string
-		policy        backupKeepPolicy
-		expected      []string
-		expectedError bool
+		name     string
+		runs     []string
+		policy   backupKeepPolicy
+		expected []string
 	}{
-		{"runs outside the keep set go and a directory outside the run form stays", daily, backupKeepPolicy{daily: 4}, append([]string{"notes"}, daily[2:]...), false},
-		{"no declared window prunes nothing", daily, backupKeepPolicy{}, append([]string{"notes"}, daily...), false},
-		{"exactly half is pruned", daily[:4], backupKeepPolicy{daily: 2}, append([]string{"notes"}, daily[2:4]...), false},
-		{"more than half is refused and nothing goes", daily[:4], backupKeepPolicy{daily: 1}, append([]string{"notes"}, daily[:4]...), true},
+		{"runs outside the keep set go and a directory outside the run form stays", daily, backupKeepPolicy{daily: 4}, append([]string{"notes"}, daily[2:]...)},
+		{"no declared window prunes nothing", daily, backupKeepPolicy{}, append([]string{"notes"}, daily...)},
+		{"exactly half is pruned", daily[:4], backupKeepPolicy{daily: 2}, append([]string{"notes"}, daily[2:4]...)},
+		{"more than half prunes only the oldest half", daily[:4], backupKeepPolicy{daily: 1}, append([]string{"notes"}, daily[2:4]...)},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -150,7 +149,7 @@ func TestProbeUtilBackupKeep_PruneBackupRuns(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			err := pruneBackupRuns(t.Context(), scribe.SubjectNone, dir, test.policy)
+			pruneBackupRuns(t.Context(), scribe.SubjectNone, dir, test.policy)
 			entries, readErr := os.ReadDir(dir)
 			if readErr != nil {
 				t.Fatal(readErr)
@@ -160,8 +159,8 @@ func TestProbeUtilBackupKeep_PruneBackupRuns(t *testing.T) {
 				actual = append(actual, entry.Name())
 			}
 			slices.Sort(test.expected)
-			if (err != nil) != test.expectedError || !slices.Equal(actual, test.expected) {
-				t.Errorf("prune: got error [%v] and %v want error [%t] and %v", err, actual, test.expectedError, test.expected)
+			if !slices.Equal(actual, test.expected) {
+				t.Errorf("prune: got %v want %v", actual, test.expected)
 			}
 		})
 	}
