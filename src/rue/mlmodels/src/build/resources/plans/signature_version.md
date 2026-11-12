@@ -1,6 +1,6 @@
 # Signature version plan
 
-Status: implemented in the library, `mlserver` and the spec. Open: the migration and trial of section 7, which a person runs. Owner of the outcome is `model.md` (sections named below); this plan is removed when the work lands.
+Status: complete. The library, `mlserver`, the spec, the migration, the 1001 trial and the cleanup of 7.1 are done and released or ready to release with the next `mlmodels` release. Delete this plan when that release has shipped. Owner of the outcome is `model.md` (sections named below); this plan is removed when the work lands.
 
 ## 1. Problem
 
@@ -16,13 +16,13 @@ Considered and rejected: an unversioned "latest" name (it breaks a caller the mo
 
 1. **Field.** `signature.json` holds `"signature_version"` as its second key, after `schema`. MD006: every target MUST carry an integer of 1000 or more (not a boolean). Only a served target's version is acted on, so an `embedded` or `local` project carries it unchanged.
 2. **Baseline.** `metadata.json` gains an optional last field, `baseline`, the signature document of the last release of a served target. `fab release` writes it with `release`, packaging never clears it, and the next release replaces it. It is absent for a target that was never released and for `embedded` and `local` targets, so the layout schema stays 2 and no other `metadata.json` changes. Where `release` is set and `baseline` is absent, as in the one served workspace today, packaging seeds `baseline` from `release.signature`, so existing files need no migration. `release` keeps its meaning (null until released), and a content change still nulls it. Today `record_project` writes `release` as null on any content change, so an additive edit followed by a breaking edit passes at the same version, because the second edit has no baseline.
-3. **Compatibility**, against `baseline`, whose version reads as 1000 when the document has none. It is one gate, in `record_project` at package time, and `fab release` does not repeat it, because it writes `baseline` from a project that already passed:
+3. **Compatibility**, against `baseline`, whose version and the new one must both be present. It is one gate, in `record_project` at package time, and `fab release` does not repeat it, because it writes `baseline` from a project that already passed:
    - lower than the baseline: `GateError` Package, signature, "went down";
    - equal: today's additive-only check (`signature_findings`), with its message ending "bump signature_version";
    - higher: no check.
 4. **Served name.** `served_name(name, signature)` is `<name>_<signature_version>`, read from the signature document, with 1000 when it has none. It is one pure function in `_signature.py` beside `registered_name`. The registry model, the served name and the pin in a client are this value, and `<served_name>_preview` is its preview. The project, signature, golden, manifest and loaders keep the plain name.
 5. **Naming.** A notebook name MUST NOT be all digits or end in `_<digits>`, which keeps `<stem>_<digits>` unambiguous as a version, so `c_1000` cannot collide with any future version of `c`. WS015, added to 6.1. This one rule is enough: a lint that checked names for uniqueness across workspaces would only see the versions that exist today.
-6. **Retirement.** `publish` of a workspace, once its served name is `READY` in the production index, ranks the registered models matching `^<stem>(_\d+)?$` that hold a `release` alias (an unsuffixed legacy model ranks as version 0), keeps the top two and the version just published, and removes `release` from the rest. It skips, with a warning, any version a repository source still pins (rule 7). It does nothing when `mlserver` is unreachable. Registry versions are never deleted, and `mlserver` unloads a model with no alias by the loop it already runs, within one poll (30 seconds) and with no restart.
+6. **Retirement.** `publish` of a workspace, once its served name is `READY` in the production index, ranks the registered models matching `^<stem>_\d+$` that hold a `release` alias, keeps the top two and the version just published, and removes `release` from the rest. It skips, with a warning, any version a repository source still pins (rule 7). It does nothing when `mlserver` is unreachable. Registry versions are never deleted, and `mlserver` unloads a model with no alias by the loop it already runs, within one poll (30 seconds) and with no restart.
 7. **Pins.** A scan of the repository sources finds `/v2/models/<stem>[_<digits>][_preview]/` in code and configuration (not in `target/`, `.go/`, notebooks, plans or `mlmodels` tests). It feeds retirement (rule 6) and `status`, and is not a lint. It reads the working tree and not what is deployed, so the N-1 grace period is the real protection and the scan only catches a client left behind in the tree.
 8. **Status.** `model.sh status` warns when more than two versions of a family are live, when the registry holds a version newer than git, when a pin is not live, and when a pin is the older of the two live versions ("move before the next bump").
 
@@ -89,7 +89,7 @@ Rule codes reuse the existing families, and nothing here adds one.
 Each new rule gets a test that fails when the rule is removed.
 
 - Lint: MD006 for each target kind, for a value below 1000, a non-integer and a boolean, and for `baseline` on a non-served target. WS015 for `1000`, `c_1000` and `pm_25`, and not for `co2`.
-- Baseline: an additive edit followed by a breaking edit at the same version fails the gate, a released workspace with no `baseline` is seeded from `release`, a document with no version reads as 1000, and `fab release` and a later content change keep `baseline`.
+- Baseline: an additive edit followed by a breaking edit at the same version fails the gate, a released workspace with no `baseline` is seeded from `release`, a signature with no version is a finding, and `fab release` and a later content change keep `baseline`.
 - Package gate: lower, equal-additive, equal-breaking, higher.
 - `served_name` and its callers through `register_preview`, `publish`, `wait_served` and `status_lines`.
 - Retirement against the sqlite registry the existing tests use: 1000 and 1001 retire nothing, 1002 retires 1000, a preview-only version counts for nothing, a failed or unreachable `mlserver` retires nothing, a pinned version is skipped, a re-run converges, the legacy unsuffixed model ranks lowest, and publishing the third-newest version keeps it.
@@ -111,15 +111,13 @@ The control is `rackmains/ups/battery`, embedded, which changes nothing.
 
 ### 7.1 Cleanup after the trial
 
-Done as one small change once the legacy unsuffixed model has lost its `release` alias (the trial retires it, or it is removed by hand) and no client calls it. Until then retirement itself needs the first item.
+Done once the legacy unsuffixed model had lost its `release` alias (the trial retired it) and no client called it.
 
-1. `live_signatures` and `served_pins` (`_release.py`): drop the optional `_<digits>` group, so a family is `<stem>_<digits>` only and the unsuffixed model no longer ranks as version 0.
-2. `signature_findings` and `served_name`: drop the default of 1000 for a signature with no `signature_version`, so a missing one is an error. This needs the fixtures that build projects without a version, such as `mlmodels.testing.build_project`, to pass one.
-3. `record_project`: drop the seed of `baseline` from `release.signature`. `fab release` writes `baseline` for every served release, so a released served workspace always has one.
-4. Tests and spec: delete the test that seeds `baseline` and the legacy case of the live-version ranking test, and remove the sentence about seeding from 10.2 and rule 2 above.
-5. Check by searching the repo for the unsuffixed model name and for `1000` defaults, running the unit tests of `mlmodels` and `mlserver`, and showing that each removed rule's test now fails.
-
-Not part of this cleanup: the registry versions of the legacy model are kept, as a version that has carried `release` is never deleted. The `weewx_console_battery_preview` model in the index is a separate leftover.
+1. Done. `live_signatures` and `served_pins` (`_release.py`) match `<stem>_<digits>` only, so the unsuffixed model no longer ranks as version 0 and is no longer a pin.
+2. Done. `signature_findings` reports a signature with no `signature_version`, released or new, and `served_name` raises for one. `mlmodels.testing.build_project` passes version 1000 by default, and the registration test builds its signature with one.
+3. Not done, and the plan was wrong. Seeding `baseline` from `release.signature` in `record_project` is not migration code. A project released as `embedded` carries no `baseline`, so when it becomes `served` the seed is what keeps the compatibility check, which `test_an_embedded_project_may_change_its_released_signature_in_place_and_a_served_one_may_not` covers. It stays, with its test and the spec sentence.
+4. Done. The legacy cases of the retirement and ranking tests now use numbered versions only, a test of the pin family covers look-alike names, and the spec no longer says a missing version reads as 1000 or that the unsuffixed model ranks as version 0.
+5. Checked. The repository no longer names the unsuffixed model, the unit tests of `mlmodels` and `mlserver` pass, and each removed rule's test fails without it.
 
 ## 8. Order and acceptance
 
