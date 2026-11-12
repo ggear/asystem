@@ -79,6 +79,21 @@ class SyncTest(unittest.TestCase):
         self.sync()
         self.assertFalse(isdir(join(self.models_dir, NAME)))
 
+    def test_a_model_installed_without_its_release_is_installed_again_and_given_one(self):
+        self.registry.add(1, "1.0.0", released=True)
+        self.sync()
+        settings_path = join(self.models_dir, NAME, "model-settings.json")
+        with open(settings_path) as settings_file:
+            settings = json.load(settings_file)
+        del settings["parameters"]["extra"]["release_version"]
+        os.remove(join(self.models_dir, NAME, "release.json"))
+        with open(settings_path, "w") as settings_file:
+            json.dump(settings, settings_file)
+        self.registry.downloads.clear()
+        self.sync()
+        self.assertEqual([(NAME, "1")], self.registry.downloads)
+        self.assertTrue(os.path.isfile(join(self.models_dir, NAME, "release.json")))
+
     def test_an_unchanged_registry_downloads_and_calls_nothing(self):
         self.registry.add(1, "1.0.0", released=True)
         self.sync()

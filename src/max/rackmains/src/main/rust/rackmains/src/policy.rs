@@ -28,10 +28,10 @@ pub struct Estimate {
 impl Policy {
     pub fn fields(&self) -> Vec<(&'static str, String)> {
         vec![
-            ("shed_battery", format!("{}s", self.shed_battery.as_secs())),
-            ("restore_mains", format!("{}s", self.restore_mains.as_secs())),
+            ("shed battery", format!("{}s", self.shed_battery.as_secs())),
+            ("restore mains", format!("{}s", self.restore_mains.as_secs())),
             (
-                "shed_runtime",
+                "shed runtime",
                 self.shed_runtime
                     .map_or_else(|| "none".to_string(), |runtime| format!("{}s", runtime.as_secs())),
             ),

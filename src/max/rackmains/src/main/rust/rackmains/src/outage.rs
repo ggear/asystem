@@ -9,6 +9,7 @@ use chrono::{Local, NaiveDateTime};
 use log::{info, warn};
 use serde_json::Value;
 
+use crate::log_line;
 use crate::metrics::{self, Frame, LAST_OUTAGE_END, LAST_OUTAGE_MIN_VOLTS, LAST_OUTAGE_SECONDS, STATUS};
 use crate::nut::Flags;
 
@@ -228,6 +229,7 @@ struct Spool {
     number: u32,
     parts: Vec<Part>,
     current: Option<usize>,
+    failing: bool,
 }
 
 impl Spool {
@@ -239,6 +241,7 @@ impl Spool {
             number: 0,
             parts: Vec::new(),
             current: None,
+            failing: false,
         }
     }
 
@@ -262,7 +265,15 @@ impl Spool {
                     self.next_part();
                 }
             }
-            Command::Close => self.current = None,
+            Command::Close => {
+                if let Some(index) = self.current {
+                    info!(
+                        "{}",
+                        log_line("outage file closed", &self.parts[index].path.display().to_string())
+                    );
+                }
+                self.current = None;
+            }
             Command::Sync(_) | Command::Stop => {}
         }
     }
@@ -277,19 +288,40 @@ impl Spool {
             written: false,
         });
         self.current = Some(self.parts.len() - 1);
+        let label = if self.number == 1 {
+            "outage file opened"
+        } else {
+            "outage file continued"
+        };
+        info!(
+            "{}",
+            log_line(label, &self.parts[self.parts.len() - 1].path.display().to_string())
+        );
     }
 
     fn flush(&mut self) {
         let mut created = false;
+        let mut failed = false;
+        let mut attempted = false;
         for part in self.parts.iter_mut().filter(|part| !part.written) {
+            attempted = true;
             let fresh = !part.path.exists();
             match write_atomic(&part.path, part.text.as_bytes()) {
                 Ok(()) => {
                     part.written = true;
                     created |= fresh;
                 }
-                Err(err) => warn!("outage write failed, rows kept in memory [{err}]"),
+                Err(err) => {
+                    failed = true;
+                    warn!("outage write failed, rows kept in memory [{err}]");
+                }
             }
+        }
+        if failed {
+            self.failing = true;
+        } else if attempted && self.failing {
+            self.failing = false;
+            info!("{}", log_line("outage writer recovered", "rows written"));
         }
         if created {
             prune(&self.dir, self.keep, &self.stem);

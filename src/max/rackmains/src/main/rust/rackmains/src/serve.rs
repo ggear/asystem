@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicI32, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::Arc;
 use std::thread;
@@ -26,6 +27,7 @@ use crate::schema::{AVAILABILITY_ONLINE, KEY_PERIOD_MS, KEY_TIMESTAMP};
 use crate::shed::{self, load_hosts, DryRun, Finished, Runner, Ssh};
 use crate::{check, drill, log_line, parse_duration, STATE_TOPIC, STATUS_TOPIC};
 
+static STOP_SIGNAL: AtomicI32 = AtomicI32::new(0);
 const REPORT_PERIOD: Duration = Duration::from_secs(60);
 const REPORT_PERIOD_BATTERY: Duration = Duration::from_secs(1);
 const SSH_TIMEOUT_SECONDS: u64 = 30;
@@ -92,6 +94,7 @@ pub struct Poller {
     interrupted: Option<String>,
     first: bool,
     publish_failing: bool,
+    model_failures: u32,
     read_failures_total: u64,
     report_since: Duration,
 }
@@ -170,6 +173,7 @@ impl Poller {
             interrupted,
             first: true,
             publish_failing: false,
+            model_failures: 0,
             read_failures_total: 0,
             report_since: Duration::ZERO,
             settings,
@@ -218,6 +222,12 @@ impl Poller {
         }
         let reading = match self.source.read() {
             Ok(reading) => {
+                if self.failures > 0 {
+                    info!(
+                        "{}",
+                        log_line("ups read recovered", &format!("after {} failed reads", self.failures))
+                    );
+                }
                 self.failures = 0;
                 self.last_read_boot_ms = boot_ms();
                 Some(reading)
@@ -380,7 +390,7 @@ impl Poller {
         let (before_status, before) =
             previous.map_or((None, Flags::default()), |(status, flags)| (Some(status), flags));
         if self.first && before_status.is_none() {
-            info!("{}", log_line(STATUS, status));
+            info!("{}", log_line("ups status", status));
         }
         let status_change = (before_status.as_deref().is_some_and(|before| before != status)).then(|| {
             let detail = format!(
@@ -514,6 +524,16 @@ impl Poller {
         };
         match self.loaded.call(request) {
             Ok(answer) => {
+                if self.model_failures > 0 {
+                    info!(
+                        "{}",
+                        log_line(
+                            "model call recovered",
+                            &format!("after {} failed calls", self.model_failures)
+                        )
+                    );
+                    self.model_failures = 0;
+                }
                 if answer.policy != self.policy {
                     for ((name, was), (_, now)) in self.policy.fields().into_iter().zip(answer.policy.fields()) {
                         if was != now {
@@ -554,7 +574,12 @@ impl Poller {
             }
             Err(err) => {
                 self.guard.set_runtime_remaining(None);
-                warn!("model call failed, keeping the last answer [{err}]");
+                self.model_failures += 1;
+                if self.model_failures == 1 {
+                    warn!("model call failed, keeping the last answer [{err}]");
+                } else {
+                    debug!("model call still failing [{err}]");
+                }
                 rows.push(("note", format!("model call failed [{err}]")));
             }
         }
@@ -600,26 +625,22 @@ impl Poller {
                 }
                 words.join(", ")
             };
-            for (name, value) in [
-                ("read failures", self.read_failures_total.to_string()),
+            for (label, value) in [
+                ("ups read failures", self.read_failures_total.to_string()),
                 ("ups state", state),
-                (metrics::MAINS_INPUT_VOLTS, shown(metrics::MAINS_INPUT_VOLTS)),
-                (metrics::UTILISATION, shown(metrics::UTILISATION)),
-                (metrics::BATTERY_VOLTS, shown(metrics::BATTERY_VOLTS)),
-                (metrics::BATTERY_CHARGE_PCT, shown(metrics::BATTERY_CHARGE_PCT)),
-                (
-                    metrics::BATTERY_RUNTIME_REMAINING_SECONDS,
-                    shown(metrics::BATTERY_RUNTIME_REMAINING_SECONDS),
-                ),
+                ("mains input volts", shown(metrics::MAINS_INPUT_VOLTS)),
+                ("output load pct", shown(metrics::UTILISATION)),
+                ("battery volts", shown(metrics::BATTERY_VOLTS)),
+                ("battery charge pct", shown(metrics::BATTERY_CHARGE_PCT)),
                 (
                     "battery remaining",
                     self.last
                         .number(metrics::BATTERY_RUNTIME_REMAINING_SECONDS)
                         .map_or_else(|| "unknown".to_string(), |seconds| format!("{}s", seconds as i64)),
                 ),
-                (metrics::GUARD_STATE, shown(metrics::GUARD_STATE)),
+                ("guard state", shown(metrics::GUARD_STATE)),
             ] {
-                info!("{}", log_line(&format!("progress {name}"), &value));
+                info!("{}", log_line(&format!("progress {label}"), &value));
             }
         }
         let key = (frame.text(STATUS).map(str::to_string), self.failures);
@@ -705,6 +726,17 @@ fn sample_state(frame: &mut Frame, names: &[String], state: Option<&Vec<f64>>) {
     }
 }
 
+fn install_signal_handlers() {
+    extern "C" fn handler(signal: libc::c_int) {
+        STOP_SIGNAL.store(signal, Ordering::SeqCst);
+    }
+    for signal in [libc::SIGINT, libc::SIGTERM] {
+        unsafe {
+            libc::signal(signal, handler as extern "C" fn(libc::c_int) as libc::sighandler_t);
+        }
+    }
+}
+
 pub fn run(args: &ServeArgs, data_dir: &Path) -> Result<(), String> {
     let period = parse_duration(&args.poll_period)?;
     init_serve_logging(args, period);
@@ -740,6 +772,11 @@ pub fn run(args: &ServeArgs, data_dir: &Path) -> Result<(), String> {
             device: Path::new(&common.device),
             timeout,
         });
+        for outcome in &outcomes {
+            if let Ok(detail) = &outcome.result {
+                info!("{}", log_line(&format!("check {}", outcome.name), detail));
+            }
+        }
         let failed = check::failed(&outcomes);
         if !failed.is_empty() {
             return Err(format!("live mode refused, check failed [{}]", failed.join(",")));
@@ -756,6 +793,32 @@ pub fn run(args: &ServeArgs, data_dir: &Path) -> Result<(), String> {
         Arc::new(DryRun)
     };
     info!("{}", log_line("reading device", &common.device));
+    info!("{}", log_line("poll period", &args.poll_period));
+    info!("{}", log_line("mains publish period", &args.mains_publish_period));
+    info!("{}", log_line("data dir", &data_dir.display().to_string()));
+    info!("{}", log_line("outage files kept", &args.outage_keep.to_string()));
+    info!("{}", log_line("ssh timeout", &format!("{}s", ssh_timeout.as_secs())));
+    info!("{}", log_line("shed order", &shed::shed_order(&hosts).join(" ")));
+    info!(
+        "{}",
+        log_line(
+            "plug host",
+            if common.plug_host.is_empty() {
+                "none"
+            } else {
+                &common.plug_host
+            }
+        )
+    );
+    if args.battery_installed.is_empty() {
+        info!("{}", log_line("battery installed", "none"));
+    } else {
+        let age = metrics::battery_age_days(&args.battery_installed, Local::now().date_naive())?;
+        info!(
+            "{}",
+            log_line("battery installed", &format!("{} ({age} days)", args.battery_installed))
+        );
+    }
     let publisher = MqttPublisher::new(&args.broker_host, args.broker_port, &args.broker_token, STATUS_TOPIC)
         .map_err(|err| err.to_string())?;
     if period.is_zero() {
@@ -797,9 +860,22 @@ pub fn run(args: &ServeArgs, data_dir: &Path) -> Result<(), String> {
     if !period.is_zero() {
         watchdog("poller", progress, WATCHDOG_LIMIT, WATCHDOG_TICK, abort_on_stall);
     }
+    install_signal_handlers();
     let mut last = Instant::now();
     let mut next = last;
     loop {
+        let signal = STOP_SIGNAL.load(Ordering::SeqCst);
+        if signal != 0 {
+            let name = if signal == libc::SIGINT {
+                "interrupt"
+            } else {
+                "terminate"
+            };
+            info!("{}", log_line("stopping", &format!("signal {name}")));
+            poller.stop();
+            info!("{}", log_line("stopped", "publisher closed, outage writer flushed"));
+            return Ok(());
+        }
         let now = Instant::now();
         let dt = if period.is_zero() { Duration::ZERO } else { now - last };
         last = now;

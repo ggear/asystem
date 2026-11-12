@@ -145,7 +145,12 @@ def _serve(registry, models_dir, served, candidates, held, failed, call):
     for version, tags, label in candidates:
         if (served, version) in failed:
             continue
-        if held is not None and held.get("registry_version") == version and held.get("content_sha256") == tags[PROJECT_TAG_CONTENT_SHA256]:
+        if (
+            held is not None
+            and held.get("registry_version") == version
+            and held.get("content_sha256") == tags[PROJECT_TAG_CONTENT_SHA256]
+            and held.get("release_version") == tags.get(PROJECT_TAG_RELEASE_VERSION)
+        ):
             return
         try:
             with subject(f"sync {served}"):
@@ -181,7 +186,7 @@ def _swap(registry, models_dir, served, name, version, tags, label, call):
             settings = {
                 "name": served,
                 "implementation": RUNTIME,
-                "parameters": {"version": label, "extra": {"registry_version": version, "content_sha256": tags[PROJECT_TAG_CONTENT_SHA256]}},
+                "parameters": {"version": label, "extra": {"registry_version": version, "content_sha256": tags[PROJECT_TAG_CONTENT_SHA256], "release_version": tags.get(PROJECT_TAG_RELEASE_VERSION)}},
                 "inputs": [{key: entry[key] for key in ("name", "datatype", "shape")} for entry in model.signature()["inputs"]],
                 "outputs": [{key: entry[key] for key in ("name", "datatype", "shape")} for entry in model.signature()["outputs"]],
             }
