@@ -77,7 +77,7 @@ pub struct Poller {
     session: Option<Session>,
     last: Frame,
     last_outage: Frame,
-    model_state: Option<Vec<f64>>,
+    battery_state: Option<Vec<f64>>,
     state_names: Vec<String>,
     previous: Option<(String, Flags)>,
     published_key: Option<(Option<String>, u32)>,
@@ -123,9 +123,9 @@ impl Poller {
         outage::recover(&outage_dir);
         let last_outage = outage::last_outage(&outage_dir);
         let state_names = parts.loaded.state_names();
-        let model_state = outage::last_model_state(&outage_dir, &parts.loaded.info().content_sha256)
+        let battery_state = outage::last_model_state(&outage_dir, &parts.loaded.info().content_sha256)
             .and_then(|object| policy::object_to_state(&state_names, &object));
-        if model_state.is_some() {
+        if battery_state.is_some() {
             info!(
                 "{}",
                 log_line(
@@ -153,7 +153,7 @@ impl Poller {
             session: None,
             last: Frame::default(),
             last_outage,
-            model_state,
+            battery_state,
             state_names,
             previous: None,
             published_key: None,
@@ -264,10 +264,10 @@ impl Poller {
         let out = self.guard.step(flags, dt);
         ended |= self.apply(out, &mut rows);
         self.guard.metrics(&mut frame);
-        frame.set_int(metrics::GUARD_SHED_BATTERY, self.policy.shed_max.as_secs() as i64);
-        frame.set_int(metrics::GUARD_RESTORE_MAINS, self.policy.mains_stable.as_secs() as i64);
-        if let Some(lead) = self.policy.shed_lead {
-            frame.set_int(metrics::GUARD_SHED_RUNTIME, lead.as_secs() as i64);
+        frame.set_int(metrics::GUARD_SHED_BATTERY, self.policy.shed_battery.as_secs() as i64);
+        frame.set_int(metrics::GUARD_RESTORE_MAINS, self.policy.restore_mains.as_secs() as i64);
+        if let Some(runtime) = self.policy.shed_runtime {
+            frame.set_int(metrics::GUARD_SHED_RUNTIME, runtime.as_secs() as i64);
         }
         if let Some(session) = &mut self.session {
             session.hosts_shed = session.hosts_shed.max(self.guard.hosts_shed());
@@ -292,11 +292,9 @@ impl Poller {
         }
         published.merge(&self.last_outage);
         self.last.merge_sticky(&published);
-        let state_in = self.model_state.clone();
-        if let Some(flags) = flags {
-            self.call_model(&mut published, flags, epoch, &mut rows);
-            self.last.merge_sticky(&published);
-        }
+        let battery_state_in = self.battery_state.clone();
+        self.call_model(&mut published, flags.is_some(), epoch, &mut rows);
+        self.last.merge_sticky(&published);
         let forced = ended || status_change.is_some();
         self.publish(&published, dt, flags.is_some_and(|flags| flags.raw_on_battery), forced)?;
         let mut commands = Vec::new();
@@ -308,7 +306,7 @@ impl Poller {
             }
             let (event, detail) = match (&start_detail, &status_change) {
                 (Some(detail), _) => {
-                    sample_state(&mut sample, &self.state_names, state_in.as_ref());
+                    sample_state(&mut sample, &self.state_names, battery_state_in.as_ref());
                     ("start", detail.clone())
                 }
                 (None, Some(change)) => ("status", change.clone()),
@@ -332,7 +330,7 @@ impl Poller {
                     END_ABORTED
                 };
                 let mut end = self.last.clone();
-                sample_state(&mut end, &self.state_names, self.model_state.as_ref());
+                sample_state(&mut end, &self.state_names, self.battery_state.as_ref());
                 let detail = session.stats.detail(reason, session.hosts_shed);
                 info!("outage ended {detail}");
                 commands.push(Command::Row(outage::row(&stamp, elapsed, EVENT_END, &detail, &end)));
@@ -474,23 +472,32 @@ impl Poller {
         let gone = marker
             .as_ref()
             .is_none_or(|marker| marker.id != *id || !marker.live(naive));
-        let lead = (naive - session.started).to_std().unwrap_or_default() >= self.policy.mains_stable;
-        if gone || lead {
+        let runtime = (naive - session.started).to_std().unwrap_or_default() >= self.policy.restore_mains;
+        if gone || runtime {
             rows.push(("note", format!("drill [{id}] ended before the cut")));
             *ended = true;
         }
     }
 
-    fn call_model(&mut self, frame: &mut Frame, flags: Flags, epoch: f64, rows: &mut Vec<(&'static str, String)>) {
-        let Some(utilisation) = frame.number(metrics::UTILISATION) else {
-            return;
-        };
-        let request = Request {
-            clock_epoch_seconds: epoch,
-            output_utilisation_pct: utilisation as i64,
-            ups_on_battery: i64::from(flags.on_battery),
-            battery_replace: i64::from(flags.replace),
-            model_state_in: self.model_state.clone(),
+    fn call_model(&mut self, frame: &mut Frame, read_ok: bool, epoch: f64, rows: &mut Vec<(&'static str, String)>) {
+        let request = {
+            let last = &self.last;
+            let Some(utilisation) = last.number(metrics::UTILISATION) else {
+                return;
+            };
+            let known = |name: &str| last.get(name).map(|_| i64::from(last.flag(name)));
+            Request {
+                clock_epoch_seconds: epoch,
+                rackmains_output_load_pct: utilisation as i64,
+                rackmains_mains_failed: i64::from(last.flag(metrics::ON_BATTERY)),
+                rackmains_ups_calibrating: known(metrics::UPS_CALIBRATING),
+                rackmains_battery_low: known(metrics::BATTERY_LOW),
+                rackmains_battery_volts: last.number(metrics::BATTERY_VOLTS),
+                rackmains_battery_replace_due: known(metrics::BATTERY_REPLACE),
+                rackmains_battery_age_days: last.number(metrics::BATTERY_AGE_DAYS).map(|days| days as i64),
+                rackmains_read_failures: Some(i64::from(self.failures)),
+                rackmains_battery_state_in: self.battery_state.clone(),
+            }
         };
         match self.loaded.call(request) {
             Ok(answer) => {
@@ -499,29 +506,34 @@ impl Poller {
                     self.guard.set_policy(answer.policy.clone());
                     self.policy = answer.policy;
                 }
-                self.guard.set_remaining(answer.estimate.remaining);
-                if let Some(value) = answer.estimate.remaining_pct {
-                    frame.set_int("rackmains_battery_energy_remaining_pct", value);
-                }
-                if let Some(value) = answer.estimate.remaining {
-                    frame.set_int("rackmains_battery_runtime_remaining_seconds", value.as_secs() as i64);
-                }
+                self.guard.set_runtime_remaining(answer.estimate.runtime_remaining);
                 let response = answer.response;
-                if let Some(value) = response.model_energy_used_wh {
-                    frame.set_number("rackmains_battery_energy_used_wh", value);
-                }
-                if let Some(value) = response.model_recalibrate {
-                    if value == 1 && !self.last.flag("rackmains_model_refit_due") {
-                        warn!("model_recalibrate [1]");
+                if read_ok {
+                    if let Some(value) = answer.estimate.energy_remaining_pct {
+                        frame.set_int(metrics::BATTERY_ENERGY_REMAINING_PCT, value);
                     }
-                    frame.set_int("rackmains_model_refit_due", value);
+                    if let Some(value) = answer.estimate.runtime_remaining {
+                        frame.set_int(metrics::BATTERY_RUNTIME_REMAINING_SECONDS, value.as_secs() as i64);
+                    }
+                    if let Some(value) = response.rackmains_battery_energy_used_wh {
+                        frame.set_number(metrics::BATTERY_ENERGY_USED_WH, value);
+                    }
+                    if let Some(value) = response.rackmains_model_refit_due {
+                        if value == 1 && !self.last.flag(metrics::MODEL_REFIT_DUE) {
+                            warn!("model refit due [1]");
+                        }
+                        frame.set_int(metrics::MODEL_REFIT_DUE, value);
+                    }
+                    if let Some(value) = response.rackmains_model_refit_reason_code {
+                        frame.set_int(metrics::MODEL_REFIT_REASON_CODE, value);
+                    }
                 }
-                if response.model_state_out.is_some() {
-                    self.model_state = response.model_state_out;
+                if response.rackmains_battery_state_out.is_some() {
+                    self.battery_state = response.rackmains_battery_state_out;
                 }
             }
             Err(err) => {
-                self.guard.set_remaining(None);
+                self.guard.set_runtime_remaining(None);
                 warn!("model call failed, keeping the last answer [{err}]");
                 rows.push(("note", format!("model call failed [{err}]")));
             }
@@ -595,8 +607,8 @@ impl Poller {
             model_name: info.name.clone(),
             model_version: info.flavour.clone(),
             model_hash: info.content_sha256.clone(),
-            guard_shed_battery_seconds: self.policy.shed_max.as_secs(),
-            guard_restore_mains_seconds: self.policy.mains_stable.as_secs(),
+            guard_shed_battery_seconds: self.policy.shed_battery.as_secs(),
+            guard_restore_mains_seconds: self.policy.restore_mains.as_secs(),
             poll_s: self.settings.period.as_secs(),
             ssh_timeout_s: self.settings.ssh_timeout.as_secs(),
             shed_order: shed::shed_order(&self.hosts),
@@ -1416,7 +1428,7 @@ mod tests {
 
     #[test]
     fn a_lead_in_that_is_not_ol_refuses_to_cut() {
-        let live = Live::new("drill-lead", "OL OVER", true);
+        let live = Live::new("drill-runtime", "OL OVER", true);
         let error = drill::run_drill(&live.env, Some("1s"), true).unwrap_err();
         assert_eq!(error.code, 1);
         assert!(

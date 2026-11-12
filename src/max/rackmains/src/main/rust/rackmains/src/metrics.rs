@@ -36,6 +36,11 @@ pub const GUARD_LAST_ACTION: &str = "rackmains_guard_last_action_result";
 pub const GUARD_SHED_BATTERY: &str = "rackmains_guard_shed_battery_seconds";
 pub const GUARD_RESTORE_MAINS: &str = "rackmains_guard_restore_mains_seconds";
 pub const GUARD_SHED_RUNTIME: &str = "rackmains_guard_shed_runtime_seconds";
+pub const BATTERY_ENERGY_REMAINING_PCT: &str = "rackmains_battery_energy_remaining_pct";
+pub const BATTERY_RUNTIME_REMAINING_SECONDS: &str = "rackmains_battery_runtime_remaining_seconds";
+pub const BATTERY_ENERGY_USED_WH: &str = "rackmains_battery_energy_used_wh";
+pub const MODEL_REFIT_DUE: &str = "rackmains_model_refit_due";
+pub const MODEL_REFIT_REASON_CODE: &str = "rackmains_model_refit_reason_code";
 pub const MODEL_STATE: &str = "rackmains_battery_state";
 pub const PLUG_POWER_STATE: &str = "rackmains_plug_power_state";
 pub const PLUG_WATTS: &str = "rackmains_plug_watts";
@@ -100,8 +105,8 @@ pub const COLUMNS: &[Column] = &[
     column(BATTERY_REPLACE, Kind::Int),
     column(BATTERY_AGE_DAYS, Kind::Int),
     column(BATTERY_AGE_DUE, Kind::Int),
-    later("rackmains_battery_energy_remaining_pct", Kind::Int),
-    later("rackmains_battery_runtime_remaining_seconds", Kind::Int),
+    later(BATTERY_ENERGY_REMAINING_PCT, Kind::Int),
+    later(BATTERY_RUNTIME_REMAINING_SECONDS, Kind::Int),
     column(STATUS, Kind::Text),
     column(ON_BATTERY, Kind::Int),
     column(UPS_PROBLEM, Kind::Int),
@@ -117,9 +122,9 @@ pub const COLUMNS: &[Column] = &[
     column(GUARD_BATTERY_SECONDS, Kind::Int),
     column(GUARD_FAILED_HOSTS, Kind::Text),
     column(GUARD_LAST_ACTION, Kind::Text),
-    later("rackmains_battery_energy_used_wh", Kind::Float),
-    later("rackmains_model_refit_due", Kind::Int),
-    later("rackmains_model_refit_reason_code", Kind::Int),
+    later(BATTERY_ENERGY_USED_WH, Kind::Float),
+    later(MODEL_REFIT_DUE, Kind::Int),
+    later(MODEL_REFIT_REASON_CODE, Kind::Int),
     recorded(GUARD_SHED_BATTERY, Kind::Int),
     recorded(GUARD_RESTORE_MAINS, Kind::Int),
     recorded(GUARD_SHED_RUNTIME, Kind::Int),

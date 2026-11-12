@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "signature_version": 1000,
+  "signature_version": 1001,
   "name": "homeassistant_weatherstation_battery",
   "platform": "mlserver",
   "parameters": {"state": []},
@@ -15,7 +15,7 @@
       "name": "weatherstation_console_battery_voltage_valid",
       "datatype": "INT64",
       "shape": [1],
-      "parameters": {"unit": "flag", "required": false, "description": "1 when the voltage reading is available, else 0. Absent means 1. The voltage is then 0.0."}
+      "parameters": {"unit": "flag", "required": false, "description": "1 when the voltage reading is available and 0 when it is not. Absent means 1. The voltage is then 0.0 if the reading is not available."}
     },
     {
       "name": "weatherstation_console_battery_reported",

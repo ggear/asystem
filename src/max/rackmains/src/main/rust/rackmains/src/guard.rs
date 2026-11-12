@@ -90,7 +90,7 @@ pub struct Guard {
     restore_wanted: bool,
     shed_after_restore: bool,
     last_flags: Flags,
-    remaining: Option<Duration>,
+    runtime_remaining: Option<Duration>,
     battery: Duration,
     mains: Duration,
     blind: Duration,
@@ -112,7 +112,7 @@ impl Guard {
             restore_wanted: false,
             shed_after_restore: false,
             last_flags: Flags::default(),
-            remaining: None,
+            runtime_remaining: None,
             battery: Duration::ZERO,
             mains: Duration::ZERO,
             blind: Duration::ZERO,
@@ -131,8 +131,8 @@ impl Guard {
         self.mains = mains;
     }
 
-    pub fn set_remaining(&mut self, remaining: Option<Duration>) {
-        self.remaining = remaining;
+    pub fn set_runtime_remaining(&mut self, runtime_remaining: Option<Duration>) {
+        self.runtime_remaining = runtime_remaining;
     }
 
     pub fn set_policy(&mut self, policy: Policy) {
@@ -184,8 +184,8 @@ impl Guard {
                 self.blind = Duration::ZERO;
                 if self.outage {
                     self.mains += dt;
-                    if self.mains >= self.policy.mains_stable {
-                        self.want_restore(&mut out, "mains stable");
+                    if self.mains >= self.policy.restore_mains {
+                        self.want_restore(&mut out, "mains restore");
                     }
                 }
             }
@@ -195,7 +195,7 @@ impl Guard {
                     self.battery += dt;
                     self.check_shed(self.last_flags, &mut out);
                 }
-                if self.shed_started && self.blind >= self.policy.mains_stable * BLIND_RESTORE_FACTOR {
+                if self.shed_started && self.blind >= self.policy.restore_mains * BLIND_RESTORE_FACTOR {
                     self.want_restore(&mut out, "blind restore, reads failing");
                 }
             }
@@ -232,17 +232,17 @@ impl Guard {
         if self.shed_started || self.restore_wanted {
             return;
         }
-        let timer_due = !flags.calibrating && self.battery >= self.policy.shed_max;
+        let timer_due = !flags.calibrating && self.battery >= self.policy.shed_battery;
         let lead_due = !flags.calibrating
             && self
                 .policy
-                .shed_lead
-                .zip(self.remaining)
-                .is_some_and(|(lead, remaining)| remaining <= lead);
+                .shed_runtime
+                .zip(self.runtime_remaining)
+                .is_some_and(|(runtime, runtime_remaining)| runtime_remaining <= runtime);
         let reason = if flags.low {
             "battery low"
         } else if lead_due {
-            "estimated run time at the lead"
+            "estimated run time at the runtime"
         } else if timer_due {
             "shed time reached"
         } else {
@@ -371,9 +371,9 @@ mod tests {
 
     fn policy() -> Policy {
         Policy {
-            shed_max: Duration::from_secs(120),
-            mains_stable: Duration::from_secs(300),
-            shed_lead: None,
+            shed_battery: Duration::from_secs(120),
+            restore_mains: Duration::from_secs(300),
+            shed_runtime: None,
         }
     }
 
@@ -612,21 +612,21 @@ mod tests {
     #[test]
     fn the_estimated_run_time_sheds_at_the_lead_and_not_before() {
         let mut policy = policy();
-        policy.shed_lead = Some(Duration::from_secs(60));
+        policy.shed_runtime = Some(Duration::from_secs(60));
         let mut guard = Guard::new(policy, true, hosts());
-        guard.set_remaining(Some(Duration::from_secs(61)));
+        guard.set_runtime_remaining(Some(Duration::from_secs(61)));
         assert!(run(&mut guard, Some(battery()), 5).is_empty());
-        guard.set_remaining(Some(Duration::from_secs(60)));
+        guard.set_runtime_remaining(Some(Duration::from_secs(60)));
         assert_eq!(guard.step(Some(battery()), SECOND).calls.len(), 3);
     }
 
     #[test]
     fn a_missing_estimate_or_lead_leaves_the_timer_in_charge() {
         let mut guard = guard();
-        guard.set_remaining(Some(Duration::from_secs(1)));
+        guard.set_runtime_remaining(Some(Duration::from_secs(1)));
         assert!(run(&mut guard, Some(battery()), 10).is_empty());
         let mut policy = policy();
-        policy.shed_lead = Some(Duration::from_secs(60));
+        policy.shed_runtime = Some(Duration::from_secs(60));
         let mut unestimated = Guard::new(policy, true, hosts());
         assert!(run(&mut unestimated, Some(battery()), 119).is_empty());
         assert_eq!(unestimated.step(Some(battery()), SECOND).calls.len(), 3);
@@ -635,9 +635,9 @@ mod tests {
     #[test]
     fn the_estimated_run_time_is_withheld_during_a_calibration() {
         let mut policy = policy();
-        policy.shed_lead = Some(Duration::from_secs(60));
+        policy.shed_runtime = Some(Duration::from_secs(60));
         let mut guard = Guard::new(policy, true, hosts());
-        guard.set_remaining(Some(Duration::from_secs(5)));
+        guard.set_runtime_remaining(Some(Duration::from_secs(5)));
         let calibrating = Some(Flags {
             raw_on_battery: true,
             calibrating: true,

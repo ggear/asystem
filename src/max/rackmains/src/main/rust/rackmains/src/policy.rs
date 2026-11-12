@@ -6,23 +6,23 @@ use serde_json::{Map, Value};
 use crate::model::battery::{load, Request, Response};
 use crate::model::loader::{Info, Model};
 
-pub const SHED_MAX_FLOOR: Duration = Duration::from_secs(30);
-pub const SHED_MAX_CEILING: Duration = Duration::from_secs(3600);
-pub const MAINS_STABLE_FLOOR: Duration = Duration::from_secs(60);
-pub const MAINS_STABLE_CEILING: Duration = Duration::from_hours(24);
-pub const REMAINING_CEILING: Duration = Duration::from_hours(24);
+pub const SHED_BATTERY_FLOOR: Duration = Duration::from_secs(30);
+pub const SHED_BATTERY_CEILING: Duration = Duration::from_secs(3600);
+pub const RESTORE_MAINS_FLOOR: Duration = Duration::from_secs(60);
+pub const RESTORE_MAINS_CEILING: Duration = Duration::from_hours(24);
+pub const RUNTIME_REMAINING_CEILING: Duration = Duration::from_hours(24);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Policy {
-    pub shed_max: Duration,
-    pub mains_stable: Duration,
-    pub shed_lead: Option<Duration>,
+    pub shed_battery: Duration,
+    pub restore_mains: Duration,
+    pub shed_runtime: Option<Duration>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Estimate {
-    pub remaining: Option<Duration>,
-    pub remaining_pct: Option<i64>,
+    pub runtime_remaining: Option<Duration>,
+    pub energy_remaining_pct: Option<i64>,
 }
 
 impl TryFrom<&Response> for Policy {
@@ -42,26 +42,26 @@ impl TryFrom<&Response> for Policy {
             }
             Ok(duration)
         };
-        let shed_max = seconds(
-            "rackmains_guard_shed_battery_seconds",
-            response.guard_shed_max_seconds,
-            SHED_MAX_FLOOR,
-            SHED_MAX_CEILING,
+        let shed_battery = seconds(
+            crate::metrics::GUARD_SHED_BATTERY,
+            response.rackmains_guard_shed_battery_seconds,
+            SHED_BATTERY_FLOOR,
+            SHED_BATTERY_CEILING,
         )?;
-        let mains_stable = seconds(
-            "rackmains_guard_restore_mains_seconds",
-            response.guard_mains_stable_seconds,
-            MAINS_STABLE_FLOOR,
-            MAINS_STABLE_CEILING,
+        let restore_mains = seconds(
+            crate::metrics::GUARD_RESTORE_MAINS,
+            response.rackmains_guard_restore_mains_seconds,
+            RESTORE_MAINS_FLOOR,
+            RESTORE_MAINS_CEILING,
         )?;
-        let shed_lead = response
-            .guard_shed_lead_seconds
-            .map(|value| seconds("rackmains_guard_shed_runtime_seconds", value, Duration::ZERO, shed_max))
+        let shed_runtime = response
+            .rackmains_guard_shed_runtime_seconds
+            .map(|value| seconds(crate::metrics::GUARD_SHED_RUNTIME, value, Duration::ZERO, shed_battery))
             .transpose()?;
         Ok(Self {
-            shed_max,
-            mains_stable,
-            shed_lead,
+            shed_battery,
+            restore_mains,
+            shed_runtime,
         })
     }
 }
@@ -70,36 +70,36 @@ impl TryFrom<&Response> for Estimate {
     type Error = String;
 
     fn try_from(response: &Response) -> Result<Self, Self::Error> {
-        let remaining = response
-            .battery_remaining_seconds
+        let runtime_remaining = response
+            .rackmains_battery_runtime_remaining_seconds
             .map(|value| {
                 u64::try_from(value)
                     .map(Duration::from_secs)
                     .ok()
-                    .filter(|duration| *duration <= REMAINING_CEILING)
+                    .filter(|duration| *duration <= RUNTIME_REMAINING_CEILING)
                     .ok_or_else(|| {
                         format!(
-                            "estimate [battery_remaining_seconds] [{value}] outside [0] to [{}]",
-                            REMAINING_CEILING.as_secs()
+                            "estimate [rackmains_battery_runtime_remaining_seconds] [{value}] outside [0] to [{}]",
+                            RUNTIME_REMAINING_CEILING.as_secs()
                         )
                     })
             })
             .transpose()?;
-        let remaining_pct = response
-            .battery_remaining_pct
+        let energy_remaining_pct = response
+            .rackmains_battery_energy_remaining_pct
             .map(|value| {
                 if (0..=100).contains(&value) {
                     Ok(value)
                 } else {
                     Err(format!(
-                        "estimate [battery_remaining_pct] [{value}] outside [0] to [100]"
+                        "estimate [rackmains_battery_energy_remaining_pct] [{value}] outside [0] to [100]"
                     ))
                 }
             })
             .transpose()?;
         Ok(Self {
-            remaining,
-            remaining_pct,
+            runtime_remaining,
+            energy_remaining_pct,
         })
     }
 }
@@ -170,10 +170,15 @@ pub fn load_model(directory: &Path) -> Result<(Loaded, Policy), String> {
     };
     let initial = loaded.call(Request {
         clock_epoch_seconds: 0.0,
-        output_utilisation_pct: 0,
-        ups_on_battery: 0,
-        battery_replace: 0,
-        model_state_in: None,
+        rackmains_output_load_pct: 0,
+        rackmains_mains_failed: 0,
+        rackmains_ups_calibrating: None,
+        rackmains_battery_low: None,
+        rackmains_battery_volts: None,
+        rackmains_battery_replace_due: None,
+        rackmains_battery_age_days: None,
+        rackmains_read_failures: None,
+        rackmains_battery_state_in: None,
     })?;
     Ok((loaded, initial.policy))
 }
@@ -187,17 +192,17 @@ mod tests {
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../build/resources/model/battery")
     }
 
-    fn response(shed_max: i64) -> Response {
+    fn response(shed_battery: i64) -> Response {
         Response {
-            guard_shed_max_seconds: shed_max,
-            guard_mains_stable_seconds: 300,
-            guard_shed_lead_seconds: None,
-            battery_remaining_pct: None,
-            battery_remaining_seconds: None,
-            model_energy_used_wh: None,
-            model_history_known: None,
-            model_recalibrate: None,
-            model_state_out: None,
+            rackmains_guard_shed_battery_seconds: shed_battery,
+            rackmains_guard_restore_mains_seconds: 300,
+            rackmains_guard_shed_runtime_seconds: None,
+            rackmains_battery_runtime_remaining_seconds: None,
+            rackmains_battery_energy_remaining_pct: None,
+            rackmains_battery_energy_used_wh: None,
+            rackmains_model_refit_due: None,
+            rackmains_model_refit_reason_code: None,
+            rackmains_battery_state_out: None,
         }
     }
 
@@ -209,8 +214,8 @@ mod tests {
     #[test]
     fn the_embedded_model_gives_a_policy() {
         let (_, policy) = load_model(&embedded()).unwrap();
-        assert!(!policy.shed_max.is_zero());
-        assert!(!policy.mains_stable.is_zero());
+        assert!(!policy.shed_battery.is_zero());
+        assert!(!policy.restore_mains.is_zero());
     }
 
     fn with(mutate: impl FnOnce(&mut Response)) -> Response {
@@ -221,50 +226,59 @@ mod tests {
 
     #[test]
     fn a_response_converts_each_threshold_to_a_duration() {
-        let policy = Policy::try_from(&with(|response| response.guard_shed_lead_seconds = Some(45))).unwrap();
-        assert_eq!(Duration::from_secs(120), policy.shed_max);
-        assert_eq!(Duration::from_secs(300), policy.mains_stable);
-        assert_eq!(Some(Duration::from_secs(45)), policy.shed_lead);
+        let policy = Policy::try_from(&with(|response| {
+            response.rackmains_guard_shed_runtime_seconds = Some(45);
+        }))
+        .unwrap();
+        assert_eq!(Duration::from_secs(120), policy.shed_battery);
+        assert_eq!(Duration::from_secs(300), policy.restore_mains);
+        assert_eq!(Some(Duration::from_secs(45)), policy.shed_runtime);
     }
 
     #[test]
     fn a_threshold_outside_its_bounds_is_refused_and_one_on_a_bound_is_not() {
         let shed = |value: i64| Policy::try_from(&response(value));
-        let stable = |value: i64| Policy::try_from(&with(|response| response.guard_mains_stable_seconds = value));
-        let lead = |value: i64| Policy::try_from(&with(|response| response.guard_shed_lead_seconds = Some(value)));
+        let restore =
+            |value: i64| Policy::try_from(&with(|response| response.rackmains_guard_restore_mains_seconds = value));
+        let runtime = |value: i64| {
+            Policy::try_from(&with(|response| {
+                response.rackmains_guard_shed_runtime_seconds = Some(value);
+            }))
+        };
         let seconds = |duration: Duration| i64::try_from(duration.as_secs()).unwrap();
-        assert!(shed(seconds(SHED_MAX_FLOOR)).is_ok());
-        assert!(shed(seconds(SHED_MAX_FLOOR) - 1).is_err());
-        assert!(shed(seconds(SHED_MAX_CEILING)).is_ok());
-        assert!(shed(seconds(SHED_MAX_CEILING) + 1).is_err());
-        assert!(stable(seconds(MAINS_STABLE_FLOOR)).is_ok());
-        assert!(stable(seconds(MAINS_STABLE_FLOOR) - 1).is_err());
-        assert!(stable(seconds(MAINS_STABLE_CEILING)).is_ok());
-        assert!(stable(seconds(MAINS_STABLE_CEILING) + 1).is_err());
-        assert!(lead(0).is_ok());
-        assert!(lead(120).is_ok());
-        assert!(lead(121).is_err());
+        assert!(shed(seconds(SHED_BATTERY_FLOOR)).is_ok());
+        assert!(shed(seconds(SHED_BATTERY_FLOOR) - 1).is_err());
+        assert!(shed(seconds(SHED_BATTERY_CEILING)).is_ok());
+        assert!(shed(seconds(SHED_BATTERY_CEILING) + 1).is_err());
+        assert!(restore(seconds(RESTORE_MAINS_FLOOR)).is_ok());
+        assert!(restore(seconds(RESTORE_MAINS_FLOOR) - 1).is_err());
+        assert!(restore(seconds(RESTORE_MAINS_CEILING)).is_ok());
+        assert!(restore(seconds(RESTORE_MAINS_CEILING) + 1).is_err());
+        assert!(runtime(0).is_ok());
+        assert!(runtime(120).is_ok());
+        assert!(runtime(121).is_err());
         assert!(shed(-1).is_err());
-        assert!(lead(-1).is_err());
+        assert!(runtime(-1).is_err());
     }
 
     #[test]
     fn an_estimate_is_validated_and_absent_when_the_model_gives_none() {
         assert_eq!(Estimate::default(), Estimate::try_from(&response(120)).unwrap());
         let estimate = Estimate::try_from(&with(|response| {
-            response.battery_remaining_seconds = Some(600);
-            response.battery_remaining_pct = Some(40);
+            response.rackmains_battery_runtime_remaining_seconds = Some(600);
+            response.rackmains_battery_energy_remaining_pct = Some(40);
         }))
         .unwrap();
-        assert_eq!(Some(Duration::from_secs(600)), estimate.remaining);
-        assert_eq!(Some(40), estimate.remaining_pct);
+        assert_eq!(Some(Duration::from_secs(600)), estimate.runtime_remaining);
+        assert_eq!(Some(40), estimate.energy_remaining_pct);
         for bad in [
-            with(|response| response.battery_remaining_seconds = Some(-1)),
+            with(|response| response.rackmains_battery_runtime_remaining_seconds = Some(-1)),
             with(|response| {
-                response.battery_remaining_seconds = Some(i64::try_from(REMAINING_CEILING.as_secs()).unwrap() + 1);
+                response.rackmains_battery_runtime_remaining_seconds =
+                    Some(i64::try_from(RUNTIME_REMAINING_CEILING.as_secs()).unwrap() + 1);
             }),
-            with(|response| response.battery_remaining_pct = Some(101)),
-            with(|response| response.battery_remaining_pct = Some(-1)),
+            with(|response| response.rackmains_battery_energy_remaining_pct = Some(101)),
+            with(|response| response.rackmains_battery_energy_remaining_pct = Some(-1)),
         ] {
             assert!(Estimate::try_from(&bad).is_err());
         }
@@ -295,13 +309,18 @@ mod tests {
         let answer = loaded
             .call(Request {
                 clock_epoch_seconds: 1.0,
-                output_utilisation_pct: 13,
-                ups_on_battery: 1,
-                battery_replace: 0,
-                model_state_in: None,
+                rackmains_output_load_pct: 13,
+                rackmains_mains_failed: 1,
+                rackmains_ups_calibrating: None,
+                rackmains_battery_low: None,
+                rackmains_battery_volts: None,
+                rackmains_battery_replace_due: None,
+                rackmains_battery_age_days: None,
+                rackmains_read_failures: None,
+                rackmains_battery_state_in: None,
             })
             .unwrap();
-        assert!(!answer.policy.shed_max.is_zero());
+        assert!(!answer.policy.shed_battery.is_zero());
         assert!(!loaded.info().name.is_empty());
     }
 

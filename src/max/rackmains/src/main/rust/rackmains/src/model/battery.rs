@@ -2,7 +2,7 @@
 // WARNING: This file is written by the build process, any manual edits will be lost!
 ////////////////////////////////////////////////////////////////////////////////
 
-// project rackmains_ups_battery sha256 5ebf415e02c9f03a21930e8e119b331ed85584bfc50e5e9362e595f7cf489e32
+// project rackmains_ups_battery sha256 11e9c6b4b77e3c89292bc0eda2f2bdf12d4a95dde82794b6d89a74dd4862bed9
 
 use std::path::Path;
 
@@ -14,58 +14,76 @@ pub const NAME: &str = "rackmains_ups_battery";
 pub const STATE_SLOTS: usize = 6;
 pub const INPUT_NAMES: &[&str] = &[
     "clock_epoch_seconds",
-    "output_utilisation_pct",
-    "ups_on_battery",
-    "battery_replace",
-    "model_state_in",
+    "rackmains_output_load_pct",
+    "rackmains_mains_failed",
+    "rackmains_ups_calibrating",
+    "rackmains_battery_low",
+    "rackmains_battery_volts",
+    "rackmains_battery_replace_due",
+    "rackmains_battery_age_days",
+    "rackmains_read_failures",
+    "rackmains_battery_state_in",
 ];
 pub const OUTPUT_NAMES: &[&str] = &[
-    "guard_shed_max_seconds",
-    "guard_mains_stable_seconds",
-    "guard_shed_lead_seconds",
-    "battery_remaining_pct",
-    "battery_remaining_seconds",
-    "model_energy_used_wh",
-    "model_history_known",
-    "model_recalibrate",
-    "model_state_out",
+    "rackmains_guard_shed_battery_seconds",
+    "rackmains_guard_restore_mains_seconds",
+    "rackmains_guard_shed_runtime_seconds",
+    "rackmains_battery_runtime_remaining_seconds",
+    "rackmains_battery_energy_remaining_pct",
+    "rackmains_battery_energy_used_wh",
+    "rackmains_model_refit_due",
+    "rackmains_model_refit_reason_code",
+    "rackmains_battery_state_out",
 ];
 pub const REQUIRED_INPUT_NAMES: &[&str] = &[
     "clock_epoch_seconds",
-    "output_utilisation_pct",
-    "ups_on_battery",
-    "battery_replace",
+    "rackmains_output_load_pct",
+    "rackmains_mains_failed",
 ];
-pub const REQUIRED_OUTPUT_NAMES: &[&str] = &["guard_shed_max_seconds", "guard_mains_stable_seconds"];
+pub const REQUIRED_OUTPUT_NAMES: &[&str] = &[
+    "rackmains_guard_shed_battery_seconds",
+    "rackmains_guard_restore_mains_seconds",
+];
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Request {
     pub clock_epoch_seconds: f64,
-    pub output_utilisation_pct: i64,
-    pub ups_on_battery: i64,
-    pub battery_replace: i64,
+    pub rackmains_output_load_pct: i64,
+    pub rackmains_mains_failed: i64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub model_state_in: Option<Vec<f64>>,
+    pub rackmains_ups_calibrating: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rackmains_battery_low: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rackmains_battery_volts: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rackmains_battery_replace_due: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rackmains_battery_age_days: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rackmains_read_failures: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rackmains_battery_state_in: Option<Vec<f64>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Response {
-    pub guard_shed_max_seconds: i64,
-    pub guard_mains_stable_seconds: i64,
+    pub rackmains_guard_shed_battery_seconds: i64,
+    pub rackmains_guard_restore_mains_seconds: i64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub guard_shed_lead_seconds: Option<i64>,
+    pub rackmains_guard_shed_runtime_seconds: Option<i64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub battery_remaining_pct: Option<i64>,
+    pub rackmains_battery_runtime_remaining_seconds: Option<i64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub battery_remaining_seconds: Option<i64>,
+    pub rackmains_battery_energy_remaining_pct: Option<i64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub model_energy_used_wh: Option<f64>,
+    pub rackmains_battery_energy_used_wh: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub model_history_known: Option<i64>,
+    pub rackmains_model_refit_due: Option<i64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub model_recalibrate: Option<i64>,
+    pub rackmains_model_refit_reason_code: Option<i64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub model_state_out: Option<Vec<f64>>,
+    pub rackmains_battery_state_out: Option<Vec<f64>>,
 }
 
 impl From<Request> for Tensors {
@@ -73,25 +91,52 @@ impl From<Request> for Tensors {
         let mut tensors = Tensors::new();
         tensors.insert("clock_epoch_seconds".to_string(), vec![request.clock_epoch_seconds]);
         tensors.insert(
-            "output_utilisation_pct".to_string(),
-            vec![serde_json::Number::from(request.output_utilisation_pct)
+            "rackmains_output_load_pct".to_string(),
+            vec![serde_json::Number::from(request.rackmains_output_load_pct)
                 .as_f64()
                 .unwrap_or(f64::NAN)],
         );
         tensors.insert(
-            "ups_on_battery".to_string(),
-            vec![serde_json::Number::from(request.ups_on_battery)
+            "rackmains_mains_failed".to_string(),
+            vec![serde_json::Number::from(request.rackmains_mains_failed)
                 .as_f64()
                 .unwrap_or(f64::NAN)],
         );
-        tensors.insert(
-            "battery_replace".to_string(),
-            vec![serde_json::Number::from(request.battery_replace)
-                .as_f64()
-                .unwrap_or(f64::NAN)],
-        );
-        if let Some(value) = request.model_state_in {
-            tensors.insert("model_state_in".to_string(), value);
+        if let Some(value) = request.rackmains_ups_calibrating {
+            tensors.insert(
+                "rackmains_ups_calibrating".to_string(),
+                vec![serde_json::Number::from(value).as_f64().unwrap_or(f64::NAN)],
+            );
+        }
+        if let Some(value) = request.rackmains_battery_low {
+            tensors.insert(
+                "rackmains_battery_low".to_string(),
+                vec![serde_json::Number::from(value).as_f64().unwrap_or(f64::NAN)],
+            );
+        }
+        if let Some(value) = request.rackmains_battery_volts {
+            tensors.insert("rackmains_battery_volts".to_string(), vec![value]);
+        }
+        if let Some(value) = request.rackmains_battery_replace_due {
+            tensors.insert(
+                "rackmains_battery_replace_due".to_string(),
+                vec![serde_json::Number::from(value).as_f64().unwrap_or(f64::NAN)],
+            );
+        }
+        if let Some(value) = request.rackmains_battery_age_days {
+            tensors.insert(
+                "rackmains_battery_age_days".to_string(),
+                vec![serde_json::Number::from(value).as_f64().unwrap_or(f64::NAN)],
+            );
+        }
+        if let Some(value) = request.rackmains_read_failures {
+            tensors.insert(
+                "rackmains_read_failures".to_string(),
+                vec![serde_json::Number::from(value).as_f64().unwrap_or(f64::NAN)],
+            );
+        }
+        if let Some(value) = request.rackmains_battery_state_in {
+            tensors.insert("rackmains_battery_state_in".to_string(), value);
         }
         tensors
     }
@@ -102,93 +147,110 @@ impl TryFrom<Tensors> for Response {
 
     fn try_from(tensors: Tensors) -> Result<Self, Self::Error> {
         Ok(Self {
-            guard_shed_max_seconds: match tensors.get("guard_shed_max_seconds").map(Vec::as_slice) {
+            rackmains_guard_shed_battery_seconds: match tensors
+                .get("rackmains_guard_shed_battery_seconds")
+                .map(Vec::as_slice)
+            {
                 Some([value]) => *value as i64,
                 _ => {
                     return Err(ModelError {
                         kind: Kind::Signature,
                         gate: "response".to_string(),
-                        cause: "output [guard_shed_max_seconds] is absent or not one value".to_string(),
+                        cause: "output [rackmains_guard_shed_battery_seconds] is absent or not one value".to_string(),
                     })
                 }
             },
-            guard_mains_stable_seconds: match tensors.get("guard_mains_stable_seconds").map(Vec::as_slice) {
+            rackmains_guard_restore_mains_seconds: match tensors
+                .get("rackmains_guard_restore_mains_seconds")
+                .map(Vec::as_slice)
+            {
                 Some([value]) => *value as i64,
                 _ => {
                     return Err(ModelError {
                         kind: Kind::Signature,
                         gate: "response".to_string(),
-                        cause: "output [guard_mains_stable_seconds] is absent or not one value".to_string(),
+                        cause: "output [rackmains_guard_restore_mains_seconds] is absent or not one value".to_string(),
                     })
                 }
             },
-            guard_shed_lead_seconds: match tensors.get("guard_shed_lead_seconds").map(Vec::as_slice) {
+            rackmains_guard_shed_runtime_seconds: match tensors
+                .get("rackmains_guard_shed_runtime_seconds")
+                .map(Vec::as_slice)
+            {
                 None => None,
                 Some([value]) => Some(*value as i64),
                 _ => {
                     return Err(ModelError {
                         kind: Kind::Signature,
                         gate: "response".to_string(),
-                        cause: "output [guard_shed_lead_seconds] is absent or not one value".to_string(),
+                        cause: "output [rackmains_guard_shed_runtime_seconds] is absent or not one value".to_string(),
                     })
                 }
             },
-            battery_remaining_pct: match tensors.get("battery_remaining_pct").map(Vec::as_slice) {
+            rackmains_battery_runtime_remaining_seconds: match tensors
+                .get("rackmains_battery_runtime_remaining_seconds")
+                .map(Vec::as_slice)
+            {
                 None => None,
                 Some([value]) => Some(*value as i64),
                 _ => {
                     return Err(ModelError {
                         kind: Kind::Signature,
                         gate: "response".to_string(),
-                        cause: "output [battery_remaining_pct] is absent or not one value".to_string(),
+                        cause: "output [rackmains_battery_runtime_remaining_seconds] is absent or not one value"
+                            .to_string(),
                     })
                 }
             },
-            battery_remaining_seconds: match tensors.get("battery_remaining_seconds").map(Vec::as_slice) {
+            rackmains_battery_energy_remaining_pct: match tensors
+                .get("rackmains_battery_energy_remaining_pct")
+                .map(Vec::as_slice)
+            {
                 None => None,
                 Some([value]) => Some(*value as i64),
                 _ => {
                     return Err(ModelError {
                         kind: Kind::Signature,
                         gate: "response".to_string(),
-                        cause: "output [battery_remaining_seconds] is absent or not one value".to_string(),
+                        cause: "output [rackmains_battery_energy_remaining_pct] is absent or not one value".to_string(),
                     })
                 }
             },
-            model_energy_used_wh: match tensors.get("model_energy_used_wh").map(Vec::as_slice) {
+            rackmains_battery_energy_used_wh: match tensors.get("rackmains_battery_energy_used_wh").map(Vec::as_slice) {
                 None => None,
                 Some([value]) => Some(*value),
                 _ => {
                     return Err(ModelError {
                         kind: Kind::Signature,
                         gate: "response".to_string(),
-                        cause: "output [model_energy_used_wh] is absent or not one value".to_string(),
+                        cause: "output [rackmains_battery_energy_used_wh] is absent or not one value".to_string(),
                     })
                 }
             },
-            model_history_known: match tensors.get("model_history_known").map(Vec::as_slice) {
+            rackmains_model_refit_due: match tensors.get("rackmains_model_refit_due").map(Vec::as_slice) {
                 None => None,
                 Some([value]) => Some(*value as i64),
                 _ => {
                     return Err(ModelError {
                         kind: Kind::Signature,
                         gate: "response".to_string(),
-                        cause: "output [model_history_known] is absent or not one value".to_string(),
+                        cause: "output [rackmains_model_refit_due] is absent or not one value".to_string(),
                     })
                 }
             },
-            model_recalibrate: match tensors.get("model_recalibrate").map(Vec::as_slice) {
+            rackmains_model_refit_reason_code: match tensors.get("rackmains_model_refit_reason_code").map(Vec::as_slice)
+            {
                 None => None,
                 Some([value]) => Some(*value as i64),
                 _ => {
                     return Err(ModelError {
                         kind: Kind::Signature,
                         gate: "response".to_string(),
-                        cause: "output [model_recalibrate] is absent or not one value".to_string(),
+                        cause: "output [rackmains_model_refit_reason_code] is absent or not one value".to_string(),
                     })
                 }
             },
-            model_state_out: tensors.get("model_state_out").cloned(),
+            rackmains_battery_state_out: tensors.get("rackmains_battery_state_out").cloned(),
         })
     }
 }

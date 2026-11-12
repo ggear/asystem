@@ -373,16 +373,16 @@ pub fn plan_text(effective: &Effective, target: &Target, assessment: &Preflight,
         Target::Drain => (MODE_DRAIN, 0),
     };
     let shed = effective.guard_shed_battery_seconds;
-    let stable = effective.guard_restore_mains_seconds;
+    let restore_mains = effective.guard_restore_mains_seconds;
     let mut lines = vec![
         "tool".to_string(),
         format!(
-            "  mode [{mode}] hold [{hold}s] after [{stable}s] deadman [{}s] plug [{plug_host}]",
+            "  mode [{mode}] hold [{hold}s] after [{restore_mains}s] deadman [{}s] plug [{plug_host}]",
             deadman_seconds(target)
         ),
         "main program".to_string(),
         format!(
-            "  guard_live [{}] model [{} {}] rackmains_guard_shed_battery_seconds [{shed}] rackmains_guard_restore_mains_seconds [{stable}] poll [{}s] ssh_timeout [{}s] shed_order [{}]",
+            "  guard_live [{}] model [{} {}] rackmains_guard_shed_battery_seconds [{shed}] rackmains_guard_restore_mains_seconds [{restore_mains}] poll [{}s] ssh_timeout [{}s] shed_order [{}]",
             u8::from(effective.guard_live),
             effective.model_name,
             effective.model_hash,
@@ -393,7 +393,11 @@ pub fn plan_text(effective: &Effective, target: &Target, assessment: &Preflight,
         "timeline".to_string(),
     ];
     let ending = match target {
-        Target::Hold(hold) => format!("T+{} plug on, T+{} awake, end", hold.as_secs(), hold.as_secs() + stable),
+        Target::Hold(hold) => format!(
+            "T+{} plug on, T+{} awake, end",
+            hold.as_secs(),
+            hold.as_secs() + restore_mains
+        ),
         Target::Drain => "runs to the UPS cutoff, the deadman restores mains".to_string(),
     };
     lines.push(format!(
@@ -545,7 +549,7 @@ pub fn run_stop(env: &Env, force: bool) -> Result<(), ExitError> {
         marker.write(&marker_path)?;
         let _ = fs::remove_file(&marker_path);
     }
-    println!("mains restored, the main program runs awake after the stable period of mains");
+    println!("mains restored, the main program runs awake after the restore period of mains");
     Ok(())
 }
 
@@ -679,7 +683,7 @@ fn abort(env: &Env, marker: &Marker, marker_path: &Path, outage_dir: &Path, stem
     let mut aborted = marker.clone();
     aborted.state = STATE_ABORTED.to_string();
     let _ = aborted.write(marker_path);
-    println!("aborted, the main program runs awake after the stable period of mains, following until the end row");
+    println!("aborted, the main program runs awake after the restore period of mains, following until the end row");
     let started = Instant::now();
     while started.elapsed() < env.timing.after_cap {
         if follow_run(outage_dir, stem).ended() {

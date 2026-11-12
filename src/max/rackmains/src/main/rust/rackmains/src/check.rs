@@ -30,11 +30,11 @@ pub fn run(target: &Target) -> Vec<Outcome> {
             name: "model",
             result: load_model(target.model_dir).map(|(loaded, policy)| {
                 format!(
-                    "project [{}] hash [{}] shed_max [{}s] mains_stable [{}s]",
+                    "project [{}] hash [{}] shed_battery [{}s] restore_mains [{}s]",
                     loaded.info().name,
                     loaded.info().content_sha256,
-                    policy.shed_max.as_secs(),
-                    policy.mains_stable.as_secs()
+                    policy.shed_battery.as_secs(),
+                    policy.restore_mains.as_secs()
                 )
             }),
         },
