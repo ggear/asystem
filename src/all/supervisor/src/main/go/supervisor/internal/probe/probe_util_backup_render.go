@@ -518,7 +518,8 @@ const (
 	ringPoints  = 12
 	ringQuantum = bytesPerMebibyte
 
-	backupProgressHeartbeat = 10 * time.Second
-	backupTailPoll          = 2 * time.Second
-	backupTailSettle        = 2 * time.Minute
+	backupTailPoll   = 2 * time.Second
+	backupTailSettle = 2 * time.Minute
 )
+
+var backupProgressHeartbeat = 10 * time.Second

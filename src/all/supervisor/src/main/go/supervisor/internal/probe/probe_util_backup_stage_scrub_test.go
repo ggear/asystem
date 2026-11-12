@@ -66,6 +66,12 @@ func fixtureStages(t *testing.T, relPath string) string {
 	return strings.Join(lines, "\n")
 }
 
+func shortenBackupProgressHeartbeat(t *testing.T) {
+	original := backupProgressHeartbeat
+	backupProgressHeartbeat = 10 * time.Millisecond
+	t.Cleanup(func() { backupProgressHeartbeat = original })
+}
+
 func fakeExec(t *testing.T, table map[string]string) {
 	t.Helper()
 	original := stageStream
@@ -494,6 +500,7 @@ func TestProbeUtilBackupStageScrub_APassPausedAtItsDeadlineLeavesTheStageHealthy
 			originalStream, originalAvailable := stageStream, commandAvailable
 			t.Cleanup(func() { stageStream, commandAvailable = originalStream, originalAvailable })
 			commandAvailable = func(string) bool { return true }
+			shortenBackupProgressHeartbeat(t)
 			polled := 0
 			stageStream = func(_ context.Context, _ io.Writer, name string, args ...string) (string, int, bool) {
 				key := name + " " + strings.Join(args, " ")
@@ -528,6 +535,7 @@ func TestProbeUtilBackupStageScrub_AResumeBtrfsRefusesStartsAFreshPass(t *testin
 	originalStream, originalAvailable := stageStream, commandAvailable
 	t.Cleanup(func() { stageStream, commandAvailable = originalStream, originalAvailable })
 	commandAvailable = func(string) bool { return true }
+	shortenBackupProgressHeartbeat(t)
 	var issued []string
 	stageStream = func(_ context.Context, _ io.Writer, name string, args ...string) (string, int, bool) {
 		key := name + " " + strings.Join(args, " ")
@@ -570,6 +578,7 @@ func stopScrubUnderneath(t *testing.T, cancelled bool) {
 	originalStream, originalAvailable := stageStream, commandAvailable
 	t.Cleanup(func() { stageStream, commandAvailable = originalStream, originalAvailable })
 	commandAvailable = func(string) bool { return true }
+	shortenBackupProgressHeartbeat(t)
 	var unmounted atomic.Bool
 	var touched []string
 	var touchedMu sync.Mutex
@@ -769,6 +778,7 @@ func TestProbeUtilBackupStageScrub_CorruptionDeletesTheLiveMirrorCopyAndNeverASn
 	})
 	backupFstabPath = fstab
 	commandAvailable = func(string) bool { return true }
+	shortenBackupProgressHeartbeat(t)
 	clean := fixtureStages(t, "btrfs/scrub-status-raw-running.txt")
 	finished := strings.Replace(strings.Replace(clean, "Status:           running", "Status:           finished", 1),
 		"csum_errors: 0", "csum_errors: 3", 1)
