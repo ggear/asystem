@@ -75,6 +75,18 @@ PROJECT_TAG_FLAVOUR = "project_flavour"
 PROJECT_TAG_RELEASE_VERSION = "release_version"
 
 
+PROJECT_TAG_SNAPSHOT_VERSION = "snapshot_version"
+
+
+PROJECT_TAG_INPUTS_SHA256 = "inputs_sha256"
+
+
+PROJECT_TAG_RELEASED_AT = "released_at"
+
+
+PROJECT_TAG_METADATA = "metadata"
+
+
 PROJECT_LABEL_PREVIEW = "preview-"
 
 
@@ -145,3 +157,6 @@ MODEL_DIR = "model"
 MODEL_DOCUMENT = "model.json"
 MODEL_SCHEMA = 1
 RUN_FIRST = 1000
+SIGNATURE_VERSION_FIRST = 1000
+SIGNATURE_VERSION_KEY = "signature_version"
+NOTEBOOK_VERSION_SUFFIX = re.compile(r"(^|_)\d+$")

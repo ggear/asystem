@@ -1,5 +1,6 @@
 {
   "schema": 1,
+  "signature_version": 1000,
   "name": "wrangle_household_income",
   "platform": "mlserver",
   "parameters": {

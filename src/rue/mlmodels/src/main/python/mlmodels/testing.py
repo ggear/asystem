@@ -14,7 +14,7 @@ def example_project(workspace):
     return project_dir
 
 
-def build_project(flavour, golden_out=None, tolerance=None):
+def build_project(flavour, golden_out=None, tolerance=None, signature_version=None):
     from mlmodels._project import evaluation_build, package_project
     from mlmodels._signature import build_signature, signature_input, signature_output
 
@@ -60,7 +60,9 @@ def build_project(flavour, golden_out=None, tolerance=None):
         model = helper.make_model(graph, opset_imports=[helper.make_opsetid("", 21)])
         model.ir_version = 10
         onnx.save(model, model_path)
-    signature = build_signature("demo_replay_double", [signature_input("demo_in", "none", "A number.")], [signature_output("demo_out", "none", "Twice the number.", datatype="FP64")])
+    signature = build_signature(
+        "demo_replay_double", [signature_input("demo_in", "none", "A number.")], [signature_output("demo_out", "none", "Twice the number.", datatype="FP64")], signature_version=signature_version
+    )
     dataset = join(work_dir, "2026-11-03_10-00-00", "demo_replay_backtest_2026-11-01_2026-11-02.csv")
     os.makedirs(dirname(dataset))
     with open(dataset, "w") as dataset_file:

@@ -660,7 +660,7 @@ class MetadataTest(unittest.TestCase):
         with open(join(self.workspace, "data", "training", "2026-01-01_00-00-00", "a.csv"), "w") as data_file:
             data_file.write("x\n1\n")
         self.write_notebook(["x = 1\n"], ["# a heading\n"])
-        self.project_dir = build_project("wasm")
+        self.project_dir = build_project("wasm", signature_version=1000)
 
     def write_notebook(self, code, markdown):
         with open(join(self.workspace, "notebook.ipynb"), "w") as notebook_file:
@@ -829,6 +829,41 @@ class MetadataTest(unittest.TestCase):
     def test_a_project_that_differs_from_its_hash_is_a_finding(self):
         self.place(self.metadata(content_sha256="b" * 64))
         self.assertEqual(["MD003"], self.rules())
+
+    def test_every_target_carries_a_valid_signature_version(self):
+        embedded = {"kind": "embedded", "language": "go"}
+        with open(join(self.project_dir, "signature.json")) as signature_file:
+            signature = {key: value for key, value in json.load(signature_file).items() if key != "signature_version"}
+        for target, fields, flagged in (
+            ({"kind": "served"}, {}, True),
+            ({"kind": "served"}, {"signature_version": 999}, True),
+            ({"kind": "served"}, {"signature_version": True}, True),
+            ({"kind": "served"}, {"signature_version": "1000"}, True),
+            ({"kind": "served"}, {"signature_version": 1000}, False),
+            (embedded, {"signature_version": 1000}, False),
+            (embedded, {}, True),
+            ({"kind": "local"}, {"signature_version": 1001}, False),
+            ({"kind": "local"}, {}, True),
+        ):
+            with self.subTest(target=target["kind"], fields=fields):
+                self.place(self.metadata(target=target))
+                with open(join(self.workspace, "signature.json"), "w") as signature_file:
+                    json.dump({**signature, **fields}, signature_file)
+                self.assertEqual(flagged, "MD006" in self.rules())
+
+    def test_a_baseline_is_an_object_on_a_served_target_only(self):
+        with open(join(self.project_dir, "signature.json")) as signature_file:
+            signature = json.load(signature_file)
+        for target, baseline, flagged in (
+            ({"kind": "served"}, signature, False),
+            ({"kind": "served"}, "text", True),
+            ({"kind": "embedded", "language": "go"}, signature, True),
+        ):
+            with self.subTest(target=target["kind"], baseline=type(baseline).__name__):
+                self.place(self.metadata(target=target, baseline=baseline))
+                with open(join(self.workspace, "signature.json"), "w") as signature_file:
+                    json.dump({**signature, **({"signature_version": 1000} if target["kind"] == "served" else {})}, signature_file)
+                self.assertEqual(flagged, "MD006" in self.rules())
 
     def test_a_target_with_no_wrapper_for_its_flavour_is_a_finding(self):
         self.place(self.metadata(target={"kind": "embedded", "language": "java"}))
@@ -1310,6 +1345,185 @@ class ReleaseTest(unittest.TestCase):
             self.record(project_dir=self.project_with_signature(lambda signature: signature["outputs"].pop(0)))
         self.assertEqual(("Package", "signature"), (raised.exception.stage, raised.exception.gate))
 
+    def additive(self, signature):
+        signature["inputs"].append({**signature["inputs"][0], "name": "demo_optional", "parameters": {**signature["inputs"][0]["parameters"], "required": False}})
+
+    def test_a_content_change_then_a_breaking_edit_at_the_same_signature_version_is_refused(self):
+        from mlmodels._errors import GateError
+        from mlmodels._metadata import read_metadata
+
+        self.record()
+        self.release()
+        self.record(project_dir=build_project("wasm", golden_out=3.5))
+        self.assertIsNone(read_metadata(self.workspace)["release"])
+        with self.assertRaises(GateError) as raised:
+            self.record(project_dir=self.project_with_signature(lambda signature: signature["outputs"].pop(0)))
+        self.assertEqual(("Package", "signature"), (raised.exception.stage, raised.exception.gate))
+
+    def test_a_higher_signature_version_may_break_and_a_lower_one_is_refused(self):
+        from mlmodels._errors import GateError
+        from mlmodels._metadata import read_metadata
+
+        def project(number, change=lambda signature: None):
+            return self.project_with_signature(lambda signature: (signature.update(signature_version=number), change(signature)))
+
+        self.record(project_dir=project(1001))
+        self.release()
+        with self.assertRaises(GateError):
+            self.record(project_dir=project(1000))
+        self.record(project_dir=project(1002, lambda signature: signature["outputs"].pop(0)))
+        self.assertEqual(1001, read_metadata(self.workspace)["baseline"]["signature_version"])
+
+    def test_a_released_workspace_with_no_baseline_is_seeded_from_its_release(self):
+        from mlmodels._errors import GateError
+        from mlmodels._metadata import read_metadata, write_metadata
+
+        self.record()
+        self.release()
+        metadata = read_metadata(self.workspace)
+        del metadata["baseline"]
+        write_metadata(self.workspace, metadata)
+        with self.assertRaises(GateError):
+            self.record(project_dir=self.project_with_signature(lambda signature: signature["outputs"].pop(0)))
+        self.record(project_dir=self.project_with_signature(self.additive))
+        self.assertEqual(metadata["release"]["signature"], read_metadata(self.workspace)["baseline"])
+
+    def test_a_release_writes_the_baseline_of_a_served_target_only(self):
+        from mlmodels._metadata import read_metadata
+
+        self.record()
+        self.release()
+        metadata = read_metadata(self.workspace)
+        self.assertEqual(metadata["release"]["signature"], metadata["baseline"])
+        shutil.rmtree(self.workspace)
+        os.makedirs(self.workspace)
+        with open(join(self.workspace, "notebook.ipynb"), "w") as notebook_file:
+            json.dump({"cells": [{"cell_type": "code", "source": ["x = 1\n"]}]}, notebook_file)
+        self.record(target={"kind": "embedded", "language": "rust"})
+        self.release()
+        self.assertNotIn("baseline", read_metadata(self.workspace))
+
+    def test_live_signature_versions_are_ranked_newest_first_with_the_unsuffixed_model_last(self):
+        from mlmodels._release import live_signatures
+
+        self.assertEqual([(1001, "a_1001"), (1000, "a_1000"), (0, "a")], live_signatures("a", ["a", "a_1000", "a_1001", "a_b_1000", "ab", "a_1000_preview", "b_1002"]))
+
+    def live_models(self, client, *names, preview=()):
+        for name in (*names, *preview):
+            client.create_registered_model(name)
+            version = client.create_model_version(name, "file:///nowhere", tags={"content_sha256": name, "project_flavour": "wasm"})
+            client.set_registered_model_alias(name, "preview" if name in preview else "release", version.version)
+
+    def serve(self, *names):
+        import http.server
+        import threading
+
+        index = json.dumps([{"name": name, "version": "10.200.1", "state": "READY"} for name in names]).encode()
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def do_POST(handler):
+                handler.send_response(200)
+                handler.send_header("Content-Type", "application/json")
+                handler.end_headers()
+                handler.wfile.write(index)
+
+            def log_message(handler, *arguments):
+                pass
+
+        server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        return f"http://127.0.0.1:{server.server_address[1]}"
+
+    def publish_at(self, signature_version, models, preview=(), url=None):
+        from mlflow import MlflowClient
+        from mlmodels._release import publish_workspace
+
+        uri = f"sqlite:///{join(tempfile.mkdtemp(), 'mlflow.db')}"
+        client = MlflowClient(uri, uri)
+        self.live_models(client, *models, preview=preview)
+        self.record(project_dir=build_project("wasm", signature_version=signature_version))
+        self.release()
+        publish_workspace("demo_replay_double", self.workspace, uri, url or self.serve(f"demo_replay_double_{signature_version}"), self.source)
+        return {model.name for model in client.search_registered_models() if "release" in model.aliases}
+
+    def test_publishing_a_new_signature_version_retires_all_but_the_two_newest(self):
+        self.assertEqual(
+            {"demo_replay_double_1000", "demo_replay_double_1001", "demo_replay_doubled_1000"}, self.publish_at(1001, ["demo_replay_double", "demo_replay_double_1000", "demo_replay_doubled_1000"])
+        )
+
+    def test_two_live_signature_versions_retire_nothing(self):
+        self.assertEqual({"demo_replay_double_1000", "demo_replay_double_1001"}, self.publish_at(1001, ["demo_replay_double_1000"]))
+
+    def test_a_preview_only_signature_version_counts_for_nothing(self):
+        self.assertEqual({"demo_replay_double_1000", "demo_replay_double_1001"}, self.publish_at(1001, ["demo_replay_double_1000"], preview=["demo_replay_double_1002"]))
+
+    def test_publishing_an_older_signature_version_keeps_it_though_two_newer_are_live(self):
+        self.assertEqual({"demo_replay_double_1000", "demo_replay_double_1001", "demo_replay_double_1002"}, self.publish_at(1000, ["demo_replay_double_1001", "demo_replay_double_1002"]))
+
+    def test_a_signature_version_a_client_still_pins_is_not_retired(self):
+        client_dir = join(self.source, "meg", "client")
+        os.makedirs(client_dir)
+        with open(join(client_dir, "config.yaml"), "w") as config_file:
+            config_file.write("resource: https://mlserver/v2/models/demo_replay_double/infer\n")
+        self.assertEqual({"demo_replay_double", "demo_replay_double_1000", "demo_replay_double_1001"}, self.publish_at(1001, ["demo_replay_double", "demo_replay_double_1000"]))
+
+    def test_nothing_is_retired_when_the_published_version_is_not_confirmed_served(self):
+        from unittest import mock
+
+        with mock.patch("mlmodels._release.wait_served", return_value="unreachable"):
+            live = self.publish_at(1001, ["demo_replay_double", "demo_replay_double_1000"])
+        self.assertEqual({"demo_replay_double", "demo_replay_double_1000", "demo_replay_double_1001"}, live)
+
+    def test_status_counts_what_a_registry_shows_beyond_the_two_live_versions_and_git(self):
+        from mlflow import MlflowClient
+        from mlmodels._embed import embed_consumer
+        from mlmodels._release import publish_workspace, status_lines
+
+        self.record()
+        self.release()
+        uri = f"sqlite:///{join(tempfile.mkdtemp(), 'mlflow.db')}"
+        publish_workspace("demo_replay_double", self.workspace, uri)
+        embed_consumer(self.consumer, self.source, "demo_replay_double")
+        client = MlflowClient(uri, uri)
+        self.assertEqual([], status_lines(self.source, uri))
+        self.live_models(client, "demo_replay_double_1001")
+        self.assertEqual(1, len(status_lines(self.source, uri)))
+        self.live_models(client, "demo_replay_double_1002")
+        self.assertEqual(2, len(status_lines(self.source, uri)))
+        client.delete_registered_model_alias("demo_replay_double_1002", "release")
+        self.assertEqual(1, len(status_lines(self.source, uri)))
+        client_dir = join(self.source, "meg", "client")
+        os.makedirs(client_dir)
+
+        def pin(model):
+            with open(join(client_dir, "config.yaml"), "w") as config_file:
+                config_file.write(f"resource: https://mlserver/v2/models/{model}/infer\n")
+
+        pin("demo_replay_double_1000")
+        self.assertEqual(2, len(status_lines(self.source, uri)))
+        pin("demo_replay_double_1001")
+        self.assertEqual(1, len(status_lines(self.source, uri)))
+        client.delete_registered_model_alias("demo_replay_double_1001", "release")
+        self.assertEqual(1, len(status_lines(self.source, uri)))
+
+    def test_an_embedded_project_may_change_its_released_signature_in_place_and_a_served_one_may_not(self):
+        from mlmodels._errors import GateError
+        from mlmodels._metadata import read_metadata
+
+        embedded = {"kind": "embedded", "language": "rust"}
+        self.record(target=embedded)
+        self.release()
+        released = read_metadata(self.workspace)["release"]["signature"]
+        changed = self.project_with_signature(lambda signature: signature["outputs"].pop(0))
+        recorded = self.record(project_dir=changed, target=embedded)
+        assert recorded is not None
+        self.assertEqual(released, read_metadata(self.workspace)["release"]["signature"])
+        with self.assertRaises(GateError) as raised:
+            self.record(project_dir=self.project_with_signature(lambda signature: signature["outputs"].pop(0)))
+        self.assertEqual(("Package", "signature"), (raised.exception.stage, raised.exception.gate))
+
     def project_with_signature(self, change):
         project_dir = build_project("wasm")
         with open(join(project_dir, "signature.json")) as signature_file:
@@ -1328,18 +1542,18 @@ class ReleaseTest(unittest.TestCase):
         uri = f"sqlite:///{join(tempfile.mkdtemp(), 'mlflow.db')}"
         from mlmodels._registry import register_project
 
-        previewed = register_project(join(self.workspace, "project"), "demo_replay_double", uri)
+        previewed = register_project(join(self.workspace, "project"), "demo_replay_double_1000", uri)
         self.assertEqual("published", publish_workspace("demo_replay_double", self.workspace, uri))
         client = MlflowClient(uri, uri)
-        model = client.get_registered_model("demo_replay_double")
+        model = client.get_registered_model("demo_replay_double_1000")
         self.assertEqual({"release": str(previewed)}, {alias: str(version) for alias, version in model.aliases.items()})
-        tags = client.get_model_version("demo_replay_double", previewed).tags
+        tags = client.get_model_version("demo_replay_double_1000", previewed).tags
         self.assertEqual("10.200.1", tags["release_version"])
         self.assertEqual(json.loads(tags["metadata"])["release"]["timestamp"], tags["released_at"])
         self.assertEqual("published", publish_workspace("demo_replay_double", self.workspace, uri))
-        register_project(join(self.workspace, "project"), "demo_replay_double", uri)
-        client.delete_registered_model_alias("demo_replay_double", "preview")
-        self.assertNotIn("preview", client.get_registered_model("demo_replay_double").aliases)
+        register_project(join(self.workspace, "project"), "demo_replay_double_1000", uri)
+        client.delete_registered_model_alias("demo_replay_double_1000", "preview")
+        self.assertNotIn("preview", client.get_registered_model("demo_replay_double_1000").aliases)
         self.assertEqual("unreachable", wait_served("http://127.0.0.1:9", "demo_replay_double", "10.200.1", timeout=1))
 
     def test_status_names_a_stale_consumer_and_nothing_else_when_everything_matches(self):
@@ -1657,6 +1871,17 @@ class WorkspaceLintTest(unittest.TestCase):
 
     def test_valid_workspace_has_no_findings(self):
         self.assertEqual([], self.rules())
+
+    def test_a_notebook_name_may_not_be_mistaken_for_a_signature_version(self):
+        from mlmodels._lint_workspace import lint_workspace
+
+        for notebook, flagged in (("run", False), ("co2", False), ("1000", True), ("run_1000", True), ("run_25", True)):
+            with self.subTest(notebook=notebook):
+                renamed = join(dirname(self.notebook_dir), notebook)
+                if renamed != self.notebook_dir:
+                    shutil.rmtree(renamed, ignore_errors=True)
+                    shutil.copytree(self.notebook_dir, renamed)
+                self.assertEqual(flagged, "WS015" in {rule for rule, _ in lint_workspace(renamed, self.source_dir)})
 
     def test_the_single_command_reaches_the_workspace_lint(self):
         from mlmodels.__main__ import main

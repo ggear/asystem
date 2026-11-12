@@ -8,5 +8,5 @@ if [ "${RACKMAINS_MOCK}" = "1" ]; then
   done
 fi
 
-exec /asystem/bin/rackmains --poll-period "${RACKMAINS_POLL_PERIOD}" --log-level "${RACKMAINS_LOG_LEVEL}" \
+exec /asystem/bin/rackmains serve --poll-period "${RACKMAINS_POLL_PERIOD}" --log-level "${RACKMAINS_LOG_LEVEL}" \
   --device "${RACKMAINS_DEVICE}" "$@"

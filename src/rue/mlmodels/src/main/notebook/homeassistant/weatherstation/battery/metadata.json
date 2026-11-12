@@ -1,66 +1,60 @@
 {
   "schema": 2,
-  "version": "10.200.2012",
-  "content_sha256": "5c5c9b849db9a21d833ee4731546c6d65271eb1cd048c95145d301151a1537f5",
-  "inputs_sha256": "0d8a535262a04c1544045fdd4cce53e04f3662f8ef510a7f93ce1bc1cb660acb",
+  "version": "10.200.2024-SNAPSHOT",
+  "content_sha256": "53278119b8012bca70c15c43bada6b997e6b8b6d50e1b6c67d387990ea24e6de",
+  "inputs_sha256": "df932e9a53b2f95e8c2165da1b0e2f93284ea4074dc759664d8df90d5b7f9528",
   "target": {"kind": "served"},
-  "release": {
-    "timestamp": "2026-11-10T07:21:55Z",
-    "signature": {
-      "schema": 1,
-      "name": "homeassistant_weatherstation_battery",
-      "platform": "mlserver",
-      "parameters": {"state": []},
-      "inputs": [
-        {
-          "name": "weatherstation_console_battery_voltage",
-          "datatype": "FP64",
-          "shape": [1],
-          "parameters": {"unit": "volts", "required": true, "description": "Voltage of the weather station console's battery as Home Assistant reports it."}
-        },
-        {
-          "name": "weatherstation_console_battery_voltage_valid",
-          "datatype": "INT64",
-          "shape": [1],
-          "parameters": {"unit": "flag", "required": false, "description": "1 when the voltage reading is available, else 0. Absent means 1. The voltage is then 0.0."}
-        },
-        {
-          "name": "weatherstation_console_battery_reported",
-          "datatype": "FP64",
-          "shape": [1],
-          "parameters": {
-            "unit": "seconds",
-            "required": false,
-            "description": "Epoch seconds of the last report of the voltage, from the Home Assistant helper of this name. Absent until the stateful model uses it."
-          }
-        },
-        {
-          "name": "weatherstation_console_battery_reported_valid",
-          "datatype": "INT64",
-          "shape": [1],
-          "parameters": {"unit": "flag", "required": false, "description": "1 when the reported time is available, else 0. Absent means 1. Absent until the stateful model uses it."}
-        },
-        {
-          "name": "clock_epoch_seconds",
-          "datatype": "FP64",
-          "shape": [1],
-          "parameters": {"unit": "seconds", "required": false, "description": "Epoch seconds when the model is called. Absent until the stateful model uses it."}
-        }
-      ],
-      "outputs": [
-        {
-          "name": "weatherstation_console_battery_capacity_pct",
-          "datatype": "INT64",
-          "shape": [1],
-          "parameters": {"unit": "percent", "required": true, "description": "Estimated battery capacity left, in steps of 5, 0 to 100, one level across the 3.77 to 3.83 V plateau."}
-        },
-        {
-          "name": "weatherstation_console_battery_capacity_pct_valid",
-          "datatype": "INT64",
-          "shape": [1],
-          "parameters": {"unit": "flag", "required": true, "description": "1 when the capacity is a prediction, 0 when the voltage was flagged not valid and the capacity is 0."}
-        }
-      ]
-    }
+  "release": null,
+  "baseline": {
+    "schema": 1,
+    "name": "homeassistant_weatherstation_battery",
+    "platform": "mlserver",
+    "parameters": {"state": []},
+    "inputs": [
+      {
+        "name": "weatherstation_console_battery_voltage",
+        "datatype": "FP64",
+        "shape": [1],
+        "parameters": {"unit": "volts", "required": true, "description": "Voltage of the weather station console's battery as Home Assistant reports it."}
+      },
+      {
+        "name": "weatherstation_console_battery_voltage_valid",
+        "datatype": "INT64",
+        "shape": [1],
+        "parameters": {"unit": "flag", "required": false, "description": "1 when the voltage reading is available, else 0. Absent means 1. The voltage is then 0.0."}
+      },
+      {
+        "name": "weatherstation_console_battery_reported",
+        "datatype": "FP64",
+        "shape": [1],
+        "parameters": {"unit": "seconds", "required": false, "description": "Epoch seconds of the last report of the voltage, from the Home Assistant helper of this name. Absent until the stateful model uses it."}
+      },
+      {
+        "name": "weatherstation_console_battery_reported_valid",
+        "datatype": "INT64",
+        "shape": [1],
+        "parameters": {"unit": "flag", "required": false, "description": "1 when the reported time is available, else 0. Absent means 1. Absent until the stateful model uses it."}
+      },
+      {
+        "name": "clock_epoch_seconds",
+        "datatype": "FP64",
+        "shape": [1],
+        "parameters": {"unit": "seconds", "required": false, "description": "Epoch seconds when the model is called. Absent until the stateful model uses it."}
+      }
+    ],
+    "outputs": [
+      {
+        "name": "weatherstation_console_battery_capacity_pct",
+        "datatype": "INT64",
+        "shape": [1],
+        "parameters": {"unit": "percent", "required": true, "description": "Estimated battery capacity left, in steps of 5, 0 to 100, one level across the 3.77 to 3.83 V plateau."}
+      },
+      {
+        "name": "weatherstation_console_battery_capacity_pct_valid",
+        "datatype": "INT64",
+        "shape": [1],
+        "parameters": {"unit": "flag", "required": true, "description": "1 when the capacity is a prediction, 0 when the voltage was flagged not valid and the capacity is 0."}
+      }
+    ]
   }
 }

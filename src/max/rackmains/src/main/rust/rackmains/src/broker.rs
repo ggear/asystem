@@ -1,11 +1,10 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::{self, RecvTimeoutError};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use log::{debug, info, warn};
 use rumqttc::{Client, Event, LastWill, MqttOptions, Outgoing, Packet, QoS};
@@ -14,7 +13,6 @@ use crate::log_line;
 use crate::schema::{AVAILABILITY_OFFLINE, AVAILABILITY_ONLINE};
 
 const CHANNEL_CAPACITY: usize = 10;
-const CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
 const RECONNECT_DELAY: Duration = Duration::from_secs(5);
 
 #[derive(Debug)]
@@ -36,11 +34,16 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 pub trait Publisher {
     fn publish(&mut self, topic: &str, payload: &[u8]) -> Result<()>;
+
+    fn close(&mut self) -> Result<()> {
+        Ok(())
+    }
 }
 
 pub struct MqttPublisher {
     client: Client,
     shutdown: Arc<AtomicBool>,
+    connected: Arc<AtomicBool>,
     handle: Option<JoinHandle<()>>,
     status_topic: String,
     retained: Arc<Mutex<HashMap<String, Vec<u8>>>>,
@@ -61,23 +64,27 @@ impl MqttPublisher {
         ));
         let (client, mut connection) = Client::new(options, CHANNEL_CAPACITY);
         let shutdown = Arc::new(AtomicBool::new(false));
-        let (ready_sender, ready_receiver) = mpsc::channel();
+        let connected = Arc::new(AtomicBool::new(false));
         let retained: Arc<Mutex<HashMap<String, Vec<u8>>>> = Arc::new(Mutex::new(HashMap::new()));
         let thread_shutdown = Arc::clone(&shutdown);
+        let thread_connected = Arc::clone(&connected);
         let thread_retained = Arc::clone(&retained);
         let thread_client = client.clone();
         let thread_status_topic = status_topic.to_string();
         let address = format!("{host}:{port}");
         let handle = thread::spawn(move || {
-            let mut ready_sender = Some(ready_sender);
+            let mut seen = false;
+            let mut failing = false;
             for event in connection.iter() {
                 match event {
                     Ok(Event::Incoming(Packet::ConnAck(_))) => {
-                        if let Some(sender) = ready_sender.take() {
-                            info!("{}", log_line("connected to broker", &address));
-                            let _ = sender.send(());
-                        } else {
+                        thread_connected.store(true, Ordering::SeqCst);
+                        failing = false;
+                        if seen {
                             info!("broker reconnected [{address}]");
+                        } else {
+                            info!("{}", log_line("connected to broker", &address));
+                            seen = true;
                         }
                         if let Err(err) =
                             thread_client.try_publish(&thread_status_topic, QoS::AtLeastOnce, true, AVAILABILITY_ONLINE)
@@ -119,40 +126,45 @@ impl MqttPublisher {
                         if thread_shutdown.load(Ordering::SeqCst) {
                             break;
                         }
-                        warn!("broker error [{address}] [{err}]");
-                        info!("broker reconnecting [{address}] in [{RECONNECT_DELAY:?}]");
+                        thread_connected.store(false, Ordering::SeqCst);
+                        if failing {
+                            debug!("broker still down [{address}] [{err}]");
+                        } else {
+                            failing = true;
+                            warn!("broker error [{address}] [{err}], retrying every [{RECONNECT_DELAY:?}]");
+                        }
                         thread::sleep(RECONNECT_DELAY);
                     }
                 }
             }
             debug!("broker event loop stopped");
         });
-        match ready_receiver.recv_timeout(CONNECT_TIMEOUT) {
-            Ok(()) => Ok(MqttPublisher {
-                client,
-                shutdown,
-                handle: Some(handle),
-                status_topic: status_topic.to_string(),
-                retained,
-            }),
-            Err(err) => {
-                shutdown.store(true, Ordering::SeqCst);
-                let _ = client.try_disconnect();
-                handle.join().ok();
-                Err(match err {
-                    RecvTimeoutError::Timeout => Error::Timeout,
-                    RecvTimeoutError::Disconnected => {
-                        Error::Mqtt("broker event loop exited before connecting".to_string())
-                    }
-                })
-            }
-        }
+        Ok(MqttPublisher {
+            client,
+            shutdown,
+            connected,
+            handle: Some(handle),
+            status_topic: status_topic.to_string(),
+            retained,
+        })
     }
 
-    pub fn close(&mut self, status_topic: &str) -> Result<()> {
-        let published = self.publish(status_topic, AVAILABILITY_OFFLINE.as_bytes());
+    pub fn wait_connected(&self, timeout: Duration) -> Result<()> {
+        let started = Instant::now();
+        while !self.connected.load(Ordering::SeqCst) {
+            if started.elapsed() >= timeout {
+                return Err(Error::Timeout);
+            }
+            thread::sleep(Duration::from_millis(50));
+        }
+        Ok(())
+    }
+
+    fn close_connection(&mut self) -> Result<()> {
+        let status_topic = self.status_topic.clone();
+        let published = self.publish(&status_topic, AVAILABILITY_OFFLINE.as_bytes());
         self.shutdown.store(true, Ordering::SeqCst);
-        let disconnected = self.client.disconnect().map_err(|err| Error::Mqtt(err.to_string()));
+        let disconnected = self.client.try_disconnect().map_err(|err| Error::Mqtt(err.to_string()));
         if let Some(handle) = self.handle.take() {
             handle.join().ok();
         }
@@ -162,6 +174,10 @@ impl MqttPublisher {
 }
 
 impl Publisher for MqttPublisher {
+    fn close(&mut self) -> Result<()> {
+        self.close_connection()
+    }
+
     fn publish(&mut self, topic: &str, payload: &[u8]) -> Result<()> {
         match std::str::from_utf8(payload) {
             Ok(text) => debug!("publish [{topic}] -> [{text}]"),

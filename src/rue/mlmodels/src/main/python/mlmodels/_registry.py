@@ -13,6 +13,7 @@ from mlmodels._constants import (
     PROJECT_TAG_CONTENT_SHA256,
     PROJECT_TAG_FLAVOUR,
     PROJECT_TAG_RELEASE_VERSION,
+    PROJECT_TAG_SNAPSHOT_VERSION,
 )
 from mlmodels._lint_project import verify_project
 from mlmodels._metadata import content_sha256
@@ -20,7 +21,7 @@ from mlmodels._project import check_acceptance
 from mlmodels._tracking import log_tracking, project_tracking, source_tags
 
 
-def register_project(project_dir, name, tracking_uri, aliases=(PROJECT_ALIAS_PREVIEW,), snapshot_version=None, tracking=None):
+def register_project(project_dir, name, tracking_uri, aliases=(PROJECT_ALIAS_PREVIEW,), snapshot_version=None, tracking=None, experiment=None):
     import mlflow.pyfunc
 
     import mlflow
@@ -30,12 +31,13 @@ def register_project(project_dir, name, tracking_uri, aliases=(PROJECT_ALIAS_PRE
     content = content_sha256(project_dir)
     version = next((candidate for candidate in client.search_model_versions(f"name = '{name}'") if candidate.tags.get(PROJECT_TAG_CONTENT_SHA256) == content), None)
     if version is None:
-        experiment = client.get_experiment_by_name(name)
-        if experiment is None and tracking_uri.startswith("sqlite:///"):
-            client.create_experiment(name, artifact_location="file://" + join(dirname(os.path.abspath(tracking_uri.removeprefix("sqlite:///"))), "artifacts"))
-        elif experiment is not None and experiment.lifecycle_stage == "deleted":
-            client.restore_experiment(experiment.experiment_id)
-        mlflow.set_experiment(name)
+        experiment_name = experiment or name
+        existing = client.get_experiment_by_name(experiment_name)
+        if existing is None and tracking_uri.startswith("sqlite:///"):
+            client.create_experiment(experiment_name, artifact_location="file://" + join(dirname(os.path.abspath(tracking_uri.removeprefix("sqlite:///"))), "artifacts"))
+        elif existing is not None and existing.lifecycle_stage == "deleted":
+            client.restore_experiment(existing.experiment_id)
+        mlflow.set_experiment(experiment_name)
         pyfunc_uri = ""
         with mlflow.start_run(tags={"mlflow.source.name": "mlmodels", **source_tags(project_dir)}) as run:
             mlflow.set_tags({PROJECT_TAG_FLAVOUR: manifest["flavour"]})
@@ -83,17 +85,17 @@ def register_project(project_dir, name, tracking_uri, aliases=(PROJECT_ALIAS_PRE
         for key, value in {PROJECT_TAG_CONTENT_SHA256: content, PROJECT_TAG_FLAVOUR: manifest["flavour"]}.items():
             client.set_model_version_tag(name, version.version, key, value)
         client.update_model_version(name, version.version, description=tracking["description"])
-    if snapshot_version is not None and "snapshot_version" not in version.tags and PROJECT_TAG_RELEASE_VERSION not in version.tags:
-        client.set_model_version_tag(name, version.version, "snapshot_version", snapshot_version)
+    if snapshot_version is not None and PROJECT_TAG_SNAPSHOT_VERSION not in version.tags and PROJECT_TAG_RELEASE_VERSION not in version.tags:
+        client.set_model_version_tag(name, version.version, PROJECT_TAG_SNAPSHOT_VERSION, snapshot_version)
     for alias in aliases:
         client.set_registered_model_alias(name, alias, version.version)
     return version.version
 
 
-def register_preview(project_dir, name, tracking_uri, target, snapshot_version=None, tracking=None):
+def register_preview(project_dir, name, tracking_uri, target, snapshot_version=None, tracking=None, experiment=None):
     if target["kind"] != "served":
         return None
-    return register_project(project_dir, name, tracking_uri, aliases=(PROJECT_ALIAS_PREVIEW,), snapshot_version=snapshot_version, tracking=tracking)
+    return register_project(project_dir, name, tracking_uri, aliases=(PROJECT_ALIAS_PREVIEW,), snapshot_version=snapshot_version, tracking=tracking, experiment=experiment)
 
 
 def registry_client(tracking_uri):

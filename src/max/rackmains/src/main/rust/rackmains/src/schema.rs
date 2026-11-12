@@ -2,13 +2,11 @@ use std::io::Write;
 
 use serde::Serialize;
 
-use crate::nut::SAMPLES;
+use crate::metrics::{self, COLUMNS};
 
 pub const MODULE: &str = "rackmains";
 pub const KEY_TIMESTAMP: &str = "timestamp";
 pub const KEY_PERIOD_MS: &str = "period_ms";
-pub const KEY_STATUS: &str = "mains_status";
-pub const KEY_SAMPLES: &str = "samples";
 pub const AVAILABILITY_ONLINE: &str = "online";
 pub const AVAILABILITY_OFFLINE: &str = "offline";
 
@@ -87,18 +85,18 @@ impl BrokerSchema for RackMains {
                 match_glob: String::new(),
                 root: Member::object(
                     "",
-                    vec![
+                    [
                         Member::scalar(KEY_TIMESTAMP, Kind::Str),
                         Member::scalar(KEY_PERIOD_MS, Kind::Int),
-                        Member::scalar(KEY_STATUS, Kind::Str),
-                        Member::object(
-                            KEY_SAMPLES,
-                            SAMPLES
-                                .iter()
-                                .map(|sample| Member::scalar(sample.key, Kind::Float))
-                                .collect(),
-                        ),
-                    ],
+                    ]
+                    .into_iter()
+                    .chain(
+                        COLUMNS
+                            .iter()
+                            .filter(|column| column.declared)
+                            .map(|column| Member::scalar(column.name, kind(column.kind))),
+                    )
+                    .collect(),
                 ),
             },
             Payload {
@@ -141,5 +139,13 @@ impl Member {
             enum_values: values.iter().map(std::string::ToString::to_string).collect(),
             members: Vec::new(),
         }
+    }
+}
+
+fn kind(kind: metrics::Kind) -> Kind {
+    match kind {
+        metrics::Kind::Float => Kind::Float,
+        metrics::Kind::Int => Kind::Int,
+        metrics::Kind::Text => Kind::Str,
     }
 }

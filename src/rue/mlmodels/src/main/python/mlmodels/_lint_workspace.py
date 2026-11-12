@@ -2,7 +2,7 @@ import json
 from os import listdir
 from os.path import abspath, basename, dirname, isdir, isfile, join, normpath, splitext
 
-from mlmodels._constants import MODEL_DIR, MODEL_DOCUMENT, PROJECT_MODEL_FILES, PROJECT_NAME, PROJECT_SIGNATURE, RUN_FIRST
+from mlmodels._constants import MODEL_DIR, MODEL_DOCUMENT, NOTEBOOK_VERSION_SUFFIX, PROJECT_MODEL_FILES, PROJECT_NAME, PROJECT_SIGNATURE, RUN_FIRST
 from mlmodels._lint_project import file_sha256
 from mlmodels._metadata import METADATA_FILE, PROJECT_DIR, REQUIREMENT_FILES, read_metadata
 
@@ -24,6 +24,8 @@ def lint_workspace(notebook_dir, source_dir=None):
     findings.extend(
         ("WS001", f"{level} directory [{name}] does not follow the naming style") for level, name in (("module", module), ("model", model), ("notebook", notebook)) if not PROJECT_NAME.match(name)
     )
+    if NOTEBOOK_VERSION_SUFFIX.search(notebook):
+        findings.append(("WS015", f"notebook directory [{notebook}] is all digits or ends in digits, which a signature version would be mistaken for"))
     notebooks = sorted(name for name in listdir(notebook_dir) if name.endswith(".ipynb")) if isdir(notebook_dir) else []
     if notebooks != [WORKSPACE_NOTEBOOK]:
         findings.append(("WS002", f"the directory must hold exactly one notebook, [{WORKSPACE_NOTEBOOK}], found {notebooks}"))

@@ -11,6 +11,7 @@ import pytest
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 INSTALL_PREP_SCRIPT = join(DIR_ROOT, "install_prep.sh")
 INSTALL_PRE_SCRIPT = join(DIR_ROOT, "install_pre.sh")
+CHECK_HEALTHY_FRAGMENT = join(DIR_ROOT, "src/build/resources/checkhealthy.sh")
 DEVICE = "/run/nut/nutdrv_qx-powershield"
 RESTART = "systemctl restart nut-driver@powershield.service nut-server.service"
 
@@ -175,6 +176,71 @@ class InstallPreShellTest(ShellHookTest):
     def test_a_module_with_no_generated_broker_script_is_left_alone(self):
         self.invoke("true")
         self.assertEqual(self.calls(), [])
+
+
+class CheckHealthyShellTest(ShellHookTest):
+    NOW_MS = 100000
+
+    def setUp(self):
+        super().setUp()
+        self.run_dir = join(self.workdir, "run")
+        os.makedirs(self.run_dir)
+        self.uptime = join(self.workdir, "uptime")
+        with open(self.uptime, "w") as handle:
+            handle.write(f"{self.NOW_MS // 1000}.00 0.00\n")
+        with open(CHECK_HEALTHY_FRAGMENT) as handle:
+            fragment = " ".join(line.strip() for line in handle.read().strip().split("\n"))
+        self.script = join(self.workdir, "check.sh")
+        with open(self.script, "w") as handle:
+            handle.write("POSITIONAL_ARGS=()\nif " + fragment.replace("/asystem/etc/checkalive.sh", "true") + "; then exit 0; else exit 1; fi\n")
+
+    def liveness(self, boot=0, read=0, guard=0, problem=False):
+        with open(join(self.run_dir, "liveness.json"), "w") as handle:
+            handle.write(
+                '{{"boot_ms":{},"last_read_boot_ms":{},"guard_boot_ms":{},"ups_problem":{},"effective":{{"poll_s":1}}}}'.format(
+                    self.NOW_MS - boot, self.NOW_MS - read, self.NOW_MS - guard, "true" if problem else "false"
+                )
+            )
+
+    def healthy(self):
+        env = dict(os.environ, RACKMAINS_RUN_DIR=self.run_dir, RACKMAINS_UPTIME_FILE=self.uptime)
+        return subprocess.run(["bash", self.script], capture_output=True, text=True, env=env).returncode == 0
+
+    def test_fresh_stamps_are_healthy(self):
+        self.liveness(boot=500, read=900, guard=500)
+        self.assertTrue(self.healthy())
+
+    def test_each_stale_stamp_is_unhealthy(self):
+        for stale, ages in (("boot", (30000, 0, 0)), ("read", (0, 30000, 0)), ("guard", (0, 0, 30000))):
+            with self.subTest(stale=stale):
+                self.liveness(*ages)
+                self.assertFalse(self.healthy())
+
+    def test_a_stamp_just_inside_the_limit_is_healthy(self):
+        self.liveness(boot=29999, read=29999, guard=29999)
+        self.assertTrue(self.healthy())
+
+    def test_a_ups_problem_is_unhealthy(self):
+        self.liveness(problem=True)
+        self.assertFalse(self.healthy())
+
+    def test_a_missing_or_garbled_liveness_file_is_unhealthy(self):
+        self.assertFalse(self.healthy())
+        with open(join(self.run_dir, "liveness.json"), "w") as handle:
+            handle.write("{")
+        self.assertFalse(self.healthy())
+
+    def test_the_health_check_needs_no_broker_and_ignores_alerts(self):
+        with open(CHECK_HEALTHY_FRAGMENT) as handle:
+            fragment = handle.read()
+        for word in ("mosquitto", "jq", "BROKER"):
+            self.assertNotIn(word, fragment)
+        self.liveness()
+        with open(join(self.run_dir, "liveness.json")) as handle:
+            document = handle.read()
+        with open(join(self.run_dir, "liveness.json"), "w") as handle:
+            handle.write(document.replace('"effective":{', '"on_battery":true,"battery_replace":true,"model_recalibrate":true,"battery_age_due":true,"effective":{'))
+        self.assertTrue(self.healthy())
 
 
 if __name__ == "__main__":

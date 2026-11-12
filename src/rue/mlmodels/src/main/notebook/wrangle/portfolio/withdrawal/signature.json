@@ -1,5 +1,6 @@
 {
   "schema": 1,
+  "signature_version": 1000,
   "name": "wrangle_portfolio_withdrawal",
   "platform": "mlserver",
   "parameters": {"state": []},

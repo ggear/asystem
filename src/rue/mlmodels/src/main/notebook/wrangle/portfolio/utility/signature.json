@@ -1,5 +1,6 @@
 {
   "schema": 1,
+  "signature_version": 1000,
   "name": "wrangle_portfolio_utility",
   "platform": "mlserver",
   "parameters": {"state": []},

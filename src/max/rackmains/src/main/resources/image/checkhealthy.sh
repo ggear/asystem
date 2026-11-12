@@ -43,7 +43,7 @@ fi
 shopt -s expand_aliases
 
 if
-  /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" && PAYLOAD=$(mosquitto_sub -h "$BROKER_HOST" -p "$BROKER_PORT" ${BROKER_TOKEN:+-u rackmains -P $BROKER_TOKEN} -t "rackmains/data" -C 1 -W 2 2>/dev/null) && jq -e '(.mains_status | length) > 0 and (.samples | length) > 0' <<<"$PAYLOAD" >/dev/null && TIMESTAMP=$(jq -r '.timestamp' <<<"$PAYLOAD") && (($(date +%s) - $(date -d "$TIMESTAMP" +%s) < 120))
+  /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && NOW=$(awk '{printf "%d", $1 * 1000}' "${RACKMAINS_UPTIME_FILE:-/proc/uptime}") && LIVENESS=$(cat "${RACKMAINS_RUN_DIR:-/run/rackmains}/liveness.json") && STALE=$(for KEY in boot_ms last_read_boot_ms guard_boot_ms; do STAMP=$(sed -n "s/.*\"${KEY}\":\([0-9]*\).*/\1/p" <<<"${LIVENESS}"); { [ -n "${STAMP}" ] && [ $((NOW - STAMP)) -lt 30000 ]; } || echo "${KEY}"; done) && [ -z "${STALE}" ] && ! grep -q '"ups_problem":true' <<<"${LIVENESS}"
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && exec {HEALTHCHECK_TRACE}>&- && wait "${HEALTHCHECK_TRACER}"

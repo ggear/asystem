@@ -5,5 +5,5 @@
   "model_id": 1000,
   "constants": {"static_out": 7},
   "provenance": {"source": "static", "trained_on": "none", "inputs": [], "notes": "The constant 7"},
-  "files": {"signature.json": "94c2ff04c05daee086ab4b32a69d135006ed75bcff2a2c00b73f5647ee1b22f5", "golden.json": "13555c981c3d176485da8b8350e4a39b2d5775bd831f9c88a753ebca95a4bc13"}
+  "files": {"signature.json": "8ca0821e5254fe10d6f26b2b36919dbb3b1af927a81627475d4985f382ec1a34", "golden.json": "13555c981c3d176485da8b8350e4a39b2d5775bd831f9c88a753ebca95a4bc13"}
 }

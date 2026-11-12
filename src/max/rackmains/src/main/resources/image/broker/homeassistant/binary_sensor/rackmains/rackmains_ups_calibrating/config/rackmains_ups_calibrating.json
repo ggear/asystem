@@ -1,0 +1,24 @@
+{
+  "default_entity_id": "binary_sensor.rackmains_ups_calibrating",
+  "unique_id": "rackmains_ups_calibrating",
+  "name": "Rackmains Ups Calibrating",
+  "device_class": "running",
+  "force_update": false,
+  "state_topic": "rackmains/data",
+  "value_template": "{{ value_json['rackmains_ups_calibrating'] if value_json['rackmains_ups_calibrating'] is defined else (1 if is_state('binary_sensor.rackmains_ups_calibrating', 'on') else 0) }}",
+  "command_topic": "rackmains/command",
+  "availability_topic": "rackmains/status",
+  "payload_on": "1",
+  "payload_off": "0",
+  "qos": 1,
+  "device": {
+    "identifiers": [
+      "powershield-rack-mains"
+    ],
+    "name": "Rack Mains",
+    "model": "Defender RackMount 800 (PSDR800)",
+    "manufacturer": "PowerShield",
+    "sw_version": "ASYSTEM_VERSION",
+    "suggested_area": "Rack"
+  }
+}

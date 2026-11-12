@@ -516,7 +516,7 @@ class PackageModelTest(ModelWorkspaceCase):
         self.assertIn("demo_in_seconds", str(run.inputs.dataset_inputs[0].dataset.schema))
         client = mlflow.MlflowClient()
         self.assertEqual({"figures", "evaluation"} <= {entry.path for entry in client.list_artifacts(run.info.run_id)}, True)
-        self.assertIn("demo_out_seconds", str(client.get_model_version_by_alias("demo_calc_run", "preview").description))
+        self.assertIn("demo_out_seconds", str(client.get_model_version_by_alias("demo_calc_run_1000", "preview").description))
 
     def package(self, golden=None, model=1000):
         from mlmodels.workflow.package import package_model

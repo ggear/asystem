@@ -9,4 +9,5 @@ if [[ "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
   chmod +x "${SERVICE_INSTALL}/sleep.sh"
   ln -sfn "${SERVICE_INSTALL}/sleep.sh" /usr/local/bin/asleep
   install -m 755 "${SERVICE_INSTALL}/wake.sh" /usr/local/bin/awake
+  install -m 755 "${SERVICE_INSTALL}/shed.sh" /usr/local/bin/rackmains-shed
 fi

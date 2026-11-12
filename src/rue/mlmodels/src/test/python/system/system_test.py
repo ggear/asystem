@@ -1,3 +1,4 @@
+import json
 import subprocess
 import sys
 from os.path import abspath, dirname, isfile, join, realpath, relpath
@@ -9,11 +10,12 @@ sys.path.append("../../../../../../all/_/src/build/python")
 
 from asystem.report import run_pytest, stage
 from mlmodels._config import VERSION_PATH
-from mlmodels._constants import PROJECT_ALIAS_PREVIEW, PROJECT_LABEL_PREVIEW, PROJECT_PREVIEW_SUFFIX
+from mlmodels._constants import PROJECT_ALIAS_PREVIEW, PROJECT_LABEL_PREVIEW, PROJECT_PREVIEW_SUFFIX, PROJECT_SIGNATURE
 from mlmodels._errors import GateError
 from mlmodels._metadata import METADATA_FILE, PROJECT_DIR, read_metadata
 from mlmodels._registry import registry_client
 from mlmodels._release import consumers, slot_name, slots, wait_served, workspaces
+from mlmodels._signature import served_name
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 DIR_SOURCE = abspath(join(DIR_ROOT, "../.."))
@@ -73,16 +75,18 @@ def test_the_declared_target_runs_its_project(name, directory, target, env, imag
     if target["kind"] == "served":
         with stage("compile") as entry:
             entry.detail = "interpreted"
-        previews.add(name)
+        with open(join(project_dir, PROJECT_SIGNATURE)) as signature_file:
+            registered = served_name(name, json.load(signature_file))
+        previews.add(registered)
         with stage("registry") as entry:
-            _wait_registry(name, metadata["content_sha256"], env["MLFLOW_TRACKING_URI"])
+            _wait_registry(registered, metadata["content_sha256"], env["MLFLOW_TRACKING_URI"])
             entry.detail = PROJECT_ALIAS_PREVIEW
         server = f"http://{env['MLSERVER_SERVICE_PROD']}:{env['MLSERVER_HTTP_PORT']}"
-        served_name, label = (name, metadata["version"]) if metadata["release"] is not None else (f"{name}{PROJECT_PREVIEW_SUFFIX}", f"{PROJECT_LABEL_PREVIEW}{metadata['content_sha256'][:8]}")
+        serving, label = (registered, metadata["version"]) if metadata["release"] is not None else (f"{registered}{PROJECT_PREVIEW_SUFFIX}", f"{PROJECT_LABEL_PREVIEW}{metadata['content_sha256'][:8]}")
         with stage("serve") as entry:
-            wait_served(server, served_name, label)
-            entry.detail = served_name
-        output = _run(image, "python", ["-m", "mlmodels.runtime", "/project", server, served_name], project_dir)
+            wait_served(server, serving, label)
+            entry.detail = serving
+        output = _run(image, "python", ["-m", "mlmodels.runtime", "/project", server, serving], project_dir)
     else:
         with stage("compile") as entry:
             entry.detail = "interpreted" if target["language"] == "python" else "prebuilt"

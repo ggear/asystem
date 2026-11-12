@@ -19,7 +19,7 @@ fn main() -> ExitCode {
         Ok(()) => ExitCode::SUCCESS,
         Err(err) => {
             eprintln!("rackmains failed [{err}]");
-            ExitCode::FAILURE
+            ExitCode::from(err.code)
         }
     }
 }

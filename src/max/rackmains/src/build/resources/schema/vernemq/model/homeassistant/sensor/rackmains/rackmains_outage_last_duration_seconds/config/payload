@@ -1,0 +1,24 @@
+{
+  "default_entity_id": "sensor.rackmains_outage_last_duration_seconds",
+  "unique_id": "rackmains_outage_last_duration_seconds",
+  "name": "Rackmains Outage Last Duration Seconds",
+  "state_class": "measurement",
+  "unit_of_measurement": "s",
+  "device_class": "duration",
+  "force_update": false,
+  "state_topic": "rackmains/data",
+  "value_template": "{{ (value_json['rackmains_outage_last_duration_seconds'] | int(None)) if value_json['rackmains_outage_last_duration_seconds'] is defined else (states('sensor.rackmains_outage_last_duration_seconds') | int(None)) }}",
+  "command_topic": "rackmains/command",
+  "availability_topic": "rackmains/status",
+  "qos": 1,
+  "device": {
+    "identifiers": [
+      "powershield-rack-mains"
+    ],
+    "name": "Rack Mains",
+    "model": "Defender RackMount 800 (PSDR800)",
+    "manufacturer": "PowerShield",
+    "sw_version": "ASYSTEM_VERSION",
+    "suggested_area": "Rack"
+  }
+}

@@ -13,7 +13,7 @@
     "implementation": "WebAssembly traced and built by define_model, model 1000"
   },
   "files": {
-    "signature.json": "b2caff758ccb863bd514cc28a4acf4810053c8ca35640a8ce97766347a115742",
+    "signature.json": "c414e80537cda74aa0ed52bbf8034d9f2b3c059605913beb883dce64417b0dca",
     "golden.json": "7b74a066044a7647fa8767205266fbde547f3a2e66267f4c8fc0eb9901a3f0f5",
     "evaluation.json": "a857f08526d95b512e7e72f1b684a2aee3e3ad6cc666703a8223d9901e20ace8",
     "model.wasm": "fa18cbf7d18b08da974a72f165d88948df523dbc12cf7d45bd281e0347b0ec25"

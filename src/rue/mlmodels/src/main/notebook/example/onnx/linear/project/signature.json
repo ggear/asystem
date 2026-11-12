@@ -1,5 +1,6 @@
 {
   "schema": 1,
+  "signature_version": 1000,
   "name": "example_onnx_linear",
   "platform": "mlserver",
   "parameters": {"state": []},

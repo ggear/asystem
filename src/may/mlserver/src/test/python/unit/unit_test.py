@@ -13,7 +13,7 @@ sys.path.append("../../../main/python")
 sys.path.append("../../../../../../rue/mlmodels/src/main/python")
 
 from mlmodels.testing import example_project
-from registry.sync import sync
+from registry.sync import MlflowRegistry, sync
 from serving.model.loader import ModelError, load
 from serving.model.vocabulary import (
     PROJECT_ALIAS_PREVIEW,
@@ -35,6 +35,7 @@ class SyncTest(unittest.TestCase):
         self.registry = FakeRegistry()
         self.failed = set()
         self.calls = []
+        self.refuse_unload = False
 
     def test_a_released_model_is_served_by_name_with_its_release_label(self):
         self.registry.add(1, "1.0.0", released=True)
@@ -132,18 +133,41 @@ class SyncTest(unittest.TestCase):
         self.assertFalse(isdir(join(self.models_dir, NAME)))
         self.assertIn(("unload", NAME), self.calls)
 
+    def test_a_refused_unload_keeps_the_files_for_the_next_poll(self):
+        self.registry.add(1, "1.0.0", released=True)
+        self.sync()
+        self.registry.remove_alias(NAME, PROJECT_ALIAS_RELEASE)
+        self.refuse_unload = True
+        self.sync()
+        self.assertTrue(isdir(join(self.models_dir, NAME)))
+        self.refuse_unload = False
+        self.sync()
+        self.assertFalse(isdir(join(self.models_dir, NAME)))
+
     def sync(self):
         sync(self.registry, self.models_dir, self.failed, self.call)
 
     def call(self, action, name):
         self.calls.append((action, name))
-        return not (self.registry.refuse and action == "load")
+        return not ((self.registry.refuse and action == "load") or (self.refuse_unload and action == "unload"))
 
     def held(self, name):
         import json
 
         with open(join(self.models_dir, name, "model-settings.json")) as settings_file:
             return [json.load(settings_file)]
+
+
+class MlflowRegistryTest(unittest.TestCase):
+    def test_every_model_and_version_is_read_beyond_one_page(self):
+        directory = tempfile.mkdtemp()
+        registry = MlflowRegistry(f"sqlite:///{directory}/mlflow.db")
+        for number in range(101):
+            registry.client.create_registered_model(f"demo_{number:03d}")
+            registry.client.create_model_version(f"demo_{number:03d}", "file:///nowhere", tags={PROJECT_TAG_CONTENT_SHA256: str(number)})
+        models = registry.models()
+        self.assertEqual(101, len(models))
+        self.assertEqual({"1": {PROJECT_TAG_CONTENT_SHA256: "100"}}, next(model for model in models if model["name"] == "demo_100")["versions"])
 
 
 class ServingRuntimeTest(unittest.TestCase):

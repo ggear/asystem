@@ -36,10 +36,20 @@ class MlflowRegistry:
         self.client = MlflowClient()
 
     def models(self):
-        return [
-            {"name": model.name, "aliases": dict(model.aliases), "versions": {str(version.version): dict(version.tags) for version in self.client.search_model_versions(f"name = '{model.name}'")}}
-            for model in self.client.search_registered_models()
-        ]
+        versions = {}
+        for version in self._pages(self.client.search_model_versions):
+            versions.setdefault(version.name, {})[str(version.version)] = dict(version.tags)
+        return [{"name": model.name, "aliases": dict(model.aliases), "versions": versions.get(model.name, {})} for model in self._pages(self.client.search_registered_models)]
+
+    @staticmethod
+    def _pages(search):
+        token = None
+        while True:
+            page = search(page_token=token)
+            yield from page
+            token = page.token
+            if not token:
+                return
 
     def download(self, name, version, destination):
         from mlflow.artifacts import download_artifacts
@@ -81,8 +91,9 @@ def sync(registry, models_dir, failed, call=None):
     for served, candidates in wanted.items():
         _serve(registry, models_dir, served, candidates, held.get(served), failed, call)
     for served in held.keys() - wanted.keys():
-        if call is not None:
-            call("unload", served)
+        if call is not None and call("unload", served) is False:
+            _log("WARN", f"unload refused, files kept for the next poll model [{served}]")
+            continue
         shutil.rmtree(join(models_dir, served), ignore_errors=True)
         _log("INFO", f"unloaded model [{served}]")
 

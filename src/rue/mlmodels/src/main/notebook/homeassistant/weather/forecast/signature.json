@@ -1,5 +1,6 @@
 {
   "schema": 1,
+  "signature_version": 1000,
   "name": "homeassistant_weather_forecast",
   "platform": "mlserver",
   "parameters": {

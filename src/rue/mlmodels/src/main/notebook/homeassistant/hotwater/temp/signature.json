@@ -1,5 +1,6 @@
 {
   "schema": 1,
+  "signature_version": 1000,
   "name": "homeassistant_hotwater_temp",
   "platform": "mlserver",
   "parameters": {

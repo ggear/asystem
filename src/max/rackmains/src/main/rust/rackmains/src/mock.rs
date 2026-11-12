@@ -1,7 +1,7 @@
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::thread;
 
 use crate::nut::COMMAND_DUMP;
@@ -20,29 +20,48 @@ pub const DUMP: &str = concat!(
     "DUMPDONE\n",
 );
 
+pub const STATUS_SUFFIX: &str = ".status";
+
 pub fn run(path: &Path) -> Result<(), String> {
     let _ = fs::remove_file(path);
     let listener =
         UnixListener::bind(path).map_err(|err| format!("failed to bind socket [{}] [{err}]", path.display()))?;
-    serve(&listener)
+    serve(&listener, &status_path(path))
 }
 
-pub fn serve(listener: &UnixListener) -> Result<(), String> {
+pub fn status_path(socket: &Path) -> PathBuf {
+    let mut name = socket.as_os_str().to_os_string();
+    name.push(STATUS_SUFFIX);
+    PathBuf::from(name)
+}
+
+pub fn serve(listener: &UnixListener, status: &Path) -> Result<(), String> {
     for stream in listener.incoming() {
         let stream = stream.map_err(|err| format!("failed to accept [{err}]"))?;
-        thread::spawn(move || answer(stream));
+        let status = status.to_path_buf();
+        thread::spawn(move || answer(stream, &status));
     }
     Ok(())
 }
 
-fn answer(stream: UnixStream) {
+pub fn dump(status: &Path) -> String {
+    match fs::read_to_string(status) {
+        Ok(text) if !text.trim().is_empty() => DUMP.replace(
+            "SETINFO ups.status \"OL\"",
+            &format!("SETINFO ups.status \"{}\"", text.trim().replace('"', "")),
+        ),
+        _ => DUMP.to_string(),
+    }
+}
+
+fn answer(stream: UnixStream, status: &Path) {
     let Ok(mut writer) = stream.try_clone() else {
         return;
     };
     for line in BufReader::new(stream).lines() {
         match line {
             Ok(line) if line == COMMAND_DUMP => {
-                if writer.write_all(DUMP.as_bytes()).is_err() {
+                if writer.write_all(dump(status).as_bytes()).is_err() {
                     return;
                 }
             }
@@ -67,7 +86,8 @@ mod tests {
     fn serving(path: &Path) {
         let _ = fs::remove_file(path);
         let listener = UnixListener::bind(path).unwrap();
-        thread::spawn(move || serve(&listener));
+        let status = status_path(path);
+        thread::spawn(move || serve(&listener, &status));
     }
 
     #[test]
@@ -79,8 +99,8 @@ mod tests {
             let reading = nut.read().unwrap();
             assert_eq!(reading.status.as_deref(), Some("OL"));
             assert_eq!(reading.samples.len(), crate::nut::SAMPLES.len());
-            assert!(reading.samples.contains(&("rack_battery_charge_percent", 100.0)));
-            assert!(reading.samples.contains(&("rack_mains_input_voltage_volts", 241.4)));
+            assert!(reading.samples.contains(&("rackmains_battery_charge_pct", 100.0)));
+            assert!(reading.samples.contains(&("rackmains_mains_input_volts", 241.4)));
         }
         let _ = fs::remove_file(path);
     }
@@ -115,6 +135,21 @@ mod tests {
         let mut nut = Nut::new(path.clone(), Duration::from_millis(200));
         assert!(nut.read().is_err());
         drop(held);
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn the_mock_driver_reports_the_status_written_beside_its_socket() {
+        let path = socket("status");
+        serving(&path);
+        let status = status_path(&path);
+        let mut nut = Nut::new(path.clone(), Duration::from_secs(2));
+        assert_eq!(nut.read().unwrap().status.as_deref(), Some("OL"));
+        fs::write(&status, "OB DISCHRG\n").unwrap();
+        assert_eq!(nut.read().unwrap().status.as_deref(), Some("OB DISCHRG"));
+        fs::write(&status, "\n").unwrap();
+        assert_eq!(nut.read().unwrap().status.as_deref(), Some("OL"));
+        let _ = fs::remove_file(status);
         let _ = fs::remove_file(path);
     }
 }

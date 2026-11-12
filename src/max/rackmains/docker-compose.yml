@@ -7,6 +7,11 @@ x-common: &common
     - RACKMAINS_DEVICE
     - RACKMAINS_POLL_PERIOD
     - RACKMAINS_LOG_LEVEL
+    - RACKMAINS_GUARD_LIVE
+    - RACKMAINS_LOCAL_HOST
+    - RACKMAINS_PLUG_HOST
+    - RACKMAINS_OUTAGE_LOG_KEEP
+    - RACKMAINS_BATTERY_INSTALLED
     - SERVICE_VERSION_ABSOLUTE
     - BROKER_HOST
     - BROKER_PORT
@@ -14,6 +19,9 @@ x-common: &common
   volumes:
     - ${SERVICE_DATA_DIR}:/asystem/mnt
     - ${RACKMAINS_NUT_SOURCE}:/run/nut:ro
+    - ${RACKMAINS_SSH_SOURCE}:/asystem/ssh:ro
+  tmpfs:
+    - /run/rackmains
   logging:
     driver: "json-file"
     options:
@@ -26,12 +34,12 @@ services:
     restart: ${SERVICE_RESTART}
     healthcheck:
       test: /asystem/etc/checkhealthy.sh
-      interval: 2m
-      timeout: 30s
+      interval: 10s
+      timeout: 5s
       retries: 3
       start_period: 1m
-      start_interval: 10s
+      start_interval: 5s
     deploy:
       resources:
         limits:
-          memory: 32M
+          memory: 64M

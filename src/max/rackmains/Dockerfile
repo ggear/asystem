@@ -13,6 +13,7 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install jq=1.6-2.1+deb12u3 && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install procps=2:4.0.2-3 && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install mosquitto-clients=2.0.11-1.2+deb12u2 && \
+    DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install openssh-client=1:9.2p1-2+deb12u10 && \
     DEBIAN_FRONTEND=noninteractive apt-get clean && rm -rf /var/lib/apt/lists/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
 
@@ -38,6 +39,6 @@ COPY src/main/resources/image /asystem/etc
 COPY src/build/resources/model/battery /asystem/etc/model
 WORKDIR /asystem/etc
 ENV RACKMAINS_DEVICE=/run/nut/nutdrv_qx-powershield
-ENV RACKMAINS_POLL_PERIOD=10s
+ENV RACKMAINS_POLL_PERIOD=1s
 ENV RACKMAINS_LOG_LEVEL=info
 ENTRYPOINT ["/asystem/etc/entrypoint.sh"]

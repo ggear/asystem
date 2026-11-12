@@ -2,7 +2,7 @@ import json
 import os
 from os.path import isfile, join
 
-from mlmodels._constants import PROJECT_FLAVOURS, PROJECT_SIGNATURE, RUN_FIRST
+from mlmodels._constants import PROJECT_FLAVOURS, PROJECT_SIGNATURE, RUN_FIRST, SIGNATURE_VERSION_FIRST
 from mlmodels._document import write_json
 from mlmodels._lint_notebook import stage_heading
 from mlmodels._signature import build_signature, check_name, registered_name, signature_input, signature_output
@@ -31,6 +31,7 @@ def scaffold_notebook(root, module, model, notebook, flavour, local=False):
         name,
         [signature_input(f"{model}_in", "none", "An input.")],
         [signature_output(f"{model}_out", "none", "An output.", datatype="FP64")],
+        signature_version=SIGNATURE_VERSION_FIRST,
     )
     write_json(created[1], signature)
     return created

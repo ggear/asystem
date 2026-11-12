@@ -1,8 +1,12 @@
-from mlmodels._constants import PROJECT_NAME, PROJECT_SCHEMA, PROJECT_SIGNATURE_ERROR
+from mlmodels._constants import PROJECT_NAME, PROJECT_SCHEMA, PROJECT_SIGNATURE_ERROR, SIGNATURE_VERSION_FIRST, SIGNATURE_VERSION_KEY
 
 
 def registered_name(module, model, notebook):
     return "_".join(check_name(part) for part in (module, model, notebook))
+
+
+def served_name(name, signature):
+    return f"{name}_{signature.get(SIGNATURE_VERSION_KEY, SIGNATURE_VERSION_FIRST)}"
 
 
 def check_name(name):
@@ -19,9 +23,11 @@ def signature_output(name, unit, description, datatype="INT64", required=True, s
     return _signature_tensor(name, unit, description, datatype, required, shape)
 
 
-def build_signature(name, inputs, outputs, state=()):
+def build_signature(name, inputs, outputs, state=(), signature_version=None):
+    version = {} if signature_version is None else {SIGNATURE_VERSION_KEY: signature_version}
     return {
         "schema": PROJECT_SCHEMA,
+        **version,
         "name": name,
         "platform": "mlserver",
         "parameters": {"state": [{"slot": slot, **entry} for slot, entry in enumerate(state)]},

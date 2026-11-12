@@ -919,7 +919,7 @@ def _build(context, filter_module=None, filter_host=None, is_release=False):
                 f"CARGO_TARGET_DIR={module_rust_target} cargo clippy --workspace --all-targets -- -D warnings -W clippy::pedantic "
                 "-A clippy::missing_errors_doc -A clippy::must_use_candidate "
                 "-A clippy::cast_possible_truncation -A clippy::cast_sign_loss -A clippy::cast_possible_wrap "
-                "-A clippy::float_cmp -A clippy::too_many_lines -A clippy::unused_self",
+                "-A clippy::float_cmp -A clippy::too_many_lines -A clippy::unused_self -A clippy::struct_excessive_bools",
                 module_rust_main_path,
             )
             _run_local(context, f"CARGO_TARGET_DIR={module_rust_target} cargo build", module_rust_main_path)

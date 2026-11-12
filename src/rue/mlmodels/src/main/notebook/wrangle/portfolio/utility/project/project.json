@@ -13,7 +13,7 @@
     "implementation": "mlflow.pyfunc model.py, model 1000"
   },
   "files": {
-    "signature.json": "9c36ce1293154d5618c187d70c9f48d958aac3f528c622f955dd2c0bca52c420",
+    "signature.json": "f9afd93afb239d467f7e3e7d3f3bd3884664da02272839a68d83720f66ec9aa0",
     "golden.json": "2d628f7a5f742711613a62272acd2e34ba3d99bfc7bf637088ef058eaab575c2",
     "evaluation.json": "e0a34ebdb5f816982f2eccbe8757ca7e393ac65e96ca829366499c223b1e922a",
     "model.py": "42fc356417682096647ba1583585342b5ae119e7176775831d13e051d02a4000"

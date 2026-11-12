@@ -1,8 +1,8 @@
 {
   "schema": 2,
-  "version": "10.200.2012-SNAPSHOT",
-  "content_sha256": "3dcbabc15c7fb7720a7e27dee65e0a1ff138fc13436c48d4fc56317fc8e7592c",
-  "inputs_sha256": "9620cac1c534cbc9cecb72b583ee264f27a6ee13c383e7f6c084ee01c15a1020",
+  "version": "10.200.2024-SNAPSHOT",
+  "content_sha256": "e249b11e0f474cd9683852becf99f61dbf12e2bf417a8a4cc31eeeb0d1a1dcb6",
+  "inputs_sha256": "13bff695b616e15b30e632c43c299aab42f5fcfe5bb7ef38f092ed82877344ee",
   "target": {"kind": "embedded", "language": "rust"},
   "release": null
 }

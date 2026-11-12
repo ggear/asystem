@@ -1,0 +1,22 @@
+{
+  "default_entity_id": "sensor.rackmains_read_last_epoch_seconds",
+  "unique_id": "rackmains_read_last_epoch_seconds",
+  "name": "Rackmains Read Last Epoch Seconds",
+  "device_class": "timestamp",
+  "force_update": false,
+  "state_topic": "rackmains/data",
+  "value_template": "{{ (value_json['rackmains_read_last_epoch_seconds'] | float(None) | timestamp_custom('%Y-%m-%dT%H:%M:%S+00:00', false)) if (value_json['rackmains_read_last_epoch_seconds'] is defined and value_json['rackmains_read_last_epoch_seconds'] is number) else states('sensor.rackmains_read_last_epoch_seconds') }}",
+  "command_topic": "rackmains/command",
+  "availability_topic": "rackmains/status",
+  "qos": 1,
+  "device": {
+    "identifiers": [
+      "powershield-rack-mains"
+    ],
+    "name": "Rack Mains",
+    "model": "Defender RackMount 800 (PSDR800)",
+    "manufacturer": "PowerShield",
+    "sw_version": "ASYSTEM_VERSION",
+    "suggested_area": "Rack"
+  }
+}

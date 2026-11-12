@@ -1,0 +1,21 @@
+{
+  "default_entity_id": "sensor.rackmains_guard_failed_hosts",
+  "unique_id": "rackmains_guard_failed_hosts",
+  "name": "Rackmains Guard Failed Hosts",
+  "force_update": false,
+  "state_topic": "rackmains/data",
+  "value_template": "{{ value_json['rackmains_guard_failed_hosts'] if value_json['rackmains_guard_failed_hosts'] is defined else states('sensor.rackmains_guard_failed_hosts') }}",
+  "command_topic": "rackmains/command",
+  "availability_topic": "rackmains/status",
+  "qos": 1,
+  "device": {
+    "identifiers": [
+      "powershield-rack-mains"
+    ],
+    "name": "Rack Mains",
+    "model": "Defender RackMount 800 (PSDR800)",
+    "manufacturer": "PowerShield",
+    "sw_version": "ASYSTEM_VERSION",
+    "suggested_area": "Rack"
+  }
+}

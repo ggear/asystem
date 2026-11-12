@@ -1,0 +1,24 @@
+{
+  "default_entity_id": "binary_sensor.rackmains_battery_age_due",
+  "unique_id": "rackmains_battery_age_due",
+  "name": "Rackmains Battery Age Due",
+  "device_class": "problem",
+  "force_update": false,
+  "state_topic": "rackmains/data",
+  "value_template": "{{ value_json['rackmains_battery_age_due'] if value_json['rackmains_battery_age_due'] is defined else (1 if is_state('binary_sensor.rackmains_battery_age_due', 'on') else 0) }}",
+  "command_topic": "rackmains/command",
+  "availability_topic": "rackmains/status",
+  "payload_on": "1",
+  "payload_off": "0",
+  "qos": 1,
+  "device": {
+    "identifiers": [
+      "powershield-rack-mains"
+    ],
+    "name": "Rack Mains",
+    "model": "Defender RackMount 800 (PSDR800)",
+    "manufacturer": "PowerShield",
+    "sw_version": "ASYSTEM_VERSION",
+    "suggested_area": "Rack"
+  }
+}

@@ -6,7 +6,7 @@ import shutil
 from glob import glob
 from os.path import dirname, isfile, join, normpath, relpath
 
-from mlmodels._constants import PROJECT_MANIFEST, PROJECT_SIGNATURE
+from mlmodels._constants import PROJECT_MANIFEST, PROJECT_SIGNATURE, SIGNATURE_VERSION_FIRST, SIGNATURE_VERSION_KEY
 from mlmodels._document import write_json
 from mlmodels._errors import GateError
 from mlmodels._lint_project import file_sha256
@@ -44,7 +44,7 @@ HOST_FILES = {"python": "src/main/python/py_deps.txt", "rust": "src/main/rust/{h
 TARGET_MATRIX = {"python": ("static", "wasm", "onnx", "pyfunc"), "go": ("static", "wasm", "onnx"), "rust": ("static", "wasm", "onnx")}
 
 
-METADATA_ORDER = ("schema", "version", "content_sha256", "inputs_sha256", "target", "release")
+METADATA_ORDER = ("schema", "version", "content_sha256", "inputs_sha256", "target", "release", "baseline")
 
 
 METADATA_FIELDS = {
@@ -121,8 +121,10 @@ def record_project(workspace_dir, project_dir, target, pins_path, version_path=N
         return None
     previous = read_metadata(workspace_dir) if isfile(join(workspace_dir, METADATA_FILE)) else {}
     released_before = previous.get("release")
+    baseline = previous.get("baseline") or (None if released_before is None else released_before["signature"])
     with open(join(project_dir, PROJECT_SIGNATURE)) as signature_file:
-        findings = signature_findings(None if released_before is None else released_before["signature"], json.load(signature_file))
+        signature = json.load(signature_file)
+    findings = [] if target.get("kind") == "embedded" else signature_findings(baseline, signature)
     if findings:
         raise GateError("Package", "signature", "; ".join(findings))
     with open(join(project_dir, PROJECT_MANIFEST)) as manifest_file:
@@ -149,6 +151,8 @@ def record_project(workspace_dir, project_dir, target, pins_path, version_path=N
         "target": target,
         "release": released_before if same else None,
     }
+    if baseline is not None and target.get("kind") == "served":
+        metadata["baseline"] = baseline
     write_metadata(workspace_dir, metadata)
     derived = derived_requirements(runtime, manifest["flavour"], target)
     for language, file_name in REQUIREMENT_FILES.items():
@@ -172,6 +176,12 @@ def read_runtime(workspace_dir):
 def signature_findings(released, new):
     if released is None:
         return []
+    released_version = released.get(SIGNATURE_VERSION_KEY, SIGNATURE_VERSION_FIRST)
+    new_version = new.get(SIGNATURE_VERSION_KEY, SIGNATURE_VERSION_FIRST)
+    if new_version < released_version:
+        return [f"signature_version went down from [{released_version}] to [{new_version}]"]
+    if new_version > released_version:
+        return []
     findings = []
     old_entries = {entry["name"]: entry for section in ("inputs", "outputs") for entry in released[section]}
     new_inputs = {entry["name"]: entry for entry in new["inputs"]}
@@ -183,6 +193,8 @@ def signature_findings(released, new):
             findings.extend(f"input [{name}] is new and required" for name, entry in entries.items() if name not in old_entries and entry["parameters"]["required"])
     if released["parameters"].get("state") != new["parameters"].get("state"):
         findings.append("state slots changed")
+    if findings:
+        findings.append(f"raise signature_version above [{released_version}] to make a breaking change")
     return findings
 
 
@@ -206,6 +218,7 @@ def lint_metadata(workspace_dir, flavour, pins_path=None):
     if findings:
         return findings
     findings.extend(("MD004", message) for message in _target_findings(flavour, metadata["target"]))
+    findings.extend(("MD006", message) for message in _signature_version_findings(workspace_dir, metadata))
     release = metadata["release"]
     if release is None:
         if metadata["version"] is not None and not SNAPSHOT_VERSION.match(metadata["version"]):
@@ -239,6 +252,21 @@ def lint_metadata(workspace_dir, flavour, pins_path=None):
                 found = [line for line in requirements_file.read().splitlines() if line]
         if found != derived.get(language):
             findings.append(("MD005", f"requirements file [{file_name}] differs from the names derived from the project, expected {derived.get(language)} found {found}"))
+    return findings
+
+
+def _signature_version_findings(workspace_dir, metadata):
+    served = metadata["target"].get("kind") == "served"
+    findings = []
+    if "baseline" in metadata and (not isinstance(metadata["baseline"], dict) or not served):
+        findings.append("baseline needs a served target and an object")
+    signature_path = join(workspace_dir, PROJECT_SIGNATURE)
+    if isfile(signature_path):
+        with open(signature_path) as signature_file:
+            version = json.load(signature_file).get(SIGNATURE_VERSION_KEY)
+        valid = isinstance(version, int) and not isinstance(version, bool) and version >= SIGNATURE_VERSION_FIRST
+        if not valid:
+            findings.append(f"a signature_version of [{SIGNATURE_VERSION_FIRST}] or more is needed, found [{version}]")
     return findings
 
 

@@ -18,33 +18,69 @@ pub struct Sample {
 pub const SAMPLES: [Sample; 7] = [
     Sample {
         variable: "input.voltage",
-        key: "rack_mains_input_voltage_volts",
+        key: "rackmains_mains_input_volts",
     },
     Sample {
         variable: "input.voltage.fault",
-        key: "rack_mains_input_voltage_fault_volts",
+        key: "rackmains_mains_input_fault_volts",
     },
     Sample {
         variable: "output.voltage",
-        key: "rack_mains_output_voltage_volts",
+        key: "rackmains_output_volts",
     },
     Sample {
         variable: "output.frequency",
-        key: "rack_mains_output_frequency_hertz",
+        key: "rackmains_output_hertz",
     },
     Sample {
         variable: "ups.load",
-        key: "rack_mains_utilisation_percent",
+        key: "rackmains_output_load_pct",
     },
     Sample {
         variable: "battery.charge",
-        key: "rack_battery_charge_percent",
+        key: "rackmains_battery_charge_pct",
     },
     Sample {
         variable: "battery.voltage",
-        key: "rack_battery_voltage_volts",
+        key: "rackmains_battery_volts",
     },
 ];
+
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+pub struct Flags {
+    pub raw_on_battery: bool,
+    pub on_battery: bool,
+    pub low: bool,
+    pub replace: bool,
+    pub charging: bool,
+    pub problem: bool,
+    pub calibrating: bool,
+    pub boost: bool,
+    pub trim: bool,
+}
+
+impl Flags {
+    pub fn parse(status: &str) -> (Self, Vec<String>) {
+        let mut flags = Flags::default();
+        let mut unknown = Vec::new();
+        for token in status.split_whitespace() {
+            match token {
+                "OL" | "DISCHRG" | "HB" => {}
+                "OB" => flags.raw_on_battery = true,
+                "LB" => flags.low = true,
+                "RB" => flags.replace = true,
+                "OFF" | "OVER" | "BYPASS" | "FSD" | "ALARM" => flags.problem = true,
+                "CAL" => flags.calibrating = true,
+                "CHRG" => flags.charging = true,
+                "BOOST" => flags.boost = true,
+                "TRIM" => flags.trim = true,
+                other => unknown.push(other.to_string()),
+            }
+        }
+        flags.on_battery = flags.raw_on_battery && !flags.calibrating;
+        (flags, unknown)
+    }
+}
 
 #[derive(Debug)]
 pub enum Error {
@@ -66,6 +102,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug, Default, PartialEq)]
 pub struct Reading {
     pub status: Option<String>,
+    pub pollfreq: Option<String>,
     pub samples: Vec<(&'static str, f64)>,
 }
 
@@ -90,6 +127,9 @@ impl Reading {
                 .map(|(_, value)| value.trim())
         };
         Reading {
+            pollfreq: lookup("driver.parameter.pollfreq")
+                .filter(|value| !value.is_empty())
+                .map(str::to_string),
             status: lookup(VARIABLE_STATUS)
                 .filter(|value| !value.is_empty())
                 .map(str::to_string),
@@ -211,9 +251,9 @@ mod tests {
                     DUMPDONE\n";
         let reading = Reading::from_dump(dump).unwrap();
         assert_eq!(reading.status.as_deref(), Some("OL"));
-        assert_eq!(sample(&reading, "rack_battery_charge_percent"), Some(100.0));
-        assert_eq!(sample(&reading, "rack_battery_voltage_volts"), Some(13.3));
-        assert_eq!(sample(&reading, "rack_mains_input_voltage_volts"), Some(241.4));
+        assert_eq!(sample(&reading, "rackmains_battery_charge_pct"), Some(100.0));
+        assert_eq!(sample(&reading, "rackmains_battery_volts"), Some(13.3));
+        assert_eq!(sample(&reading, "rackmains_mains_input_volts"), Some(241.4));
         assert_eq!(reading.samples.len(), 3);
     }
 
@@ -236,13 +276,13 @@ mod tests {
         let reading = Reading::from_variables(REPORTED);
         assert_eq!(reading.status.as_deref(), Some("OL"));
         assert_eq!(reading.samples.len(), SAMPLES.len());
-        assert_eq!(sample(&reading, "rack_battery_charge_percent"), Some(100.0));
-        assert_eq!(sample(&reading, "rack_battery_voltage_volts"), Some(13.4));
-        assert_eq!(sample(&reading, "rack_mains_input_voltage_volts"), Some(241.4));
-        assert_eq!(sample(&reading, "rack_mains_output_voltage_volts"), Some(241.4));
-        assert_eq!(sample(&reading, "rack_mains_output_frequency_hertz"), Some(50.1));
-        assert_eq!(sample(&reading, "rack_mains_input_voltage_fault_volts"), Some(241.4));
-        assert_eq!(sample(&reading, "rack_mains_utilisation_percent"), Some(13.0));
+        assert_eq!(sample(&reading, "rackmains_battery_charge_pct"), Some(100.0));
+        assert_eq!(sample(&reading, "rackmains_battery_volts"), Some(13.4));
+        assert_eq!(sample(&reading, "rackmains_mains_input_volts"), Some(241.4));
+        assert_eq!(sample(&reading, "rackmains_output_volts"), Some(241.4));
+        assert_eq!(sample(&reading, "rackmains_output_hertz"), Some(50.1));
+        assert_eq!(sample(&reading, "rackmains_mains_input_fault_volts"), Some(241.4));
+        assert_eq!(sample(&reading, "rackmains_output_load_pct"), Some(13.0));
     }
 
     #[test]
@@ -255,7 +295,7 @@ mod tests {
             ("ups.status", "  "),
         ]);
         assert_eq!(reading.status, None);
-        assert_eq!(reading.samples, vec![("rack_mains_input_voltage_volts", 241.4)]);
+        assert_eq!(reading.samples, vec![("rackmains_mains_input_volts", 241.4)]);
     }
 
     #[test]
@@ -263,5 +303,71 @@ mod tests {
         let reading = Reading::from_variables([("ups.status", "OB LB")]);
         assert_eq!(reading.status.as_deref(), Some("OB LB"));
         assert!(reading.samples.is_empty());
+    }
+
+    #[test]
+    fn status_resolves_to_flags() {
+        let flags = |status| Flags::parse(status).0;
+        for (status, want) in [
+            ("OL", Flags::default()),
+            (
+                "OB DISCHRG",
+                Flags {
+                    raw_on_battery: true,
+                    on_battery: true,
+                    ..Flags::default()
+                },
+            ),
+            (
+                "OB LB",
+                Flags {
+                    raw_on_battery: true,
+                    on_battery: true,
+                    low: true,
+                    ..Flags::default()
+                },
+            ),
+            (
+                "OL BOOST",
+                Flags {
+                    boost: true,
+                    ..Flags::default()
+                },
+            ),
+            (
+                "OB CAL",
+                Flags {
+                    raw_on_battery: true,
+                    calibrating: true,
+                    ..Flags::default()
+                },
+            ),
+            (
+                "OFF",
+                Flags {
+                    problem: true,
+                    ..Flags::default()
+                },
+            ),
+            (
+                "OL CHRG RB TRIM",
+                Flags {
+                    charging: true,
+                    replace: true,
+                    trim: true,
+                    ..Flags::default()
+                },
+            ),
+            ("", Flags::default()),
+        ] {
+            assert_eq!(flags(status), want, "status [{status}]");
+        }
+    }
+
+    #[test]
+    fn an_unknown_status_token_is_returned_and_sets_nothing() {
+        let (flags, unknown) = Flags::parse("OL WOBBLE");
+        assert_eq!(flags, Flags::default());
+        assert_eq!(unknown, vec!["WOBBLE".to_string()]);
     }
 }

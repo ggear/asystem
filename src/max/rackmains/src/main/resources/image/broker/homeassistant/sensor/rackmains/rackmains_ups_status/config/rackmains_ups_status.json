@@ -1,0 +1,21 @@
+{
+  "default_entity_id": "sensor.rackmains_ups_status",
+  "unique_id": "rackmains_ups_status",
+  "name": "Rackmains Ups Status",
+  "force_update": false,
+  "state_topic": "rackmains/data",
+  "value_template": "{{ value_json['rackmains_ups_status'] if value_json['rackmains_ups_status'] is defined else states('sensor.rackmains_ups_status') }}",
+  "command_topic": "rackmains/command",
+  "availability_topic": "rackmains/status",
+  "qos": 1,
+  "device": {
+    "identifiers": [
+      "powershield-rack-mains"
+    ],
+    "name": "Rack Mains",
+    "model": "Defender RackMount 800 (PSDR800)",
+    "manufacturer": "PowerShield",
+    "sw_version": "ASYSTEM_VERSION",
+    "suggested_area": "Rack"
+  }
+}

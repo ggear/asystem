@@ -1,5 +1,6 @@
 {
   "schema": 1,
+  "signature_version": 1000,
   "name": "homeassistant_airquality_pm25",
   "platform": "mlserver",
   "parameters": {

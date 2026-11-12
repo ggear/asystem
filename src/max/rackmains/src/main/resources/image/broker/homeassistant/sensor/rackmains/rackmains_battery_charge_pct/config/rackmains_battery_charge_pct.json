@@ -1,0 +1,24 @@
+{
+  "default_entity_id": "sensor.rackmains_battery_charge_pct",
+  "unique_id": "rackmains_battery_charge_pct",
+  "name": "Rackmains Battery Charge Pct",
+  "state_class": "measurement",
+  "unit_of_measurement": "%",
+  "device_class": "battery",
+  "force_update": false,
+  "state_topic": "rackmains/data",
+  "value_template": "{{ (value_json['rackmains_battery_charge_pct'] | int(None)) if value_json['rackmains_battery_charge_pct'] is defined else (states('sensor.rackmains_battery_charge_pct') | int(None)) }}",
+  "command_topic": "rackmains/command",
+  "availability_topic": "rackmains/status",
+  "qos": 1,
+  "device": {
+    "identifiers": [
+      "powershield-rack-mains"
+    ],
+    "name": "Rack Mains",
+    "model": "Defender RackMount 800 (PSDR800)",
+    "manufacturer": "PowerShield",
+    "sw_version": "ASYSTEM_VERSION",
+    "suggested_area": "Rack"
+  }
+}
