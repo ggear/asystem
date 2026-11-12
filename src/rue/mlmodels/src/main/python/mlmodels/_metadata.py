@@ -176,8 +176,11 @@ def read_runtime(workspace_dir):
 def signature_findings(released, new):
     if released is None:
         return []
-    released_version = released.get(SIGNATURE_VERSION_KEY, SIGNATURE_VERSION_FIRST)
-    new_version = new.get(SIGNATURE_VERSION_KEY, SIGNATURE_VERSION_FIRST)
+    missing = [label for label, signature in (("released", released), ("new", new)) if SIGNATURE_VERSION_KEY not in signature]
+    if missing:
+        return [f"{SIGNATURE_VERSION_KEY} is missing from the {' and '.join(missing)} signature"]
+    released_version = released[SIGNATURE_VERSION_KEY]
+    new_version = new[SIGNATURE_VERSION_KEY]
     if new_version < released_version:
         return [f"signature_version went down from [{released_version}] to [{new_version}]"]
     if new_version > released_version:

@@ -28,7 +28,7 @@ run_backup() {
     log_info "Backup skipped, command is [${COMMAND}] not [install]"
     return 0
   fi
-  backup_source="$(readlink -f "${SERVICE_PARENT}/latest")"
+  backup_source="$(readlink -f "${SERVICE_PARENT}/latest" 2>/dev/null || true)"
   if [[ ! -d "${backup_source}" ]]; then
     log_warn "Backup skipped, no current home [${SERVICE_PARENT}/latest]"
     return 0

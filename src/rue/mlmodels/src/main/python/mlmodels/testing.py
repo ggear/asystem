@@ -14,7 +14,7 @@ def example_project(workspace):
     return project_dir
 
 
-def build_project(flavour, golden_out=None, tolerance=None, signature_version=None):
+def build_project(flavour, golden_out=None, tolerance=None, signature_version=1000):
     from mlmodels._project import evaluation_build, package_project
     from mlmodels._signature import build_signature, signature_input, signature_output
 

@@ -1,4 +1,4 @@
-from mlmodels._constants import PROJECT_NAME, PROJECT_SCHEMA, PROJECT_SIGNATURE_ERROR, SIGNATURE_VERSION_FIRST, SIGNATURE_VERSION_KEY
+from mlmodels._constants import PROJECT_NAME, PROJECT_SCHEMA, PROJECT_SIGNATURE_ERROR, SIGNATURE_VERSION_KEY
 
 
 def registered_name(module, model, notebook):
@@ -6,7 +6,9 @@ def registered_name(module, model, notebook):
 
 
 def served_name(name, signature):
-    return f"{name}_{signature.get(SIGNATURE_VERSION_KEY, SIGNATURE_VERSION_FIRST)}"
+    if SIGNATURE_VERSION_KEY not in signature:
+        raise ValueError(f"signature has no [{SIGNATURE_VERSION_KEY}] so a served name cannot be formed")
+    return f"{name}_{signature[SIGNATURE_VERSION_KEY]}"
 
 
 def check_name(name):

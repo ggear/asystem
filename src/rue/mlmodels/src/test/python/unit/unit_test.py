@@ -297,7 +297,7 @@ class ModelWorkspaceCase(unittest.TestCase):
             inputs.append(signature_input("demo_state_in", "state", "Carried state.", required=False, shape=[-1]))
             outputs.append(signature_output("demo_state_out", "state", "Next state.", datatype="FP64", required=False, shape=[-1]))
             state = [{"name": "total_seconds", "unit": "seconds", "description": "The running total."}]
-        self.signature = build_signature("demo_calc_run", inputs, outputs, state=state)
+        self.signature = build_signature("demo_calc_run", inputs, outputs, state=state, signature_version=1000)
         self.path = join(tempfile.mkdtemp(), "run")
         os.makedirs(self.path)
         with open(join(self.path, "notebook.ipynb"), "w") as notebook_file:

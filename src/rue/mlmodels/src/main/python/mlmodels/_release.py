@@ -190,12 +190,12 @@ def clear_previews(source_dir, tracking_uri):
 
 
 def live_signatures(name, released_names):
-    family = re.compile(rf"^{re.escape(name)}(?:_(\d+))?$")
-    return sorted(((int(match.group(1) or 0), model) for model in released_names if (match := family.match(model))), reverse=True)
+    family = re.compile(rf"^{re.escape(name)}_(\d+)$")
+    return sorted(((int(match.group(1)), model) for model in released_names if (match := family.match(model))), reverse=True)
 
 
 def served_pins(source_dir, name):
-    family = re.compile(rf"^{re.escape(name)}(?:_\d+)?$")
+    family = re.compile(rf"^{re.escape(name)}_\d+$")
     found = {}
     for root, directories, files in os.walk(source_dir):
         directories[:] = [entry for entry in directories if entry not in PIN_EXCLUDED]

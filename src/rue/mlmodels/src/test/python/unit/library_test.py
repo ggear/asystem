@@ -1431,10 +1431,37 @@ class ReleaseTest(unittest.TestCase):
         self.release()
         self.assertNotIn("baseline", read_metadata(self.workspace))
 
-    def test_live_signature_versions_are_ranked_newest_first_with_the_unsuffixed_model_last(self):
+    def test_a_signature_with_no_version_has_no_served_name_and_cannot_be_compared(self):
+        from mlmodels._metadata import signature_findings
+        from mlmodels._signature import served_name
+
+        self.assertEqual("demo_1001", served_name("demo", {"signature_version": 1001}))
+        with self.assertRaises(ValueError):
+            served_name("demo", {"inputs": []})
+        versioned = {"signature_version": 1000, "inputs": [], "outputs": [], "parameters": {}}
+        unversioned = {key: value for key, value in versioned.items() if key != "signature_version"}
+        self.assertEqual([], signature_findings(versioned, versioned))
+        self.assertTrue(signature_findings(unversioned, versioned))
+        self.assertTrue(signature_findings(versioned, unversioned))
+
+    def test_pins_are_found_only_for_the_exact_family_in_its_numbered_and_preview_forms(self):
+        from mlmodels._release import served_pins
+
+        client_dir = join(self.source, "meg", "client")
+        os.makedirs(client_dir)
+        with open(join(client_dir, "config.yaml"), "w") as config_file:
+            config_file.write(
+                "a: https://mlserver/v2/models/demo_replay_double_1000/infer\n"
+                "b: https://mlserver/v2/models/demo_replay_double_1001_preview/infer\n"
+                "c: https://mlserver/v2/models/demo_replay_double/infer\n"
+                "d: https://mlserver/v2/models/demo_replay_doubled_1000/infer\n"
+            )
+        self.assertEqual({"demo_replay_double_1000", "demo_replay_double_1001"}, set(served_pins(self.source, "demo_replay_double")))
+
+    def test_live_signature_versions_are_ranked_newest_first_and_only_by_their_suffix(self):
         from mlmodels._release import live_signatures
 
-        self.assertEqual([(1001, "a_1001"), (1000, "a_1000"), (0, "a")], live_signatures("a", ["a", "a_1000", "a_1001", "a_b_1000", "ab", "a_1000_preview", "b_1002"]))
+        self.assertEqual([(1001, "a_1001"), (1000, "a_1000")], live_signatures("a", ["a", "a_1000", "a_1001", "a_b_1000", "ab", "a_1000_preview", "b_1002"]))
 
     def live_models(self, client, *names, preview=()):
         for name in (*names, *preview):
@@ -1478,7 +1505,8 @@ class ReleaseTest(unittest.TestCase):
 
     def test_publishing_a_new_signature_version_retires_all_but_the_two_newest(self):
         self.assertEqual(
-            {"demo_replay_double_1000", "demo_replay_double_1001", "demo_replay_doubled_1000"}, self.publish_at(1001, ["demo_replay_double", "demo_replay_double_1000", "demo_replay_doubled_1000"])
+            {"demo_replay_double_1001", "demo_replay_double_1002", "demo_replay_doubled_1000"},
+            self.publish_at(1002, ["demo_replay_double_1000", "demo_replay_double_1001", "demo_replay_doubled_1000"]),
         )
 
     def test_waiting_for_the_server_reports_each_state_seen_until_ready(self):
@@ -1530,15 +1558,15 @@ class ReleaseTest(unittest.TestCase):
         client_dir = join(self.source, "meg", "client")
         os.makedirs(client_dir)
         with open(join(client_dir, "config.yaml"), "w") as config_file:
-            config_file.write("resource: https://mlserver/v2/models/demo_replay_double/infer\n")
-        self.assertEqual({"demo_replay_double", "demo_replay_double_1000", "demo_replay_double_1001"}, self.publish_at(1001, ["demo_replay_double", "demo_replay_double_1000"]))
+            config_file.write("resource: https://mlserver/v2/models/demo_replay_double_1000/infer\n")
+        self.assertEqual({"demo_replay_double_1000", "demo_replay_double_1001", "demo_replay_double_1002"}, self.publish_at(1002, ["demo_replay_double_1000", "demo_replay_double_1001"]))
 
     def test_nothing_is_retired_when_the_published_version_is_not_confirmed_served(self):
         from unittest import mock
 
         with mock.patch("mlmodels._release.wait_served", return_value="unreachable"):
-            live = self.publish_at(1001, ["demo_replay_double", "demo_replay_double_1000"])
-        self.assertEqual({"demo_replay_double", "demo_replay_double_1000", "demo_replay_double_1001"}, live)
+            live = self.publish_at(1002, ["demo_replay_double_1000", "demo_replay_double_1001"])
+        self.assertEqual({"demo_replay_double_1000", "demo_replay_double_1001", "demo_replay_double_1002"}, live)
 
     def test_status_counts_what_a_registry_shows_beyond_the_two_live_versions_and_git(self):
         from mlflow import MlflowClient
