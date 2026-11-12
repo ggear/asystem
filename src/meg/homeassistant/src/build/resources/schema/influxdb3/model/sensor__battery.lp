@@ -34,7 +34,8 @@
 #     template_weatherstation_console_battery_percent_int]
 #   tag model_version [Home Assistant model_version:
 #     10.200.2005,
-#     10.200.2012]
+#     10.200.2012,
+#     10.200.2025]
 #   tag unit_of_measurement [Home Assistant unit_of_measurement:
 #     %]
 #   field value - <on-change> [Home Assistant value]

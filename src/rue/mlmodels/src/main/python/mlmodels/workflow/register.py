@@ -3,6 +3,7 @@ import logging
 from os.path import join
 
 from mlmodels._constants import PROJECT_MANIFEST
+from mlmodels._detail import record_detail
 from mlmodels._errors import GateError
 from mlmodels._metadata import read_metadata
 from mlmodels._registry import register_preview
@@ -20,6 +21,7 @@ def register_model(ws, model):
     metadata = read_metadata(ws.path)
     registered = served_name(ws.model_name, ws.signature)
     version = register_preview(ws.project_dir, registered, ws.env["MLFLOW_TRACKING_URI"], metadata["target"], metadata["version"], tracking_context(ws, ws.models[model]), experiment=ws.model_name)
+    record_detail("not served" if version is None else f"preview v{version}")
     if version is None:
         LOG.info("Register model [%s] not registered as the target is not served", model)
     else:

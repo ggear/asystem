@@ -2,6 +2,7 @@ import json
 import logging
 
 from mlmodels._constants import PROJECT_FLAVOURS, RUN_FIRST
+from mlmodels._detail import record_detail
 from mlmodels._errors import GateError
 from mlmodels._model import model_content, model_install
 
@@ -25,4 +26,5 @@ def define_model(ws, *, model, flavour, source, label, constants=None, runs=None
     file_name, content, values = model_content(ws, flavour, source, constants)
     ws.models[model] = model_install(ws, model, label, flavour, runs, file_name, content, values)
     ws.models[model].fitted = constants
+    record_detail(f"{len(ws.models)} model{'' if len(ws.models) == 1 else 's'}")
     LOG.info("Define model [%s] [%s] as [%s] with runs [%s]", model, label, flavour, ", ".join(str(run) for run in runs))

@@ -140,6 +140,16 @@ class ReportTest(unittest.TestCase):
         self.assertRegex(lines[2], r"^    replay       \.\.\. FAILED \(\d+\.\d\ds\)$")
         self.assertTrue(re.fullmatch(r"--- PASS: notebook a/b/c \(\d+\.\d\ds\)", lines[3]))
 
+    def test_a_stage_with_nothing_to_say_still_prints_a_bracketed_value(self):
+        import io
+
+        from asystem.report import stage
+
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output), stage("setup"):
+            pass
+        self.assertRegex(output.getvalue(), r"^    setup        \.\.\. done \[none\] \(\d+\.\d\ds\)$")
+
     def test_a_stage_prints_its_progress_notes_under_its_name_and_resumes_the_line(self):
         import io
 

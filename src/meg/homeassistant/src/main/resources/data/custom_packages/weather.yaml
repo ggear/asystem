@@ -11,7 +11,7 @@ sensor:
     url: https://api.emergency.wa.gov.au/v1/rss/incidents?region=METRO%20NORTH%20EAST
 #######################################################################################
 rest:
-  - resource: https://mlserver.proxy.janeandgraham.com/v2/models/homeassistant_weatherstation_battery_1000/infer
+  - resource: https://mlserver.proxy.janeandgraham.com/v2/models/homeassistant_weatherstation_battery_1001/infer
     method: POST
     headers:
       Content-Type: application/json

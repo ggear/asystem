@@ -3,6 +3,7 @@ import tempfile
 from os.path import join
 
 from mlmodels._constants import PROJECT_MANIFEST
+from mlmodels._detail import record_detail
 from mlmodels._errors import GateError
 from mlmodels._metadata import read_metadata
 from mlmodels._registry import registry_pull
@@ -12,6 +13,7 @@ from mlmodels._signature import served_name
 def pull_model(ws, model):
     if read_metadata(ws.path)["target"]["kind"] != "served":
         print("Not pulled, the target is not served")
+        record_detail("not served")
         return None
     pulled = registry_pull(served_name(ws.model_name, ws.signature), "preview", join(tempfile.mkdtemp(), "pulled"), ws.env["MLFLOW_TRACKING_URI"])
     if pulled is None:
@@ -20,5 +22,6 @@ def pull_model(ws, model):
         local = json.load(manifest_file)
     if pulled.get("model_id") != model or pulled["files"] != local["files"]:
         raise GateError("Pull", "content", f"the registry preview differs from the project of model [{model}]")
+    record_detail(f"{len(pulled['files'])} files")
     print(f"Pulled model [{model}] files [{len(pulled['files'])}] identical to the project")
     return pulled

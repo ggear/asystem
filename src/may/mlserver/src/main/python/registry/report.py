@@ -42,4 +42,4 @@ def stage(name):
     except BaseException:
         print(f"{entry.resume()} FAILED ({time.monotonic() - started:.2f}s)", flush=True)
         raise
-    print(f"{entry.resume()} done{f' [{entry.detail}]' if entry.detail else ''} ({time.monotonic() - started:.2f}s)", flush=True)
+    print(f"{entry.resume()} done [{entry.detail or 'none'}] ({time.monotonic() - started:.2f}s)", flush=True)

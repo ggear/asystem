@@ -639,15 +639,15 @@ Every run of a notebook, a unit test or a system test, in any flavour and langua
 
 ```
 === RUN   notebook example/wasm/saturate
-    setup        ... done (0.44s)
-    train        ... done (0.00s)
+    setup        ... done [1 in 1 out] (0.44s)
+    train        ... done [1 cell] (0.00s)
     requirements ... done [0 to add] (0.00s)
     metadata     ... done [wasm] (0.00s)
 --- PASS: notebook example/wasm/saturate (1.34s)
 ```
 
 - A subject opens with `=== RUN` and closes with `--- PASS`, `--- FAIL` or `--- SKIP` and its seconds. A run ends with `PASS` or `FAIL` and a suite line with its seconds.
-- A stage is one indented line giving its name, `done` or `FAILED`, an optional bracketed detail and its seconds. A stage with nothing to do still prints.
+- A stage is one indented line giving its name, `done` or `FAILED`, a bracketed value and its seconds. A `done` line is never bare: a stage with nothing to say prints `[none]`, and a notebook stage with no detail of its own prints the number of cells it ran. The library functions of the workflow hand their detail to the run (`setup` the size of the signature, `collect` the runs and rows, `prepare` the rows of each split, `define` the models, `evaluate` the candidate and its verdict, `package` the candidate, flavour and golden steps, `register` and `pull` what they did).
 - A notebook's stages are those of 6.7 lowercased, then `requirements` and `metadata` (3.4). A reference consumer prints `verify`, `load` and `replay`, and a system test also prints `compile` and, for a `served` target, `registry` and `serve`.
 - A finding is printed on standard error as `ERROR <rule> [<message>]` and an error as `ERROR [<message>]`. A consumer repeats this shape in its own language and MUST NOT import `asystem`.
 

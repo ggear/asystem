@@ -5,6 +5,7 @@ import numpy as np
 import polars as pl
 
 from mlmodels._constants import ACCEPTANCE_SPLITS
+from mlmodels._detail import record_detail
 from mlmodels._errors import GateError
 from mlmodels._project import evaluation_build
 
@@ -82,6 +83,7 @@ def evaluate_gate(ws, model, checks):
             entry["limit"],
             entry["passed"],
         )
+    record_detail(f"{model} {_verdict(record).split()[0]}")
     return record.evaluation
 
 

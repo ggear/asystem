@@ -5,6 +5,7 @@ import polars as pl
 
 from mlmodels._config import PINS_PATH, VERSION_PATH
 from mlmodels._constants import PROJECT_MANIFEST, PROJECT_SIGNATURE_ERROR
+from mlmodels._detail import record_detail
 from mlmodels._errors import GateError
 from mlmodels._lint_project import file_sha256
 from mlmodels._metadata import record_project
@@ -87,4 +88,6 @@ def package_model(ws, model, golden, *, target, tolerance=None):
     ws.target = target
     record_project(ws.path, ws.project_dir, target, PINS_PATH, VERSION_PATH)
     LOG.info("Package model [%s] [%s] as [%s] to target [%s] with project [%s]", model, record.label, record.flavour, target["kind"], file_sha256(join(ws.project_dir, PROJECT_MANIFEST))[:12])
-    LOG.info("Package replayed [%s] golden steps exactly through the shipped runtime", sum(len(steps) for steps in sequences.values()))
+    replayed = sum(len(steps) for steps in sequences.values())
+    record_detail(f"{model} {record.flavour} {replayed} steps")
+    LOG.info("Package replayed [%s] golden steps exactly through the shipped runtime", replayed)

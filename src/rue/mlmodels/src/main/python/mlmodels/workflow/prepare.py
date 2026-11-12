@@ -1,6 +1,7 @@
 import polars as pl
 
 from mlmodels._constants import FOLD_SCHEMES, PROJECT_SPLITS
+from mlmodels._detail import record_detail
 from mlmodels._errors import GateError
 from mlmodels._prepare import Fold, Split
 from mlmodels._selection import Selection
@@ -31,6 +32,7 @@ def prepare_split(ws, *, overlap=(), **splits):
             if shared and pair not in allowed:
                 raise GateError("Prepare", "overlap", f"splits [{first}] and [{second}] share [{len(shared)}] rows, declare the pair in overlap or separate them")
     ws.splits = defined
+    record_detail(" ".join(f"{name} {split.frame.height}" for name, split in defined.items()))
     return defined
 
 

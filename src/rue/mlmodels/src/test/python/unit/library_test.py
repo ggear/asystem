@@ -1587,6 +1587,37 @@ class ReleaseTest(unittest.TestCase):
         self.assertEqual([], status_lines(self.source))
 
 
+class StageDetailTest(unittest.TestCase):
+    def setUp(self):
+        self.path = join(tempfile.mkdtemp(), "stage-detail")
+
+    def test_a_detail_is_recorded_only_while_a_runner_is_listening_and_the_last_one_wins(self):
+        from unittest import mock
+
+        from mlmodels._detail import DETAIL_ENV, record_detail, take_detail
+
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop(DETAIL_ENV, None)
+            record_detail("ignored")
+        self.assertIsNone(take_detail(self.path))
+        with mock.patch.dict(os.environ, {DETAIL_ENV: self.path}):
+            record_detail("1 run 10 rows")
+            record_detail("2 runs 25 rows")
+        self.assertEqual("2 runs 25 rows", take_detail(self.path))
+        self.assertIsNone(take_detail(self.path))
+
+    def test_setting_up_a_workspace_records_the_size_of_its_signature(self):
+        import io
+        from unittest import mock
+
+        from mlmodels._detail import DETAIL_ENV, take_detail
+        from mlmodels.workflow.setup import setup_workspace
+
+        with mock.patch.dict(os.environ, {DETAIL_ENV: self.path}), contextlib.redirect_stdout(io.StringIO()):
+            setup_workspace("example/static/constant")
+        self.assertRegex(take_detail(self.path) or "", r"^\d+ in \d+ out$")
+
+
 class DocumentTest(unittest.TestCase):
     def test_a_document_keeps_its_order_and_puts_scalar_lists_and_flat_objects_on_one_line(self):
         from mlmodels._document import write_json

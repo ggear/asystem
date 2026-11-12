@@ -7,6 +7,7 @@ from datetime import datetime
 from mlmodels._collect import RunData, capture_source, read_frame
 from mlmodels._config import DATA_SCHEMA, DATA_SOURCES, DATA_SOURCES_QUERIED, DATA_TIMESTAMP_FORMAT, DATA_TIMEZONE
 from mlmodels._constants import RUN_FIRST
+from mlmodels._detail import record_detail
 from mlmodels._document import write_json
 from mlmodels._errors import GateError
 from mlmodels._lint_project import file_sha256
@@ -68,3 +69,5 @@ def collect_run(ws, run, *, label, name=None, source=None, query=None, params=No
         frame = read_frame(path, source in DATA_SOURCES_QUERIED)
         log_run(False, frame.height)
     ws.runs[(run, name)] = RunData(frame, path, live)
+    runs = len({number for number, _ in ws.runs})
+    record_detail(f"{runs} run{'' if runs == 1 else 's'} {sum(data.frame.height for data in ws.runs.values())} rows")
