@@ -1,13 +1,13 @@
 import json
-import logging
 import os
 import re
 import time
 import urllib.error
 import urllib.request
 from datetime import UTC, datetime
-from os.path import isdir, isfile, join
+from os.path import basename, isdir, isfile, join
 
+from asystem.report import skipped, stage, subject
 from mlmodels._constants import (
     CONSUMER_MODEL_PATH,
     PROJECT_ALIAS_PREVIEW,
@@ -26,8 +26,6 @@ from mlmodels._errors import GateError
 from mlmodels._metadata import LOCAL_TARGET, METADATA_FILE, PROJECT_DIR, content_sha256, read_metadata, write_metadata
 from mlmodels._registry import register_project, registry_client
 from mlmodels._signature import registered_name, served_name
-
-LOG = logging.getLogger(__name__)
 
 NOTEBOOK_ROOT = "rue/mlmodels/src/main/notebook"
 
@@ -50,6 +48,9 @@ LIVE_KEPT = 2
 SERVED_TIMEOUT_SECONDS = 90
 
 
+SERVED_REPORT_SECONDS = 5
+
+
 def workspaces(source_dir):
     root = join(source_dir, NOTEBOOK_ROOT)
     found = {}
@@ -67,32 +68,37 @@ def release_workspaces(source_dir, version, tracking_uri=None, mlserver_url=None
     released = []
     for name, directory in workspaces(source_dir).items():
         if name.startswith(RELEASE_FIXTURES + "_"):
-            LOG.info("Release workspace [%s] skipped as [fixture]", name)
+            skipped(f"release {name}", "fixture")
             continue
         if not isfile(join(directory, METADATA_FILE)):
-            LOG.info("Release workspace [%s] skipped as [unpackaged]", name)
+            skipped(f"release {name}", "unpackaged")
             continue
         metadata = read_metadata(directory)
         if metadata["target"] == LOCAL_TARGET:
-            LOG.info("Release workspace [%s] skipped as [local]", name)
+            skipped(f"release {name}", "local")
             continue
         _require_project(name, directory)
-        outcome = "kept"
-        if metadata["release"] is None:
-            with open(join(directory, PROJECT_DIR, PROJECT_SIGNATURE)) as signature_file:
-                signature = json.load(signature_file)
-            metadata = {**metadata, "version": version, "release": {"timestamp": now, "signature": signature}}
-            if metadata["target"]["kind"] == "served":
-                metadata["baseline"] = signature
-            write_metadata(directory, metadata)
-            outcome = "released"
-        with open(join(directory, PROJECT_DIR, PROJECT_MANIFEST)) as manifest_file:
-            manifest = json.load(manifest_file)
-        target = " ".join(str(metadata["target"][key]) for key in ("kind", "language") if key in metadata["target"])
-        LOG.info("Release workspace [%s] model [%s] [%s] as [%s] at version [%s] %s", name, manifest.get("model_id"), manifest["provenance"].get("notes", "none"), target, metadata["version"], outcome)
-        released.append(name)
-        if tracking_uri is not None and metadata["target"]["kind"] == "served":
-            publish_workspace(name, directory, tracking_uri, mlserver_url, source_dir)
+        with subject(f"release {name}"):
+            with stage("version") as entry:
+                outcome = "kept"
+                if metadata["release"] is None:
+                    with open(join(directory, PROJECT_DIR, PROJECT_SIGNATURE)) as signature_file:
+                        signature = json.load(signature_file)
+                    metadata = {**metadata, "version": version, "release": {"timestamp": now, "signature": signature}}
+                    if metadata["target"]["kind"] == "served":
+                        metadata["baseline"] = signature
+                    write_metadata(directory, metadata)
+                    outcome = "released"
+                entry.detail = f"{metadata['version']} {outcome}"
+            with stage("target") as entry:
+                entry.detail = " ".join(str(metadata["target"][key]) for key in ("kind", "language") if key in metadata["target"])
+            with stage("model") as entry:
+                with open(join(directory, PROJECT_DIR, PROJECT_MANIFEST)) as manifest_file:
+                    manifest = json.load(manifest_file)
+                entry.detail = f"{manifest.get('model_id')} {manifest['flavour']}"
+            released.append(name)
+            if tracking_uri is not None and metadata["target"]["kind"] == "served":
+                publish_workspace(name, directory, tracking_uri, mlserver_url, source_dir)
     return released
 
 
@@ -102,43 +108,55 @@ def publish_workspace(name, directory, tracking_uri, mlserver_url=None, source_d
     if metadata["release"] is None:
         raise GateError("Release", "publish", f"workspace [{name}] has no released version")
     registered = served_name(name, metadata["release"]["signature"])
-    register_project(join(directory, PROJECT_DIR), registered, tracking_uri, aliases=(), experiment=name)
-    client = registry_client(tracking_uri)
-    version = next(candidate for candidate in client.search_model_versions(f"name = '{registered}'") if candidate.tags.get(PROJECT_TAG_CONTENT_SHA256) == metadata["content_sha256"])
-    tags = {
-        PROJECT_TAG_RELEASE_VERSION: metadata["version"],
-        PROJECT_TAG_INPUTS_SHA256: metadata["inputs_sha256"],
-        PROJECT_TAG_RELEASED_AT: metadata["release"]["timestamp"],
-        PROJECT_TAG_METADATA: json.dumps(metadata, sort_keys=True, separators=(",", ":")),
-    }
-    for key, value in tags.items():
-        client.set_model_version_tag(registered, version.version, key, value)
-    if PROJECT_TAG_SNAPSHOT_VERSION in version.tags:
-        client.delete_model_version_tag(registered, version.version, PROJECT_TAG_SNAPSHOT_VERSION)
-    client.set_registered_model_alias(registered, PROJECT_ALIAS_RELEASE, version.version)
-    if PROJECT_ALIAS_PREVIEW in client.get_registered_model(registered).aliases:
-        client.delete_registered_model_alias(registered, PROJECT_ALIAS_PREVIEW)
-    LOG.info("Release workspace [%s] published as [%s] registry version [%s] with alias [release]", name, registered, version.version)
+    with stage("register") as entry:
+        register_project(join(directory, PROJECT_DIR), registered, tracking_uri, aliases=(), experiment=name)
+        client = registry_client(tracking_uri)
+        version = next(candidate for candidate in client.search_model_versions(f"name = '{registered}'") if candidate.tags.get(PROJECT_TAG_CONTENT_SHA256) == metadata["content_sha256"])
+        entry.detail = f"{registered} v{version.version}"
+    with stage("tags") as entry:
+        tags = {
+            PROJECT_TAG_RELEASE_VERSION: metadata["version"],
+            PROJECT_TAG_INPUTS_SHA256: metadata["inputs_sha256"],
+            PROJECT_TAG_RELEASED_AT: metadata["release"]["timestamp"],
+            PROJECT_TAG_METADATA: json.dumps(metadata, sort_keys=True, separators=(",", ":")),
+        }
+        for key, value in tags.items():
+            client.set_model_version_tag(registered, version.version, key, value)
+        if PROJECT_TAG_SNAPSHOT_VERSION in version.tags:
+            client.delete_model_version_tag(registered, version.version, PROJECT_TAG_SNAPSHOT_VERSION)
+        entry.detail = f"release_version {metadata['version']}"
+    with stage("alias") as entry:
+        client.set_registered_model_alias(registered, PROJECT_ALIAS_RELEASE, version.version)
+        if PROJECT_ALIAS_PREVIEW in client.get_registered_model(registered).aliases:
+            client.delete_registered_model_alias(registered, PROJECT_ALIAS_PREVIEW)
+        entry.detail = f"release v{version.version}"
     if mlserver_url is None:
         return "published"
-    served = wait_served(mlserver_url, registered, metadata["version"])
-    LOG.info("Release workspace [%s] served by mlserver as [%s]", name, served)
+    with stage("serve") as entry:
+        served = wait_served(mlserver_url, registered, metadata["version"], note=entry.note)
+        entry.detail = f"{served} {metadata['version']}"
     if served == "ready":
-        _retire_signatures(client, name, registered, source_dir)
+        with stage("retire") as entry:
+            _retire_signatures(client, name, registered, source_dir, entry)
     return served
 
 
-def _retire_signatures(client, name, published, source_dir):
+def _retire_signatures(client, name, published, source_dir, entry):
     live = live_signatures(name, [model.name for model in client.search_registered_models(f"name LIKE '{name}%'", max_results=1000) if PROJECT_ALIAS_RELEASE in model.aliases])
     pinned = served_pins(source_dir, name) if source_dir is not None else {}
-    for _, retired in live[LIVE_KEPT:]:
-        if retired == published:
+    retired = 0
+    for _, model in live[LIVE_KEPT:]:
+        if model == published:
             continue
-        if retired in pinned:
-            LOG.warning("Release workspace [%s] keeps retired signature version [%s] as it is pinned in %s", name, retired, sorted(pinned[retired]))
+        if model in pinned:
+            entry.note(f"kept [{model}]")
+            for file in sorted(pinned[model]):
+                entry.note(f"pinned in [{basename(file)}]")
             continue
-        client.delete_registered_model_alias(retired, PROJECT_ALIAS_RELEASE)
-        LOG.info("Release workspace [%s] retired signature version [%s]", name, retired)
+        client.delete_registered_model_alias(model, PROJECT_ALIAS_RELEASE)
+        retired += 1
+        entry.note(f"retired [{model}]")
+    entry.detail = f"live {[number for number, _ in live]} retired [{retired}]"
 
 
 def live_signatures(name, released_names):
@@ -160,15 +178,21 @@ def served_pins(source_dir, name):
     return found
 
 
-def wait_served(mlserver_url, served_name, label, timeout=SERVED_TIMEOUT_SECONDS):
-    deadline = time.monotonic() + timeout
+def wait_served(mlserver_url, served_name, label, timeout=SERVED_TIMEOUT_SECONDS, note=None):
+    started = time.monotonic()
     reached = False
-    while time.monotonic() < deadline:
+    reported = 0
+    while time.monotonic() - started < timeout:
         index = served_index(mlserver_url)
         if index is not None:
             reached = True
             if index.get(served_name) == (label, "READY"):
                 return "ready"
+        waited = int(time.monotonic() - started)
+        if note is not None and waited // SERVED_REPORT_SECONDS > reported:
+            reported = waited // SERVED_REPORT_SECONDS
+            seen = "server [unreachable]" if index is None else f"state [{index[served_name][1]}] label [{index[served_name][0]}]" if served_name in index else "state [absent]"
+            note(f"poll [{waited:3d}/{timeout:3d}] seconds {seen}")
         time.sleep(1)
     if not reached:
         return "unreachable"

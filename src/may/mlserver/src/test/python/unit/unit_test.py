@@ -1,4 +1,6 @@
+import contextlib
 import copy
+import io
 import json
 import os
 import shutil
@@ -65,8 +67,22 @@ class SyncTest(unittest.TestCase):
         self.sync()
         self.calls.clear()
         self.registry.downloads.clear()
-        self.sync()
-        self.assertEqual(([], []), (self.calls, self.registry.downloads))
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            self.sync()
+        self.assertEqual(([], [], ""), (self.calls, self.registry.downloads, output.getvalue()))
+
+    def test_a_change_is_reported_as_a_subject_with_a_stage_for_each_step(self):
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            self.registry.add(1, "1.0.0", released=True)
+            self.sync()
+            self.registry.remove_alias(NAME, PROJECT_ALIAS_RELEASE)
+            self.sync()
+        lines = output.getvalue().splitlines()
+        self.assertEqual([f"=== RUN   sync {NAME}", f"=== RUN   unload {NAME}"], [line for line in lines if line.startswith("=== RUN")])
+        self.assertEqual(["download", "verify", "install", "load", "unload", "remove"], [line.split()[0] for line in lines if line.startswith("    ")])
+        self.assertEqual(2, len([line for line in lines if line.startswith("--- PASS")]))
 
     def test_the_newest_release_that_cannot_be_used_falls_back_to_the_next_most_recent(self):
         self.registry.add(1, "1.0.0")

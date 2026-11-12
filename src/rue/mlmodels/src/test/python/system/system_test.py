@@ -84,7 +84,7 @@ def test_the_declared_target_runs_its_project(name, directory, target, env, imag
         server = f"http://{env['MLSERVER_SERVICE_PROD']}:{env['MLSERVER_HTTP_PORT']}"
         serving, label = (registered, metadata["version"]) if metadata["release"] is not None else (f"{registered}{PROJECT_PREVIEW_SUFFIX}", f"{PROJECT_LABEL_PREVIEW}{metadata['content_sha256'][:8]}")
         with stage("serve") as entry:
-            wait_served(server, serving, label)
+            wait_served(server, serving, label, note=entry.note)
             entry.detail = serving
         output = _run(image, "python", ["-m", "mlmodels.runtime", "/project", server, serving], project_dir)
     else:

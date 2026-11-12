@@ -140,6 +140,19 @@ class ReportTest(unittest.TestCase):
         self.assertRegex(lines[2], r"^    replay       \.\.\. FAILED \(\d+\.\d\ds\)$")
         self.assertTrue(re.fullmatch(r"--- PASS: notebook a/b/c \(\d+\.\d\ds\)", lines[3]))
 
+    def test_a_stage_prints_its_progress_notes_under_its_name_and_resumes_the_line(self):
+        import io
+
+        from asystem.report import stage
+
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output), stage("serve") as entry:
+            entry.note("poll [  5/ 90] seconds state [LOADING]")
+            entry.detail = "ready"
+        lines = output.getvalue().splitlines()
+        self.assertEqual(["    serve        ...", "        poll [  5/ 90] seconds state [LOADING]"], lines[:2])
+        self.assertRegex(lines[2], r"^    serve        \.\.\. done \[ready\] \(\d+\.\d\ds\)$")
+
 
 if __name__ == "__main__":
     unittest.main()

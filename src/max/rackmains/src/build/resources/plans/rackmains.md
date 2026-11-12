@@ -1,19 +1,19 @@
 # rackmains
 
-**Status, 2026-11-12.** The code phases are built; what remains is yours (workbook rows, ssh keys, hardware tests, releases, trials) and the review sign-off.
+**Status, 2026-11-12.** All code phases are built, reviewed twice and tested (unit tests, clippy and `fab test-sys` in the real container), the 29 workbook rows are in and the battery model is released and embedded. What remains is yours: the R4 sign-off, the dry-run release, ssh keys, hardware tests and trials.
 
 | Part | State |
 |---|---|
-| Publisher (`rackmains/{data,status}`, mock driver, mock-backed system test) | built on the flat canonical payload; unit tests pass, the container system test has not been run |
+| Publisher (`rackmains/{data,status}`, mock driver, mock-backed system test) | built on the flat canonical payload; unit tests and the container system test pass |
 | Host setup (`install_prep.sh`, `install_pre.sh`) | built, unit tested |
 | Host side of the shed (`asleep`, `awake`, power-on-after-cut setting, in the `system` module) | built, tested on `max`; a deep run and the power-on-after-cut test are not done |
-| Battery model (`ups/battery` notebook, `static` project `rackmains_ups_battery`) | built, released, embedded, `policy.rs` built; the halt thresholds were removed before release; the guard's validation at start is not built |
-| Metrics, outage CSV, liveness-file health that does not need MQTT, watchdog, backup enrolment | built, unit tested and smoke run against the mock driver; not run in a container |
-| Guard (shed, restore, state machine), dry-run by default | built as a pure state machine with table tests, called from the poll loop; ssh runner and forced-command wrapper (`rackmains-shed`, `system` module) built, not run against a host |
+| Battery model (`ups/battery` notebook, `static` project `rackmains_ups_battery`) | built, released, embedded; signature prefixed `rackmains_`, optional inputs (calibrating, battery low, volts, replace due, age, read failures, state) and outputs (runtime and energy remaining, energy used, refit due and reason, state) wired through `serve.rs` and `policy.rs`; the model is called through failed reads; the guard validates the policy at start |
+| Metrics, outage CSV, liveness-file health that does not need MQTT, watchdog, backup enrolment | built, unit tested and run in the container against the mock driver |
+| Guard (shed, restore, state machine), dry-run by default | built as a pure state machine with table tests, called from the poll loop; ssh runner and forced-command wrapper (`rackmains-shed`, `system` module) built, not run against a host; dry-run by default |
 | The root CLI, `check`, `guard tail` and `guard list` | built |
 | `rackmains guard drill` and `guard stop` | built and exercised end to end against a simulated plug and a real poller; the deadman rule and the `Status 0` parse are unproven on the real plug |
-| Workbook rows | yours: 29 metric rows and `service_rackmains` |
-| Release | not done; the first release is the publisher and the guard in dry-run, `.env_prod` sets `RACKMAINS_GUARD_LIVE=0` |
+| Workbook rows | done: 29 metric rows (indexes 2450 to 2478) and `service_rackmains`; the topic and schema checks pass |
+| Release | not done, waits for R4; the first release is the publisher and the guard in dry-run, `.env_prod` sets `RACKMAINS_GUARD_LIVE=0` |
 
 **Decided 2026-11-11, not built: no final UPS command, run to failure.** The guard sheds the followers and then does nothing more. `max` stays up in
 `asleep --shallow` with rackmains and the guard recording until the UPS cuts its own output at its low-battery cutoff, and every host boots on AC restore. There is no
@@ -471,7 +471,7 @@ config is regenerated for `macmini-max` has not been checked, and is confirmed a
 After the rows: `fab generate` and read the diff, then add a check that every key a generated `value_template` reads is a
 declared payload key. The system test's declared-topics check cannot pass until the rows exist.
 
-## The shutdown guard (designed, not built)
+## The shutdown guard (built)
 
 **Why here and not `upsmon`.** The wanted behaviour is staged and reversible: shed the others, then `max`, or bring the
 others back if mains returns. `upsmon` knows on-battery, low-battery and forced shutdown, so it cannot restore. A state
@@ -602,7 +602,7 @@ as for any outage, and the interrupted file is closed `interrupted` as usual.
 it adds an always-on server to a module whose surface is deliberately small. A TCP REST API adds a LAN listener and authentication, which the plan already rejected for `upsd`, and nothing off-host needs it. Health
 stays on the liveness file, because a server thread can answer while the poll loop is hung, whereas the file is written by the loop itself. If a live request and reply is wanted later, add a unix socket for it.
 
-## The guard CLI and the test command, `rackmains guard drill` (designed 2026-11-11, not built)
+## The guard CLI and the test command, `rackmains guard drill` (built)
 
 **Staging (decided 2026-11-12).** The first release carries `serve`, `check` and the read-only `guard tail` and `guard list`. `guard drill` and `guard stop`, with the marker, ack, lead-in, plug sampler and deadman handling below, are built after the first release and before trial 5, since only trial 5 and the deadman proof need them. Trials 1 to 3 are cut by hand (see "Trials, tests and rollout"). Everything below describes the drill as it will be built.
 
@@ -1013,7 +1013,7 @@ and the time cap carries that job.
 
 Hands-on steps the code cannot do, in the order they unblock work. Results of the tests and trials are recorded in "Trials, tests and rollout".
 
-1. **Workbook rows** in `entity_metadata.xlsx` (never edited by code): the 29 metric rows under `RackMains` and `service_rackmains` under `Supervisor`, then run `fab generate` and read the diff.
+1. ~~Workbook rows~~ done 2026-11-12.
 2. **ssh keys:** a forced-command key on all four hosts including `max`, the private key mounted read-only from a root-only directory on `max`, `known_hosts` pinned. The forced-command test (3) proves it.
 3. **Tests 3 and 4** (forced command, per-host `asleep` time), then the **spare-plug deadman proof** (test 8) and the **retained `cmnd/POWER` check**.
 4. **`mad`'s macOS step** for power-on after a cut, then test 5 on all four hosts.
@@ -1029,7 +1029,7 @@ dry-run**, not a publisher alone. Each build step ends in a review (R1 to R4, de
 1. **R1, done in the build pass (2026-11-12):** review `rackmains`, `mockdriver`, `tools/schema`, the install hooks and `policy.rs`.
 2. **Build metrics and the outage CSV:** the `nut.rs` flag function and `SAMPLES` with the canonical names, the flat MQTT payload and the poll and publish cadence, the outage CSV writer and its backup enrolment (`backup.sh`,
    `write_container_backup()`, the `.env_all` keep values), the liveness file, the watchdog and an MQTT-independent `checkhealthy.sh`, the model seam, the module `CLAUDE.md`. Then **R2**.
-3. **Yours (not done):** tests 3 and 4, the spare-plug deadman proof and the retained-command check ("Yours to do").
+3. **Yours (not done, no longer blocks the build):** tests 3 and 4, the spare-plug deadman proof and the retained-command check ("Yours to do").
 4. **Build the guard, dry-run only:** the root CLI (`serve`, `check`, `guard`) with the image entrypoint and compose command changed to `rackmains serve`; `run` restructured so the poll, the CSV writer and the guard start
    before, and never wait on, the broker connect; the generated host file; `liveness.json` on tmpfs; the ssh runners for `asleep` and `awake`; the state machine with mock sequences; `rackmains guard tail|list`. Then **R3**.
 5. **R4, final review of the whole module,** then **yours:** the workbook rows and the dry-run release; confirm `rackmains/status` is `online`, the entities appear, and a short by-hand plug cut turns `rackmains_mains_failed` on within one poll and off when mains returns.
@@ -1044,7 +1044,7 @@ Consolidated 2026-11-11 and renumbered Q1 to Q21. Each has the question, why it 
 **To observe or check, not to decide**
 - **Q18. Does the PSDR800 supply its outlets again by itself after a depletion cutoff?** Not in the manual; trial 5 observes it. If not, the fallback is a host-side `shutdown.return` helper (see "Residual risk of running to failure").
 - **Q19. Two checks before `guard drill` is trusted:** the rule-timer deadman on the spare plug (test 8), and no retained `cmnd/POWER` for `rack_outlet_plug` on the broker (`mosquitto_sub` from the Mac failed to connect on 2026-11-11, so it needs the broker's credentials or a run from `max`).
-- **Q21. The `effective` fields and `rackmains_guard_failed_hosts`.** Fixed when the guard's policy type and the host results are final, in the guard build step.
+- **Q21. Closed 2026-11-12.** The `effective` fields and `rackmains_guard_failed_hosts` are final with the guard's policy type.
 - **Q22. Power off and on behaviour per model of host.** Observe, on `mad` (Mac mini M2 Pro, Asahi) and on `max`, `may` and `meg` (the 2014 Mac minis, Macmini7,1), what each does when its power is lost and when it returns: after `asleep --deep` (on `max`, `--shallow`), and with the cord pulled from a running host. Record per host whether it boots by itself, the time to ssh, and whether the containers come back healthy. The three 2014 minis are expected to behave the same (`AFTERG3_EN` is cleared on each); `mad` is the one at risk, since the macOS "Start up automatically after a power failure" setting is not known to carry into Linux on an M2 Pro. This is test 5 in "Trials, tests and rollout", run on all four hosts, and its result decides the restart shape.
 
 **Decided, kept for reference**

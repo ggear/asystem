@@ -1453,6 +1453,26 @@ class ReleaseTest(unittest.TestCase):
             {"demo_replay_double_1000", "demo_replay_double_1001", "demo_replay_doubled_1000"}, self.publish_at(1001, ["demo_replay_double", "demo_replay_double_1000", "demo_replay_doubled_1000"])
         )
 
+    def test_waiting_for_the_server_reports_each_state_seen_until_ready(self):
+        from types import SimpleNamespace
+        from unittest import mock
+
+        from mlmodels._release import wait_served
+
+        clock = [0.0]
+        fake_time = SimpleNamespace(monotonic=lambda: clock[0], sleep=lambda seconds: clock.__setitem__(0, clock[0] + seconds))
+        states = iter([{}, {}, {"demo": ("1.0.0", "LOADING")}, {"demo": ("1.0.0", "READY")}])
+        notes = []
+        with (
+            mock.patch("mlmodels._release.time", fake_time),
+            mock.patch("mlmodels._release.served_index", side_effect=lambda url: next(states)),
+            mock.patch("mlmodels._release.SERVED_REPORT_SECONDS", 1),
+        ):
+            self.assertEqual("ready", wait_served("http://unused", "demo", "1.0.0", timeout=20, note=notes.append))
+        self.assertEqual(2, len(notes))
+        self.assertIn("absent", notes[0])
+        self.assertIn("LOADING", notes[1])
+
     def test_two_live_signature_versions_retire_nothing(self):
         self.assertEqual({"demo_replay_double_1000", "demo_replay_double_1001"}, self.publish_at(1001, ["demo_replay_double_1000"]))
 

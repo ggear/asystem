@@ -8,6 +8,7 @@ import urllib.error
 import urllib.request
 from os.path import isdir, join
 
+from registry.report import stage, subject
 from serving.model.loader import load
 from serving.model.vocabulary import (
     PROJECT_ALIAS_PREVIEW,
@@ -76,6 +77,7 @@ def main(arguments=None):
     if "--once" in arguments:
         sync(registry, models_dir, failed)
         return 0
+    _log("INFO", f"polling registry every [{interval}] seconds")
     while True:
         sync(registry, models_dir, failed, lambda action, name: _call(server, action, name))
         time.sleep(interval)
@@ -91,11 +93,17 @@ def sync(registry, models_dir, failed, call=None):
     for served, candidates in wanted.items():
         _serve(registry, models_dir, served, candidates, held.get(served), failed, call)
     for served in held.keys() - wanted.keys():
-        if call is not None and call("unload", served) is False:
-            _log("WARN", f"unload refused, files kept for the next poll model [{served}]")
-            continue
-        shutil.rmtree(join(models_dir, served), ignore_errors=True)
-        _log("INFO", f"unloaded model [{served}]")
+        try:
+            with subject(f"unload {served}"):
+                with stage("unload") as entry:
+                    if call is not None and call("unload", served) is False:
+                        raise OSError("the server refused the unload")
+                    entry.detail = "server" if call is not None else "at start"
+                with stage("remove") as entry:
+                    shutil.rmtree(join(models_dir, served), ignore_errors=True)
+                    entry.detail = "files"
+        except OSError as error:
+            _log("WARN", f"unload refused, files kept for the next poll model [{served}] [{error}]")
 
 
 def _wanted(models):
@@ -137,12 +145,12 @@ def _serve(registry, models_dir, served, candidates, held, failed, call):
         if held is not None and held.get("registry_version") == version and held.get("content_sha256") == tags[PROJECT_TAG_CONTENT_SHA256]:
             return
         try:
-            _swap(registry, models_dir, served, name, version, tags, label, call)
+            with subject(f"sync {served}"):
+                _swap(registry, models_dir, served, name, version, tags, label, call)
         except Exception as error:
             failed.add((served, version))
             _log("WARN", f"version not usable model [{served}] version [{version}] [{error}]")
             continue
-        _log("INFO", f"serving model [{served}] version [{version}] label [{label}]")
         return
     if held is None:
         _log("ERROR", f"no usable version model [{served}]")
@@ -151,30 +159,38 @@ def _serve(registry, models_dir, served, candidates, held, failed, call):
 def _swap(registry, models_dir, served, name, version, tags, label, call):
     staging_dir = tempfile.mkdtemp(prefix=f".{served}-", dir=models_dir)
     try:
-        registry.download(name, version, staging_dir)
-        project_dir = next((root for root, _, files in os.walk(staging_dir) if "project.json" in files), None)
-        if project_dir is None:
-            raise ValueError("no project in the pulled model")
-        model = load(project_dir)
-        settings = {
-            "name": served,
-            "implementation": RUNTIME,
-            "parameters": {"version": label, "extra": {"registry_version": version, "content_sha256": tags[PROJECT_TAG_CONTENT_SHA256]}},
-            "inputs": [{key: entry[key] for key in ("name", "datatype", "shape")} for entry in model.signature()["inputs"]],
-            "outputs": [{key: entry[key] for key in ("name", "datatype", "shape")} for entry in model.signature()["outputs"]],
-        }
-        with open(join(project_dir, SETTINGS_FILE), "w") as settings_file:
-            json.dump(settings, settings_file, indent=2, sort_keys=True)
+        with stage("download") as entry:
+            registry.download(name, version, staging_dir)
+            project_dir = next((root for root, _, files in os.walk(staging_dir) if "project.json" in files), None)
+            if project_dir is None:
+                raise ValueError("no project in the pulled model")
+            entry.detail = f"v{version}"
+        with stage("verify") as entry:
+            model = load(project_dir)
+            entry.detail = f"content {tags[PROJECT_TAG_CONTENT_SHA256][:8]}"
         target_dir = join(models_dir, served)
         backup_dir = join(staging_dir, "previous")
-        if isdir(target_dir):
-            os.rename(target_dir, backup_dir)
-        os.rename(project_dir, target_dir)
-        if call is not None and call("load", served) is False:
-            shutil.rmtree(target_dir, ignore_errors=True)
-            if isdir(backup_dir):
-                os.rename(backup_dir, target_dir)
-            raise ValueError("the server refused the load")
+        with stage("install") as entry:
+            settings = {
+                "name": served,
+                "implementation": RUNTIME,
+                "parameters": {"version": label, "extra": {"registry_version": version, "content_sha256": tags[PROJECT_TAG_CONTENT_SHA256]}},
+                "inputs": [{key: entry[key] for key in ("name", "datatype", "shape")} for entry in model.signature()["inputs"]],
+                "outputs": [{key: entry[key] for key in ("name", "datatype", "shape")} for entry in model.signature()["outputs"]],
+            }
+            with open(join(project_dir, SETTINGS_FILE), "w") as settings_file:
+                json.dump(settings, settings_file, indent=2, sort_keys=True)
+            if isdir(target_dir):
+                os.rename(target_dir, backup_dir)
+            os.rename(project_dir, target_dir)
+            entry.detail = f"label {label}"
+        with stage("load") as entry:
+            if call is not None and call("load", served) is False:
+                shutil.rmtree(target_dir, ignore_errors=True)
+                if isdir(backup_dir):
+                    os.rename(backup_dir, target_dir)
+                raise ValueError("the server refused the load")
+            entry.detail = "server" if call is not None else "at start"
     finally:
         shutil.rmtree(staging_dir, ignore_errors=True)
 

@@ -109,6 +109,7 @@ def model_command(arguments=None):
             for consumer in stale_consumers(options.source_dir):
                 print(f"WARN consumer embeds an older release [{relpath(consumer, options.source_dir)}]", file=sys.stderr)
         elif options.command == "publish":
+            from asystem.report import subject
             from mlmodels._metadata import read_metadata
             from mlmodels._release import publish_workspace, workspaces
 
@@ -117,7 +118,8 @@ def model_command(arguments=None):
             for name, directory in workspaces(options.source_dir).items():
                 metadata = read_metadata(directory) if isfile(join(directory, "metadata.json")) else None
                 if metadata is not None and metadata["release"] is not None and metadata["target"]["kind"] == "served":
-                    publish_workspace(name, directory, tracking_uri, options.mlserver)
+                    with subject(f"publish {name}"):
+                        publish_workspace(name, directory, tracking_uri, options.mlserver, options.source_dir)
         elif options.command == "status":
             from mlmodels._release import status_lines
 
