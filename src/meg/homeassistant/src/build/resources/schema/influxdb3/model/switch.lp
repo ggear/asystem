@@ -57,6 +57,7 @@
 #     service_openra,
 #     service_plex,
 #     service_postgres,
+#     service_rackmains,
 #     service_sabnzbd,
 #     service_sonarr,
 #     service_tasmota,
