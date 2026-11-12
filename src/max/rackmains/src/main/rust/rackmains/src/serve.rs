@@ -318,6 +318,29 @@ impl Poller {
         let battery_state_in = self.battery_state.clone();
         self.call_model(&mut published, flags.is_some(), epoch, &mut rows);
         self.last.merge_sticky(&published);
+        if start_detail.is_some() {
+            let value = |name: &str| {
+                published
+                    .get(name)
+                    .map_or_else(|| "unknown".to_string(), ToString::to_string)
+            };
+            let status = published.text(STATUS).unwrap_or("unknown");
+            info!(
+                "{}",
+                log_line(
+                    "outage started",
+                    &format!(
+                        "{status}, load {}%, battery {}V {}%",
+                        value(metrics::UTILISATION),
+                        value(metrics::BATTERY_VOLTS),
+                        value(metrics::BATTERY_CHARGE_PCT)
+                    )
+                )
+            );
+            if let Some(id) = self.session.as_ref().and_then(|session| session.drill.as_ref()) {
+                info!("{}", log_line("outage drill", id));
+            }
+        }
         let forced = ended || status_change.is_some();
         self.publish(&published, dt, flags.is_some_and(|flags| flags.raw_on_battery), forced)?;
         let mut commands = Vec::new();
@@ -355,7 +378,7 @@ impl Poller {
                 let mut end = self.last.clone();
                 sample_state(&mut end, &self.state_names, self.battery_state.as_ref());
                 let detail = session.stats.detail(reason, session.hosts_shed);
-                info!("outage ended {detail}");
+                info!("{}", log_line("outage ended", &detail));
                 commands.push(Command::Row(outage::row(&stamp, elapsed, EVENT_END, &detail, &end)));
                 commands.push(Command::Close);
             }
@@ -452,6 +475,7 @@ impl Poller {
         );
         let mut extra = Vec::new();
         if let Some(previous) = self.interrupted.take() {
+            info!("{}", log_line("outage file closed as interrupted", &previous));
             extra.push(format!("interrupted [{previous}]"));
         }
         if let Some(marker) = marker {
@@ -460,7 +484,6 @@ impl Poller {
         if !extra.is_empty() {
             detail = format!("{detail} {}", extra.join(" "));
         }
-        info!("outage started {detail}");
         self.writer.send(Command::Open(stamp.to_string()));
         self.session = Some(Session {
             started: naive,
@@ -744,6 +767,18 @@ pub fn run(args: &ServeArgs, data_dir: &Path) -> Result<(), String> {
     let timeout = parse_duration(&common.timeout)?;
     let version = std::env::var("SERVICE_VERSION_ABSOLUTE").unwrap_or_else(|_| "unknown".to_string());
     info!("{}", log_line("version", &version));
+    info!("{}", log_line("poll period", &args.poll_period));
+    info!("{}", log_line("mains publish period", &args.mains_publish_period));
+    info!("{}", log_line("reading device", &common.device));
+    if args.battery_installed.is_empty() {
+        info!("{}", log_line("battery installed", "none"));
+    } else {
+        let age = metrics::battery_age_days(&args.battery_installed, Local::now().date_naive())?;
+        info!(
+            "{}",
+            log_line("battery installed", &format!("{} ({age} days)", args.battery_installed))
+        );
+    }
     let (loaded, policy) = load_model(Path::new(&common.model_dir))?;
     let model = loaded.info();
     info!("{}", log_line("model name", &model.name));
@@ -783,6 +818,7 @@ pub fn run(args: &ServeArgs, data_dir: &Path) -> Result<(), String> {
         }
     }
     let runner: Arc<dyn Runner> = if args.live {
+        info!("{}", log_line("guard mode", "live"));
         Arc::new(Ssh {
             key: PathBuf::from(&common.ssh_key),
             known_hosts: PathBuf::from(&common.known_hosts),
@@ -792,33 +828,6 @@ pub fn run(args: &ServeArgs, data_dir: &Path) -> Result<(), String> {
         info!("{}", log_line("guard mode", "dry-run"));
         Arc::new(DryRun)
     };
-    info!("{}", log_line("reading device", &common.device));
-    info!("{}", log_line("poll period", &args.poll_period));
-    info!("{}", log_line("mains publish period", &args.mains_publish_period));
-    info!("{}", log_line("data dir", &data_dir.display().to_string()));
-    info!("{}", log_line("outage files kept", &args.outage_keep.to_string()));
-    info!("{}", log_line("ssh timeout", &format!("{}s", ssh_timeout.as_secs())));
-    info!("{}", log_line("shed order", &shed::shed_order(&hosts).join(" ")));
-    info!(
-        "{}",
-        log_line(
-            "plug host",
-            if common.plug_host.is_empty() {
-                "none"
-            } else {
-                &common.plug_host
-            }
-        )
-    );
-    if args.battery_installed.is_empty() {
-        info!("{}", log_line("battery installed", "none"));
-    } else {
-        let age = metrics::battery_age_days(&args.battery_installed, Local::now().date_naive())?;
-        info!(
-            "{}",
-            log_line("battery installed", &format!("{} ({age} days)", args.battery_installed))
-        );
-    }
     let publisher = MqttPublisher::new(&args.broker_host, args.broker_port, &args.broker_token, STATUS_TOPIC)
         .map_err(|err| err.to_string())?;
     if period.is_zero() {
