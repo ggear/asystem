@@ -5,7 +5,7 @@
 import hashlib
 import json
 import math
-from os.path import join
+from os.path import isfile, join
 from typing import NamedTuple
 
 
@@ -21,20 +21,36 @@ class Info(NamedTuple):
     name: str
     flavour: str
     content_sha256: str
+    model_id: int | None
+    signature_version: int | None
+    release_version: str | None
+    released_at: str | None
+    files: dict
 
 
 class Project(NamedTuple):
     manifest: dict
     signature_json: str
     content_sha256: str
+    release: dict | None = None
 
 
 class Model:
     def __init__(self, directory, project, predict):
         self._directory = directory
         self._predict = predict
-        self._info = Info(project.manifest["name"], project.manifest["flavour"], project.content_sha256)
         self._signature = json.loads(project.signature_json)
+        release = project.release or {}
+        self._info = Info(
+            project.manifest["name"],
+            project.manifest["flavour"],
+            project.content_sha256,
+            project.manifest.get("model_id"),
+            self._signature.get("signature_version"),
+            release.get("version"),
+            release.get("released_at"),
+            dict(project.manifest.get("files", {})),
+        )
 
     def info(self):
         return self._info
@@ -89,7 +105,13 @@ def read_project(directory):
     elif manifest["flavour"] != "static":
         raise ModelError("Load", "acceptance", f"no acceptance evaluation for flavour [{manifest['flavour']}]")
     signature_json = _read_bytes(join(directory, "signature.json")).decode()
-    return Project(manifest, signature_json, hashlib.sha256(manifest_bytes).hexdigest())
+    content_sha256 = hashlib.sha256(manifest_bytes).hexdigest()
+    release = None
+    if isfile(join(directory, "release.json")):
+        release = read_json(join(directory, "release.json"))
+        if not isinstance(release, dict) or release.get("content_sha256") != content_sha256 or not isinstance(release.get("version"), str) or not isinstance(release.get("released_at"), str):
+            raise ModelError("Load", "release", f"release file differs from the project [{release.get('content_sha256') if isinstance(release, dict) else release}]")
+    return Project(manifest, signature_json, content_sha256, release)
 
 
 def build(directory, project):

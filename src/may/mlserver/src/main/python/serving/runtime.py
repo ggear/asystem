@@ -1,4 +1,4 @@
-from mlserver.types import InferenceRequest, InferenceResponse, ResponseOutput, TensorData
+from mlserver.types import InferenceRequest, InferenceResponse, Parameters, ResponseOutput, TensorData
 
 from mlserver import MLModel
 from serving.model.loader import load
@@ -17,4 +17,12 @@ class ProjectRuntime(MLModel):
         result = self._model.predict(inputs)
         datatypes = {entry["name"]: entry["datatype"] for entry in self._model.signature()["outputs"]}
         outputs = [ResponseOutput(name=name, shape=[len(values)], datatype=datatypes[name], data=TensorData(root=values)) for name, values in result.items()]
-        return InferenceResponse(model_name=self.name, model_version=self.version, outputs=outputs)
+        info = self._model.info()
+        identity = {
+            "content_sha256": info.content_sha256,
+            "model_id": info.model_id,
+            "signature_version": info.signature_version,
+            "release_version": info.release_version,
+            "released_at": info.released_at,
+        }
+        return InferenceResponse(model_name=self.name, model_version=self.version, outputs=outputs, parameters=Parameters(**{key: value for key, value in identity.items() if value is not None}))

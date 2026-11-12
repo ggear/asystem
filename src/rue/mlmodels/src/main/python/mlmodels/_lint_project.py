@@ -20,6 +20,7 @@ from mlmodels._constants import (
     PROJECT_MODEL_FILES,
     PROJECT_NAME,
     PROJECT_PLACEHOLDERS,
+    PROJECT_RELEASE,
     PROJECT_SCHEMA,
     PROJECT_SIGNATURE,
     PROJECT_SIGNATURE_ERROR,
@@ -71,6 +72,17 @@ def lint_project(project_dir):
             findings.append(("PJ003", f"file absent [{file_name}]"))
         elif file_sha256(file_path) != sha256:
             findings.append(("PJ003", f"file checksum mismatch [{file_name}]"))
+    release_path = join(project_dir, PROJECT_RELEASE)
+    if isfile(release_path):
+        try:
+            with open(release_path) as release_file:
+                release = json.load(release_file)
+        except ValueError:
+            release = None
+        if not isinstance(release, dict) or not isinstance(release.get("version"), str) or not isinstance(release.get("released_at"), str):
+            findings.append(("PJ018", f"release file needs a version and a released_at as text [{PROJECT_RELEASE}]"))
+        elif release.get("content_sha256") != file_sha256(join(project_dir, PROJECT_MANIFEST)):
+            findings.append(("PJ018", f"release file differs from the project [{release.get('content_sha256')}]"))
     if flavour == "wasm" and model in files and isfile(join(project_dir, model)):
         import wasmtime
 

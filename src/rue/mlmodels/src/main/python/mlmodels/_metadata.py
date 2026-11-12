@@ -6,7 +6,7 @@ import shutil
 from glob import glob
 from os.path import dirname, isfile, join, normpath, relpath
 
-from mlmodels._constants import PROJECT_MANIFEST, PROJECT_SIGNATURE, SIGNATURE_VERSION_FIRST, SIGNATURE_VERSION_KEY
+from mlmodels._constants import PROJECT_MANIFEST, PROJECT_RELEASE, PROJECT_SCHEMA, PROJECT_SIGNATURE, SIGNATURE_VERSION_FIRST, SIGNATURE_VERSION_KEY
 from mlmodels._document import write_json
 from mlmodels._errors import GateError
 from mlmodels._lint_project import file_sha256
@@ -116,6 +116,16 @@ def write_metadata(workspace_dir, metadata):
     write_json(join(workspace_dir, METADATA_FILE), ordered)
 
 
+def write_release(workspace_dir, metadata):
+    path = join(workspace_dir, PROJECT_DIR, PROJECT_RELEASE)
+    release = metadata["release"]
+    if release is None:
+        if isfile(path):
+            os.remove(path)
+        return
+    write_json(path, {"schema": PROJECT_SCHEMA, "version": metadata["version"], "released_at": release["timestamp"], "content_sha256": metadata["content_sha256"]})
+
+
 def record_project(workspace_dir, project_dir, target, pins_path, version_path=None):
     if not target:
         return None
@@ -154,6 +164,7 @@ def record_project(workspace_dir, project_dir, target, pins_path, version_path=N
     if baseline is not None and target.get("kind") == "served":
         metadata["baseline"] = baseline
     write_metadata(workspace_dir, metadata)
+    write_release(workspace_dir, metadata)
     derived = derived_requirements(runtime, manifest["flavour"], target)
     for language, file_name in REQUIREMENT_FILES.items():
         path = join(workspace_dir, file_name)

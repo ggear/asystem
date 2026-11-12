@@ -5,7 +5,7 @@ import time
 import urllib.error
 import urllib.request
 from datetime import UTC, datetime
-from os.path import basename, isdir, isfile, join
+from os.path import basename, isdir, isfile, join, relpath
 
 from asystem.report import skipped, stage, subject
 from mlmodels._constants import (
@@ -14,6 +14,7 @@ from mlmodels._constants import (
     PROJECT_ALIAS_RELEASE,
     PROJECT_MANIFEST,
     PROJECT_NAME,
+    PROJECT_RELEASE,
     PROJECT_SIGNATURE,
     PROJECT_TAG_CONTENT_SHA256,
     PROJECT_TAG_INPUTS_SHA256,
@@ -23,7 +24,7 @@ from mlmodels._constants import (
     PROJECT_TAG_SNAPSHOT_VERSION,
 )
 from mlmodels._errors import GateError
-from mlmodels._metadata import LOCAL_TARGET, METADATA_FILE, PROJECT_DIR, content_sha256, inputs_changed, lint_metadata, read_metadata, write_metadata
+from mlmodels._metadata import LOCAL_TARGET, METADATA_FILE, PROJECT_DIR, content_sha256, inputs_changed, lint_metadata, read_metadata, write_metadata, write_release
 from mlmodels._registry import register_project, registry_client
 from mlmodels._signature import registered_name, served_name
 
@@ -106,6 +107,7 @@ def release_workspaces(source_dir, version, tracking_uri=None, mlserver_url=None
                         metadata["baseline"] = signature
                     write_metadata(directory, metadata)
                     outcome = "released"
+                write_release(directory, metadata)
                 entry.detail = f"{metadata['version']} {outcome}"
             with stage("target") as entry:
                 entry.detail = " ".join(str(metadata["target"][key]) for key in ("kind", "language") if key in metadata["target"])
@@ -284,6 +286,14 @@ def status_lines(source_dir, tracking_uri=None, mlserver_url=None):
     from mlmodels._embed import stale_consumers
 
     lines.extend(("WARN", f"consumer embeds an older release module [{os.path.relpath(consumer, source_dir)}]") for consumer in stale_consumers(source_dir))
+    for consumer in consumers(source_dir):
+        for slot in slots(consumer):
+            release_path = join(slot, PROJECT_RELEASE)
+            label = "none"
+            if isfile(release_path):
+                with open(release_path) as release_file:
+                    label = json.load(release_file)["version"]
+            lines.append(("INFO", f"consumer embeds [{relpath(consumer, source_dir)}] [{slot_name(slot)}] content [{content_sha256(slot)[:8]}] release [{label}]"))
     return lines
 
 

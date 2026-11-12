@@ -18,7 +18,7 @@ pub struct Sample {
 pub const SAMPLES: [Sample; 7] = [
     Sample {
         variable: "input.voltage",
-        key: "rackmains_mains_input_volts",
+        key: crate::metrics::MAINS_INPUT_VOLTS,
     },
     Sample {
         variable: "input.voltage.fault",

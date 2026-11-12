@@ -65,6 +65,61 @@ fn a_project_loads_predicts_and_verifies() {
     assert_eq!("static", model.info().flavour);
 }
 
+fn release(directory: &Path, content_sha256: &str) {
+    fs::write(
+        directory.join("release.json"),
+        json!({"schema": 1, "version": "10.200.2027", "released_at": "2026-11-12T09:05:35Z", "content_sha256": content_sha256}).to_string(),
+    )
+    .unwrap();
+}
+
+fn identified(directory: &Path) -> String {
+    let signature = fs::read(directory.join("signature.json")).unwrap();
+    let mut signature: Value = serde_json::from_slice(&signature).unwrap();
+    signature["signature_version"] = json!(1001);
+    let signature = signature.to_string();
+    fs::write(directory.join("signature.json"), &signature).unwrap();
+    let mut manifest: Value = serde_json::from_slice(&fs::read(directory.join("project.json")).unwrap()).unwrap();
+    manifest["model_id"] = json!(1005);
+    manifest["files"]["signature.json"] = json!(hex(&Sha256::digest(signature.as_bytes())));
+    let manifest = manifest.to_string();
+    fs::write(directory.join("project.json"), &manifest).unwrap();
+    hex(&Sha256::digest(manifest.as_bytes()))
+}
+
+#[test]
+fn a_released_project_reports_its_versions_and_hashes() {
+    let directory = project(3.5, "FP64", 3.5);
+    let content_sha256 = identified(&directory);
+    release(&directory, &content_sha256);
+    let info = Model::load(&directory).unwrap().info().clone();
+    assert_eq!(info.content_sha256, content_sha256);
+    assert_eq!(info.model_id, Some(1005));
+    assert_eq!(info.signature_version, Some(1001));
+    assert_eq!(info.release_version.as_deref(), Some("10.200.2027"));
+    assert_eq!(info.released_at.as_deref(), Some("2026-11-12T09:05:35Z"));
+    assert_eq!(
+        info.files.keys().cloned().collect::<Vec<_>>(),
+        ["golden.json", "signature.json"]
+    );
+}
+
+#[test]
+fn an_unreleased_project_reports_no_release() {
+    let info = Model::load(&project(3.5, "FP64", 3.5)).unwrap().info().clone();
+    assert_eq!((info.model_id, info.signature_version), (None, None));
+    assert_eq!((info.release_version, info.released_at), (None, None));
+}
+
+#[test]
+fn a_release_file_for_another_project_is_a_load_error() {
+    let directory = project(3.5, "FP64", 3.5);
+    release(&directory, &"0".repeat(64));
+    let error = load_error(&directory);
+    assert!(matches!(error.kind, Kind::Load));
+    assert_eq!(error.gate, "release");
+}
+
 #[test]
 fn a_model_is_send_and_sync() {
     fn check<T: Send + Sync>() {}

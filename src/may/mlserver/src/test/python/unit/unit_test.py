@@ -1,5 +1,6 @@
 import contextlib
 import copy
+import hashlib
 import io
 import json
 import os
@@ -25,6 +26,7 @@ from serving.model.vocabulary import (
     PROJECT_TAG_CONTENT_SHA256,
     PROJECT_TAG_FLAVOUR,
     PROJECT_TAG_RELEASE_VERSION,
+    PROJECT_TAG_RELEASED_AT,
 )
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
@@ -61,6 +63,21 @@ class SyncTest(unittest.TestCase):
         self.registry.add(1, "1.0.0", released=True, tagged=False)
         self.sync()
         self.assertEqual([], os.listdir(self.models_dir))
+
+    def test_a_release_file_is_written_from_the_tags_of_a_release_and_not_of_a_preview(self):
+        self.registry.add(1, "1.0.0", released=True)
+        self.registry.add(2, None, previewed=True)
+        self.sync()
+        with open(join(self.models_dir, NAME, "release.json")) as release_file:
+            release = json.load(release_file)
+        self.assertEqual(("1.0.0", "2026-11-12T09:05:35Z"), (release["version"], release["released_at"]))
+        self.assertFalse(os.path.isfile(join(self.models_dir, NAME + PROJECT_PREVIEW_SUFFIX, "release.json")))
+
+    def test_a_release_whose_tags_name_another_content_is_not_served(self):
+        self.registry.add(1, "1.0.0", released=True)
+        self.registry.model_list[NAME]["versions"]["1"][PROJECT_TAG_CONTENT_SHA256] = "0" * 64
+        self.sync()
+        self.assertFalse(isdir(join(self.models_dir, NAME)))
 
     def test_an_unchanged_registry_downloads_and_calls_nothing(self):
         self.registry.add(1, "1.0.0", released=True)
@@ -228,9 +245,12 @@ class FakeRegistry:
         if broken:
             with open(join(project_dir, "model.wasm"), "ab") as model_file:
                 model_file.write(b"\0")
-        tags = {PROJECT_TAG_CONTENT_SHA256: f"{version:064d}", PROJECT_TAG_FLAVOUR: "wasm"} if tagged else {}
+        with open(join(project_dir, "project.json"), "rb") as manifest_file:
+            actual = hashlib.sha256(manifest_file.read()).hexdigest()
+        tags = {PROJECT_TAG_CONTENT_SHA256: actual, PROJECT_TAG_FLAVOUR: "wasm"} if tagged else {}
         if release_version is not None:
             tags[PROJECT_TAG_RELEASE_VERSION] = release_version
+            tags[PROJECT_TAG_RELEASED_AT] = "2026-11-12T09:05:35Z"
         model["versions"][str(version)] = tags
         self.projects[(name, str(version))] = project_dir
         if released:

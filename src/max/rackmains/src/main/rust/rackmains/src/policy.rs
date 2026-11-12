@@ -25,6 +25,20 @@ pub struct Estimate {
     pub energy_remaining_pct: Option<i64>,
 }
 
+impl Policy {
+    pub fn fields(&self) -> Vec<(&'static str, String)> {
+        vec![
+            ("shed_battery", format!("{}s", self.shed_battery.as_secs())),
+            ("restore_mains", format!("{}s", self.restore_mains.as_secs())),
+            (
+                "shed_runtime",
+                self.shed_runtime
+                    .map_or_else(|| "none".to_string(), |runtime| format!("{}s", runtime.as_secs())),
+            ),
+        ]
+    }
+}
+
 impl TryFrom<&Response> for Policy {
     type Error = String;
 
@@ -351,7 +365,18 @@ mod tests {
             out
         });
         manifest["files"]["signature.json"] = Value::from(digest);
-        std::fs::write(directory.join("project.json"), serde_json::to_vec(&manifest).unwrap()).unwrap();
+        let manifest_bytes = serde_json::to_vec(&manifest).unwrap();
+        std::fs::write(directory.join("project.json"), &manifest_bytes).unwrap();
+        let mut release: Value =
+            serde_json::from_slice(&std::fs::read(directory.join("release.json")).unwrap()).unwrap();
+        release["content_sha256"] = Value::from(Sha256::digest(&manifest_bytes).iter().fold(
+            String::new(),
+            |mut out, byte| {
+                let _ = write!(out, "{byte:02x}");
+                out
+            },
+        ));
+        std::fs::write(directory.join("release.json"), serde_json::to_vec(&release).unwrap()).unwrap();
         let error = load(&directory).err().unwrap();
         std::fs::remove_dir_all(&directory).unwrap();
         assert_eq!((Kind::Signature, "contract"), (error.kind, error.gate.as_str()));

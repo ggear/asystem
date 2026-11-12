@@ -7,6 +7,7 @@ use crate::nut::Flags;
 
 pub const BATTERY_AGE_DUE_DAYS: i64 = 1095;
 
+pub const MAINS_INPUT_VOLTS: &str = "rackmains_mains_input_volts";
 pub const BATTERY_LOW: &str = "rackmains_battery_low";
 pub const BATTERY_CHARGE_PCT: &str = "rackmains_battery_charge_pct";
 pub const BATTERY_REPLACE: &str = "rackmains_battery_replace_due";

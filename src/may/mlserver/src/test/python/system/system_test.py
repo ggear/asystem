@@ -48,6 +48,9 @@ def test_a_release_is_served_a_broken_newer_release_falls_back_and_a_preview_is_
     good = register_project(example_project("wasm/accumulate"), NAME, uri, aliases=())
     _release(client, good, "1.0.0")
     _wait(lambda: _index().get(NAME) == ("1.0.0", "READY"))
+    parameters = _call(f"/v2/models/{NAME}/infer", _golden_request("wasm/accumulate"))["parameters"]
+    assert parameters["release_version"] == "1.0.0"
+    assert parameters["released_at"] and len(parameters["content_sha256"]) == 64 and parameters["signature_version"] >= 1000
     broken = _broken_version(uri, client)
     client.set_registered_model_alias(NAME, "release", broken)
     time.sleep(8)
@@ -58,10 +61,18 @@ def test_a_release_is_served_a_broken_newer_release_falls_back_and_a_preview_is_
     assert _call(f"/v2/models/{NAME}_preview/infer", {"inputs": [{"name": "saturate_in", "shape": [1], "datatype": "FP64", "data": [-3.0]}]})["outputs"][0]["data"] == pytest.approx(
         [-3.6205930145794656]
     )
+    preview_parameters = _call(f"/v2/models/{NAME}_preview/infer", _golden_request("wasm/saturate"))["parameters"]
+    assert "release_version" not in preview_parameters and len(preview_parameters["content_sha256"]) == 64
     client.delete_registered_model_alias(NAME, "preview")
     _wait(lambda: NAME + "_preview" not in _index())
     client.delete_registered_model_alias(NAME, "release")
     _wait(lambda: NAME not in _index())
+
+
+def _golden_request(example):
+    with open(join(example_project(example), "golden.json")) as golden_file:
+        step = next(step for sequence in json.load(golden_file)["sequences"] for step in sequence["steps"] if "response" in step)
+    return {"inputs": [{key: entry[key] for key in ("name", "shape", "datatype", "data")} for entry in step["request"]["inputs"]]}
 
 
 def _broken_version(uri, client):
@@ -80,6 +91,7 @@ def _broken_version(uri, client):
 
 def _release(client, version, label):
     client.set_model_version_tag(NAME, version, "release_version", label)
+    client.set_model_version_tag(NAME, version, "released_at", "2026-11-12T09:05:35Z")
     client.set_registered_model_alias(NAME, "release", version)
 
 

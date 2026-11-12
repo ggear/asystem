@@ -16,9 +16,12 @@ from serving.model.vocabulary import (
     PROJECT_LABEL_PREVIEW,
     PROJECT_LABEL_RELEASE,
     PROJECT_PREVIEW_SUFFIX,
+    PROJECT_RELEASE,
+    PROJECT_SCHEMA,
     PROJECT_TAG_CONTENT_SHA256,
     PROJECT_TAG_FLAVOUR,
     PROJECT_TAG_RELEASE_VERSION,
+    PROJECT_TAG_RELEASED_AT,
 )
 
 RUNTIME = "serving.runtime.ProjectRuntime"
@@ -166,8 +169,12 @@ def _swap(registry, models_dir, served, name, version, tags, label, call):
                 raise ValueError("no project in the pulled model")
             entry.detail = f"v{version}"
         with stage("verify") as entry:
+            if PROJECT_TAG_RELEASE_VERSION in tags and PROJECT_TAG_RELEASED_AT in tags:
+                release = {"schema": PROJECT_SCHEMA, "version": tags[PROJECT_TAG_RELEASE_VERSION], "released_at": tags[PROJECT_TAG_RELEASED_AT], "content_sha256": tags[PROJECT_TAG_CONTENT_SHA256]}
+                with open(join(project_dir, PROJECT_RELEASE), "w") as release_file:
+                    json.dump(release, release_file, indent=2)
             model = load(project_dir)
-            entry.detail = f"content {tags[PROJECT_TAG_CONTENT_SHA256][:8]}"
+            entry.detail = f"content {tags[PROJECT_TAG_CONTENT_SHA256][:8]} label {label}"
         target_dir = join(models_dir, served)
         backup_dir = join(staging_dir, "previous")
         with stage("install") as entry:

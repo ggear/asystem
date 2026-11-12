@@ -26,6 +26,8 @@ use crate::schema::{AVAILABILITY_ONLINE, KEY_PERIOD_MS, KEY_TIMESTAMP};
 use crate::shed::{self, load_hosts, DryRun, Finished, Runner, Ssh};
 use crate::{check, drill, log_line, parse_duration, STATE_TOPIC, STATUS_TOPIC};
 
+const REPORT_PERIOD: Duration = Duration::from_secs(60);
+const REPORT_PERIOD_BATTERY: Duration = Duration::from_secs(1);
 const SSH_TIMEOUT_SECONDS: u64 = 30;
 
 pub struct Settings {
@@ -90,6 +92,8 @@ pub struct Poller {
     interrupted: Option<String>,
     first: bool,
     publish_failing: bool,
+    read_failures_total: u64,
+    report_since: Duration,
 }
 
 impl Poller {
@@ -166,6 +170,8 @@ impl Poller {
             interrupted,
             first: true,
             publish_failing: false,
+            read_failures_total: 0,
+            report_since: Duration::ZERO,
             settings,
         })
     }
@@ -218,7 +224,14 @@ impl Poller {
             }
             Err(err) => {
                 self.failures += 1;
-                warn!("device read failed [{err}] {READ_FAILURES} [{}]", self.failures);
+                self.read_failures_total += 1;
+                warn!(
+                    "{}",
+                    log_line(
+                        "device read failed",
+                        &format!("{err} {READ_FAILURES} {}", self.failures)
+                    )
+                );
                 None
             }
         };
@@ -502,7 +515,14 @@ impl Poller {
         match self.loaded.call(request) {
             Ok(answer) => {
                 if answer.policy != self.policy {
-                    info!("guard policy changed [{:?}]", answer.policy);
+                    for ((name, was), (_, now)) in self.policy.fields().into_iter().zip(answer.policy.fields()) {
+                        if was != now {
+                            info!(
+                                "{}",
+                                log_line(&format!("guard policy {name} changed"), &format!("{was} to {now}"))
+                            );
+                        }
+                    }
                     self.guard.set_policy(answer.policy.clone());
                     self.policy = answer.policy;
                 }
@@ -542,6 +562,60 @@ impl Poller {
 
     fn publish(&mut self, frame: &Frame, dt: Duration, on_battery: bool, forced: bool) -> Result<(), String> {
         self.since_publish += dt;
+        self.report_since += dt;
+        if self.report_since
+            >= if on_battery {
+                REPORT_PERIOD_BATTERY
+            } else {
+                REPORT_PERIOD
+            }
+        {
+            self.report_since = Duration::ZERO;
+            let shown = |name: &str| {
+                self.last.get(name).map_or_else(
+                    || "unknown".to_string(),
+                    |value| value.as_str().map_or_else(|| value.to_string(), str::to_string),
+                )
+            };
+            let state = if self.last.get(metrics::ON_BATTERY).is_none() {
+                "unknown".to_string()
+            } else {
+                let mut words = vec![if self.last.flag(metrics::ON_BATTERY) {
+                    "on battery"
+                } else {
+                    "on mains"
+                }];
+                for (name, word) in [
+                    (metrics::UPS_CALIBRATING, "calibrating"),
+                    (metrics::BATTERY_LOW, "battery low"),
+                    (metrics::BATTERY_REPLACE, "battery replace due"),
+                    (metrics::UPS_PROBLEM, "fault"),
+                    (metrics::UPS_BOOST, "boosting"),
+                    (metrics::UPS_TRIM, "trimming"),
+                    (metrics::BATTERY_CHARGING, "charging"),
+                ] {
+                    if self.last.flag(name) {
+                        words.push(word);
+                    }
+                }
+                words.join(", ")
+            };
+            for (name, value) in [
+                ("read failures", self.read_failures_total.to_string()),
+                ("ups state", state),
+                (metrics::MAINS_INPUT_VOLTS, shown(metrics::MAINS_INPUT_VOLTS)),
+                (metrics::UTILISATION, shown(metrics::UTILISATION)),
+                (metrics::BATTERY_VOLTS, shown(metrics::BATTERY_VOLTS)),
+                (metrics::BATTERY_CHARGE_PCT, shown(metrics::BATTERY_CHARGE_PCT)),
+                (
+                    metrics::BATTERY_RUNTIME_REMAINING_SECONDS,
+                    shown(metrics::BATTERY_RUNTIME_REMAINING_SECONDS),
+                ),
+                (metrics::GUARD_STATE, shown(metrics::GUARD_STATE)),
+            ] {
+                info!("{}", log_line(&format!("progress {name}"), &value));
+            }
+        }
         let key = (frame.text(STATUS).map(str::to_string), self.failures);
         let changed = self.published_key.as_ref() != Some(&key);
         let due = on_battery
@@ -572,15 +646,18 @@ impl Poller {
             Err(err) if !self.publish_failing => {
                 self.publish_failing = true;
                 if self.session.is_some() {
-                    info!("publish lost during an outage [{STATE_TOPIC}] [{err}]");
+                    info!(
+                        "{}",
+                        log_line("publish lost during an outage", &format!("{STATE_TOPIC} {err}"))
+                    );
                 } else {
-                    warn!("publish lost [{STATE_TOPIC}] [{err}]");
+                    warn!("{}", log_line("publish lost", &format!("{STATE_TOPIC} {err}")));
                 }
             }
             Err(err) => debug!("publish still lost [{STATE_TOPIC}] [{err}]"),
             Ok(()) if self.publish_failing => {
                 self.publish_failing = false;
-                info!("publish restored [{STATE_TOPIC}]");
+                info!("{}", log_line("publish restored", STATE_TOPIC));
             }
             Ok(()) => {}
         }
@@ -605,7 +682,7 @@ impl Poller {
         Effective {
             guard_live: self.settings.live,
             model_name: info.name.clone(),
-            model_version: info.flavour.clone(),
+            model_version: info.release_version.clone().unwrap_or_else(|| "unreleased".to_string()),
             model_hash: info.content_sha256.clone(),
             guard_shed_battery_seconds: self.policy.shed_battery.as_secs(),
             guard_restore_mains_seconds: self.policy.restore_mains.as_secs(),
@@ -628,9 +705,22 @@ pub fn run(args: &ServeArgs, data_dir: &Path) -> Result<(), String> {
     let common = &args.common;
     let timeout = parse_duration(&common.timeout)?;
     let version = std::env::var("SERVICE_VERSION_ABSOLUTE").unwrap_or_else(|_| "unknown".to_string());
-    info!("{}", log_line("starting version", &version));
+    info!("{}", log_line("version", &version));
     let (loaded, policy) = load_model(Path::new(&common.model_dir))?;
-    info!("{}", log_line("guard policy", &format!("{policy:?}")));
+    let model = loaded.info();
+    info!("{}", log_line("model name", &model.name));
+    info!("{}", log_line("model flavour", &model.flavour));
+    info!(
+        "{}",
+        log_line(
+            "model version",
+            model.release_version.as_deref().unwrap_or("unreleased")
+        )
+    );
+    info!("{}", log_line("model hash", &model.content_sha256));
+    for (name, value) in policy.fields() {
+        info!("{}", log_line(&format!("guard policy {name}"), &value));
+    }
     let hosts = load_hosts(Path::new(&common.hosts_file), &common.local_host)?;
     let ssh_timeout = Duration::from_secs(SSH_TIMEOUT_SECONDS);
     if args.live {
@@ -656,7 +746,7 @@ pub fn run(args: &ServeArgs, data_dir: &Path) -> Result<(), String> {
             timeout: ssh_timeout,
         })
     } else {
-        warn!("guard is in dry-run, commands are logged and not run");
+        info!("{}", log_line("guard mode", "dry-run"));
         Arc::new(DryRun)
     };
     info!("{}", log_line("reading device", &common.device));

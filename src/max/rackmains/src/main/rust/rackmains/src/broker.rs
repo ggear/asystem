@@ -81,7 +81,7 @@ impl MqttPublisher {
                         thread_connected.store(true, Ordering::SeqCst);
                         failing = false;
                         if seen {
-                            info!("broker reconnected [{address}]");
+                            info!("{}", log_line("broker reconnected", &address));
                         } else {
                             info!("{}", log_line("connected to broker", &address));
                             seen = true;
@@ -109,7 +109,10 @@ impl MqttPublisher {
                                     warn!("broker retained republish failed [{topic}] [{err}]");
                                 }
                             }
-                            info!("broker republished [{}] retained topic(s) [{address}]", replay.len());
+                            info!(
+                                "{}",
+                                log_line("broker republished retained topics", &replay.len().to_string())
+                            );
                         }
                     }
                     Ok(Event::Incoming(Packet::PubAck(ack))) => {
@@ -131,7 +134,13 @@ impl MqttPublisher {
                             debug!("broker still down [{address}] [{err}]");
                         } else {
                             failing = true;
-                            warn!("broker error [{address}] [{err}], retrying every [{RECONNECT_DELAY:?}]");
+                            warn!(
+                                "{}",
+                                log_line(
+                                    "broker error",
+                                    &format!("{address} {err} retrying every {RECONNECT_DELAY:?}")
+                                )
+                            );
                         }
                         thread::sleep(RECONNECT_DELAY);
                     }
@@ -168,7 +177,7 @@ impl MqttPublisher {
         if let Some(handle) = self.handle.take() {
             handle.join().ok();
         }
-        info!("broker disconnected");
+        info!("{}", log_line("broker disconnected", "closing connection"));
         published.and(disconnected)
     }
 }

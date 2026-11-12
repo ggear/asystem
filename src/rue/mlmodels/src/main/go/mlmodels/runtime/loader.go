@@ -42,9 +42,14 @@ func (e *ModelError) Error() string {
 }
 
 type Info struct {
-	Name          string
-	Flavour       string
-	ContentSha256 string
+	Name             string
+	Flavour          string
+	ContentSha256    string
+	ModelID          *int64
+	SignatureVersion *int64
+	ReleaseVersion   *string
+	ReleasedAt       *string
+	Files            map[string]string
 }
 
 type Finding struct {
@@ -56,6 +61,7 @@ type Project struct {
 	Manifest      map[string]any
 	SignatureJSON string
 	ContentSha256 string
+	Release       map[string]any
 }
 
 type Model struct {
@@ -111,7 +117,19 @@ func ReadProject(directory string) (*Project, error) {
 		return nil, err
 	}
 	sum := sha256.Sum256(manifestBytes)
-	return &Project{Manifest: manifest, SignatureJSON: string(signatureBytes), ContentSha256: hex.EncodeToString(sum[:])}, nil
+	contentSha256 := hex.EncodeToString(sum[:])
+	var release map[string]any
+	if _, err := os.Stat(filepath.Join(directory, "release.json")); err == nil {
+		if err := ReadJSON(filepath.Join(directory, "release.json"), &release); err != nil {
+			return nil, err
+		}
+		_, versioned := release["version"].(string)
+		_, dated := release["released_at"].(string)
+		if text(release["content_sha256"]) != contentSha256 || !versioned || !dated {
+			return nil, &ModelError{KindLoad, "release", fmt.Sprintf("release file differs from the project [%s]", text(release["content_sha256"]))}
+		}
+	}
+	return &Project{Manifest: manifest, SignatureJSON: string(signatureBytes), ContentSha256: contentSha256, Release: release}, nil
 }
 
 func Build(directory string, project *Project) (*Model, error) {
@@ -139,8 +157,22 @@ func Build(directory string, project *Project) (*Model, error) {
 	if err != nil {
 		return nil, &ModelError{KindLoad, "driver", err.Error()}
 	}
+	files := map[string]string{}
+	manifestFiles, _ := project.Manifest["files"].(map[string]any)
+	for path, checksum := range manifestFiles {
+		files[path] = text(checksum)
+	}
 	return &Model{
-		info:      Info{Name: text(project.Manifest["name"]), Flavour: flavour, ContentSha256: project.ContentSha256},
+		info: Info{
+			Name:             text(project.Manifest["name"]),
+			Flavour:          flavour,
+			ContentSha256:    project.ContentSha256,
+			ModelID:          optionalInt(project.Manifest["model_id"]),
+			SignatureVersion: optionalInt(signature["signature_version"]),
+			ReleaseVersion:   optionalText(project.Release["version"]),
+			ReleasedAt:       optionalText(project.Release["released_at"]),
+			Files:            files,
+		},
 		signature: signature,
 		directory: directory,
 		predict:   predict,
@@ -337,6 +369,23 @@ func isState(entry map[string]any) bool {
 func text(value any) string {
 	content, _ := value.(string)
 	return content
+}
+
+func optionalInt(value any) *int64 {
+	number, found := value.(float64)
+	if !found {
+		return nil
+	}
+	whole := int64(number)
+	return &whole
+}
+
+func optionalText(value any) *string {
+	content, found := value.(string)
+	if !found {
+		return nil
+	}
+	return &content
 }
 
 func loadStatic(constantsJSON string, signatureJSON string) (Predict, error) {

@@ -51,12 +51,18 @@ pub struct Info {
     pub name: String,
     pub flavour: String,
     pub content_sha256: String,
+    pub model_id: Option<i64>,
+    pub signature_version: Option<i64>,
+    pub release_version: Option<String>,
+    pub released_at: Option<String>,
+    pub files: BTreeMap<String, String>,
 }
 
 pub struct Project {
     pub manifest: Value,
     pub signature_json: String,
     pub content_sha256: String,
+    pub release: Option<Value>,
 }
 
 pub struct Model {
@@ -95,6 +101,16 @@ impl Model {
                 name: text(&manifest["name"]),
                 flavour,
                 content_sha256: project.content_sha256.clone(),
+                model_id: manifest["model_id"].as_i64(),
+                signature_version: signature["signature_version"].as_i64(),
+                release_version: project.release.as_ref().map(|release| text(&release["version"])),
+                released_at: project.release.as_ref().map(|release| text(&release["released_at"])),
+                files: manifest["files"]
+                    .as_object()
+                    .into_iter()
+                    .flatten()
+                    .map(|(path, checksum)| (path.clone(), text(checksum)))
+                    .collect(),
             },
             signature,
             directory: directory.to_path_buf(),
@@ -208,10 +224,32 @@ pub fn read_project(directory: &Path) -> Result<Project, ModelError> {
     }
     let signature_json = String::from_utf8(read_bytes(&directory.join("signature.json"))?)
         .map_err(|error| ModelError::new(Kind::Load, "signature", format!("signature invalid [{error}]")))?;
+    let content_sha256 = hex(&Sha256::digest(&manifest_bytes));
+    let release_path = directory.join("release.json");
+    let release = if release_path.is_file() {
+        let release = read_json(&release_path)?;
+        if text(&release["content_sha256"]) != content_sha256
+            || !release["version"].is_string()
+            || !release["released_at"].is_string()
+        {
+            return Err(ModelError::new(
+                Kind::Load,
+                "release",
+                format!(
+                    "release file differs from the project [{}]",
+                    text(&release["content_sha256"])
+                ),
+            ));
+        }
+        Some(release)
+    } else {
+        None
+    };
     Ok(Project {
         manifest,
         signature_json,
-        content_sha256: hex(&Sha256::digest(&manifest_bytes)),
+        content_sha256,
+        release,
     })
 }
 

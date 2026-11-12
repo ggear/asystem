@@ -13,6 +13,7 @@ PROJECT_MANIFEST = "project.json"
 
 
 PROJECT_SIGNATURE = "signature.json"
+PROJECT_RELEASE = "release.json"
 
 
 PROJECT_GOLDEN = "golden.json"

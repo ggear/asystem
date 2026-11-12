@@ -597,6 +597,39 @@ class LoaderTest(unittest.TestCase):
             load(build_project("wasm", golden_out=9.5)).verify()
         self.assertEqual("Verify", raised.exception.kind)
 
+    def release_file(self, project_dir, content_sha256=None):
+        import hashlib
+
+        with open(join(project_dir, "project.json"), "rb") as manifest_file:
+            actual = hashlib.sha256(manifest_file.read()).hexdigest()
+        with open(join(project_dir, "release.json"), "w") as release_file:
+            json.dump({"schema": 1, "version": "10.200.2027", "released_at": "2026-11-12T09:05:35Z", "content_sha256": content_sha256 or actual}, release_file)
+        return actual
+
+    def test_a_released_project_reports_its_versions_and_hashes(self):
+        from mlmodels.runtime.loader import load
+
+        project_dir = build_project("wasm")
+        content_sha256 = self.release_file(project_dir)
+        info = load(project_dir).info()
+        self.assertEqual((content_sha256, 1000, "10.200.2027", "2026-11-12T09:05:35Z"), (info.content_sha256, info.signature_version, info.release_version, info.released_at))
+        self.assertGreaterEqual(set(info.files), {"signature.json", "golden.json", "model.wasm"})
+
+    def test_an_unreleased_project_reports_no_release(self):
+        from mlmodels.runtime.loader import load
+
+        info = load(build_project("wasm")).info()
+        self.assertEqual((None, None), (info.release_version, info.released_at))
+
+    def test_a_release_file_for_another_project_is_a_load_error(self):
+        from mlmodels.runtime.loader import ModelError, load
+
+        project_dir = build_project("wasm")
+        self.release_file(project_dir, "0" * 64)
+        with self.assertRaises(ModelError) as raised:
+            load(project_dir)
+        self.assertEqual(("Load", "release"), (raised.exception.kind, raised.exception.gate))
+
 
 class EmbedLoaderTest(unittest.TestCase):
     def test_the_loader_is_written_once_and_a_repeat_writes_nothing(self):
@@ -1376,6 +1409,41 @@ class ReleaseTest(unittest.TestCase):
         self.assertEqual(("Release", "stale"), (raised.exception.stage, raised.exception.gate))
         self.assertIsNone(read_metadata(self.workspace)["release"])
 
+    def test_a_release_file_is_written_beside_the_project_kept_by_a_rerun_and_dropped_with_the_content(self):
+        from mlmodels._metadata import read_metadata
+
+        path = join(self.workspace, "project", "release.json")
+        self.record()
+        self.assertFalse(os.path.isfile(path))
+        self.release()
+        metadata = read_metadata(self.workspace)
+        with open(path) as release_file:
+            release = json.load(release_file)
+        self.assertEqual(("10.200.1", metadata["release"]["timestamp"], metadata["content_sha256"]), (release["version"], release["released_at"], release["content_sha256"]))
+        self.record()
+        self.assertTrue(os.path.isfile(path))
+        self.record(project_dir=build_project("wasm", golden_out=3.5))
+        self.assertFalse(os.path.isfile(path))
+
+    def test_a_release_file_is_a_finding_unless_it_names_the_project_it_sits_in(self):
+        from mlmodels._lint_project import lint_project
+
+        project_dir = build_project("wasm")
+        release = {"schema": 1, "version": "10.200.1", "released_at": "2026-11-12T09:05:35Z", "content_sha256": "0" * 64}
+        with open(join(project_dir, "release.json"), "w") as release_file:
+            json.dump(release, release_file)
+        self.assertEqual(["PJ018"], [rule for rule, _ in lint_project(project_dir)])
+        with open(join(project_dir, "project.json"), "rb") as manifest_file:
+            import hashlib
+
+            release["content_sha256"] = hashlib.sha256(manifest_file.read()).hexdigest()
+        with open(join(project_dir, "release.json"), "w") as release_file:
+            json.dump(release, release_file)
+        self.assertEqual([], lint_project(project_dir))
+        with open(join(project_dir, "release.json"), "w") as release_file:
+            json.dump({**release, "version": 10}, release_file)
+        self.assertEqual(["PJ018"], [rule for rule, _ in lint_project(project_dir)])
+
     def test_a_content_change_then_a_breaking_edit_at_the_same_signature_version_is_refused(self):
         from mlmodels._errors import GateError
         from mlmodels._metadata import read_metadata
@@ -1568,6 +1636,20 @@ class ReleaseTest(unittest.TestCase):
             live = self.publish_at(1002, ["demo_replay_double_1000", "demo_replay_double_1001"])
         self.assertEqual({"demo_replay_double_1000", "demo_replay_double_1001", "demo_replay_double_1002"}, live)
 
+    def test_status_prints_the_content_and_release_of_every_embedded_project(self):
+        from mlmodels._embed import embed_consumer
+        from mlmodels._release import status_lines
+
+        self.record()
+        self.release()
+        before = [message for level, message in status_lines(self.source) if level == "INFO"]
+        self.assertEqual(1, len(before))
+        self.assertIn("release [none]", before[0])
+        embed_consumer(self.consumer, self.source, "demo_replay_double")
+        after = [message for level, message in status_lines(self.source) if level == "INFO"]
+        self.assertEqual(1, len(after))
+        self.assertIn("release [10.200.1]", after[0])
+
     def test_status_counts_what_a_registry_shows_beyond_the_two_live_versions_and_git(self):
         from mlflow import MlflowClient
         from mlmodels._embed import embed_consumer
@@ -1579,13 +1661,13 @@ class ReleaseTest(unittest.TestCase):
         publish_workspace("demo_replay_double", self.workspace, uri)
         embed_consumer(self.consumer, self.source, "demo_replay_double")
         client = MlflowClient(uri, uri)
-        self.assertEqual([], status_lines(self.source, uri))
+        self.assertEqual([], [line for line in status_lines(self.source, uri) if line[0] == "WARN"])
         self.live_models(client, "demo_replay_double_1001")
-        self.assertEqual(1, len(status_lines(self.source, uri)))
+        self.assertEqual(1, len([line for line in status_lines(self.source, uri) if line[0] == "WARN"]))
         self.live_models(client, "demo_replay_double_1002")
-        self.assertEqual(2, len(status_lines(self.source, uri)))
+        self.assertEqual(2, len([line for line in status_lines(self.source, uri) if line[0] == "WARN"]))
         client.delete_registered_model_alias("demo_replay_double_1002", "release")
-        self.assertEqual(1, len(status_lines(self.source, uri)))
+        self.assertEqual(1, len([line for line in status_lines(self.source, uri) if line[0] == "WARN"]))
         client_dir = join(self.source, "meg", "client")
         os.makedirs(client_dir)
 
@@ -1594,11 +1676,11 @@ class ReleaseTest(unittest.TestCase):
                 config_file.write(f"resource: https://mlserver/v2/models/{model}/infer\n")
 
         pin("demo_replay_double_1000")
-        self.assertEqual(2, len(status_lines(self.source, uri)))
+        self.assertEqual(2, len([line for line in status_lines(self.source, uri) if line[0] == "WARN"]))
         pin("demo_replay_double_1001")
-        self.assertEqual(1, len(status_lines(self.source, uri)))
+        self.assertEqual(1, len([line for line in status_lines(self.source, uri) if line[0] == "WARN"]))
         client.delete_registered_model_alias("demo_replay_double_1001", "release")
-        self.assertEqual(1, len(status_lines(self.source, uri)))
+        self.assertEqual(1, len([line for line in status_lines(self.source, uri) if line[0] == "WARN"]))
 
     def test_an_embedded_project_may_change_its_released_signature_in_place_and_a_served_one_may_not(self):
         from mlmodels._errors import GateError
@@ -1654,9 +1736,9 @@ class ReleaseTest(unittest.TestCase):
 
         self.record()
         self.release()
-        self.assertEqual(["WARN"], [level for level, _ in status_lines(self.source)])
+        self.assertEqual(["WARN"], [level for level, _ in status_lines(self.source) if level == "WARN"])
         embed_consumer(self.consumer, self.source, "demo_replay_double")
-        self.assertEqual([], status_lines(self.source))
+        self.assertEqual([], [line for line in status_lines(self.source) if line[0] == "WARN"])
 
 
 class StageDetailTest(unittest.TestCase):
