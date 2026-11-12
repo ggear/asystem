@@ -46,12 +46,14 @@ def model_command(arguments=None):
     release.add_argument("source_dir")
     release.add_argument("--version", required=True)
     release.add_argument("--mlserver")
+    release.add_argument("--pins")
     publish = commands.add_parser("publish")
     publish.add_argument("source_dir")
     publish.add_argument("--mlserver")
     status = commands.add_parser("status")
     status.add_argument("source_dir")
     status.add_argument("--mlserver")
+    commands.add_parser("clear-previews").add_argument("source_dir")
     docker_args = commands.add_parser("docker-args")
     docker_args.add_argument("source_dir")
     docker_args.add_argument("pins_path")
@@ -104,7 +106,7 @@ def model_command(arguments=None):
 
             configure_log()
             tracking_uri = registry_address(os.environ.get("MLFLOW_TRACKING_URI"))
-            released = release_workspaces(options.source_dir, options.version, tracking_uri, options.mlserver)
+            released = release_workspaces(options.source_dir, options.version, tracking_uri, options.mlserver, pins_path=options.pins)
             LOG.info("Release version [%s] of [%s] workspaces", options.version, len(released))
             for consumer in stale_consumers(options.source_dir):
                 print(f"WARN consumer embeds an older release [{relpath(consumer, options.source_dir)}]", file=sys.stderr)
@@ -120,6 +122,12 @@ def model_command(arguments=None):
                 if metadata is not None and metadata["release"] is not None and metadata["target"]["kind"] == "served":
                     with subject(f"publish {name}"):
                         publish_workspace(name, directory, tracking_uri, options.mlserver, options.source_dir)
+        elif options.command == "clear-previews":
+            from mlmodels._release import clear_previews
+
+            configure_log()
+            for registered in clear_previews(options.source_dir, registry_address(os.environ.get("MLFLOW_TRACKING_URI"))):
+                print(f"cleared the preview alias of [{registered}]")
         elif options.command == "status":
             from mlmodels._release import status_lines
 

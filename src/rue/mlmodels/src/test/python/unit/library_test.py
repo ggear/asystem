@@ -1348,6 +1348,34 @@ class ReleaseTest(unittest.TestCase):
     def additive(self, signature):
         signature["inputs"].append({**signature["inputs"][0], "name": "demo_optional", "parameters": {**signature["inputs"][0]["parameters"], "required": False}})
 
+    def test_a_release_with_the_staleness_check_ships_a_workspace_that_is_current(self):
+        self.record()
+        self.assertEqual(["demo_replay_double"], self.release(pins_path=self.pins))
+
+    def test_a_release_refuses_a_workspace_whose_notebook_changed_after_it_was_packaged(self):
+        from mlmodels._errors import GateError
+        from mlmodels._metadata import read_metadata
+
+        self.record()
+        with open(join(self.workspace, "notebook.ipynb"), "w") as notebook_file:
+            json.dump({"cells": [{"cell_type": "code", "source": ["x = 2\n"]}]}, notebook_file)
+        with self.assertRaises(GateError) as raised:
+            self.release(pins_path=self.pins)
+        self.assertEqual(("Release", "stale"), (raised.exception.stage, raised.exception.gate))
+        self.assertIsNone(read_metadata(self.workspace)["release"])
+
+    def test_a_release_refuses_a_workspace_whose_metadata_fails_its_lint(self):
+        from mlmodels._errors import GateError
+        from mlmodels._metadata import read_metadata, write_metadata
+
+        self.record()
+        metadata = read_metadata(self.workspace)
+        write_metadata(self.workspace, {**metadata, "target": {"kind": "embedded", "language": "java"}})
+        with self.assertRaises(GateError) as raised:
+            self.release(pins_path=self.pins)
+        self.assertEqual(("Release", "stale"), (raised.exception.stage, raised.exception.gate))
+        self.assertIsNone(read_metadata(self.workspace)["release"])
+
     def test_a_content_change_then_a_breaking_edit_at_the_same_signature_version_is_refused(self):
         from mlmodels._errors import GateError
         from mlmodels._metadata import read_metadata
@@ -1472,6 +1500,22 @@ class ReleaseTest(unittest.TestCase):
         self.assertEqual(2, len(notes))
         self.assertIn("absent", notes[0])
         self.assertIn("LOADING", notes[1])
+
+    def test_clearing_previews_removes_only_the_preview_alias_of_each_served_workspace(self):
+        from mlflow import MlflowClient
+        from mlmodels._registry import register_project
+        from mlmodels._release import clear_previews
+
+        self.record()
+        self.release()
+        uri = f"sqlite:///{join(tempfile.mkdtemp(), 'mlflow.db')}"
+        self.assertEqual([], clear_previews(self.source, uri))
+        register_project(join(self.workspace, "project"), "demo_replay_double_1000", uri)
+        client = MlflowClient(uri, uri)
+        client.set_registered_model_alias("demo_replay_double_1000", "release", "1")
+        self.assertEqual(["demo_replay_double_1000"], clear_previews(self.source, uri))
+        self.assertEqual({"release": "1"}, {alias: str(version) for alias, version in client.get_registered_model("demo_replay_double_1000").aliases.items()})
+        self.assertEqual([], clear_previews(self.source, uri))
 
     def test_two_live_signature_versions_retire_nothing(self):
         self.assertEqual({"demo_replay_double_1000", "demo_replay_double_1001"}, self.publish_at(1001, ["demo_replay_double_1000"]))

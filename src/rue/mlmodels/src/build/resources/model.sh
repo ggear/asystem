@@ -10,7 +10,7 @@ ROOT_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../.." && pwd)"
 SOURCE_DIR="$(cd "${ROOT_DIR}/../.." && pwd)"
 PYENV_BIN="${HOME}/.pyenv/versions/asystem/bin"
 OUTPUT_DIR="${ROOT_DIR}/target/model-output"
-COMMAND="${1:?usage: model.sh <unittest|systest|release|publish|status|docker-args>}"
+COMMAND="${1:?usage: model.sh <unittest|systest|release|publish|status|clear-previews|docker-args>}"
 export PYTHONPATH="${ROOT_DIR}/src/main/python${PYTHONPATH:+:${PYTHONPATH}}"
 
 unittest() {
@@ -20,13 +20,20 @@ unittest() {
 }
 
 systest() {
-  run_notebooks "--register" || return 1
+  run_notebooks "--register" || {
+    clear_previews || true
+    return 1
+  }
+}
+
+clear_previews() {
+  MLFLOW_TRACKING_URI="$(env_value MLFLOW_TRACKING_URI)" "${PYENV_BIN}/python" -W ignore -m mlmodels clear-previews "${SOURCE_DIR}"
 }
 
 release() {
   local version="${1:?usage: model.sh release <version>}"
   MLFLOW_TRACKING_URI="$(env_value MLFLOW_TRACKING_URI)" "${PYENV_BIN}/python" -W ignore -m mlmodels release "${SOURCE_DIR}" \
-    --version "${version}" --mlserver "$(mlserver_url)"
+    --version "${version}" --mlserver "$(mlserver_url)" --pins "${SOURCE_DIR}/../.py_deps_prod.txt"
 }
 
 publish() {
@@ -81,6 +88,7 @@ case "${COMMAND}" in
   release) shift && release "$@" ;;
   publish) publish ;;
   status) status ;;
+  clear-previews) clear_previews ;;
   docker-args) docker_args ;;
   *)
     echo "ERROR unknown command [${COMMAND}]" >&2

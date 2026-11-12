@@ -23,7 +23,7 @@ from mlmodels._constants import (
     PROJECT_TAG_SNAPSHOT_VERSION,
 )
 from mlmodels._errors import GateError
-from mlmodels._metadata import LOCAL_TARGET, METADATA_FILE, PROJECT_DIR, content_sha256, read_metadata, write_metadata
+from mlmodels._metadata import LOCAL_TARGET, METADATA_FILE, PROJECT_DIR, content_sha256, inputs_changed, lint_metadata, read_metadata, write_metadata
 from mlmodels._registry import register_project, registry_client
 from mlmodels._signature import registered_name, served_name
 
@@ -63,20 +63,37 @@ def workspaces(source_dir):
     return found
 
 
-def release_workspaces(source_dir, version, tracking_uri=None, mlserver_url=None, clock=None):
+def release_workspaces(source_dir, version, tracking_uri=None, mlserver_url=None, clock=None, pins_path=None):
     now = (clock or (lambda: datetime.now(UTC)))().strftime("%Y-%m-%dT%H:%M:%SZ")
     released = []
+    entries = []
     for name, directory in workspaces(source_dir).items():
         if name.startswith(RELEASE_FIXTURES + "_"):
-            skipped(f"release {name}", "fixture")
-            continue
-        if not isfile(join(directory, METADATA_FILE)):
-            skipped(f"release {name}", "unpackaged")
+            skip = "fixture"
+        elif not isfile(join(directory, METADATA_FILE)):
+            skip = "unpackaged"
+        elif read_metadata(directory)["target"] == LOCAL_TARGET:
+            skip = "local"
+        else:
+            skip = None
+        entries.append((name, directory, skip))
+    stale = []
+    for name, directory, skip in entries:
+        if skip is None and pins_path is not None:
+            _require_project(name, directory)
+            if inputs_changed(directory, pins_path):
+                stale.append(f"workspace [{name}] has inputs newer than its project, run fab unittest")
+                continue
+            with open(join(directory, PROJECT_DIR, PROJECT_MANIFEST)) as manifest_file:
+                flavour = json.load(manifest_file)["flavour"]
+            stale.extend(f"workspace [{name}] {rule} {message}" for rule, message in lint_metadata(directory, flavour, pins_path))
+    if stale:
+        raise GateError("Release", "stale", "; ".join(stale))
+    for name, directory, skip in entries:
+        if skip is not None:
+            skipped(f"release {name}", skip)
             continue
         metadata = read_metadata(directory)
-        if metadata["target"] == LOCAL_TARGET:
-            skipped(f"release {name}", "local")
-            continue
         _require_project(name, directory)
         with subject(f"release {name}"):
             with stage("version") as entry:
@@ -157,6 +174,19 @@ def _retire_signatures(client, name, published, source_dir, entry):
         retired += 1
         entry.note(f"retired [{model}]")
     entry.detail = f"live {[number for number, _ in live]} retired [{retired}]"
+
+
+def clear_previews(source_dir, tracking_uri):
+    client = registry_client(tracking_uri)
+    cleared = []
+    for name, directory in workspaces(source_dir).items():
+        if isfile(join(directory, METADATA_FILE)) and read_metadata(directory)["target"]["kind"] == "served":
+            with open(join(directory, PROJECT_DIR, PROJECT_SIGNATURE)) as signature_file:
+                registered = served_name(name, json.load(signature_file))
+            if client.search_registered_models(f"name = '{registered}'") and PROJECT_ALIAS_PREVIEW in client.get_registered_model(registered).aliases:
+                client.delete_registered_model_alias(registered, PROJECT_ALIAS_PREVIEW)
+                cleared.append(registered)
+    return cleared
 
 
 def live_signatures(name, released_names):

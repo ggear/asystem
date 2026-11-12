@@ -13,8 +13,7 @@ from mlmodels._config import VERSION_PATH
 from mlmodels._constants import PROJECT_ALIAS_PREVIEW, PROJECT_LABEL_PREVIEW, PROJECT_PREVIEW_SUFFIX, PROJECT_SIGNATURE
 from mlmodels._errors import GateError
 from mlmodels._metadata import METADATA_FILE, PROJECT_DIR, read_metadata
-from mlmodels._registry import registry_client
-from mlmodels._release import consumers, slot_name, slots, wait_served, workspaces
+from mlmodels._release import clear_previews, consumers, slot_name, slots, wait_served, workspaces
 from mlmodels._signature import served_name
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
@@ -53,23 +52,21 @@ def image():
         tag = f"mlmodels:{version_file.read().strip()}"
     with stage("image") as entry:
         if subprocess.run(["docker", "image", "inspect", tag], capture_output=True, check=False).returncode != 0:
-            raise GateError("image", "missing", f"image [{tag}] was not built, run fab test_sys, which packages it first")
+            raise GateError(
+                "image", "missing", f"image [{tag}] was not built, run fab test_sys, which packages it first, or the repository version moved on while this ran because another release started"
+            )
         entry.detail = tag
     return tag
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session", autouse=True)
 def previews(env):
-    registered = set()
-    yield registered
-    client = registry_client(env["MLFLOW_TRACKING_URI"])
-    for name in sorted(registered):
-        if PROJECT_ALIAS_PREVIEW in client.get_registered_model(name).aliases:
-            client.delete_registered_model_alias(name, PROJECT_ALIAS_PREVIEW)
+    yield
+    clear_previews(DIR_SOURCE, env["MLFLOW_TRACKING_URI"])
 
 
 @pytest.mark.parametrize(("name", "directory", "target"), _targets())
-def test_the_declared_target_runs_its_project(name, directory, target, env, image, previews):
+def test_the_declared_target_runs_its_project(name, directory, target, env, image):
     metadata = read_metadata(directory)
     project_dir = join(directory, PROJECT_DIR)
     if target["kind"] == "served":
@@ -77,7 +74,6 @@ def test_the_declared_target_runs_its_project(name, directory, target, env, imag
             entry.detail = "interpreted"
         with open(join(project_dir, PROJECT_SIGNATURE)) as signature_file:
             registered = served_name(name, json.load(signature_file))
-        previews.add(registered)
         with stage("registry") as entry:
             _wait_registry(registered, metadata["content_sha256"], env["MLFLOW_TRACKING_URI"])
             entry.detail = PROJECT_ALIAS_PREVIEW
