@@ -672,6 +672,7 @@ echo " && \\\\\\\\"
 for ASYSTEM_PACKAGE in "\\${{ASYSTEM_PACKAGES_BASE[@]}}"; do echo "    $PKG_INSTALL" "\\$ASYSTEM_PACKAGE="\\$($PKG_VERSION \\$ASYSTEM_PACKAGE 2>/dev/null | grep "$PKG_VERSION_GREP" | awk '$PKG_VERSION_AWK')" && \\\\\\\\"; done
 echo "    $PKG_CLEAN && \\\\\\\\"
 echo "    mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt"
+echo 'ENV PATH=\\${{PATH}}:/asystem/bin'
 echo ""
 echo "#######################################################################################"
 echo "# Dockerfile [image_base] command:"

@@ -14,6 +14,7 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install ca-certificates=20250419~deb12u2 && \
     DEBIAN_FRONTEND=noninteractive apt-get clean && rm -rf /var/lib/apt/lists/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
+ENV PATH=${PATH}:/asystem/bin
 
 FROM image_upstream AS image_runtime
 ENV TZ=Australia/Perth

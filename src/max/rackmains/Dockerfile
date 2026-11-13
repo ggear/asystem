@@ -16,6 +16,7 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install openssh-client=1:9.2p1-2+deb12u10 && \
     DEBIAN_FRONTEND=noninteractive apt-get clean && rm -rf /var/lib/apt/lists/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
+ENV PATH=${PATH}:/asystem/bin
 
 FROM image_upstream AS image_base
 ARG ASYSTEM_RUST_VERSION

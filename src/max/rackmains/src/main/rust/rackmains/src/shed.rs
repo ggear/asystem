@@ -115,7 +115,10 @@ pub fn parse_result(output: &str) -> String {
     output
         .lines()
         .rev()
-        .find_map(|line| line.strip_prefix(RESULT_PREFIX))
+        .find_map(|line| {
+            line.strip_prefix(RESULT_PREFIX)
+                .or_else(|| line.split_once(" RESULT ").map(|(_, rest)| rest))
+        })
         .unwrap_or_default()
         .trim()
         .to_string()
@@ -296,6 +299,13 @@ mod tests {
     fn the_last_result_line_is_the_reason() {
         let output = "log line\nRESULT asleep status=0 reason=ok\nRESULT awake status=6 reason=unhealthy\n";
         assert_eq!(parse_result(output), "awake status=6 reason=unhealthy");
+        let logged = "2026-11-13T09:43:57+0800 INFO  Log kept at [/run/asleep.log], took [3677] ms\n\
+                      2026-11-13T09:43:57+0800 INFO  RESULT asleep status=0 reason=ok mode=shallow failed=0 warnings=1 timeouts=0\n\
+                      2026-11-13T09:43:57+0800 DEBUG Exiting, exit code [0]\n";
+        assert_eq!(
+            parse_result(logged),
+            "asleep status=0 reason=ok mode=shallow failed=0 warnings=1 timeouts=0"
+        );
         assert_eq!(parse_result("nothing"), "");
     }
 
