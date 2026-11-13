@@ -79,7 +79,6 @@ type compiled struct {
 	valOffset int
 }
 
-// noinspection GoSnakeCaseUsage
 func compactDisplayLayout(useUnicode bool) [][]box {
 	resizeIncValService := func(b *box, inc, hostCount int) { b.valLen += inc }
 	resizeIncLblService := func(b *box, inc, hostCount int) {
@@ -224,7 +223,6 @@ func compactDisplayLayout(useUnicode bool) [][]box {
 	})
 }
 
-// noinspection GoSnakeCaseUsage
 func relaxedDisplayLayout(useUnicode bool) [][]box {
 	resizeIncHistVal := func(b *box, inc, hostCount int) { b.valLen += inc }
 	resizeIncHistLbl := func(b *box, inc, hostCount int) {
@@ -939,24 +937,6 @@ func repeat(base string, prefixCount, suffixCount, length int) string {
 		}
 	}
 	return builder.String()
-}
-
-func divider(base string, length int) string {
-	if length <= 0 || base == "" {
-		return ""
-	}
-	centerCount := 1
-	if length%2 == 0 {
-		centerCount = 2
-	}
-	spaceCount := (length - 1) / 2
-	tokens := tokens(base)
-	if len(tokens) == 0 {
-		return ""
-	}
-	center := strings.Repeat(tokens[0], centerCount)
-	spaces := strings.Repeat(" ", spaceCount)
-	return spaces + center + spaces
 }
 
 func tokens(value string) []string {

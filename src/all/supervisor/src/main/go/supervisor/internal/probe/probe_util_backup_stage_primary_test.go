@@ -11,7 +11,7 @@ import (
 	"supervisor/internal/metric"
 )
 
-func loadedWithTimeout(t *testing.T, hours int) *config.Config {
+func loadConfigWithTimeout(t *testing.T, hours int) *config.Config {
 	t.Helper()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.json")
@@ -97,7 +97,7 @@ func TestProbeUtilBackupStagePrimary_ParseBackupArtefact(t *testing.T) {
 	}{
 		{name: "full_carries_no_version", file: "myservice_full.tar.gz", expectedKind: "full", expectedVersion: "unknown"},
 		{name: "delta_version_cut_from_the_prefix", file: "myservice_2026-09-22_01-00-00_v3_delta.tar.gz", expectedKind: "delta", expectedVersion: "v3"},
-		{name: "a_name_without_a_kind_suffix_is_not_the_artifact", file: "myservice_delta_from_v2.tar.gz", expectedKind: "unknown", expectedVersion: "unknown"},
+		{name: "a_name_without_a_kind_suffix_is_not_the_artefact", file: "myservice_delta_from_v2.tar.gz", expectedKind: "unknown", expectedVersion: "unknown"},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -147,7 +147,7 @@ func TestProbeUtilBackupStagePrimary_ParseBackupArtefactSkipsASidecarThatSortsFi
 	}
 	kind, version := parseBackupArtefact("myservice", dir)
 	if kind != "delta" || version != "v3" {
-		t.Errorf("parseBackupArtefact() = (%q, %q), want (delta, v3) read from the artifact and not a sidecar", kind, version)
+		t.Errorf("parseBackupArtefact() = (%q, %q), want (delta, v3) read from the artefact and not a sidecar", kind, version)
 	}
 }
 
@@ -224,7 +224,7 @@ func TestProbeUtilBackupStagePrimary_ScriptSkipHoursHonoursTheOverrideEnvVar(t *
 }
 
 func TestProbeUtilBackupStagePrimary_ScriptTimeoutHoursPrefersTheRunDeadlineWhenItLeavesTimeToRun(t *testing.T) {
-	loaded := loadedWithTimeout(t, 3)
+	loaded := loadConfigWithTimeout(t, 3)
 	request := stageRequest{Expires: time.Now().Add(10*time.Hour + 50*time.Minute)}
 	if got := scriptTimeoutHours(loaded, request); got != 10 {
 		t.Errorf("scriptTimeoutHours() = %d, want 10 taken from the run deadline, not the configured default", got)
@@ -241,7 +241,7 @@ func TestProbeUtilBackupStagePrimary_ScriptTimeoutHoursFallsBackToTheConfiguredD
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			loaded := loadedWithTimeout(t, 7)
+			loaded := loadConfigWithTimeout(t, 7)
 			request := stageRequest{Expires: testCase.expires}
 			if got := scriptTimeoutHours(loaded, request); got != 7 {
 				t.Errorf("scriptTimeoutHours() = %d, want 7 taken from the configured default", got)

@@ -1,6 +1,5 @@
 package display
 
-// noinspection GoSnakeCaseUsage
 var (
 	displayCompactASCIISoloHost_57x10_0_3 = `
 += labnode-one ================================== vESC =+

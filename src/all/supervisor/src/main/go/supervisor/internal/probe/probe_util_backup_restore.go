@@ -37,7 +37,7 @@ func BackupModuleReport(_ context.Context, request BackupModuleRequest, stdout, 
 
 func BackupModuleRestoreFiles(ctx context.Context, request BackupModuleRequest, stdout, stderr io.Writer) int {
 	if len(request.Arguments) != 1 || request.Target == "" || request.File == "" || request.Run == "" {
-		fmt.Fprintln(stderr, "Restore files needs a module, a target, an artifact and a run")
+		fmt.Fprintln(stderr, "Restore files needs a module, a target, an artefact and a run")
 		return 2
 	}
 	_, source, _, ok := resolveBackupModule(request, stderr, 1)
@@ -289,6 +289,7 @@ func (s *restoreSession) backedUp() bool {
 	}
 	s.report("backup taking a safety backup of the current data first ...")
 	command := exec.CommandContext(s.ctx, "bash", script)
+	killWithGroup(command, moduleHookGrace)
 	command.Env = append(os.Environ(), "BACKUP_PRUNE=false", "BACKUP_SKIP_HOURS=0", "BACKUP_SERVICE_RESTART=false", moduleLockHeldVariable+"="+s.module)
 	command.Stdout, command.Stderr = s.stdout, s.stderr
 	if err := command.Run(); err != nil {
@@ -334,7 +335,7 @@ func (s *restoreSession) execute() int {
 			s.run = restoreDefaultRun(s.roots)
 		}
 		if s.run == "" {
-			s.fault(fmt.Sprintf("no accepted backup run under %v", s.roots))
+			s.fault(fmt.Sprintf("no accepted backup run under [%v]", s.roots))
 			return s.finish()
 		}
 		if manifest, read := s.manifest(); read && manifest.Verdict == metric.BackupStateRegressed && !s.request.Force {
@@ -364,17 +365,17 @@ func (s *restoreSession) execute() int {
 	if info, err := os.Stat(last); err == nil {
 		megabytes = info.Size() >> 20
 	}
-	s.report("artifact  [" + last + "]")
+	s.report("artefact  [" + last + "]")
 	s.report(fmt.Sprintf("taken     [%s] kind [%s] chain [%d]", s.run, kind, len(s.chain)))
 	s.report(fmt.Sprintf("size      [%d] MB", megabytes))
 	for _, link := range s.chain {
 		if err := restoreIntact(link.file); err != nil {
-			s.fault(fmt.Sprintf("the artifact failed its integrity check [%s] [%v]", link.file, err))
+			s.fault(fmt.Sprintf("the artefact failed its integrity check [%s] [%v]", link.file, err))
 		}
 	}
 	if s.faults > 0 {
 		if s.mode == backupRestoreModeDrill {
-			s.record(metric.BackupStateFailure, "artifact failed its integrity check")
+			s.record(metric.BackupStateFailure, "artefact failed its integrity check")
 		}
 		return s.finish()
 	}
@@ -477,7 +478,7 @@ func reportedRestoreLine(text string) string {
 var restoreCaptured = map[string]bool{restoreHookStaged: true, restoreHookSettled: true, moduleHookFingerprint: true, "restore_service_state": true, "restore_live_address": true}
 
 var restoreLabels = map[string]bool{
-	"artifact": true, "taken": true, "size": true, "service": true, "integrity": true, "chain": true, "drill": true, "merge": true, "plan": true,
+	"artefact": true, "taken": true, "size": true, "service": true, "integrity": true, "chain": true, "drill": true, "merge": true, "plan": true,
 	"staging": true, "counting": true, "sealing": true, "verify": true, "short": true, "backup": true, "would": true, "extracted": true, "moved": true,
 	"carried": true, "stopped": true, "started": true, "unzipped": true, "loaded": true, "restored": true, "check": true,
 }

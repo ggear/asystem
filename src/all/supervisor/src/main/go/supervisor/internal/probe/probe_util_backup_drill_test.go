@@ -23,9 +23,9 @@ func TestProbeUtilBackupDrill_Drill(t *testing.T) {
 		expectedVerdict string
 	}{
 		{"a held manifest drills green", 5, ":", 0, metric.BackupStateSuccess},
-		{"a manifest wanting more than the artifact holds fails", 50, ":", 1, metric.BackupStateFailure},
+		{"a manifest wanting more than the artefact holds fails", 50, ":", 1, metric.BackupStateFailure},
 		{"a scratch that moves after sealing fails", 5, `restore_sealed() { printf more >> "$1/data/a.txt"; }`, 1, metric.BackupStateFailure},
-		{"a truncated artifact fails by name", 5, ":", 1, metric.BackupStateFailure},
+		{"a truncated artefact fails by name", 5, ":", 1, metric.BackupStateFailure},
 		{"a failing module check fails", 5, `restore_checked() { return 1; }`, 1, metric.BackupStateFailure},
 	}
 	for _, test := range tests {
@@ -48,7 +48,7 @@ func TestProbeUtilBackupDrill_Drill(t *testing.T) {
 			if err := os.WriteFile(script, []byte(test.script+"\n"), 0o644); err != nil {
 				t.Fatal(err)
 			}
-			if test.name == "a truncated artifact fails by name" {
+			if test.name == "a truncated artefact fails by name" {
 				artefact := filepath.Join(root, run, "mod_full.tar.gz")
 				whole, _ := os.ReadFile(artefact)
 				if err := os.WriteFile(artefact, whole[:len(whole)/2], 0o644); err != nil {

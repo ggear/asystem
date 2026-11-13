@@ -323,12 +323,6 @@ func SetFilters(source, subject, action string) error {
 	return nil
 }
 
-func ResetFilters() {
-	filterMu.Lock()
-	activeFilter = logFilter{}
-	filterMu.Unlock()
-}
-
 func allowed(source, subject, action string) bool {
 	filterMu.Lock()
 	filter := activeFilter
@@ -415,7 +409,7 @@ func closedPrefixes(dimension, value string, declared []string) ([]string, error
 			}
 		}
 		if !matched {
-			return nil, fmt.Errorf("log %s filter term [%s] matches none of [%s]", dimension, term, strings.Join(declared, ", "))
+			return nil, fmt.Errorf("log [%s] filter term [%s] matches none of [%s]", dimension, term, strings.Join(declared, ", "))
 		}
 	}
 	return terms, nil

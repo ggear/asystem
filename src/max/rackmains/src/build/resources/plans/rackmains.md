@@ -342,6 +342,7 @@ the container), so it is on the host's disk and survives Docker stopping.
     row every 1 s on battery whatever the broker is doing, so the CSV is the complete series and the InfluxDB data is a subset of it;
     forward-fill the InfluxDB side to compare. Timestamps differ by the publish and receive delay: the CSV time is the poll, the
     InfluxDB time is when Home Assistant fired the event.
+- **Call logs (2026-11-13).** Each live `asleep` or `awake` call writes `outage/rackmains_call_<timestamp>_<host>_<verb>.log` from its own call thread when it returns: the host, command, status and time, then the whole stdout and stderr. The host's `/run/asleep.log` and `/run/awake.log` hold the same detail but are tmpfs, truncated by the next run and lost with the reboot a power cut brings, so these are the durable copy. They are backed up with `outage/`, the newest 400 are kept (about 100 outages of four hosts), the outage prune and recovery ignore them, and a failed write is a WARN that never changes the call's result. Dry-run writes none.
 - **Safe write.** The whole file is rebuilt from the in-memory rows, written to `<name>.tmp` in the same directory, fsynced, renamed
   over the final name, and the directory fsynced, so the file on disk is always the whole previous version or the whole new one,
   never torn. A write happens once per tick (1 s on battery), carrying every row since the last one. A run to failure therefore loses at most the rows since the last rename.
@@ -1015,13 +1016,11 @@ Hands-on steps the code cannot do, in the order they unblock work. Results of th
 
 1. ~~Workbook rows~~ done 2026-11-12.
 2. **ssh keys** (decided 2026-11-13: a dedicated, unrestricted root key, simplicity over restriction; the forced-command wrapper `rackmains-shed` was dropped). Open until every step is done:
-   1. Release the `system` module, so each host has `asleep --except` and no `rackmains-shed`; remove a leftover `/usr/local/bin/rackmains-shed` by hand.
-   2. Run `asleep --shallow --except rackmains --dry-run` on `max`, since the shallow selection changed after the earlier real shallow cycle.
-   3. Generate a dedicated passphrase-less keypair on `max` in the root-only directory (`RACKMAINS_SSH_SOURCE`), mode `0600`, mounted read-only.
-   4. Add the public key, as a plain line, to `/root/.ssh/authorized_keys` on `max`, `may`, `mad` and `meg`; `max` needs it too, as it sheds itself.
-   5. Pin `known_hosts` in the same directory with `ssh-keyscan` for the four hosts, fingerprints checked against each host.
-   6. Prove it with test 3, then `rackmains check` in the container.
-   Not restricted by the key: anyone holding it is root on all four hosts, accepted. Kept: strict host key checking, a dedicated key, the mode check in `check`.
+   1. ~~Release the `system` module~~ done 2026-11-13: all four hosts have `asleep --except` and none has `/usr/local/bin/rackmains-shed`.
+   2. ~~Run `asleep --shallow --except rackmains --dry-run` on `max`~~ done 2026-11-13: `rackmains` left running, `supervisor`, `grafana`, `letsencrypt` and `cloudflare` stopped, `/home` and `/var` kept held, exit 0. Its closing ERROR (still writable) is a dry run's own, nothing was unmounted. A real run followed the same day: status 0, `rackmains` stayed healthy, the four others stopped cleanly in about 1.4 s, `sda` detached, one avahi stop job cancelled and retried by the verify pass, and one failed unit afterwards. `awake` then returned status 0 in 16 s: all five containers healthy (`rackmains` untouched), 30 services, 11 timers and 10 automounts back, and the failed unit cleared, so it was transient. That closes the shallow round trip on `max`; a deep run is still not done. The host mounts the key directory at `/etc/asystem/rackmains/ssh`.
+   3. ~~Generate a keypair, distribute it, pin `known_hosts`~~ dropped 2026-11-13: the guard uses the existing shared `id_rsa` (`_homes`) and root's `known_hosts`, both already on `max` and authorized on all four hosts (checked: `known_hosts` has `macmini-max`, `-may`, `-mad` and `-meg`, the `hosts.json` addresses). `.env_all` sets `RACKMAINS_SSH_SOURCE=/root/.ssh` and `RACKMAINS_SSH_KEY=/asystem/ssh/id_rsa`; the compose mount is unchanged.
+   4. Release `rackmains`, then prove it with test 3 and `rackmains check` in the container.
+   Not restricted by the key, and not dedicated: it is the personal key that opens every host, so the guard cannot be revoked without rotating it (accepted, simplicity over security). Kept: strict host key checking and the mode check in `check`.
 3. **Tests 3 and 4** (ssh key, per-host `asleep` time), then the **spare-plug deadman proof** (test 8) and the **retained `cmnd/POWER` check**.
 4. **`mad`'s macOS step** for power-on after a cut, then test 5 on all four hosts.
 5. **List what else is on the UPS** (switch, router, access point, the Mac): the plug's WiFi and the followers' ssh path depend on them.

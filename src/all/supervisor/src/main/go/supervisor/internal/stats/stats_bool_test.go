@@ -448,3 +448,27 @@ func TestStatsBool_TrendOff(t *testing.T) {
 		})
 	}
 }
+
+func (v *BoolStats) PulseHasTrue() bool {
+	v.mutex.RLock()
+	defer v.mutex.RUnlock()
+	return v.pulseTrueCount > 0
+}
+
+func (v *BoolStats) PulseHasFalse() bool {
+	v.mutex.RLock()
+	defer v.mutex.RUnlock()
+	return v.pulseFalseCount > 0
+}
+
+func (v *BoolStats) TrendHasTrue() bool {
+	v.mutex.RLock()
+	defer v.mutex.RUnlock()
+	return !v.trendOff && v.trendTrueWeight > 0
+}
+
+func (v *BoolStats) TrendHasFalse() bool {
+	v.mutex.RLock()
+	defer v.mutex.RUnlock()
+	return !v.trendOff && v.trendFalseWeight > 0
+}

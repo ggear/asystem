@@ -50,7 +50,7 @@ func Reset() {
 }
 
 func ResolvedVersion(path string) string {
-	version, _ := resolved("SERVICE_VERSION_ABSOLUTE", documentVersion(path))
+	version, _ := resolveValue("SERVICE_VERSION_ABSOLUTE", documentVersion(path))
 	if !DefaultVersionPattern.MatchString(version) {
 		return DefaultVersion
 	}
@@ -338,7 +338,7 @@ func resolve(field, env, key string) string {
 	resolveStart := time.Now()
 	logger := scribe.Log(scribe.SourceConfig, scribe.SubjectNone, scribe.ActionResolve)
 	named := strings.ReplaceAll(field, "_", " ")
-	value, origin := resolved(env, key)
+	value, origin := resolveValue(env, key)
 	if origin == "" {
 		if strings.HasPrefix(key, "$") {
 			logger.Warnf("unfilled", resolveStart, "[unset] %s in [env/file]", named)
@@ -351,7 +351,7 @@ func resolve(field, env, key string) string {
 	return value
 }
 
-func resolved(env, key string) (string, string) {
+func resolveValue(env, key string) (string, string) {
 	if value := os.Getenv(env); value != "" {
 		return value, "env"
 	}
@@ -390,7 +390,7 @@ func mask(field, value string) string {
 	return value
 }
 
-func parsedTrendPeriod() time.Duration {
+func parseTrendPeriod() time.Duration {
 	parsed, err := time.ParseDuration(DefaultTrendPeriod)
 	if err != nil {
 		panic(fmt.Sprintf("invalid default trend period [%s] with [%v]", DefaultTrendPeriod, err))
@@ -398,7 +398,7 @@ func parsedTrendPeriod() time.Duration {
 	return parsed
 }
 
-func parsedCachePeriod() time.Duration {
+func parseCachePeriod() time.Duration {
 	parsed, err := time.ParseDuration(DefaultCachePeriod)
 	if err != nil {
 		panic(fmt.Sprintf("invalid default cache period [%s] with [%v]", DefaultCachePeriod, err))
@@ -471,8 +471,8 @@ const (
 )
 
 var (
-	DefaultTrendWindow    = parsedTrendPeriod()
-	DefaultCacheWindow    = parsedCachePeriod()
+	DefaultTrendWindow    = parseTrendPeriod()
+	DefaultCacheWindow    = parseCachePeriod()
 	DefaultVersionPattern = regexp.MustCompile(`^\d{2}\.\d{3}\.\d{4}(-SNAPSHOT)?$`)
 )
 

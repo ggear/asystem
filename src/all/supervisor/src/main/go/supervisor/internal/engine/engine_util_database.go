@@ -204,7 +204,7 @@ func (d *databaseClient) write(ctx context.Context, data []byte) {
 	d.lost(writeStart)
 	newClient, _, rebuildErr := newInfluxClient(d.configPath)
 	if rebuildErr != nil {
-		scribe.Log(scribe.SourceEngineDatabase, scribe.SubjectNone, scribe.ActionConnect).Warnf("sessions", writeStart, "[database] rebuild failed with %v", rebuildErr)
+		scribe.Log(scribe.SourceEngineDatabase, scribe.SubjectNone, scribe.ActionConnect).Warnf("sessions", writeStart, "[database] rebuild failed with [%v]", rebuildErr)
 		return
 	}
 	_ = d.client.Close()
@@ -226,7 +226,7 @@ func (d *databaseClient) lost(since time.Time) {
 func (d *databaseClient) close() {
 	closeStart := time.Now()
 	if err := d.client.Close(); err != nil {
-		scribe.Log(scribe.SourceEngineDatabase, scribe.SubjectNone, scribe.ActionDisconnect).Warnf("sessions", closeStart, "[database] close failed with %v", err)
+		scribe.Log(scribe.SourceEngineDatabase, scribe.SubjectNone, scribe.ActionDisconnect).Warnf("sessions", closeStart, "[database] close failed with [%v]", err)
 	}
 }
 

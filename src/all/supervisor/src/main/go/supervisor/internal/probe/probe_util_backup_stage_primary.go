@@ -12,7 +12,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"supervisor/internal/config"
@@ -104,9 +103,7 @@ func runOneService(ctx context.Context, request stageRequest, loaded *config.Con
 	defer func() { _ = logFile.Close() }()
 	script := backupScriptPath(service)
 	command := exec.CommandContext(ctx, "bash", script)
-	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	command.Cancel = func() error { return syscall.Kill(-command.Process.Pid, syscall.SIGTERM) }
-	command.WaitDelay = scriptStopGrace
+	killWithGroup(command, scriptStopGrace)
 	command.Stdout = logFile
 	command.Stderr = logFile
 	command.Env = append(os.Environ(),
@@ -140,7 +137,7 @@ func runOneService(ctx context.Context, request stageRequest, loaded *config.Con
 	_ = writeAtomic(statusPath, document)
 	sized := backupMoved(intReading(int64(sizeMB)), time.Since(started))
 	if state != metric.BackupStateSuccess && !regressed {
-		sized = backupHeld(intReading(int64(sizeMB)), time.Since(started))
+		sized = fmt.Sprintf("[%s] GiB held after [%s] s", backupSizedGibibytes(intReading(int64(sizeMB))), elapsedSeconds(time.Since(started)))
 	}
 	scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Infof(backupVerb(metric.BackupStagePrimary), started,
 		"%s from [%s] as [%s], kind [%s], version [%s]", sized, service, state, kind, version)

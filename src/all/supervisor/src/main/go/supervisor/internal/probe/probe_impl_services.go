@@ -120,9 +120,9 @@ func (p *servicesProbe) create(configPath string, cache *metric.RecordCache, mas
 	p.cache = cache
 	p.mask = mask
 	p.periods = periods
-	p.servicesBool = stats.NewBoolStats(p.periods.TrendHours, float64(p.periods.PulseMillis)/1000.0, float64(p.periods.PollMillis)/1000.0)
-	p.hostBool = stats.NewBoolStats(p.periods.TrendHours, float64(p.periods.PulseMillis)/1000.0, float64(p.periods.PollMillis)/1000.0)
-	p.servicesMaxMemoryFloat = stats.NewFloatStats(p.periods.TrendHours, float64(p.periods.PulseMillis)/1000.0, float64(p.periods.PollMillis)/1000.0)
+	p.servicesBool = newBoolStats(p.periods)
+	p.hostBool = newBoolStats(p.periods)
+	p.servicesMaxMemoryFloat = newFloatStats(p.periods)
 	p.configPath = configPath
 	c := config.Load(configPath)
 	p.hostName = c.Host()
@@ -159,16 +159,16 @@ func (p *servicesProbe) poll(ctx context.Context, isPulse bool) error {
 		scribe.Log(scribe.SourceProbeServices, p.subject(), scribe.ActionRemove).Infof("removals", tombstoneStart, "[%s] host, [%d] services [%s]", p.hostName, len(tombstoned), strings.Join(tombstoned, ","))
 	}
 	newBool := func() *stats.BoolStats {
-		return stats.NewBoolStats(p.periods.TrendHours, float64(p.periods.PulseMillis)/1000.0, float64(p.periods.PollMillis)/1000.0)
+		return newBoolStats(p.periods)
 	}
 	newString := func() *stats.StringStats {
-		return stats.NewStringStats(p.periods.TrendHours, float64(p.periods.PulseMillis)/1000.0, float64(p.periods.PollMillis)/1000.0)
+		return newStringStats(p.periods)
 	}
 	newInt := func() *stats.IntStats {
-		return stats.NewIntStats(p.periods.TrendHours, float64(p.periods.PulseMillis)/1000.0, float64(p.periods.PollMillis)/1000.0)
+		return newIntStats(p.periods)
 	}
 	newFloat := func() *stats.FloatStats {
-		return stats.NewFloatStats(p.periods.TrendHours, float64(p.periods.PulseMillis)/1000.0, float64(p.periods.PollMillis)/1000.0)
+		return newFloatStats(p.periods)
 	}
 	serviceBools := syncStatsFields(p.serviceBool, polledServiceNames, newBool)
 	backupStatusBools := syncStatsFields(p.backupStatusBool, polledServiceNames, newBool)
@@ -639,8 +639,8 @@ func (p *servicesProbe) servicesMaxMemory(snapshot *installSnapshot) (float64, d
 	if err != nil {
 		return 0, derivation{}, err
 	}
-	return float64(allocatedBytes) / bytesPerMiB, derivedf(scribe.ActionCompute, "computed [%.0f] MiB of ceilings, installed [%d] of configured [%d] services",
-		float64(allocatedBytes)/bytesPerMiB, installed, len(p.configuredServiceNames)), nil
+	return float64(allocatedBytes) / bytesPerMebibyte, derivedf(scribe.ActionCompute, "computed [%.0f] MiB of ceilings, installed [%d] of configured [%d] services",
+		float64(allocatedBytes)/bytesPerMebibyte, installed, len(p.configuredServiceNames)), nil
 }
 
 func (s *service) isUp() (bool, derivation, error) {
@@ -773,7 +773,7 @@ func (p *servicesProbe) memoryUsed(name string, response container.StatsResponse
 	}
 	usedPercent := (used / float64(response.MemoryStats.Limit)) * 100.0
 	return stats.ConvertToInt(usedPercent), derivedf(scribe.ActionSample, "computed [%d] pct used memory, service [%s] used [%d] MiB of limit [%d] MiB, cache [%d] MiB excluded",
-		stats.ConvertToInt(usedPercent), name, int64(used)/bytesPerMiB, int64(response.MemoryStats.Limit)/bytesPerMiB, int64(cache)/bytesPerMiB), nil
+		stats.ConvertToInt(usedPercent), name, int64(used)/bytesPerMebibyte, int64(response.MemoryStats.Limit)/bytesPerMebibyte, int64(cache)/bytesPerMebibyte), nil
 }
 
 func (p *servicesProbe) diskOpsUsed(name string, rates serviceIORates) (int8, derivation, error) {
@@ -785,7 +785,7 @@ func (p *servicesProbe) diskOpsUsed(name string, rates serviceIORates) (int8, de
 	}
 	usedPercent := rates.blockBytes / metric.UsedDiskRateBudgetBytes * 100.0
 	return percentValue(usedPercent), derivedf(scribe.ActionCompute, "computed [%d] pct used disk ops, service [%s] moved [%.1f] MiB per second of the [%.0f] MiB budget across [%d] devices over [%.1f] s",
-		percentValue(usedPercent), name, rates.blockBytes/bytesPerMiB, metric.UsedDiskRateBudgetMiB, rates.blockEntries, rates.elapsed), nil
+		percentValue(usedPercent), name, rates.blockBytes/bytesPerMebibyte, metric.UsedDiskRateBudgetMiB, rates.blockEntries, rates.elapsed), nil
 }
 
 func (p *servicesProbe) networkUsed(name string, rates serviceIORates) (int8, derivation, error) {
@@ -906,8 +906,8 @@ func (p *servicesProbe) maxMemory(snapshot *installSnapshot, name string) (float
 	if installed.maxMemoryBytes <= 0 {
 		return 0, derivation{}, fmt.Errorf("no memory ceiling read, service [%s] declares no [deploy.resources.limits.memory] in its compose file under [%s]", name, config.DirInstall)
 	}
-	return float64(installed.maxMemoryBytes) / bytesPerMiB, derivedf(scribe.ActionSample, "computed [%.0f] MiB ceiling, service [%s] read from [deploy.resources.limits.memory] in its compose file",
-		float64(installed.maxMemoryBytes)/bytesPerMiB, name), nil
+	return float64(installed.maxMemoryBytes) / bytesPerMebibyte, derivedf(scribe.ActionSample, "computed [%.0f] MiB ceiling, service [%s] read from [deploy.resources.limits.memory] in its compose file",
+		float64(installed.maxMemoryBytes)/bytesPerMebibyte, name), nil
 }
 
 func (p *servicesProbe) upTime(name string, containerInfo container.InspectResponse) (float64, derivation, error) {

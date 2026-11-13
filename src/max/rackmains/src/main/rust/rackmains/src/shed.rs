@@ -6,10 +6,12 @@ use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
 
+use chrono::Local;
 use log::{info, warn};
 use serde::Deserialize;
 
 use crate::guard::{Call, Command, Host, HOST_SHED_LAST};
+use crate::outage;
 
 pub const SSH_STATUS_UNREACHABLE: i32 = 255;
 pub const SSH_STATUS_SPAWN: i32 = 127;
@@ -17,6 +19,9 @@ const SSH_KEEPALIVE: Duration = Duration::from_secs(10);
 const SSH_KEEPALIVE_COUNT: u32 = 3;
 const RESULT_PREFIX: &str = "RESULT ";
 const REMOTE_BIN_DIR: &str = "/usr/local/bin";
+const CALL_LOG_PREFIX: &str = "rackmains_call_";
+const CALL_LOG_SUFFIX: &str = ".log";
+const CALL_LOG_KEEP: usize = 400;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Outcome {
@@ -33,6 +38,7 @@ pub struct Ssh {
     pub key: PathBuf,
     pub known_hosts: PathBuf,
     pub timeout: Duration,
+    pub log_dir: PathBuf,
 }
 
 pub struct DryRun;
@@ -154,6 +160,45 @@ impl Runner for Ssh {
                     host.name,
                     command.remote()
                 );
+                let record = || -> std::io::Result<()> {
+                    let name = format!(
+                        "{CALL_LOG_PREFIX}{}_{}_{}{CALL_LOG_SUFFIX}",
+                        outage::stamp(Local::now()),
+                        host.name,
+                        command.remote().split(' ').next().unwrap_or_default()
+                    );
+                    fs::write(
+                        self.log_dir.join(name),
+                        format!(
+                            "host [{}]\ncommand [{}]\nstatus [{status}]\ntook [{took:?}]\n--- stdout\n{}\n--- stderr\n{}\n",
+                            host.name,
+                            command.remote(),
+                            String::from_utf8_lossy(&output.stdout),
+                            String::from_utf8_lossy(&output.stderr)
+                        ),
+                    )?;
+                    let mut logs: Vec<PathBuf> = fs::read_dir(&self.log_dir)?
+                        .flatten()
+                        .map(|entry| entry.path())
+                        .filter(|path| {
+                            path.file_name().and_then(|name| name.to_str()).is_some_and(|name| {
+                                name.starts_with(CALL_LOG_PREFIX) && name.ends_with(CALL_LOG_SUFFIX)
+                            })
+                        })
+                        .collect();
+                    logs.sort();
+                    for old in logs.iter().take(logs.len().saturating_sub(CALL_LOG_KEEP)) {
+                        fs::remove_file(old)?;
+                    }
+                    Ok(())
+                };
+                if let Err(err) = record() {
+                    warn!(
+                        "call log failed [{err}] host [{}] command [{}]",
+                        host.name,
+                        command.remote()
+                    );
+                }
                 Outcome { status, reason, took }
             }
             Err(err) => Outcome {

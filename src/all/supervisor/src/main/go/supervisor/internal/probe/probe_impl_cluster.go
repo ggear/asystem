@@ -54,7 +54,7 @@ func (p *clusterProbe) create(configPath string, cache *metric.RecordCache, mask
 	p.periods = periods
 	p.configPath = configPath
 	p.hostName = config.Load(configPath).Host()
-	p.clusterBool = stats.NewBoolStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
+	p.clusterBool = newBoolStats(periods)
 	return nil
 }
 

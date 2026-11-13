@@ -12,9 +12,9 @@
 #
 # RESTORE_MODULE_NAME     this module's name
 # RESTORE_SOURCE_PATH     this module's data path, the restore target
-# RESTORE_SOURCE_FILE     the artifact being restored from
-# RESTORE_CHAIN_FILES     every artifact of the chain, oldest first
-# RESTORE_RUN_TIMESTAMP   the timestamp of the run the artifact belongs to
+# RESTORE_SOURCE_FILE     the artefact being restored from
+# RESTORE_CHAIN_FILES     every artefact of the chain, oldest first
+# RESTORE_RUN_TIMESTAMP   the timestamp of the run the artefact belongs to
 # RESTORE_FULL_SUFFIX     the file suffix marking a full backup
 # RESTORE_DELTA_SUFFIX    the file suffix marking a delta backup
 # RESTORE_SERVICE_STATE   the state the service must be in, stopped or running

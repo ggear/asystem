@@ -114,12 +114,6 @@ func (v *StringStats) PulseLast() string {
 	return v.lastValue
 }
 
-func (v *StringStats) PulseDominant() string {
-	v.mutex.RLock()
-	defer v.mutex.RUnlock()
-	return modeOfStrings(v.pulseWindow, v.pulsePresent)
-}
-
 func (v *StringStats) PulseMedian() string {
 	v.mutex.RLock()
 	defer v.mutex.RUnlock()
@@ -184,24 +178,6 @@ func (v *StringStats) TrendHasChanged() bool {
 	v.mutex.RLock()
 	defer v.mutex.RUnlock()
 	return !v.trendOff && v.trendWeight > 0 && v.trendOther > 0
-}
-
-func modeOfStrings(values []string, present []bool) string {
-	counts := make(map[string]int)
-	var bestValue string
-	bestCount := 0
-	for i, ok := range present {
-		if !ok {
-			continue
-		}
-		value := values[i]
-		counts[value]++
-		if counts[value] > bestCount {
-			bestCount = counts[value]
-			bestValue = value
-		}
-	}
-	return bestValue
 }
 
 func medianOfStrings(values []string, present []bool) string {

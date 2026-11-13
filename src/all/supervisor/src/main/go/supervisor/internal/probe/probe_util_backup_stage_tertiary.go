@@ -47,7 +47,7 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 			"[%s] replayed its log at mount, so the previous unmount was unclean", config.DirBackup)
 	}
 	if !ready(ctx) {
-		return result, fmt.Errorf("[%s] %s, refusing to mirror", config.DirBackup, diagnosed(ctx, config.DirBackup))
+		return result, fmt.Errorf("[%s] refusing to mirror, diagnosed as [%s]", config.DirBackup, diagnosed(ctx, config.DirBackup))
 	}
 	if deviceID(config.DirBackup) == deviceID(homeRoot) {
 		return result, fmt.Errorf("[%s] shares a filesystem with [%s], refusing to mirror onto the host", config.DirBackup, homeRoot)
@@ -58,7 +58,15 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 	if err := os.WriteFile(filepath.Join(stagePath, tertiaryDeviceMarker), fmt.Appendf(nil, "%d", deviceID(config.DirBackup)), 0o644); err != nil {
 		return result, fmt.Errorf("write disk identity marker failed [%s] [%w]", stagePath, err)
 	}
-	shares := mountedLocalShares(ctx)
+	var shares []string
+	if mountsOut, mountsCode, mountsAbandoned := bounded(ctx, stageBoundedWait, "findmnt", "-rn", "-o", "TARGET,SOURCE,FSTYPE"); !mountsAbandoned && mountsCode == 0 {
+		for line := range strings.SplitSeq(mountsOut, "\n") {
+			fields := strings.Fields(line)
+			if len(fields) >= 3 && shareMountPattern(fields[0]) && isLocalFilesystem(fields[2]) && strings.HasPrefix(fields[1], "/dev/") {
+				shares = append(shares, fields[0])
+			}
+		}
+	}
 	expected := measureStage(ctx, shares)
 	counters.addTotal(int(expected.mirrorBytes / bytesPerMebibyte))
 	mirroring := &rsyncProgress{}
@@ -279,7 +287,17 @@ func tertiaryCleanup(parent context.Context, request stageRequest) {
 	pattern := `rsync .*` + config.DirBackup + `/` + tertiaryShareDirectory
 	_, _, _ = bounded(ctx, stageBoundedWait, "pkill", "-CONT", "-f", pattern)
 	_, _, _ = bounded(ctx, stageBoundedWait, "pkill", "-TERM", "-f", pattern)
-	reapProcesses(ctx, pattern)
+reaping:
+	for reapDeadline := time.Now().Add(tertiaryReapWait); time.Now().Before(reapDeadline); {
+		if _, code, abandoned := stageExec(ctx, "pgrep", "-f", pattern); abandoned || code != 0 {
+			break
+		}
+		select {
+		case <-ctx.Done():
+			break reaping
+		case <-time.After(time.Second):
+		}
+	}
 	_, _, _ = bounded(ctx, stageBoundedWait, "sync", "-f", config.DirBackup)
 	detachAll(ctx, scribe.SubjectStage(metric.BackupStageTertiary), homeRoot)
 }
@@ -395,24 +413,6 @@ func snapshotShares(ctx context.Context, request stageRequest, loaded *config.Co
 			"[%s] snapshotted to [%s]", subvolume, target)
 		pruneBackupRuns(ctx, scribe.SubjectStage(metric.BackupStageTertiary), snapshots,
 			backupKeepPolicy{daily: loaded.BackupKeepDaily(), weekly: loaded.BackupKeepWeekly(), monthly: loaded.BackupKeepMonthly(), gated: true})
-	}
-}
-
-func reapProcesses(ctx context.Context, pattern string) {
-	deadline := time.Now().Add(tertiaryReapWait)
-	for {
-		_, code, abandoned := stageExec(ctx, "pgrep", "-f", pattern)
-		if abandoned || code != 0 {
-			return
-		}
-		if time.Now().After(deadline) {
-			return
-		}
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(time.Second):
-		}
 	}
 }
 

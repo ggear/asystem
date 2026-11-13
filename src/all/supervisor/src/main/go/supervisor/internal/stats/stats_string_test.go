@@ -426,3 +426,27 @@ func TestStatsString_TrendOff(t *testing.T) {
 		})
 	}
 }
+
+func (v *StringStats) PulseDominant() string {
+	v.mutex.RLock()
+	defer v.mutex.RUnlock()
+	return modeOfStrings(v.pulseWindow, v.pulsePresent)
+}
+
+func modeOfStrings(values []string, present []bool) string {
+	counts := make(map[string]int)
+	var bestValue string
+	bestCount := 0
+	for i, ok := range present {
+		if !ok {
+			continue
+		}
+		value := values[i]
+		counts[value]++
+		if counts[value] > bestCount {
+			bestCount = counts[value]
+			bestValue = value
+		}
+	}
+	return bestValue
+}

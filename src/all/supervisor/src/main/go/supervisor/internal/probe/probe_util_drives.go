@@ -478,7 +478,7 @@ func driveSmartKind(node, kind string) (smartReport, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), mountDeadline)
 	defer cancel()
 	command := exec.CommandContext(ctx, driveSmartCommand, "--json", "-d", kind, "-a", node)
-	command.WaitDelay = driveSmartAbandon
+	killWithGroup(command, driveSmartAbandon)
 	output, err := command.Output()
 	if len(output) == 0 {
 		if err == nil {

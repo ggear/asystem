@@ -154,7 +154,7 @@ func backupListRow(root, run string) string {
 	} else if states[metric.BackupStageTertiary] == metric.BackupStateSkipped {
 		scrubState = metric.BackupStateSkipped
 	}
-	result := resolvedState(states, scrubDeclared)
+	result := resolveBackupState(states, scrubDeclared)
 	if len(states) == 0 && scrubDeclared == "" {
 		result = backupUnknownCell
 	}
@@ -289,7 +289,7 @@ func backupProgressed(copied, total, percent, remaining reading, eta string, rat
 		line += fmt.Sprintf(" and [%s] percent complete", backupPercent(percent))
 	}
 	if last >= 4 {
-		line += fmt.Sprintf(", finished in [%s] min at [%s]%s", backupMinutes(remaining), eta, bounded)
+		line += fmt.Sprintf(", finished in [%s] min at [%s]%s", padLeft(digits(remaining), backupMinutesWidth), eta, bounded)
 	}
 	return line
 }
@@ -300,10 +300,6 @@ func backupMoved(sizeMB reading, elapsed time.Duration) string {
 		rate = backupRated(sizeMB, floatReading(elapsed.Seconds()))
 	}
 	return fmt.Sprintf("[%s] GiB in [%s] s at [%s] MiB/s", backupSizedGibibytes(sizeMB), elapsedSeconds(elapsed), backupThroughput(rate))
-}
-
-func backupHeld(sizeMB reading, elapsed time.Duration) string {
-	return fmt.Sprintf("[%s] GiB held after [%s] s", backupSizedGibibytes(sizeMB), elapsedSeconds(elapsed))
 }
 
 func backupVerb(stage metric.BackupStage) string {
@@ -338,8 +334,6 @@ func backupCounted(r reading) string { return padLeft(digits(r), backupCountedWi
 func backupPercent(r reading) string { return padLeft(digits(r), backupPercentWidth) }
 
 func backupThroughput(r reading) string { return padLeft(digits(r), backupThroughputWidth) }
-
-func backupMinutes(r reading) string { return padLeft(digits(r), backupMinutesWidth) }
 
 func backupSizedGibibytes(r reading) string {
 	return padLeft(tenthsOf(r, mebibytesPerGibibyte), backupGibibytesWidth)
@@ -377,10 +371,6 @@ func elapsedSeconds(d time.Duration) string {
 
 func elapsedMinutes(d time.Duration) string {
 	return padLeft(strconv.FormatInt(int64(d.Round(time.Minute)/time.Minute), 10), backupMinutesWidth)
-}
-
-func elapsedMillis(d time.Duration) string {
-	return padLeft(strconv.FormatInt(int64(d.Round(time.Millisecond)/time.Millisecond), 10), elapsedMillisWidth)
 }
 
 func backupBar(percent reading) string {
@@ -508,7 +498,6 @@ const (
 	backupBarWidth        = 18
 
 	elapsedSecondsWidth = 3
-	elapsedMillisWidth  = 5
 
 	backupUnknownEta   = "--:--:--"
 	backupUnknownCell  = "-"

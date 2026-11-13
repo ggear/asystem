@@ -21,7 +21,6 @@ func init() {
 	rootCmd.AddCommand(newWatchCmd())
 }
 
-// noinspection DuplicatedCode
 func newWatchCmd() *cobra.Command {
 	opts := &watchOptions{}
 	cmd := &cobra.Command{

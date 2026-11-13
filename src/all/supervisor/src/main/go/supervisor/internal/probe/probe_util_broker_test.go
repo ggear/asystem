@@ -1,6 +1,8 @@
 package probe
 
 import (
+	"errors"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -224,4 +226,39 @@ func TestProbeUtilBroker_ForgetClearsPayloadsAndReadiness(t *testing.T) {
 	if len(retained) != 0 {
 		t.Errorf("payloads: got %d want 0, a lost connection must not leave a phantom reading", len(retained))
 	}
+}
+
+type failingToken struct {
+	acknowledged bool
+	err          error
+}
+
+func (t failingToken) Wait() bool                     { return t.acknowledged }
+func (t failingToken) WaitTimeout(time.Duration) bool { return t.acknowledged }
+func (t failingToken) Done() <-chan struct{}          { return nil }
+func (t failingToken) Error() error                   { return t.err }
+
+func TestProbeUtilBroker_SubscribeRefused(t *testing.T) {
+	filters := map[string]byte{"b/topic": 1, "a/topic": 1}
+	tests := []struct {
+		name            string
+		token           mqtt.Token
+		expectedRefused []string
+	}{
+		{"an unacknowledged subscribe refuses every filter in order", failingToken{acknowledged: false}, []string{"a/topic", "b/topic"}},
+		{"a failed subscribe refuses every filter in order", failingToken{acknowledged: true, err: errors.New("boom")}, []string{"a/topic", "b/topic"}},
+		{"an acknowledged subscribe of an unknown token type refuses nothing", failingToken{acknowledged: true}, nil},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			refused, reason := SubscribeRefused(testCase.token, filters, time.Second)
+			if !slices.Equal(refused, testCase.expectedRefused) || (len(refused) > 0) != (reason != "") {
+				t.Errorf("refused: got %v reason [%s] want %v", refused, reason, testCase.expectedRefused)
+			}
+		})
+	}
+}
+
+func brokerWatcherWith(client mqtt.Client, payloads map[string]string) *brokerWatcher {
+	return &brokerWatcher{brokerPayloads: brokerPayloads{payloads: payloads}, client: client}
 }

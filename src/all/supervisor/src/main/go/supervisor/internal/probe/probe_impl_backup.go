@@ -81,9 +81,9 @@ func (p *backupProbe) create(configPath string, cache *metric.RecordCache, mask 
 			"[%s] declares no backup stages, assuming [%s]", p.configPath, backupStagesNamed(p.stages))
 	}
 	p.serverHost = slices.Contains(p.stages, metric.BackupStageTertiary)
-	p.failedBackupStagesInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
-	p.haltedBackupStagesInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
-	p.usedBackupSpaceInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
+	p.failedBackupStagesInt = newIntStats(periods)
+	p.haltedBackupStagesInt = newIntStats(periods)
+	p.usedBackupSpaceInt = newIntStats(periods)
 	return nil
 }
 

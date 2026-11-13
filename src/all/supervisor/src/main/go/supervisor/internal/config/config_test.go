@@ -1152,3 +1152,30 @@ func TestConfig_GeneratedConfigDeclaresServers(t *testing.T) {
 		t.Errorf("servers: got none want the generated config to declare [%s] hosts, so no role could elect a leader", FormFactorServer)
 	}
 }
+
+func TestConfig_DocumentVersion(t *testing.T) {
+	tests := []struct {
+		name     string
+		content  string
+		written  bool
+		expected string
+	}{
+		{"the asystem version is read", `{"asystem":{"version":"10.200.2042"}}`, true, "10.200.2042"},
+		{"a document without a version reads empty", `{"asystem":{}}`, true, ""},
+		{"malformed json reads empty", `{`, true, ""},
+		{"a missing file reads empty", "", false, ""},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "config.json")
+			if testCase.written {
+				if err := os.WriteFile(path, []byte(testCase.content), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if actual := documentVersion(path); actual != testCase.expected {
+				t.Errorf("version: got [%s] want [%s]", actual, testCase.expected)
+			}
+		})
+	}
+}

@@ -16,7 +16,7 @@ func (s *restoreSession) merge() {
 		return
 	}
 	s.swept()
-	s.report(fmt.Sprintf("staging   [%d] artifact(s) into scratch", len(s.chain)))
+	s.report(fmt.Sprintf("staging   [%d] artefact(s) into scratch", len(s.chain)))
 	scratch, err := s.staged()
 	if err != nil {
 		s.fault(fmt.Sprintf("could not stage [%s] into scratch [%v]", s.run, err))
@@ -69,7 +69,7 @@ func (s *restoreSession) merge() {
 	stats := progress + ".stats"
 	_ = os.Remove(stats)
 	jobs := max(restoreSetting("RESTORE_MERGE_JOBS", 3), 1)
-	every := time.Duration(restoreSetting("RESTORE_PROGRESS_SECONDS", 30)) * time.Second
+	every := time.Duration(max(restoreSetting("RESTORE_PROGRESS_SECONDS", 30), 1)) * time.Second
 	s.report(fmt.Sprintf("merge     merging [%d] unit(s) with [%d] job(s), progress is recorded in [%s]", len(planned), jobs, progress))
 	var (
 		mutex   sync.Mutex
@@ -97,7 +97,10 @@ func (s *restoreSession) merge() {
 		}
 	}()
 	for _, unit := range planned {
-		if done[unit] {
+		mutex.Lock()
+		merged := done[unit]
+		mutex.Unlock()
+		if merged {
 			continue
 		}
 		slots <- struct{}{}
@@ -132,7 +135,7 @@ func (s *restoreSession) merge() {
 	for _, unit := range staged {
 		want[unit.name] = unit.count
 	}
-	attempts, pause := restoreSetting("RESTORE_VERIFY_ATTEMPTS", 24), time.Duration(restoreSetting("RESTORE_VERIFY_SLEEP", 5))*time.Second
+	attempts, pause := max(restoreSetting("RESTORE_VERIFY_ATTEMPTS", 24), 1), time.Duration(restoreSetting("RESTORE_VERIFY_SLEEP", 5))*time.Second
 	var shorts []string
 	for attempt := 1; attempt <= attempts; attempt++ {
 		after, _ := s.fingerprinted(s.liveAddress())

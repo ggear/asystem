@@ -223,9 +223,9 @@ func TestProbeUtilDrives_TopologyReadsThroughTheNamespace(t *testing.T) {
 		vendor            string
 		model             string
 		rotational        string
+		bridge            string
 		expectedHardware  string
 		expectedNode      string
-		bridge            string
 		expectedTransport string
 		expectedError     bool
 	}{

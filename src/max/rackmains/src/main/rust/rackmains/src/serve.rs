@@ -823,6 +823,7 @@ pub fn run(args: &ServeArgs, data_dir: &Path) -> Result<(), String> {
             key: PathBuf::from(&common.ssh_key),
             known_hosts: PathBuf::from(&common.known_hosts),
             timeout: ssh_timeout,
+            log_dir: data_dir.join(DIR_OUTAGE),
         })
     } else {
         info!("{}", log_line("guard mode", "dry-run"));

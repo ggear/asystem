@@ -184,8 +184,8 @@ func TestProbeUtilBackupSummary_ResolvedState(t *testing.T) {
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			if got := resolvedState(testCase.stages, testCase.scrub); got != testCase.expected {
-				t.Errorf("resolvedState() = %q, want %q", got, testCase.expected)
+			if got := resolveBackupState(testCase.stages, testCase.scrub); got != testCase.expected {
+				t.Errorf("resolveBackupState() = %q, want %q", got, testCase.expected)
 			}
 		})
 	}
@@ -208,7 +208,7 @@ func TestProbeUtilBackupSummary_ResolvedStateInvariantsHoldAcrossEveryCombinatio
 					if tertiary != "" {
 						stages[metric.BackupStageTertiary] = tertiary
 					}
-					result := resolvedState(stages, scrub)
+					result := resolveBackupState(stages, scrub)
 
 					anyRunning := primary == metric.BackupStateRunning || secondary == metric.BackupStateRunning ||
 						tertiary == metric.BackupStateRunning || scrub == metric.BackupStateRunning

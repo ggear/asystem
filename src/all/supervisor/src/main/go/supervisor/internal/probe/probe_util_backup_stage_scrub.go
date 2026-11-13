@@ -223,7 +223,10 @@ finished:
 		for _, file := range files {
 			listing = append(listing, fmt.Sprintf("%-8s %4d %s", file.outcome, file.snapshots, file.mirror))
 		}
-		scrubLog(ctx, stagePath, listing, kernelFaulted(logged))
+		counters, _, _ := bounded(ctx, stageBoundedWait, "btrfs", "scrub", "status", "-R", config.DirBackup)
+		stats, _, _ := bounded(ctx, stageBoundedWait, "btrfs", "device", "stats", config.DirBackup)
+		sections := []string{counters, stats, strings.Join(listing, "\n"), strings.Join(kernelFaulted(logged), "\n")}
+		_ = os.WriteFile(filepath.Join(stagePath, scrubLogLeaf), []byte(strings.Join(sections, "\n\n")+"\n"), 0o644)
 	}
 	if deviceErrors > 0 || lastReading.found > 0 {
 		_, _, _ = bounded(ctx, stageBoundedWait, "btrfs", "device", "stats", "-z", config.DirBackup)
@@ -382,23 +385,6 @@ func scrubReport(state string, resumed bool, reading scrubReading, deviceErrors 
 	return lines
 }
 
-func scrubStateCleared(ctx context.Context) int {
-	if commandAvailable("btrfs") && mountpointCheck(ctx, config.DirBackup) {
-		cancelScrub(ctx)
-	}
-	states, _ := filepath.Glob(filepath.Join(scrubStateDirectory, scrubStateLeaves))
-	cleared := 0
-	for _, state := range states {
-		if data, err := os.ReadFile(state); err == nil && strings.Contains(string(data), "finished:1") && !strings.Contains(string(data), "finished:0") {
-			continue
-		}
-		if os.Remove(state) == nil {
-			cleared++
-		}
-	}
-	return cleared
-}
-
 func scrubHalt(stagePath string, cancelled bool) string {
 	if _, err := os.Stat(filepath.Join(stagePath, stageTimedOutMarker)); err == nil {
 		return metric.BackupStateTimeout
@@ -410,13 +396,6 @@ func scrubHalt(stagePath string, cancelled bool) string {
 		return metric.BackupStateStopped
 	}
 	return ""
-}
-
-func scrubLog(ctx context.Context, stagePath string, corrupt, faulted []string) {
-	counters, _, _ := bounded(ctx, stageBoundedWait, "btrfs", "scrub", "status", "-R", config.DirBackup)
-	stats, _, _ := bounded(ctx, stageBoundedWait, "btrfs", "device", "stats", config.DirBackup)
-	sections := []string{counters, stats, strings.Join(corrupt, "\n"), strings.Join(faulted, "\n")}
-	_ = os.WriteFile(filepath.Join(stagePath, scrubLogLeaf), []byte(strings.Join(sections, "\n\n")+"\n"), 0o644)
 }
 
 func scrubTotal(reading scrubReading, reached float64) reading {

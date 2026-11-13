@@ -60,7 +60,13 @@ func runSecondaryStage(ctx context.Context, request stageRequest, counters *stag
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionStart).Warnf("faulting", time.Now(),
 			"[%s] recorded no successful service backup, promoting supervisor alone", label)
 	}
-	counters.addTotal(pendingPromotionMB(share, host, promote))
+	pendingMB := 0
+	for _, service := range promote {
+		_, sourceMB := directoryStats(serviceHomeDir(service))
+		_, targetMB := directoryStats(promotionTarget(service, share, host))
+		pendingMB += sourceMB - targetMB
+	}
+	counters.addTotal(max(pendingMB, 0))
 	scribe.Log(scribe.SourceBackup, subject, scribe.ActionStart).Infof("promoted", time.Now(),
 		"[%d] services promoting to [%s/backup]", len(promote), share)
 	failed := 0
@@ -191,21 +197,6 @@ func adoptedRun(root string) (string, bool) {
 		}
 	}
 	return "", false
-}
-
-func pendingPromotionMB(share, host string, promote []string) int {
-	pending := 0
-	for _, service := range promote {
-		source := serviceHomeDir(service)
-		target := promotionTarget(service, share, host)
-		_, sourceMB := directoryStats(source)
-		_, targetMB := directoryStats(target)
-		pending += sourceMB - targetMB
-	}
-	if pending < 0 {
-		pending = 0
-	}
-	return pending
 }
 
 func clearDirectory(dir string) {

@@ -229,8 +229,7 @@ func stageExec(ctx context.Context, name string, args ...string) (string, int, b
 
 func realStageStream(ctx context.Context, sink io.Writer, name string, args ...string) (string, int, bool) {
 	command := exec.CommandContext(ctx, name, args...)
-	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	command.Cancel = func() error { return syscall.Kill(-command.Process.Pid, syscall.SIGTERM) }
+	killWithGroup(command, stageExecAbandon)
 	command.Stdin = nil
 	buffer := &lockedBuffer{}
 	command.Stdout = buffer
@@ -238,7 +237,6 @@ func realStageStream(ctx context.Context, sink io.Writer, name string, args ...s
 		command.Stdout = io.MultiWriter(buffer, sink)
 	}
 	command.Stderr = buffer
-	command.WaitDelay = stageExecAbandon
 	runErr := command.Run()
 	if ctx.Err() != nil {
 		return buffer.String(), stageBoundedAbandoned, true
@@ -253,6 +251,12 @@ func realStageStream(ctx context.Context, sink io.Writer, name string, args ...s
 		return buffer.String(), command.ProcessState.ExitCode(), false
 	}
 	return buffer.String(), -1, false
+}
+
+func killWithGroup(command *exec.Cmd, grace time.Duration) {
+	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	command.Cancel = func() error { return syscall.Kill(-command.Process.Pid, syscall.SIGTERM) }
+	command.WaitDelay = grace
 }
 
 func (b *lockedBuffer) Write(data []byte) (int, error) {

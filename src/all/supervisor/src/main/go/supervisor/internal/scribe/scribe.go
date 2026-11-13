@@ -114,23 +114,6 @@ func EnableStdout(level slog.Level) {
 	slog.SetDefault(scribeLoggerInstance)
 }
 
-func EnableFile(level slog.Level, cmd, version string, maxSizeMB, maxBackups, maxAgeDays int) error {
-	writer, path, err := fileWriter(cmd, version, maxSizeMB, maxBackups, maxAgeDays)
-	if err != nil {
-		return err
-	}
-	scribeLoggerMu.Lock()
-	defer scribeLoggerMu.Unlock()
-	closeLoggerWriter()
-	scribeLoggerLevel = level
-	scribeLoggerMode = "file"
-	scribeLoggerInstance = installed(&streamHandler{level: level, writer: writer, sink: sinkFile()})
-	scribeLoggerWriter = writer
-	slog.SetDefault(scribeLoggerInstance)
-	purgeLogFiles(path)
-	return nil
-}
-
 func EnableStdoutAndFile(level slog.Level, cmd, version string, maxSizeMB, maxBackups, maxAgeDays int) error {
 	writer, path, err := fileWriter(cmd, version, maxSizeMB, maxBackups, maxAgeDays)
 	if err != nil {
@@ -598,11 +581,6 @@ func (h *backupHandler) WithGroup(name string) slog.Handler {
 	return &contextualHandler{handler: h, groups: []string{name}}
 }
 
-var backupLevelWords = map[slog.Level]string{
-	slog.LevelDebug: "DEBG",
-	slog.LevelError: "ERRS",
-}
-
 func renderBackup(line LogLine) string {
 	level, ok := backupLevelWords[line.Level]
 	if !ok {
@@ -900,7 +878,7 @@ func purgeLogFiles(keep string) {
 	dir := filepath.Dir(keep)
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		Log(SourceScribe, SubjectNone, ActionRemove).Warnf("faulting", purgeStart, "[unreadable] log dir for purge, %v", err)
+		Log(SourceScribe, SubjectNone, ActionRemove).Warnf("faulting", purgeStart, "[unreadable] log dir for purge, [%v]", err)
 		return
 	}
 	removed, kept := 0, 0
@@ -918,7 +896,7 @@ func purgeLogFiles(keep string) {
 			continue
 		}
 		if removeErr := os.Remove(path); removeErr != nil {
-			Log(SourceScribe, SubjectNone, ActionRemove).Warnf("faulting", purgeStart, "[%-16.16s] not removed, %v", name, removeErr)
+			Log(SourceScribe, SubjectNone, ActionRemove).Warnf("faulting", purgeStart, "[%-16.16s] not removed, [%v]", name, removeErr)
 			continue
 		}
 		removed++
@@ -1011,3 +989,8 @@ var (
 
 	flattened = strings.NewReplacer("\r\n", " ", "\n", " ", "\r", " ", "\t", " ")
 )
+
+var backupLevelWords = map[slog.Level]string{
+	slog.LevelDebug: "DEBG",
+	slog.LevelError: "ERRS",
+}

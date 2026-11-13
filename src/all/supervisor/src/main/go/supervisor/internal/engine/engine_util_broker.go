@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sort"
 	"supervisor/internal/config"
 	"supervisor/internal/scribe"
 	"sync/atomic"
@@ -132,7 +131,7 @@ func brokerReconnect(ctx context.Context, client mqtt.Client, reviveStart time.T
 			scribe.Log(scribe.SourceEngineBroker, scribe.SubjectNone, scribe.ActionConnect).Infof("liveness", reviveStart, "[true] session revived and ready")
 			return
 		}
-		scribe.Log(scribe.SourceEngineBroker, scribe.SubjectNone, scribe.ActionConnect).Warnf("liveness", reviveStart, "[false] failed, wait [%5d] ms %v", backoff.Milliseconds(), token.Error())
+		scribe.Log(scribe.SourceEngineBroker, scribe.SubjectNone, scribe.ActionConnect).Warnf("liveness", reviveStart, "[false] failed, wait [%5d] ms [%v]", backoff.Milliseconds(), token.Error())
 		select {
 		case <-ctx.Done():
 			return
@@ -141,39 +140,11 @@ func brokerReconnect(ctx context.Context, client mqtt.Client, reviveStart time.T
 	}
 }
 
-func subscribeRefused(token mqtt.Token, filters map[string]byte) ([]string, string) {
-	if !token.WaitTimeout(brokerTimeout) || token.Error() != nil {
-		refused := make([]string, 0, len(filters))
-		for topic := range filters {
-			refused = append(refused, topic)
-		}
-		sort.Strings(refused)
-		return refused, fmt.Sprintf("failed with [%v]", token.Error())
-	}
-	granted, ok := token.(*mqtt.SubscribeToken)
-	if !ok {
-		return nil, ""
-	}
-	var refused []string
-	for topic, code := range granted.Result() {
-		if code <= subscribeQosMax {
-			continue
-		}
-		refused = append(refused, topic)
-	}
-	if len(refused) == 0 {
-		return nil, ""
-	}
-	sort.Strings(refused)
-	return refused, fmt.Sprintf("refused by the broker with [%s]", refused[0])
-}
-
 const (
 	brokerProbeTopic = "supervisor/probe/wake"
 	brokerTimeout    = 3 * time.Second
 	brokerInterval   = 10 * time.Second
 	brokerExpiry     = brokerInterval * 3 / 2
-	subscribeQosMax  = 2
 
 	sessionAttemptsMax = 9
 )

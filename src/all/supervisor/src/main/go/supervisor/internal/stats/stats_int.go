@@ -115,13 +115,6 @@ func (v *IntStats) TrendMean() int8 {
 	return v.read(v.trend.mean)
 }
 
-func (v *IntStats) TrendMedian() int8 {
-	if v.trend == nil {
-		return 0
-	}
-	return v.read(v.trend.median)
-}
-
 func (v *IntStats) TrendMax() int8 {
 	if v.trend == nil {
 		return 0

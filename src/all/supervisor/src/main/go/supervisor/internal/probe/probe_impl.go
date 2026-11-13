@@ -616,13 +616,27 @@ func metricScope(task cacheMetricTask) string {
 	return fmt.Sprintf("[%s] ", task.serviceName)
 }
 
+func newIntStats(periods config.Periods) *stats.IntStats {
+	return stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
+}
+
+func newFloatStats(periods config.Periods) *stats.FloatStats {
+	return stats.NewFloatStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
+}
+
+func newBoolStats(periods config.Periods) *stats.BoolStats {
+	return stats.NewBoolStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
+}
+
+func newStringStats(periods config.Periods) *stats.StringStats {
+	return stats.NewStringStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
+}
+
 const (
 	metricFaultRepeat = time.Minute
 	cycleInterval     = time.Minute
 	pollStalePulses   = 5
 	pollStaleFloor    = 30 * time.Second
-
-	bytesPerMiB = 1 << 20
 )
 
 var (

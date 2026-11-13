@@ -553,3 +553,9 @@ func assertMountpoints(t *testing.T, label string, got, want []string) {
 		}
 	}
 }
+
+func resetMounts() {
+	mountCacheMu.Lock()
+	defer mountCacheMu.Unlock()
+	clear(mountCache)
+}

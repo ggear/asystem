@@ -42,12 +42,12 @@ func RunListeningProbesLoop(ctx context.Context, configPath string, cache *metri
 	}
 	createStart := time.Now()
 	if err := probe.Create(configPath, cache, periods); err != nil {
-		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStart).Errorf("faulting", createStart, "[%-16.16s] loop halted, %v", loopListeningProbes, err)
+		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStart).Errorf("faulting", createStart, "[%-16.16s] loop halted, [%v]", loopListeningProbes, err)
 		return
 	}
 	runStart := time.Now()
 	if err := probe.RunPoll(ctx, nil); err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
-		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStop).Errorf("faulting", runStart, "[%-16.16s] loop halted, %v", loopListeningProbes, err)
+		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStop).Errorf("faulting", runStart, "[%-16.16s] loop halted, [%v]", loopListeningProbes, err)
 	}
 }
 
@@ -179,7 +179,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		streamStart := time.Now()
 		if err := json.Unmarshal(msg.Payload(), &value); err != nil {
 			dropCount.Add(1)
-			scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(msg.Topic()), scribe.ActionSubscribe).Errorf("received", streamStart, "[unmarshal] data payload broke, %v", err)
+			scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(msg.Topic()), scribe.ActionSubscribe).Errorf("received", streamStart, "[unmarshal] data payload broke, [%v]", err)
 			return
 		}
 		if !online && !proveOnline(client, guid.Host, value) {
@@ -212,7 +212,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		subscribeStart := time.Now()
 		token := client.SubscribeMultiple(filters, onData)
 		go func() {
-			refused, reason := subscribeRefused(token, filters)
+			refused, reason := probe.SubscribeRefused(token, filters, brokerTimeout)
 			if len(refused) == 0 {
 				return
 			}
@@ -277,7 +277,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		if len(msg.Payload()) > 0 {
 			if err := json.Unmarshal(msg.Payload(), &value); err != nil {
 				dropCount.Add(1)
-				scribe.Log(scribe.SourceEngine, topic, scribe.ActionDiscover).Errorf("rejected", discoveryStart, "[unmarshal] discovery gone with %v", err)
+				scribe.Log(scribe.SourceEngine, topic, scribe.ActionDiscover).Errorf("rejected", discoveryStart, "[unmarshal] discovery gone with [%v]", err)
 				return
 			}
 		}
@@ -395,7 +395,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			subscribeStart := time.Now()
 			token := client.Subscribe(topic, 1, wildcardHandlers[topic])
 			go func(topic string, token mqtt.Token) {
-				refused, reason := subscribeRefused(token, map[string]byte{topic: 1})
+				refused, reason := probe.SubscribeRefused(token, map[string]byte{topic: 1}, brokerTimeout)
 				if len(refused) == 0 {
 					return
 				}
@@ -441,7 +441,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 	clientStart := time.Now()
 	client, err := brokerConnect(configPath, onConnect, "", "")
 	if err != nil {
-		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStop).Errorf("faulting", clientStart, "[%-16.16s] loop halted, %v", loopListeningStream, err)
+		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStop).Errorf("faulting", clientStart, "[%-16.16s] loop halted, [%v]", loopListeningStream, err)
 		return
 	}
 	defer client.Disconnect(250)

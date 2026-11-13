@@ -70,7 +70,7 @@ func TestProbeUtilBackupRestore_ReportedRestoreLine(t *testing.T) {
 		text     string
 		expected string
 	}{
-		{"a known label takes the first column", "artifact  [x]", "   artifact  [x]"},
+		{"a known label takes the first column", "artefact  [x]", "   artefact  [x]"},
 		{"free text is indented under the labels", "something else", "             something else"},
 	}
 	for _, test := range tests {

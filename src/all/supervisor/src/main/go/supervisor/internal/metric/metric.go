@@ -4,7 +4,6 @@ package metric
 
 type ID int
 
-// noinspection GoNameStartsWithPackageName
 const (
 	MetricCluster ID = iota
 	MetricHost
@@ -45,10 +44,8 @@ const (
 	MetricMax
 )
 
-// noinspection GoNameStartsWithPackageName
 type MetricKind int
 
-// noinspection GoNameStartsWithPackageName
 const (
 	MetricKindUnset MetricKind = iota
 	MetricKindCluster

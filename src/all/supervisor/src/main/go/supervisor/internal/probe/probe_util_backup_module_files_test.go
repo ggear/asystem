@@ -118,3 +118,30 @@ func TestProbeUtilBackupModuleFiles_BackupModuleFiles(t *testing.T) {
 		})
 	}
 }
+
+func TestProbeUtilBackupModuleFiles_CompileShellPattern(t *testing.T) {
+	tests := []struct {
+		name            string
+		pattern         string
+		path            string
+		expectedMatched bool
+	}{
+		{"a star matches within a name", "*.log", "a.log", true},
+		{"a pattern matches below any directory", "*.log", "dir/sub/a.log", true},
+		{"a pattern matches everything below a directory", "cache", "cache/deep/file", true},
+		{"a trailing character defeats the match", "*.log", "a.logx", false},
+		{"a question mark is one character", "a?c", "abc", true},
+		{"a question mark is not zero characters", "a?c", "ac", false},
+		{"a negated class excludes its members", "[!a]x", "ax", false},
+		{"a negated class admits the rest", "[!a]x", "bx", true},
+		{"an unclosed bracket is literal", "[a", "[a", true},
+		{"regexp metacharacters are literal", "a.b", "aXb", false},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if actual := compileShellPattern(testCase.pattern).MatchString(testCase.path); actual != testCase.expectedMatched {
+				t.Errorf("match: got [%t] want [%t] for pattern [%s] path [%s]", actual, testCase.expectedMatched, testCase.pattern, testCase.path)
+			}
+		})
+	}
+}

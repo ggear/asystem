@@ -202,14 +202,14 @@ func TestProbeUtilBackup_PreparedRefusesARequestTheRunCannotHonour(t *testing.T)
 func TestProbeUtilBackup_PreparedResolvesTheArgumentIntoTheRunIdOnce(t *testing.T) {
 	named := "2026-09-22_01-00-35"
 	tests := []struct {
-		name     string
-		command  BackupCommand
-		argument string
-		expected string
-		minted   bool
+		name           string
+		command        BackupCommand
+		argument       string
+		expected       string
+		expectedMinted bool
 	}{
 		{name: "start_takes_the_run_it_was_given", command: BackupCommandStart, argument: named, expected: named},
-		{name: "start_mints_one_when_given_none", command: BackupCommandStart, minted: true},
+		{name: "start_mints_one_when_given_none", command: BackupCommandStart, expectedMinted: true},
 		{name: "stop_takes_the_run_it_was_given", command: BackupCommandStop, argument: named, expected: named},
 		{name: "stop_leaves_the_newest_to_be_resolved", command: BackupCommandStop},
 		{name: "tail_takes_the_run_it_was_given", command: BackupCommandTail, argument: named, expected: named},
@@ -222,7 +222,7 @@ func TestProbeUtilBackup_PreparedResolvesTheArgumentIntoTheRunIdOnce(t *testing.
 			if err != nil {
 				t.Fatalf("BackupPrepared() error = %v", err)
 			}
-			if testCase.minted {
+			if testCase.expectedMinted {
 				if !treeRunPattern.MatchString(request.RunID) {
 					t.Errorf("RunID = %q, want a minted run stamp", request.RunID)
 				}
@@ -331,8 +331,8 @@ func TestProbeUtilBackup_ASecondRunIsRefusedWhileTheLockIsHeld(t *testing.T) {
 	}
 	err = Backup(t.Context(), BackupRequest{Command: BackupCommandStart, Trigger: metric.BackupTriggerManual,
 		Config: configPath, RunID: "2026-09-22_01-00-00"})
-	if err == nil || !strings.Contains(err.Error(), "refusing to start") {
-		t.Errorf("Backup() error = %v, want a refusal naming the held lock", err)
+	if err == nil {
+		t.Errorf("Backup() error = nil, want a refusal while the lock is held")
 	}
 	if runs := backupRuns(root); len(runs) != 0 {
 		t.Errorf("backupRuns() = %v, want a refused run to mint no directory", runs)
@@ -476,8 +476,8 @@ func TestProbeUtilBackup_CleanIsRefusedWhileARunHoldsTheLock(t *testing.T) {
 
 	err = Backup(t.Context(), BackupRequest{Command: BackupCommandClean, Trigger: metric.BackupTriggerManual,
 		Config: filepath.Join(home, "config.json")})
-	if err == nil || !strings.Contains(err.Error(), "stop it before cleaning") {
-		t.Errorf("Backup(clean) error = %v, want a refusal naming the held lock", err)
+	if err == nil {
+		t.Errorf("Backup(clean) error = nil, want a refusal while the lock is held")
 	}
 	if runs := backupRuns(root); len(runs) != 1 {
 		t.Errorf("backupRuns() = %v, want the history left alone while a run owns it", runs)

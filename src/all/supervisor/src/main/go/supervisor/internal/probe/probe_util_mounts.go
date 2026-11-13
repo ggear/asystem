@@ -92,12 +92,6 @@ func loadMounts(root string, window time.Duration) *mountSet {
 	return cached
 }
 
-func resetMounts() {
-	mountCacheMu.Lock()
-	defer mountCacheMu.Unlock()
-	clear(mountCache)
-}
-
 func (s *mountSet) request(window time.Duration) {
 	s.mutex.Lock()
 	if s.current != nil && s.current.failed > 0 && mountRetry < window {
@@ -172,7 +166,7 @@ func (s *mountSet) usedHomeSpace() (int8, derivation, error) {
 	}
 	used := float64(home.used) / float64(home.total) * 100.0
 	return percentValue(used), derivedf(scribe.ActionSample, "computed [%d] pct used home, used [%d] MiB of total [%d] MiB on [%s] holding [%s] of [%d] filesystems, snapshot taken [%s] ago",
-		percentValue(used), home.used/bytesPerMiB, home.total/bytesPerMiB, home.mountpoint, config.DirServiceHome, systems, config.SinceIncludingSuspend(taken.taken).Truncate(time.Second)), nil
+		percentValue(used), home.used/bytesPerMebibyte, home.total/bytesPerMebibyte, home.mountpoint, config.DirServiceHome, systems, config.SinceIncludingSuspend(taken.taken).Truncate(time.Second)), nil
 }
 
 func (s *mountSet) usedShareSpace() (int8, derivation, error) {
@@ -203,7 +197,7 @@ func (s *mountSet) usedShareSpace() (int8, derivation, error) {
 			taken.locals, taken.shares, errEnvironment, strings.Join(mountReasons(taken.mounts, true), "\n"))
 	}
 	return percentValue(float64(used) / float64(total) * 100.0), derivedf(scribe.ActionSample, "computed [%d] pct used share, used [%d] MiB of total [%d] MiB across [%d] measured of [%d] local shares",
-		percentValue(float64(used)/float64(total)*100.0), used/bytesPerMiB, total/bytesPerMiB, measured, taken.locals), nil
+		percentValue(float64(used)/float64(total)*100.0), used/bytesPerMebibyte, total/bytesPerMebibyte, measured, taken.locals), nil
 }
 
 func (s *mountSet) failedShares() (int8, derivation, error) {
@@ -248,7 +242,7 @@ func (s *mountSet) collect() *mountSnapshot {
 			usedShare = float64(used) / float64(total) * 100.0
 		}
 		scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(mountFeeding(mounts[index])), scribe.ActionSample).Debugf("measured", measureStart, "[%s] device [%s] fstype [%s] class [%s] used [%3d] of [%3d] MiB at [%3d] pct",
-			mounts[index].mountpoint, mounts[index].device, mounts[index].fstype, mountClassLabel(mounts[index]), used/bytesPerMiB, total/bytesPerMiB, percentValue(usedShare))
+			mounts[index].mountpoint, mounts[index].device, mounts[index].fstype, mountClassLabel(mounts[index]), used/bytesPerMebibyte, total/bytesPerMebibyte, percentValue(usedShare))
 	}
 	mounted := map[string]mountUsage{}
 	for index := range mounts {

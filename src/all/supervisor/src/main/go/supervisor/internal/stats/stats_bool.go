@@ -131,18 +131,6 @@ func (v *BoolStats) PulseMedian() bool {
 	return v.pulseTrueCount*2 >= v.pulseFilled
 }
 
-func (v *BoolStats) PulseHasTrue() bool {
-	v.mutex.RLock()
-	defer v.mutex.RUnlock()
-	return v.pulseTrueCount > 0
-}
-
-func (v *BoolStats) PulseHasFalse() bool {
-	v.mutex.RLock()
-	defer v.mutex.RUnlock()
-	return v.pulseFalseCount > 0
-}
-
 func (v *BoolStats) PulseHasChanged() bool {
 	v.mutex.RLock()
 	defer v.mutex.RUnlock()
@@ -160,18 +148,6 @@ func (v *BoolStats) TrendMean() bool {
 		return false
 	}
 	return v.trendTrueWeight >= v.trendFalseWeight
-}
-
-func (v *BoolStats) TrendHasTrue() bool {
-	v.mutex.RLock()
-	defer v.mutex.RUnlock()
-	return !v.trendOff && v.trendTrueWeight > 0
-}
-
-func (v *BoolStats) TrendHasFalse() bool {
-	v.mutex.RLock()
-	defer v.mutex.RUnlock()
-	return !v.trendOff && v.trendFalseWeight > 0
 }
 
 func (v *BoolStats) TrendHasChanged() bool {

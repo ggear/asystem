@@ -2,11 +2,10 @@ package metric
 
 import (
 	"encoding/json"
-	"reflect"
 	"testing"
 )
 
-func TestMetricValue_DataUnmarshalJSON(t *testing.T) {
+func TestMetricValueData_UnmarshalJSON(t *testing.T) {
 	tests := []struct {
 		name          string
 		json          string
@@ -163,7 +162,7 @@ func TestMetricValue_DataUnmarshalJSON(t *testing.T) {
 	}
 }
 
-func TestMetricValue_DataMarshalJSON(t *testing.T) {
+func TestMetricValueData_MarshalJSON(t *testing.T) {
 	tests := []struct {
 		name          string
 		value         *ValueData
@@ -290,7 +289,7 @@ func TestMetricValue_DataMarshalJSON(t *testing.T) {
 	}
 }
 
-func TestMetricValue_DataDetailUnmarshalJSON(t *testing.T) {
+func TestMetricValueData_DetailUnmarshalJSON(t *testing.T) {
 	tests := []struct {
 		name          string
 		json          string
@@ -462,7 +461,7 @@ func TestMetricValue_DataDetailUnmarshalJSON(t *testing.T) {
 	}
 }
 
-func TestMetricValue_DataDetailMarshalJSON(t *testing.T) {
+func TestMetricValueData_DetailMarshalJSON(t *testing.T) {
 	tests := []struct {
 		name          string
 		value         ValueDataDetail
@@ -540,203 +539,7 @@ func TestMetricValue_DataDetailMarshalJSON(t *testing.T) {
 	}
 }
 
-func TestMetricValue_MetaUnmarshalJSON(t *testing.T) {
-	tests := []struct {
-		name          string
-		json          string
-		expected      ValueMeta
-		expectedError bool
-	}{
-		{
-			name: "happy_with_pulse_and_trend",
-			json: `{"version":"10.100.6842","pulse":{"window":"5s","unit":"%","type":"percentage","measure":"mean"},"trend":{"window":"24h","unit":"%","type":"percentage","measure":"p95"}}`,
-			expected: ValueMeta{
-				Version: "10.100.6842",
-				Pulse: &ValueMetaDetail{
-					Window:  "5s",
-					Unit:    "%",
-					Type:    "percentage",
-					Measure: "mean",
-				},
-				Trend: &ValueMetaDetail{
-					Window:  "24h",
-					Unit:    "%",
-					Type:    "percentage",
-					Measure: "p95",
-				},
-			},
-			expectedError: false,
-		},
-		{
-			name: "happy_pulse_only",
-			json: `{"version":"10.100.6842","pulse":{"window":"5s","unit":"%","type":"percentage","measure":"mean"}}`,
-			expected: ValueMeta{
-				Version: "10.100.6842",
-				Pulse: &ValueMetaDetail{
-					Window:  "5s",
-					Unit:    "%",
-					Type:    "percentage",
-					Measure: "mean",
-				},
-				Trend: nil,
-			},
-			expectedError: false,
-		},
-		{
-			name: "happy_trend_only",
-			json: `{"version":"10.100.6842","trend":{"window":"24h","unit":"%","type":"percentage","measure":"p95"}}`,
-			expected: ValueMeta{
-				Version: "10.100.6842",
-				Pulse:   nil,
-				Trend: &ValueMetaDetail{
-					Window:  "24h",
-					Unit:    "%",
-					Type:    "percentage",
-					Measure: "p95",
-				},
-			},
-			expectedError: false,
-		},
-		{
-			name: "happy_version_only",
-			json: `{"version":"10.100.6842"}`,
-			expected: ValueMeta{
-				Version: "10.100.6842",
-			},
-			expectedError: false,
-		},
-		{
-			name: "happy_pulse_missing_unit",
-			json: `{"version":"10.100.6842","pulse":{"window":"5s","type":"percentage","measure":"mean"}}`,
-			expected: ValueMeta{
-				Version: "10.100.6842",
-				Pulse: &ValueMetaDetail{
-					Window:  "5s",
-					Unit:    "",
-					Type:    "percentage",
-					Measure: "mean",
-				},
-			},
-			expectedError: false,
-		},
-		{
-			name:          "sad_invalid_json_input",
-			json:          `{`,
-			expectedError: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var meta ValueMeta
-			err := json.Unmarshal([]byte(tt.json), &meta)
-			if (err != nil) != tt.expectedError {
-				t.Fatalf("Got err = %v, expected error? %t", err, tt.expectedError)
-			}
-			if err != nil {
-				return
-			}
-			if !reflect.DeepEqual(meta, tt.expected) {
-				t.Fatalf("Got meta = %+v, expected %+v", meta, tt.expected)
-			}
-		})
-	}
-}
-
-func TestMetricValue_MetaMarshalJSON(t *testing.T) {
-	tests := []struct {
-		name          string
-		value         ValueMeta
-		expected      string
-		expectedError bool
-	}{
-		{
-			name: "happy_version_only",
-			value: ValueMeta{
-				Version: "10.100.6842",
-			},
-			expected:      `{"version":"10.100.6842"}`,
-			expectedError: false,
-		},
-		{
-			name: "happy_with_pulse_and_trend",
-			value: ValueMeta{
-				Version: "10.100.6842",
-				Pulse: &ValueMetaDetail{
-					Window:  "5s",
-					Unit:    "%",
-					Type:    "percentage",
-					Measure: "mean",
-				},
-				Trend: &ValueMetaDetail{
-					Window:  "24h",
-					Unit:    "%",
-					Type:    "percentage",
-					Measure: "p95",
-				},
-			},
-			expected:      `{"version":"10.100.6842","pulse":{"window":"5s","unit":"%","type":"percentage","measure":"mean"},"trend":{"window":"24h","unit":"%","type":"percentage","measure":"p95"}}`,
-			expectedError: false,
-		},
-		{
-			name: "happy_pulse_only",
-			value: ValueMeta{
-				Version: "10.100.6842",
-				Pulse: &ValueMetaDetail{
-					Window:  "5s",
-					Unit:    "%",
-					Type:    "percentage",
-					Measure: "mean",
-				},
-			},
-			expected:      `{"version":"10.100.6842","pulse":{"window":"5s","unit":"%","type":"percentage","measure":"mean"}}`,
-			expectedError: false,
-		},
-		{
-			name: "happy_trend_only",
-			value: ValueMeta{
-				Version: "10.100.6842",
-				Trend: &ValueMetaDetail{
-					Window:  "24h",
-					Unit:    "%",
-					Type:    "percentage",
-					Measure: "p95",
-				},
-			},
-			expected:      `{"version":"10.100.6842","trend":{"window":"24h","unit":"%","type":"percentage","measure":"p95"}}`,
-			expectedError: false,
-		},
-		{
-			name: "happy_pulse_missing_unit",
-			value: ValueMeta{
-				Version: "10.100.6842",
-				Pulse: &ValueMetaDetail{
-					Window:  "5s",
-					Unit:    "",
-					Type:    "percentage",
-					Measure: "mean",
-				},
-			},
-			expected:      `{"version":"10.100.6842","pulse":{"window":"5s","type":"percentage","measure":"mean"}}`,
-			expectedError: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			raw, err := json.Marshal(tt.value)
-			if (err != nil) != tt.expectedError {
-				t.Fatalf("Got err = %v, expected error? %t", err, tt.expectedError)
-			}
-			if err != nil {
-				return
-			}
-			if string(raw) != tt.expected {
-				t.Fatalf("Got json = %s, expected %s", raw, tt.expected)
-			}
-		})
-	}
-}
-
-func TestMetricValue_DataFailedSkew(t *testing.T) {
+func TestMetricValueData_FailedSkew(t *testing.T) {
 	type legacyValueData struct {
 		Timestamp int64            `json:"timestamp"`
 		Pulse     *ValueDataDetail `json:"pulse,omitempty"`

@@ -419,3 +419,9 @@ func writeSensorFile(t *testing.T, path, content string) {
 		t.Fatalf("write %s failed: %v", path, err)
 	}
 }
+
+func resetSensors() {
+	sensorCacheMu.Lock()
+	defer sensorCacheMu.Unlock()
+	clear(sensorCache)
+}

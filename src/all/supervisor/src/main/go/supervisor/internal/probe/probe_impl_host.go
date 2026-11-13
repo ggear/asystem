@@ -101,22 +101,22 @@ func (p *hostProbe) create(configPath string, cache *metric.RecordCache, mask [m
 	p.periods = periods
 	p.configPath = configPath
 	p.hostName = config.Load(configPath).Host()
-	p.usedProcessorInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
-	p.usedMemoryInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
-	p.allocatedMemoryInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
-	p.failedLogsInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
-	p.failedSharesInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
-	p.warnTemperatureInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
-	p.spinFanSpeedInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
-	p.failedDrivesInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
-	p.usedDriveLifeInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
-	p.usedHomeSpaceInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
-	p.usedShareSpaceInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
-	p.usedSwapSpaceInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
-	p.usedDiskTimeInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
-	p.usedNetworkInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
-	p.upTimeFloat = stats.NewFloatStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
-	p.temperatureFloat = stats.NewFloatStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
+	p.usedProcessorInt = newIntStats(periods)
+	p.usedMemoryInt = newIntStats(periods)
+	p.allocatedMemoryInt = newIntStats(periods)
+	p.failedLogsInt = newIntStats(periods)
+	p.failedSharesInt = newIntStats(periods)
+	p.warnTemperatureInt = newIntStats(periods)
+	p.spinFanSpeedInt = newIntStats(periods)
+	p.failedDrivesInt = newIntStats(periods)
+	p.usedDriveLifeInt = newIntStats(periods)
+	p.usedHomeSpaceInt = newIntStats(periods)
+	p.usedShareSpaceInt = newIntStats(periods)
+	p.usedSwapSpaceInt = newIntStats(periods)
+	p.usedDiskTimeInt = newIntStats(periods)
+	p.usedNetworkInt = newIntStats(periods)
+	p.upTimeFloat = newFloatStats(periods)
+	p.temperatureFloat = newFloatStats(periods)
 	return nil
 }
 
@@ -300,7 +300,7 @@ func (p *hostProbe) usedMemory() (int8, derivation, error) {
 	}
 	usedPercent := (float64(memoryStat.Used) / float64(memoryStat.Total)) * 100.0
 	return stats.ConvertToInt(usedPercent), derivedf(scribe.ActionCompute, "computed [%d] pct used, used [%d] MiB of total [%d] MiB, available [%d] MiB",
-		stats.ConvertToInt(usedPercent), memoryStat.Used/bytesPerMiB, memoryStat.Total/bytesPerMiB, memoryStat.Available/bytesPerMiB), nil
+		stats.ConvertToInt(usedPercent), memoryStat.Used/bytesPerMebibyte, memoryStat.Total/bytesPerMebibyte, memoryStat.Available/bytesPerMebibyte), nil
 }
 
 func (p *hostProbe) allocatedMemory() (int8, derivation, error) {
@@ -321,12 +321,12 @@ func (p *hostProbe) allocatedMemory() (int8, derivation, error) {
 	}
 	allocatedPercent := (float64(allocatedBytes) / float64(memoryStat.Total)) * 100.0
 	sampled := derivedf(scribe.ActionCompute, "computed [%d] pct allocated, ceilings [%d] MiB of total [%d] MiB, installed [%d] of configured [%d] services",
-		stats.ConvertToInt(allocatedPercent), allocatedBytes/bytesPerMiB, int64(memoryStat.Total)/bytesPerMiB, installed, len(config.Load(p.configPath).Services(p.hostName)))
+		stats.ConvertToInt(allocatedPercent), allocatedBytes/bytesPerMebibyte, int64(memoryStat.Total)/bytesPerMebibyte, installed, len(config.Load(p.configPath).Services(p.hostName)))
 	if allocatedPercent > 100.0 {
 		if allocatedBytes != p.allocatedMemoryLogged {
 			p.allocatedMemoryLogged = allocatedBytes
 			scribe.Log(scribe.SourceProbeHost, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionCompute).Warnf("exceeded", allocatedStart, "[%d] MiB allocated of [%d] MiB total at [%.1f] pct across [%d] installed services, capping the metric at [100] pct",
-				allocatedBytes/bytesPerMiB, int64(memoryStat.Total)/bytesPerMiB, allocatedPercent, installed)
+				allocatedBytes/bytesPerMebibyte, int64(memoryStat.Total)/bytesPerMebibyte, allocatedPercent, installed)
 		}
 		allocatedPercent = 100.0
 	}
@@ -396,7 +396,7 @@ func (p *hostProbe) usedSwapSpace() (int8, derivation, error) {
 	}
 	usedPercent := (float64(swapStat.Used) / float64(swapStat.Total)) * 100.0
 	return percentValue(usedPercent), derivedf(scribe.ActionCompute, "computed [%d] pct used, used [%d] MiB of total [%d] MiB, free [%d] MiB",
-		percentValue(usedPercent), swapStat.Used/bytesPerMiB, swapStat.Total/bytesPerMiB, swapStat.Free/bytesPerMiB), nil
+		percentValue(usedPercent), swapStat.Used/bytesPerMebibyte, swapStat.Total/bytesPerMebibyte, swapStat.Free/bytesPerMebibyte), nil
 }
 
 func (p *hostProbe) usedDiskTime() (int8, derivation, error) {
@@ -447,7 +447,6 @@ type cpuUsageSampler struct {
 	lastSample cpu.TimesStat
 }
 
-//goland:noinspection GoDeprecation
 func (s *cpuUsageSampler) sample(cpuTimes func(bool) ([]cpu.TimesStat, error)) (int8, derivation, error) {
 	currentTimes, err := cpuTimes(false)
 	if err != nil {
@@ -461,10 +460,13 @@ func (s *cpuUsageSampler) sample(cpuTimes func(bool) ([]cpu.TimesStat, error)) (
 		s.hasSample = true
 		return 0, derivation{}, errProbeWarmingUp
 	}
+	total := func(times cpu.TimesStat) float64 {
+		return times.User + times.System + times.Idle + times.Nice + times.Iowait + times.Irq + times.Softirq + times.Steal
+	}
 	previousIdleTime := s.lastSample.Idle
-	previousTotalTime := s.lastSample.Total()
+	previousTotalTime := total(s.lastSample)
 	currentIdleTime := currentTimes[0].Idle
-	currentTotalTime := currentTimes[0].Total()
+	currentTotalTime := total(currentTimes[0])
 	idleDelta := currentIdleTime - previousIdleTime
 	totalDelta := currentTotalTime - previousTotalTime
 	s.lastSample = currentTimes[0]

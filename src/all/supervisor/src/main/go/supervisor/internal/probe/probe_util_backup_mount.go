@@ -292,26 +292,6 @@ func backupShares() []string {
 	return mounts
 }
 
-func mountedLocalShares(ctx context.Context) []string {
-	out, code, abandoned := bounded(ctx, stageBoundedWait, "findmnt", "-rn", "-o", "TARGET,SOURCE,FSTYPE")
-	if abandoned || code != 0 {
-		return nil
-	}
-	var mounts []string
-	for line := range strings.SplitSeq(out, "\n") {
-		fields := strings.Fields(line)
-		if len(fields) < 3 {
-			continue
-		}
-		mount, source, fstype := fields[0], fields[1], fields[2]
-		if !shareMountPattern(mount) || !isLocalFilesystem(fstype) || !strings.HasPrefix(source, "/dev/") {
-			continue
-		}
-		mounts = append(mounts, mount)
-	}
-	return mounts
-}
-
 func measureUsage(ctx context.Context, subject scribe.Subject, target string) (percent float64, usedMB, totalMB int, ok bool) {
 	if !mountpointCheck(ctx, target) {
 		return 0, 0, 0, false
@@ -406,12 +386,12 @@ var (
 
 	btrfsUnidentified sync.Map
 
-	backupFstabPath = "/etc/fstab"
+	backupFstabPath  = "/etc/fstab"
+	backupSysfsBtrfs = "/sys/fs/btrfs"
 )
 
 const (
 	mountDetachSettle = 2 * time.Second
 
-	backupAliveWait  = 10 * time.Second
-	backupSysfsBtrfs = "/sys/fs/btrfs"
+	backupAliveWait = 10 * time.Second
 )

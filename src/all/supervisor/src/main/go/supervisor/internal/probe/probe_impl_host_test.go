@@ -94,6 +94,36 @@ func TestProbeImplHost_UsedProcessor(t *testing.T) {
 	}
 }
 
+func TestProbeImplHost_UsedProcessorExcludesGuestTime(t *testing.T) {
+	tests := []struct {
+		name     string
+		first    cpu.TimesStat
+		second   cpu.TimesStat
+		expected int8
+	}{
+		{"guest time already inside user is not counted twice", cpu.TimesStat{User: 100, Idle: 100}, cpu.TimesStat{User: 200, Idle: 200, Guest: 50, GuestNice: 50}, 50},
+		{"no guest time", cpu.TimesStat{User: 100, Idle: 100}, cpu.TimesStat{User: 200, Idle: 200}, 50},
+		{"iowait and steal count as used", cpu.TimesStat{Idle: 100}, cpu.TimesStat{Idle: 150, Iowait: 25, Steal: 25}, 50},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			sampler := &cpuUsageSampler{}
+			call := 0
+			times := func(bool) ([]cpu.TimesStat, error) {
+				call++
+				return []cpu.TimesStat{map[int]cpu.TimesStat{1: testCase.first, 2: testCase.second}[call]}, nil
+			}
+			if _, _, err := sampler.sample(times); !errors.Is(err, errProbeWarmingUp) {
+				t.Fatalf("warm-up: got %v want %v", err, errProbeWarmingUp)
+			}
+			value, _, err := sampler.sample(times)
+			if err != nil || value != testCase.expected {
+				t.Errorf("used: got [%d] error [%v] want [%d]", value, err, testCase.expected)
+			}
+		})
+	}
+}
+
 func TestProbeImplHost_UsedMemory(t *testing.T) {
 	tests := []struct {
 		name           string

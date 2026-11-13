@@ -137,13 +137,13 @@ func NewDataPulseValue(pulseOK bool, pulse any) (*ValueData, error) {
 	case bool:
 		return NewBoolPulseValue(pulseOK), nil
 	default:
-		return nil, fmt.Errorf("unsupported metric pulse value type: %T", pulse)
+		return nil, fmt.Errorf("unsupported metric pulse value type [%T]", pulse)
 	}
 }
 
 func NewDataValue(pulseOK bool, pulse any, trendOK bool, trend any) (*ValueData, error) {
 	typeMismatch := func() error {
-		return fmt.Errorf("metric value type mismatch: pulse %T trend %T", pulse, trend)
+		return fmt.Errorf("metric value type mismatch, pulse [%T] trend [%T]", pulse, trend)
 	}
 	switch p := pulse.(type) {
 	case int8:
@@ -170,7 +170,7 @@ func NewDataValue(pulseOK bool, pulse any, trendOK bool, trend any) (*ValueData,
 		}
 		return NewBoolValue(pulseOK, trendOK), nil
 	default:
-		return nil, fmt.Errorf("unsupported metric value type: %T", pulse)
+		return nil, fmt.Errorf("unsupported metric value type [%T]", pulse)
 	}
 }
 
@@ -232,7 +232,6 @@ func (d ValueDataDetail) MarshalJSON() ([]byte, error) {
 	return json.Marshal(Alias{OK: d.OK, Value: v})
 }
 
-// noinspection GoMixedReceiverTypes
 func (d *ValueDataDetail) UnmarshalJSON(data []byte) error {
 	if len(data) == 0 || len(data) == 2 && data[0] == '{' && data[1] == '}' || string(data) == `""` || string(data) == "null" {
 		*d = ValueDataDetail{}

@@ -16,25 +16,25 @@ import (
 
 func TestProbeUtilBackupStageTertiary_ProgressTotal(t *testing.T) {
 	tests := []struct {
-		name     string
-		moved    int64
-		expected int64
-		known    bool
-		value    int64
+		name          string
+		moved         int64
+		estimate      int64
+		expectedKnown bool
+		expectedValue int64
 	}{
-		{name: "unknown_when_expected_is_zero", expected: 0, known: false},
-		{name: "unknown_when_expected_is_negative", expected: -1, known: false},
-		{name: "unknown_once_the_copy_has_passed_the_estimate", moved: 89 * bytesPerGibibyte, expected: 79 * bytesPerGibibyte, known: false},
-		{name: "known_converts_bytes_to_mebibytes_for_the_formatter", expected: 3 * bytesPerGibibyte, known: true, value: 3 * mebibytesPerGibibyte},
+		{name: "unknown_when_expected_is_zero", estimate: 0, expectedKnown: false},
+		{name: "unknown_when_expected_is_negative", estimate: -1, expectedKnown: false},
+		{name: "unknown_once_the_copy_has_passed_the_estimate", moved: 89 * bytesPerGibibyte, estimate: 79 * bytesPerGibibyte, expectedKnown: false},
+		{name: "known_converts_bytes_to_mebibytes_for_the_formatter", estimate: 3 * bytesPerGibibyte, expectedKnown: true, expectedValue: 3 * mebibytesPerGibibyte},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			got := progressTotal(testCase.moved, testCase.expected)
-			if got.Known() != testCase.known {
-				t.Fatalf("progressTotal() known = %v, want %v", got.Known(), testCase.known)
+			got := progressTotal(testCase.moved, testCase.estimate)
+			if got.Known() != testCase.expectedKnown {
+				t.Fatalf("progressTotal() known = %v, want %v", got.Known(), testCase.expectedKnown)
 			}
-			if testCase.known && got.Rounded() != testCase.value {
-				t.Errorf("progressTotal() = %d, want %d", got.Rounded(), testCase.value)
+			if testCase.expectedKnown && got.Rounded() != testCase.expectedValue {
+				t.Errorf("progressTotal() = %d, want %d", got.Rounded(), testCase.expectedValue)
 			}
 		})
 	}
@@ -42,25 +42,25 @@ func TestProbeUtilBackupStageTertiary_ProgressTotal(t *testing.T) {
 
 func TestProbeUtilBackupStageTertiary_ProgressPercent(t *testing.T) {
 	tests := []struct {
-		name     string
-		moved    int64
-		expected int64
-		known    bool
-		value    float64
+		name          string
+		moved         int64
+		estimate      int64
+		expectedKnown bool
+		expectedValue float64
 	}{
-		{name: "unknown_when_expected_is_zero", moved: 10, expected: 0, known: false},
-		{name: "unknown_when_moved_exceeds_expected", moved: 200, expected: 100, known: false},
-		{name: "halfway", moved: 50, expected: 100, known: true, value: 50},
-		{name: "moved_equal_to_expected_is_complete", moved: 100, expected: 100, known: true, value: 100},
+		{name: "unknown_when_expected_is_zero", moved: 10, estimate: 0, expectedKnown: false},
+		{name: "unknown_when_moved_exceeds_expected", moved: 200, estimate: 100, expectedKnown: false},
+		{name: "halfway", moved: 50, estimate: 100, expectedKnown: true, expectedValue: 50},
+		{name: "moved_equal_to_expected_is_complete", moved: 100, estimate: 100, expectedKnown: true, expectedValue: 100},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			got := progressPercent(testCase.moved, testCase.expected)
-			if got.Known() != testCase.known {
-				t.Fatalf("progressPercent() known = %v, want %v", got.Known(), testCase.known)
+			got := progressPercent(testCase.moved, testCase.estimate)
+			if got.Known() != testCase.expectedKnown {
+				t.Fatalf("progressPercent() known = %v, want %v", got.Known(), testCase.expectedKnown)
 			}
-			if testCase.known && got.Value() != testCase.value {
-				t.Errorf("progressPercent() = %v, want %v", got.Value(), testCase.value)
+			if testCase.expectedKnown && got.Value() != testCase.expectedValue {
+				t.Errorf("progressPercent() = %v, want %v", got.Value(), testCase.expectedValue)
 			}
 		})
 	}
@@ -68,24 +68,24 @@ func TestProbeUtilBackupStageTertiary_ProgressPercent(t *testing.T) {
 
 func TestProbeUtilBackupStageTertiary_ProgressRemaining(t *testing.T) {
 	tests := []struct {
-		name     string
-		moved    int64
-		expected int64
-		rate     reading
-		known    bool
+		name          string
+		moved         int64
+		estimate      int64
+		rate          reading
+		expectedKnown bool
 	}{
-		{name: "unknown_when_expected_is_zero", moved: 10, expected: 0, rate: floatReading(10), known: false},
-		{name: "unknown_when_moved_exceeds_expected", moved: 200, expected: 100, rate: floatReading(10), known: false},
-		{name: "unknown_when_rate_is_unknown", moved: 10, expected: 100, rate: unknownReading(), known: false},
-		{name: "unknown_when_rate_is_zero", moved: 10, expected: 100, rate: floatReading(0), known: false},
-		{name: "unknown_when_rate_is_negative", moved: 10, expected: 100, rate: floatReading(-1), known: false},
-		{name: "known_with_a_positive_rate", moved: 10 * bytesPerMebibyte, expected: 110 * bytesPerMebibyte, rate: floatReading(10), known: true},
+		{name: "unknown_when_expected_is_zero", moved: 10, estimate: 0, rate: floatReading(10), expectedKnown: false},
+		{name: "unknown_when_moved_exceeds_expected", moved: 200, estimate: 100, rate: floatReading(10), expectedKnown: false},
+		{name: "unknown_when_rate_is_unknown", moved: 10, estimate: 100, rate: unknownReading(), expectedKnown: false},
+		{name: "unknown_when_rate_is_zero", moved: 10, estimate: 100, rate: floatReading(0), expectedKnown: false},
+		{name: "unknown_when_rate_is_negative", moved: 10, estimate: 100, rate: floatReading(-1), expectedKnown: false},
+		{name: "known_with_a_positive_rate", moved: 10 * bytesPerMebibyte, estimate: 110 * bytesPerMebibyte, rate: floatReading(10), expectedKnown: true},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			got := progressRemaining(testCase.moved, testCase.expected, testCase.rate)
-			if got.Known() != testCase.known {
-				t.Fatalf("progressRemaining() known = %v, want %v", got.Known(), testCase.known)
+			got := progressRemaining(testCase.moved, testCase.estimate, testCase.rate)
+			if got.Known() != testCase.expectedKnown {
+				t.Fatalf("progressRemaining() known = %v, want %v", got.Known(), testCase.expectedKnown)
 			}
 		})
 	}
@@ -93,13 +93,13 @@ func TestProbeUtilBackupStageTertiary_ProgressRemaining(t *testing.T) {
 
 func TestProbeUtilBackupStageTertiary_RsyncSentReadsTheProgressCounter(t *testing.T) {
 	tests := []struct {
-		name     string
-		line     string
-		expected int64
-		known    bool
+		name          string
+		line          string
+		expectedSent  int64
+		expectedKnown bool
 	}{
-		{name: "a_progress2_line_carries_grouped_digits", line: "  1,234,567,890  12%   45.67MB/s    0:01:23", expected: 1234567890, known: true},
-		{name: "a_completed_line_still_parses", line: "85,899,345,920 100%  205.31MB/s    0:06:39 (xfr#12, to-chk=0/99)", expected: 85899345920, known: true},
+		{name: "a_progress2_line_carries_grouped_digits", line: "  1,234,567,890  12%   45.67MB/s    0:01:23", expectedSent: 1234567890, expectedKnown: true},
+		{name: "a_completed_line_still_parses", line: "85,899,345,920 100%  205.31MB/s    0:06:39 (xfr#12, to-chk=0/99)", expectedSent: 85899345920, expectedKnown: true},
 		{name: "a_stats_line_is_not_progress", line: "Total transferred file size: 1,234 bytes"},
 		{name: "a_bare_percentage_with_no_count_is_not_progress", line: "  ...  50%"},
 		{name: "an_empty_line_is_not_progress", line: ""},
@@ -107,11 +107,11 @@ func TestProbeUtilBackupStageTertiary_RsyncSentReadsTheProgressCounter(t *testin
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got, ok := rsyncSent(test.line)
-			if ok != test.known {
-				t.Fatalf("rsyncSent(%q) ok = %v, want %v", test.line, ok, test.known)
+			if ok != test.expectedKnown {
+				t.Fatalf("rsyncSent(%q) ok = %v, want %v", test.line, ok, test.expectedKnown)
 			}
-			if test.known && got != test.expected {
-				t.Errorf("rsyncSent(%q) = %d, want %d", test.line, got, test.expected)
+			if test.expectedKnown && got != test.expectedSent {
+				t.Errorf("rsyncSent(%q) = %d, want %d", test.line, got, test.expectedSent)
 			}
 		})
 	}

@@ -489,3 +489,43 @@ func TestProbeUtilLogs_Suppression(t *testing.T) {
 		})
 	}
 }
+
+func resetLogs() {
+	logCacheMu.Lock()
+	defer logCacheMu.Unlock()
+	for _, set := range logCache {
+		set.close()
+	}
+	clear(logCache)
+}
+
+func TestProbeUtilLogs_BootTime(t *testing.T) {
+	tests := []struct {
+		name            string
+		uptime          string
+		written         bool
+		expectedAgoSecs float64
+	}{
+		{"uptime seconds are subtracted from now", "100.5 200.0\n", true, 100.5},
+		{"a missing file reads as booted now", "", false, 0},
+		{"an empty file reads as booted now", "", true, 0},
+		{"a non numeric field reads as booted now", "soon 1\n", true, 0},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			root := t.TempDir()
+			if testCase.written {
+				if err := os.MkdirAll(filepath.Join(root, "proc"), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(filepath.Join(root, logUptimePath), []byte(testCase.uptime), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			ago := time.Since(bootTime(root)).Seconds()
+			if ago < testCase.expectedAgoSecs-1 || ago > testCase.expectedAgoSecs+1 {
+				t.Errorf("boot: got [%.1f] s ago want [%.1f]", ago, testCase.expectedAgoSecs)
+			}
+		})
+	}
+}

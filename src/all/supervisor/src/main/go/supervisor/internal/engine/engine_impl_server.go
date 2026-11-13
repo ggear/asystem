@@ -127,7 +127,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		cluster := client.Subscribe(metric.TopicAllCommand, 1, onCommand)
 		subscribeStart := time.Now()
 		for topic, token := range map[string]mqtt.Token{serviceNameTopic: names, commandTopic: commands, metric.TopicAllCommand: cluster} {
-			if refused, reason := subscribeRefused(token, map[string]byte{topic: 1}); len(refused) > 0 {
+			if refused, reason := probe.SubscribeRefused(token, map[string]byte{topic: 1}, brokerTimeout); len(refused) > 0 {
 				scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(topic), scribe.ActionSubscribe).Errorf("rollback", subscribeStart, "[%s] topic, %s, rediscovery and commands lost", topic, reason)
 			}
 		}

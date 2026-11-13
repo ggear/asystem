@@ -61,24 +61,27 @@ func judgeBackupRegression(current []backupFingerprintUnit, baseline backupManif
 }
 
 func renderBackupManifest(manifest backupManifest) string {
-	escaped := func(text string) string { return strings.ReplaceAll(strings.ReplaceAll(text, `\`, `\\`), `"`, `\"`) }
+	quoted := func(text string) string {
+		encoded, _ := json.Marshal(text)
+		return string(encoded)
+	}
 	var out strings.Builder
 	out.WriteString("{\n")
-	fmt.Fprintf(&out, "  \"kind\": \"%s\",\n", manifest.Kind)
-	fmt.Fprintf(&out, "  \"parent\": \"%s\",\n", manifest.Parent)
-	fmt.Fprintf(&out, "  \"source_version\": \"%s\",\n", escaped(manifest.SourceVersion))
+	fmt.Fprintf(&out, "  \"kind\": %s,\n", quoted(manifest.Kind))
+	fmt.Fprintf(&out, "  \"parent\": %s,\n", quoted(manifest.Parent))
+	fmt.Fprintf(&out, "  \"source_version\": %s,\n", quoted(manifest.SourceVersion))
 	if manifest.SourceSoftware != "" {
-		fmt.Fprintf(&out, "  \"source_software\": \"%s\",\n", escaped(manifest.SourceSoftware))
+		fmt.Fprintf(&out, "  \"source_software\": %s,\n", quoted(manifest.SourceSoftware))
 	}
-	fmt.Fprintf(&out, "  \"verdict\": \"%s\",\n", manifest.Verdict)
+	fmt.Fprintf(&out, "  \"verdict\": %s,\n", quoted(manifest.Verdict))
 	fmt.Fprintf(&out, "  \"accepted\": %t,\n", manifest.Accepted)
-	fmt.Fprintf(&out, "  \"baseline\": \"%s\",\n", manifest.Baseline)
+	fmt.Fprintf(&out, "  \"baseline\": %s,\n", quoted(manifest.Baseline))
 	out.WriteString("  \"evidence\": [\n")
 	for index, line := range manifest.Evidence {
 		if index > 0 {
 			out.WriteString(",\n")
 		}
-		fmt.Fprintf(&out, "    \"%s\"", escaped(line))
+		fmt.Fprintf(&out, "    %s", quoted(line))
 	}
 	if len(manifest.Evidence) > 0 {
 		out.WriteString("\n")
@@ -88,7 +91,7 @@ func renderBackupManifest(manifest backupManifest) string {
 		if index > 0 {
 			out.WriteString(",\n")
 		}
-		fmt.Fprintf(&out, "    \"%s\": %d", escaped(unit.name), unit.count)
+		fmt.Fprintf(&out, "    %s: %d", quoted(unit.name), unit.count)
 	}
 	if len(manifest.Fingerprint) > 0 {
 		out.WriteString("\n")
@@ -306,8 +309,6 @@ type backupRegressionVerdict struct {
 	evidence []string
 }
 
-const backupEvidenceLimit = 20
-
 func backupCompatible(point backupManifest, software string) bool {
 	return point.SourceSoftware != "" && point.SourceSoftware == software
 }
@@ -330,3 +331,5 @@ func versionedModule(ctx context.Context, hooks moduleHooks, stderr io.Writer, v
 	}
 	return strings.SplitN(software, "\n", 2)[0]
 }
+
+const backupEvidenceLimit = 20

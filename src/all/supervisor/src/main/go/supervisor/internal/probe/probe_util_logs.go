@@ -59,15 +59,6 @@ func loadLogs(mount string) *logSet {
 	return created
 }
 
-func resetLogs() {
-	logCacheMu.Lock()
-	defer logCacheMu.Unlock()
-	for _, set := range logCache {
-		set.close()
-	}
-	clear(logCache)
-}
-
 func (s *logSet) attempted() string {
 	paths := make([]string, 0, len(s.roots))
 	for _, root := range s.roots {
@@ -237,7 +228,7 @@ func (s *logSet) scan(shouts int) int {
 		}
 		clipped := strings.TrimSpace(message)
 		if len(clipped) > logMessageMax {
-			clipped = clipped[:logMessageMax-3] + "..."
+			clipped = strings.ToValidUTF8(clipped[:logMessageMax-3], "") + "..."
 		}
 		s.records = append(s.records, logRecord{timestamp: timestamp, message: clipped})
 		if s.drained && shouts < logShoutsMax {

@@ -405,7 +405,7 @@ func TestProbeUtilInstall_ReportSummarisesAllocation(t *testing.T) {
 	t.Cleanup(resetInstallTrees)
 	previous := installVirtualMemory
 	installVirtualMemory = func() (*mem.VirtualMemoryStat, error) {
-		return &mem.VirtualMemoryStat{Total: 8000 * bytesPerMiB}, nil
+		return &mem.VirtualMemoryStat{Total: 8000 * bytesPerMebibyte}, nil
 	}
 	t.Cleanup(func() { installVirtualMemory = previous })
 	buffer := scribe.EnableBuffer(slog.LevelDebug, 200)
@@ -453,3 +453,9 @@ func writeInstallFile(t *testing.T, path, content string) {
 }
 
 var installTestConfigured = []string{"myservice"}
+
+func resetInstallTrees() {
+	installTreeCacheMu.Lock()
+	defer installTreeCacheMu.Unlock()
+	clear(installTreeCache)
+}

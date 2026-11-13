@@ -80,12 +80,6 @@ func loadInstallTree(mount string) *installTree {
 	return created
 }
 
-func resetInstallTrees() {
-	installTreeCacheMu.Lock()
-	defer installTreeCacheMu.Unlock()
-	clear(installTreeCache)
-}
-
 func (t *installTree) snapshot(configured []string) *installSnapshot {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
@@ -154,16 +148,16 @@ func (s *installSnapshot) report(scanStart time.Time, configured []string) {
 			continue
 		}
 		allocated += entry.maxMemoryBytes
-		scribe.Log(scribe.SourceProbeInstall, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Debugf("declared", scanStart, "[%4d] MiB max RAM allocated to [%s]", entry.maxMemoryBytes/bytesPerMiB, name)
+		scribe.Log(scribe.SourceProbeInstall, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Debugf("declared", scanStart, "[%4d] MiB max RAM allocated to [%s]", entry.maxMemoryBytes/bytesPerMebibyte, name)
 	}
-	scribe.Log(scribe.SourceProbeInstall, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Debugf("declared", scanStart, "[%4d] MiB max RAM allocated to all services", allocated/bytesPerMiB)
+	scribe.Log(scribe.SourceProbeInstall, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Debugf("declared", scanStart, "[%4d] MiB max RAM allocated to all services", allocated/bytesPerMebibyte)
 	stat, err := installVirtualMemory()
 	if err != nil || stat == nil || stat.Total == 0 {
 		scribe.Log(scribe.SourceProbeInstall, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Warnf("unusable", scanStart, "[unreadable] sys RAM for the host, the memory reader failed with [%v]", err)
 		return
 	}
-	installedMiB := int64(stat.Total) / bytesPerMiB
-	scribe.Log(scribe.SourceProbeInstall, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Debugf("measured", scanStart, "[%4d] MiB sys RAM unallocated on host", installedMiB-allocated/bytesPerMiB)
+	installedMiB := int64(stat.Total) / bytesPerMebibyte
+	scribe.Log(scribe.SourceProbeInstall, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Debugf("measured", scanStart, "[%4d] MiB sys RAM unallocated on host", installedMiB-allocated/bytesPerMebibyte)
 	scribe.Log(scribe.SourceProbeInstall, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Debugf("measured", scanStart, "[%4d] MiB sys RAM installed on host", installedMiB)
 }
 

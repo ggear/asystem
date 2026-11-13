@@ -288,8 +288,20 @@ func runBackupClean(ctx context.Context, request BackupRequest) error {
 		removed++
 	}
 	report("expunged", "[%d] of [%d] backup run directories under [%s]", removed, len(runs), root)
-	report("expunged", "[%d] unfinished scrub state file(s) under [%s], a finished pass is kept for the quarterly window",
-		scrubStateCleared(ctx), scrubStateDirectory)
+	if commandAvailable("btrfs") && mountpointCheck(ctx, config.DirBackup) {
+		cancelScrub(ctx)
+	}
+	scrubStates, _ := filepath.Glob(filepath.Join(scrubStateDirectory, scrubStateLeaves))
+	scrubCleared := 0
+	for _, state := range scrubStates {
+		if data, readErr := os.ReadFile(state); readErr == nil && strings.Contains(string(data), "finished:1") && !strings.Contains(string(data), "finished:0") {
+			continue
+		}
+		if os.Remove(state) == nil {
+			scrubCleared++
+		}
+	}
+	report("expunged", "[%d] unfinished scrub state file(s) under [%s], a finished pass is kept for the quarterly window", scrubCleared, scrubStateDirectory)
 	topics, err := clearRetainedBackup(request.Config)
 	if err != nil {
 		scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionRemove).Warnf("faulting", started,

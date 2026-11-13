@@ -288,3 +288,27 @@ func TestProbeUtilBackupManifest_VersionedModule(t *testing.T) {
 		})
 	}
 }
+
+func TestProbeUtilBackupManifest_RenderRoundTripsAwkwardText(t *testing.T) {
+	tests := []struct {
+		name     string
+		manifest backupManifest
+	}{
+		{"newlines and tabs in evidence", backupManifest{Kind: "full", Verdict: metric.BackupStateRegressed, Evidence: []string{"missing [a\nb] was [1]\tagainst [x]"}}},
+		{"quotes and backslashes in a unit name", backupManifest{Kind: "full", Verdict: metric.BackupStateSuccess, Fingerprint: []backupFingerprintUnit{{name: `dir\"odd"`, count: 3}}}},
+		{"unicode and control characters", backupManifest{Kind: "delta", Parent: "p", Verdict: metric.BackupStateSuccess, SourceSoftware: "18-2.30 x", Fingerprint: []backupFingerprintUnit{{name: "café\x01", count: 9}}}},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			root := t.TempDir()
+			if err := writeBackupManifest(root, "2026-11-01_01-00-00", testCase.manifest); err != nil {
+				t.Fatal(err)
+			}
+			read, found := readBackupManifest(root, "2026-11-01_01-00-00")
+			if !found || read.Kind != testCase.manifest.Kind || read.SourceSoftware != testCase.manifest.SourceSoftware ||
+				!slices.Equal(read.Evidence, testCase.manifest.Evidence) || !slices.Equal(read.Fingerprint, testCase.manifest.Fingerprint) {
+				t.Errorf("round trip: got [%+v] found [%t] want [%+v]", read, found, testCase.manifest)
+			}
+		})
+	}
+}

@@ -3,6 +3,7 @@ package probe
 import (
 	"fmt"
 	"maps"
+	"slices"
 	"strings"
 	"supervisor/internal/config"
 	"supervisor/internal/scribe"
@@ -61,10 +62,6 @@ type brokerWatcher struct {
 	generation uint64
 	readyAt    time.Time
 	heardAt    time.Time
-}
-
-func brokerWatcherWith(client mqtt.Client, payloads map[string]string) *brokerWatcher {
-	return &brokerWatcher{brokerPayloads: brokerPayloads{payloads: payloads}, client: client}
 }
 
 func brokerWatch(configPath, host string, filters ...string) (*brokerWatcher, error) {
@@ -217,17 +214,37 @@ func brokerConnect(options *mqtt.ClientOptions) (mqtt.Client, error) {
 	return client, nil
 }
 
+func SubscribeRefused(token mqtt.Token, filters map[string]byte, wait time.Duration) ([]string, string) {
+	timedOut := !token.WaitTimeout(wait)
+	if timedOut || token.Error() != nil {
+		refused := slices.Sorted(maps.Keys(filters))
+		if timedOut {
+			return refused, fmt.Sprintf("unacknowledged within [%s]", wait)
+		}
+		return refused, fmt.Sprintf("failed with [%v]", token.Error())
+	}
+	granted, ok := token.(*mqtt.SubscribeToken)
+	if !ok {
+		return nil, ""
+	}
+	var refused []string
+	for topic, code := range granted.Result() {
+		if code > brokerQosMax {
+			refused = append(refused, topic)
+		}
+	}
+	if len(refused) == 0 {
+		return nil, ""
+	}
+	slices.Sort(refused)
+	return refused, fmt.Sprintf("refused by the broker with [%s]", refused[0])
+}
+
 func brokerSubscribe(client mqtt.Client, handler mqtt.MessageHandler, filters []string) error {
 	var refused []string
 	for _, filter := range filters {
-		token := client.Subscribe(filter, 1, handler)
-		if !token.WaitTimeout(brokerTimeout) || token.Error() != nil {
-			refused = append(refused, filter)
-			continue
-		}
-		if granted, ok := token.(*mqtt.SubscribeToken); ok && granted.Result()[filter] > brokerQosMax {
-			refused = append(refused, filter)
-		}
+		failed, _ := SubscribeRefused(client.Subscribe(filter, 1, handler), map[string]byte{filter: 1}, brokerTimeout)
+		refused = append(refused, failed...)
 	}
 	if len(refused) > 0 {
 		return fmt.Errorf("broker refused [%d] of [%d] subscriptions [%s]", len(refused), len(filters), strings.Join(refused, ","))

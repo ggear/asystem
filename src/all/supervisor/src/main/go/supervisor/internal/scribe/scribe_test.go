@@ -14,11 +14,10 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"supervisor/internal/metric"
 	"testing"
 	"time"
 	"unicode/utf8"
-
-	"supervisor/internal/metric"
 )
 
 func TestScribe_Stdout(t *testing.T) {
@@ -1362,5 +1361,172 @@ func TestScribe_AttachCarriesOnlyTheNamedSourcesUntilClosed(t *testing.T) {
 	}
 	if strings.Contains(string(data), "[engine]") || strings.Contains(string(data), "after close") {
 		t.Errorf("attached log = %q, want no unnamed source and nothing after the close", data)
+	}
+}
+
+func TestScribe_RenderPadsLevelAndStageIntoFixedColumns(t *testing.T) {
+	timestamp := time.Date(2026, 9, 22, 10, 20, 30, 0, time.UTC)
+	tests := []struct {
+		name     string
+		level    slog.Level
+		subject  string
+		detail   string
+		expected string
+	}{
+		{name: "info_with_stage", level: slog.LevelInfo, subject: "stage/primary",
+			detail: "backup run over [3] stages", expected: "[INFO primary   10:20:30] backup run over [3] stages"},
+		{name: "warn_with_stage", level: slog.LevelWarn, subject: "stage/tertiary",
+			detail: "share [plex] not mounted", expected: "[WARN tertiary  10:20:30] share [plex] not mounted"},
+		{name: "error_renders_as_errs", level: slog.LevelError, subject: "stage/secondary",
+			detail: "promotion failed", expected: "[ERRS secondary 10:20:30] promotion failed"},
+		{name: "blank_stage_for_whole_run", level: slog.LevelInfo, subject: "",
+			detail: "run [2026-09-22_01-00-00] started", expected: "[INFO           10:20:30] run [2026-09-22_01-00-00] started"},
+		{name: "debug_keeps_its_own_word", level: slog.LevelDebug, subject: "stage/primary",
+			detail: "polled", expected: "[DEBG primary   10:20:30] polled"},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			line := LogLine{Time: timestamp, Level: testCase.level, Subject: testCase.subject, Detail: testCase.detail}
+			if got := renderBackup(line); got != testCase.expected {
+				t.Errorf("renderBackup() = %q, want %q", got, testCase.expected)
+			}
+		})
+	}
+}
+
+func TestScribe_EveryLevelFitsItsColumn(t *testing.T) {
+	timestamp := time.Date(2026, 9, 22, 10, 20, 30, 0, time.UTC)
+	for _, level := range []slog.Level{slog.LevelDebug, slog.LevelInfo, slog.LevelWarn, slog.LevelError} {
+		line := LogLine{Time: timestamp, Level: level, Subject: "stage/primary", Detail: "x"}
+		if got := renderBackup(line); len(got) != len("[INFO primary   10:20:30] x") {
+			t.Errorf("renderBackup(%v) = %q, want every level to render the same width", level, got)
+		}
+	}
+}
+
+func TestScribe_SubjectStageIsNamespacedAndStrippedForTheColumn(t *testing.T) {
+	if got := SubjectStage("primary").String(); got != "stage/primary" {
+		t.Errorf("SubjectStage().String() = %q, want %q", got, "stage/primary")
+	}
+	if got := SubjectStage("").String(); got != SubjectNone.String() {
+		t.Errorf("SubjectStage().String() = %q, want the none subject against an unstaged line", got)
+	}
+	line := LogLine{Time: time.Now(), Level: slog.LevelInfo, Subject: SubjectStage("primary").String(), Detail: "x"}
+	if got := renderBackup(line); got[6:13] != "primary" {
+		t.Errorf("renderBackup() stage column = %q, want the bare stage name", got[6:13])
+	}
+}
+
+func TestScribe_EnableBackupAndFileCopiesToStdoutAndStderr(t *testing.T) {
+	stdout, stderr := enableBackupFixture(t, false)
+	Log(SourceBackup, SubjectStage("primary"), ActionStart).Infof("started", time.Now(), "run [%s]", "2026-09-22_01-00-00")
+	Log(SourceBackup, SubjectStage("primary"), ActionStop).Errorf("faulting", time.Now(), "run [%s] failed", "2026-09-22_01-00-00")
+
+	if stdout.Len() == 0 {
+		t.Errorf("stdout is empty, want the info line copied to it")
+	}
+	if stderr.Len() == 0 {
+		t.Errorf("stderr is empty, want the error line copied to it")
+	}
+}
+
+func TestScribe_QuietDropsStdoutAndStderr(t *testing.T) {
+	stdout, stderr := enableBackupFixture(t, true)
+	Log(SourceBackup, SubjectStage("primary"), ActionStart).Infof("started", time.Now(), "quiet run")
+	Log(SourceBackup, SubjectStage("primary"), ActionStop).Errorf("faulting", time.Now(), "quiet fault")
+
+	if stdout.Len() != 0 {
+		t.Errorf("stdout = %q, want nothing under --quiet", stdout.String())
+	}
+	if stderr.Len() != 0 {
+		t.Errorf("stderr = %q, want nothing under --quiet", stderr.String())
+	}
+}
+
+func enableBackupFixture(t *testing.T, quiet bool) (stdout, stderr *bytes.Buffer) {
+	t.Helper()
+	t.Cleanup(func() { Disable() })
+	t.Setenv("HOME", t.TempDir())
+	if err := EnableBackupAndFile(slog.LevelInfo, "backup", "1.0.0", quiet, 1, 1, 1); err != nil {
+		t.Fatalf("EnableBackupAndFile() error = %v", err)
+	}
+	stdout, stderr = &bytes.Buffer{}, &bytes.Buffer{}
+	scribeLoggerMu.Lock()
+	defer scribeLoggerMu.Unlock()
+	attaching, attached := scribeLoggerInstance.Handler().(*attachHandler)
+	if !attached {
+		t.Fatalf("installed handler = %T, want an attachHandler wrapping the backup sinks", scribeLoggerInstance.Handler())
+	}
+	multi, ok := attaching.handler.(*multiHandler)
+	if !ok {
+		t.Fatalf("wrapped handler = %T, want a multiHandler carrying the backup sinks", attaching.handler)
+	}
+	retargeted := 0
+	for _, handler := range multi.handlers {
+		if backup, isBackup := handler.(*backupHandler); isBackup {
+			backup.stdout, backup.stderr = stdout, stderr
+			retargeted++
+		}
+	}
+	if expected := map[bool]int{false: 1, true: 0}[quiet]; retargeted != expected {
+		t.Fatalf("retargeted %d stdout sinks, want %d", retargeted, expected)
+	}
+	return stdout, stderr
+}
+
+func EnableFile(level slog.Level, cmd, version string, maxSizeMB, maxBackups, maxAgeDays int) error {
+	writer, path, err := fileWriter(cmd, version, maxSizeMB, maxBackups, maxAgeDays)
+	if err != nil {
+		return err
+	}
+	scribeLoggerMu.Lock()
+	defer scribeLoggerMu.Unlock()
+	closeLoggerWriter()
+	scribeLoggerLevel = level
+	scribeLoggerMode = "file"
+	scribeLoggerInstance = installed(&streamHandler{level: level, writer: writer, sink: sinkFile()})
+	scribeLoggerWriter = writer
+	slog.SetDefault(scribeLoggerInstance)
+	purgeLogFiles(path)
+	return nil
+}
+
+func ResetFilters() {
+	filterMu.Lock()
+	activeFilter = logFilter{}
+	filterMu.Unlock()
+}
+
+func TestScribe_Chunked(t *testing.T) {
+	long := strings.Repeat("word ", 40)
+	tests := []struct {
+		name           string
+		detail         string
+		budget         int
+		expectedChunks int
+		expectedSplit  bool
+	}{
+		{"a detail within budget is one chunk", "short detail", 60, 1, false},
+		{"a budget below the minimum span is never split", long, 10, 1, false},
+		{"a long detail is split to fit the budget", long, 50, 0, true},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			chunks := chunked(testCase.detail, testCase.budget)
+			if testCase.expectedSplit {
+				if len(chunks) < 2 {
+					t.Fatalf("chunks: got [%d] want a split", len(chunks))
+				}
+				for _, chunk := range chunks {
+					if len([]rune(chunk)) > testCase.budget {
+						t.Errorf("chunk: got [%d] runes want at most [%d]", len([]rune(chunk)), testCase.budget)
+					}
+				}
+				return
+			}
+			if len(chunks) != testCase.expectedChunks || chunks[0] != testCase.detail {
+				t.Errorf("chunks: got [%d] want [%d] unsplit", len(chunks), testCase.expectedChunks)
+			}
+		})
 	}
 }

@@ -344,3 +344,39 @@ func TestProbeUtilBackupMount_AStopDuringMountDoesNotInterruptTheMount(t *testin
 		t.Errorf("mount ran on a cancelled context [%v]", mountContextErr)
 	}
 }
+
+func TestProbeUtilBackupMount_BtrfsSysfsUsage(t *testing.T) {
+	tests := []struct {
+		name          string
+		files         map[string]string
+		expectedTotal int64
+		expectedUsed  int64
+	}{
+		{"device sectors and allocated bytes are summed", map[string]string{
+			"devices/sda/size": "1000\n", "devices/sdb/size": "500\n",
+			"allocation/data/bytes_used": "100\n", "allocation/metadata/bytes_used": "50\n", "allocation/system/bytes_used": "5\n",
+		}, 1500 * 512, 155},
+		{"an unparseable value is skipped", map[string]string{"devices/sda/size": "x\n", "allocation/data/bytes_used": "7\n"}, 0, 7},
+		{"an absent filesystem reads as empty", map[string]string{}, 0, 0},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			original := backupSysfsBtrfs
+			backupSysfsBtrfs = t.TempDir()
+			t.Cleanup(func() { backupSysfsBtrfs = original })
+			for name, content := range testCase.files {
+				path := filepath.Join(backupSysfsBtrfs, "uuid", name)
+				if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			total, used := btrfsSysfsUsage("uuid")
+			if total != testCase.expectedTotal || used != testCase.expectedUsed {
+				t.Errorf("usage: got total [%d] used [%d] want total [%d] used [%d]", total, used, testCase.expectedTotal, testCase.expectedUsed)
+			}
+		})
+	}
+}

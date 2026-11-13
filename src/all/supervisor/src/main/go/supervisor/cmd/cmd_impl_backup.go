@@ -210,7 +210,7 @@ func addBackupModuleRestoreFlags(flags *pflag.FlagSet, request *engine.BackupMod
 	flags.StringVarP(&request.Script, "script", "x", "", "the module's restore.sh, sourced for its hooks")
 	flags.StringVarP(&request.Runs, "runs", "r", "", "a directory of runs searched alone")
 	flags.StringVarP(&request.From, "from", "f", "", "the run to restore, defaulting to the newest not regressed")
-	flags.StringVarP(&request.File, "file", "i", "", "an artifact path outright")
+	flags.StringVarP(&request.File, "file", "i", "", "an artefact path outright")
 	flags.StringVarP(&request.Record, "record", "R", "", "the stage under whose .meta a drill writes its verdict [primary, secondary]")
 	flags.DurationVarP(&request.LockPeriod, "lock-period", "k", backupModuleLockPeriod, "time to wait for another actor holding the module's lock, uses unit suffixes [s, m, h]")
 	flags.BoolVarP(&request.Force, "force", "F", false, "apply the plan")

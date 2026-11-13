@@ -153,18 +153,18 @@ func (d *Display) Compile() (Format, error) {
 	compile := func(format Format, layout [][]box) ([]box, error) {
 		displayRowMin := 0
 		if len(layout) < 2 || len(layout[0]) < 2 {
-			return nil, fmt.Errorf("cannot compile display: layout is empty")
+			return nil, fmt.Errorf("compile display failed, layout is empty")
 		}
 		if hostCount < 1 {
-			return nil, fmt.Errorf("cannot compile display: no hosts")
+			return nil, fmt.Errorf("compile display failed, no hosts")
 		}
 		displayRowMin = len(layout) * ((hostCount + 1) / 2)
 		if displayRowMin <= 0 {
-			return nil, fmt.Errorf("cannot compile display: "+
+			return nil, fmt.Errorf("compile display failed, "+
 				"invalid minimum rows [%d] for format [%s]", displayRowMin, format)
 		}
 		if d.dimsInit.rows < displayRowMin {
-			return nil, fmt.Errorf("cannot compile display: "+
+			return nil, fmt.Errorf("compile display failed, "+
 				"minimum [%d] rows required for [%d] hosts, only [%d] available for format [%s]",
 				displayRowMin, hostCount, d.dimsInit.rows, format)
 		}
@@ -196,18 +196,18 @@ func (d *Display) Compile() (Format, error) {
 				if hostColMin == 0 {
 					hostColMin = rowCols
 				} else if rowCols != hostColMin {
-					return nil, fmt.Errorf("cannot compile display: "+
+					return nil, fmt.Errorf("compile display failed, "+
 						"pre-resize row column width must be [%d], but got [%d] in zero-indexed row [%d] of layout [%v]",
 						hostColMin, rowCols, layoutRowIndex, format)
 				}
 				if rowResizeCount < 1 {
-					return nil, fmt.Errorf("cannot compile display: "+
+					return nil, fmt.Errorf("compile display failed, "+
 						"no box resize functions set in zero-indexed row [%d] of layout [%v]", layoutRowIndex, format)
 				}
 				if hostResizeCount == 0 {
 					hostResizeCount = rowResizeCount
 				} else if rowResizeCount != hostResizeCount {
-					return nil, fmt.Errorf("cannot compile display: "+
+					return nil, fmt.Errorf("compile display failed, "+
 						"the number of box resize functions per row must be [%d], but got [%d] in zero-indexed row [%d] of layout [%v]",
 						hostResizeCount, rowResizeCount, layoutRowIndex, format)
 				}
@@ -218,7 +218,7 @@ func (d *Display) Compile() (Format, error) {
 			}
 		}
 		if displayResizeCount == 0 {
-			return nil, fmt.Errorf("cannot compile display: "+
+			return nil, fmt.Errorf("compile display failed, "+
 				"no box resize functions set layout [%v]", format)
 		}
 		displayResizeIncrement := (d.dimsInit.cols - displayColMin) / displayResizeCount
@@ -234,12 +234,12 @@ func (d *Display) Compile() (Format, error) {
 				rowColsCount := 0
 				if len(layoutRow) < 1 ||
 					layoutRow[0].kind == boxDivdr {
-					return nil, fmt.Errorf("cannot compile display: "+
+					return nil, fmt.Errorf("compile display failed, "+
 						"row starts with [cline] in zero-indexed row [%d] of layout [%v]", layoutRowIndex, format)
 				}
 				if len(layoutRow) < 2 ||
 					layoutRow[len(layoutRow)-1].kind != boxDivdr {
-					return nil, fmt.Errorf("cannot compile display: "+
+					return nil, fmt.Errorf("compile display failed, "+
 						"row is not terminated by at least one [cline] in zero-indexed row [%d] of layout [%v]",
 						layoutRowIndex, format)
 				}
@@ -255,11 +255,11 @@ func (d *Display) Compile() (Format, error) {
 						}
 						b := layoutBox.clone()
 						if b.kind == boxDatum && (b.metricID < metric.ID(0) || b.metricID >= metric.MetricMax) {
-							return nil, fmt.Errorf("cannot compile display: "+
+							return nil, fmt.Errorf("compile display failed, "+
 								"invalid metricID ID [%v] in zero-indexed row [%d] of layout [%v]", layoutRow, b.metricID, format)
 						}
 						if b.kind == boxDatum && b.valLen < 1 {
-							return nil, fmt.Errorf("cannot compile display: "+
+							return nil, fmt.Errorf("compile display failed, "+
 								"invalid value columns [%d] in zero-indexed row [%d] of layout [%v]", b.valLen, b.metricID, format)
 						}
 						if b.kind == boxTitle {
@@ -307,7 +307,7 @@ func (d *Display) Compile() (Format, error) {
 					if boxesColsCount == 0 {
 						boxesColsCount = rowColsCount
 					} else if rowColsCount != boxesColsCount {
-						return nil, fmt.Errorf("cannot compile display: "+
+						return nil, fmt.Errorf("compile display failed, "+
 							"post-resize, row column width must be [%d], but got [%d] in layout zero-indexed row [%d] and [%v]",
 							boxesColsCount, rowColsCount, layoutRowIndex, format)
 					}
@@ -318,7 +318,7 @@ func (d *Display) Compile() (Format, error) {
 			rowWidth := 0
 			expectedCol := 0
 			expectedRow := -1
-			positioningErr := fmt.Errorf("cannot compile display: invalid box positioning in layout [%v]", format)
+			positioningErr := fmt.Errorf("compile display failed, invalid box positioning in layout [%v]", format)
 			for _, b := range boxes {
 				if b.position == nil {
 					return nil, positioningErr
@@ -355,7 +355,7 @@ func (d *Display) Compile() (Format, error) {
 			attemptedFormat = FormatCompact
 			layout = compactDisplayLayout(d.useUnicode)
 		default:
-			return d.format, fmt.Errorf("cannot compile display: invalid formats [%v]", d.format)
+			return d.format, fmt.Errorf("compile display failed, invalid formats [%v]", d.format)
 		}
 		boxes, err := compile(attemptedFormat, layout)
 		if err == nil {
@@ -393,7 +393,7 @@ func (d *Display) Compile() (Format, error) {
 			return d.format, err
 		}
 		if d.format == FormatRelaxed {
-			scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDiscover).Warnf("fallback", compileStart, "[compact] relaxed layout failed %v", err)
+			scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDiscover).Warnf("fallback", compileStart, "[compact] relaxed layout failed [%v]", err)
 		}
 		d.format = FormatCompact
 	}
@@ -619,7 +619,7 @@ func (d *Display) rebuild(trigger string) {
 	d.boxes = nil
 	d.serviceShown = nil
 	if _, err := d.Compile(); err != nil {
-		scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Errorf("faulting", rebuildStart, "[rebuild] of the display failed %v", err)
+		scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Errorf("faulting", rebuildStart, "[rebuild] of the display failed [%v]", err)
 		if !d.logOverlay {
 			d.logRewind()
 		}

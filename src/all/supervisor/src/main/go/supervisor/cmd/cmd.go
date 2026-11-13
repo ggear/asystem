@@ -139,18 +139,18 @@ func makePeriods(pollPeriod, pulseFactor, trendPeriod, cachePeriod, snapshotPeri
 	}
 	pollDuration, err := time.ParseDuration(pollPeriod)
 	if err != nil {
-		return config.Periods{}, fmt.Errorf("invalid poll period: %w", err)
+		return config.Periods{}, fmt.Errorf("invalid poll period [%s] [%w]", pollPeriod, err)
 	}
 	if pollDuration <= 0 {
-		return config.Periods{}, fmt.Errorf("invalid poll period: must be > 0")
+		return config.Periods{}, fmt.Errorf("invalid poll period [%s] must be above zero", pollPeriod)
 	}
 	pollMillis := int(pollDuration / time.Millisecond)
 	pulseFactorInt, err := strconv.Atoi(pulseFactor)
 	if err != nil {
-		return config.Periods{}, fmt.Errorf("invalid pulse factor: %w", err)
+		return config.Periods{}, fmt.Errorf("invalid pulse factor [%s] [%w]", pulseFactor, err)
 	}
 	if pulseFactorInt < 1 {
-		return config.Periods{}, fmt.Errorf("invalid pulse factor: must be >= 1")
+		return config.Periods{}, fmt.Errorf("invalid pulse factor [%s] must be at least one", pulseFactor)
 	}
 	pulseMillis := pulseFactorInt * pollMillis
 	trendHours, err := toDuration(trendPeriod, time.Hour, "trend")
@@ -167,10 +167,10 @@ func makePeriods(pollPeriod, pulseFactor, trendPeriod, cachePeriod, snapshotPeri
 	}
 	heartbeatDuration, err := time.ParseDuration(heartbeatPeriod)
 	if err != nil {
-		return config.Periods{}, fmt.Errorf("invalid heartbeat period: %w", err)
+		return config.Periods{}, fmt.Errorf("invalid heartbeat period [%s] [%w]", heartbeatPeriod, err)
 	}
 	if heartbeatDuration <= 0 {
-		return config.Periods{}, fmt.Errorf("invalid heartbeat period: must be > 0")
+		return config.Periods{}, fmt.Errorf("invalid heartbeat period [%s] must be above zero", heartbeatPeriod)
 	}
 	heartbeatMillis := int(heartbeatDuration / time.Millisecond)
 	heartbeatSecs := (heartbeatMillis + pulseMillis - 1) / pulseMillis * pulseMillis / 1000

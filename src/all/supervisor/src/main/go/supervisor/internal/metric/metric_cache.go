@@ -141,14 +141,14 @@ func (c *RecordCache) Store(guid RecordGUID, record *Record) {
 		notify = false
 	}
 	index, exists := slices.BinarySearchFunc(c.guids, guid, compareRecordGUID)
+	snapshot := *record
 	if !exists {
 		c.guids = slices.Insert(c.guids, index, guid)
-		c.records[k] = record
+		c.records[k] = &snapshot
 		c.reindex()
 		guid = c.guids[index]
 	} else {
 		guid = c.guids[index]
-		snapshot := *record
 		if snapshot.Topic == "" && cached != nil {
 			snapshot.Topic = cached.Topic
 			snapshot.Tags = cached.Tags

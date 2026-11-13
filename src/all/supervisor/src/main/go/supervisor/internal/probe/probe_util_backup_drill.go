@@ -19,7 +19,7 @@ func (s *restoreSession) drill() {
 		s.record(metric.BackupStateSkipped, "software differs")
 		return
 	}
-	s.report(fmt.Sprintf("drill     chain of [%d] artifact(s), manifest holds [%d] unit(s)", len(s.chain), len(want)))
+	s.report(fmt.Sprintf("drill     chain of [%d] artefact(s), manifest holds [%d] unit(s)", len(s.chain), len(want)))
 	if len(want) == 0 {
 		s.report("the run has no manifest fingerprint, so only integrity and staging are proven")
 	}
@@ -75,7 +75,7 @@ func (s *restoreSession) drill() {
 		}
 		have, fingerprintErr := fingerprintBackupArtefact(s.chain[len(s.chain)-1].file, includes)
 		if shorts := shortBackupUnits(want, have); fingerprintErr != nil || len(shorts) > 0 {
-			failed("the artifact holds less than its manifest says", shorts)
+			failed("the artefact holds less than its manifest says", shorts)
 			return
 		}
 	}

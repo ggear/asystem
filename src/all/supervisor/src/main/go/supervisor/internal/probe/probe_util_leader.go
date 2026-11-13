@@ -437,18 +437,9 @@ func (c *leaderCampaign) attach(client mqtt.Client) {
 		c.election.leaseTopic():        1,
 		c.election.candidateTopic("+"): 1,
 	}
-	token := client.SubscribeMultiple(filters, c.observe)
-	if !token.WaitTimeout(c.timing.publishTimeout) || token.Error() != nil {
-		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionSubscribe).Warnf("faulting", attachStart, "[%s] election subscribe failed with [%v], retrying", c.election.name, token.Error())
+	if refused, reason := SubscribeRefused(client.SubscribeMultiple(filters, c.observe), filters, c.timing.publishTimeout); len(refused) > 0 {
+		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionSubscribe).Warnf("faulting", attachStart, "[%s] election subscribe of [%s] %s, retrying", c.election.name, strings.Join(refused, ","), reason)
 		return
-	}
-	if granted, ok := token.(*mqtt.SubscribeToken); ok {
-		for filter, code := range granted.Result() {
-			if code > brokerQosMax {
-				scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionSubscribe).Warnf("faulting", attachStart, "[%s] election subscribe refused [%s] with code [%d], retrying", c.election.name, filter, code)
-				return
-			}
-		}
 	}
 	if c.stopping.Load() {
 		return
@@ -626,7 +617,7 @@ func (c *leaderCampaign) observe(client mqtt.Client, message mqtt.Message) {
 	renewed, parseErr := time.Parse(time.RFC3339Nano, candidacy.RenewedTS)
 	if skew := received.Sub(renewed).Abs(); parseErr == nil && !message.Retained() && skew > leaderSkewWarn && !c.skewed[host] {
 		c.skewed[host] = true
-		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(host), scribe.ActionSubscribe).Warnf("observed", received, "[%s] election candidacy stamped [%s] ms off this clock, freshness is judged on arrival so the election is unaffected", c.election.name, elapsedMillis(skew))
+		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(host), scribe.ActionSubscribe).Warnf("observed", received, "[%s] election candidacy stamped [%d] ms off this clock, freshness is judged on arrival so the election is unaffected", c.election.name, skew.Milliseconds())
 	}
 }
 

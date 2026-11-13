@@ -249,9 +249,7 @@ type moduleHooks struct {
 func (h moduleHooks) command(ctx context.Context, name string, arguments ...string) *exec.Cmd {
 	command := exec.CommandContext(ctx, "bash", append([]string{"-c", `set -o pipefail; . "$1" || exit 1; shift; "$@"`, "backup", h.script, name}, arguments...)...)
 	command.Env = append(os.Environ(), h.env...)
-	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	command.Cancel = func() error { return syscall.Kill(-command.Process.Pid, syscall.SIGTERM) }
-	command.WaitDelay = moduleHookGrace
+	killWithGroup(command, moduleHookGrace)
 	return command
 }
 

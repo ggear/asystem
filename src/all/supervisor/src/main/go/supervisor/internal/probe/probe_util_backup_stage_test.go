@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -186,5 +187,35 @@ func TestProbeUtilBackupStage_ACancelledCommandTerminatesItsWholeProcessGroup(t 
 	time.Sleep(4 * time.Second)
 	if _, err := os.Stat(marker); err == nil {
 		t.Errorf("a grandchild outlived the cancelled command, want the whole process group terminated")
+	}
+}
+
+func TestProbeUtilBackupStage_KillWithGroupEndsGrandchildrenOnCancel(t *testing.T) {
+	tests := []struct {
+		name         string
+		grouped      bool
+		expectedFast bool
+	}{
+		{"a grouped command takes its grandchildren down with it", true, true},
+		{"an ungrouped command is held by its grandchildren", false, false},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+			defer cancel()
+			var output strings.Builder
+			command := exec.CommandContext(ctx, "bash", "-c", "sleep 4 & wait")
+			command.Stdout = &output
+			if testCase.grouped {
+				killWithGroup(command, 30*time.Second)
+			} else {
+				command.WaitDelay = 1500 * time.Millisecond
+			}
+			started := time.Now()
+			_ = command.Run()
+			if fast := time.Since(started) < time.Second; fast != testCase.expectedFast {
+				t.Errorf("cancel: got fast [%t] after [%s] want [%t]", fast, time.Since(started), testCase.expectedFast)
+			}
+		})
 	}
 }

@@ -200,7 +200,7 @@ func finishRun(root, runID string, started time.Time) backupSummary {
 	if scrubbed := readScrubSummary(scrubStatusPath(runPath)); scrubbed != nil {
 		scrubState = scrubbed.State
 	}
-	state := resolvedState(states, scrubState)
+	state := resolveBackupState(states, scrubState)
 	if len(states) == 0 {
 		state = metric.BackupStateFailure
 	}
@@ -212,7 +212,7 @@ func finishRun(root, runID string, started time.Time) backupSummary {
 	return document
 }
 
-func resolvedState(stages map[metric.BackupStage]string, scrub string) string {
+func resolveBackupState(stages map[metric.BackupStage]string, scrub string) string {
 	for _, stage := range backupStages {
 		if stages[stage] == metric.BackupStateRunning {
 			return metric.BackupStateRunning

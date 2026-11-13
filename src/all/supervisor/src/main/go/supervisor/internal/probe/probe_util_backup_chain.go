@@ -19,11 +19,11 @@ func restoreChain(roots []string, run string) ([]restoreLink, error) {
 	for {
 		dir, found := restoreRunDir(roots, run)
 		if !found {
-			return nil, fmt.Errorf("no backup run [%s] under %v", run, roots)
+			return nil, fmt.Errorf("no backup run [%s] under [%v]", run, roots)
 		}
 		file, found := restoreArtefact(dir)
 		if !found {
-			return nil, fmt.Errorf("no artifact in run [%s]", run)
+			return nil, fmt.Errorf("no artefact in run [%s]", run)
 		}
 		reversed = append(reversed, restoreLink{run: run, file: file})
 		if backupArtefactKind(filepath.Base(file)) != backupKindDelta {

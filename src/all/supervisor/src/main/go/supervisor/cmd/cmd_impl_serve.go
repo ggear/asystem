@@ -20,7 +20,6 @@ func init() {
 	rootCmd.AddCommand(newServeCmd())
 }
 
-// noinspection DuplicatedCode
 func newServeCmd() *cobra.Command {
 	opts := &serveOptions{}
 	cmd := &cobra.Command{

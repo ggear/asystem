@@ -2674,3 +2674,21 @@ func TestDisplay_LogResizePreservesPause(t *testing.T) {
 		t.Fatalf("page up after resize: got anchor %d want %d", display.logAnchor, anchor)
 	}
 }
+
+func divider(base string, length int) string {
+	if length <= 0 || base == "" {
+		return ""
+	}
+	centerCount := 1
+	if length%2 == 0 {
+		centerCount = 2
+	}
+	spaceCount := (length - 1) / 2
+	tokens := tokens(base)
+	if len(tokens) == 0 {
+		return ""
+	}
+	center := strings.Repeat(tokens[0], centerCount)
+	spaces := strings.Repeat(" ", spaceCount)
+	return spaces + center + spaces
+}

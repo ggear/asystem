@@ -50,12 +50,6 @@ func loadSensors(sysRoot string) *sensorSet {
 	return discovered
 }
 
-func resetSensors() {
-	sensorCacheMu.Lock()
-	defer sensorCacheMu.Unlock()
-	clear(sensorCache)
-}
-
 func (s *sensorSet) celsius() (float64, derivation, error) {
 	if s == nil {
 		return 0, derivation{}, fmt.Errorf("no package, soc, composite or thermal zone sensor found [%w]", errEnvironment)

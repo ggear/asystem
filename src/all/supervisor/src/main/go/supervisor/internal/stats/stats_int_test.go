@@ -1496,3 +1496,10 @@ func TestStatsInt_ConvertToInt(t *testing.T) {
 		})
 	}
 }
+
+func (v *IntStats) TrendMedian() int8 {
+	if v.trend == nil {
+		return 0
+	}
+	return v.read(v.trend.median)
+}
