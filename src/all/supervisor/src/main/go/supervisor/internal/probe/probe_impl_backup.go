@@ -277,11 +277,7 @@ func (p *backupProbe) reap(ctx context.Context) {
 		return
 	}
 	p.reapStale = 0
-	flag, declared := retained[backupAllReaperTopic]
-	var reaper backupReaperSummary
-	if declared {
-		_ = json.Unmarshal([]byte(flag), &reaper)
-	}
+	reaper, declared := decodeSummary[backupReaperSummary]([]byte(retained[backupAllReaperTopic]))
 	switch {
 	case !declared:
 		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Infof("restored", reapStart,
@@ -318,8 +314,7 @@ func (p *backupProbe) reap(ctx context.Context) {
 		}
 		return
 	}
-	var coordinated backupSummary
-	if json.Unmarshal([]byte(retained[backupAllStatusTopic]), &coordinated) == nil && coordinated.State == metric.BackupStateRunning {
+	if coordinated, decoded := decodeSummary[backupSummary]([]byte(retained[backupAllStatusTopic])); decoded && coordinated.State == metric.BackupStateRunning {
 		if started, perr := time.Parse(time.RFC3339, coordinated.StartedTS); perr == nil && time.Since(started) < p.runCeiling() {
 			if p.reapQuiet() {
 				scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Infof("deferred", reapStart,
@@ -332,8 +327,8 @@ func (p *backupProbe) reap(ctx context.Context) {
 		if !strings.HasSuffix(topic, backupTertiaryStatusSuffix) {
 			continue
 		}
-		var document backupSummary
-		if json.Unmarshal([]byte(payload), &document) != nil || document.State != metric.BackupStateRunning || document.ExpiresTS == "" {
+		document, decoded := decodeSummary[backupSummary]([]byte(payload))
+		if !decoded || document.State != metric.BackupStateRunning || document.ExpiresTS == "" {
 			continue
 		}
 		if expires, perr := time.Parse(time.RFC3339, document.ExpiresTS); perr == nil && time.Now().Before(expires) {
@@ -585,9 +580,9 @@ type backupClusterRun struct {
 }
 
 func backupClusterRunDecision(retained map[string]string, expected []string, now time.Time, ceiling time.Duration) backupClusterRun {
-	var clusterRun backupSummary
 	clusterRunStarted := time.Time{}
-	if json.Unmarshal([]byte(retained[backupAllStatusTopic]), &clusterRun) == nil {
+	clusterRun, clusterDecoded := decodeSummary[backupSummary]([]byte(retained[backupAllStatusTopic]))
+	if clusterDecoded {
 		clusterRunStarted, _ = time.Parse(time.RFC3339, clusterRun.StartedTS)
 	}
 	decision := backupClusterRun{action: backupClusterRunIdle}
@@ -602,8 +597,8 @@ func backupClusterRunDecision(retained map[string]string, expected []string, now
 				if !found || strings.Count(stage, "/") != 1 || !strings.HasSuffix(stage, "/status") {
 					continue
 				}
-				var document backupSummary
-				if json.Unmarshal([]byte(payload), &document) != nil || document.State != metric.BackupStateRunning || document.Trigger != metric.BackupTriggerSystem {
+				document, decoded := decodeSummary[backupSummary]([]byte(payload))
+				if !decoded || document.State != metric.BackupStateRunning || document.Trigger != metric.BackupTriggerSystem {
 					continue
 				}
 				expires, expiresErr := time.Parse(time.RFC3339, document.ExpiresTS)
@@ -625,8 +620,7 @@ func backupClusterRunDecision(retained map[string]string, expected []string, now
 	}
 	earliest := decision.started.Add(-backupRunSkew)
 	for _, host := range expected {
-		var document backupSummary
-		if json.Unmarshal([]byte(retained[metric.TopicBackupStatus(host)]), &document) == nil &&
+		if document, decoded := decodeSummary[backupSummary]([]byte(retained[metric.TopicBackupStatus(host)])); decoded &&
 			backupTerminal(document.State) && reportedForRun(document, earliest) {
 			decision.reported++
 			if !document.SuccessBool {

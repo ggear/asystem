@@ -260,7 +260,6 @@ func (c *RecordCache) LoadByID(id ID, hostName string, serviceIndex int) (*Recor
 	}
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
-
 	var record *Record
 	if serviceIndex == ServiceIndexUnset {
 		guid := NewRecordGUID(id, hostName)

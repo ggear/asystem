@@ -151,7 +151,6 @@ func (d *Display) Compile() (Format, error) {
 	}
 	hostCount := len(compileHosts)
 	compile := func(format Format, layout [][]box) ([]box, error) {
-
 		displayRowMin := 0
 		if len(layout) < 2 || len(layout[0]) < 2 {
 			return nil, fmt.Errorf("cannot compile display: layout is empty")
@@ -159,7 +158,6 @@ func (d *Display) Compile() (Format, error) {
 		if hostCount < 1 {
 			return nil, fmt.Errorf("cannot compile display: no hosts")
 		}
-
 		displayRowMin = len(layout) * ((hostCount + 1) / 2)
 		if displayRowMin <= 0 {
 			return nil, fmt.Errorf("cannot compile display: "+
@@ -180,7 +178,6 @@ func (d *Display) Compile() (Format, error) {
 			lastRow := layout[len(layout)-1]
 			layout = append(layout[:len(layout)-1], newRow, lastRow)
 		}
-
 		displayColMin := 0
 		displayResizeCount := 0
 		displayBoxSkip := func(i int, b box) bool { return (hostCount == 1 || (i+1)%2 == 0) && b.kind == boxDivdr }
@@ -226,7 +223,6 @@ func (d *Display) Compile() (Format, error) {
 		}
 		displayResizeIncrement := (d.dimsInit.cols - displayColMin) / displayResizeCount
 		displayResizeRemainder := (d.dimsInit.cols - displayColMin) % displayResizeCount
-
 		boxesColsCount := 0
 		boxes := make([]box, 0, hostCount*50)
 		hostServiceIndex := make([]int, len(compileHosts))
@@ -318,7 +314,6 @@ func (d *Display) Compile() (Format, error) {
 				}
 			}
 		}
-
 		if len(boxes) > 0 {
 			rowWidth := 0
 			expectedCol := 0
@@ -347,7 +342,6 @@ func (d *Display) Compile() (Format, error) {
 				rowWidth += length
 			}
 		}
-
 		return boxes, nil
 	}
 	var layout [][]box

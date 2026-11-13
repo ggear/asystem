@@ -253,11 +253,16 @@ func readSummary[T any](path string) *T {
 	if err != nil {
 		return nil
 	}
-	var document T
-	if json.Unmarshal(data, &document) != nil {
+	document, ok := decodeSummary[T](data)
+	if !ok {
 		return nil
 	}
 	return &document
+}
+
+func decodeSummary[T any](data []byte) (T, bool) {
+	var document T
+	return document, json.Unmarshal(data, &document) == nil
 }
 
 func backupTerminal(state string) bool {

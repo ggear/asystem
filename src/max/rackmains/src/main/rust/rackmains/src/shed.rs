@@ -16,6 +16,7 @@ pub const SSH_STATUS_SPAWN: i32 = 127;
 const SSH_KEEPALIVE: Duration = Duration::from_secs(10);
 const SSH_KEEPALIVE_COUNT: u32 = 3;
 const RESULT_PREFIX: &str = "RESULT ";
+const REMOTE_BIN_DIR: &str = "/usr/local/bin";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Outcome {
@@ -137,7 +138,7 @@ impl Runner for Ssh {
             .arg("-o")
             .arg(format!("ServerAliveCountMax={SSH_KEEPALIVE_COUNT}"))
             .arg(format!("root@{}", host.address))
-            .arg(command.remote())
+            .arg(format!("{REMOTE_BIN_DIR}/{}", command.remote()))
             .stdin(Stdio::null())
             .output();
         let took = started.elapsed();

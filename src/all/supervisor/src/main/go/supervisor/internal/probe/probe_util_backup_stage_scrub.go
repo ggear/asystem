@@ -28,7 +28,6 @@ func runScrub(ctx context.Context, request stageRequest) bool {
 		publishScrubSummary(request, host, scrubDocument(request, metric.BackupStateSkipped, true, started, scrubReading{}))
 		return true
 	}
-
 	forced := request.Scrub
 	if !commandAvailable("btrfs") {
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Errorf("faulting", started,
@@ -44,17 +43,14 @@ func runScrub(ctx context.Context, request stageRequest) bool {
 		publishScrubSummary(request, host, scrubDocument(request, metric.BackupStateFailure, false, started, scrubReading{}))
 		return false
 	}
-
 	action, reason := scrubAction(forced, request.Trigger, statusOut, started)
 	if reason != "" {
 		return skipped("[%s] not scrubbing, %s", config.DirBackup, reason)
 	}
-
 	hard := scrubDeadline(request, started)
 	if !hard.After(started) {
 		return skipped("[%s] not scrubbing, no time is left inside the run deadline", config.DirBackup)
 	}
-
 	cursor := kernelCursor(ctx)
 	out, code, abandoned := bounded(ctx, stageBoundedWait, "btrfs", "scrub", action, "-c", "3", "-n", "15", config.DirBackup)
 	if !abandoned && code != 0 && action == scrubActionResume {
@@ -80,7 +76,6 @@ func runScrub(ctx context.Context, request stageRequest) bool {
 	opening.ExpiresTS = hard.Format(time.RFC3339)
 	publishScrubSummary(request, host, opening)
 	baseline, _ := scrubReadNow(ctx)
-
 	reached := 0.0
 	var silent time.Time
 	halt := ""
@@ -151,7 +146,6 @@ func runScrub(ctx context.Context, request stageRequest) bool {
 			break
 		}
 	}
-
 finished:
 	ctx = context.WithoutCancel(ctx)
 	scrubbing := scrubUUID(statusOut)
@@ -176,7 +170,6 @@ finished:
 	lastReading.found = max(lastReading.found-baseline.found, 0)
 	lastReading.corrected = max(lastReading.corrected-baseline.corrected, 0)
 	lastReading.uncorrectable = max(lastReading.uncorrectable-baseline.uncorrectable, 0)
-
 	deviceErrors, counted := 0, false
 	if held {
 		deviceErrors, counted = deviceStatsSum(ctx)

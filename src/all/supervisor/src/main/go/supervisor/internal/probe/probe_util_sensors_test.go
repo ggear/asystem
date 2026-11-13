@@ -308,7 +308,8 @@ func TestProbeUtilSensors_FanSpeedOfMax(t *testing.T) {
 func TestProbeUtilSensors_LoadIsCachedPerRoot(t *testing.T) {
 	t.Cleanup(resetSensors)
 	sysRoot := writeSensorDevices(t, []sensorDevice{{name: "coretemp", labelled: map[string]float64{"Package id 0": 55.0}}}, nil)
-	if loadSensors(sysRoot) != loadSensors(sysRoot) {
+	first := loadSensors(sysRoot)
+	if first != loadSensors(sysRoot) {
 		t.Errorf("load: got distinct sets for one root, want the same set")
 	}
 	if loadSensors(sysRoot) == loadSensors(writeSensorDevices(t, nil, nil)) {

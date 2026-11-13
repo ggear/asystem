@@ -73,10 +73,8 @@ func newServicesProbe() *servicesProbe {
 		upTimeFloat:          make(map[string]*stats.FloatStats),
 		maxMemoryFloat:       make(map[string]*stats.FloatStats),
 		restartCountFloat:    make(map[string]*stats.FloatStats),
-
-		prevCPUStats: make(map[string]container.CPUStats),
-		prevIOStats:  make(map[string]serviceIOSample),
-
+		prevCPUStats:         make(map[string]container.CPUStats),
+		prevIOStats:          make(map[string]serviceIOSample),
 		newDockerClient: func() (*client.Client, error) {
 			return client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 		},
@@ -185,7 +183,6 @@ func (p *servicesProbe) poll(ctx context.Context, isPulse bool) error {
 	upTimeFloats := syncStatsFields(p.upTimeFloat, polledServiceNames, newFloat)
 	maxMemoryFloats := syncStatsFields(p.maxMemoryFloat, polledServiceNames, newFloat)
 	restartCountFloats := syncStatsFields(p.restartCountFloat, polledServiceNames, newFloat)
-
 	for polledServiceName, polledService := range servicesByName {
 		serviceStart := time.Now()
 		healthStatus, _, _ := polledService.healthStatus()
@@ -347,7 +344,6 @@ func (p *servicesProbe) poll(ctx context.Context, isPulse bool) error {
 			func() bool { return p.hostBool.TrendMean() },
 		),
 	})
-
 	return nil
 }
 
@@ -409,7 +405,6 @@ func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot)
 		if strings.HasPrefix(name, servicesDockerContainerIgnorePattern) || strings.HasSuffix(name, servicesDockerContainerIgnoreSuffix) {
 			continue
 		}
-
 		if name == "" {
 			scribe.Log(scribe.SourceProbeServices, p.subject(), scribe.ActionDiscover).Errorf("rejected", servicesStart, "[container] empty name, excluding from the service list")
 			continue

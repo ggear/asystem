@@ -22,7 +22,6 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 	loaded := config.Load(request.ConfigPath)
 	homeRoot := backupHomeRoot()
 	stagePath := stageDir(request.RunPath, metric.BackupStageTertiary)
-
 	if len(backupTargets()) == 0 {
 		scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStageTertiary), scribe.ActionStart).Infof("excluded", time.Now(),
 			"[%s] is declared by no entry in [%s], so this host mirrors nothing and the stage is skipped", config.DirBackup, backupFstabPath)
@@ -33,7 +32,6 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 			"[%v] powering the backup disk on, carrying on in case it is already powered", err)
 	}
 	defer tertiaryCleanup(ctx, request)
-
 	cursor := kernelCursor(ctx)
 	defer func() {
 		if percent, usedMB, totalMB, ok := measureUsage(context.WithoutCancel(ctx), scribe.SubjectStage(metric.BackupStageTertiary), config.DirBackup); ok {
@@ -54,17 +52,17 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 	if deviceID(config.DirBackup) == deviceID(homeRoot) {
 		return result, fmt.Errorf("[%s] shares a filesystem with [%s], refusing to mirror onto the host", config.DirBackup, homeRoot)
 	}
-
 	for _, share := range backupShares() {
 		_ = mountTarget(ctx, scribe.SubjectStage(metric.BackupStageTertiary), share)
 	}
-	_ = os.WriteFile(filepath.Join(stagePath, tertiaryDeviceMarker), fmt.Appendf(nil, "%d", deviceID(config.DirBackup)), 0o644)
+	if err := os.WriteFile(filepath.Join(stagePath, tertiaryDeviceMarker), fmt.Appendf(nil, "%d", deviceID(config.DirBackup)), 0o644); err != nil {
+		return result, fmt.Errorf("write disk identity marker failed [%s] [%w]", stagePath, err)
+	}
 	shares := mountedLocalShares(ctx)
 	expected := measureStage(ctx, shares)
 	counters.addTotal(int(expected.mirrorBytes / bytesPerMebibyte))
 	mirroring := &rsyncProgress{}
 	expungedBytes := int64(0)
-
 	failed := false
 	for _, share := range shares {
 		if err := ctx.Err(); err != nil {
@@ -83,7 +81,6 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 			failed = true
 			break
 		}
-
 		expunging := &expungeProgress{sizes: expected.expungeSizes[share]}
 		expungeStarted := time.Now()
 		scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStageTertiary), scribe.ActionStart).Infof("expunged", expungeStarted, "[%s] starting", share)
@@ -98,11 +95,9 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 		counters.addTransfer(0, 0, 0, expungeStats.filesDeleted, 0, 0, 0)
 		scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStageTertiary), scribe.ActionStop).Infof("expunged", expungeStarted,
 			"[%s] stopping with [%s] GiB in [%s] s", share, backupSizedGibibytes(intReading(expunging.bytes()/bytesPerMebibyte)), elapsedSeconds(time.Since(expungeStarted)))
-
 		rsyncTemp := filepath.Join(target, ".rsync")
 		_ = os.MkdirAll(rsyncTemp, 0o755)
 		pruneStale(rsyncTemp, tertiaryPartialKeep)
-
 		mirrorStarted := time.Now()
 		scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStageTertiary), scribe.ActionStart).Infof("mirrored", mirrorStarted, "[%s] starting", share)
 		stopMirroring := reportStageProgress(ctx, "mirrored", mirroring.bytes, expected.mirrorBytes, request.Expires)
@@ -120,7 +115,6 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 		scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStageTertiary), scribe.ActionStop).Infof("mirrored", mirrorStarted,
 			"[%s] stopping with %s", share, backupMoved(intReading(int64(stats.totalTransferredBytes)/bytesPerMebibyte), time.Since(mirrorStarted)))
 	}
-
 	if err := ctx.Err(); err != nil {
 		return result, err
 	}
@@ -136,7 +130,6 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 			"[%s] %s, so it was neither snapshotted nor scrubbed", config.DirBackup, diagnosed(ctx, config.DirBackup))
 		failed = true
 	}
-
 	switch {
 	case failed && !scrubOK:
 		return result, errStageMirrorAndScrub

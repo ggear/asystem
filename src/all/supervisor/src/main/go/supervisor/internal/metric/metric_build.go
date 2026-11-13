@@ -677,9 +677,6 @@ var (
 	templateHostPrefix = "supervisor/$HOST/$SCOPE/host"
 	templateCluster    = "supervisor/$HOST/$SCOPE/cluster"
 
-	templateCommand  = "supervisor/$HOST/command"
-	templateSnapshot = "supervisor/$HOST/snapshot"
-
 	patternToken    = regexp.MustCompile(`^[a-z0-9-_]+$`)
 	patternTemplate = regexp.MustCompile(`^supervisor/\$HOST(/(command|snapshot)|/\$SCOPE/(cluster|host|services|service(/[^/]+)?)(/[A-Za-z0-9_]+)*)$`)
 	patternTopic    = regexp.MustCompile(`^supervisor/[a-z0-9-_]+(/(command|snapshot)|/(meta|data)/(cluster|host|services|service(/[a-z0-9-_]+)?)(/[a-z0-9-_]+)*)$`)

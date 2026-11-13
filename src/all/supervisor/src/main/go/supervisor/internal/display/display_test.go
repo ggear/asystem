@@ -2329,7 +2329,6 @@ func TestDisplay_LogWrapping(t *testing.T) {
 			}
 			display.logPageUp()
 			display.Logging()
-			previous, _ = display.logPagination()
 			parked := display.logAnchor
 			emit(testCase.flooded)
 			display.logTick()

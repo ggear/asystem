@@ -35,7 +35,7 @@ func BackupModuleReport(_ context.Context, request BackupModuleRequest, stdout, 
 	return 0
 }
 
-func BackupModuleRestoreFiles(_ context.Context, request BackupModuleRequest, stdout, stderr io.Writer) int {
+func BackupModuleRestoreFiles(ctx context.Context, request BackupModuleRequest, stdout, stderr io.Writer) int {
 	if len(request.Arguments) != 1 || request.Target == "" || request.File == "" || request.Run == "" {
 		fmt.Fprintln(stderr, "Restore files needs a module, a target, an artifact and a run")
 		return 2
@@ -50,7 +50,7 @@ func BackupModuleRestoreFiles(_ context.Context, request BackupModuleRequest, st
 	}
 	replaced := filepath.Join(filepath.Dir(source), "replaced", request.Run)
 	declared := slices.DeleteFunc(strings.Split(request.Paths, ":"), func(path string) bool { return path == "" })
-	moved := false
+	var moves [][2]string
 	for _, path := range declared {
 		from := filepath.Join(request.Target, path)
 		if _, err := os.Lstat(from); err != nil {
@@ -65,13 +65,17 @@ func BackupModuleRestoreFiles(_ context.Context, request BackupModuleRequest, st
 			fmt.Fprintf(stderr, "Could not move [%s] aside to [%s] [%v]\n", from, replaced, err)
 			return 1
 		}
-		moved = true
+		moves = append(moves, [2]string{from, to})
 	}
-	if moved {
+	if len(moves) > 0 {
 		fmt.Fprintln(stdout, reportedRestoreLine("moved ["+request.Paths+"] aside to ["+replaced+"]"))
 	}
-	if output, code, abandoned := bounded(context.Background(), moduleToolWait, "tar", "--extract", "--gzip", "--directory", request.Target, "--numeric-owner", "--preserve-permissions", "--file", request.File); abandoned || code != 0 {
-		fmt.Fprintf(stderr, "Could not extract [%s] into [%s] [%s]\n", request.File, request.Target, strings.TrimSpace(output))
+	if output, code, abandoned := bounded(ctx, moduleToolWait, "tar", "--extract", "--gzip", "--directory", request.Target, "--numeric-owner", "--preserve-permissions", "--file", request.File); abandoned || code != 0 {
+		for _, move := range moves {
+			_ = os.RemoveAll(move[0])
+			_ = os.Rename(move[1], move[0])
+		}
+		fmt.Fprintf(stderr, "Could not extract [%s] into [%s] [%s], moved the replaced paths back\n", request.File, request.Target, strings.TrimSpace(output))
 		return 1
 	}
 	extracted := request.Paths
@@ -429,7 +433,12 @@ func (s *restoreSession) replace() bool {
 		s.changed++
 	}
 	state, _ := s.hooked("restore_service_state", "")
-	if strings.TrimSpace(state) == "running" {
+	state = strings.TrimSpace(state)
+	if state != "" && state != "stopped" && state != "running" {
+		s.fault(fmt.Sprintf("[%s] declares unknown restore service state [%s], only [stopped] and [running] are understood", s.module, state))
+		return false
+	}
+	if state == "running" {
 		if !s.serviceRunning() {
 			s.fault(fmt.Sprintf("[%s] must be running to restore, start it first", s.module))
 			return false

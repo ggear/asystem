@@ -41,24 +41,6 @@ func (k ValueKind) String() string {
 	}
 }
 
-//goland:noinspection GoUnusedExportedFunction
-func ParseValueKind(value string) (ValueKind, bool) {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "bool":
-		return ValueBool, true
-	case "float":
-		return ValueFloat, true
-	case "int":
-		return ValueInt, true
-	case "string":
-		return ValueString, true
-	case "", "none":
-		return ValueNone, true
-	default:
-		return ValueNone, false
-	}
-}
-
 func (v *ValueData) Equal(that *ValueData) bool {
 	if v == nil || that == nil {
 		return v == that

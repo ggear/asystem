@@ -29,7 +29,6 @@ func runStage(ctx context.Context, request stageRequest) error {
 	stoppedMarker := filepath.Join(stagePath, stageStoppedMarker)
 	_ = os.Remove(stoppedMarker)
 	_ = os.Remove(filepath.Join(stagePath, stageTimedOutMarker))
-
 	stageCtx, cancel := context.WithCancelCause(ctx)
 	defer cancel(nil)
 	if !request.Expires.IsZero() {
@@ -46,7 +45,6 @@ func runStage(ctx context.Context, request stageRequest) error {
 		}
 	})
 	defer stop()
-
 	subject := scribe.SubjectStage(request.Stage)
 	deadlineText := "none"
 	timeoutHours := 0
@@ -56,7 +54,6 @@ func runStage(ctx context.Context, request stageRequest) error {
 	}
 	scribe.Log(scribe.SourceBackup, subject, scribe.ActionStart).Infof("starting", started,
 		"[%s] stage [%s] timeout [%s]", request.RunID, request.Stage, deadlineText)
-
 	announce := func(document backupSummary) {
 		publishStageStatus(request.ConfigPath, request.Stage, document)
 	}
@@ -123,10 +120,8 @@ func runStage(ctx context.Context, request stageRequest) error {
 	default:
 		runErr = fmt.Errorf("unknown stage [%s]", request.Stage)
 	}
-
 	stopBackground()
 	<-backgroundDone
-
 	cause := context.Cause(stageCtx)
 	if _, err := os.Stat(filepath.Join(stagePath, stageTimedOutMarker)); cause == nil && err == nil {
 		cause = errStageTimedOut
@@ -135,7 +130,6 @@ func runStage(ctx context.Context, request stageRequest) error {
 		cause = errStageStopped
 	}
 	state, success := stageVerdict(cause, runErr, result.skipped)
-
 	document := backupSummary{
 		RunID: request.RunID, State: state, Trigger: request.Trigger,
 		StartedTS: started.Format(time.RFC3339), FinishedTS: time.Now().Format(time.RFC3339),
@@ -153,7 +147,6 @@ func runStage(ctx context.Context, request stageRequest) error {
 	} else {
 		announce(document)
 	}
-
 	if runErr != nil {
 		reason := runErr
 		if state != metric.BackupStateFailure && cause != nil {

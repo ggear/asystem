@@ -120,9 +120,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 				scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(msg.Topic()), scribe.ActionSubscribe).Errorf("rejected", commandStart, "[%s] scope, only [%s], [%s] and [%s] are commanded", tokens[3], metric.EntityCluster, metric.EntityHost, metric.EntityService)
 				return
 			}
-
 			// TODO: Implement command handling
-
 			scribe.Log(scribe.SourceEngine, subject, scribe.ActionSubscribe).Debugf("observed", commandStart, "[%s] host, [%s] scope, command [%s]", tokens[1], tokens[3], string(msg.Payload()))
 		}
 		commands := client.Subscribe(commandTopic, 1, onCommand)
@@ -204,7 +202,11 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		}
 		leading, epoch := probe.Leading(metric.LeaderDutySentinel)
 		published := func(guid metric.RecordGUID) bool {
-			return metric.GetIDKind(guid.ID) != metric.MetricKindCluster || leading
+			if metric.GetIDKind(guid.ID) != metric.MetricKindCluster {
+				return true
+			}
+			held, _ := probe.Leading(metric.LeaderDutySentinel)
+			return held
 		}
 		if forceRepublish.Swap(false) && !isHeartbeat {
 			client.Publish(statusTopic, 1, true, metric.AvailabilityOnline)

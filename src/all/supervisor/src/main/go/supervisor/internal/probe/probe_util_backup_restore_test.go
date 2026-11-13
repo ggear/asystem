@@ -27,6 +27,7 @@ func TestProbeUtilBackupRestore_Replace(t *testing.T) {
 		{"force without restore_applied faults", metric.BackupStateSuccess, true, ":", "", 1, false},
 		{"a failing restore_applied faults", metric.BackupStateSuccess, true, `restore_applied() { return 1; }`, "", 1, false},
 		{"naming a regressed run needs force", metric.BackupStateRegressed, false, `restore_applied() { echo yes > "$APPLIED"; }`, "2026-11-01_01-00-00", 1, false},
+		{"an unknown service state faults before applying", metric.BackupStateSuccess, true, `RESTORE_SERVICE_STATE=stoped; restore_applied() { echo yes > "$APPLIED"; }`, "", 1, false},
 		{"the default run skips a regressed one", metric.BackupStateRegressed, false, `restore_applied() { echo yes > "$APPLIED"; }`, "", 1, false},
 	}
 	for _, test := range tests {
@@ -133,5 +134,44 @@ func TestProbeUtilBackupRestore_RestoreFiles(t *testing.T) {
 	}
 	if code != 0 || read("keep/db") != "restored" || read("keep/db-2026-11-01") != "carry" || read("keep/db-wal") != "" || read("stale") != "newer" {
 		t.Errorf("restore files: got code [%d] db [%s] carried [%s] sidecar [%s] stderr [%s]", code, read("keep/db"), read("keep/db-2026-11-01"), read("keep/db-wal"), stderr.String())
+	}
+}
+
+func TestProbeUtilBackupRestore_RestoreFilesRollback(t *testing.T) {
+	tests := []struct {
+		name          string
+		archive       []byte
+		expectedCode  int
+		expectedLive  string
+		expectedAside bool
+	}{
+		{"a good archive replaces the path and keeps the old copy aside", tarGzipped(t, "keep/db", "restored"), 0, "restored", true},
+		{"an unreadable archive puts the old copy back", []byte("not an archive"), 1, "old", false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			home := filepath.Join(t.TempDir(), "mod")
+			source := filepath.Join(home, "1.0")
+			target := filepath.Join(source, "config")
+			if err := os.MkdirAll(filepath.Join(target, "keep"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(target, "keep", "db"), []byte("old"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			archive := filepath.Join(t.TempDir(), "a.tar.gz")
+			if err := os.WriteFile(archive, test.archive, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			code := BackupModuleRestoreFiles(context.Background(), BackupModuleRequest{
+				Arguments: []string{"mod"}, Source: source, Target: target, File: archive, Run: "2026-11-01_01-00-00", Paths: "keep",
+			}, &stdout, &stderr)
+			live, _ := os.ReadFile(filepath.Join(target, "keep", "db"))
+			_, asideErr := os.Stat(filepath.Join(home, "replaced", "2026-11-01_01-00-00", "keep", "db"))
+			if code != test.expectedCode || string(live) != test.expectedLive || (asideErr == nil) != test.expectedAside {
+				t.Errorf("restore files: got code [%d] live [%s] aside [%t] stderr [%s] want code [%d] live [%s] aside [%t]", code, live, asideErr == nil, stderr.String(), test.expectedCode, test.expectedLive, test.expectedAside)
+			}
+		})
 	}
 }

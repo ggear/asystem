@@ -101,7 +101,6 @@ func (p *hostProbe) create(configPath string, cache *metric.RecordCache, mask [m
 	p.periods = periods
 	p.configPath = configPath
 	p.hostName = config.Load(configPath).Host()
-
 	p.usedProcessorInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.usedMemoryInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.allocatedMemoryInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)

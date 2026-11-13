@@ -98,6 +98,9 @@ Integrate Withings scale direcltly, locally, it has been done here https://didac
 ###############################################################################################################################################################
 # Media
 ###############################################################################################################################################################
+Add in Plex refresh a rationalisation of watch lists - Watchlist - have a nice way of managing this -> Jane/Graham/Jane & Graham
+Maybe fixed? PUID=1000/PGID=100 impl to mean restarts dont set /share/10/tmp/usenet to root ownership, install_post.sh does it today
+Add __LARGE to any quality=9 movies I want small versions of too
 Implement a move that moves all but parents series from /share/10 to X eg find . -name *.mkv ! -path */parents/series/*
 Have a 2-thread media transcode script, maybe do even/odd/every so can launch in two windows?
 Implement syncart.py to store artwork in /shares and save download after failure
@@ -110,12 +113,6 @@ Multiple versions of files should error:
 | The Diplomat S04E03.mkv   | 8. Nothing  | Downscale High Size Non-HEVC | Original     | Complete   | Right     | Direct Play | Direct Play | Direct Play   | Messy          | '/share/10/media/parents/series/The Diplomat/Season 4' |
 | The Diplomat S04E03_0.mkv | 8. Nothing  | Downscale High Size Non-HEVC | Original     | Complete   | Right     | Direct Play | Direct Play | Direct Play   | Messy          | '/share/10/media/parents/series/The Diplomat/Season 4' |
 +---------------------------+-------------+------------------------------+--------------+------------+-----------+-------------+-------------+---------------+----------------+--------------------------------------------------------+
-
-
-###############################################################################################################################################################
-# Media
-###############################################################################################################################################################
-PUID=1000/PGID=100 impl to mean restarts dont set /share/10/tmp/usenet to root ownership, install_post.sh does it today
 
 
 ###############################################################################################################################################################
@@ -171,8 +168,9 @@ Add additional local tests
 
 
 ###############################################################################################################################################################
-# Networks
+# Network
 ###############################################################################################################################################################
+Recover from weex/zigbee2mtt/* outage quickly like internet - what needs to change?
 Validate all plugins logic against grafana
 test internet when downloading
 have certs check letsnecrypt cert actually deployed to all targets, amke deployment nice
@@ -189,6 +187,13 @@ Log firewall events - https://github.com/opustecnica/public/wiki/UDM-&-UDM-PRO-N
 ###############################################################################################################################################################
 # Finance
 ###############################################################################################################################################################
+Update maintenace tab on wealth
+Rebuild wealth sheet, update history to be new
+Update portfolio with FY28 tax immplications
+Make inflation rate input to wealth via model -  normalise against offcial data that i have versus my spend data in the same time frame, add an incrament to it, then apply and 40 year mean it to get adjusted inflation?
+Make porfolio return input to wealth via model
+Make investment allocation strategy confirmed by model - risk ananlysis via volatility etc
+
 Super:
 https://www.afr.com/wealth/personal-finance/how-to-bank-40pc-more-profit-on-an-investment-property-after-the-budget-20260522-p5zzqh
 https://www.afr.com/wealth/personal-finance/the-eofy-super-strategy-that-could-give-you-a-200-000-tax-deduction-20260601-p602pa

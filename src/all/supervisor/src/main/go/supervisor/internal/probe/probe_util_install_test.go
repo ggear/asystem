@@ -357,7 +357,8 @@ func TestProbeUtilInstall_InvalidationOnVersionChange(t *testing.T) {
 func TestProbeUtilInstall_LoadIsCachedPerMount(t *testing.T) {
 	t.Cleanup(resetInstallTrees)
 	mount := t.TempDir()
-	if loadInstallTree(mount) != loadInstallTree(mount) {
+	first := loadInstallTree(mount)
+	if first != loadInstallTree(mount) {
 		t.Errorf("load: got distinct trees for one mount, want the same tree")
 	}
 	if loadInstallTree(mount) == loadInstallTree(t.TempDir()) {

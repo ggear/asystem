@@ -155,7 +155,6 @@ func compactDisplayLayout(useUnicode bool) [][]box {
 			}
 		}
 	}
-
 	t_0_0 := box{lblLhs: text{
 		ascii:   "+= ",
 		unicode: "╭─┐",
@@ -178,47 +177,38 @@ func compactDisplayLayout(useUnicode bool) [][]box {
 	}, kind: boxCtrls}
 	b_X_Y := box{lblLhs: text{ascii: "|", unicode: "│"}, lblMid: text{ascii: "", unicode: ""}, lblRhs: text{ascii: "", unicode: ""}, kind: boxBordr, resizeRem: resizeRemBorder}
 	b_X_Z := box{lblRhs: text{ascii: "|", unicode: "│"}, lblMid: text{ascii: "", unicode: ""}, lblLhs: text{ascii: "", unicode: ""}, kind: boxBordr, resizeRem: resizeRemBorder}
-
 	d_1_0 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostUsedProcessor) + " "}, valLen: 3, valSfx: "%", metricID: metric.MetricHostUsedProcessor}
 	d_1_1 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostFailedLogs) + " "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: " "}, metricID: metric.MetricHostFailedLogs, resizeInc: resizeIncSpacer}
 	d_1_2 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostWarnTemperature) + " "}, valLen: 3, valSfx: "%", metricID: metric.MetricHostWarnTemperature}
 	d_1_3 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostUsedHomeSpace) + " "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: " "}, metricID: metric.MetricHostUsedHomeSpace, resizeInc: resizeIncSpacer}
-
 	d_2_0 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostUsedMemory) + " "}, valLen: 3, valSfx: "%", metricID: metric.MetricHostUsedMemory}
 	d_2_1 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostFailedShares) + " "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: " "}, metricID: metric.MetricHostFailedShares, resizeInc: resizeIncSpacer}
 	d_2_2 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostSpinFanSpeed) + " "}, valLen: 3, valSfx: "%", metricID: metric.MetricHostSpinFanSpeed}
 	d_2_3 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostUsedShareSpace) + " "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: " "}, metricID: metric.MetricHostUsedShareSpace, resizeInc: resizeIncSpacer}
-
 	d_3_0 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostAllocatedMemory) + " "}, valLen: 3, valSfx: "%", metricID: metric.MetricHostAllocatedMemory}
 	d_3_1 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostFailedBackupStages) + " "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: " "}, metricID: metric.MetricHostFailedBackupStages, resizeInc: resizeIncSpacer}
 	d_3_2 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostUsedDriveLife) + " "}, valLen: 3, valSfx: "%", metricID: metric.MetricHostUsedDriveLife}
 	d_3_3 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostUsedBackupSpace) + " "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: " "}, metricID: metric.MetricHostUsedBackupSpace, resizeInc: resizeIncSpacer}
-
 	s_X_0 := box{lblRhs: text{
 		ascii:   "+-------------------------------------------------------+",
 		unicode: "├───────────────────────────────────────────────────────┤",
 	}, kind: boxBordr, resizeCnt: 3, resizeInc: resizeIncBorder, resizeRem: resizeRemSpacer}
 	s_Y_Y := box{lblRhs: text{ascii: " "}, kind: boxBordr, resizeInc: resizeIncBorder, resizeRem: resizeRemColumn}
-
 	l_5_0 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricServiceName)}, lblRhs: text{ascii: "   "}, kind: boxLabel, resizeInc: resizeIncLblService}
 	l_5_1 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricServiceUsedProcessor)}, lblLhs: text{ascii: " "}, lblRhs: text{ascii: " "}, kind: boxLabel}
 	l_5_2 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricServiceUsedMemory)}, lblLhs: text{ascii: " "}, kind: boxLabel}
 	l_5_3 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricServiceBackupStatus)}, lblLhs: text{ascii: " "}, kind: boxLabel}
 	l_5_4 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricService)}, lblLhs: text{ascii: " "}, kind: boxLabel}
-
 	d_X_0 := box{lblRhs: text{ascii: " "}, valLen: 9, valAln: boxLhs, valOpt: true, metricID: metric.MetricServiceName, resizeInc: resizeIncValService}
 	d_X_1 := box{valSfx: "%", lblRhs: text{ascii: " "}, valLen: 3, valOpt: true, metricID: metric.MetricServiceUsedProcessor}
 	d_X_2 := box{valSfx: "%", lblRhs: text{ascii: " "}, valLen: 3, valOpt: true, metricID: metric.MetricServiceUsedMemory}
 	d_X_3 := box{lblLhs: text{ascii: " "}, valLen: 1, lblRhs: text{ascii: "  "}, valOpt: true, valKind: valBool, metricID: metric.MetricServiceBackupStatus}
 	d_X_4 := box{lblLhs: text{ascii: " "}, valLen: 1, lblRhs: text{ascii: " "}, valOpt: true, valKind: valBool, metricID: metric.MetricService}
-
 	s_X_Y := box{lblRhs: text{
 		ascii:   "                                                         ",
 		unicode: "╰───────────────────────────────────────────────────────╯",
 	}, kind: boxBordr, resizeCnt: 3, resizeInc: resizeIncBorder, resizeRem: resizeRemSpacer}
-
 	v_X_X := box{lblLhs: text{ascii: ""}, kind: boxDivdr, resizeRem: resizeRemDivider}
-
 	return compile(useUnicode, [][]box{
 		{t_0_0, t_0_1, v_X_X},
 		{b_X_Y, d_1_0, d_1_1, s_Y_Y, d_1_2, d_1_3, b_X_Z, v_X_X},
@@ -309,7 +299,6 @@ func relaxedDisplayLayout(useUnicode bool) [][]box {
 			}
 		}
 	}
-
 	t_0_0 := box{lblLhs: text{
 		ascii:   "+= ",
 		unicode: "╭─┐",
@@ -332,28 +321,23 @@ func relaxedDisplayLayout(useUnicode bool) [][]box {
 	}, kind: boxCtrls}
 	b_X_Y := box{lblLhs: text{ascii: "|", unicode: "│"}, lblMid: text{ascii: " ", unicode: " "}, lblRhs: text{ascii: "", unicode: ""}, kind: boxBordr, resizeRem: resizeRemBorder}
 	b_X_Z := box{lblRhs: text{ascii: "|", unicode: "│"}, lblMid: text{ascii: " ", unicode: " "}, lblLhs: text{ascii: "", unicode: ""}, kind: boxBordr, resizeRem: resizeRemBorder}
-
 	d_1_0 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostUsedProcessor) + " "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostUsedProcessor, resizeInc: resizeIncHistVal}
 	d_1_1 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostFailedLogs) + " "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostFailedLogs, resizeInc: resizeIncHistVal}
 	d_1_2 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostWarnTemperature) + " "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostWarnTemperature, resizeInc: resizeIncHistVal}
 	d_1_3 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostUsedHomeSpace) + " "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostUsedHomeSpace, resizeInc: resizeIncHistVal}
-
 	d_2_0 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostUsedMemory) + " "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostUsedMemory, resizeInc: resizeIncHistVal}
 	d_2_1 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostFailedShares) + " "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostFailedShares, resizeInc: resizeIncHistVal}
 	d_2_2 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostSpinFanSpeed) + " "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostSpinFanSpeed, resizeInc: resizeIncHistVal}
 	d_2_3 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostUsedShareSpace) + " "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostUsedShareSpace, resizeInc: resizeIncHistVal}
-
 	d_3_0 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostAllocatedMemory) + " "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostAllocatedMemory, resizeInc: resizeIncHistVal}
 	d_3_1 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostFailedBackupStages) + " "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostFailedBackupStages, resizeInc: resizeIncHistVal}
 	d_3_2 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostUsedDriveLife) + " "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostUsedDriveLife, resizeInc: resizeIncHistVal}
 	d_3_3 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostUsedBackupSpace) + " "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostUsedBackupSpace, resizeInc: resizeIncHistVal}
-
 	s_X_0 := box{lblRhs: text{
 		ascii:   "+--------------------------------------------------------------------------------------+",
 		unicode: "├──────────────────────────────────────────────────────────────────────────────────────┤",
 	}, kind: boxBordr, resizeCnt: 4, resizeInc: resizeIncBorder, resizeRem: resizeRemSpacer}
 	s_Y_Y := box{lblRhs: text{ascii: "    "}, kind: boxBordr, resizeRem: resizeRemColumn}
-
 	l_5_0 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricServiceName)}, lblRhs: text{ascii: "        "}, kind: boxLabel}
 	l_5_1 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricServiceVersion)}, lblLhs: text{ascii: "  "}, lblRhs: text{ascii: "  "}, kind: boxLabel}
 	l_5_2 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricServiceUsedProcessor)}, lblLhs: text{ascii: "       "}, lblRhs: text{ascii: "    "}, kind: boxLabel, resizeCnt: 2, resizeInc: resizeIncHistLbl}
@@ -363,7 +347,6 @@ func relaxedDisplayLayout(useUnicode bool) [][]box {
 	l_5_6 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricServiceConfiguredStatus)}, lblLhs: text{ascii: "  "}, kind: boxLabel}
 	l_5_7 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricServiceRestartCount)}, lblLhs: text{ascii: "  "}, kind: boxLabel}
 	l_5_8 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricServiceUpTime)}, lblLhs: text{ascii: "  "}, kind: boxLabel}
-
 	d_X_0 := box{valLen: 14, lblRhs: text{ascii: " "}, valAln: boxLhs, valOpt: true, valKind: valText, metricID: metric.MetricServiceName}
 	d_X_1 := box{valLen: 11, lblRhs: text{ascii: " "}, valOpt: true, valKind: valText, metricID: metric.MetricServiceVersion}
 	d_X_2 := box{lblLhs: text{ascii: "  "}, valSfx: "%", valLen: 10, valOpt: true, valKind: valHist, metricID: metric.MetricServiceUsedProcessor, resizeCnt: 2, resizeInc: resizeIncHistVal}
@@ -373,14 +356,11 @@ func relaxedDisplayLayout(useUnicode bool) [][]box {
 	d_X_6 := box{lblLhs: text{ascii: "   "}, lblRhs: text{ascii: " "}, valLen: 1, valOpt: true, valKind: valBool, metricID: metric.MetricServiceConfiguredStatus}
 	d_X_7 := box{lblLhs: text{ascii: "   "}, lblRhs: text{ascii: " "}, valLen: 1, valOpt: true, metricID: metric.MetricServiceRestartCount}
 	d_X_8 := box{lblLhs: text{ascii: "    "}, lblRhs: text{ascii: ""}, valLen: 4, valOpt: true, valKind: valTime, metricID: metric.MetricServiceUpTime}
-
 	s_X_Y := box{lblRhs: text{
 		ascii:   "                                                                                        ",
 		unicode: "╰──────────────────────────────────────────────────────────────────────────────────────╯",
 	}, kind: boxBordr, resizeCnt: 4, resizeInc: resizeIncBorder, resizeRem: resizeRemSpacer}
-
 	v_X_X := box{lblLhs: text{ascii: ""}, kind: boxDivdr, resizeRem: resizeRemDivider}
-
 	return compile(useUnicode, [][]box{
 		{t_0_0, t_0_1, v_X_X},
 		{b_X_Y, d_1_0, d_1_1, s_Y_Y, d_1_2, d_1_3, b_X_Z, v_X_X},

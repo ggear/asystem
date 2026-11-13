@@ -31,7 +31,7 @@ func newServeCmd() *cobra.Command {
 			configPath, _ := cmd.Flags().GetString("config")
 			err := executeServe(configPath, opts)
 			if err != nil {
-				return fmt.Errorf("error: %w", err)
+				return fmt.Errorf("serve failed [%w]", err)
 			}
 			return nil
 		},
@@ -53,7 +53,7 @@ func executeServe(configPath string, opts *serveOptions) error {
 		return err
 	}
 	if err := scribe.EnableStdoutAndFile(level, "serve", config.ResolvedVersion(configPath), logFileSizeMB, logFileBackups, logFileAgeDays); err != nil {
-		return fmt.Errorf("enable file logging: %w", err)
+		return fmt.Errorf("enable file logging failed [%w]", err)
 	}
 	if err := setLogFilters(&opts.logOptions); err != nil {
 		return err

@@ -22,7 +22,6 @@ func runSecondaryStage(ctx context.Context, request stageRequest, counters *stag
 	loaded := config.Load(request.ConfigPath)
 	host := loaded.Host()
 	subject := scribe.SubjectStage(metric.BackupStageSecondary)
-
 	share, err := resolveShare(ctx, loaded, host)
 	if err != nil {
 		return stageResult{}, err
@@ -34,7 +33,6 @@ func runSecondaryStage(ctx context.Context, request stageRequest, counters *stag
 	if err := os.MkdirAll(filepath.Join(share, treeBackupDirectory), 0o755); err != nil {
 		return stageResult{}, fmt.Errorf("share backup directory could not be created [%w]", err)
 	}
-
 	servicePath := serviceRoot(request.RunPath)
 	adopted := ""
 	if _, err := os.Stat(stageDir(request.RunPath, metric.BackupStagePrimary)); err != nil {
@@ -49,7 +47,6 @@ func runSecondaryStage(ctx context.Context, request stageRequest, counters *stag
 				"[%s] ran no primary and no earlier run recorded one", request.RunID)
 		}
 	}
-
 	promote := append([]string{treeModule}, gradedServices(servicePath, true)...)
 	for _, service := range gradedServices(servicePath, false) {
 		scribe.Log(scribe.SourceBackup, scribe.SubjectService(service), scribe.ActionStart).Warnf("faulting", time.Now(),
@@ -63,11 +60,9 @@ func runSecondaryStage(ctx context.Context, request stageRequest, counters *stag
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionStart).Warnf("faulting", time.Now(),
 			"[%s] recorded no successful service backup, promoting supervisor alone", label)
 	}
-
 	counters.addTotal(pendingPromotionMB(share, host, promote))
 	scribe.Log(scribe.SourceBackup, subject, scribe.ActionStart).Infof("promoted", time.Now(),
 		"[%d] services promoting to [%s/backup]", len(promote), share)
-
 	failed := 0
 	for index, service := range promote {
 		if err := ctx.Err(); err != nil {
@@ -77,9 +72,7 @@ func runSecondaryStage(ctx context.Context, request stageRequest, counters *stag
 			failed++
 		}
 	}
-
 	_, drillFailed := drillSecondaryServices(ctx, loaded, share, host, servicePath, promote)
-
 	percent, usedMB, totalMB, ok := measureUsage(ctx, subject, share)
 	result := stageResult{}
 	if ok {
@@ -110,14 +103,11 @@ func promoteOneService(ctx context.Context, loaded *config.Config, share, host, 
 		return err
 	}
 	clearDirectory(rsyncTemp)
-
 	started := time.Now()
 	scribe.Log(scribe.SourceBackup, scribe.SubjectService(service), scribe.ActionStart).Infof("promoted", started,
 		"[%s] promoting [%d/%d] from [%s] to [%s]", service, index, total, source, target)
-
 	window := loaded.BackupWindowOf(service)
 	policy := backupKeepPolicy{daily: window.KeepDaily, weekly: window.KeepWeekly, monthly: window.KeepMonthly}
-
 	rsyncArgs := []string{"-a", "--stats", "--out-format=%t %o %f %l", "--exclude", "/.lock", "--exclude", ".rsync/", "--exclude", ".rsync-*"}
 	if policy.window > 0 || policy.daily+policy.weekly+policy.monthly > 0 {
 		sourceRuns := readBackupKeepRuns(strings.TrimSuffix(source, "/"))
@@ -134,7 +124,6 @@ func promoteOneService(ctx context.Context, loaded *config.Config, share, host, 
 		stats.filesDeleted, stats.filesListed, stats.totalFileSizeBytes/bytesPerMebibyte, stats.totalBytesSent/bytesPerMebibyte)
 	scribe.Log(scribe.SourceBackup, scribe.SubjectService(service), scribe.ActionStop).Infof(backupVerb(metric.BackupStageSecondary), started,
 		"%s from [%s]", backupMoved(intReading(int64(stats.totalTransferredBytes/bytesPerMebibyte)), time.Since(started)), service)
-
 	scribe.Log(scribe.SourceBackup, scribe.SubjectService(service), scribe.ActionCompute).Infof("thinning", time.Now(),
 		"[%s] thinning with the keep set", target)
 	policy.gated = true

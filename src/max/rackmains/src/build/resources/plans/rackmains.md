@@ -9,7 +9,7 @@
 | Host side of the shed (`asleep`, `awake`, power-on-after-cut setting, in the `system` module) | built, tested on `max`; a deep run and the power-on-after-cut test are not done |
 | Battery model (`ups/battery` notebook, `static` project `rackmains_ups_battery`) | built, released, embedded; signature prefixed `rackmains_`, optional inputs (calibrating, battery low, volts, replace due, age, read failures, state) and outputs (runtime and energy remaining, energy used, refit due and reason, state) wired through `serve.rs` and `policy.rs`; the model is called through failed reads; the guard validates the policy at start |
 | Metrics, outage CSV, liveness-file health that does not need MQTT, watchdog, backup enrolment | built, unit tested and run in the container against the mock driver |
-| Guard (shed, restore, state machine), dry-run by default | built as a pure state machine with table tests, called from the poll loop; ssh runner and forced-command wrapper (`rackmains-shed`, `system` module) built, not run against a host; dry-run by default |
+| Guard (shed, restore, state machine), dry-run by default | built as a pure state machine with table tests, called from the poll loop; ssh runner built, calling `asleep` and `awake` by absolute path over an unrestricted root key (`asleep --except` in the `system` module), not run against a host; dry-run by default |
 | The root CLI, `check`, `guard tail` and `guard list` | built |
 | `rackmains guard drill` and `guard stop` | built and exercised end to end against a simulated plug and a real poller; the deadman rule and the `Status 0` parse are unproven on the real plug |
 | Workbook rows | done: 29 metric rows (indexes 2450 to 2478) and `service_rackmains`; the topic and schema checks pass |
@@ -518,7 +518,7 @@ next section). A host is never powered off.
    servers up.
 2. **Shed.** At `rackmains_guard_shed_battery_seconds` on battery, or `LB`: run `asleep --deep` on the followers in parallel, `meg` last so Home
    Assistant and the broker outlast the rest, each over ssh with a key whose `authorized_keys` forces the command (`restrict`,
-   no shell; see the forced-command test), each call synchronous, so it is done when the call returns, and `0` means it completed cleanly. Any other code (1 error, 4 timeout,
+   no shell; see the ssh test), each call synchronous, so it is done when the call returns, and `0` means it completed cleanly. Any other code (1 error, 4 timeout,
    5 unclean) is logged and alerted and the guard moves on; it never retries in a loop. On `max`, run `asleep --shallow`
    stopping every container but rackmains (supervisor first, it binds `/`). A shed is not undone by the voltage rebound when
    the load drops, only by `rackmains_guard_restore_mains_seconds` of mains.
@@ -546,7 +546,7 @@ runners, so the timer policy is replaceable; if a better policy is ever wanted i
   connected to utility with outlets **not supplied**, and, under troubleshooting, to recharge for at least 6 hours and start again after a low battery. If the PSDR800 comes
   back from a depletion in Standby, no host boots and the rack stays dark until someone presses the button. Trial 5 observes this: after the
   cutoff restore mains and record whether the outlets are supplied without a button press, and how long it takes. If they are not, revisit by
-  adding a host-side helper that sends `shutdown.return` over a forced-command ssh key, since that is the only command that guarantees a power cycle.
+  adding a host-side helper that sends `shutdown.return` over the guard's ssh key, since that is the only command that guarantees a power cycle.
 - **Battery wear.** A 9Ah sealed lead-acid battery runs to the unit's own cutoff on every outage past the shed point. The shed point is the only limit on how often.
 - **`max` is cut while running.** Only rackmains runs there and the CSV is written by write, fsync and rename, so the cut is survivable, but `/home` is writable
   and root is not unmounted.
@@ -752,8 +752,8 @@ after a clean `poweroff`, so the guard quiesces a host and leaves it running.
 - **`asleep --deep`** (followers). Stops timers, automounts, containers (each given its own grace period, its exit code
   checked), docker and the services, then unmounts every fstab mount, makes root read only, and flushes and detaches the SATA
   and USB SSDs. Leaves ssh, the network, NUT and the fan control. Never powers off.
-- **`asleep --shallow --stop <container>`** (`max`). Leaves docker, root, `/var` and `/home` writable so rackmains keeps
-  running and writing to its home dir; stops only the named containers; unmounts what no running container holds.
+- **`asleep --shallow --except rackmains`** (`max`; `--except` added 2026-11-13, replacing the wrapper's container list, and `--stop <container>` still works). Leaves docker, root, `/var` and `/home` writable so rackmains keeps
+  running and writing to its home dir; stops every container but `rackmains`; unmounts what no running container holds.
 - **`awake`.** Undoes either from `/run/asleep.state`, then waits up to 60 s for containers that are starting or unhealthy to
   turn healthy. It replaces the wake packet.
 - **What the guard reads.** The exit code and the last line, `RESULT <asleep|awake> status=… reason=…`: 0 ok, 1 error, 2 usage,
@@ -887,7 +887,7 @@ neighbouring files first, and keep the style in step with them. Passes, in this 
 8. **Tests.** Table-driven where the input space is real, one test file's worth per source file, names that read as the behaviour (as `tempstat`'s). Assert behaviour (codes, counters, states, data, files), never log, error or reason wording and never the implementation's shape; remove tests whose
    subject was inlined; add one where a handler or a decision rule has none; cover the failure path as well as the success. **Prove each new decision rule bites** by deleting the rule and watching its test fail.
 9. **Standards.** Run the formatters, linters and type checkers and the project's own convention tests; the build rewrites source when it lints, so read the diff after every run. Check the dependency list (each justified, features minimal, none duplicated, pinned), `Cargo.lock` unchanged except deliberately, and the
-   security points: only `DUMPALL` written to the driver socket, forced-command keys with the host key pinned and no host name interpolated into a shell string, untrusted input parsed defensively (driver lines, the MQTT command, a model response, ssh output, CSV quoting), no panic reachable from outside input, no secret in a log or the repo.
+   security points: only `DUMPALL` written to the driver socket, the ssh key with the host key pinned and no host name interpolated into a shell string, untrusted input parsed defensively (driver lines, the MQTT command, a model response, ssh output, CSV quoting), no panic reachable from outside input, no secret in a log or the repo.
 10. **Prove it still works.** Run the targeted tests first, then the full suite once. Run the real built artefact: `fab build`, `fab package`, then the image with the mock driver and the system test, with failure injection (`kill -9` mid CSV write, stop the container mid outage, start with the broker down and lose it mid drain,
     a read-only or full data dir, a stale, garbage and vanished driver socket, an invalid, absent or slow model response, a hung host, a plug that does not answer). Measure resources: the compose memory limit through the longest outage the CSV bound allows, with no queue, in-memory row set, thread or descriptor growing without
     bound, the combined writes per second on battery (the CSV rewrite of up to 1 MB; the tmpfs files cost no disk) judged for SSD wear, and DEBUG volume against the 5 x 100 MB log rotation. For generated output (`broker.sh`, the schema, `.env`, `docker_deps.sh`) a pure refactor regenerates byte-identical, and any other diff is explained.
@@ -918,7 +918,7 @@ Version reviewed: none stamped; the author's passes and a high-effort `code-revi
 | 8 | No reinit loop | `serve::run` | plan deviation | guideline | accepted | a fresh socket per poll leaves nothing to reinitialise; `tempstat` could adopt the removal |
 | 9 | `rackmains_battery_state` is recorded as a JSON array, not an object of named slots | `serve::sample_state` | plan deviation | guideline | accepted | the response carries no slot names; revisit with the stateful model |
 | 10 | `struct_excessive_bools` added to the shared clippy `-A` list | `fabfile.py` | style | guideline | accepted | `Flags` mirrors NUT's status tokens; a per-crate allow is forbidden and the list is the one policy home |
-| 11 | The `system` module gained `shed.sh` (installed as `rackmains-shed`) | `src/all/system` | scope | guideline | accepted | the forced command the plan calls for; keys and deployment are yours |
+| 11 | The `system` module gained `asleep --except` (2026-11-13; the `rackmains-shed` forced-command wrapper was dropped) | `src/all/system` | scope | guideline | accepted | the guard's ssh key is unrestricted by choice; keys and deployment are yours |
 | 13 | A restart after a shed rebuilt the guard with no shed on record, so mains returning never woke the hosts | `guard::resume`, `outage::clocks` | correctness, restart | correctness | blocker | fixed: a shed decision row in the open file restores `shed_started`; tests for both directions |
 | 14 | A restore wanted but not started was never cancelled if the battery returned, waking hosts mid-outage | `guard::step` | correctness, flapping grid | correctness | blocker | fixed: cancelled, the shed starts afresh; test added |
 | 15 | Failed reads freeze the battery timer, so a dead driver mid-outage never sheds | `guard::step` | correctness | correctness | accepted | specified: a sequence starts only on a fresh reading; the 120 s floor and the UPS cutoff are the backstop, and the stale liveness turns the container unhealthy |
@@ -966,7 +966,7 @@ Trial 5 was written as "to the 11.5 V floor or `LB`, not to the UPS cutting out"
 **Tests still needed**, from no risk to most; each result decides a branch.
 1. **Baseline**, a day on mains with the recorder: which flags appear unprompted (`BOOST`, `TRIM`). The recorder has since been stopped, so the published entities and the outage CSVs are the record.
 2. **Quick battery test** (`test.battery.start.quick`): the test flag's name and the seconds spent in `OB`, in a quiet hour.
-3. **Forced command** on `may`: a dedicated key with `command="echo ok",restrict`, then `command="/usr/local/bin/asleep --deep --dry-run",restrict`, run from a container on `max`. A forced command takes no arguments, so it is decided (2026-11-12): one key and one wrapper, `/usr/local/bin/rackmains-shed` in the `system` module, which dispatches on `SSH_ORIGINAL_COMMAND` and allows exactly `asleep --deep`, `asleep --shallow --stop <container>` and `awake`, rejecting anything else.
+3. **ssh key** on `may`: a dedicated unrestricted root key (decided 2026-11-13, simplicity over restriction; the forced-command wrapper was dropped), then `/usr/local/bin/asleep --deep --dry-run` run from a container on `max` with `StrictHostKeyChecking=yes` against the pinned `known_hosts`.
 4. **Per-host `asleep` time**, start of the command to its `RESULT` line (`took`), several runs per host and the slowest container stop; order `may`, `mad`, `meg`. Measured so far: `max`, shallow, three containers, about 3 s; no deep run yet.
 5. **Power on after a cut**, per host, yours. A clean `poweroff` is not the test, the board stays off after one. `max`, `may`, `meg`: `AFTERG3_EN` is already cleared (`1c08`); run `asleep --deep` (on `max`, `--shallow`), pull the cord from the UPS for
    10 s, replace it, and time the boot to ssh. `mad` (Mac mini M2 Pro) needs a macOS step first: boot macOS from the boot picker, turn on "Start up automatically after a power failure" in Energy Saver, check `pmset -g | grep autorestart`
@@ -1014,8 +1014,15 @@ and the time cap carries that job.
 Hands-on steps the code cannot do, in the order they unblock work. Results of the tests and trials are recorded in "Trials, tests and rollout".
 
 1. ~~Workbook rows~~ done 2026-11-12.
-2. **ssh keys:** a forced-command key on all four hosts including `max`, the private key mounted read-only from a root-only directory on `max`, `known_hosts` pinned. The forced-command test (3) proves it.
-3. **Tests 3 and 4** (forced command, per-host `asleep` time), then the **spare-plug deadman proof** (test 8) and the **retained `cmnd/POWER` check**.
+2. **ssh keys** (decided 2026-11-13: a dedicated, unrestricted root key, simplicity over restriction; the forced-command wrapper `rackmains-shed` was dropped). Open until every step is done:
+   1. Release the `system` module, so each host has `asleep --except` and no `rackmains-shed`; remove a leftover `/usr/local/bin/rackmains-shed` by hand.
+   2. Run `asleep --shallow --except rackmains --dry-run` on `max`, since the shallow selection changed after the earlier real shallow cycle.
+   3. Generate a dedicated passphrase-less keypair on `max` in the root-only directory (`RACKMAINS_SSH_SOURCE`), mode `0600`, mounted read-only.
+   4. Add the public key, as a plain line, to `/root/.ssh/authorized_keys` on `max`, `may`, `mad` and `meg`; `max` needs it too, as it sheds itself.
+   5. Pin `known_hosts` in the same directory with `ssh-keyscan` for the four hosts, fingerprints checked against each host.
+   6. Prove it with test 3, then `rackmains check` in the container.
+   Not restricted by the key: anyone holding it is root on all four hosts, accepted. Kept: strict host key checking, a dedicated key, the mode check in `check`.
+3. **Tests 3 and 4** (ssh key, per-host `asleep` time), then the **spare-plug deadman proof** (test 8) and the **retained `cmnd/POWER` check**.
 4. **`mad`'s macOS step** for power-on after a cut, then test 5 on all four hosts.
 5. **List what else is on the UPS** (switch, router, access point, the Mac): the plug's WiFi and the followers' ssh path depend on them.
 6. **Releases and trials:** the dry-run release, trial 1, trials 2 and 3, and trial 5 once per battery.

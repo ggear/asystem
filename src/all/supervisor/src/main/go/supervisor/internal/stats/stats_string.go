@@ -89,7 +89,7 @@ func (v *StringStats) Push(value string) {
 		} else {
 			v.trendOther += 1.0
 			if v.trendOther > v.trendWeight {
-				v.trendValue, value = value, v.trendValue
+				v.trendValue = value
 				v.trendWeight, v.trendOther = v.trendOther, v.trendWeight
 			}
 		}

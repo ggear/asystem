@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestMetricAccessors_GetIDName(t *testing.T) {
+func TestMetricAttribs_GetIDName(t *testing.T) {
 	testCases := []struct {
 		name          string
 		id            ID
@@ -27,7 +27,7 @@ func TestMetricAccessors_GetIDName(t *testing.T) {
 	}
 }
 
-func TestMetricAccessors_GetIDNameIsUniqueAndTemplated(t *testing.T) {
+func TestMetricAttribs_GetIDNameIsUniqueAndTemplated(t *testing.T) {
 	names := map[string]ID{}
 	for _, id := range GetIDs() {
 		name := GetIDName(id)

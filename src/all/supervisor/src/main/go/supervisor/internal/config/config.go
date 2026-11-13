@@ -467,8 +467,6 @@ const (
 	BackupHomeEnvVar  = "BACKUP_HOME_ROOT"
 	TimingScaleEnvVar = "SUPERVISOR_TIMING_SCALE"
 
-	FormFactorEdge   = "edge"
-	FormFactorClient = "client"
 	FormFactorServer = "server"
 )
 

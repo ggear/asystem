@@ -127,13 +127,13 @@ func makePeriods(pollPeriod, pulseFactor, trendPeriod, cachePeriod, snapshotPeri
 	toDuration := func(raw string, unit time.Duration, name string) (int, error) {
 		d, err := time.ParseDuration(raw)
 		if err != nil {
-			return 0, fmt.Errorf("invalid %s period: %w", name, err)
+			return 0, fmt.Errorf("invalid period [%s] value [%s] [%w]", name, raw, err)
 		}
 		if d < 0 {
-			return 0, fmt.Errorf("invalid %s period: must be >= 0", name)
+			return 0, fmt.Errorf("invalid period [%s] value [%s] must not be negative", name, raw)
 		}
 		if d%unit != 0 {
-			return 0, fmt.Errorf("invalid %s period: must be a whole number of %s", name, unit)
+			return 0, fmt.Errorf("invalid period [%s] value [%s] must be a whole number of [%s]", name, raw, unit)
 		}
 		return int(d / unit), nil
 	}

@@ -33,7 +33,7 @@ func newWatchCmd() *cobra.Command {
 			configPath, _ := cmd.Flags().GetString("config")
 			err := executeWatch(configPath, opts)
 			if err != nil {
-				return fmt.Errorf("error: %w", err)
+				return fmt.Errorf("watch failed [%w]", err)
 			}
 			return nil
 		},
@@ -79,7 +79,7 @@ func executeWatch(configPath string, opts *watchOptions) error {
 	}
 	logBuffer, err := scribe.EnableBufferAndFile(level, "watch", config.ResolvedVersion(configPath), scribe.BufferLines(height), logFileSizeMB, logFileBackups, logFileAgeDays)
 	if err != nil {
-		return fmt.Errorf("enable file logging: %w", err)
+		return fmt.Errorf("enable file logging failed [%w]", err)
 	}
 	if err := setLogFilters(&opts.logOptions); err != nil {
 		return err
@@ -108,7 +108,7 @@ func executeWatch(configPath string, opts *watchOptions) error {
 	if len(hosts) == 0 {
 		hostname, err := os.Hostname()
 		if err != nil {
-			return fmt.Errorf("unable to determine local hostname: %w", err)
+			return fmt.Errorf("determine local hostname failed [%w]", err)
 		}
 		hosts = []string{hostname}
 	}
@@ -161,10 +161,10 @@ func executeWatch(configPath string, opts *watchOptions) error {
 	}
 	refreshPeriod, err := time.ParseDuration(opts.refreshPeriod)
 	if err != nil {
-		return fmt.Errorf("invalid refresh period: %w", err)
+		return fmt.Errorf("invalid refresh period [%s] [%w]", opts.refreshPeriod, err)
 	}
 	if refreshPeriod <= 0 {
-		return fmt.Errorf("invalid refresh period: must be > 0")
+		return fmt.Errorf("invalid refresh period [%s] must be above zero", opts.refreshPeriod)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

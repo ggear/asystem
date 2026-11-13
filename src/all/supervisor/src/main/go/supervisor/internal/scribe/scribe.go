@@ -324,18 +324,6 @@ func (b *LogBuffer) From(sequence uint64, n int) ([]LogLine, uint64) {
 	return result, sequence
 }
 
-func (b *LogBuffer) Rewind(n int) uint64 {
-	b.mutex.Lock()
-	defer b.mutex.Unlock()
-	if n < 0 {
-		n = 0
-	}
-	if n > b.count {
-		n = b.count
-	}
-	return b.version - uint64(n)
-}
-
 func (b *LogBuffer) Oldest() uint64 {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()

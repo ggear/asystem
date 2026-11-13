@@ -38,7 +38,6 @@ func runPrimaryStage(ctx context.Context, request stageRequest, counters *stageC
 		scribe.Log(scribe.SourceBackup, scribe.SubjectService(service), scribe.ActionCensus).Warnf("faulting", time.Now(),
 			"[%s] holds backups at [%s] but ships no backup.sh on this host, so nothing prunes them, remove them by hand", service, serviceHomeDir(service))
 	}
-
 	failed, regressed := 0, 0
 	for index, service := range enrolled {
 		if err := ctx.Err(); err != nil {
@@ -75,13 +74,12 @@ func runOneService(ctx context.Context, request stageRequest, loaded *config.Con
 	}
 	host := loaded.Host()
 	subject := scribe.SubjectService(service)
-
 	refused := func(reason string) error {
 		now := time.Now().Format(time.RFC3339)
 		_ = writeAtomic(statusPath, serviceSummary{RunID: request.RunID, State: metric.BackupStateFailure, StartedTS: now, FinishedTS: now})
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionStart).Warnf("faulting", time.Now(),
 			"[%s] skipped [%d/%d], container is %s", service, index, total, reason)
-		return fmt.Errorf("container [%s] is %s", service, reason)
+		return fmt.Errorf("container [%s] unusable [%s]", service, reason)
 	}
 	running, health := dockerServiceState(ctx, service)
 	if !running {
@@ -90,24 +88,20 @@ func runOneService(ctx context.Context, request stageRequest, loaded *config.Con
 	if health == "starting" {
 		return refused("still starting")
 	}
-
 	started := time.Now()
 	backupDir := serviceHomeDir(service)
 	previous := newestBackupDir(backupDir)
-
 	scribe.Log(scribe.SourceBackup, subject, scribe.ActionStart).Infof("starting", started,
 		"[%s] started [%d/%d]", service, index, total)
 	_ = writeAtomic(statusPath, serviceSummary{
 		RunID: request.RunID, State: metric.BackupStateRunning, StartedTS: started.Format(time.RFC3339),
 	})
-
 	logPath := serviceLogPath(request.RunPath, service)
 	logFile, err := os.Create(logPath)
 	if err != nil {
 		return fmt.Errorf("service log [%s] could not be created [%w]", logPath, err)
 	}
 	defer func() { _ = logFile.Close() }()
-
 	script := backupScriptPath(service)
 	command := exec.CommandContext(ctx, "bash", script)
 	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
@@ -120,7 +114,6 @@ func runOneService(ctx context.Context, request stageRequest, loaded *config.Con
 		scriptRestartVariable+"=true",
 		backupTimeoutVariable+"="+strconv.Itoa(scriptTimeoutHours(loaded, request)))
 	runErr := command.Run()
-
 	ok := runErr == nil
 	if ok {
 		pruneBackupRuns(ctx, subject, backupDir, backupKeepPolicy{window: time.Duration(loaded.BackupWindowOf(service).RetainDays) * 24 * time.Hour})
@@ -133,7 +126,6 @@ func runOneService(ctx context.Context, request stageRequest, loaded *config.Con
 		}
 	}
 	regressed := state == metric.BackupStateRegressed
-
 	sizeMB, files, kind, version := 0, 0, "unknown", "unknown"
 	if newest != "" {
 		files, sizeMB = directoryStats(newest)
@@ -146,14 +138,12 @@ func runOneService(ctx context.Context, request stageRequest, loaded *config.Con
 		FileCount: files, SizeMB: sizeMB,
 	}
 	_ = writeAtomic(statusPath, document)
-
 	sized := backupMoved(intReading(int64(sizeMB)), time.Since(started))
 	if state != metric.BackupStateSuccess && !regressed {
 		sized = backupHeld(intReading(int64(sizeMB)), time.Since(started))
 	}
 	scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Infof(backupVerb(metric.BackupStagePrimary), started,
 		"%s from [%s] as [%s], kind [%s], version [%s]", sized, service, state, kind, version)
-
 	for _, line := range evidence {
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Warnf("faulting", started, "%s", line)
 	}

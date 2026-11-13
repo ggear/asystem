@@ -143,6 +143,7 @@ func BackupModuleRun(ctx context.Context, request BackupModuleRequest, stdout, s
 		}
 		return true
 	}
+	judged := ""
 	manifested := func() error {
 		kind, parent := backupKindFull, ""
 		if backupArtefactKind(filepath.Base(target)) == backupKindDelta {
@@ -176,6 +177,7 @@ func BackupModuleRun(ctx context.Context, request BackupModuleRequest, stdout, s
 			}
 		}
 		verdict := judgeBackupRegression(current, baseline, baselineRun, request.ShrinkPercent)
+		judged = verdict.verdict
 		manifest := backupManifest{
 			Kind: kind, Parent: parent, SourceVersion: version, SourceSoftware: versionedModule(ctx, hooks, stderr, version), Verdict: verdict.verdict, Baseline: baselineRun, Evidence: verdict.evidence, Fingerprint: current,
 		}
@@ -213,7 +215,9 @@ func BackupModuleRun(ctx context.Context, request BackupModuleRequest, stdout, s
 		if defined[moduleHookPrunedStore] {
 			_ = hooks.run(hookCtx, stdout, stderr, moduleHookPrunedStore)
 		}
-		_ = os.RemoveAll(filepath.Join(filepath.Dir(source), "replaced"))
+		if judged == metric.BackupStateSuccess {
+			_ = os.RemoveAll(filepath.Join(filepath.Dir(source), "replaced"))
+		}
 	} else {
 		fmt.Fprintf(stderr, "Failed backup in [%d] seconds\n", int(time.Since(started).Seconds()))
 		status = 1

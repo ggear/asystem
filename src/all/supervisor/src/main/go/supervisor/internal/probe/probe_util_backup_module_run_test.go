@@ -53,6 +53,10 @@ func TestProbeUtilBackupModuleRun_Lifecycle(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
+			replaced := filepath.Join(dir, "mod", "replaced", "2026-11-01_01-00-00")
+			if err := os.MkdirAll(replaced, 0o755); err != nil {
+				t.Fatal(err)
+			}
 			script := filepath.Join(dir, "backup.sh")
 			if err := os.WriteFile(script, []byte("backup_completed() { echo completed >>\""+dir+"/trail\"; }\n"+testCase.body+"\n"), 0o755); err != nil {
 				t.Fatal(err)
@@ -67,6 +71,10 @@ func TestProbeUtilBackupModuleRun_Lifecycle(t *testing.T) {
 			runs := backupRuns(root)
 			if len(runs) != testCase.expectedRuns {
 				t.Fatalf("BackupModuleRun: got runs %v want [%d]", runs, testCase.expectedRuns)
+			}
+			_, replacedErr := os.Stat(replaced)
+			if kept := replacedErr == nil; kept == (testCase.expectedVerdict == metric.BackupStateSuccess) {
+				t.Errorf("BackupModuleRun: got replaced kept [%t] want [%t] for verdict [%s]", kept, testCase.expectedVerdict != metric.BackupStateSuccess, testCase.expectedVerdict)
 			}
 			if testCase.expectedVerdict == "" {
 				return

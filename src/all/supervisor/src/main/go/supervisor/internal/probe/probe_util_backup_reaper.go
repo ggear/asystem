@@ -110,12 +110,8 @@ func backupReaperState(configPath string) (state, expiresTS string, found bool, 
 	if settleErr != nil {
 		return "", "", false, settleErr
 	}
-	raw, ok := payloads[metric.TopicBackupReaper()]
-	if !ok {
-		return "", "", false, nil
-	}
-	var reaper backupReaperSummary
-	if json.Unmarshal([]byte(raw), &reaper) != nil {
+	reaper, decoded := decodeSummary[backupReaperSummary]([]byte(payloads[metric.TopicBackupReaper()]))
+	if !decoded {
 		return "", "", false, nil
 	}
 	return reaper.State, reaper.ExpiresTS, true, nil

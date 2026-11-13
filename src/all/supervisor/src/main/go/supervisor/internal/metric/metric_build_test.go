@@ -186,13 +186,13 @@ func TestMetricBuild_TopicToAndFromID(t *testing.T) {
 		},
 		{
 			name:                   "sad_command",
-			topic:                  strings.NewReplacer("$HOST", "labnode-one").Replace(templateCommand),
+			topic:                  "supervisor/labnode-one/command",
 			expectedFromIDError:    false,
 			expectedFromTopicError: true,
 		},
 		{
 			name:                   "sad_snapshot",
-			topic:                  strings.NewReplacer("$HOST", "labnode-one").Replace(templateSnapshot),
+			topic:                  "supervisor/labnode-one/snapshot",
 			expectedFromIDError:    false,
 			expectedFromTopicError: true,
 		},

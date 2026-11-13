@@ -4,13 +4,14 @@
 # asleep, quiesce the host so a power cut lands on clean disks, never powers off
 #
 # Usage
-#   asleep [--deep | --shallow] [--keep UNIT]... [--stop CONTAINER]... [--stop-timeout SECONDS] [--quiet] [--dry-run]
+#   asleep [--deep | --shallow] [--keep UNIT]... [--stop CONTAINER]... [--except CONTAINER]... [--stop-timeout SECONDS] [--quiet] [--dry-run]
 #
 # Options
 #   --deep            stop everything, root and every mount read only (default)
 #   --shallow         leave docker, swap, journal and root alone, unmount what no container holds
 #   --keep UNIT       spare a host service from the stop, may repeat
 #   --stop NAME       stop this container, shallow only, may repeat
+#   --except NAME     stop every running container but this one, shallow only, may repeat, not with --stop
 #   --stop-timeout    grace seconds per container before it is killed, default 120
 #   --quiet           drop DEBUG lines
 #   --dry-run         print the steps, change nothing
@@ -161,8 +162,9 @@ units() {
 ARGS=("$@")
 KEEP_NAMES=()
 STOP_NAMES=()
+EXCEPT_NAMES=()
 usage() {
-  log_error "Usage, asleep [--deep | --shallow] [--keep UNIT] [--stop CONTAINER] [--quiet] [--dry-run]"
+  log_error "Usage, asleep [--deep | --shallow] [--keep UNIT] [--stop CONTAINER] [--except CONTAINER] [--quiet] [--dry-run]"
   log_error "Usage, asleep [--stop-timeout SECONDS], options marked [] may repeat or be omitted"
   exit 2
 }
@@ -182,6 +184,11 @@ while [[ $# -gt 0 ]]; do
     STOP_NAMES+=("$2")
     shift
     ;;
+  --except)
+    [[ $# -ge 2 ]] || usage
+    EXCEPT_NAMES+=("$2")
+    shift
+    ;;
   --stop-timeout)
     [[ $# -ge 2 && "$2" =~ ^[0-9]+$ ]] || usage
     STOP_TIMEOUT="$2"
@@ -193,6 +200,14 @@ while [[ $# -gt 0 ]]; do
 done
 if [[ ${#STOP_NAMES[@]} -gt 0 && "${MODE}" != "shallow" ]]; then
   log_error "Option [--stop] needs [--shallow], deep stops every container"
+  exit 2
+fi
+if [[ ${#EXCEPT_NAMES[@]} -gt 0 && "${MODE}" != "shallow" ]]; then
+  log_error "Option [--except] needs [--shallow], deep stops every container"
+  exit 2
+fi
+if [[ ${#EXCEPT_NAMES[@]} -gt 0 && ${#STOP_NAMES[@]} -gt 0 ]]; then
+  log_error "Options [--stop] and [--except] cannot be combined"
   exit 2
 fi
 
@@ -215,7 +230,7 @@ trap 'log_debug "Exiting, exit code [$?]"; rm -f "$0"' EXIT
 
 log_info "Starting, host [$(hostname)], mode [${MODE}], dry run [${DRY_RUN}], run [${RUN_ID}]"
 log_debug "Script [$(sha256sum "$0" | cut -c1-12)], user [$(id -un)], pid [$$], log [${LOG_FILE}], state [${STATE}]"
-log_debug "Keep [${KEEP_NAMES[*]:-}], stop [${STOP_NAMES[*]:-}], stop timeout [${STOP_TIMEOUT}] seconds"
+log_debug "Keep [${KEEP_NAMES[*]:-}], stop [${STOP_NAMES[*]:-}], except [${EXCEPT_NAMES[*]:-}], stop timeout [${STOP_TIMEOUT}] seconds"
 
 ################################################################################
 # Docker
@@ -304,11 +319,16 @@ if [[ "${DOCKER_UP}" == "true" ]]; then
       fail "docker still running"
     fi
     RUNNING_AFTER=()
-  elif [[ ${#STOP_NAMES[@]} -gt 0 ]]; then
+  elif [[ ${#STOP_NAMES[@]} -gt 0 || ${#EXCEPT_NAMES[@]} -gt 0 ]]; then
     STOP_IDS=()
     RUNNING_AFTER=()
     for LINE in "${RUNNING[@]}"; do
-      if printf '%s\n' "${STOP_NAMES[@]}" | grep -qxF "${LINE#* }"; then
+      if [[ ${#EXCEPT_NAMES[@]} -gt 0 ]]; then
+        printf '%s\n' "${EXCEPT_NAMES[@]}" | grep -qxF "${LINE#* }" && STOPPING=false || STOPPING=true
+      else
+        printf '%s\n' "${STOP_NAMES[@]}" | grep -qxF "${LINE#* }" && STOPPING=true || STOPPING=false
+      fi
+      if [[ "${STOPPING}" == "true" ]]; then
         STOP_IDS+=("${LINE%% *}")
       else
         log_debug "Container [${LINE#* }] left running"
@@ -323,7 +343,7 @@ if [[ "${DOCKER_UP}" == "true" ]]; then
   else
     log_debug "Shallow with nothing to stop, containers left running [${#RUNNING[@]}]"
   fi
-elif [[ ${#STOP_NAMES[@]} -gt 0 ]]; then
+elif [[ ${#STOP_NAMES[@]} -gt 0 || ${#EXCEPT_NAMES[@]} -gt 0 ]]; then
   log_warn "Docker not running, nothing to stop"
 fi
 

@@ -115,7 +115,8 @@ func runBackupStart(ctx context.Context, request BackupRequest) error {
 	}
 	defer func() { _ = lock.Close() }()
 	if err := syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
-		discardRun(runPath)
+		_ = os.Remove(runLogPath(runPath))
+		_ = os.Remove(runPath)
 		return fmt.Errorf("another backup run holds [%s], refusing to start", locked)
 	}
 	defer func() { _ = syscall.Flock(int(lock.Fd()), syscall.LOCK_UN) }()
@@ -128,7 +129,6 @@ func runBackupStart(ctx context.Context, request BackupRequest) error {
 	} else {
 		defer func() { _ = attached.Close() }()
 	}
-
 	stages := backupStages
 	if request.Stage != "" {
 		stages = []metric.BackupStage{request.Stage}
@@ -143,7 +143,6 @@ func runBackupStart(ctx context.Context, request BackupRequest) error {
 			"[%s] deadline capped at [%s], [%s] before the scheduled [%02d:00] run", request.RunID,
 			expires.Format(backupTimeFormat), backupScheduleMargin, backupScheduledHour)
 	}
-
 	stageErr := runStageSequence(stages, func(stage metric.BackupStage) error {
 		return runStage(ctx, stageRequest{
 			Stage: stage, RunID: request.RunID, RunPath: runPath, Expires: expires,
@@ -220,7 +219,6 @@ func runBackupStop(ctx context.Context, request BackupRequest) error {
 		}
 		return nil
 	}
-
 	if acquired() {
 		defer func() { _ = syscall.Flock(int(lock.Fd()), syscall.LOCK_UN) }()
 		forceErr := forced()
@@ -238,7 +236,6 @@ func runBackupStop(ctx context.Context, request BackupRequest) error {
 			"[%s] held [%d] stage(s) of a run no process owns, finalised as [%s]", runID, len(active), metric.BackupStateStopped)
 		return forceErr
 	}
-
 	for stage := range active {
 		_ = os.WriteFile(filepath.Join(stageDir(runPath, stage), stageStoppedMarker), nil, 0o644)
 	}
@@ -339,11 +336,6 @@ func backupRunPending(root, run string) bool {
 		return false
 	}
 	return snapshot.age() < backupTailSettle
-}
-
-func discardRun(runPath string) {
-	_ = os.Remove(runLogPath(runPath))
-	_ = os.Remove(runPath)
 }
 
 func backupExpiry(configPath string, started time.Time, timeout time.Duration) (time.Time, bool) {
