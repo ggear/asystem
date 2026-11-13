@@ -399,6 +399,49 @@ func TestProbeImplBackup_SnapshotFollowsTheTreeRatherThanAClock(t *testing.T) {
 	}
 }
 
+func TestProbeImplBackup_StoppedRunKeepsTheLastVerdict(t *testing.T) {
+	failed := time.Now().Add(-2 * time.Hour).Format(backupTimestampFormat)
+	stopped := time.Now().Add(-time.Hour).Format(backupTimestampFormat)
+	tests := []struct {
+		name            string
+		setup           func(root string)
+		expectedFailed  int8
+		expectedHalted  int8
+		expectedService bool
+		expectedFound   bool
+		expectedDir     string
+	}{
+		{"a stop after a failure keeps the failure", func(root string) {
+			writeBackupRun(t, root, failed, &backupSummary{StagesRun: 3, StagesFailed: 1, State: metric.BackupStateFailure}, nil, map[string]bool{"plex": false})
+			writeBackupRun(t, root, stopped, &backupSummary{StagesRun: 3, StagesHalted: 1, State: metric.BackupStateStopped}, nil, nil)
+		}, 33, 33, false, true, failed},
+		{"a stop after a success keeps the success", func(root string) {
+			writeBackupRun(t, root, failed, &backupSummary{StagesRun: 3, State: metric.BackupStateSuccess}, nil, map[string]bool{"plex": true})
+			writeBackupRun(t, root, stopped, &backupSummary{StagesRun: 3, StagesHalted: 1, State: metric.BackupStateStopped}, nil, nil)
+		}, 0, 33, true, true, failed},
+		{"a stop with nothing before it is read as it stands", func(root string) {
+			writeBackupRun(t, root, stopped, &backupSummary{StagesRun: 3, StagesHalted: 1, State: metric.BackupStateStopped}, nil, nil)
+		}, 0, 33, false, false, stopped},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			root := t.TempDir()
+			testCase.setup(root)
+			p := &backupProbe{root: root, serverHost: true}
+			failedValue, _, failedErr := p.failedBackupStages()
+			haltedValue, _, haltedErr := p.haltedBackupStages()
+			service, found, dir := p.serviceSuccess("plex")
+			if failedErr != nil || haltedErr != nil {
+				t.Fatalf("errors: failed [%v] halted [%v]", failedErr, haltedErr)
+			}
+			if failedValue != testCase.expectedFailed || haltedValue != testCase.expectedHalted || service != testCase.expectedService || found != testCase.expectedFound || dir != testCase.expectedDir {
+				t.Errorf("got failed [%d] halted [%d] service [%v] found [%v] dir [%s] want failed [%d] halted [%d] service [%v] found [%v] dir [%s]",
+					failedValue, haltedValue, service, found, dir, testCase.expectedFailed, testCase.expectedHalted, testCase.expectedService, testCase.expectedFound, testCase.expectedDir)
+			}
+		})
+	}
+}
+
 func TestProbeImplBackup_HaltedBackupStages(t *testing.T) {
 	fresh := time.Now().Format(backupTimestampFormat)
 	tests := []struct {

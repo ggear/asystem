@@ -130,6 +130,10 @@
               "lounge_arc_microphone",
               "parents_air_purifier_replace_filter",
               "parents_move_microphone",
+              "rackmains_guard_live",
+              "rackmains_mains_failed",
+              "rackmains_ups_boost",
+              "rackmains_ups_trim",
               "template_back_door_state",
               "template_bathroom_rails_plug_proxy",
               "template_ceiling_network_switch_plug_proxy",
@@ -185,7 +189,8 @@
             "entities": [
               "back_door_lock_battery_low",
               "back_door_sensor_battery_low",
-              "front_door_lock_battery_low"
+              "front_door_lock_battery_low",
+              "rackmains_battery_low"
             ]
           }
         ],
@@ -222,7 +227,8 @@
             "subject": true,
             "entities": [
               "kitchen_move_charging",
-              "parents_move_charging"
+              "parents_move_charging",
+              "rackmains_battery_charging"
             ]
           }
         ],
@@ -356,6 +362,80 @@
               "edwin_fan_occupancy",
               "lounge_fan_occupancy",
               "parents_fan_occupancy"
+            ]
+          }
+        ],
+        "measures": [
+          {
+            "key": "state",
+            "kind": "str",
+            "unit": "",
+            "description": "Home Assistant value",
+            "persist": true,
+            "period": "",
+            "levels": null
+          },
+          {
+            "key": "value",
+            "kind": "float",
+            "unit": "",
+            "description": "Home Assistant value",
+            "persist": true,
+            "period": "",
+            "levels": null
+          }
+        ]
+      },
+      {
+        "path": "binary_sensor__problem",
+        "description": "Home Assistant binary_sensor__problem",
+        "cadence": "<on-change>",
+        "entities": [],
+        "dimensions": [
+          {
+            "key": "entity_id",
+            "description": "Home Assistant entity_id",
+            "subject": true,
+            "entities": [
+              "rackmains_battery_age_due",
+              "rackmains_battery_replace_due",
+              "rackmains_ups_problem"
+            ]
+          }
+        ],
+        "measures": [
+          {
+            "key": "state",
+            "kind": "str",
+            "unit": "",
+            "description": "Home Assistant value",
+            "persist": true,
+            "period": "",
+            "levels": null
+          },
+          {
+            "key": "value",
+            "kind": "float",
+            "unit": "",
+            "description": "Home Assistant value",
+            "persist": true,
+            "period": "",
+            "levels": null
+          }
+        ]
+      },
+      {
+        "path": "binary_sensor__running",
+        "description": "Home Assistant binary_sensor__running",
+        "cadence": "<on-change>",
+        "entities": [],
+        "dimensions": [
+          {
+            "key": "entity_id",
+            "description": "Home Assistant entity_id",
+            "subject": true,
+            "entities": [
+              "rackmains_ups_calibrating"
             ]
           }
         ],
@@ -1030,6 +1110,10 @@
               "rack_printer_plug_energy_monthly",
               "rack_printer_plug_energy_weekly",
               "rack_printer_plug_energy_yearly",
+              "rackmains_guard_state",
+              "rackmains_output_load_pct",
+              "rackmains_read_failures",
+              "rackmains_ups_status",
               "roof_24hour_rain",
               "roof_cloud_base",
               "roof_daily_rain",
@@ -1224,6 +1308,7 @@
               "parents_move_battery",
               "pixel_tablet_battery_level",
               "pixel_tablet_battery_level_2",
+              "rackmains_battery_charge_pct",
               "tablet_ada_battery_level",
               "tablet_ada_battery_level_2",
               "tablet_edwin_battery_level_2",
@@ -1238,7 +1323,8 @@
             "entities": [
               "10.200.2005",
               "10.200.2012",
-              "10.200.2025"
+              "10.200.2025",
+              "10.200.2027"
             ]
           },
           {
@@ -1332,6 +1418,44 @@
             "subject": false,
             "entities": [
               "A"
+            ]
+          }
+        ],
+        "measures": [
+          {
+            "key": "value",
+            "kind": "float",
+            "unit": "",
+            "description": "Home Assistant value",
+            "persist": true,
+            "period": "",
+            "levels": null
+          }
+        ]
+      },
+      {
+        "path": "sensor__duration",
+        "description": "Home Assistant sensor__duration",
+        "cadence": "<on-change>",
+        "entities": [],
+        "dimensions": [
+          {
+            "key": "entity_id",
+            "description": "Home Assistant entity_id",
+            "subject": true,
+            "entities": [
+              "rackmains_battery_age_days",
+              "rackmains_guard_battery_seconds",
+              "rackmains_guard_mains_seconds"
+            ]
+          },
+          {
+            "key": "unit_of_measurement",
+            "description": "Home Assistant unit_of_measurement",
+            "subject": false,
+            "entities": [
+              "d",
+              "s"
             ]
           }
         ],
@@ -2213,6 +2337,41 @@
         ]
       },
       {
+        "path": "sensor__frequency",
+        "description": "Home Assistant sensor__frequency",
+        "cadence": "<on-change>",
+        "entities": [],
+        "dimensions": [
+          {
+            "key": "entity_id",
+            "description": "Home Assistant entity_id",
+            "subject": false,
+            "entities": [
+              "rackmains_output_hertz"
+            ]
+          },
+          {
+            "key": "unit_of_measurement",
+            "description": "Home Assistant unit_of_measurement",
+            "subject": true,
+            "entities": [
+              "Hz"
+            ]
+          }
+        ],
+        "measures": [
+          {
+            "key": "value",
+            "kind": "float",
+            "unit": "",
+            "description": "Home Assistant value",
+            "persist": true,
+            "period": "",
+            "levels": null
+          }
+        ]
+      },
+      {
         "path": "sensor__humidity",
         "description": "Home Assistant sensor__humidity",
         "cadence": "<on-change>",
@@ -2810,7 +2969,8 @@
               "bom_darlington_uv_start_time_1",
               "bom_darlington_uv_start_time_2",
               "bom_darlington_uv_start_time_3",
-              "bom_darlington_uv_start_time_4"
+              "bom_darlington_uv_start_time_4",
+              "rackmains_read_last_epoch_seconds"
             ]
           }
         ],
@@ -2846,6 +3006,10 @@
               "kitchen_dish_washer_plug_voltage",
               "lounge_tv_plug_voltage",
               "rack_backup_plug_voltage",
+              "rackmains_battery_volts",
+              "rackmains_mains_input_fault_volts",
+              "rackmains_mains_input_volts",
+              "rackmains_output_volts",
               "server_lia_plug_voltage",
               "statistics_weatherstation_console_battery_voltage_mean20",
               "weatherstation_console_battery_voltage"

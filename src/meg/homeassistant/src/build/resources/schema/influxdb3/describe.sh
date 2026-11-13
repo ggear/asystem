@@ -269,6 +269,30 @@ WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
+    'binary_sensor__problem'   AS relation,
+    'entity_id*'               AS dimension,
+    2                          AS measures,
+    '<on-change>'              AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM binary_sensor__problem
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
+    'binary_sensor__running'   AS relation,
+    'entity_id*'               AS dimension,
+    2                          AS measures,
+    '<on-change>'              AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM binary_sensor__running
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
     'binary_sensor__safety'    AS relation,
     'entity_id*'               AS dimension,
     2                          AS measures,
@@ -449,6 +473,18 @@ WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
+    'sensor__duration'               AS relation,
+    'entity_id*/unit_of_measurement' AS dimension,
+    1                                AS measures,
+    '<on-change>'                    AS cadence,
+    count(*)                         AS rows,
+    CAST(min(time) AS VARCHAR)       AS oldest,
+    CAST(max(time) AS VARCHAR)       AS newest
+FROM sensor__duration
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
     'sensor__energy'                 AS relation,
     'entity_id*/unit_of_measurement' AS dimension,
     1                                AS measures,
@@ -469,6 +505,18 @@ SELECT
     CAST(min(time) AS VARCHAR) AS oldest,
     CAST(max(time) AS VARCHAR) AS newest
 FROM sensor__enum
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
+    'sensor__frequency'              AS relation,
+    'entity_id/unit_of_measurement*' AS dimension,
+    1                                AS measures,
+    '<on-change>'                    AS cadence,
+    count(*)                         AS rows,
+    CAST(min(time) AS VARCHAR)       AS oldest,
+    CAST(max(time) AS VARCHAR)       AS newest
+FROM sensor__frequency
 WHERE
     module = 'homeassistant'
 UNION ALL
@@ -925,6 +973,86 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'binary_sensor__occupancy'
+    AND column_name NOT IN ('entity_id', 'module', 'state', 'time', 'value')
+UNION ALL
+SELECT
+    'binary_sensor__problem'                                    AS relation,
+    'state'                                                     AS measure,
+    'str'                                                       AS kind,
+    '-'                                                         AS unit,
+    '<on-change>'                                               AS period,
+    count(state)                                                AS rows,
+    CAST(min(time) FILTER (WHERE state IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE state IS NOT NULL) AS VARCHAR) AS newest
+FROM binary_sensor__problem
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
+    'binary_sensor__problem'                                    AS relation,
+    'value'                                                     AS measure,
+    'float'                                                     AS kind,
+    '-'                                                         AS unit,
+    '<on-change>'                                               AS period,
+    count(value)                                                AS rows,
+    CAST(min(time) FILTER (WHERE value IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE value IS NOT NULL) AS VARCHAR) AS newest
+FROM binary_sensor__problem
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
+    '-'                   AS relation,
+    column_name           AS measure,
+    '-'                   AS kind,
+    '-'                   AS unit,
+    '-'                   AS period,
+    CAST(NULL AS BIGINT)  AS rows,
+    CAST(NULL AS VARCHAR) AS oldest,
+    CAST(NULL AS VARCHAR) AS newest
+FROM information_schema.columns
+WHERE
+    table_name = 'binary_sensor__problem'
+    AND column_name NOT IN ('entity_id', 'module', 'state', 'time', 'value')
+UNION ALL
+SELECT
+    'binary_sensor__running'                                    AS relation,
+    'state'                                                     AS measure,
+    'str'                                                       AS kind,
+    '-'                                                         AS unit,
+    '<on-change>'                                               AS period,
+    count(state)                                                AS rows,
+    CAST(min(time) FILTER (WHERE state IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE state IS NOT NULL) AS VARCHAR) AS newest
+FROM binary_sensor__running
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
+    'binary_sensor__running'                                    AS relation,
+    'value'                                                     AS measure,
+    'float'                                                     AS kind,
+    '-'                                                         AS unit,
+    '<on-change>'                                               AS period,
+    count(value)                                                AS rows,
+    CAST(min(time) FILTER (WHERE value IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE value IS NOT NULL) AS VARCHAR) AS newest
+FROM binary_sensor__running
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
+    '-'                   AS relation,
+    column_name           AS measure,
+    '-'                   AS kind,
+    '-'                   AS unit,
+    '-'                   AS period,
+    CAST(NULL AS BIGINT)  AS rows,
+    CAST(NULL AS VARCHAR) AS oldest,
+    CAST(NULL AS VARCHAR) AS newest
+FROM information_schema.columns
+WHERE
+    table_name = 'binary_sensor__running'
     AND column_name NOT IN ('entity_id', 'module', 'state', 'time', 'value')
 UNION ALL
 SELECT
@@ -1615,6 +1743,33 @@ WHERE
     AND column_name NOT IN ('entity_id', 'module', 'time', 'unit_of_measurement', 'value')
 UNION ALL
 SELECT
+    'sensor__duration'                                          AS relation,
+    'value'                                                     AS measure,
+    'float'                                                     AS kind,
+    '-'                                                         AS unit,
+    '<on-change>'                                               AS period,
+    count(value)                                                AS rows,
+    CAST(min(time) FILTER (WHERE value IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE value IS NOT NULL) AS VARCHAR) AS newest
+FROM sensor__duration
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
+    '-'                   AS relation,
+    column_name           AS measure,
+    '-'                   AS kind,
+    '-'                   AS unit,
+    '-'                   AS period,
+    CAST(NULL AS BIGINT)  AS rows,
+    CAST(NULL AS VARCHAR) AS oldest,
+    CAST(NULL AS VARCHAR) AS newest
+FROM information_schema.columns
+WHERE
+    table_name = 'sensor__duration'
+    AND column_name NOT IN ('entity_id', 'module', 'time', 'unit_of_measurement', 'value')
+UNION ALL
+SELECT
     'sensor__energy'                                            AS relation,
     'value'                                                     AS measure,
     'float'                                                     AS kind,
@@ -1667,6 +1822,33 @@ FROM information_schema.columns
 WHERE
     table_name = 'sensor__enum'
     AND column_name NOT IN ('entity_id', 'module', 'state', 'time')
+UNION ALL
+SELECT
+    'sensor__frequency'                                         AS relation,
+    'value'                                                     AS measure,
+    'float'                                                     AS kind,
+    '-'                                                         AS unit,
+    '<on-change>'                                               AS period,
+    count(value)                                                AS rows,
+    CAST(min(time) FILTER (WHERE value IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE value IS NOT NULL) AS VARCHAR) AS newest
+FROM sensor__frequency
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
+    '-'                   AS relation,
+    column_name           AS measure,
+    '-'                   AS kind,
+    '-'                   AS unit,
+    '-'                   AS period,
+    CAST(NULL AS BIGINT)  AS rows,
+    CAST(NULL AS VARCHAR) AS oldest,
+    CAST(NULL AS VARCHAR) AS newest
+FROM information_schema.columns
+WHERE
+    table_name = 'sensor__frequency'
+    AND column_name NOT IN ('entity_id', 'module', 'time', 'unit_of_measurement', 'value')
 UNION ALL
 SELECT
     'sensor__humidity'                                          AS relation,
@@ -2128,6 +2310,32 @@ WHERE
 GROUP BY entity_id
 UNION ALL
 SELECT
+    'binary_sensor__problem'   AS relation,
+    'entity_id*'               AS dimension,
+    entity_id                  AS entity,
+    '-'                        AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM binary_sensor__problem
+WHERE
+    module = 'homeassistant'
+GROUP BY entity_id
+UNION ALL
+SELECT
+    'binary_sensor__running'   AS relation,
+    'entity_id*'               AS dimension,
+    entity_id                  AS entity,
+    '-'                        AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM binary_sensor__running
+WHERE
+    module = 'homeassistant'
+GROUP BY entity_id
+UNION ALL
+SELECT
     'binary_sensor__safety'    AS relation,
     'entity_id*'               AS dimension,
     entity_id                  AS entity,
@@ -2323,6 +2531,19 @@ WHERE
 GROUP BY concat(entity_id, '/', unit_of_measurement)
 UNION ALL
 SELECT
+    'sensor__duration'                          AS relation,
+    'entity_id*/unit_of_measurement'            AS dimension,
+    concat(entity_id, '/', unit_of_measurement) AS entity,
+    '-'                                         AS declared,
+    count(*)                                    AS rows,
+    CAST(min(time) AS VARCHAR)                  AS oldest,
+    CAST(max(time) AS VARCHAR)                  AS newest
+FROM sensor__duration
+WHERE
+    module = 'homeassistant'
+GROUP BY concat(entity_id, '/', unit_of_measurement)
+UNION ALL
+SELECT
     'sensor__energy'                            AS relation,
     'entity_id*/unit_of_measurement'            AS dimension,
     concat(entity_id, '/', unit_of_measurement) AS entity,
@@ -2347,6 +2568,19 @@ FROM sensor__enum
 WHERE
     module = 'homeassistant'
 GROUP BY entity_id
+UNION ALL
+SELECT
+    'sensor__frequency'                         AS relation,
+    'entity_id/unit_of_measurement*'            AS dimension,
+    concat(entity_id, '/', unit_of_measurement) AS entity,
+    '-'                                         AS declared,
+    count(*)                                    AS rows,
+    CAST(min(time) AS VARCHAR)                  AS oldest,
+    CAST(max(time) AS VARCHAR)                  AS newest
+FROM sensor__frequency
+WHERE
+    module = 'homeassistant'
+GROUP BY concat(entity_id, '/', unit_of_measurement)
 UNION ALL
 SELECT
     'sensor__humidity'                          AS relation,

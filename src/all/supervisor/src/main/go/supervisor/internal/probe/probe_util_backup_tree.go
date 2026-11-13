@@ -158,6 +158,14 @@ type backupSnapshot struct {
 	tertiary  *backupSummary
 	stages    map[metric.BackupStage]*backupSummary
 	services  map[string]bool
+	decided   *backupSnapshot
+}
+
+func (s *backupSnapshot) verdict() *backupSnapshot {
+	if s == nil || s.decided == nil {
+		return s
+	}
+	return s.decided
 }
 
 func (s *backupSnapshot) age() time.Duration {

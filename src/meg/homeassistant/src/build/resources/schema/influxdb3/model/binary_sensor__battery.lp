@@ -8,7 +8,8 @@
 #   tag entity_id* [Home Assistant entity_id:
 #     back_door_lock_battery_low,
 #     back_door_sensor_battery_low,
-#     front_door_lock_battery_low]
+#     front_door_lock_battery_low,
+#     rackmains_battery_low]
 #   field state - <on-change> [Home Assistant value]
 #   field value - <on-change> [Home Assistant value]
 

@@ -7,7 +7,8 @@
 #   tag module [always 'homeassistant']
 #   tag entity_id* [Home Assistant entity_id:
 #     kitchen_move_charging,
-#     parents_move_charging]
+#     parents_move_charging,
+#     rackmains_battery_charging]
 #   field state - <on-change> [Home Assistant value]
 #   field value - <on-change> [Home Assistant value]
 

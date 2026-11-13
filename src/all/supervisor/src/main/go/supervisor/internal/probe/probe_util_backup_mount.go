@@ -173,7 +173,7 @@ func mountTarget(ctx context.Context, subject scribe.Subject, target string) err
 		return errMountUndeclared
 	}
 	scribe.Log(scribe.SourceBackup, subject, scribe.ActionStart).Infof("mounting", time.Now(), "[%s] mounting", target)
-	_, code, abandoned := bounded(ctx, stageBoundedWait, "mount", target)
+	_, code, abandoned := bounded(context.WithoutCancel(ctx), stageBoundedWait, "mount", target)
 	if abandoned {
 		return errMountAbandoned
 	}

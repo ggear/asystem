@@ -27,6 +27,7 @@
 #     parents_move_battery,
 #     pixel_tablet_battery_level,
 #     pixel_tablet_battery_level_2,
+#     rackmains_battery_charge_pct,
 #     tablet_ada_battery_level,
 #     tablet_ada_battery_level_2,
 #     tablet_edwin_battery_level_2,
@@ -35,7 +36,8 @@
 #   tag model_version [Home Assistant model_version:
 #     10.200.2005,
 #     10.200.2012,
-#     10.200.2025]
+#     10.200.2025,
+#     10.200.2027]
 #   tag unit_of_measurement [Home Assistant unit_of_measurement:
 #     %]
 #   field value - <on-change> [Home Assistant value]

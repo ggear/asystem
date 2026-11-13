@@ -15,6 +15,10 @@
 #     kitchen_dish_washer_plug_voltage,
 #     lounge_tv_plug_voltage,
 #     rack_backup_plug_voltage,
+#     rackmains_battery_volts,
+#     rackmains_mains_input_fault_volts,
+#     rackmains_mains_input_volts,
+#     rackmains_output_volts,
 #     server_lia_plug_voltage,
 #     statistics_weatherstation_console_battery_voltage_mean20,
 #     weatherstation_console_battery_voltage]

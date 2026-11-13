@@ -127,7 +127,7 @@ func (p *backupProbe) poll(ctx context.Context, isPulse bool) error {
 }
 
 func (p *backupProbe) failedBackupStages() (int8, derivation, error) {
-	snapshot := p.documents()
+	snapshot := p.documents().verdict()
 	if snapshot != nil && snapshot.abandoned {
 		return 100, derivedf(scribe.ActionCompute, "computed [100] pct failed, scheduled run [%s] started [%s] min ago went silent past the [%s] min ceiling with no roll-up",
 			snapshot.dir, elapsedMinutes(snapshot.age()), elapsedMinutes(p.runCeiling())), nil
@@ -171,7 +171,7 @@ func (p *backupProbe) haltedBackupStages() (int8, derivation, error) {
 }
 
 func (p *backupProbe) usedBackupSpace() (int8, derivation, error) {
-	snapshot := p.documents()
+	snapshot := p.documents().verdict()
 	if snapshot == nil || snapshot.tertiary == nil || snapshot.tertiary.State == metric.BackupStateRunning {
 		if !p.serverHost {
 			return 0, derivedInertf(scribe.ActionCompute, "computed [0] pct used, host [%s] owns no share index so holds no backup disk, so inert and always ok", p.hostName), nil
@@ -191,7 +191,7 @@ func (p *backupProbe) usedBackupSpace() (int8, derivation, error) {
 }
 
 func (p *backupProbe) serviceSuccess(service string) (bool, bool, string) {
-	snapshot := p.documents()
+	snapshot := p.documents().verdict()
 	if snapshot == nil || snapshot.age() > p.staleWindow() {
 		return false, false, ""
 	}
@@ -675,17 +675,27 @@ func readNewestRun(root string, ceiling, stale time.Duration) *backupSnapshot {
 	started := newest.host == nil && newest.staged > 0
 	newest.running = started && newest.age() <= ceiling
 	newest.abandoned = started && !newest.running && newest.trigger == metric.BackupTriggerSystem
+	earlier := func(accept func(*backupSnapshot) bool) *backupSnapshot {
+		for index := len(runs) - 2; index >= 0; index-- {
+			candidate := readBackupRun(root, runs[index])
+			if candidate.age() > stale {
+				break
+			}
+			if candidate.host != nil && accept(candidate) {
+				return candidate
+			}
+		}
+		return nil
+	}
+	if newest.host != nil && newest.host.State == metric.BackupStateStopped {
+		newest.decided = earlier(func(candidate *backupSnapshot) bool { return candidate.host.State != metric.BackupStateStopped })
+		return newest
+	}
 	if newest.host != nil || newest.abandoned {
 		return newest
 	}
-	for index := len(runs) - 2; index >= 0; index-- {
-		candidate := readBackupRun(root, runs[index])
-		if candidate.age() > stale {
-			break
-		}
-		if candidate.host != nil {
-			return candidate
-		}
+	if candidate := earlier(func(*backupSnapshot) bool { return true }); candidate != nil {
+		return candidate
 	}
 	return newest
 }

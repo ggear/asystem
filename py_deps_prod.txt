@@ -64,7 +64,7 @@ fastapi==0.115.14
 dropbox==12.2.4
 gspread==6.2.1
 gspread-pandas==4.2.1
-psycopg[binary]==3.3.8
+psycopg[binary]==3.3.9
 psycopg2-binary==2.9.13
 influxdb3-python==0.21.0
 adbc-driver-postgresql==1.13.0

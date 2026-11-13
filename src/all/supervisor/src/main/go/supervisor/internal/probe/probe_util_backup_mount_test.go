@@ -321,3 +321,26 @@ func TestProbeUtilBackupMount_ABindOfAHostDirectoryIsNeverDetachedAsADisk(t *tes
 		})
 	}
 }
+
+func TestProbeUtilBackupMount_AStopDuringMountDoesNotInterruptTheMount(t *testing.T) {
+	fstab := filepath.Join(t.TempDir(), "fstab")
+	if err := os.WriteFile(fstab, []byte("/dev/null  /backup  btrfs  noauto  0 2\n"), 0o644); err != nil {
+		t.Fatalf("write fstab: %v", err)
+	}
+	originalFstab, originalStream := backupFstabPath, stageStream
+	t.Cleanup(func() { backupFstabPath, stageStream = originalFstab, originalStream })
+	backupFstabPath = fstab
+	var mountContextErr error
+	stageStream = func(ctx context.Context, _ io.Writer, name string, _ ...string) (string, int, bool) {
+		if name == "mount" {
+			mountContextErr = ctx.Err()
+		}
+		return "", 1, false
+	}
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	_ = mountTarget(ctx, scribe.SubjectNone, config.DirBackup)
+	if mountContextErr != nil {
+		t.Errorf("mount ran on a cancelled context [%v]", mountContextErr)
+	}
+}
