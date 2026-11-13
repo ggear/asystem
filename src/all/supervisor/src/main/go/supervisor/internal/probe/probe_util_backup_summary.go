@@ -165,6 +165,9 @@ func finishRun(root, runID string, started time.Time) backupSummary {
 		if staged == nil {
 			continue
 		}
+		if staged.State == metric.BackupStateRunning {
+			staged.State = metric.BackupStateFailure
+		}
 		states[stage] = staged.State
 		if staged.State != metric.BackupStateSkipped {
 			document.StagesRun++

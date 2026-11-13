@@ -157,6 +157,12 @@
           "keep_weekly": 4,
           "keep_monthly": 12
         },
+        "rackmains": {
+          "retain_days": 7,
+          "keep_daily": 7,
+          "keep_weekly": 8,
+          "keep_monthly": 60
+        },
         "wrangle": {
           "retain_days": 7,
           "keep_daily": 7,

@@ -364,6 +364,27 @@ func TestProbeUtilBackupSummary_FinishRunOverAStageThatWroteNothing(t *testing.T
 	}
 }
 
+func TestProbeUtilBackupSummary_FinishRunNeverLeavesARunRunning(t *testing.T) {
+	root := t.TempDir()
+	run := "2026-09-22_01-00-00"
+	runPath := backupRunPath(root, run)
+	for stage, state := range map[metric.BackupStage]string{
+		metric.BackupStagePrimary: metric.BackupStateSuccess, metric.BackupStageSecondary: metric.BackupStateRunning, metric.BackupStageTertiary: metric.BackupStateSuccess,
+	} {
+		if err := os.MkdirAll(stageDir(runPath, stage), 0o755); err != nil {
+			t.Fatalf("mkdir [%s]: %v", stage, err)
+		}
+		if err := writeAtomic(stageStatusPath(runPath, stage), backupSummary{State: state}); err != nil {
+			t.Fatalf("write [%s]: %v", stage, err)
+		}
+	}
+	document := finishRun(root, run, time.Now())
+	if document.State != metric.BackupStateFailure || document.StagesFailed != 1 || document.FinishedTS == "" {
+		t.Errorf("finishRun() = state %q failed %d finished %q, want a failure counting the stale stage and a finish time",
+			document.State, document.StagesFailed, document.FinishedTS)
+	}
+}
+
 func TestProbeUtilBackupSummary_ASkippedStageIsNeitherFailedNorHalted(t *testing.T) {
 	tests := []struct {
 		name          string

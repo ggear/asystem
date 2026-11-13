@@ -158,7 +158,8 @@ func backupListRow(root, run string) string {
 	if len(states) == 0 && scrubDeclared == "" {
 		result = backupUnknownCell
 	}
-	if snapshot.host != nil {
+	closed := snapshot.host != nil && snapshot.host.State == metric.BackupStateRunning && snapshot.host.FinishedTS != "" && result != metric.BackupStateRunning
+	if snapshot.host != nil && !closed {
 		result = snapshot.host.State
 	}
 	began, _ := runStarted(backupSummary{RunID: run})

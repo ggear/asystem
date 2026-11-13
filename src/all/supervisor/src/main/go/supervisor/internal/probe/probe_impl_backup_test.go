@@ -909,6 +909,36 @@ func TestProbeImplBackup_ReapLocalStaleKeepsEveryFieldItRewrites(t *testing.T) {
 	}
 }
 
+func TestProbeImplBackup_ReapLocalStaleNeverOverwritesAStageThatFinished(t *testing.T) {
+	original := stageStream
+	t.Cleanup(func() { stageStream = original })
+	stageStream = func(_ context.Context, _ io.Writer, _ string, _ ...string) (string, int, bool) { return "", 0, false }
+	root := t.TempDir()
+	run := "2026-09-22_01-00-00"
+	runPath := backupRunPath(root, run)
+	if err := os.MkdirAll(stageDir(runPath, metric.BackupStageSecondary), 0o755); err != nil {
+		t.Fatalf("mkdir secondary: %v", err)
+	}
+	path := stageStatusPath(runPath, metric.BackupStageSecondary)
+	wedged := backupSummary{RunID: run, State: metric.BackupStateRunning, Trigger: metric.BackupTriggerSystem,
+		StartedTS: time.Now().Add(-2 * time.Hour).Format(time.RFC3339), ExpiresTS: time.Now().Add(-time.Hour).Format(time.RFC3339)}
+	if err := writeAtomic(path, wedged); err != nil {
+		t.Fatalf("write secondary: %v", err)
+	}
+	snapshot := readNewestRun(root, testRunCeiling, testStaleWindow)
+	if snapshot == nil {
+		t.Fatalf("readNewestRun() found no run under [%s]", root)
+	}
+	finished := backupSummary{RunID: run, State: metric.BackupStateSuccess, Trigger: metric.BackupTriggerSystem, SuccessBool: true, FileCount: 2}
+	if err := writeAtomic(path, finished); err != nil {
+		t.Fatalf("write finished: %v", err)
+	}
+	(&backupProbe{root: root, configPath: filepath.Join(root, "config.json"), hostName: "testhost"}).reapLocalStale(t.Context(), snapshot)
+	if reaped := readBackupSummary(path); reaped == nil || *reaped != finished {
+		t.Errorf("stage document = %+v, want the finished document left untouched", reaped)
+	}
+}
+
 func TestProbeImplBackup_AnUnreadableMetricReasonFitsOneDetailColumn(t *testing.T) {
 	abandoned := t.TempDir()
 	stuck := time.Now().Add(-8 * time.Hour).Format(backupTimestampFormat)

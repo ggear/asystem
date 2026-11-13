@@ -361,6 +361,27 @@ func TestProbeUtilBackupRender_AStageThatNeverReachedTheScrubSaysWhy(t *testing.
 	}
 }
 
+func TestProbeUtilBackupRender_AFinishedRunNeverReadsRunningNorTicks(t *testing.T) {
+	root, run := t.TempDir(), "2026-10-02_01-00-10"
+	runPath := backupRunPath(root, run)
+	for _, stage := range backupStages {
+		path := stageStatusPath(runPath, stage)
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatalf("mkdir stage: %v", err)
+		}
+		if err := writeAtomic(path, backupSummary{RunID: run, State: metric.BackupStateSuccess, Trigger: metric.BackupTriggerSystem, FinishedTS: "2026-10-02T01:02:00+08:00"}); err != nil {
+			t.Fatalf("write stage: %v", err)
+		}
+	}
+	if err := writeAtomic(statusPath(runPath), backupSummary{RunID: run, State: metric.BackupStateRunning, FinishedTS: "2026-10-02T01:02:43+08:00"}); err != nil {
+		t.Fatalf("write run: %v", err)
+	}
+	columns := strings.Split(backupListRow(root, run), "|")
+	if result, duration := strings.TrimSpace(columns[len(columns)-2]), strings.TrimSpace(columns[3]); result != metric.BackupStateSuccess || !strings.HasPrefix(duration, "00h") {
+		t.Errorf("RESULT = %q DURATION = %q, want success and a duration measured to the finish", result, duration)
+	}
+}
+
 func TestProbeUtilBackupRender_APausingScrubReadsPausingBesideASuccessfulRun(t *testing.T) {
 	root, run := t.TempDir(), "2026-10-02_01-00-10"
 	runPath := backupRunPath(root, run)

@@ -388,6 +388,9 @@ func (p *backupProbe) reapLocalStale(ctx context.Context, snapshot *backupSnapsh
 		if err != nil || time.Now().Before(expires) {
 			continue
 		}
+		if current := readBackupSummary(stageStatusPath(runPath, stage)); current == nil || current.State != metric.BackupStateRunning {
+			continue
+		}
 		staleStart := config.NowIncludingSuspend()
 		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Warnf("faulting", staleStart, "[%-9s] stage of run [%s] still running with liveness expired at [%s], stopping it", stage, snapshot.dir, document.ExpiresTS)
 		stopCtx, stopCancel := context.WithTimeout(context.WithoutCancel(ctx), backupStopDeadline)
@@ -396,7 +399,11 @@ func (p *backupProbe) reapLocalStale(ctx context.Context, snapshot *backupSnapsh
 		if stopErr != nil {
 			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Warnf("faulting", staleStart, "[%-9s] stage of run [%s] did not stop within [%s], abandoning it with [%v]", stage, snapshot.dir, backupStopDeadline, stopErr)
 		}
-		stale := haltedStage(*document, metric.BackupStateTimeout)
+		current := readBackupSummary(stageStatusPath(runPath, stage))
+		if current == nil || current.State != metric.BackupStateRunning {
+			continue
+		}
+		stale := haltedStage(*current, metric.BackupStateTimeout)
 		_ = writeAtomic(stageStatusPath(runPath, stage), stale)
 		publishStageStatus(p.configPath, stage, stale)
 		reaped = true
