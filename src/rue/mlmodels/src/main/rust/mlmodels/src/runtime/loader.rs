@@ -272,7 +272,8 @@ pub fn replay(
                 .flatten()
                 .map(|entry| (text(&entry["name"]), numbers(&entry["data"])))
                 .collect();
-            let complete = required.iter().all(|name| inputs.contains_key(name));
+            let missing: Vec<&String> = required.iter().filter(|name| !inputs.contains_key(*name)).collect();
+            let complete = missing.is_empty();
             if step.get("error").is_some() {
                 if complete {
                     findings.push((
@@ -285,7 +286,7 @@ pub fn replay(
             if !complete {
                 findings.push((
                     "RP002".to_string(),
-                    format!("step [{step_id}] is missing required inputs"),
+                    format!("step [{step_id}] is missing required inputs [{missing:?}]"),
                 ));
                 continue;
             }

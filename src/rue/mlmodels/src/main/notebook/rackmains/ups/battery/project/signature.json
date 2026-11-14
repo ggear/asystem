@@ -35,13 +35,13 @@
       }
     },
     {
-      "name": "rackmains_mains_failed",
+      "name": "rackmains_mains_present",
       "datatype": "INT64",
       "shape": [1],
       "parameters": {
         "unit": "flag",
         "required": true,
-        "description": "1 while the UPS is running from its battery because the mains input has failed, 0 on mains. Also 0 during a deliberate battery calibration, when the unit runs from its battery with the mains healthy. Derived by rackmains from the UPS status, which is not sent."
+        "description": "1 while the mains input is present, 0 while the UPS is running from its battery because the mains input has failed. Also 1 during a deliberate battery calibration, when the unit runs from its battery with the mains healthy. Derived by rackmains from the UPS status, which is not sent."
       }
     },
     {
@@ -51,7 +51,7 @@
       "parameters": {
         "unit": "flag",
         "required": false,
-        "description": "1 during a deliberate battery calibration, when rackmains_mains_failed is held at 0. The battery is discharging when this or rackmains_mains_failed is 1. Absent means 0."
+        "description": "1 during a deliberate battery calibration, when rackmains_mains_present is held at 1. The battery is discharging when this is 1 or rackmains_mains_present is 0. Absent means 0."
       }
     },
     {

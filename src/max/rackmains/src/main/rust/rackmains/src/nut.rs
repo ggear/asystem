@@ -9,6 +9,8 @@ pub const COMMAND_DUMP: &str = "DUMPALL";
 pub const LINE_DONE: &str = "DUMPDONE";
 pub const LINE_OK: &str = "DATAOK";
 pub const LINE_STALE: &str = "DATASTALE";
+pub const TOKEN_OB: &str = "OB";
+pub const TOKEN_OL: &str = "OL";
 
 pub struct Sample {
     pub variable: &'static str,
@@ -65,8 +67,8 @@ impl Flags {
         let mut unknown = Vec::new();
         for token in status.split_whitespace() {
             match token {
-                "OL" | "DISCHRG" | "HB" => {}
-                "OB" => flags.raw_on_battery = true,
+                TOKEN_OL | "DISCHRG" | "HB" => {}
+                TOKEN_OB => flags.raw_on_battery = true,
                 "LB" => flags.low = true,
                 "RB" => flags.replace = true,
                 "OFF" | "OVER" | "BYPASS" | "FSD" | "ALARM" => flags.problem = true,

@@ -6,6 +6,7 @@ use crate::metrics::{
     Frame, GUARD_BATTERY_SECONDS, GUARD_FAILED_HOSTS, GUARD_LAST_ACTION, GUARD_LIVE, GUARD_MAINS_SECONDS, GUARD_STATE,
 };
 use crate::nut::Flags;
+use crate::outage::{DECISION_SHED, EVENT_DECISION};
 use crate::policy::Policy;
 
 pub const HOST_SHED_LAST: &str = "meg";
@@ -248,7 +249,7 @@ impl Guard {
         } else {
             return;
         };
-        self.decide(out, &format!("shed {reason}"));
+        self.decide(out, &format!("{DECISION_SHED} {reason}"));
         self.begin(Sequence::Shed);
     }
 
@@ -320,7 +321,7 @@ impl Guard {
 
     fn decide(&self, out: &mut Output, detail: &str) {
         out.rows.push(Row {
-            event: "decision",
+            event: EVENT_DECISION,
             detail: format!(
                 "{detail} guard_battery_seconds [{}] guard_mains_seconds [{}] guard_live [{}]",
                 self.battery.as_secs(),
@@ -731,5 +732,86 @@ mod tests {
         assert_eq!(frame.text(GUARD_STATE), Some("shedding"));
         assert_eq!(frame.text(GUARD_FAILED_HOSTS), Some("mad"));
         assert!(frame.flag(GUARD_LIVE));
+    }
+
+    struct Lcg(u64);
+
+    impl Lcg {
+        fn next(&mut self, bound: u64) -> u64 {
+            self.0 = self
+                .0
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            (self.0 >> 33) % bound
+        }
+    }
+
+    #[test]
+    fn any_interleaving_never_double_dispatches_ends_once_and_leaves_every_called_host_awake() {
+        let low = Flags {
+            raw_on_battery: true,
+            low: true,
+            ..Flags::default()
+        };
+        let calibrating = Flags {
+            raw_on_battery: true,
+            calibrating: true,
+            ..Flags::default()
+        };
+        for seed in 0..1500 {
+            let mut random = Lcg(seed);
+            let mut guard = guard();
+            let mut in_flight: Vec<Call> = Vec::new();
+            let mut last: std::collections::BTreeMap<String, Command> = std::collections::BTreeMap::new();
+            let mut outages = 0;
+            let mut ended = 0;
+            let mut mode = 0;
+            for tick in 0..4000 {
+                let random_phase = tick < 1500;
+                if tick % 25 == 0 {
+                    mode = if random_phase { random.next(5) } else { 1 };
+                }
+                let flags = match mode {
+                    0 => Some(battery()),
+                    1 => Some(mains()),
+                    2 => Some(calibrating),
+                    3 => Some(low),
+                    _ => None,
+                };
+                if matches!(flags, Some(flags) if flags.raw_on_battery) && !guard.in_outage() {
+                    outages += 1;
+                }
+                let mut outputs = vec![guard.step(flags, SECOND)];
+                let mut index = 0;
+                while index < in_flight.len() {
+                    if random.next(if random_phase { 4 } else { 2 }) == 0 {
+                        let call = in_flight.remove(index);
+                        let status = i32::from(random.next(5) == 0);
+                        outputs.push(guard.complete(&call.host, call.command, status));
+                    } else {
+                        index += 1;
+                    }
+                }
+                for output in outputs {
+                    for call in output.calls {
+                        assert!(
+                            !in_flight.iter().any(|flying| flying.host == call.host),
+                            "seed {seed} tick {tick} double dispatch to [{}]",
+                            call.host
+                        );
+                        last.insert(call.host.clone(), call.command);
+                        in_flight.push(call);
+                    }
+                    ended += usize::from(output.ended);
+                }
+            }
+            assert!(in_flight.is_empty(), "seed {seed} calls never finished");
+            assert_eq!(guard.state(), State::Idle, "seed {seed} not idle");
+            assert!(ended <= outages, "seed {seed} ended [{ended}] outages [{outages}]");
+            assert!(
+                last.values().all(|command| *command == Command::Awake),
+                "seed {seed} left a host asleep {last:?}"
+            );
+        }
     }
 }

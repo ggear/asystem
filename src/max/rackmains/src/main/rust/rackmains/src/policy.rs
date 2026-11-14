@@ -185,7 +185,7 @@ pub fn load_model(directory: &Path) -> Result<(Loaded, Policy), String> {
     let initial = loaded.call(Request {
         clock_epoch_seconds: 0.0,
         rackmains_output_load_pct: 0,
-        rackmains_mains_failed: 0,
+        rackmains_mains_present: 1,
         rackmains_ups_calibrating: None,
         rackmains_battery_low: None,
         rackmains_battery_volts: None,
@@ -324,7 +324,7 @@ mod tests {
             .call(Request {
                 clock_epoch_seconds: 1.0,
                 rackmains_output_load_pct: 13,
-                rackmains_mains_failed: 1,
+                rackmains_mains_present: 0,
                 rackmains_ups_calibrating: None,
                 rackmains_battery_low: None,
                 rackmains_battery_volts: None,

@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/tetratelabs/wazero"
@@ -278,12 +279,13 @@ func Replay(directory string, signature map[string]any, predict Predict) ([]Find
 			for _, entry := range step.Request.Inputs {
 				inputs[entry.Name] = entry.Data
 			}
-			complete := true
+			var missing []string
 			for _, entry := range entries(signature, "inputs") {
 				if _, supplied := inputs[text(entry["name"])]; required(entry) && !supplied {
-					complete = false
+					missing = append(missing, text(entry["name"]))
 				}
 			}
+			complete := len(missing) == 0
 			if step.Error != "" {
 				if complete {
 					findings = append(findings, Finding{"RP001", fmt.Sprintf("step [%s] expects a signature error but supplies every required input", id)})
@@ -291,7 +293,7 @@ func Replay(directory string, signature map[string]any, predict Predict) ([]Find
 				continue
 			}
 			if !complete {
-				findings = append(findings, Finding{"RP002", fmt.Sprintf("step [%s] is missing required inputs", id)})
+				findings = append(findings, Finding{"RP002", fmt.Sprintf("step [%s] is missing required inputs [%v]", id, missing)})
 				continue
 			}
 			outputs, err := predict(inputs)
@@ -523,6 +525,8 @@ func loadWasm(path string, signatureJSON string) (Predict, error) {
 	}, nil
 }
 
+var onnxEnvironment sync.Mutex
+
 func loadOnnx(path string, signatureJSON string) (Predict, error) {
 	const exactInteger = 1 << 53
 	var sig struct {
@@ -536,12 +540,15 @@ func loadOnnx(path string, signatureJSON string) (Predict, error) {
 	if err := json.Unmarshal([]byte(signatureJSON), &sig); err != nil {
 		return nil, fmt.Errorf("signature invalid [%w]", err)
 	}
+	onnxEnvironment.Lock()
 	if !ort.IsInitialized() {
 		ort.SetSharedLibraryPath(os.Getenv("ONNXRUNTIME_LIB"))
 		if err := ort.InitializeEnvironment(); err != nil {
+			onnxEnvironment.Unlock()
 			return nil, fmt.Errorf("onnxruntime unavailable [%w]", err)
 		}
 	}
+	onnxEnvironment.Unlock()
 	outputNames := make([]string, len(sig.Outputs))
 	for index, entry := range sig.Outputs {
 		outputNames[index] = entry.Name

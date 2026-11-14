@@ -3,6 +3,6 @@ anyio==4.16.0
 fastapi==0.115.14
 numpy==2.5.4
 pandas==3.1.1
-onnxruntime==1.31.1
+onnxruntime==1.32.0
 wasmtime==50.0.1
 scikit-learn==1.9.1

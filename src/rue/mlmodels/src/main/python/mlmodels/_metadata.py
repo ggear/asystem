@@ -231,7 +231,11 @@ def lint_metadata(workspace_dir, flavour, pins_path=None):
     findings = [("MD002", f"metadata field missing or of the wrong type [{field}]") for field, kind in METADATA_FIELDS.items() if not isinstance(metadata.get(field), kind)]
     if findings:
         return findings
-    findings.extend(("MD004", message) for message in _target_findings(flavour, metadata["target"]))
+    target = metadata["target"]
+    if target.get("kind") not in TARGET_KINDS:
+        findings.append(("MD004", f"target kind unknown [{target}]"))
+    elif target["kind"] == "embedded" and flavour not in TARGET_MATRIX.get(str(target.get("language")), ()):
+        findings.append(("MD004", f"no wrapper for flavour [{flavour}] language [{target.get('language')}]"))
     findings.extend(("MD006", message) for message in _signature_version_findings(workspace_dir, metadata))
     release = metadata["release"]
     if release is None:
@@ -325,11 +329,3 @@ def requirements(workspace_dir, flavour, pins_path, source_dir):
 
 def content_sha256(project_dir):
     return file_sha256(join(project_dir, PROJECT_MANIFEST))
-
-
-def _target_findings(flavour, target):
-    if target.get("kind") not in TARGET_KINDS:
-        return [f"target kind unknown [{target}]"]
-    if target["kind"] == "embedded" and flavour not in TARGET_MATRIX.get(str(target.get("language")), ()):
-        return [f"no wrapper for flavour [{flavour}] language [{target.get('language')}]"]
-    return []

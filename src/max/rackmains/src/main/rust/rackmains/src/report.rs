@@ -3,7 +3,10 @@ use std::path::Path;
 use std::thread;
 use std::time::Duration;
 
-use crate::outage::{self, OutageFile, Table};
+use crate::metrics::{
+    BATTERY_VOLTS, COLUMN_DETAIL, COLUMN_ELAPSED, COLUMN_EVENT, GUARD_STATE, PLUG_WATTS, STATUS, UTILISATION,
+};
+use crate::outage::{self, OutageFile, Table, EVENT_START};
 
 const TAIL_POLL: Duration = Duration::from_secs(1);
 
@@ -35,14 +38,14 @@ pub fn format_row(table: &Table, row: &[String]) -> String {
     let cell = |name: &str| table.cell(row, name);
     format!(
         "{:>6}s {:<12} {:>6}V {:>3}% {:<10} {:>5}W {} {}",
-        cell("elapsed_seconds"),
-        cell("rackmains_ups_status"),
-        cell("rackmains_battery_volts"),
-        cell("rackmains_output_load_pct"),
-        cell("rackmains_guard_state"),
-        cell("rackmains_plug_watts"),
-        cell("event"),
-        cell("detail"),
+        cell(COLUMN_ELAPSED),
+        cell(STATUS),
+        cell(BATTERY_VOLTS),
+        cell(UTILISATION),
+        cell(GUARD_STATE),
+        cell(PLUG_WATTS),
+        cell(COLUMN_EVENT),
+        cell(COLUMN_DETAIL),
     )
 }
 
@@ -102,13 +105,17 @@ fn summarise(stem: &str, parts: &[OutageFile]) -> String {
     for part in parts {
         let Ok(table) = Table::read(&part.path) else { continue };
         rows += table.rows.len();
-        if let Some(first) = table.rows.first().filter(|first| table.cell(first, "event") == "start") {
-            if table.cell(first, "detail").contains("drill [") {
+        if let Some(first) = table
+            .rows
+            .first()
+            .filter(|first| table.cell(first, COLUMN_EVENT) == EVENT_START)
+        {
+            if table.cell(first, COLUMN_DETAIL).contains("drill [") {
                 kind = "drill";
             }
         }
         if let Some(last) = table.rows.last().filter(|_| table.ended()) {
-            let detail = table.cell(last, "detail");
+            let detail = table.cell(last, COLUMN_DETAIL);
             end = format!(
                 "{} seconds [{}] min_volts [{}] hosts_shed [{}]",
                 field(detail, "reason"),

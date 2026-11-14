@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
-use super::loader::{Kind, Model, ModelError, Tensors};
+use super::loader::{load_wasm, Kind, Model, ModelError, Tensors};
 
 static COUNTER: AtomicUsize = AtomicUsize::new(0);
 
@@ -166,4 +166,61 @@ fn an_integer_output_that_is_not_an_integer_is_a_runtime_error() {
 fn a_golden_difference_is_a_verify_error() {
     let model = Model::load(&project(3.0, "FP64", 9.0)).unwrap();
     assert_eq!(Kind::Verify, model.verify().unwrap_err().kind);
+}
+
+#[test]
+fn concurrent_replays_of_every_flavour_agree() {
+    for notebook in ["wasm/accumulate", "wasm/saturate", "onnx/linear"] {
+        if notebook.starts_with("onnx") && std::env::var("ONNXRUNTIME_LIB").is_err() {
+            eprintln!("skipped [{notebook}] ONNXRUNTIME_LIB is not set");
+            continue;
+        }
+        let directory = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../notebook/example")
+            .join(notebook)
+            .join("project");
+        let model = Model::load(&directory).unwrap();
+        std::thread::scope(|scope| {
+            let handles: Vec<_> = (0..16)
+                .map(|_| scope.spawn(|| (0..10).try_for_each(|_| model.verify())))
+                .collect();
+            for handle in handles {
+                handle.join().unwrap().unwrap();
+            }
+        });
+    }
+}
+
+#[test]
+fn the_wasm_host_gives_ieee_results_outside_the_domain() {
+    let directory = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../build/resources/maths");
+    let document: Value = serde_json::from_slice(&fs::read(directory.join("edges.json")).unwrap()).unwrap();
+    let number = |value: &Value| {
+        value
+            .as_str()
+            .map_or_else(|| value.as_f64().unwrap(), |text| text.parse::<f64>().unwrap())
+    };
+    let predict = load_wasm(
+        directory.join("edges.wasm").to_str().unwrap(),
+        &document["signature"].to_string(),
+    )
+    .unwrap();
+    let cases = document["cases"].as_array().unwrap();
+    assert!(!cases.is_empty());
+    for case in cases {
+        let inputs = Tensors::from([
+            ("a".to_string(), vec![number(&case["a"])]),
+            ("b".to_string(), vec![number(&case["b"])]),
+        ]);
+        let outputs = predict(&inputs).unwrap();
+        for (name, expected) in case["expect"].as_object().unwrap() {
+            let (want, got) = (number(expected), outputs[name][0]);
+            assert!(
+                got == want || (got.is_nan() && want.is_nan()),
+                "{name} of {} {}: got {got} want {want}",
+                case["a"],
+                case["b"]
+            );
+        }
+    }
 }

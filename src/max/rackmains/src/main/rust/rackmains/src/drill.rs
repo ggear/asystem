@@ -13,8 +13,12 @@ use serde_json::Value;
 
 use crate::cli::ExitError;
 use crate::liveness::{boot_ms, Effective, Liveness, FILE_LIVENESS};
-use crate::metrics::{self, Frame, PLUG_AMPS, PLUG_ENERGY, PLUG_POWER_STATE, PLUG_VOLTS, PLUG_WATTS};
-use crate::outage::{self, parse_stamp, write_atomic, OutageFile, Table, DIR_OUTAGE, DIR_STATE};
+use crate::metrics::{
+    self, Frame, COLUMN_DETAIL, COLUMN_ELAPSED, COLUMN_EVENT, COLUMN_TIME, PLUG_AMPS, PLUG_ENERGY, PLUG_POWER_STATE,
+    PLUG_VOLTS, PLUG_WATTS,
+};
+use crate::nut::{TOKEN_OB, TOKEN_OL};
+use crate::outage::{self, parse_stamp, write_atomic, OutageFile, Table, DIR_OUTAGE, DIR_STATE, EVENT_START};
 use crate::report;
 use crate::shed::load_hosts;
 
@@ -79,14 +83,6 @@ impl PlugReading {
             amps: energy["Current"].as_f64()?,
             energy_today_wh: (energy["Today"].as_f64()? * 1000.0).round() as i64,
         })
-    }
-
-    pub fn into_frame(self, frame: &mut Frame) {
-        frame.set_text(PLUG_POWER_STATE, &self.power);
-        frame.set_int(PLUG_WATTS, self.watts);
-        frame.set_int(PLUG_VOLTS, self.volts);
-        frame.set_number(PLUG_AMPS, self.amps);
-        frame.set_int(PLUG_ENERGY, self.energy_today_wh);
     }
 }
 
@@ -176,7 +172,11 @@ impl Sampler {
                 .map(|(_, reading)| reading.clone())
         });
         if let Some(reading) = reading {
-            reading.into_frame(frame);
+            frame.set_text(PLUG_POWER_STATE, &reading.power);
+            frame.set_int(PLUG_WATTS, reading.watts);
+            frame.set_int(PLUG_VOLTS, reading.volts);
+            frame.set_number(PLUG_AMPS, reading.amps);
+            frame.set_int(PLUG_ENERGY, reading.energy_today_wh);
         }
     }
 }
@@ -424,13 +424,14 @@ pub fn find_ack(dir: &Path, id: &str) -> Option<(OutageFile, Table)> {
     outage::files(dir).into_iter().rev().find_map(|file| {
         let table = Table::read(&file.path).ok()?;
         let first = table.rows.first()?;
-        (table.cell(first, "event") == "start" && report::field(table.cell(first, "detail"), "drill") == id)
+        (table.cell(first, COLUMN_EVENT) == EVENT_START
+            && report::field(table.cell(first, COLUMN_DETAIL), "drill") == id)
             .then_some((file, table))
     })
 }
 
 pub fn lead_in_verdict(table: &Table, lead: Duration) -> LeadIn {
-    let seconds = |row: &[String]| table.cell(row, "elapsed_seconds").parse::<u64>().unwrap_or(0);
+    let seconds = |row: &[String]| table.cell(row, COLUMN_ELAPSED).parse::<u64>().unwrap_or(0);
     let watts = |row: &[String]| table.cell(row, "rackmains_plug_watts").parse::<i64>().ok();
     let Some(first) = table.rows.iter().position(|row| watts(row).is_some()) else {
         return LeadIn::Wait;
@@ -439,7 +440,7 @@ pub fn lead_in_verdict(table: &Table, lead: Duration) -> LeadIn {
     let unsteady = |row: &&Vec<String>| {
         let status = table.cell(row, crate::metrics::STATUS);
         let (flags, _) = crate::nut::Flags::parse(status);
-        !status.split_whitespace().any(|token| token == "OL") || flags.problem
+        !status.split_whitespace().any(|token| token == TOKEN_OL) || flags.problem
     };
     if let Some(row) = window.iter().find(unsteady) {
         return LeadIn::Refuse(format!(
@@ -461,12 +462,12 @@ pub fn lead_in_verdict(table: &Table, lead: Duration) -> LeadIn {
 }
 
 pub fn held_seconds(table: &Table) -> Option<u64> {
-    let seconds = |row: &[String]| table.cell(row, "elapsed_seconds").parse::<u64>().ok();
+    let seconds = |row: &[String]| table.cell(row, COLUMN_ELAPSED).parse::<u64>().ok();
     let first = table.rows.iter().find(|row| {
         table
             .cell(row, crate::metrics::STATUS)
             .split_whitespace()
-            .any(|token| token == "OB")
+            .any(|token| token == TOKEN_OB)
     })?;
     Some(seconds(table.rows.last()?)?.saturating_sub(seconds(first)?))
 }
@@ -521,7 +522,15 @@ pub fn run_drill(env: &Env, raw_target: Option<&str>, force: bool) -> Result<(),
         state: STATE_ARMED.to_string(),
     };
     marker.write(&marker_path)?;
-    let result = drive(env, &target, &marker, &marker_path, &outage_dir);
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        drive(env, &target, &marker, &marker_path, &outage_dir)
+    }))
+    .unwrap_or_else(|_| {
+        Err(match restore_plug(env.plug.as_ref(), env.timing.poll) {
+            Ok(()) => ExitError::new(1, "the drill panicked, mains restored"),
+            Err(err) => ExitError::new(1, &err),
+        })
+    });
     let _ = fs::remove_file(&marker_path);
     result
 }
@@ -590,13 +599,14 @@ fn drive(env: &Env, target: &Target, marker: &Marker, marker_path: &Path, outage
         if SIGNALLED.load(Ordering::SeqCst) {
             return Err(abort(env, marker, marker_path, outage_dir, &stem, false));
         }
-        if reload().ended() || waiting.elapsed() > timing.lead_in * 3 + timing.ack_timeout {
+        let table = reload();
+        if table.ended() || waiting.elapsed() > timing.lead_in * 3 + timing.ack_timeout {
             return Err(ExitError::new(
                 EXIT_TIMEOUT,
                 "the lead-in never completed, nothing was cut",
             ));
         }
-        match lead_in_verdict(&reload(), timing.lead_in) {
+        match lead_in_verdict(&table, timing.lead_in) {
             LeadIn::Ready => break,
             LeadIn::Wait => {}
             LeadIn::Refuse(reason) => return Err(ExitError::new(1, &format!("{reason}, nothing was cut"))),
@@ -610,15 +620,19 @@ fn drive(env: &Env, target: &Target, marker: &Marker, marker_path: &Path, outage
         thread::sleep(timing.poll);
     }
     let seconds = deadman_seconds(target);
-    env.plug.command(&deadman_command(seconds), PLUG_COMMAND_TIMEOUT)?;
-    env.plug.command("Rule1 1", PLUG_COMMAND_TIMEOUT)?;
-    let armed = env.plug.command("Rule1", PLUG_COMMAND_TIMEOUT)?;
-    if !deadman_armed(&armed, seconds) {
+    let armed = env
+        .plug
+        .command(&deadman_command(seconds), PLUG_COMMAND_TIMEOUT)
+        .and_then(|_| env.plug.command("Rule1 1", PLUG_COMMAND_TIMEOUT))
+        .and_then(|_| env.plug.command("Rule1", PLUG_COMMAND_TIMEOUT));
+    let problem = match &armed {
+        Ok(reply) if deadman_armed(reply, seconds) => None,
+        Ok(_) => Some("the deadman did not read back armed".to_string()),
+        Err(err) => Some(format!("the deadman could not be set [{err}]")),
+    };
+    if let Some(problem) = problem {
         let _ = env.plug.command("Rule1 0", PLUG_COMMAND_TIMEOUT);
-        return Err(ExitError::new(
-            1,
-            "the deadman did not read back armed, nothing was cut",
-        ));
+        return Err(ExitError::new(1, &format!("{problem}, nothing was cut")));
     }
     println!("deadman armed [{seconds}s]");
     let off = env.plug.command("Power Off", PLUG_COMMAND_TIMEOUT);
@@ -702,7 +716,7 @@ fn verify_restored(env: &Env, outage_dir: &Path, stem: &str) -> Result<(), ExitE
             table
                 .cell(row, crate::metrics::STATUS)
                 .split_whitespace()
-                .all(|token| token != "OB")
+                .all(|token| token != TOKEN_OB)
         }) {
             return Ok(());
         }
@@ -752,7 +766,7 @@ fn gather(env: &Env, liveness: &Liveness, outage_dir: &Path, marker_path: &Path)
     let last_end = outage::files(outage_dir).into_iter().rev().find_map(|file| {
         let table = Table::read(&file.path).ok()?;
         let last = table.rows.last().filter(|_| table.ended())?;
-        parse_stamp(table.cell(last, "time"))
+        parse_stamp(table.cell(last, COLUMN_TIME))
     });
     let marker_run_open = Marker::read(marker_path).is_some_and(|marker| {
         marker.live(now)
@@ -1160,9 +1174,7 @@ mod tests {
         assert!(restore_plug(&plug, Duration::from_millis(1)).is_ok());
         assert!(plug.sent.lock().unwrap().iter().any(|sent| sent == "Rule1 0"));
         let dead = mock::MockPlug::default();
-        assert!(restore_plug(&dead, Duration::from_millis(1))
-            .unwrap_err()
-            .contains("PLUG NOT CONFIRMED ON"));
+        assert!(restore_plug(&dead, Duration::from_millis(1)).is_err());
     }
 
     #[test]

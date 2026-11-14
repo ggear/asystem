@@ -70,8 +70,9 @@ def test_publishes_readings():
         assert isinstance(payload["timestamp"], str) and len(payload["timestamp"]) == 20
         assert "samples" not in payload and "mains_status" not in payload
         assert payload["rackmains_ups_status"] == "OL"
-        for key in ("rackmains_mains_failed", "rackmains_battery_low", "rackmains_battery_replace_due", "rackmains_ups_problem", "rackmains_ups_calibrating"):
+        for key in ("rackmains_battery_low", "rackmains_battery_replace_due", "rackmains_ups_problem", "rackmains_ups_calibrating"):
             assert payload[key] == 0, key
+        assert payload["rackmains_mains_present"] == 1
         assert payload["rackmains_read_failures"] == 0
         assert isinstance(payload["clock_epoch_seconds"], float)
         assert isinstance(payload["rackmains_battery_age_days"], int)
@@ -120,7 +121,7 @@ def test_an_outage_is_recorded_and_the_service_stays_healthy_on_battery():
         rows = wait_until(lambda: exec_in_container("cat", join(DIR_OUTAGE, max(files))).splitlines())
         header = rows[0].split(",")
         assert header[:4] == ["time", "elapsed_seconds", "event", "detail"]
-        assert "rackmains_mains_failed" in header and "rackmains_guard_state" in header
+        assert "rackmains_mains_present" in header and "rackmains_guard_state" in header
         assert rows[1].split(",")[2] == "start"
         assert wait_until(lambda: health_status() == "healthy", 60)
     finally:

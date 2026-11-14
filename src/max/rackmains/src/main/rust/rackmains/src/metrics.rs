@@ -3,9 +3,12 @@ use std::collections::HashMap;
 use chrono::NaiveDate;
 use serde_json::{json, Map, Value};
 
-use crate::nut::Flags;
-
 pub const BATTERY_AGE_DUE_DAYS: i64 = 1095;
+
+pub const COLUMN_TIME: &str = "time";
+pub const COLUMN_ELAPSED: &str = "elapsed_seconds";
+pub const COLUMN_EVENT: &str = "event";
+pub const COLUMN_DETAIL: &str = "detail";
 
 pub const MAINS_INPUT_VOLTS: &str = "rackmains_mains_input_volts";
 pub const BATTERY_LOW: &str = "rackmains_battery_low";
@@ -24,7 +27,7 @@ pub const BATTERY_AGE_DUE: &str = "rackmains_battery_age_due";
 pub const BATTERY_VOLTS: &str = "rackmains_battery_volts";
 pub const UTILISATION: &str = "rackmains_output_load_pct";
 pub const STATUS: &str = "rackmains_ups_status";
-pub const ON_BATTERY: &str = "rackmains_mains_failed";
+pub const MAINS_PRESENT: &str = "rackmains_mains_present";
 pub const LAST_OUTAGE_SECONDS: &str = "rackmains_outage_last_duration_seconds";
 pub const LAST_OUTAGE_MIN_VOLTS: &str = "rackmains_outage_last_battery_min_volts";
 pub const LAST_OUTAGE_END: &str = "rackmains_outage_last_end_epoch_seconds";
@@ -109,7 +112,7 @@ pub const COLUMNS: &[Column] = &[
     later(BATTERY_ENERGY_REMAINING_PCT, Kind::Int),
     later(BATTERY_RUNTIME_REMAINING_SECONDS, Kind::Int),
     column(STATUS, Kind::Text),
-    column(ON_BATTERY, Kind::Int),
+    column(MAINS_PRESENT, Kind::Int),
     column(UPS_PROBLEM, Kind::Int),
     column(UPS_CALIBRATING, Kind::Int),
     column(UPS_BOOST, Kind::Int),
@@ -160,17 +163,6 @@ impl Frame {
 
     pub fn set_text(&mut self, name: &'static str, value: &str) {
         self.set(name, json!(value));
-    }
-
-    pub fn set_flags(&mut self, flags: Flags) {
-        self.set_bool(ON_BATTERY, flags.on_battery);
-        self.set_bool(BATTERY_LOW, flags.low);
-        self.set_bool(BATTERY_REPLACE, flags.replace);
-        self.set_bool(BATTERY_CHARGING, flags.charging);
-        self.set_bool(UPS_PROBLEM, flags.problem);
-        self.set_bool(UPS_CALIBRATING, flags.calibrating);
-        self.set_bool(UPS_BOOST, flags.boost);
-        self.set_bool(UPS_TRIM, flags.trim);
     }
 
     pub fn set_battery_age(&mut self, days: i64) {
@@ -229,7 +221,7 @@ impl Frame {
 }
 
 pub fn header() -> Vec<String> {
-    ["time", "elapsed_seconds", "event", "detail"]
+    [COLUMN_TIME, COLUMN_ELAPSED, COLUMN_EVENT, COLUMN_DETAIL]
         .into_iter()
         .map(str::to_string)
         .chain(COLUMNS.iter().map(|column| column.name.to_string()))
@@ -285,11 +277,9 @@ mod tests {
     #[test]
     fn bools_are_integers_in_payload_and_cells() {
         let mut frame = Frame::default();
-        frame.set_flags(Flags {
-            on_battery: true,
-            ..Flags::default()
-        });
-        assert_eq!(frame.payload()[ON_BATTERY], json!(1));
+        frame.set_bool(MAINS_PRESENT, true);
+        frame.set_bool(UPS_BOOST, false);
+        assert_eq!(frame.payload()[MAINS_PRESENT], json!(1));
         assert_eq!(frame.payload()[UPS_BOOST], json!(0));
     }
 
@@ -334,11 +324,11 @@ mod tests {
         let mut row = Frame::default();
         row.set_int(PLUG_WATTS, 90);
         row.set_text(MODEL_STATE, "{}");
-        row.set_bool(ON_BATTERY, true);
+        row.set_bool(MAINS_PRESENT, true);
         last.merge_sticky(&row);
         assert!(last.get(PLUG_WATTS).is_none());
         assert!(last.get(MODEL_STATE).is_none());
-        assert!(last.get(ON_BATTERY).is_some());
+        assert!(last.get(MAINS_PRESENT).is_some());
     }
 
     #[test]
@@ -389,5 +379,49 @@ mod tests {
         assert!(!frame.flag(BATTERY_AGE_DUE));
         frame.set_battery_age(BATTERY_AGE_DUE_DAYS);
         assert!(frame.flag(BATTERY_AGE_DUE));
+    }
+
+    #[test]
+    fn the_discovery_entities_and_the_declared_columns_name_the_same_keys() {
+        fn collect(dir: &std::path::Path, found: &mut Vec<Value>) {
+            for entry in std::fs::read_dir(dir).unwrap().flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    collect(&path, found);
+                } else if path.extension().is_some_and(|extension| extension == "json") {
+                    found.push(serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap());
+                }
+            }
+        }
+        let mut entities = Vec::new();
+        collect(
+            &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../resources/image/broker/homeassistant"),
+            &mut entities,
+        );
+        assert!(!entities.is_empty(), "no discovery entities found");
+        let declared: std::collections::BTreeSet<&str> = COLUMNS
+            .iter()
+            .filter(|column| column.mqtt && column.declared)
+            .map(|column| column.name)
+            .collect();
+        let mut entity_keys = std::collections::BTreeSet::new();
+        for entity in &entities {
+            entity_keys.insert(entity["unique_id"].as_str().unwrap().to_string());
+            let template = entity["value_template"].as_str().unwrap();
+            for key in template.split("value_json['").skip(1) {
+                entity_keys.insert(key.split('\'').next().unwrap().to_string());
+            }
+        }
+        let entity_keys: std::collections::BTreeSet<&str> = entity_keys.iter().map(String::as_str).collect();
+        let unpublished: Vec<_> = entity_keys.difference(&declared).collect();
+        let unexposed: Vec<_> = declared
+            .difference(&entity_keys)
+            .filter(|name| **name != CLOCK)
+            .collect();
+        assert!(
+            unpublished.is_empty(),
+            "entities with no declared column {unpublished:?}"
+        );
+        assert!(unexposed.is_empty(), "declared columns with no entity {unexposed:?}");
     }
 }

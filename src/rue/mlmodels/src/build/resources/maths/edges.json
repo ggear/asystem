@@ -1,0 +1,292 @@
+{
+  "schema": 1,
+  "signature": {
+    "inputs": [
+      {
+        "name": "a",
+        "datatype": "FP64",
+        "shape": [
+          1
+        ]
+      },
+      {
+        "name": "b",
+        "datatype": "FP64",
+        "shape": [
+          1
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "acos",
+        "datatype": "FP64",
+        "shape": [
+          1
+        ]
+      },
+      {
+        "name": "asin",
+        "datatype": "FP64",
+        "shape": [
+          1
+        ]
+      },
+      {
+        "name": "atan",
+        "datatype": "FP64",
+        "shape": [
+          1
+        ]
+      },
+      {
+        "name": "atan2",
+        "datatype": "FP64",
+        "shape": [
+          1
+        ]
+      },
+      {
+        "name": "cos",
+        "datatype": "FP64",
+        "shape": [
+          1
+        ]
+      },
+      {
+        "name": "cosh",
+        "datatype": "FP64",
+        "shape": [
+          1
+        ]
+      },
+      {
+        "name": "exp",
+        "datatype": "FP64",
+        "shape": [
+          1
+        ]
+      },
+      {
+        "name": "log",
+        "datatype": "FP64",
+        "shape": [
+          1
+        ]
+      },
+      {
+        "name": "log10",
+        "datatype": "FP64",
+        "shape": [
+          1
+        ]
+      },
+      {
+        "name": "log2",
+        "datatype": "FP64",
+        "shape": [
+          1
+        ]
+      },
+      {
+        "name": "pow",
+        "datatype": "FP64",
+        "shape": [
+          1
+        ]
+      },
+      {
+        "name": "sin",
+        "datatype": "FP64",
+        "shape": [
+          1
+        ]
+      },
+      {
+        "name": "sinh",
+        "datatype": "FP64",
+        "shape": [
+          1
+        ]
+      },
+      {
+        "name": "tan",
+        "datatype": "FP64",
+        "shape": [
+          1
+        ]
+      },
+      {
+        "name": "tanh",
+        "datatype": "FP64",
+        "shape": [
+          1
+        ]
+      }
+    ],
+    "parameters": {}
+  },
+  "cases": [
+    {
+      "a": 0.0,
+      "b": 0.0,
+      "expect": {
+        "log": "-inf",
+        "log2": "-inf",
+        "log10": "-inf",
+        "pow": 1.0,
+        "asin": 0.0,
+        "acos": 1.5707963267948966,
+        "sin": 0.0,
+        "exp": 1.0
+      }
+    },
+    {
+      "a": -0.0,
+      "b": 0.0,
+      "expect": {
+        "log": "-inf"
+      }
+    },
+    {
+      "a": -1.0,
+      "b": 2.0,
+      "expect": {
+        "log": "nan",
+        "log2": "nan",
+        "log10": "nan",
+        "pow": 1.0
+      }
+    },
+    {
+      "a": 2.0,
+      "b": 0.5,
+      "expect": {
+        "asin": "nan",
+        "acos": "nan"
+      }
+    },
+    {
+      "a": "inf",
+      "b": 1.0,
+      "expect": {
+        "sin": "nan",
+        "cos": "nan",
+        "tan": "nan",
+        "exp": "inf",
+        "cosh": "inf",
+        "sinh": "inf",
+        "log": "inf",
+        "tanh": 1.0,
+        "atan": 1.5707963267948966
+      }
+    },
+    {
+      "a": "-inf",
+      "b": 1.0,
+      "expect": {
+        "sin": "nan",
+        "exp": 0.0,
+        "cosh": "inf",
+        "sinh": "-inf",
+        "log": "nan",
+        "tanh": -1.0
+      }
+    },
+    {
+      "a": 1000.0,
+      "b": 1.0,
+      "expect": {
+        "exp": "inf",
+        "cosh": "inf",
+        "sinh": "inf",
+        "tanh": 1.0
+      }
+    },
+    {
+      "a": -1000.0,
+      "b": 1.0,
+      "expect": {
+        "exp": 0.0,
+        "cosh": "inf",
+        "sinh": "-inf",
+        "tanh": -1.0
+      }
+    },
+    {
+      "a": 0.0,
+      "b": -1.0,
+      "expect": {
+        "pow": "inf"
+      }
+    },
+    {
+      "a": -0.0,
+      "b": -1.0,
+      "expect": {
+        "pow": "-inf"
+      }
+    },
+    {
+      "a": 0.0,
+      "b": -2.0,
+      "expect": {
+        "pow": "inf"
+      }
+    },
+    {
+      "a": -8.0,
+      "b": 0.5,
+      "expect": {
+        "pow": "nan"
+      }
+    },
+    {
+      "a": 10.0,
+      "b": 400.0,
+      "expect": {
+        "pow": "inf"
+      }
+    },
+    {
+      "a": -10.0,
+      "b": 401.0,
+      "expect": {
+        "pow": "-inf"
+      }
+    },
+    {
+      "a": "nan",
+      "b": 1.0,
+      "expect": {
+        "sin": "nan",
+        "log": "nan",
+        "exp": "nan",
+        "pow": "nan"
+      }
+    },
+    {
+      "a": 1.0,
+      "b": "nan",
+      "expect": {
+        "pow": 1.0,
+        "atan2": "nan"
+      }
+    },
+    {
+      "a": 0.0,
+      "b": 0.0,
+      "expect": {
+        "atan2": 0.0
+      }
+    },
+    {
+      "a": 1.0,
+      "b": 0.0,
+      "expect": {
+        "atan2": 1.5707963267948966,
+        "pow": 1.0
+      }
+    }
+  ]
+}

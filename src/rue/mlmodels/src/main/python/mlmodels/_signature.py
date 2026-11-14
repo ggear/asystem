@@ -78,16 +78,11 @@ def banner(prefix):
     return [rule, f"{prefix} WARNING: This file is written by the build process, any manual edits will be lost!", rule, ""]
 
 
-def render_rust(signature, project=None):
+def render_rust(signature, project):
     required_inputs = [entry["name"] for entry in signature["inputs"] if entry["parameters"]["required"]]
     required_outputs = [entry["name"] for entry in signature["outputs"] if entry["parameters"]["required"]]
     lines = [*banner("//")]
-    if project is not None:
-        lines += [f"// project {project[0]} sha256 {project[1]}", ""]
-        lines += ["use std::path::Path;", ""]
-    lines.append("use serde::{Deserialize, Serialize};")
-    if project is not None:
-        lines += ["", "use super::loader::{Kind, Model, ModelError, Tensors};"]
+    lines += [f"// project {project[0]} sha256 {project[1]}", "", "use std::path::Path;", "", "use serde::{Deserialize, Serialize};", "", "use super::loader::{Kind, Model, ModelError, Tensors};"]
     lines += [
         "",
         f'pub const NAME: &str = "{signature["name"]}";',
@@ -107,8 +102,7 @@ def render_rust(signature, project=None):
             else:
                 lines += ['    #[serde(default, skip_serializing_if = "Option::is_none")]', f"    pub {entry['name']}: Option<{rust_type}>,"]
         lines.append("}")
-    if project is not None:
-        lines += _rust_conversions(signature)
+    lines += _rust_conversions(signature)
     return "\n".join(lines) + "\n"
 
 
@@ -191,18 +185,14 @@ def _rust_conversions(signature):
     return lines
 
 
-def render_go(signature, package, project=None):
+def render_go(signature, package, project):
     def exported(name):
         return "".join(part.capitalize() for part in name.split("_"))
 
     required_inputs = [entry["name"] for entry in signature["inputs"] if entry["parameters"]["required"]]
     required_outputs = [entry["name"] for entry in signature["outputs"] if entry["parameters"]["required"]]
     lines = [*banner("//")]
-    if project is not None:
-        lines += [f"// project {project[0]} sha256 {project[1]}", ""]
-    lines += [f"package {package}", ""]
-    if project is not None:
-        lines += ["import (", '\t"slices"', "", f'\t"{project[2]}"', ")", ""]
+    lines += [f"// project {project[0]} sha256 {project[1]}", "", f"package {package}", "", "import (", '\t"slices"', "", f'\t"{project[2]}"', ")", ""]
     lines += [
         f'const Name = "{signature["name"]}"',
         f"const StateSlots = {len(signature['parameters'].get('state', []))}",
@@ -222,8 +212,7 @@ def render_go(signature, package, project=None):
             tag = entry["name"] if required else f"{entry['name']},omitempty"
             lines.append(f'\t{exported(entry["name"])} {go_type} `json:"{tag}"`')
         lines.append("}")
-    if project is not None:
-        lines += _go_conversions(signature, exported)
+    lines += _go_conversions(signature, exported)
     return "\n".join(lines) + "\n"
 
 
@@ -306,18 +295,11 @@ def _go_conversions(signature, exported):
     return lines
 
 
-def render_python(signature, project=None):
+def render_python(signature, project):
     required_inputs = [entry["name"] for entry in signature["inputs"] if entry["parameters"]["required"]]
     required_outputs = [entry["name"] for entry in signature["outputs"] if entry["parameters"]["required"]]
     lines = [*banner("#")]
-    if project is not None:
-        lines += [f"# project {project[0]} sha256 {project[1]}", ""]
-    lines += [
-        "from dataclasses import dataclass",
-        "",
-    ]
-    if project is not None:
-        lines += ["from . import loader", ""]
+    lines += [f"# project {project[0]} sha256 {project[1]}", "", "from dataclasses import dataclass", "", "from . import loader", ""]
     lines += [
         f'NAME = "{signature["name"]}"',
         f"STATE_SLOTS = {len(signature['parameters'].get('state', []))}",
@@ -335,10 +317,8 @@ def render_python(signature, project=None):
                 lines.append(f"    {entry['name']}: {python_type}")
             else:
                 lines.append(f"    {entry['name']}: {python_type} | None = None")
-        if project is not None:
-            lines += _python_conversion(signature[section], section == "inputs")
-    if project is not None:
-        lines += _python_load()
+        lines += _python_conversion(signature[section], section == "inputs")
+    lines += _python_load()
     return "\n".join(lines) + "\n"
 
 

@@ -8,6 +8,9 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
+	"sync"
 	"testing"
 )
 
@@ -192,5 +195,90 @@ func TestLoader_GoldenDifferenceIsAVerifyError(t *testing.T) {
 	}
 	if err := model.Verify(); kindOf(err) != KindVerify {
 		t.Fatalf("got %v want a Verify error", err)
+	}
+}
+
+func TestLoader_ConcurrentReplaysOfEveryFlavourAgree(t *testing.T) {
+	for _, notebook := range []string{"wasm/accumulate", "wasm/saturate", "onnx/linear"} {
+		t.Run(notebook, func(t *testing.T) {
+			if strings.HasPrefix(notebook, "onnx") && os.Getenv("ONNXRUNTIME_LIB") == "" {
+				t.Skip("ONNXRUNTIME_LIB is not set")
+			}
+			directory := filepath.Join("..", "..", "..", "notebook", "example", filepath.FromSlash(notebook), "project")
+			model, err := Load(directory)
+			if err != nil {
+				t.Fatal(err)
+			}
+			failures := make(chan error, 16)
+			var group sync.WaitGroup
+			for range 16 {
+				group.Go(func() {
+					own, err := Load(directory)
+					if err != nil {
+						failures <- err
+						return
+					}
+					for range 10 {
+						if err := errors.Join(model.Verify(), own.Verify()); err != nil {
+							failures <- err
+							return
+						}
+					}
+				})
+			}
+			group.Wait()
+			close(failures)
+			for err := range failures {
+				t.Error(err)
+			}
+		})
+	}
+}
+
+func TestLoader_WasmHostGivesIEEEResultsOutsideTheDomain(t *testing.T) {
+	directory := filepath.Join("..", "..", "..", "..", "build", "resources", "maths")
+	content, err := os.ReadFile(filepath.Join(directory, "edges.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		Signature json.RawMessage `json:"signature"`
+		Cases     []struct {
+			A      any            `json:"a"`
+			B      any            `json:"b"`
+			Expect map[string]any `json:"expect"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(content, &document); err != nil {
+		t.Fatal(err)
+	}
+	number := func(value any) float64 {
+		if text, ok := value.(string); ok {
+			parsed, err := strconv.ParseFloat(text, 64)
+			if err != nil {
+				t.Fatal(err)
+			}
+			return parsed
+		}
+		return value.(float64)
+	}
+	predict, err := loadWasm(filepath.Join(directory, "edges.wasm"), string(document.Signature))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(document.Cases) == 0 {
+		t.Fatal("no cases")
+	}
+	for _, edge := range document.Cases {
+		outputs, err := predict(Tensors{"a": {number(edge.A)}, "b": {number(edge.B)}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for name, expected := range edge.Expect {
+			want, got := number(expected), outputs[name][0]
+			if got != want && !(math.IsNaN(got) && math.IsNaN(want)) {
+				t.Errorf("%s of [%v] [%v]: got %v want %v", name, edge.A, edge.B, got, want)
+			}
+		}
 	}
 }

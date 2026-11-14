@@ -89,7 +89,9 @@ def model_content(ws, flavour, source, constants):
         )
     else:
         text = f"{_constant_lines(constants)}\n\n{source}" if constants else source
-    _check_free_names(text, set())
+    free = _free_names(text)
+    if free:
+        raise GateError("Define", "source", f"the model reads names that are not constants, imports or builtins {sorted(free)}")
     return PROJECT_MODEL_FILES[flavour], text.encode(), None
 
 
@@ -155,12 +157,6 @@ def _free_names(text):
     defined = {symbol.get_name() for symbol in table.get_symbols() if symbol.is_assigned() or symbol.is_imported() or symbol.is_namespace()}
     walk(table)
     return free - defined - set(dir(builtins))
-
-
-def _check_free_names(text, allowed):
-    free = _free_names(text) - allowed
-    if free:
-        raise GateError("Define", "source", f"the model reads names that are not constants, imports or builtins {sorted(free)}")
 
 
 def _check_helpers(function, constants):

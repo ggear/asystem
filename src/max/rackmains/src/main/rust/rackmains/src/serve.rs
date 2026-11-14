@@ -21,7 +21,10 @@ use crate::liveness::{
 use crate::metrics::{self, Frame, CLOCK, LAST_READ, MODEL_STATE, READ_FAILURES, STATUS};
 use crate::model::battery::Request;
 use crate::nut::{Flags, Nut, Reading, Source, SAMPLES};
-use crate::outage::{self, Command, Stats, Writer, DIR_OUTAGE, DIR_STATE, END_ABORTED, END_RESTORED, EVENT_END};
+use crate::outage::{
+    self, Stats, Writer, WriterCommand, DIR_OUTAGE, DIR_STATE, END_ABORTED, END_RESTORED, EVENT_COMMAND, EVENT_END,
+    EVENT_NOTE, EVENT_START, EVENT_STATUS,
+};
 use crate::policy::{self, load_model, Loaded, Policy};
 use crate::schema::{AVAILABILITY_ONLINE, KEY_PERIOD_MS, KEY_TIMESTAMP};
 use crate::shed::{self, load_hosts, DryRun, Finished, Runner, Ssh};
@@ -31,6 +34,7 @@ static STOP_SIGNAL: AtomicI32 = AtomicI32::new(0);
 const REPORT_PERIOD: Duration = Duration::from_secs(60);
 const REPORT_PERIOD_BATTERY: Duration = Duration::from_secs(1);
 const SSH_TIMEOUT_SECONDS: u64 = 30;
+const SSH_LIMIT_SECONDS: u64 = 600;
 
 pub struct Settings {
     pub period: Duration,
@@ -184,28 +188,39 @@ impl Poller {
         self.failures
     }
 
-    pub fn sync(&self) {
-        self.writer.sync();
-    }
-
     pub fn stop(mut self) {
+        self.writer.stop();
         if let Err(err) = self.publisher.close() {
             warn!("failed to close the publisher [{err}]");
         }
-        self.writer.stop();
     }
 
+    // Poller tick flow, one pass per poll
+    //     1. Collect Calls: finished shed and wake calls into the guard
+    //     2. Read UPS: the driver socket, a failed read only counted
+    //     3. Build Frame: samples, flags and status changes
+    //     4. Open Session: the first raw OB opens the outage file
+    //     5. Match Drill Marker: ack a live marker, reject one mid-outage
+    //     6. Step Guard: flags and elapsed time in, calls and rows out
+    //     7. Observe Session: hosts shed and the outage statistics
+    //     8. End Drill: a marker gone or overrun before the cut, then the last outage summary
+    //     9. Call Model: the guard's policy and estimates from the battery model
+    //    10. Log Outage Start: one INFO line when a session opens
+    //    11. Publish: the retained payload, on battery every poll
+    //    12. Record Rows: the CSV rows for the writer thread
+    //    13. Finish: close the session, send rows, liveness and progress
     pub fn tick(&mut self, dt: Duration, wall: DateTime<Local>) -> Result<(), String> {
         let stamp = outage::stamp(wall);
         let naive = wall.naive_local();
         let epoch = SystemTime::from(wall)
             .duration_since(SystemTime::UNIX_EPOCH)
             .map_or(0.0, |elapsed| elapsed.as_secs_f64());
+        // 1. Collect Calls
         let mut rows: Vec<(&'static str, String)> = Vec::new();
         let mut ended = false;
         while let Ok(finished) = self.results.try_recv() {
             rows.push((
-                "command",
+                EVENT_COMMAND,
                 format!(
                     "host [{}] command [{}] status [{}] reason [{}] took_ms [{}]",
                     finished.host,
@@ -220,12 +235,13 @@ impl Poller {
                 .complete(&finished.host, finished.command, finished.outcome.status);
             ended |= self.apply(out, &mut rows);
         }
+        // 2. Read UPS
         let reading = match self.source.read() {
             Ok(reading) => {
                 if self.failures > 0 {
                     info!(
                         "{}",
-                        log_line("ups read recovered", &format!("after {} failed reads", self.failures))
+                        log_line("ups read recovered after failed reads", &self.failures.to_string())
                     );
                 }
                 self.failures = 0;
@@ -235,16 +251,11 @@ impl Poller {
             Err(err) => {
                 self.failures += 1;
                 self.read_failures_total += 1;
-                warn!(
-                    "{}",
-                    log_line(
-                        "device read failed",
-                        &format!("{err} {READ_FAILURES} {}", self.failures)
-                    )
-                );
+                warn!("device read failed [{err}] {READ_FAILURES} [{}]", self.failures);
                 None
             }
         };
+        // 3. Build Frame
         let mut frame = Frame::default();
         frame.set_number(CLOCK, epoch);
         frame.set_int(READ_FAILURES, i64::from(self.failures));
@@ -253,7 +264,7 @@ impl Poller {
         let mut pollfreq = None;
         if let Some(reading) = &reading {
             frame.set_number(LAST_READ, epoch);
-            self.fill(&mut frame, reading);
+            self.tick_frame(&mut frame, reading);
             pollfreq.clone_from(&reading.pollfreq);
             if let Some(status) = &reading.status {
                 let (parsed, unknown) = Flags::parse(status);
@@ -262,10 +273,11 @@ impl Poller {
                         warn!("unknown {STATUS} token [{token}]");
                     }
                 }
-                status_change = self.log_changes(status, parsed);
+                status_change = self.tick_changes(status, parsed);
                 flags = Some(parsed);
             }
         }
+        // 4. Open Session
         let mut start_detail = None;
         if flags.is_some_and(|flags| flags.raw_on_battery) {
             if self.session.is_none() {
@@ -275,15 +287,25 @@ impl Poller {
                 session.on_battery_seen = true;
             }
         }
-        if let Some(marker) = self.pending_marker(naive) {
+        // 5. Match Drill Marker
+        let pending = Marker::read(&self.settings.data_dir.join(DIR_STATE).join(drill::FILE_MARKER)).filter(|marker| {
+            marker.live(naive)
+                && self.acked.as_deref() != Some(marker.id.as_str())
+                && self.rejected.as_deref() != Some(marker.id.as_str())
+        });
+        if let Some(marker) = pending {
             if self.session.is_none() && !self.guard.in_outage() {
                 start_detail = Some(self.open_session(&stamp, naive, Some(&marker), pollfreq.as_deref()));
                 self.acked = Some(marker.id);
             } else if self.rejected.as_deref() != Some(marker.id.as_str()) {
-                rows.push(("note", format!("drill [{}] rejected, outage in progress", marker.id)));
+                rows.push((
+                    EVENT_NOTE,
+                    format!("drill [{}] rejected, outage in progress", marker.id),
+                ));
                 self.rejected = Some(marker.id);
             }
         }
+        // 6. Step Guard
         let out = self.guard.step(flags, dt);
         ended |= self.apply(out, &mut rows);
         self.guard.metrics(&mut frame);
@@ -292,13 +314,15 @@ impl Poller {
         if let Some(runtime) = self.policy.shed_runtime {
             frame.set_int(metrics::GUARD_SHED_RUNTIME, runtime.as_secs() as i64);
         }
+        // 7. Observe Session
         if let Some(session) = &mut self.session {
             session.hosts_shed = session.hosts_shed.max(self.guard.hosts_shed());
             if let Some(flags) = flags {
                 session.stats.observe(&frame, flags, &stamp, dt);
             }
         }
-        self.drill_end(naive, &mut ended, &mut rows);
+        // 8. End Drill
+        self.tick_drill_end(naive, &mut ended, &mut rows);
         if let Some(session) = self.session.as_ref().filter(|session| ended && session.on_battery_seen) {
             let mut summary = Frame::default();
             summary.set_int(metrics::LAST_OUTAGE_SECONDS, session.stats.seconds() as i64);
@@ -308,6 +332,7 @@ impl Poller {
             summary.set_number(metrics::LAST_OUTAGE_END, epoch);
             self.last_outage = summary;
         }
+        // 9. Call Model
         let mut published = frame.clone();
         if !self.settings.battery_installed.is_empty() {
             let days = metrics::battery_age_days(&self.settings.battery_installed, wall.date_naive())?;
@@ -316,8 +341,9 @@ impl Poller {
         published.merge(&self.last_outage);
         self.last.merge_sticky(&published);
         let battery_state_in = self.battery_state.clone();
-        self.call_model(&mut published, flags.is_some(), epoch, &mut rows);
+        self.tick_model(&mut published, flags.is_some(), epoch, &mut rows);
         self.last.merge_sticky(&published);
+        // 10. Log Outage Start
         if start_detail.is_some() {
             let value = |name: &str| {
                 published
@@ -326,23 +352,22 @@ impl Poller {
             };
             let status = published.text(STATUS).unwrap_or("unknown");
             info!(
-                "{}",
-                log_line(
-                    "outage started",
-                    &format!(
-                        "{status}, load {}%, battery {}V {}%",
-                        value(metrics::UTILISATION),
-                        value(metrics::BATTERY_VOLTS),
-                        value(metrics::BATTERY_CHARGE_PCT)
-                    )
-                )
+                "outage started {STATUS} [{status}] {} [{}] {} [{}] {} [{}]",
+                metrics::UTILISATION,
+                value(metrics::UTILISATION),
+                metrics::BATTERY_VOLTS,
+                value(metrics::BATTERY_VOLTS),
+                metrics::BATTERY_CHARGE_PCT,
+                value(metrics::BATTERY_CHARGE_PCT)
             );
             if let Some(id) = self.session.as_ref().and_then(|session| session.drill.as_ref()) {
                 info!("{}", log_line("outage drill", id));
             }
         }
+        // 11. Publish
         let forced = ended || status_change.is_some();
-        self.publish(&published, dt, flags.is_some_and(|flags| flags.raw_on_battery), forced)?;
+        self.tick_publish(&published, dt, flags.is_some_and(|flags| flags.raw_on_battery), forced)?;
+        // 12. Record Rows
         let mut commands = Vec::new();
         if let Some(session) = &self.session {
             let elapsed = (naive - session.started).num_seconds().max(0) as u64;
@@ -353,15 +378,15 @@ impl Poller {
             let (event, detail) = match (&start_detail, &status_change) {
                 (Some(detail), _) => {
                     sample_state(&mut sample, &self.state_names, battery_state_in.as_ref());
-                    ("start", detail.clone())
+                    (EVENT_START, detail.clone())
                 }
-                (None, Some(change)) => ("status", change.clone()),
+                (None, Some(change)) => (EVENT_STATUS, change.clone()),
                 (None, None) => ("", String::new()),
             };
-            let sample_row = Command::Row(outage::row(&stamp, elapsed, event, &detail, &sample));
+            let sample_row = WriterCommand::Row(outage::row(&stamp, elapsed, event, &detail, &sample));
             let event_rows = rows
                 .into_iter()
-                .map(|(event, detail)| Command::Row(outage::row(&stamp, elapsed, event, &detail, &self.last)));
+                .map(|(event, detail)| WriterCommand::Row(outage::row(&stamp, elapsed, event, &detail, &self.last)));
             if start_detail.is_some() {
                 commands.push(sample_row);
                 commands.extend(event_rows);
@@ -379,10 +404,13 @@ impl Poller {
                 sample_state(&mut end, &self.state_names, self.battery_state.as_ref());
                 let detail = session.stats.detail(reason, session.hosts_shed);
                 info!("{}", log_line("outage ended", &detail));
-                commands.push(Command::Row(outage::row(&stamp, elapsed, EVENT_END, &detail, &end)));
-                commands.push(Command::Close);
+                commands.push(WriterCommand::Row(outage::row(
+                    &stamp, elapsed, EVENT_END, &detail, &end,
+                )));
+                commands.push(WriterCommand::Close);
             }
         }
+        // 13. Finish
         if ended {
             self.session = None;
             self.sampler = None;
@@ -390,13 +418,13 @@ impl Poller {
         for command in commands {
             self.writer.send(command);
         }
-        self.write_liveness();
+        self.tick_liveness();
         self.progress.tick();
         self.first = false;
         Ok(())
     }
 
-    fn fill(&self, frame: &mut Frame, reading: &Reading) {
+    fn tick_frame(&self, frame: &mut Frame, reading: &Reading) {
         for sample in &SAMPLES {
             if let Some((_, value)) = reading.samples.iter().find(|(key, _)| *key == sample.key) {
                 frame.set_number(sample.key, *value);
@@ -404,11 +432,19 @@ impl Poller {
         }
         if let Some(status) = &reading.status {
             frame.set_text(STATUS, status);
-            frame.set_flags(Flags::parse(status).0);
+            let flags = Flags::parse(status).0;
+            frame.set_bool(metrics::MAINS_PRESENT, !flags.on_battery);
+            frame.set_bool(metrics::BATTERY_LOW, flags.low);
+            frame.set_bool(metrics::BATTERY_REPLACE, flags.replace);
+            frame.set_bool(metrics::BATTERY_CHARGING, flags.charging);
+            frame.set_bool(metrics::UPS_PROBLEM, flags.problem);
+            frame.set_bool(metrics::UPS_CALIBRATING, flags.calibrating);
+            frame.set_bool(metrics::UPS_BOOST, flags.boost);
+            frame.set_bool(metrics::UPS_TRIM, flags.trim);
         }
     }
 
-    fn log_changes(&mut self, status: &str, flags: Flags) -> Option<String> {
+    fn tick_changes(&mut self, status: &str, flags: Flags) -> Option<String> {
         let previous = self.previous.replace((status.to_string(), flags));
         let (before_status, before) =
             previous.map_or((None, Flags::default()), |(status, flags)| (Some(status), flags));
@@ -424,7 +460,7 @@ impl Poller {
             detail
         });
         for (name, was, now, important) in [
-            (metrics::ON_BATTERY, before.on_battery, flags.on_battery, true),
+            (metrics::MAINS_PRESENT, !before.on_battery, !flags.on_battery, true),
             (metrics::BATTERY_LOW, before.low, flags.low, true),
             (metrics::BATTERY_REPLACE, before.replace, flags.replace, true),
             (metrics::UPS_PROBLEM, before.problem, flags.problem, true),
@@ -447,7 +483,7 @@ impl Poller {
 
     fn apply(&mut self, out: Output, rows: &mut Vec<(&'static str, String)>) -> bool {
         for row in out.rows {
-            info!("guard {} {}", row.event, row.detail);
+            info!("guard [{}] {}", row.event, row.detail);
             rows.push((row.event, row.detail));
         }
         for call in out.calls {
@@ -484,7 +520,7 @@ impl Poller {
         if !extra.is_empty() {
             detail = format!("{detail} {}", extra.join(" "));
         }
-        self.writer.send(Command::Open(stamp.to_string()));
+        self.writer.send(WriterCommand::Open(stamp.to_string()));
         self.session = Some(Session {
             started: naive,
             stats: Stats::default(),
@@ -500,15 +536,7 @@ impl Poller {
         detail
     }
 
-    fn pending_marker(&self, naive: NaiveDateTime) -> Option<Marker> {
-        Marker::read(&self.settings.data_dir.join(DIR_STATE).join(drill::FILE_MARKER)).filter(|marker| {
-            marker.live(naive)
-                && self.acked.as_deref() != Some(marker.id.as_str())
-                && self.rejected.as_deref() != Some(marker.id.as_str())
-        })
-    }
-
-    fn drill_end(&mut self, naive: NaiveDateTime, ended: &mut bool, rows: &mut Vec<(&'static str, String)>) {
+    fn tick_drill_end(&mut self, naive: NaiveDateTime, ended: &mut bool, rows: &mut Vec<(&'static str, String)>) {
         let Some(session) = &self.session else { return };
         let Some(id) = &session.drill else { return };
         if session.on_battery_seen || *ended {
@@ -520,12 +548,12 @@ impl Poller {
             .is_none_or(|marker| marker.id != *id || !marker.live(naive));
         let runtime = (naive - session.started).to_std().unwrap_or_default() >= self.policy.restore_mains;
         if gone || runtime {
-            rows.push(("note", format!("drill [{id}] ended before the cut")));
+            rows.push((EVENT_NOTE, format!("drill [{id}] ended before the cut")));
             *ended = true;
         }
     }
 
-    fn call_model(&mut self, frame: &mut Frame, read_ok: bool, epoch: f64, rows: &mut Vec<(&'static str, String)>) {
+    fn tick_model(&mut self, frame: &mut Frame, read_ok: bool, epoch: f64, rows: &mut Vec<(&'static str, String)>) {
         let request = {
             let last = &self.last;
             let Some(utilisation) = last.number(metrics::UTILISATION) else {
@@ -535,7 +563,7 @@ impl Poller {
             Request {
                 clock_epoch_seconds: epoch,
                 rackmains_output_load_pct: utilisation as i64,
-                rackmains_mains_failed: i64::from(last.flag(metrics::ON_BATTERY)),
+                rackmains_mains_present: last.get(metrics::MAINS_PRESENT).and_then(Value::as_i64).unwrap_or(1),
                 rackmains_ups_calibrating: known(metrics::UPS_CALIBRATING),
                 rackmains_battery_low: known(metrics::BATTERY_LOW),
                 rackmains_battery_volts: last.number(metrics::BATTERY_VOLTS),
@@ -551,8 +579,8 @@ impl Poller {
                     info!(
                         "{}",
                         log_line(
-                            "model call recovered",
-                            &format!("after {} failed calls", self.model_failures)
+                            "model call recovered after failed calls",
+                            &self.model_failures.to_string()
                         )
                     );
                     self.model_failures = 0;
@@ -560,10 +588,7 @@ impl Poller {
                 if answer.policy != self.policy {
                     for ((name, was), (_, now)) in self.policy.fields().into_iter().zip(answer.policy.fields()) {
                         if was != now {
-                            info!(
-                                "{}",
-                                log_line(&format!("guard policy {name} changed"), &format!("{was} to {now}"))
-                            );
+                            info!("guard policy {name} changed from [{was}] to [{now}]");
                         }
                     }
                     self.guard.set_policy(answer.policy.clone());
@@ -603,12 +628,12 @@ impl Poller {
                 } else {
                     debug!("model call still failing [{err}]");
                 }
-                rows.push(("note", format!("model call failed [{err}]")));
+                rows.push((EVENT_NOTE, format!("model call failed [{err}]")));
             }
         }
     }
 
-    fn publish(&mut self, frame: &Frame, dt: Duration, on_battery: bool, forced: bool) -> Result<(), String> {
+    fn tick_publish(&mut self, frame: &Frame, dt: Duration, on_battery: bool, forced: bool) -> Result<(), String> {
         self.since_publish += dt;
         self.report_since += dt;
         if self.report_since
@@ -625,13 +650,13 @@ impl Poller {
                     |value| value.as_str().map_or_else(|| value.to_string(), str::to_string),
                 )
             };
-            let state = if self.last.get(metrics::ON_BATTERY).is_none() {
+            let state = if self.last.get(metrics::MAINS_PRESENT).is_none() {
                 "unknown".to_string()
             } else {
-                let mut words = vec![if self.last.flag(metrics::ON_BATTERY) {
-                    "on battery"
-                } else {
+                let mut words = vec![if self.last.flag(metrics::MAINS_PRESENT) {
                     "on mains"
+                } else {
+                    "on battery"
                 }];
                 for (name, word) in [
                     (metrics::UPS_CALIBRATING, "calibrating"),
@@ -696,12 +721,9 @@ impl Poller {
             Err(err) if !self.publish_failing => {
                 self.publish_failing = true;
                 if self.session.is_some() {
-                    info!(
-                        "{}",
-                        log_line("publish lost during an outage", &format!("{STATE_TOPIC} {err}"))
-                    );
+                    info!("publish lost during an outage [{STATE_TOPIC}] [{err}]");
                 } else {
-                    warn!("{}", log_line("publish lost", &format!("{STATE_TOPIC} {err}")));
+                    warn!("publish lost [{STATE_TOPIC}] [{err}]");
                 }
             }
             Err(err) => debug!("publish still lost [{STATE_TOPIC}] [{err}]"),
@@ -714,7 +736,7 @@ impl Poller {
         Ok(())
     }
 
-    fn write_liveness(&self) {
+    fn tick_liveness(&self) {
         let liveness = Liveness {
             boot_ms: boot_ms(),
             last_read_boot_ms: self.last_read_boot_ms,
@@ -774,10 +796,8 @@ pub fn run(args: &ServeArgs, data_dir: &Path) -> Result<(), String> {
         info!("{}", log_line("battery installed", "none"));
     } else {
         let age = metrics::battery_age_days(&args.battery_installed, Local::now().date_naive())?;
-        info!(
-            "{}",
-            log_line("battery installed", &format!("{} ({age} days)", args.battery_installed))
-        );
+        info!("{}", log_line("battery installed", &args.battery_installed));
+        info!("{}", log_line("battery age days", &age.to_string()));
     }
     let (loaded, policy) = load_model(Path::new(&common.model_dir))?;
     let model = loaded.info();
@@ -823,6 +843,7 @@ pub fn run(args: &ServeArgs, data_dir: &Path) -> Result<(), String> {
             key: PathBuf::from(&common.ssh_key),
             known_hosts: PathBuf::from(&common.known_hosts),
             timeout: ssh_timeout,
+            limit: Duration::from_secs(SSH_LIMIT_SECONDS),
             log_dir: data_dir.join(DIR_OUTAGE),
         })
     } else {
@@ -881,7 +902,7 @@ pub fn run(args: &ServeArgs, data_dir: &Path) -> Result<(), String> {
             } else {
                 "terminate"
             };
-            info!("{}", log_line("stopping", &format!("signal {name}")));
+            info!("{}", log_line("stopping on signal", name));
             poller.stop();
             info!("{}", log_line("stopped", "publisher closed, outage writer flushed"));
             return Ok(());
@@ -1085,7 +1106,7 @@ mod tests {
         }
 
         fn tables(&self) -> Vec<Table> {
-            self.poller.sync();
+            self.poller.writer.sync();
             outage::files(&self.data_dir.join(DIR_OUTAGE))
                 .into_iter()
                 .map(|file| Table::read(&file.path).unwrap())
@@ -1134,7 +1155,7 @@ mod tests {
         assert_eq!(payload["rackmains_battery_volts"], 13.4);
         assert_eq!(payload["rackmains_output_load_pct"], 13);
         assert_eq!(payload["rackmains_ups_status"], "OL");
-        assert_eq!(payload["rackmains_mains_failed"], 0);
+        assert_eq!(payload["rackmains_mains_present"], 1);
         assert!(payload.get("samples").is_none());
         assert!(payload["rackmains_battery_age_days"].as_i64().unwrap() > 0);
         rig.run("OL", 4);
@@ -1143,7 +1164,7 @@ mod tests {
         assert_eq!(rig.payloads().len(), 2);
         rig.run("OB DISCHRG", 1);
         assert_eq!(rig.payloads().len(), 3);
-        assert_eq!(rig.payloads()[2]["rackmains_mains_failed"], 1);
+        assert_eq!(rig.payloads()[2]["rackmains_mains_present"], 0);
     }
 
     #[test]
@@ -1154,7 +1175,7 @@ mod tests {
         let payloads = rig.payloads();
         assert_eq!(payloads[1][READ_FAILURES], 1);
         assert!(payloads[1].get("rackmains_battery_volts").is_none());
-        assert!(payloads[1].get("rackmains_mains_failed").is_none());
+        assert!(payloads[1].get("rackmains_mains_present").is_none());
         rig.run("OL", 1);
         assert_eq!(rig.payloads()[2][READ_FAILURES], 0);
         assert!(rig.tables().is_empty());
@@ -1342,7 +1363,7 @@ mod tests {
         let events = rig.events();
         assert!(events
             .iter()
-            .any(|(event, detail)| event == "note" && detail.contains("drill [late] rejected")));
+            .any(|(event, detail)| event == EVENT_NOTE && detail.contains("late")));
         assert!(!events[0].1.contains("drill ["));
     }
 
@@ -1374,11 +1395,23 @@ mod tests {
         on: Arc<AtomicBool>,
         sent: Mutex<Vec<String>>,
         rule: Mutex<String>,
+        refuse: Mutex<Option<&'static str>>,
+        panic_on: Mutex<Option<&'static str>>,
     }
 
     impl Plug for RigPlug {
         fn command(&self, command: &str, _timeout: Duration) -> Result<Value, String> {
             self.sent.lock().unwrap().push(command.to_string());
+            if *self.refuse.lock().unwrap() == Some(command) {
+                return Err("refused".to_string());
+            }
+            let mut panic_on = self.panic_on.lock().unwrap();
+            if *panic_on == Some(command) {
+                panic_on.take();
+                drop(panic_on);
+                panic!("plug panicked");
+            }
+            drop(panic_on);
             match command {
                 "Power Off" => {
                     self.on.store(false, Ordering::SeqCst);
@@ -1445,6 +1478,8 @@ mod tests {
                 on: Arc::clone(&on),
                 sent: Mutex::new(Vec::new()),
                 rule: Mutex::new(String::new()),
+                refuse: Mutex::new(None),
+                panic_on: Mutex::new(None),
             });
             fs::write(dir.join("hosts.json"), r#"[{"name":"max","address":"macmini-max"}]"#).unwrap();
             let model = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../build/resources/model/battery");
@@ -1613,15 +1648,33 @@ mod tests {
         let live = Live::new("drill-runtime", "OL OVER", true);
         let error = drill::run_drill(&live.env, Some("1s"), true).unwrap_err();
         assert_eq!(error.code, 1);
-        assert!(
-            error.message.contains("steady mains"),
-            "refused for [{}]",
-            error.message
-        );
         assert!(!live.sent().iter().any(|sent| sent == "Power Off"));
         assert!(!live.sent().iter().any(|sent| sent.starts_with("Rule1 ON")));
         let tables = live.finish();
         assert_eq!(tables.len(), 1);
+    }
+
+    #[test]
+    fn a_deadman_that_cannot_be_set_is_disarmed_and_nothing_is_cut() {
+        let live = Live::new("drill-deadman", "OL", true);
+        *live.plug.refuse.lock().unwrap() = Some("Rule1 1");
+        let error = drill::run_drill(&live.env, Some("1s"), true).unwrap_err();
+        assert_eq!(error.code, 1);
+        let sent = live.sent();
+        assert!(!sent.iter().any(|sent| sent == "Power Off"));
+        assert_eq!(sent.last().map(String::as_str), Some("Rule1 0"));
+        live.finish();
+    }
+
+    #[test]
+    fn a_panic_after_the_cut_still_restores_the_plug() {
+        let live = Live::new("drill-panic", "OL", true);
+        *live.plug.panic_on.lock().unwrap() = Some("Power Off");
+        let error = drill::run_drill(&live.env, Some("1s"), true).unwrap_err();
+        assert_eq!(error.code, 1);
+        assert!(live.plug.on.load(Ordering::SeqCst));
+        assert_eq!(live.sent().last().map(String::as_str), Some("Rule1 0"));
+        live.finish();
     }
 
     #[test]

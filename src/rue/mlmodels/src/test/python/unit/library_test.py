@@ -495,7 +495,7 @@ class ModelProjectTest(unittest.TestCase):
     def test_render_rust_names_every_tensor_with_optional_fields(self):
         from mlmodels._signature import render_rust
 
-        rust = render_rust(self.signature)
+        rust = render_rust(self.signature, ("demo_calc", "0" * 64))
         self.assertIn("pub demo_clock_seconds: f64,", rust)
         self.assertIn("pub demo_state_in: Option<Vec<f64>>,", rust)
         self.assertIn('pub const REQUIRED_OUTPUT_NAMES: &[&str] = &["demo_limit_seconds"];', rust)
@@ -503,12 +503,12 @@ class ModelProjectTest(unittest.TestCase):
     def test_render_go_and_python_name_every_tensor_with_optional_fields(self):
         from mlmodels._signature import render_go, render_python
 
-        go = render_go(self.signature, "contract")
+        go = render_go(self.signature, "contract", ("demo_calc", "0" * 64, "example.com/service/model"))
         self.assertIn("package contract", go)
         self.assertIn('DemoClockSeconds float64 `json:"demo_clock_seconds"`', go)
         self.assertIn('DemoStateIn []float64 `json:"demo_state_in,omitempty"`', go)
         self.assertIn('var RequiredOutputNames = []string{"demo_limit_seconds"}', go)
-        python = render_python(self.signature)
+        python = render_python(self.signature, ("demo_calc", "0" * 64))
         compile(python, "contract", "exec")
         self.assertIn("    demo_clock_seconds: float\n", python)
         self.assertIn("    demo_state_in: list[float] | None = None\n", python)
@@ -2234,6 +2234,53 @@ class WorkspaceLintTest(unittest.TestCase):
         self.assertIn("WS001", self.rules())
 
 
+MATHS_EDGES_DIR = join(ROOT, "rue/mlmodels/src/build/resources/maths")
+
+
+def maths_edges_signature():
+    from mlmodels._constants import WASM_MATH_FUNCTIONS
+
+    return {
+        "inputs": [{"name": name, "datatype": "FP64", "shape": [1]} for name in ("a", "b")],
+        "outputs": [{"name": name, "datatype": "FP64", "shape": [1]} for name in WASM_MATH_FUNCTIONS],
+        "parameters": {},
+    }
+
+
+def maths_edges_module():
+    from mlmodels import maths
+    from mlmodels._constants import WASM_MATH_FUNCTIONS
+    from mlmodels._wasm import feature, wasm_build
+
+    functions = {"pow": maths.power}
+    outputs = [(functions.get(name) or getattr(maths, name))(*[feature(index) for index in range(arity)]) for name, arity in WASM_MATH_FUNCTIONS.items()]
+    return wasm_build(2, outputs)
+
+
+class MathsEdgesTest(unittest.TestCase):
+    def test_the_committed_module_is_what_the_builder_writes(self):
+        with open(join(MATHS_EDGES_DIR, "edges.wasm"), "rb") as module_file:
+            self.assertEqual(bytes(maths_edges_module()), module_file.read())
+        with open(join(MATHS_EDGES_DIR, "edges.json")) as cases_file:
+            self.assertEqual(maths_edges_signature(), json.load(cases_file)["signature"])
+
+    def test_the_python_host_gives_ieee_results_outside_the_domain(self):
+        from mlmodels.runtime.loader import load_wasm
+
+        def number(value):
+            return float(value) if isinstance(value, str) else value
+
+        with open(join(MATHS_EDGES_DIR, "edges.json")) as cases_file:
+            document = json.load(cases_file)
+        predict = load_wasm(join(MATHS_EDGES_DIR, "edges.wasm"), json.dumps(document["signature"]))
+        self.assertTrue(document["cases"])
+        for case in document["cases"]:
+            outputs = predict({"a": [number(case["a"])], "b": [number(case["b"])]})
+            for name, expected in case["expect"].items():
+                expected, found = number(expected), outputs[name][0]
+                self.assertTrue(found == expected or (found != found and expected != expected), f"{name} of {case['a']} {case['b']} is {found} not {expected}")
+
+
 class SpecSyncTest(unittest.TestCase):
     SPEC = join(ROOT, "rue/mlmodels/src/build/resources/doc/model.md")
 
@@ -2262,13 +2309,11 @@ class SpecSyncTest(unittest.TestCase):
         for identifier, requirements in re.findall(r"^\| ((?:PJ|NB|WS|PM|AC|CP|RP|MD)\d{3}) \|.*\| (R[0-9, R]+) \|$", self.spec, re.MULTILINE):
             for requirement in re.findall(r"R\d+", requirements):
                 enforced.setdefault(requirement, set()).add(identifier)
-        coverage = {}
-        for requirement, checked_by in re.findall(r"^\| (R\d+) \| ([^|]+) \|$", self.section("### 9.2 Coverage of the requirements"), re.MULTILINE):
-            coverage[requirement] = set() if checked_by.strip() == "Review" else {item.strip() for item in checked_by.split(",")}
+        reviewed = set(re.findall(r"R\d+", self.section("### 9.2 Coverage of the requirements")))
         defined = set(re.findall(r"^\| (R\d+) \| (?:Standard|Parity|Delivery|Change) \|", self.spec, re.MULTILINE))
-        self.assertTrue(enforced and coverage and defined)
-        self.assertEqual(defined, set(coverage))
-        self.assertEqual({requirement: ids for requirement, ids in coverage.items() if ids}, enforced)
+        self.assertTrue(enforced and reviewed and defined)
+        self.assertEqual(defined, set(enforced) | reviewed)
+        self.assertEqual(set(), set(enforced) & reviewed)
 
     def test_every_function_a_notebook_calls_is_named_for_its_stage(self):
         from mlmodels import MLMODELS_API
@@ -2277,6 +2322,31 @@ class SpecSyncTest(unittest.TestCase):
         prefixes = tuple(f"{stage.lower()}_" for stage in NOTEBOOK_STAGES)
         self.assertTrue(MLMODELS_API)
         self.assertEqual([], [name for name in MLMODELS_API if name != "GateError" and not name.startswith(prefixes)])
+
+    def test_every_function_a_notebook_calls_is_named_in_the_spec(self):
+        from mlmodels import MLMODELS_API
+
+        self.assertEqual([], [name for name in MLMODELS_API if f"`{name}`" not in self.spec])
+
+    def test_loaders_agree_on_gates_and_rule_codes_except_the_listed_gates(self):
+        loaders = {
+            "python": "rue/mlmodels/src/main/python/mlmodels/runtime/loader.py",
+            "rust": "rue/mlmodels/src/main/rust/mlmodels/src/runtime/loader.rs",
+            "go": "rue/mlmodels/src/main/go/mlmodels/runtime/loader.go",
+        }
+        gates, codes = {}, {}
+        for language, path in loaders.items():
+            with open(join(ROOT, path)) as source:
+                text = source.read()
+            gates[language] = set(re.findall(r'(?:Kind::|Kind|")(Load|Signature|Runtime|Verify)"?,\s*"([\w.-]+)"', text))
+            codes[language] = set(re.findall(r'"((?:RP|PJ)\d{3})"', text))
+        self.assertTrue(all(gates.values()) and all(codes.values()))
+        self.assertEqual(codes["python"], codes["rust"])
+        self.assertEqual(codes["python"], codes["go"])
+        self.assertEqual(gates["rust"], gates["go"])
+        self.assertEqual({("Load", "dependency"), ("Load", "signature")}, gates["python"] ^ gates["go"])
+        for gate in ("dependency", "signature"):
+            self.assertIn(f"`{gate}`", self.section("#### 10.9.1 Consistency"))
 
     def test_flavours_splits_and_stages_agree(self):
 

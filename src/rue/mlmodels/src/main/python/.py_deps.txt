@@ -7,6 +7,6 @@ polars==2.1.0
 scikit-learn==1.9.1
 matplotlib==3.11.2
 onnx==1.23.2
-onnxruntime==1.31.1
+onnxruntime==1.32.0
 wasmtime==50.0.1
 adbc-driver-postgresql==1.13.0

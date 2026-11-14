@@ -13,7 +13,7 @@ use crate::{check, init_logging, parse_duration, report, serve, DEFAULT_DEVICE, 
 pub const DEFAULT_DATA_DIR: &str = "/asystem/mnt";
 pub const DEFAULT_MODEL_DIR: &str = "/asystem/etc/model";
 pub const DEFAULT_HOSTS_FILE: &str = "/asystem/etc/hosts.json";
-pub const DEFAULT_SSH_KEY: &str = "/asystem/ssh/id_ed25519";
+pub const DEFAULT_SSH_KEY: &str = "/asystem/ssh/id_rsa";
 pub const DEFAULT_KNOWN_HOSTS: &str = "/asystem/ssh/known_hosts";
 pub const DEFAULT_RUN_DIR: &str = "/run/rackmains";
 pub const DEFAULT_PLUG_HOST: &str = "10.0.4.102";

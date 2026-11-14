@@ -6,10 +6,10 @@ jinja2==3.1.6
 orjson==3.13.0
 tabulate==0.10.0
 datetime==6.0
-dropbox==12.2.4
+dropbox==12.2.5
 yfinance==1.8.0
 pdftotext==4.0.0
-psycopg[binary]==3.3.8
+psycopg[binary]==3.3.9
 python-calamine==0.9.1
 adbc-driver-postgresql==1.13.0
 gspread==6.2.1

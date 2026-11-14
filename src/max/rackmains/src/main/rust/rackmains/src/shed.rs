@@ -1,6 +1,7 @@
 use std::fs;
+use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::process::{Command as Process, Stdio};
+use std::process::{Command as Process, ExitStatus, Stdio};
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use std::thread;
@@ -15,6 +16,8 @@ use crate::outage;
 
 pub const SSH_STATUS_UNREACHABLE: i32 = 255;
 pub const SSH_STATUS_SPAWN: i32 = 127;
+pub const SSH_STATUS_LIMIT: i32 = 124;
+const LIMIT_POLL: Duration = Duration::from_millis(100);
 const SSH_KEEPALIVE: Duration = Duration::from_secs(10);
 const SSH_KEEPALIVE_COUNT: u32 = 3;
 const RESULT_PREFIX: &str = "RESULT ";
@@ -38,6 +41,7 @@ pub struct Ssh {
     pub key: PathBuf,
     pub known_hosts: PathBuf,
     pub timeout: Duration,
+    pub limit: Duration,
     pub log_dir: PathBuf,
 }
 
@@ -111,6 +115,42 @@ pub fn spawn(runner: &Arc<dyn Runner>, hosts: &[Host], call: Call, results: &Sen
     });
 }
 
+pub fn run_bounded(process: &mut Process, limit: Duration) -> std::io::Result<(Option<ExitStatus>, Vec<u8>, Vec<u8>)> {
+    let mut child = process
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
+    let drain = |pipe: Option<Box<dyn Read + Send>>| {
+        thread::spawn(move || {
+            let mut bytes = Vec::new();
+            if let Some(mut pipe) = pipe {
+                let _ = pipe.read_to_end(&mut bytes);
+            }
+            bytes
+        })
+    };
+    let stdout = drain(child.stdout.take().map(|pipe| Box::new(pipe) as Box<dyn Read + Send>));
+    let stderr = drain(child.stderr.take().map(|pipe| Box::new(pipe) as Box<dyn Read + Send>));
+    let started = Instant::now();
+    let status = loop {
+        if let Some(status) = child.try_wait()? {
+            break Some(status);
+        }
+        if started.elapsed() >= limit {
+            let _ = child.kill();
+            let _ = child.wait();
+            break None;
+        }
+        thread::sleep(LIMIT_POLL);
+    };
+    Ok((
+        status,
+        stdout.join().unwrap_or_default(),
+        stderr.join().unwrap_or_default(),
+    ))
+}
+
 pub fn parse_result(output: &str) -> String {
     output
         .lines()
@@ -127,36 +167,40 @@ pub fn parse_result(output: &str) -> String {
 impl Runner for Ssh {
     fn run(&self, host: &Host, command: Command) -> Outcome {
         let started = Instant::now();
-        let output = Process::new("ssh")
-            .arg("-i")
-            .arg(&self.key)
-            .args([
-                "-o",
-                "BatchMode=yes",
-                "-o",
-                "IdentitiesOnly=yes",
-                "-o",
-                "StrictHostKeyChecking=yes",
-            ])
-            .arg("-o")
-            .arg(format!("UserKnownHostsFile={}", self.known_hosts.display()))
-            .arg("-o")
-            .arg(format!("ConnectTimeout={}", self.timeout.as_secs()))
-            .arg("-o")
-            .arg(format!("ServerAliveInterval={}", SSH_KEEPALIVE.as_secs()))
-            .arg("-o")
-            .arg(format!("ServerAliveCountMax={SSH_KEEPALIVE_COUNT}"))
-            .arg(format!("root@{}", host.address))
-            .arg(format!("{REMOTE_BIN_DIR}/{}", command.remote()))
-            .stdin(Stdio::null())
-            .output();
+        let output = run_bounded(
+            Process::new("ssh")
+                .arg("-i")
+                .arg(&self.key)
+                .args([
+                    "-o",
+                    "BatchMode=yes",
+                    "-o",
+                    "IdentitiesOnly=yes",
+                    "-o",
+                    "StrictHostKeyChecking=yes",
+                ])
+                .arg("-o")
+                .arg(format!("UserKnownHostsFile={}", self.known_hosts.display()))
+                .arg("-o")
+                .arg(format!("ConnectTimeout={}", self.timeout.as_secs()))
+                .arg("-o")
+                .arg(format!("ServerAliveInterval={}", SSH_KEEPALIVE.as_secs()))
+                .arg("-o")
+                .arg(format!("ServerAliveCountMax={SSH_KEEPALIVE_COUNT}"))
+                .arg(format!("root@{}", host.address))
+                .arg(format!("{REMOTE_BIN_DIR}/{}", command.remote())),
+            self.limit,
+        );
         let took = started.elapsed();
         match output {
-            Ok(output) => {
-                let status = output.status.code().unwrap_or(SSH_STATUS_UNREACHABLE);
-                let mut reason = parse_result(&String::from_utf8_lossy(&output.stdout));
+            Ok((exit, stdout, stderr)) => {
+                let status = exit.map_or(SSH_STATUS_LIMIT, |exit| exit.code().unwrap_or(SSH_STATUS_UNREACHABLE));
+                let mut reason = parse_result(&String::from_utf8_lossy(&stdout));
                 if reason.is_empty() && status == SSH_STATUS_UNREACHABLE {
                     reason = "unreachable".to_string();
+                }
+                if reason.is_empty() && status == SSH_STATUS_LIMIT {
+                    reason = "call limit reached".to_string();
                 }
                 info!(
                     "ssh [{}] [{}] status [{status}] took [{took:?}]",
@@ -176,8 +220,8 @@ impl Runner for Ssh {
                             "host [{}]\ncommand [{}]\nstatus [{status}]\ntook [{took:?}]\n--- stdout\n{}\n--- stderr\n{}\n",
                             host.name,
                             command.remote(),
-                            String::from_utf8_lossy(&output.stdout),
-                            String::from_utf8_lossy(&output.stderr)
+                            String::from_utf8_lossy(&stdout),
+                            String::from_utf8_lossy(&stderr)
                         ),
                     )?;
                     let mut logs: Vec<PathBuf> = fs::read_dir(&self.log_dir)?
@@ -345,6 +389,17 @@ mod tests {
             receiver.recv_timeout(Duration::from_secs(2)).unwrap().outcome.status,
             SSH_STATUS_SPAWN
         );
+    }
+
+    #[test]
+    fn a_bounded_run_kills_a_call_past_the_limit_and_keeps_the_output_of_one_inside_it() {
+        let (status, stdout, _) = run_bounded(Process::new("echo").arg("done"), Duration::from_secs(5)).unwrap();
+        assert_eq!(status.and_then(|status| status.code()), Some(0));
+        assert_eq!(String::from_utf8_lossy(&stdout).trim(), "done");
+        let started = Instant::now();
+        let (status, _, _) = run_bounded(Process::new("sleep").arg("30"), Duration::from_millis(300)).unwrap();
+        assert!(status.is_none());
+        assert!(started.elapsed() < Duration::from_secs(10));
     }
 
     #[test]

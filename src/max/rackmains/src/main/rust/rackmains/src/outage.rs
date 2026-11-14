@@ -10,13 +10,22 @@ use log::{info, warn};
 use serde_json::Value;
 
 use crate::log_line;
-use crate::metrics::{self, Frame, LAST_OUTAGE_END, LAST_OUTAGE_MIN_VOLTS, LAST_OUTAGE_SECONDS, STATUS};
-use crate::nut::Flags;
+use crate::metrics::{
+    self, Frame, COLUMN_DETAIL, COLUMN_ELAPSED, COLUMN_EVENT, COLUMN_TIME, LAST_OUTAGE_END, LAST_OUTAGE_MIN_VOLTS,
+    LAST_OUTAGE_SECONDS, STATUS,
+};
+use crate::nut::{Flags, TOKEN_OB};
 
 pub const DIR_OUTAGE: &str = "outage";
 pub const DIR_STATE: &str = "state";
 pub const FILE_LIMIT_BYTES: usize = 1_000_000;
+pub const EVENT_START: &str = "start";
+pub const EVENT_STATUS: &str = "status";
+pub const EVENT_DECISION: &str = "decision";
+pub const EVENT_COMMAND: &str = "command";
+pub const EVENT_NOTE: &str = "note";
 pub const EVENT_END: &str = "end";
+pub const DECISION_SHED: &str = "shed";
 pub const END_INTERRUPTED: &str = "interrupted";
 pub const END_ABORTED: &str = "aborted";
 pub const END_RESTORED: &str = "restored";
@@ -57,7 +66,9 @@ impl Table {
     }
 
     pub fn ended(&self) -> bool {
-        self.rows.last().is_some_and(|row| self.cell(row, "event") == EVENT_END)
+        self.rows
+            .last()
+            .is_some_and(|row| self.cell(row, COLUMN_EVENT) == EVENT_END)
     }
 }
 
@@ -140,7 +151,7 @@ impl Stats {
     }
 }
 
-pub enum Command {
+pub enum WriterCommand {
     Open(String),
     Row(Vec<String>),
     Close,
@@ -149,7 +160,7 @@ pub enum Command {
 }
 
 pub struct Writer {
-    sender: Sender<Command>,
+    sender: Sender<WriterCommand>,
     handle: Option<JoinHandle<()>>,
 }
 
@@ -160,18 +171,18 @@ impl Writer {
             let mut spool = Spool::new(dir, keep);
             loop {
                 match receiver.recv_timeout(FLUSH_RETRY) {
-                    Ok(Command::Stop) | Err(RecvTimeoutError::Disconnected) => break,
+                    Ok(WriterCommand::Stop) | Err(RecvTimeoutError::Disconnected) => break,
                     Ok(command) => {
                         let mut acks = Vec::new();
                         let mut stopped = false;
                         let mut next = Some(command);
                         while let Some(command) = next.take() {
                             match command {
-                                Command::Stop => {
+                                WriterCommand::Stop => {
                                     stopped = true;
                                     break;
                                 }
-                                Command::Sync(ack) => acks.push(ack),
+                                WriterCommand::Sync(ack) => acks.push(ack),
                                 other => spool.apply(other),
                             }
                             next = receiver.try_recv().ok();
@@ -195,7 +206,7 @@ impl Writer {
         }
     }
 
-    pub fn send(&self, command: Command) {
+    pub fn send(&self, command: WriterCommand) {
         if self.sender.send(command).is_err() {
             warn!("outage writer stopped, row dropped");
         }
@@ -203,13 +214,13 @@ impl Writer {
 
     pub fn sync(&self) {
         let (ack, done) = mpsc::channel();
-        if self.sender.send(Command::Sync(ack)).is_ok() {
+        if self.sender.send(WriterCommand::Sync(ack)).is_ok() {
             let _ = done.recv_timeout(Duration::from_secs(10));
         }
     }
 
     pub fn stop(mut self) {
-        let _ = self.sender.send(Command::Stop);
+        let _ = self.sender.send(WriterCommand::Stop);
         if let Some(handle) = self.handle.take() {
             let _ = handle.join();
         }
@@ -245,14 +256,14 @@ impl Spool {
         }
     }
 
-    fn apply(&mut self, command: Command) {
+    fn apply(&mut self, command: WriterCommand) {
         match command {
-            Command::Open(stem) => {
+            WriterCommand::Open(stem) => {
                 self.stem = stem;
                 self.number = 0;
                 self.next_part();
             }
-            Command::Row(cells) => {
+            WriterCommand::Row(cells) => {
                 let Some(index) = self.current else {
                     warn!("outage row dropped, no file open");
                     return;
@@ -265,7 +276,7 @@ impl Spool {
                     self.next_part();
                 }
             }
-            Command::Close => {
+            WriterCommand::Close => {
                 if let Some(index) = self.current {
                     info!(
                         "{}",
@@ -274,7 +285,7 @@ impl Spool {
                 }
                 self.current = None;
             }
-            Command::Sync(_) | Command::Stop => {}
+            WriterCommand::Sync(_) | WriterCommand::Stop => {}
         }
     }
 
@@ -471,7 +482,7 @@ pub fn recover(dir: &Path) -> Vec<PathBuf> {
         }
         let Some(last) = table.rows.last() else { continue };
         let mut end = last.clone();
-        for (name, value) in [("event", EVENT_END), ("detail", END_INTERRUPTED)] {
+        for (name, value) in [(COLUMN_EVENT, EVENT_END), (COLUMN_DETAIL, END_INTERRUPTED)] {
             if let Some(index) = table.column(name) {
                 end[index] = value.to_string();
             }
@@ -536,7 +547,7 @@ pub fn last_model_state(dir: &Path, model_hash: &str) -> Option<Value> {
         let head = Table::read(&first.path).ok()?;
         let start = head.rows.first()?;
         return head
-            .cell(start, "detail")
+            .cell(start, COLUMN_DETAIL)
             .contains(model_hash)
             .then(|| serde_json::from_str(state).ok())
             .flatten();
@@ -545,9 +556,14 @@ pub fn last_model_state(dir: &Path, model_hash: &str) -> Option<Value> {
 }
 
 pub fn clocks(table: &Table, now: NaiveDateTime) -> Option<(Duration, Duration, bool)> {
-    let on_battery = |row: &Vec<String>| table.cell(row, STATUS).split_whitespace().any(|token| token == "OB");
-    let seconds = |row: &Vec<String>| table.cell(row, "elapsed_seconds").parse::<u64>().unwrap_or(0);
-    let stamp_of = |row: &Vec<String>| parse_stamp(table.cell(row, "time"));
+    let on_battery = |row: &Vec<String>| {
+        table
+            .cell(row, STATUS)
+            .split_whitespace()
+            .any(|token| token == TOKEN_OB)
+    };
+    let seconds = |row: &Vec<String>| table.cell(row, COLUMN_ELAPSED).parse::<u64>().unwrap_or(0);
+    let stamp_of = |row: &Vec<String>| parse_stamp(table.cell(row, COLUMN_TIME));
     let last_battery_row = table.rows.iter().rev().find(|row| on_battery(row))?;
     let last_row = table.rows.last()?;
     let since = |from: NaiveDateTime| (now - from).to_std().unwrap_or_default();
@@ -565,10 +581,9 @@ pub fn clocks(table: &Table, now: NaiveDateTime) -> Option<(Duration, Duration, 
     } else {
         since(stamp_of(last_battery_row)?)
     };
-    let shed = table
-        .rows
-        .iter()
-        .any(|row| table.cell(row, "event") == "decision" && table.cell(row, "detail").starts_with("shed "));
+    let shed = table.rows.iter().any(|row| {
+        table.cell(row, COLUMN_EVENT) == EVENT_DECISION && table.cell(row, COLUMN_DETAIL).starts_with(DECISION_SHED)
+    });
     Some((battery, mains, shed))
 }
 
@@ -628,9 +643,9 @@ mod tests {
     fn the_writer_leaves_a_whole_file_and_no_temporary() {
         let dir = directory("writer");
         let writer = Writer::start(dir.clone(), 100);
-        writer.send(Command::Open("2026-01-01_00-00-00".to_string()));
-        writer.send(Command::Row(cells("2026-01-01_00-00-00", "start", "x")));
-        writer.send(Command::Row(cells("2026-01-01_00-00-01", "", "")));
+        writer.send(WriterCommand::Open("2026-01-01_00-00-00".to_string()));
+        writer.send(WriterCommand::Row(cells("2026-01-01_00-00-00", "start", "x")));
+        writer.send(WriterCommand::Row(cells("2026-01-01_00-00-01", "", "")));
         writer.stop();
         let table = Table::read(&dir.join(file_name("2026-01-01_00-00-00", 1))).unwrap();
         assert_eq!(table.rows.len(), 2);
@@ -646,12 +661,12 @@ mod tests {
         let dir = directory("failed");
         let gone = dir.join("later");
         let writer = Writer::start(gone.clone(), 100);
-        writer.send(Command::Open("2026-01-01_00-00-00".to_string()));
-        writer.send(Command::Row(cells("2026-01-01_00-00-00", "start", "")));
+        writer.send(WriterCommand::Open("2026-01-01_00-00-00".to_string()));
+        writer.send(WriterCommand::Row(cells("2026-01-01_00-00-00", "start", "")));
         settle();
         assert!(!gone.exists());
         fs::create_dir_all(&gone).unwrap();
-        writer.send(Command::Row(cells("2026-01-01_00-00-01", "", "")));
+        writer.send(WriterCommand::Row(cells("2026-01-01_00-00-01", "", "")));
         writer.stop();
         let table = Table::read(&gone.join(file_name("2026-01-01_00-00-00", 1))).unwrap();
         assert_eq!(table.rows.len(), 2);
@@ -661,10 +676,10 @@ mod tests {
     fn a_file_over_the_limit_continues_in_the_next_numbered_file() {
         let dir = directory("rotate");
         let writer = Writer::start(dir.clone(), 100);
-        writer.send(Command::Open("2026-01-01_00-00-00".to_string()));
+        writer.send(WriterCommand::Open("2026-01-01_00-00-00".to_string()));
         let big = "x".repeat(FILE_LIMIT_BYTES);
-        writer.send(Command::Row(cells("2026-01-01_00-00-00", "start", &big)));
-        writer.send(Command::Row(cells("2026-01-01_00-00-01", "", "")));
+        writer.send(WriterCommand::Row(cells("2026-01-01_00-00-00", "start", &big)));
+        writer.send(WriterCommand::Row(cells("2026-01-01_00-00-01", "", "")));
         writer.stop();
         let found = files(&dir);
         assert_eq!(found.iter().map(|file| file.number).collect::<Vec<_>>(), vec![1, 2]);

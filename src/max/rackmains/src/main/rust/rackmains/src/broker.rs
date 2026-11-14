@@ -14,6 +14,7 @@ use crate::schema::{AVAILABILITY_OFFLINE, AVAILABILITY_ONLINE};
 
 const CHANNEL_CAPACITY: usize = 10;
 const RECONNECT_DELAY: Duration = Duration::from_secs(5);
+const RECONNECT_POLL: Duration = Duration::from_millis(100);
 
 #[derive(Debug)]
 pub enum Error {
@@ -134,15 +135,12 @@ impl MqttPublisher {
                             debug!("broker still down [{address}] [{err}]");
                         } else {
                             failing = true;
-                            warn!(
-                                "{}",
-                                log_line(
-                                    "broker error",
-                                    &format!("{address} {err} retrying every {RECONNECT_DELAY:?}")
-                                )
-                            );
+                            warn!("broker error [{address}] [{err}] retrying every [{RECONNECT_DELAY:?}]");
                         }
-                        thread::sleep(RECONNECT_DELAY);
+                        let waiting = Instant::now();
+                        while waiting.elapsed() < RECONNECT_DELAY && !thread_shutdown.load(Ordering::SeqCst) {
+                            thread::sleep(RECONNECT_POLL);
+                        }
                     }
                 }
             }
@@ -168,8 +166,10 @@ impl MqttPublisher {
         }
         Ok(())
     }
+}
 
-    fn close_connection(&mut self) -> Result<()> {
+impl Publisher for MqttPublisher {
+    fn close(&mut self) -> Result<()> {
         let status_topic = self.status_topic.clone();
         let published = self.publish(&status_topic, AVAILABILITY_OFFLINE.as_bytes());
         self.shutdown.store(true, Ordering::SeqCst);
@@ -179,12 +179,6 @@ impl MqttPublisher {
         }
         info!("{}", log_line("broker disconnected", "closing connection"));
         published.and(disconnected)
-    }
-}
-
-impl Publisher for MqttPublisher {
-    fn close(&mut self) -> Result<()> {
-        self.close_connection()
     }
 
     fn publish(&mut self, topic: &str, payload: &[u8]) -> Result<()> {
@@ -226,5 +220,23 @@ pub mod mock {
             self.messages.push((topic.to_string(), payload.to_vec()));
             Ok(())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn closing_against_a_dead_broker_returns_well_inside_the_reconnect_delay() {
+        let mut publisher = MqttPublisher::new("127.0.0.1", 1, "", "rackmains/status").unwrap();
+        thread::sleep(Duration::from_millis(500));
+        let started = Instant::now();
+        let _ = publisher.close();
+        assert!(
+            started.elapsed() < Duration::from_secs(2),
+            "close took [{:?}]",
+            started.elapsed()
+        );
     }
 }

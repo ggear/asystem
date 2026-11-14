@@ -61,7 +61,7 @@ wasmtime==50.0.1
 fastapi==0.115.14
 
 # Storage/databases
-dropbox==12.2.4
+dropbox==12.2.5
 gspread==6.2.1
 gspread-pandas==4.2.1
 psycopg[binary]==3.3.9

@@ -10,7 +10,7 @@
             "inputs": [
               {"name": "clock_epoch_seconds", "datatype": "FP64", "shape": [1], "data": [1793355300.0]},
               {"name": "rackmains_output_load_pct", "datatype": "INT64", "shape": [1], "data": [13]},
-              {"name": "rackmains_mains_failed", "datatype": "INT64", "shape": [1], "data": [1]},
+              {"name": "rackmains_mains_present", "datatype": "INT64", "shape": [1], "data": [0]},
               {"name": "rackmains_battery_replace_due", "datatype": "INT64", "shape": [1], "data": [0]}
             ]
           },
@@ -29,7 +29,7 @@
             "inputs": [
               {"name": "clock_epoch_seconds", "datatype": "FP64", "shape": [1], "data": [1793355330.0]},
               {"name": "rackmains_output_load_pct", "datatype": "INT64", "shape": [1], "data": [13]},
-              {"name": "rackmains_mains_failed", "datatype": "INT64", "shape": [1], "data": [1]},
+              {"name": "rackmains_mains_present", "datatype": "INT64", "shape": [1], "data": [0]},
               {"name": "rackmains_battery_replace_due", "datatype": "INT64", "shape": [1], "data": [0]},
               {"name": "rackmains_battery_state_in", "datatype": "FP64", "shape": [6], "data": [0.0, 1235.0, 0.0, 1.0, 1.0, 1793355329.0]}
             ]
@@ -49,7 +49,7 @@
             "inputs": [
               {"name": "clock_epoch_seconds", "datatype": "FP64", "shape": [1], "data": [1793355360.0]},
               {"name": "rackmains_output_load_pct", "datatype": "INT64", "shape": [1], "data": [12]},
-              {"name": "rackmains_mains_failed", "datatype": "INT64", "shape": [1], "data": [0]},
+              {"name": "rackmains_mains_present", "datatype": "INT64", "shape": [1], "data": [1]},
               {"name": "rackmains_battery_replace_due", "datatype": "INT64", "shape": [1], "data": [1]},
               {"name": "rackmains_battery_state_in", "datatype": "FP64", "shape": [6], "data": [0.0, 0.0, 600.0, 0.0, 1.0, 1793355359.0]}
             ]
@@ -68,7 +68,7 @@
             "id": "s1-3",
             "inputs": [
               {"name": "clock_epoch_seconds", "datatype": "FP64", "shape": [1], "data": [1793355390.0]},
-              {"name": "rackmains_mains_failed", "datatype": "INT64", "shape": [1], "data": [1]},
+              {"name": "rackmains_mains_present", "datatype": "INT64", "shape": [1], "data": [0]},
               {"name": "rackmains_battery_replace_due", "datatype": "INT64", "shape": [1], "data": [0]}
             ]
           },
@@ -80,7 +80,7 @@
             "inputs": [
               {"name": "clock_epoch_seconds", "datatype": "FP64", "shape": [1], "data": [1793355420.0]},
               {"name": "rackmains_output_load_pct", "datatype": "INT64", "shape": [1], "data": [12]},
-              {"name": "rackmains_mains_failed", "datatype": "INT64", "shape": [1], "data": [1]},
+              {"name": "rackmains_mains_present", "datatype": "INT64", "shape": [1], "data": [0]},
               {"name": "rackmains_read_failures", "datatype": "INT64", "shape": [1], "data": [3]},
               {"name": "rackmains_battery_state_in", "datatype": "FP64", "shape": [6], "data": [0.0, 1500.0, 0.0, 1.0, 1.0, 1793355389.0]}
             ]
@@ -100,7 +100,7 @@
             "inputs": [
               {"name": "clock_epoch_seconds", "datatype": "FP64", "shape": [1], "data": [1793355450.0]},
               {"name": "rackmains_output_load_pct", "datatype": "INT64", "shape": [1], "data": [14]},
-              {"name": "rackmains_mains_failed", "datatype": "INT64", "shape": [1], "data": [1]},
+              {"name": "rackmains_mains_present", "datatype": "INT64", "shape": [1], "data": [0]},
               {"name": "rackmains_ups_calibrating", "datatype": "INT64", "shape": [1], "data": [0]},
               {"name": "rackmains_battery_low", "datatype": "INT64", "shape": [1], "data": [1]},
               {"name": "rackmains_battery_volts", "datatype": "FP64", "shape": [1], "data": [11.6]},

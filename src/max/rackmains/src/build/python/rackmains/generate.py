@@ -1,4 +1,5 @@
 import json
+import subprocess
 
 from asystem import *
 
@@ -25,12 +26,18 @@ def write_hosts(metadata_df, root_dir):
 
 
 if __name__ == "__main__":
+    root_dir = abspath(join(dirname(realpath(realpath(sys.argv[0]))), "../../../.."))
     metadata_df = load_bootstrap_entities()
 
     write_container_healthchecks()
     write_container_backup()
     write_container_restore()
-    write_hosts(metadata_df, abspath(join(dirname(realpath(realpath(sys.argv[0]))), "../../../..")))
+    write_hosts(metadata_df, root_dir)
+    subprocess.run(
+        [sys.executable, "-m", "mlmodels", "embed", root_dir, join(root_dir, "../.."), "rackmains_ups_battery"],
+        check=True,
+        env={**os.environ, "PYTHONPATH": os.pathsep.join(filter(None, [join(root_dir, "../../rue/mlmodels/src/main/python"), os.environ.get("PYTHONPATH", "")]))},
+    )
 
     # Build broker schema
     metadata_rackmains_df = metadata_df[

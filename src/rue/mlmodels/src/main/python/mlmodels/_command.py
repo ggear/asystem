@@ -6,17 +6,14 @@ import re
 import sys
 from os.path import abspath, dirname, isfile, join, relpath
 
-from mlmodels._constants import PROJECT_MANIFEST, PROJECT_SIGNATURE
 from mlmodels._errors import GateError
 from mlmodels._lint_notebook import fix_notebook, lint_notebook
 from mlmodels._lint_project import fix_hints, lint_project, verify_project
 from mlmodels._lint_workspace import lint_workspace
 from mlmodels._log import configure_log
-from mlmodels._project import write_text
 from mlmodels._registry import check_release, registry_address
 from mlmodels._runner import ANSI, run_notebook
 from mlmodels._scaffold import scaffold_notebook
-from mlmodels._signature import render_go, render_python, render_rust
 
 LOG = logging.getLogger(__name__)
 
@@ -27,21 +24,12 @@ def model_command(arguments=None):
     commands.add_parser("verify").add_argument("project_dir")
     commands.add_parser("replay").add_argument("project_dir")
     commands.add_parser("lint").add_argument("project_dir")
-    generate = commands.add_parser("generate")
-    generate.add_argument("project_dir")
-    generate.add_argument("--rust")
-    generate.add_argument("--go")
-    generate.add_argument("--go-package", default="contract")
-    generate.add_argument("--python")
     check_release_parser = commands.add_parser("check-release")
     check_release_parser.add_argument("project_dir")
     check_release_parser.add_argument("--source-dir")
     changed = commands.add_parser("changed")
     changed.add_argument("workspace_dir")
     changed.add_argument("pins_path")
-    check_metadata = commands.add_parser("check-metadata")
-    check_metadata.add_argument("workspace_dir")
-    check_metadata.add_argument("pins_path")
     release = commands.add_parser("release")
     release.add_argument("source_dir")
     release.add_argument("--version", required=True)
@@ -91,15 +79,6 @@ def model_command(arguments=None):
                 print("unpackaged")
             else:
                 print("changed" if inputs_changed(options.workspace_dir, options.pins_path) else "unchanged")
-        elif options.command == "check-metadata":
-            from mlmodels._metadata import PROJECT_DIR, lint_metadata
-
-            with open(join(options.workspace_dir, PROJECT_DIR, PROJECT_MANIFEST)) as manifest_file:
-                findings = lint_metadata(options.workspace_dir, json.load(manifest_file)["flavour"], options.pins_path)
-            for rule, message in findings:
-                print(f"[{options.workspace_dir}] {rule} [{message}]", file=sys.stderr)
-            hints(rule for rule, _ in findings)
-            return 1 if findings else 0
         elif options.command == "release":
             from mlmodels._embed import stale_consumers
             from mlmodels._release import release_workspaces
@@ -176,15 +155,6 @@ def model_command(arguments=None):
             if findings:
                 return 1
             print(f"Replayed project [{options.project_dir}]")
-        elif options.command == "generate":
-            with open(join(options.project_dir, PROJECT_SIGNATURE)) as signature_file:
-                signature = json.load(signature_file)
-            if options.rust:
-                write_text(options.rust, render_rust(signature))
-            if options.go:
-                write_text(options.go, render_go(signature, options.go_package))
-            if options.python:
-                write_text(options.python, render_python(signature))
     except GateError as error:
         print(f"FAILED stage [{error.stage}] gate [{error.gate}] [{error.cause}]", file=sys.stderr)
         hints_in(error.cause)
