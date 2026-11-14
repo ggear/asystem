@@ -125,7 +125,7 @@ impl Stats {
         self.min_volts.as_ref().map(|(volts, _)| *volts)
     }
 
-    pub fn detail(&self, reason: &str, hosts_shed: usize) -> String {
+    pub fn fields(&self, reason: &str, hosts_shed: usize) -> Vec<(&'static str, String)> {
         let (min_volts, min_at) = self
             .min_volts
             .as_ref()
@@ -138,16 +138,30 @@ impl Stats {
             (self.utilisation_sum / self.utilisation_count).to_string()
         };
         let text = |value: Option<i64>| value.map(|value| value.to_string()).unwrap_or_default();
-        format!(
-            "reason [{reason}] seconds_on_battery [{}] battery_min_volts [{min_volts}] battery_min_at [{min_at}] battery_last_volts [{}] \
-             utilisation_peak_pct [{}] utilisation_mean_pct [{mean}] charge_start_pct [{}] charge_end_pct [{}] battery_low [{}] hosts_shed [{hosts_shed}]",
-            self.seconds_on_battery.as_secs(),
-            self.last_volts.map(|volts| volts.to_string()).unwrap_or_default(),
-            self.peak_utilisation,
-            text(self.charge_start),
-            text(self.charge_end),
-            u8::from(self.low_raised),
-        )
+        vec![
+            ("reason", reason.to_string()),
+            ("seconds_on_battery", self.seconds_on_battery.as_secs().to_string()),
+            ("battery_min_volts", min_volts),
+            ("battery_min_at", min_at),
+            (
+                "battery_last_volts",
+                self.last_volts.map(|volts| volts.to_string()).unwrap_or_default(),
+            ),
+            ("utilisation_peak_pct", self.peak_utilisation.to_string()),
+            ("utilisation_mean_pct", mean),
+            ("charge_start_pct", text(self.charge_start)),
+            ("charge_end_pct", text(self.charge_end)),
+            ("battery_low", u8::from(self.low_raised).to_string()),
+            ("hosts_shed", hosts_shed.to_string()),
+        ]
+    }
+
+    pub fn detail(&self, reason: &str, hosts_shed: usize) -> String {
+        self.fields(reason, hosts_shed)
+            .iter()
+            .map(|(key, value)| format!("{key} [{value}]"))
+            .collect::<Vec<_>>()
+            .join(" ")
     }
 }
 
@@ -277,12 +291,6 @@ impl Spool {
                 }
             }
             WriterCommand::Close => {
-                if let Some(index) = self.current {
-                    info!(
-                        "{}",
-                        log_line("outage file closed", &self.parts[index].path.display().to_string())
-                    );
-                }
                 self.current = None;
             }
             WriterCommand::Sync(_) | WriterCommand::Stop => {}
@@ -306,7 +314,7 @@ impl Spool {
         };
         info!(
             "{}",
-            log_line(label, &self.parts[self.parts.len() - 1].path.display().to_string())
+            log_line(label, &base_name(&self.parts[self.parts.len() - 1].path))
         );
     }
 
@@ -350,6 +358,13 @@ pub fn stamp(now: chrono::DateTime<Local>) -> String {
 
 pub fn file_name(stem: &str, number: u32) -> String {
     format!("{FILE_PREFIX}{stem}_{number}{FILE_SUFFIX}")
+}
+
+fn base_name(path: &Path) -> String {
+    path.file_name().map_or_else(
+        || path.display().to_string(),
+        |name| name.to_string_lossy().into_owned(),
+    )
 }
 
 pub fn parse_stamp(text: &str) -> Option<NaiveDateTime> {
@@ -455,11 +470,11 @@ pub fn prune(dir: &Path, keep: usize, current_stem: &str) {
     let excess = all.len().saturating_sub(keep.max(1));
     for file in all.iter().take(excess).filter(|file| file.stem != current_stem) {
         match fs::remove_file(&file.path) {
-            Ok(()) => info!("{}", log_line("outage file pruned", &file.path.display().to_string())),
-            Err(err) => warn!(
-                "{}",
-                log_line("outage file prune failed", &format!("{} {err}", file.path.display()))
-            ),
+            Ok(()) => info!("{}", log_line("outage file pruned", &base_name(&file.path))),
+            Err(err) => {
+                warn!("{}", log_line("outage file prune failed", &base_name(&file.path)));
+                warn!("{}", log_line("outage file prune error", &err.to_string()));
+            }
         }
     }
 }
@@ -497,10 +512,7 @@ pub fn recover(dir: &Path) -> Vec<PathBuf> {
             Ok(()) => {
                 warn!(
                     "{}",
-                    log_line(
-                        &format!("outage file closed {END_INTERRUPTED}"),
-                        &file.path.display().to_string()
-                    )
+                    log_line(&format!("outage file closed {END_INTERRUPTED}"), &base_name(&file.path))
                 );
                 closed.push(file.path.clone());
             }

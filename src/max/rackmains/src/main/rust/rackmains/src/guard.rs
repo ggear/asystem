@@ -67,6 +67,7 @@ pub struct Host {
 pub struct Row {
     pub event: &'static str,
     pub detail: String,
+    pub lines: Vec<(&'static str, String)>,
 }
 
 #[derive(Default, Debug, PartialEq, Eq)]
@@ -174,7 +175,7 @@ impl Guard {
                     self.shed_after_restore = true;
                 } else if self.restore_wanted {
                     self.restore_wanted = false;
-                    self.decide(&mut out, "restore cancelled, back on battery");
+                    self.decide(&mut out, "restore cancelled", "back on battery");
                     self.begin(Sequence::Shed);
                 }
                 self.last_flags = flags;
@@ -249,7 +250,7 @@ impl Guard {
         } else {
             return;
         };
-        self.decide(out, &format!("{DECISION_SHED} {reason}"));
+        self.decide(out, DECISION_SHED, reason);
         self.begin(Sequence::Shed);
     }
 
@@ -259,9 +260,9 @@ impl Guard {
         }
         if self.shed_started {
             self.restore_wanted = true;
-            self.decide(out, &format!("restore {reason}"));
+            self.decide(out, "restore", reason);
         } else {
-            self.decide(out, &format!("outage over {reason}"));
+            self.decide(out, "outage over", reason);
             self.finish(out);
         }
     }
@@ -319,15 +320,24 @@ impl Guard {
         out.ended = true;
     }
 
-    fn decide(&self, out: &mut Output, detail: &str) {
+    fn decide(&self, out: &mut Output, decision: &str, reason: &str) {
+        let (battery, mains, live) = (
+            self.battery.as_secs().to_string(),
+            self.mains.as_secs().to_string(),
+            u8::from(self.live).to_string(),
+        );
         out.rows.push(Row {
             event: EVENT_DECISION,
             detail: format!(
-                "{detail} guard_battery_seconds [{}] guard_mains_seconds [{}] guard_live [{}]",
-                self.battery.as_secs(),
-                self.mains.as_secs(),
-                u8::from(self.live)
+                "{decision} {reason} guard_battery_seconds [{battery}] guard_mains_seconds [{mains}] guard_live [{live}]"
             ),
+            lines: vec![
+                ("guard decision", decision.to_string()),
+                ("guard decision reason", reason.to_string()),
+                ("guard decision battery seconds", battery),
+                ("guard decision mains seconds", mains),
+                ("guard decision live", live),
+            ],
         });
     }
 

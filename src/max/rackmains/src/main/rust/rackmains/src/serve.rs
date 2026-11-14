@@ -253,10 +253,8 @@ impl Poller {
             Err(err) => {
                 self.failures += 1;
                 self.read_failures_total += 1;
-                warn!(
-                    "{}",
-                    log_line("ups read failed", &format!("{err} failures {}", self.failures))
-                );
+                warn!("{}", log_line("ups read failed", &err.to_string()));
+                warn!("{}", log_line("ups read failures", &self.failures.to_string()));
                 None
             }
         };
@@ -359,24 +357,7 @@ impl Poller {
         self.last.merge_sticky(&published);
         // 10. Log Outage Start
         if start_detail.is_some() {
-            let value = |name: &str| {
-                published
-                    .get(name)
-                    .map_or_else(|| "unknown".to_string(), ToString::to_string)
-            };
-            let status = published.text(STATUS).map_or_else(|| "unknown".to_string(), describe);
-            info!(
-                "{}",
-                log_line(
-                    "outage started",
-                    &format!(
-                        "{status}, load {}%, battery {}V {}%",
-                        value(metrics::UTILISATION),
-                        value(metrics::BATTERY_VOLTS),
-                        value(metrics::BATTERY_CHARGE_PCT)
-                    )
-                )
-            );
+            info!("{}", log_line("outage started", &stamp));
             if let Some(id) = self.session.as_ref().and_then(|session| session.drill.as_ref()) {
                 info!("{}", log_line("outage drill", id));
             }
@@ -420,7 +401,22 @@ impl Poller {
                 let mut end = self.last.clone();
                 sample_state(&mut end, &self.state_names, self.battery_state.as_ref());
                 let detail = session.stats.detail(reason, session.hosts_shed);
-                info!("{}", log_line("outage ended", &detail));
+                for (key, value) in
+                    session
+                        .stats
+                        .fields(reason, session.hosts_shed)
+                        .into_iter()
+                        .filter(|(key, value)| match *key {
+                            "battery_min_at" | "battery_last_volts" | "utilisation_mean_pct" => false,
+                            "battery_low" => value == "1",
+                            _ => !value.is_empty(),
+                        })
+                {
+                    info!(
+                        "{}",
+                        log_line(&format!("outage ended {}", key.replace('_', " ")), &value)
+                    );
+                }
                 commands.push(WriterCommand::Row(outage::row(
                     &stamp, elapsed, EVENT_END, &detail, &end,
                 )));
@@ -474,13 +470,22 @@ impl Poller {
 
     fn apply(&mut self, out: Output, rows: &mut Vec<(&'static str, String)>) -> bool {
         for row in out.rows {
-            info!("{}", log_line(&format!("guard {}", row.event), &row.detail));
+            for (label, value) in &row.lines {
+                info!("{}", log_line(label, value));
+            }
             rows.push((row.event, row.detail));
         }
         for call in out.calls {
             info!(
                 "{}",
-                log_line("guard call", &format!("{} {}", call.host, call.command.remote()))
+                log_line(
+                    if self.settings.live {
+                        "guard call"
+                    } else {
+                        "guard call (dry-run)"
+                    },
+                    &format!("{} {}", call.host, call.command.remote())
+                )
             );
             shed::spawn(&self.runner, &self.hosts, call, &self.results_sender);
         }
@@ -496,10 +501,11 @@ impl Poller {
     ) -> String {
         let info = self.loaded.info();
         let mut detail = format!(
-            "version [{}] model [{} {}] guard_live [{}] pollfreq [{}]",
+            "version [{}] model [{} {}] model_version [{}] guard_live [{}] pollfreq [{}]",
             self.settings.version,
             info.name,
             info.content_sha256,
+            info.release_version.as_deref().unwrap_or("unreleased"),
             u8::from(self.settings.live),
             pollfreq.unwrap_or_default()
         );
@@ -682,10 +688,7 @@ impl Poller {
         self.published_key = Some(key);
         if self.first {
             if let Err(err) = self.publisher.publish(STATUS_TOPIC, AVAILABILITY_ONLINE.as_bytes()) {
-                warn!(
-                    "{}",
-                    log_line("status publish failed", &format!("{STATUS_TOPIC} {err}"))
-                );
+                warn!("{}", log_line("status publish failed", &err.to_string()));
             }
         }
         let mut payload: Map<String, Value> = Map::new();
@@ -700,18 +703,15 @@ impl Poller {
             Err(err) if !self.publish_failing => {
                 self.publish_failing = true;
                 if self.session.is_some() {
-                    info!(
-                        "{}",
-                        log_line("publish lost during an outage", &format!("{STATE_TOPIC} {err}"))
-                    );
+                    info!("{}", log_line("publish lost during an outage", &err.to_string()));
                 } else {
-                    warn!("{}", log_line("publish lost", &format!("{STATE_TOPIC} {err}")));
+                    warn!("{}", log_line("publish lost", &err.to_string()));
                 }
             }
-            Err(err) => debug!("{}", log_line("publish still lost", &format!("{STATE_TOPIC} {err}"))),
+            Err(err) => debug!("{}", log_line("publish still lost", &err.to_string())),
             Ok(()) if self.publish_failing => {
                 self.publish_failing = false;
-                info!("{}", log_line("publish restored", STATE_TOPIC));
+                info!("{}", log_line("publish restored", "mqtt"));
             }
             Ok(()) => {}
         }

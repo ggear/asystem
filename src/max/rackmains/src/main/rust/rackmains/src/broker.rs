@@ -90,10 +90,7 @@ impl MqttPublisher {
                         if let Err(err) =
                             thread_client.try_publish(&thread_status_topic, QoS::AtLeastOnce, true, AVAILABILITY_ONLINE)
                         {
-                            warn!(
-                                "{}",
-                                log_line("broker status publish failed", &format!("{address} {err}"))
-                            );
+                            warn!("{}", log_line("broker status publish failed", &err.to_string()));
                         }
                         let replay: Vec<(String, Vec<u8>)> = match thread_retained.lock() {
                             Ok(cache) => cache
@@ -101,10 +98,7 @@ impl MqttPublisher {
                                 .map(|(topic, payload)| (topic.clone(), payload.clone()))
                                 .collect(),
                             Err(err) => {
-                                warn!(
-                                    "{}",
-                                    log_line("broker retained cache unreadable", &format!("{address} {err}"))
-                                );
+                                warn!("{}", log_line("broker retained cache unreadable", &err.to_string()));
                                 Vec::new()
                             }
                         };
@@ -113,10 +107,8 @@ impl MqttPublisher {
                                 if let Err(err) =
                                     thread_client.try_publish(topic, QoS::AtLeastOnce, true, payload.clone())
                                 {
-                                    warn!(
-                                        "{}",
-                                        log_line("broker retained republish failed", &format!("{topic} {err}"))
-                                    );
+                                    warn!("{}", log_line("broker retained republish failed", topic));
+                                    warn!("{}", log_line("broker retained republish error", &err.to_string()));
                                 }
                             }
                             info!(
@@ -141,16 +133,11 @@ impl MqttPublisher {
                         }
                         thread_connected.store(false, Ordering::SeqCst);
                         if failing {
-                            debug!("{}", log_line("broker still down", &format!("{address} {err}")));
+                            debug!("{}", log_line("broker still down", &err.to_string()));
                         } else {
                             failing = true;
-                            warn!(
-                                "{}",
-                                log_line(
-                                    "broker error, retrying",
-                                    &format!("{address} {err} every {RECONNECT_DELAY:?}")
-                                )
-                            );
+                            warn!("{}", log_line("broker error", &err.to_string()));
+                            warn!("{}", log_line("broker retry period", &format!("{RECONNECT_DELAY:?}")));
                         }
                         let waiting = Instant::now();
                         while waiting.elapsed() < RECONNECT_DELAY && !thread_shutdown.load(Ordering::SeqCst) {
@@ -197,19 +184,20 @@ impl Publisher for MqttPublisher {
     }
 
     fn publish(&mut self, topic: &str, payload: &[u8]) -> Result<()> {
+        debug!("{}", log_line("publish topic", topic));
         match std::str::from_utf8(payload) {
-            Ok(text) => debug!("{}", log_line("publish", &format!("{topic} {text}"))),
-            Err(_) => debug!("{}", log_line("publish", &format!("{topic} {} bytes", payload.len()))),
+            Ok(text) => debug!("{}", log_line("publish payload", text)),
+            Err(_) => debug!("{}", log_line("publish payload bytes", &payload.len().to_string())),
         }
         if topic != self.status_topic {
             match self.retained.lock() {
                 Ok(mut cache) => {
                     cache.insert(topic.to_string(), payload.to_vec());
                 }
-                Err(err) => warn!(
-                    "{}",
-                    log_line("broker retained cache unwritable", &format!("{topic} {err}"))
-                ),
+                Err(err) => {
+                    warn!("{}", log_line("broker retained cache unwritable", topic));
+                    warn!("{}", log_line("broker retained cache error", &err.to_string()));
+                }
             }
         }
         self.client

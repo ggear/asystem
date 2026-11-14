@@ -203,13 +203,10 @@ impl Runner for Ssh {
                 if reason.is_empty() && status == SSH_STATUS_LIMIT {
                     reason = "call limit reached".to_string();
                 }
-                info!(
-                    "{}",
-                    log_line(
-                        "ssh call",
-                        &format!("{} {} status {status} took {took:?}", host.name, command.remote())
-                    )
-                );
+                let label = format!("ssh call {}", host.name);
+                info!("{}", log_line(&label, command.remote()));
+                info!("{}", log_line(&format!("{label} status"), &status.to_string()));
+                info!("{}", log_line(&format!("{label} took"), &format!("{took:?}")));
                 let record = || -> std::io::Result<()> {
                     let name = format!(
                         "{CALL_LOG_PREFIX}{}_{}_{}{CALL_LOG_SUFFIX}",
@@ -245,7 +242,7 @@ impl Runner for Ssh {
                 if let Err(err) = record() {
                     warn!(
                         "{}",
-                        log_line("call log failed", &format!("{} {} {err}", host.name, command.remote()))
+                        log_line(&format!("ssh call {} log failed", host.name), &err.to_string())
                     );
                 }
                 Outcome { status, reason, took }
@@ -260,11 +257,7 @@ impl Runner for Ssh {
 }
 
 impl Runner for DryRun {
-    fn run(&self, host: &Host, command: Command) -> Outcome {
-        info!(
-            "{}",
-            log_line("dry-run would run", &format!("{} {}", host.name, command.remote()))
-        );
+    fn run(&self, _host: &Host, _command: Command) -> Outcome {
         Outcome {
             status: 0,
             reason: "dry-run".to_string(),

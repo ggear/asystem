@@ -31,6 +31,26 @@
 ################################################################################
 # Devices -> Rename as per entity_metadata.xlsx
 
+# Radio design (keep the Devices lines below in step with this table)
+#
+#   AP                  2.4GHz channel/width   5GHz channel/width   5GHz spectrum          DFS
+#   uap-dar-hallway     6 / 20                 36 / 160             36-64                  52-64 only
+#   uap-dar-deck-north  11 / 20                149 / 40             149-153                no
+#   uap-dar-deck-south  11 / 20                157 / 40             157-161                no
+#
+# 2.4GHz
+#   - Zigbee2MQTT (src/jen/zigbee2mqtt configuration.yaml) runs Zigbee channel 11 (2405MHz), inside WiFi channel 1 (2402-2422MHz), so WiFi channel 1 must not be used
+#   - That leaves 6 and 11 of the 1/6/11 plan: hallway on 6, north and south share 11 as both cover the deck and 5GHz carries the load
+#   - Zigbee channel 11 clears WiFi 6 (2427-2447MHz) and 11 (2452-2472MHz), so moving WiFi onto channel 1 would mean re-pairing every Zigbee device to 15, 20 or 25
+# 5GHz
+#   - Hallway is maxed at 160MHz on 36 for bandwidth, which takes all of 36-64 and leaves 149-165 as the only non-DFS spectrum for the other two
+#   - 149-165 holds two 40MHz channels (149 and 157), as 165 is 20MHz only, so north is on 149 and south on 157 with no overlap
+#   - Hallway 160MHz includes DFS channels 52-64, so a radar event moves that radio and drops its clients until it settles
+# DFS (channels 52-144)
+#   - Radio waits 60s for channel availability before beaconing (10 minutes on 120-128), then must vacate on any radar detection
+#   - Many clients never scan DFS channels, and raspbpi-jac (MediaTek MT7612U USB) never heard north on channel 100, so its BSSID pinned profile failed with the network not found
+#   - North is therefore kept off DFS, as raspbpi-jac pins wlan1 to it (5GHz 78:8A:20:B5:26:C8, 2.4GHz 78:8A:20:B4:26:C8)
+
 # Devices -> uap-dar-hallway -> Settings -> 2.4GHz Width -> 20
 # Devices -> uap-dar-hallway -> Settings -> 2.4GHz Channel -> 6
 # Devices -> uap-dar-hallway -> Settings -> 2.4GHz Transmit Power -> High
@@ -43,8 +63,8 @@
 # Devices -> uap-dar-deck-north -> Settings -> 2.4GHz Width -> 20
 # Devices -> uap-dar-deck-north -> Settings -> 2.4GHz Channel -> 11
 # Devices -> uap-dar-deck-north -> Settings -> 2.4GHz Transmit Power -> High
-# Devices -> uap-dar-deck-north -> Settings -> 5Ghz Width -> 80
-# Devices -> uap-dar-deck-north -> Settings -> 5GHz Channel -> 100
+  # Devices -> uap-dar-deck-north -> Settings -> 5Ghz Width -> 40
+# Devices -> uap-dar-deck-north -> Settings -> 5GHz Channel -> 149
 # Devices -> uap-dar-deck-north -> Settings -> 5GHz Transmit Power -> High
 # Devices -> uap-dar-deck-north -> Settings -> Band Steering -> Off
 # Devices -> uap-dar-deck-north -> Settings -> LED -> False
@@ -52,8 +72,8 @@
 # Devices -> uap-dar-deck-south -> Settings -> 2.4GHz Width -> 20
 # Devices -> uap-dar-deck-south -> Settings -> 2.4GHz Channel -> 11
 # Devices -> uap-dar-deck-south -> Settings -> 2.4GHz Transmit Power -> High
-# Devices -> uap-dar-deck-south -> Settings -> 5Ghz Width -> 80
-# Devices -> uap-dar-deck-south -> Settings -> 5GHz Channel -> 149
+# Devices -> uap-dar-deck-south -> Settings -> 5Ghz Width -> 40
+# Devices -> uap-dar-deck-south -> Settings -> 5GHz Channel -> 157
 # Devices -> uap-dar-deck-south -> Settings -> 5GHz Transmit Power -> High
 # Devices -> uap-dar-deck-south -> Settings -> Band Steering -> Off
 # Devices -> uap-dar-deck-south -> Settings -> LED -> False

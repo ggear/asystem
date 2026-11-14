@@ -10,6 +10,7 @@ set -ex
 ################################################################################
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/turbowarp.gpg] https://releases.turbowarp.org/deb stable main" > /etc/apt/sources.list.d/turbowarp.list && wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor --yes -o /usr/share/keyrings/microsoft.gpg
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list && wget -qO- https://desktop.turbowarp.org/release-signing-key.gpg | gpg --dearmor --yes -o /usr/share/keyrings/turbowarp.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/prismlauncher.gpg] https://prism-launcher-for-debian.github.io/repo $(. /etc/os-release; echo "${UBUNTU_CODENAME:-${DEBIAN_CODENAME:-${VERSION_CODENAME}}}") main" > /etc/apt/sources.list.d/prismlauncher.list && wget -qO- https://prism-launcher-for-debian.github.io/repo/prismlauncher.gpg | gpg --dearmor --yes -o /usr/share/keyrings/prismlauncher.gpg
 apt update && apt upgrade -y && apt autoremove -y
 apt install -y \
   git \
@@ -32,7 +33,8 @@ flatpak update --system -y
 ################################################################################
 # Games
 ################################################################################
-apt install -y fheroes2
-snap install prismlauncher-alpo
-snap install openra --channel=latest/beta
 snap install hedgewars
+apt install -y fheroes2
+snap install openra --channel=latest/beta
+apt update && apt install -y prismlauncher
+
