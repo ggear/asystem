@@ -20,7 +20,7 @@ use crate::liveness::{
 };
 use crate::metrics::{self, Frame, CLOCK, LAST_READ, MODEL_STATE, READ_FAILURES, STATUS};
 use crate::model::battery::Request;
-use crate::nut::{describe, Flags, Nut, Reading, Source, SAMPLES, TOKEN_CHRG};
+use crate::nut::{describe, settle_flow, Flags, Nut, Reading, Source, SAMPLES};
 use crate::outage::{
     self, Stats, Writer, WriterCommand, DIR_OUTAGE, DIR_STATE, END_ABORTED, END_RESTORED, EVENT_COMMAND, EVENT_END,
     EVENT_NOTE, EVENT_START, EVENT_STATUS,
@@ -258,6 +258,15 @@ impl Poller {
                 None
             }
         };
+        let reading = reading.map(|mut reading| {
+            let charge = reading
+                .samples
+                .iter()
+                .find(|(key, _)| *key == metrics::BATTERY_CHARGE_PCT)
+                .map(|(_, value)| *value);
+            reading.status = reading.status.map(|status| settle_flow(&status, charge));
+            reading
+        });
         // 3. Build Frame
         let mut frame = Frame::default();
         frame.set_number(CLOCK, epoch);
@@ -457,18 +466,7 @@ impl Poller {
         }
         let before = before.filter(|before| before != status)?;
         let (was, now) = (describe(&before), describe(status));
-        let line = log_change("ups status changed", &was, &now);
-        let without_charging = |raw: &str| {
-            raw.split_whitespace()
-                .filter(|token| *token != TOKEN_CHRG)
-                .collect::<Vec<_>>()
-                .join(" ")
-        };
-        if without_charging(&before) == without_charging(status) {
-            debug!("{line}");
-        } else {
-            info!("{line}");
-        }
+        info!("{}", log_change("ups status changed", &was, &now));
         Some(format!("from [{was}] to [{now}]"))
     }
 
@@ -1261,6 +1259,23 @@ mod tests {
         let events = rig.events();
         assert_eq!(events[0].0, "start");
         assert!(events.iter().any(|(event, _)| event == "decision"));
+    }
+
+    #[test]
+    fn a_bouncing_discharge_flag_is_one_status_change_not_a_row_per_bounce() {
+        let mut rig = Rig::new("bounce");
+        rig.run("OB", 1);
+        for _ in 0..5 {
+            rig.run("OB DISCHRG", 1);
+            rig.run("OB", 1);
+        }
+        let events = rig.events();
+        assert_eq!(events.iter().filter(|(event, _)| event == EVENT_STATUS).count(), 0);
+        let payloads = rig.payloads();
+        assert!(payloads
+            .iter()
+            .skip(1)
+            .all(|payload| payload["rackmains_ups_status"] == "OB DISCHRG"));
     }
 
     #[test]

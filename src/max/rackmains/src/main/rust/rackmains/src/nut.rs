@@ -12,6 +12,7 @@ pub const LINE_STALE: &str = "DATASTALE";
 pub const TOKEN_OB: &str = "OB";
 pub const TOKEN_OL: &str = "OL";
 pub const TOKEN_CHRG: &str = "CHRG";
+pub const TOKEN_DISCHRG: &str = "DISCHRG";
 
 const WORDS: [(&str, &str); 15] = [
     (TOKEN_OL, "on mains"),
@@ -20,7 +21,7 @@ const WORDS: [(&str, &str); 15] = [
     ("HB", "battery high"),
     ("RB", "battery replace due"),
     (TOKEN_CHRG, "charging"),
-    ("DISCHRG", "discharging"),
+    (TOKEN_DISCHRG, "discharging"),
     ("CAL", "calibrating"),
     ("OVER", "overloaded"),
     ("BYPASS", "bypass"),
@@ -30,6 +31,19 @@ const WORDS: [(&str, &str); 15] = [
     ("BOOST", "boosting"),
     ("TRIM", "trimming"),
 ];
+
+pub fn settle_flow(status: &str, charge_pct: Option<f64>) -> String {
+    let mut tokens: Vec<&str> = status
+        .split_whitespace()
+        .filter(|token| *token != TOKEN_CHRG && *token != TOKEN_DISCHRG)
+        .collect();
+    if tokens.contains(&TOKEN_OB) {
+        tokens.push(TOKEN_DISCHRG);
+    } else if charge_pct.is_some_and(|pct| pct < 100.0) {
+        tokens.push(TOKEN_CHRG);
+    }
+    tokens.join(" ")
+}
 
 pub fn describe(status: &str) -> String {
     status
@@ -99,7 +113,7 @@ impl Flags {
         let mut unknown = Vec::new();
         for token in status.split_whitespace() {
             match token {
-                TOKEN_OL | "DISCHRG" | "HB" => {}
+                TOKEN_OL | TOKEN_DISCHRG | "HB" => {}
                 TOKEN_OB => flags.raw_on_battery = true,
                 "LB" => flags.low = true,
                 "RB" => flags.replace = true,
@@ -430,6 +444,29 @@ mod tests {
             assert!(
                 WORDS.iter().any(|(known, _)| *known == token),
                 "token [{token}] is parsed but has no word"
+            );
+        }
+    }
+
+    #[test]
+    fn discharging_is_being_on_battery_and_charging_is_mains_with_the_battery_below_full() {
+        for (status, charge, expected) in [
+            ("OB", Some(100.0), "OB DISCHRG"),
+            ("OB DISCHRG", Some(100.0), "OB DISCHRG"),
+            ("OB CHRG", Some(54.0), "OB DISCHRG"),
+            ("OB LB", None, "OB LB DISCHRG"),
+            ("OL", Some(65.0), "OL CHRG"),
+            ("OL DISCHRG", Some(65.0), "OL CHRG"),
+            ("OL CHRG", Some(100.0), "OL"),
+            ("OL", Some(100.0), "OL"),
+            ("OL", None, "OL"),
+            ("OL RB TRIM", Some(99.0), "OL RB TRIM CHRG"),
+            ("", Some(50.0), "CHRG"),
+        ] {
+            assert_eq!(
+                settle_flow(status, charge),
+                expected,
+                "status [{status}] charge [{charge:?}]"
             );
         }
     }
