@@ -804,6 +804,15 @@ switch.ada_desk_outlet:
 switch.edwin_desk_outlet:
   friendly_name: 'Edwin Desk Outlet'
   icon: 'mdi:power-plug-outline'
+switch.ceiling_network_switch_plug:
+  friendly_name: 'Ceiling Network Devices'
+  icon: 'mdi:server-network'
+sensor.ceiling_network_switch_plug_energy_power:
+  friendly_name: 'Ceiling Network Devices'
+  unit_of_measurement: 'W'
+sensor.ceiling_network_switch_plug_energy_total:
+  friendly_name: 'Ceiling Network Devices'
+  unit_of_measurement: 'kWh'
 switch.server_jen_plug:
   friendly_name: 'Server Jen'
   icon: 'mdi:server'
@@ -816,15 +825,8 @@ sensor.rack_outlet_plug_energy_power:
 sensor.rack_outlet_plug_energy_total:
   friendly_name: 'Server Rack'
   unit_of_measurement: 'kWh'
-switch.ceiling_network_switch_plug:
-  friendly_name: 'Ceiling Network Devices'
-  icon: 'mdi:server-network'
-sensor.ceiling_network_switch_plug_energy_power:
-  friendly_name: 'Ceiling Network Devices'
-  unit_of_measurement: 'W'
-sensor.ceiling_network_switch_plug_energy_total:
-  friendly_name: 'Ceiling Network Devices'
-  unit_of_measurement: 'kWh'
+binary_sensor.rackmains_mains_present:
+  friendly_name: 'Mains Power'
 sensor.garden_repeater_linkquality:
   friendly_name: 'Garden Repeater'
 sensor.landing_repeater_linkquality:
@@ -980,18 +982,6 @@ sensor.kitchen_fan_plug_energy_total_monthly:
 sensor.kitchen_fan_plug_energy_total_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
-sensor.rack_outlet_plug_energy_total_daily:
-  friendly_name: 'Total Energy Daily'
-  icon: 'mdi:counter'
-sensor.rack_outlet_plug_energy_total_weekly:
-  friendly_name: 'Total Energy Hept-Daily'
-  icon: 'mdi:counter'
-sensor.rack_outlet_plug_energy_total_monthly:
-  friendly_name: 'Total Energy Monthly'
-  icon: 'mdi:counter'
-sensor.rack_outlet_plug_energy_total_yearly:
-  friendly_name: 'Total Energy Yearly'
-  icon: 'mdi:counter'
 sensor.ceiling_network_switch_plug_energy_total_daily:
   friendly_name: 'Total Energy Daily'
   icon: 'mdi:counter'
@@ -1002,6 +992,18 @@ sensor.ceiling_network_switch_plug_energy_total_monthly:
   friendly_name: 'Total Energy Monthly'
   icon: 'mdi:counter'
 sensor.ceiling_network_switch_plug_energy_total_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.rack_outlet_plug_energy_total_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.rack_outlet_plug_energy_total_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.rack_outlet_plug_energy_total_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.rack_outlet_plug_energy_total_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
 sensor.kitchen_bench_lights_plug_power:
@@ -2404,6 +2406,22 @@ sensor.edwin_desk_outlet_energy_monthly:
 sensor.edwin_desk_outlet_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
+sensor.template_ceiling_network_switch_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_ceiling_network_switch_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_ceiling_network_switch_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_ceiling_network_switch_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_ceiling_network_switch_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_ceiling_network_switch_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.template_server_jen_plug_proxy_power:
   friendly_name: 'Current Power'
 sensor.template_server_jen_plug_proxy_energy:
@@ -2434,22 +2452,6 @@ sensor.template_rack_outlet_plug_proxy_energy_monthly:
   friendly_name: 'Total Energy Monthly'
   icon: 'mdi:counter'
 sensor.template_rack_outlet_plug_proxy_energy_yearly:
-  friendly_name: 'Total Energy Yearly'
-  icon: 'mdi:counter'
-sensor.template_ceiling_network_switch_plug_proxy_power:
-  friendly_name: 'Current Power'
-sensor.template_ceiling_network_switch_plug_proxy_energy:
-  friendly_name: 'Total Energy'
-sensor.template_ceiling_network_switch_plug_proxy_energy_daily:
-  friendly_name: 'Total Energy Daily'
-  icon: 'mdi:counter'
-sensor.template_ceiling_network_switch_plug_proxy_energy_weekly:
-  friendly_name: 'Total Energy Hept-Daily'
-  icon: 'mdi:counter'
-sensor.template_ceiling_network_switch_plug_proxy_energy_monthly:
-  friendly_name: 'Total Energy Monthly'
-  icon: 'mdi:counter'
-sensor.template_ceiling_network_switch_plug_proxy_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
 sensor.garden_repeater_linkquality_power:
@@ -3294,6 +3296,22 @@ sensor.zigbee_repeaters_energy_monthly:
 sensor.zigbee_repeaters_energy_yearly:
   friendly_name: 'Zigbee Repeaters Total Energy Yearly'
   icon: 'mdi:counter'
+sensor.ceiling_network_devices_power:
+  friendly_name: 'Ceiling Network Devices Current Power'
+sensor.ceiling_network_devices_energy:
+  friendly_name: 'Ceiling Network Devices Total Energy'
+sensor.ceiling_network_devices_energy_daily:
+  friendly_name: 'Ceiling Network Devices Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.ceiling_network_devices_energy_weekly:
+  friendly_name: 'Ceiling Network Devices Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.ceiling_network_devices_energy_monthly:
+  friendly_name: 'Ceiling Network Devices Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.ceiling_network_devices_energy_yearly:
+  friendly_name: 'Ceiling Network Devices Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.server_jen_power:
   friendly_name: 'Server Jen Current Power'
 sensor.server_jen_energy:
@@ -3325,22 +3343,6 @@ sensor.server_rack_energy_monthly:
   icon: 'mdi:counter'
 sensor.server_rack_energy_yearly:
   friendly_name: 'Server Rack Total Energy Yearly'
-  icon: 'mdi:counter'
-sensor.ceiling_network_devices_power:
-  friendly_name: 'Ceiling Network Devices Current Power'
-sensor.ceiling_network_devices_energy:
-  friendly_name: 'Ceiling Network Devices Total Energy'
-sensor.ceiling_network_devices_energy_daily:
-  friendly_name: 'Ceiling Network Devices Total Energy Daily'
-  icon: 'mdi:counter'
-sensor.ceiling_network_devices_energy_weekly:
-  friendly_name: 'Ceiling Network Devices Total Energy Hept-Daily'
-  icon: 'mdi:counter'
-sensor.ceiling_network_devices_energy_monthly:
-  friendly_name: 'Ceiling Network Devices Total Energy Monthly'
-  icon: 'mdi:counter'
-sensor.ceiling_network_devices_energy_yearly:
-  friendly_name: 'Ceiling Network Devices Total Energy Yearly'
   icon: 'mdi:counter'
 sensor.ada_home_devices_power:
   friendly_name: 'Ada Home Devices Current Power'

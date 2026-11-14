@@ -132,6 +132,7 @@
               "parents_move_microphone",
               "rackmains_guard_live",
               "rackmains_mains_failed",
+              "rackmains_mains_present",
               "rackmains_ups_boost",
               "rackmains_ups_trim",
               "template_back_door_state",

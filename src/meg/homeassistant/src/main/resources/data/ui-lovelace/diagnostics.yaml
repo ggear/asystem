@@ -231,15 +231,17 @@
     - entity: switch.edwin_desk_outlet
       name: Edwin Desk Outlet
       icon: mdi:power-plug-outline
+    - entity: switch.ceiling_network_switch_plug
+      name: Ceiling Network Devices
+      icon: mdi:server-network
     - entity: switch.server_jen_plug
       name: Server Jen
       icon: mdi:server
     - entity: switch.rack_outlet_plug
       name: Server Rack
       icon: mdi:server
-    - entity: switch.ceiling_network_switch_plug
-      name: Ceiling Network Devices
-      icon: mdi:server-network
+    - entity: binary_sensor.rackmains_mains_present
+      name: Mains Power
 ################################################################################
 - type: entities
   title: Device Maintenance
