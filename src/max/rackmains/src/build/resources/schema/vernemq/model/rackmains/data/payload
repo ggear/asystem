@@ -17,7 +17,7 @@
   "rackmains_battery_age_days": <number>,
   "rackmains_battery_age_due": <number>,
   "rackmains_ups_status": "<text>",
-  "rackmains_mains_failed": <number>,
+  "rackmains_mains_present": <number>,
   "rackmains_ups_problem": <number>,
   "rackmains_ups_calibrating": <number>,
   "rackmains_ups_boost": <number>,

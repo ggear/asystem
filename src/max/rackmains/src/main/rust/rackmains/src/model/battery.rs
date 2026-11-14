@@ -2,7 +2,7 @@
 // WARNING: This file is written by the build process, any manual edits will be lost!
 ////////////////////////////////////////////////////////////////////////////////
 
-// project rackmains_ups_battery sha256 11e9c6b4b77e3c89292bc0eda2f2bdf12d4a95dde82794b6d89a74dd4862bed9
+// project rackmains_ups_battery sha256 30a4f8a750beff595cef875973be8ad97aeefc898fa7c132005d2804a78716e5
 
 use std::path::Path;
 
@@ -15,7 +15,7 @@ pub const STATE_SLOTS: usize = 6;
 pub const INPUT_NAMES: &[&str] = &[
     "clock_epoch_seconds",
     "rackmains_output_load_pct",
-    "rackmains_mains_failed",
+    "rackmains_mains_present",
     "rackmains_ups_calibrating",
     "rackmains_battery_low",
     "rackmains_battery_volts",
@@ -38,7 +38,7 @@ pub const OUTPUT_NAMES: &[&str] = &[
 pub const REQUIRED_INPUT_NAMES: &[&str] = &[
     "clock_epoch_seconds",
     "rackmains_output_load_pct",
-    "rackmains_mains_failed",
+    "rackmains_mains_present",
 ];
 pub const REQUIRED_OUTPUT_NAMES: &[&str] = &[
     "rackmains_guard_shed_battery_seconds",
@@ -49,7 +49,7 @@ pub const REQUIRED_OUTPUT_NAMES: &[&str] = &[
 pub struct Request {
     pub clock_epoch_seconds: f64,
     pub rackmains_output_load_pct: i64,
-    pub rackmains_mains_failed: i64,
+    pub rackmains_mains_present: i64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rackmains_ups_calibrating: Option<i64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -97,8 +97,8 @@ impl From<Request> for Tensors {
                 .unwrap_or(f64::NAN)],
         );
         tensors.insert(
-            "rackmains_mains_failed".to_string(),
-            vec![serde_json::Number::from(request.rackmains_mains_failed)
+            "rackmains_mains_present".to_string(),
+            vec![serde_json::Number::from(request.rackmains_mains_present)
                 .as_f64()
                 .unwrap_or(f64::NAN)],
         );
