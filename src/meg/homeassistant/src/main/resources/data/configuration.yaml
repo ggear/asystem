@@ -183,6 +183,7 @@ logger:
     pychromecast.socket_client: fatal
     homeassistant.components.stream.stream.camera: fatal
     homeassistant.components.websocket_api.http.connection: fatal
+    georss_client.xml_parser: fatal
     ###################################################################################
     # Debug
     ###################################################################################
@@ -200,4 +201,7 @@ logger:
     #custom_components.powercalc: debug
     #custom_components.adaptive_lighting: debug
     #custom_components.bureau_of_meteorology: debug
+  filters:
+    homeassistant.components.sensor:
+      - "geo_rss_events: Error on device update!"
   #####################################################################################

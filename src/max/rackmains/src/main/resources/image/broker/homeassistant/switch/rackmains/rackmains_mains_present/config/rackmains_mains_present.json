@@ -1,14 +1,13 @@
 {
-  "default_entity_id": "binary_sensor.rackmains_mains_present",
+  "default_entity_id": "switch.rackmains_mains_present",
   "unique_id": "rackmains_mains_present",
   "name": "Rackmains Mains Present",
+  "icon": "mdi:transmission-tower",
   "force_update": false,
   "state_topic": "rackmains/data",
-  "value_template": "{{ value_json['rackmains_mains_present'] if value_json['rackmains_mains_present'] is defined else (1 if is_state('binary_sensor.rackmains_mains_present', 'on') else 0) }}",
+  "value_template": "{{ 'ON' if (value_json['rackmains_mains_present'] == 1 if value_json['rackmains_mains_present'] is defined else is_state('switch.rackmains_mains_present', 'on')) else 'OFF' }}",
   "command_topic": "rackmains/command",
   "availability_topic": "rackmains/status",
-  "payload_on": "1",
-  "payload_off": "0",
   "qos": 1,
   "device": {
     "identifiers": [
