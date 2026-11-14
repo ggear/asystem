@@ -3143,6 +3143,7 @@
               "rack_fans_plug",
               "rack_outlet_plug",
               "rack_screen_plug",
+              "rackmains_mains_present",
               "server_jen_plug",
               "server_lia_plug_none",
               "service_cloudflare",

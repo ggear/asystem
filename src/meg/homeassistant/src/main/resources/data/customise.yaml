@@ -825,8 +825,9 @@ sensor.rack_outlet_plug_energy_power:
 sensor.rack_outlet_plug_energy_total:
   friendly_name: 'Server Rack'
   unit_of_measurement: 'kWh'
-binary_sensor.rackmains_mains_present:
+switch.rackmains_mains_present:
   friendly_name: 'Mains Power'
+  icon: 'mdi:transmission-tower'
 sensor.garden_repeater_linkquality:
   friendly_name: 'Garden Repeater'
 sensor.landing_repeater_linkquality:

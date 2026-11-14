@@ -240,8 +240,9 @@
     - entity: switch.rack_outlet_plug
       name: Server Rack
       icon: mdi:server
-    - entity: binary_sensor.rackmains_mains_present
+    - entity: switch.rackmains_mains_present
       name: Mains Power
+      icon: mdi:transmission-tower
 ################################################################################
 - type: entities
   title: Device Maintenance
