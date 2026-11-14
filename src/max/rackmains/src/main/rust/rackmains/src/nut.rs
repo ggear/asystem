@@ -13,6 +13,7 @@ pub const TOKEN_OB: &str = "OB";
 pub const TOKEN_OL: &str = "OL";
 pub const TOKEN_CHRG: &str = "CHRG";
 pub const TOKEN_DISCHRG: &str = "DISCHRG";
+pub const FULL_HOLD: Duration = Duration::from_secs(15);
 
 const WORDS: [(&str, &str); 15] = [
     (TOKEN_OL, "on mains"),
@@ -32,17 +33,42 @@ const WORDS: [(&str, &str); 15] = [
     ("TRIM", "trimming"),
 ];
 
-pub fn settle_flow(status: &str, charge_pct: Option<f64>) -> String {
-    let mut tokens: Vec<&str> = status
-        .split_whitespace()
-        .filter(|token| *token != TOKEN_CHRG && *token != TOKEN_DISCHRG)
-        .collect();
-    if tokens.contains(&TOKEN_OB) {
-        tokens.push(TOKEN_DISCHRG);
-    } else if charge_pct.is_some_and(|pct| pct < 100.0) {
-        tokens.push(TOKEN_CHRG);
+#[derive(Debug, Default)]
+pub struct Flow {
+    charging: bool,
+    full_for: Duration,
+}
+
+impl Flow {
+    pub fn settle(&mut self, status: &str, charge_pct: Option<f64>, elapsed: Duration) -> String {
+        let mut tokens: Vec<&str> = status
+            .split_whitespace()
+            .filter(|token| *token != TOKEN_CHRG && *token != TOKEN_DISCHRG)
+            .collect();
+        if tokens.contains(&TOKEN_OB) {
+            self.charging = false;
+            self.full_for = Duration::ZERO;
+            tokens.push(TOKEN_DISCHRG);
+        } else {
+            match charge_pct {
+                Some(pct) if pct < 100.0 => {
+                    self.charging = true;
+                    self.full_for = Duration::ZERO;
+                }
+                Some(_) => {
+                    self.full_for += elapsed;
+                    if self.full_for >= FULL_HOLD {
+                        self.charging = false;
+                    }
+                }
+                None => {}
+            }
+            if self.charging {
+                tokens.push(TOKEN_CHRG);
+            }
+        }
+        tokens.join(" ")
     }
-    tokens.join(" ")
 }
 
 pub fn describe(status: &str) -> String {
@@ -463,11 +489,43 @@ mod tests {
             ("OL RB TRIM", Some(99.0), "OL RB TRIM CHRG"),
             ("", Some(50.0), "CHRG"),
         ] {
+            let mut flow = Flow::default();
             assert_eq!(
-                settle_flow(status, charge),
+                flow.settle(status, charge, Duration::from_secs(1)),
                 expected,
                 "status [{status}] charge [{charge:?}]"
             );
         }
+    }
+
+    #[test]
+    fn charging_clears_only_after_a_full_hold_at_one_hundred_and_a_dip_restarts_it() {
+        let second = Duration::from_secs(1);
+        let mut flow = Flow::default();
+        assert_eq!(flow.settle("OL", Some(96.0), second), "OL CHRG");
+        for _ in 0..14 {
+            assert_eq!(flow.settle("OL", Some(100.0), second), "OL CHRG");
+        }
+        assert_eq!(flow.settle("OL", Some(96.0), second), "OL CHRG");
+        for _ in 0..14 {
+            assert_eq!(flow.settle("OL", Some(100.0), second), "OL CHRG");
+        }
+        assert_eq!(flow.settle("OL", Some(100.0), second), "OL");
+        assert_eq!(flow.settle("OL", Some(100.0), second), "OL");
+    }
+
+    #[test]
+    fn a_reading_that_dithers_across_the_boundary_never_flaps_and_battery_resets_charging() {
+        let second = Duration::from_secs(1);
+        let mut flow = Flow::default();
+        for tick in 0..120 {
+            let pct = if (tick / 6) % 2 == 0 { 96.0 } else { 100.0 };
+            assert_eq!(flow.settle("OL", Some(pct), second), "OL CHRG", "tick [{tick}]");
+        }
+        assert_eq!(flow.settle("OB", Some(100.0), second), "OB DISCHRG");
+        assert_eq!(flow.settle("OL", Some(100.0), second), "OL");
+        assert_eq!(flow.settle("OL", None, second), "OL");
+        assert_eq!(flow.settle("OL", Some(90.0), second), "OL CHRG");
+        assert_eq!(flow.settle("OL", None, second), "OL CHRG");
     }
 }

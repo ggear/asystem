@@ -20,7 +20,7 @@ use crate::liveness::{
 };
 use crate::metrics::{self, Frame, CLOCK, LAST_READ, MODEL_STATE, READ_FAILURES, STATUS};
 use crate::model::battery::Request;
-use crate::nut::{describe, settle_flow, Flags, Nut, Reading, Source, SAMPLES};
+use crate::nut::{describe, Flags, Flow, Nut, Reading, Source, SAMPLES};
 use crate::outage::{
     self, Stats, Writer, WriterCommand, DIR_OUTAGE, DIR_STATE, END_ABORTED, END_RESTORED, EVENT_COMMAND, EVENT_END,
     EVENT_NOTE, EVENT_START, EVENT_STATUS,
@@ -88,6 +88,7 @@ pub struct Poller {
     battery_state: Option<Vec<f64>>,
     state_names: Vec<String>,
     previous: Option<String>,
+    flow: Flow,
     published_key: Option<(Option<String>, u32)>,
     since_publish: Duration,
     failures: u32,
@@ -167,6 +168,7 @@ impl Poller {
             battery_state,
             state_names,
             previous: None,
+            flow: Flow::default(),
             published_key: None,
             since_publish: Duration::ZERO,
             failures: 0,
@@ -264,7 +266,7 @@ impl Poller {
                 .iter()
                 .find(|(key, _)| *key == metrics::BATTERY_CHARGE_PCT)
                 .map(|(_, value)| *value);
-            reading.status = reading.status.map(|status| settle_flow(&status, charge));
+            reading.status = reading.status.map(|status| self.flow.settle(&status, charge, dt));
             reading
         });
         // 3. Build Frame
