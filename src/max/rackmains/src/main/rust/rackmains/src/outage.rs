@@ -208,7 +208,7 @@ impl Writer {
 
     pub fn send(&self, command: WriterCommand) {
         if self.sender.send(command).is_err() {
-            warn!("outage writer stopped, row dropped");
+            warn!("{}", log_line("outage writer stopped", "row dropped"));
         }
     }
 
@@ -265,7 +265,7 @@ impl Spool {
             }
             WriterCommand::Row(cells) => {
                 let Some(index) = self.current else {
-                    warn!("outage row dropped, no file open");
+                    warn!("{}", log_line("outage row dropped", "no file open"));
                     return;
                 };
                 let part = &mut self.parts[index];
@@ -324,7 +324,7 @@ impl Spool {
                 }
                 Err(err) => {
                     failed = true;
-                    warn!("outage write failed, rows kept in memory [{err}]");
+                    warn!("{}", log_line("outage write failed, rows kept", &err));
                 }
             }
         }
@@ -455,8 +455,11 @@ pub fn prune(dir: &Path, keep: usize, current_stem: &str) {
     let excess = all.len().saturating_sub(keep.max(1));
     for file in all.iter().take(excess).filter(|file| file.stem != current_stem) {
         match fs::remove_file(&file.path) {
-            Ok(()) => info!("outage file pruned [{}]", file.path.display()),
-            Err(err) => warn!("outage file prune failed [{}] [{err}]", file.path.display()),
+            Ok(()) => info!("{}", log_line("outage file pruned", &file.path.display().to_string())),
+            Err(err) => warn!(
+                "{}",
+                log_line("outage file prune failed", &format!("{} {err}", file.path.display()))
+            ),
         }
     }
 }
@@ -492,10 +495,16 @@ pub fn recover(dir: &Path) -> Vec<PathBuf> {
         text.push('\n');
         match write_atomic(&file.path, text.as_bytes()) {
             Ok(()) => {
-                warn!("outage file closed [{END_INTERRUPTED}] [{}]", file.path.display());
+                warn!(
+                    "{}",
+                    log_line(
+                        &format!("outage file closed {END_INTERRUPTED}"),
+                        &file.path.display().to_string()
+                    )
+                );
                 closed.push(file.path.clone());
             }
-            Err(err) => warn!("{err}"),
+            Err(err) => warn!("{}", log_line("outage file recovery failed", &err)),
         }
     }
     closed

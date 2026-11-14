@@ -6,6 +6,7 @@ use std::time::Duration;
 use crate::metrics::{
     BATTERY_VOLTS, COLUMN_DETAIL, COLUMN_ELAPSED, COLUMN_EVENT, GUARD_STATE, PLUG_WATTS, STATUS, UTILISATION,
 };
+use crate::nut::describe;
 use crate::outage::{self, OutageFile, Table, EVENT_START};
 
 const TAIL_POLL: Duration = Duration::from_secs(1);
@@ -37,9 +38,9 @@ pub fn field<'a>(detail: &'a str, name: &str) -> &'a str {
 pub fn format_row(table: &Table, row: &[String]) -> String {
     let cell = |name: &str| table.cell(row, name);
     format!(
-        "{:>6}s {:<12} {:>6}V {:>3}% {:<10} {:>5}W {} {}",
+        "{:>6}s {:<30} {:>6}V {:>3}% {:<10} {:>5}W {} {}",
         cell(COLUMN_ELAPSED),
-        cell(STATUS),
+        describe(cell(STATUS)),
         cell(BATTERY_VOLTS),
         cell(UTILISATION),
         cell(GUARD_STATE),

@@ -11,6 +11,38 @@ pub const LINE_OK: &str = "DATAOK";
 pub const LINE_STALE: &str = "DATASTALE";
 pub const TOKEN_OB: &str = "OB";
 pub const TOKEN_OL: &str = "OL";
+pub const TOKEN_CHRG: &str = "CHRG";
+
+const WORDS: [(&str, &str); 15] = [
+    (TOKEN_OL, "on mains"),
+    (TOKEN_OB, "on battery"),
+    ("LB", "battery low"),
+    ("HB", "battery high"),
+    ("RB", "battery replace due"),
+    (TOKEN_CHRG, "charging"),
+    ("DISCHRG", "discharging"),
+    ("CAL", "calibrating"),
+    ("OVER", "overloaded"),
+    ("BYPASS", "bypass"),
+    ("OFF", "output off"),
+    ("FSD", "forced shutdown"),
+    ("ALARM", "alarm"),
+    ("BOOST", "boosting"),
+    ("TRIM", "trimming"),
+];
+
+pub fn describe(status: &str) -> String {
+    status
+        .split_whitespace()
+        .map(|token| {
+            WORDS
+                .iter()
+                .find(|(known, _)| *known == token)
+                .map_or(token, |(_, word)| *word)
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
+}
 
 pub struct Sample {
     pub variable: &'static str,
@@ -73,7 +105,7 @@ impl Flags {
                 "RB" => flags.replace = true,
                 "OFF" | "OVER" | "BYPASS" | "FSD" | "ALARM" => flags.problem = true,
                 "CAL" => flags.calibrating = true,
-                "CHRG" => flags.charging = true,
+                TOKEN_CHRG => flags.charging = true,
                 "BOOST" => flags.boost = true,
                 "TRIM" => flags.trim = true,
                 other => unknown.push(other.to_string()),
@@ -371,5 +403,34 @@ mod tests {
         let (flags, unknown) = Flags::parse("OL WOBBLE");
         assert_eq!(flags, Flags::default());
         assert_eq!(unknown, vec!["WOBBLE".to_string()]);
+    }
+
+    #[test]
+    fn a_status_reads_as_words_and_an_unknown_token_passes_through() {
+        assert_eq!(describe("OB DISCHRG"), "on battery, discharging");
+        assert_eq!(describe("OL"), "on mains");
+        assert_eq!(describe("OL CHRG"), "on mains, charging");
+        assert_eq!(describe("OB LB"), "on battery, battery low");
+        assert_eq!(describe("OL XYZ"), "on mains, XYZ");
+        assert_eq!(describe(""), "");
+    }
+
+    #[test]
+    fn every_word_has_a_token_the_parser_knows_and_the_other_way_round() {
+        for (token, _) in WORDS {
+            assert!(
+                Flags::parse(token).1.is_empty(),
+                "token [{token}] has a word but the parser does not know it"
+            );
+        }
+        for token in [
+            "OL", "OB", "LB", "RB", "OFF", "OVER", "BYPASS", "FSD", "ALARM", "CAL", "CHRG", "BOOST", "TRIM", "DISCHRG",
+            "HB",
+        ] {
+            assert!(
+                WORDS.iter().any(|(known, _)| *known == token),
+                "token [{token}] is parsed but has no word"
+            );
+        }
     }
 }

@@ -12,6 +12,7 @@ use log::{info, warn};
 use serde::Deserialize;
 
 use crate::guard::{Call, Command, Host, HOST_SHED_LAST};
+use crate::log_line;
 use crate::outage;
 
 pub const SSH_STATUS_UNREACHABLE: i32 = 255;
@@ -91,7 +92,7 @@ pub fn shed_order(hosts: &[Host]) -> Vec<String> {
 
 pub fn spawn(runner: &Arc<dyn Runner>, hosts: &[Host], call: Call, results: &Sender<Finished>) {
     let Some(host) = hosts.iter().find(|host| host.name == call.host).cloned() else {
-        warn!("call for unknown host [{}]", call.host);
+        warn!("{}", log_line("call for unknown host", &call.host));
         let _ = results.send(Finished {
             host: call.host,
             command: call.command,
@@ -203,9 +204,11 @@ impl Runner for Ssh {
                     reason = "call limit reached".to_string();
                 }
                 info!(
-                    "ssh [{}] [{}] status [{status}] took [{took:?}]",
-                    host.name,
-                    command.remote()
+                    "{}",
+                    log_line(
+                        "ssh call",
+                        &format!("{} {} status {status} took {took:?}", host.name, command.remote())
+                    )
                 );
                 let record = || -> std::io::Result<()> {
                     let name = format!(
@@ -241,9 +244,8 @@ impl Runner for Ssh {
                 };
                 if let Err(err) = record() {
                     warn!(
-                        "call log failed [{err}] host [{}] command [{}]",
-                        host.name,
-                        command.remote()
+                        "{}",
+                        log_line("call log failed", &format!("{} {} {err}", host.name, command.remote()))
                     );
                 }
                 Outcome { status, reason, took }
@@ -259,7 +261,10 @@ impl Runner for Ssh {
 
 impl Runner for DryRun {
     fn run(&self, host: &Host, command: Command) -> Outcome {
-        info!("dry-run would run on [{}] [{}]", host.name, command.remote());
+        info!(
+            "{}",
+            log_line("dry-run would run", &format!("{} {}", host.name, command.remote()))
+        );
         Outcome {
             status: 0,
             reason: "dry-run".to_string(),

@@ -445,7 +445,7 @@ pub fn lead_in_verdict(table: &Table, lead: Duration) -> LeadIn {
     if let Some(row) = window.iter().find(unsteady) {
         return LeadIn::Refuse(format!(
             "lead-in status [{}] is not steady mains",
-            table.cell(row, crate::metrics::STATUS)
+            crate::nut::describe(table.cell(row, crate::metrics::STATUS))
         ));
     }
     let readings: Vec<i64> = window.iter().filter_map(|row| watts(row)).collect();

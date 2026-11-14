@@ -90,7 +90,10 @@ impl MqttPublisher {
                         if let Err(err) =
                             thread_client.try_publish(&thread_status_topic, QoS::AtLeastOnce, true, AVAILABILITY_ONLINE)
                         {
-                            warn!("broker status publish failed [{address}] [{err}]");
+                            warn!(
+                                "{}",
+                                log_line("broker status publish failed", &format!("{address} {err}"))
+                            );
                         }
                         let replay: Vec<(String, Vec<u8>)> = match thread_retained.lock() {
                             Ok(cache) => cache
@@ -98,7 +101,10 @@ impl MqttPublisher {
                                 .map(|(topic, payload)| (topic.clone(), payload.clone()))
                                 .collect(),
                             Err(err) => {
-                                warn!("broker retained cache unreadable [{address}] [{err}]");
+                                warn!(
+                                    "{}",
+                                    log_line("broker retained cache unreadable", &format!("{address} {err}"))
+                                );
                                 Vec::new()
                             }
                         };
@@ -107,7 +113,10 @@ impl MqttPublisher {
                                 if let Err(err) =
                                     thread_client.try_publish(topic, QoS::AtLeastOnce, true, payload.clone())
                                 {
-                                    warn!("broker retained republish failed [{topic}] [{err}]");
+                                    warn!(
+                                        "{}",
+                                        log_line("broker retained republish failed", &format!("{topic} {err}"))
+                                    );
                                 }
                             }
                             info!(
@@ -117,13 +126,13 @@ impl MqttPublisher {
                         }
                     }
                     Ok(Event::Incoming(Packet::PubAck(ack))) => {
-                        debug!("broker ack pkid [{}]", ack.pkid);
+                        debug!("{}", log_line("broker ack", &ack.pkid.to_string()));
                     }
                     Ok(Event::Outgoing(Outgoing::Publish(pkid))) => {
-                        debug!("broker publish pkid [{pkid}]");
+                        debug!("{}", log_line("broker publish", &pkid.to_string()));
                     }
                     Ok(Event::Outgoing(Outgoing::Disconnect)) => {
-                        debug!("broker disconnect sent");
+                        debug!("{}", log_line("broker disconnect", "sent"));
                     }
                     Ok(_) => {}
                     Err(err) => {
@@ -132,10 +141,16 @@ impl MqttPublisher {
                         }
                         thread_connected.store(false, Ordering::SeqCst);
                         if failing {
-                            debug!("broker still down [{address}] [{err}]");
+                            debug!("{}", log_line("broker still down", &format!("{address} {err}")));
                         } else {
                             failing = true;
-                            warn!("broker error [{address}] [{err}] retrying every [{RECONNECT_DELAY:?}]");
+                            warn!(
+                                "{}",
+                                log_line(
+                                    "broker error, retrying",
+                                    &format!("{address} {err} every {RECONNECT_DELAY:?}")
+                                )
+                            );
                         }
                         let waiting = Instant::now();
                         while waiting.elapsed() < RECONNECT_DELAY && !thread_shutdown.load(Ordering::SeqCst) {
@@ -144,7 +159,7 @@ impl MqttPublisher {
                     }
                 }
             }
-            debug!("broker event loop stopped");
+            debug!("{}", log_line("broker event loop", "stopped"));
         });
         Ok(MqttPublisher {
             client,
@@ -183,15 +198,18 @@ impl Publisher for MqttPublisher {
 
     fn publish(&mut self, topic: &str, payload: &[u8]) -> Result<()> {
         match std::str::from_utf8(payload) {
-            Ok(text) => debug!("publish [{topic}] -> [{text}]"),
-            Err(_) => debug!("publish [{topic}] -> [{}] bytes", payload.len()),
+            Ok(text) => debug!("{}", log_line("publish", &format!("{topic} {text}"))),
+            Err(_) => debug!("{}", log_line("publish", &format!("{topic} {} bytes", payload.len()))),
         }
         if topic != self.status_topic {
             match self.retained.lock() {
                 Ok(mut cache) => {
                     cache.insert(topic.to_string(), payload.to_vec());
                 }
-                Err(err) => warn!("broker retained cache unwritable [{topic}] [{err}]"),
+                Err(err) => warn!(
+                    "{}",
+                    log_line("broker retained cache unwritable", &format!("{topic} {err}"))
+                ),
             }
         }
         self.client

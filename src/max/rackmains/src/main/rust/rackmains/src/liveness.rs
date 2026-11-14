@@ -8,6 +8,7 @@ use std::time::{Duration, Instant};
 use log::error;
 use serde::{Deserialize, Serialize};
 
+use crate::log_line;
 use crate::outage::write_replace;
 
 pub const FILE_LIVENESS: &str = "liveness.json";
@@ -93,7 +94,7 @@ pub fn watchdog(name: &'static str, progress: Progress, limit: Duration, tick: D
 }
 
 pub fn abort_on_stall(name: &str) {
-    error!("watchdog [{name}] made no progress, aborting");
+    error!("{}", log_line("watchdog stalled, aborting", name));
     std::process::abort();
 }
 
