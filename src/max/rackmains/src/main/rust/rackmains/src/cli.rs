@@ -350,6 +350,10 @@ pub fn run_clean(data_dir: &Path, confirm: impl FnOnce(&str, &str) -> Result<boo
         "deleted [{}] files, restart the container to clear the last outage values the main program still holds",
         paths.len()
     );
+    let version = std::env::var("SERVICE_VERSION_ABSOLUTE").unwrap_or_else(|_| "unknown".to_string());
+    println!(
+        "the next backup will report a shrink and refuse the next install, accept it on the host from the running version with [/var/lib/asystem/install/rackmains/{version}/backup.sh --accept=<timestamp of the regressed backup>]"
+    );
     Ok(())
 }
 

@@ -13,6 +13,7 @@ use serde_json::Value;
 
 use crate::cli::ExitError;
 use crate::liveness::{boot_ms, Effective, Liveness, FILE_LIVENESS};
+use crate::log_line;
 use crate::metrics::{
     self, Frame, COLUMN_DETAIL, COLUMN_ELAPSED, COLUMN_EVENT, COLUMN_TIME, PLUG_AMPS, PLUG_ENERGY, PLUG_POWER_STATE,
     PLUG_VOLTS, PLUG_WATTS,
@@ -191,7 +192,8 @@ impl Drop for Sampler {
 pub const EXIT_ABORTED: u8 = 7;
 pub const EXIT_TIMEOUT: u8 = 4;
 pub const LEAD_IN: Duration = Duration::from_secs(60);
-pub const LEAD_IN_WATTS_SPREAD: i64 = 3;
+pub const LEAD_IN_WATTS_WARN: i64 = 20;
+const LEAD_IN_PROGRESS: Duration = Duration::from_secs(1);
 pub const ACK_TIMEOUT: Duration = Duration::from_secs(10);
 pub const GUARD_STALE_MS: u64 = 3000;
 pub const AFTER_RESTORE_CAP: Duration = Duration::from_mins(30);
@@ -494,34 +496,61 @@ pub fn find_ack(dir: &Path, id: &str) -> Option<(OutageFile, Table)> {
     })
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub struct LeadInWindow {
+    pub span: u64,
+    pub low: i64,
+    pub high: i64,
+    pub median: i64,
+    pub last: i64,
+}
+
+pub fn lead_in_window(table: &Table, lead: Duration) -> Option<LeadInWindow> {
+    let points: Vec<(u64, i64)> = table
+        .rows
+        .iter()
+        .filter_map(|row| {
+            let seconds = table.cell(row, COLUMN_ELAPSED).parse::<u64>().ok()?;
+            Some((seconds, table.cell(row, "rackmains_plug_watts").parse::<i64>().ok()?))
+        })
+        .collect();
+    let (&(start, _), &(end, last)) = (points.first()?, points.last()?);
+    let mut recent: Vec<i64> = points
+        .iter()
+        .filter(|(seconds, _)| end - seconds <= lead.as_secs())
+        .map(|(_, watts)| *watts)
+        .collect();
+    recent.sort_unstable();
+    Some(LeadInWindow {
+        span: end - start,
+        low: *recent.first()?,
+        high: *recent.last()?,
+        median: recent[recent.len() / 2],
+        last,
+    })
+}
+
 pub fn lead_in_verdict(table: &Table, lead: Duration) -> LeadIn {
-    let seconds = |row: &[String]| table.cell(row, COLUMN_ELAPSED).parse::<u64>().unwrap_or(0);
-    let watts = |row: &[String]| table.cell(row, "rackmains_plug_watts").parse::<i64>().ok();
-    let Some(first) = table.rows.iter().position(|row| watts(row).is_some()) else {
+    let Some(window) = lead_in_window(table, lead) else {
         return LeadIn::Wait;
     };
-    let window = &table.rows[first..];
+    let first = table
+        .rows
+        .iter()
+        .position(|row| table.cell(row, "rackmains_plug_watts").parse::<i64>().is_ok())
+        .unwrap_or(0);
     let unsteady = |row: &&Vec<String>| {
         let status = table.cell(row, crate::metrics::STATUS);
         let (flags, _) = crate::nut::Flags::parse(status);
         !status.split_whitespace().any(|token| token == TOKEN_OL) || flags.problem
     };
-    if let Some(row) = window.iter().find(unsteady) {
+    if let Some(row) = table.rows[first..].iter().find(unsteady) {
         return LeadIn::Refuse(format!(
             "lead-in status [{}] is not steady mains",
             crate::nut::describe(table.cell(row, crate::metrics::STATUS))
         ));
     }
-    let (Some(start), Some(end)) = (window.first(), window.last()) else {
-        return LeadIn::Wait;
-    };
-    let readings: Vec<i64> = window
-        .iter()
-        .filter(|row| seconds(end).saturating_sub(seconds(row)) <= lead.as_secs())
-        .filter_map(|row| watts(row))
-        .collect();
-    let spread = readings.iter().max().unwrap_or(&0) - readings.iter().min().unwrap_or(&0);
-    if spread <= LEAD_IN_WATTS_SPREAD && seconds(end).saturating_sub(seconds(start)) >= lead.as_secs() {
+    if window.span >= lead.as_secs() {
         LeadIn::Ready
     } else {
         LeadIn::Wait
@@ -710,24 +739,59 @@ fn drive(
             "the main program did not acknowledge the marker, nothing was cut",
         )
     })?;
-    println!("acknowledged [{}]", file.path.display());
+    println!("{}", log_line("acknowledged", &file.path.display().to_string()));
     let stem = file.stem.clone();
     let reload = || -> Table { follow_run(outage_dir, &stem) };
     let waiting = Instant::now();
+    let mut reported = Instant::now();
     loop {
         if SIGNALLED.load(Ordering::SeqCst) {
             return Err(abort(env, marker, marker_path, outage_dir, &stem, false));
         }
         let table = reload();
+        let window = lead_in_window(&table, timing.lead_in);
         if table.ended() || waiting.elapsed() > timing.lead_in * 3 + timing.ack_timeout {
+            let detail = window.as_ref().map_or_else(String::new, |window| {
+                format!(" [{}s] of [{}s]", window.span, timing.lead_in.as_secs())
+            });
             return Err(ExitError::new(
                 EXIT_TIMEOUT,
-                "the lead-in never completed, nothing was cut",
+                &format!("the lead-in never completed{detail}, nothing was cut"),
             ));
         }
         match lead_in_verdict(&table, timing.lead_in) {
-            LeadIn::Ready => break,
-            LeadIn::Wait => {}
+            LeadIn::Ready => {
+                if let Some(window) = window {
+                    println!(
+                        "{}",
+                        log_line(
+                            "lead-in plug watts",
+                            &format!("median {}W range {}W to {}W", window.median, window.low, window.high)
+                        )
+                    );
+                    if window.high - window.low > LEAD_IN_WATTS_WARN {
+                        println!(
+                            "WARNING plug watts moved [{}W] over [{LEAD_IN_WATTS_WARN}W] in the last [{}s], the baseline is not settled, the cut goes ahead",
+                            window.high - window.low,
+                            timing.lead_in.as_secs()
+                        );
+                    }
+                }
+                break;
+            }
+            LeadIn::Wait => {
+                if let Some(window) = window.filter(|_| reported.elapsed() >= LEAD_IN_PROGRESS) {
+                    reported = Instant::now();
+                    println!(
+                        "{} of [{}s] plug watts [{}W] range [{}W] to [{}W]",
+                        log_line("lead-in", &format!("{}s", window.span)),
+                        timing.lead_in.as_secs(),
+                        window.last,
+                        window.low,
+                        window.high
+                    );
+                }
+            }
             LeadIn::Refuse(reason) => return Err(ExitError::new(1, &format!("{reason}, nothing was cut"))),
         }
         if stale(env) {
@@ -753,7 +817,7 @@ fn drive(
         let _ = env.plug.command("Rule1 0", PLUG_COMMAND_TIMEOUT);
         return Err(ExitError::new(1, &format!("{problem}, nothing was cut")));
     }
-    println!("deadman armed [{seconds}s]");
+    println!("{}", log_line("deadman armed", &format!("{seconds}s")));
     let off = env.plug.command("Power Off", PLUG_COMMAND_TIMEOUT);
     if off
         .as_ref()
@@ -762,7 +826,7 @@ fn drive(
         restore_plug(env.plug.as_ref(), env.timing.poll)?;
         return Err(ExitError::new(1, "the plug did not read OFF, mains restored"));
     }
-    println!("mains cut");
+    println!("{}", log_line("mains", "cut"));
     let cut_at = Instant::now();
     let mut printed = reload().rows.len();
     let mut restored: Option<Instant> = None;
@@ -791,10 +855,16 @@ fn drive(
                 && (held_seconds(&table).is_some_and(|held| held >= hold.as_secs()) || low_raised(&table) || volts_low)
             {
                 if volts_low {
-                    println!("battery volts at or under the abort volts [{abort_volts}], restoring mains");
+                    println!(
+                        "{}",
+                        log_line(
+                            "battery volts at or under the abort volts",
+                            &format!("{abort_volts}V restoring mains")
+                        )
+                    );
                 }
                 restore_plug(env.plug.as_ref(), env.timing.poll)?;
-                println!("mains restored");
+                println!("{}", log_line("mains", "restored"));
                 restored = Some(Instant::now());
                 verify_restored(env, outage_dir, &stem)?;
             }
@@ -811,7 +881,7 @@ fn drive(
 }
 
 fn abort(env: &Env, marker: &Marker, marker_path: &Path, outage_dir: &Path, stem: &str, cut: bool) -> ExitError {
-    println!("signalled, restoring mains first");
+    println!("{}", log_line("signalled", "restoring mains first"));
     if cut || env.plug.command("Rule1", PLUG_COMMAND_TIMEOUT).is_ok() {
         if let Err(err) = restore_plug(env.plug.as_ref(), env.timing.poll) {
             return ExitError::new(1, &err);
@@ -820,7 +890,13 @@ fn abort(env: &Env, marker: &Marker, marker_path: &Path, outage_dir: &Path, stem
     let mut aborted = marker.clone();
     aborted.state = STATE_ABORTED.to_string();
     let _ = aborted.write(marker_path);
-    println!("aborted, the main program runs awake after the restore period of mains, following until the end row");
+    println!(
+        "{}",
+        log_line(
+            "aborted",
+            "the main program runs awake after the restore period of mains, following until the end row"
+        )
+    );
     let started = Instant::now();
     while started.elapsed() < env.timing.after_cap {
         if follow_run(outage_dir, stem).ended() {
@@ -1229,47 +1305,63 @@ mod tests {
     }
 
     #[test]
-    fn the_lead_in_needs_a_minute_of_ol_with_steady_plug_watts_and_an_early_spike_ages_out() {
+    fn the_lead_in_needs_a_minute_of_ol_and_only_reports_the_plug_watts() {
         let lead = Duration::from_secs(60);
+        let series = |points: &[(u64, i64)], status: &str| {
+            let rows: Vec<(String, String, String, String)> = points
+                .iter()
+                .map(|(seconds, watts)| {
+                    (
+                        seconds.to_string(),
+                        status.to_string(),
+                        watts.to_string(),
+                        String::new(),
+                    )
+                })
+                .collect();
+            let borrowed: Vec<(&str, &str, &str, &str)> = rows
+                .iter()
+                .map(|(a, b, c, d)| (a.as_str(), b.as_str(), c.as_str(), d.as_str()))
+                .collect();
+            csv(&borrowed)
+        };
+        let table = |points: &[(u64, i64)]| series(points, "OL");
         assert_eq!(
             lead_in_verdict(&csv(&[("0", "OL", "", "start"), ("1", "OL", "", "")]), lead),
             LeadIn::Wait
         );
+        assert_eq!(lead_in_verdict(&table(&[(1, 90), (30, 91)]), lead), LeadIn::Wait);
+        assert_eq!(lead_in_verdict(&table(&[(1, 90), (61, 92)]), lead), LeadIn::Ready);
         assert_eq!(
-            lead_in_verdict(&csv(&[("1", "OL", "90", ""), ("30", "OL", "91", "")]), lead),
-            LeadIn::Wait
-        );
-        assert_eq!(
-            lead_in_verdict(&csv(&[("1", "OL", "90", ""), ("61", "OL", "92", "")]), lead),
+            lead_in_verdict(&table(&[(1, 90), (30, 200), (61, 90)]), lead),
             LeadIn::Ready
         );
+        assert_eq!(
+            lead_in_window(&table(&[(1, 90), (5, 110), (6, 88), (30, 91)]), lead),
+            Some(LeadInWindow {
+                span: 29,
+                low: 88,
+                high: 110,
+                median: 91,
+                last: 91
+            })
+        );
+        assert_eq!(
+            lead_in_window(&table(&[(1, 300), (70, 90), (100, 92)]), lead),
+            Some(LeadInWindow {
+                span: 99,
+                low: 90,
+                high: 92,
+                median: 92,
+                last: 92
+            })
+        );
         assert!(matches!(
-            lead_in_verdict(&csv(&[("1", "OL", "90", ""), ("61", "OL OVER", "90", "")]), lead),
+            lead_in_verdict(&series(&[(1, 90), (61, 90)], "OL OVER"), lead),
             LeadIn::Refuse(_)
         ));
         assert_eq!(
-            lead_in_verdict(&csv(&[("1", "OL", "90", ""), ("61", "OL", "94", "")]), lead),
-            LeadIn::Wait
-        );
-        assert_eq!(
-            lead_in_verdict(
-                &csv(&[("1", "OL", "90", ""), ("5", "OL", "99", ""), ("65", "OL", "90", "")]),
-                lead
-            ),
-            LeadIn::Wait
-        );
-        assert_eq!(
-            lead_in_verdict(
-                &csv(&[("1", "OL", "90", ""), ("5", "OL", "99", ""), ("66", "OL", "90", "")]),
-                lead
-            ),
-            LeadIn::Ready
-        );
-        assert_eq!(
-            lead_in_verdict(
-                &csv(&[("1", "OL CHRG", "90", ""), ("61", "OL CHRG BOOST", "90", "")]),
-                lead
-            ),
+            lead_in_verdict(&series(&[(1, 90), (61, 90)], "OL CHRG BOOST"), lead),
             LeadIn::Ready
         );
         assert!(matches!(
