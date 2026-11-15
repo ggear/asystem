@@ -8,7 +8,8 @@
 #   tag entity_id* [Home Assistant entity_id:
 #     rackmains_battery_age_days,
 #     rackmains_guard_battery_seconds,
-#     rackmains_guard_mains_seconds]
+#     rackmains_guard_mains_seconds,
+#     rackmains_outage_last_duration_seconds]
 #   tag unit_of_measurement [Home Assistant unit_of_measurement:
 #     d,
 #     s]

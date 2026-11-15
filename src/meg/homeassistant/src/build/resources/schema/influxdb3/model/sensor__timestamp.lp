@@ -32,6 +32,7 @@
 #     bom_darlington_uv_start_time_2,
 #     bom_darlington_uv_start_time_3,
 #     bom_darlington_uv_start_time_4,
+#     rackmains_outage_last_end_epoch_seconds,
 #     rackmains_read_last_epoch_seconds]
 #   field state - <on-change> [Home Assistant value]
 

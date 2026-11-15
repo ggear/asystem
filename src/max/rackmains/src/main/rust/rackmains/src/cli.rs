@@ -3,11 +3,12 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
-use clap::builder::{BoolishValueParser, PossibleValuesParser, TypedValueParser};
-use clap::{Args, Parser, Subcommand};
+use clap::builder::{PossibleValuesParser, TypedValueParser};
+use clap::{Args, CommandFactory, Parser, Subcommand};
+use clap_complete::Shell;
 use log::LevelFilter;
 
-use crate::drill::{self, Env, Tasmota, Timing};
+use crate::drill::{self, Env, Tasmota, Timing, Verb};
 use crate::{check, init_logging, parse_duration, report, serve, DEFAULT_DEVICE, LEVEL_NAMES};
 
 pub const DEFAULT_DATA_DIR: &str = "/asystem/mnt";
@@ -54,7 +55,7 @@ impl From<String> for ExitError {
     arg_required_else_help = true
 )]
 pub struct Cli {
-    #[arg(long = "data-dir", global = true, value_name = "DIR", env = "RACKMAINS_DATA_DIR", default_value = DEFAULT_DATA_DIR)]
+    #[arg(short = 'R', long = "data-dir", help = "directory holding the outage CSVs and the drill state", global = true, value_name = "DIR", env = "RACKMAINS_DATA_DIR", default_value = DEFAULT_DATA_DIR)]
     pub data_dir: String,
     #[command(subcommand)]
     pub command: Commands,
@@ -66,23 +67,27 @@ pub enum Commands {
     Serve(Box<ServeArgs>),
     #[command(about = "validate the model, hosts, ssh keys, data dir and driver socket, then exit")]
     Check(CommonArgs),
-    #[command(about = "operate on the guard", arg_required_else_help = true)]
+    #[command(about = "rehearse a power cut and read the outages", arg_required_else_help = true)]
     Guard {
         #[command(subcommand)]
         command: GuardCommands,
+    },
+    #[command(about = "print the tab completion script for a shell")]
+    Completions {
+        #[arg(value_enum, help = "shell to complete for")]
+        shell: Shell,
     },
 }
 
 #[derive(Debug, Subcommand)]
 pub enum GuardCommands {
-    #[command(about = "rehearse a power cut, print the plan without --force")]
+    #[command(
+        about = "rehearse a power cut, print the plan without --force",
+        arg_required_else_help = true
+    )]
     Drill {
-        #[arg(value_name = "DUR|drain")]
-        target: Option<String>,
-        #[arg(long, help = "cut mains")]
-        force: bool,
-        #[command(flatten)]
-        common: CommonArgs,
+        #[command(subcommand)]
+        verb: DrillCommands,
     },
     #[command(about = "abort the active drill, mains on and deadman disarmed")]
     Stop {
@@ -92,61 +97,119 @@ pub enum GuardCommands {
         common: CommonArgs,
     },
     #[command(about = "follow the newest outage CSV, or the given file, as rows arrive")]
-    Tail { file: Option<String> },
+    Tail {
+        #[arg(value_name = "FILE", help = "outage CSV to follow, default the newest")]
+        file: Option<String>,
+    },
     #[command(about = "show the recent outages and how each ended")]
     List,
 }
 
+#[derive(Debug, Subcommand)]
+pub enum DrillCommands {
+    #[command(name = "blip-watch", about = "restore before the shed, the guard only watches")]
+    Blip(DrillHoldArgs),
+    #[command(
+        name = "brownout-shed-wake",
+        about = "hold past the shed, then restore, the guard sheds and wakes"
+    )]
+    Brownout(DrillHoldArgs),
+    #[command(
+        name = "blackout-shed",
+        about = "run to the UPS cutoff and end there, the plug's deadman brings mains back"
+    )]
+    Blackout(DrillArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct DrillHoldArgs {
+    #[arg(
+        short = 'F',
+        long,
+        help = "time mains is held off, a blip under the shed point and a brownout at or over it",
+        value_name = "DUR"
+    )]
+    pub hold: Option<String>,
+    #[command(flatten)]
+    pub drill: DrillArgs,
+}
+
+#[derive(Debug, Args)]
+pub struct DrillArgs {
+    #[arg(long, help = "cut mains")]
+    pub force: bool,
+    #[command(flatten)]
+    pub common: CommonArgs,
+}
+
 #[derive(Debug, Args)]
 pub struct CommonArgs {
-    #[arg(short = 'D', long = "device", value_name = "SOCKET", hide_short_help = true, default_value = DEFAULT_DEVICE)]
+    #[arg(short = 'D', long = "device", help = "NUT driver socket", value_name = "SOCKET", hide_short_help = true, default_value = DEFAULT_DEVICE)]
     pub device: String,
-    #[arg(short = 'M', long = "model-dir", value_name = "DIR", hide_short_help = true, env = "RACKMAINS_MODEL_DIR", default_value = DEFAULT_MODEL_DIR)]
+    #[arg(short = 'M', long = "model-dir", help = "directory of the released battery model", value_name = "DIR", hide_short_help = true, env = "RACKMAINS_MODEL_DIR", default_value = DEFAULT_MODEL_DIR)]
     pub model_dir: String,
     #[arg(
         short = 'T',
         long = "timeout",
+        help = "timeout of one driver read",
         value_name = "PERIOD",
         hide_short_help = true,
         default_value = "1s"
     )]
     pub timeout: String,
-    #[arg(long = "hosts-file", value_name = "FILE", hide_short_help = true, env = "RACKMAINS_HOSTS_FILE", default_value = DEFAULT_HOSTS_FILE)]
+    #[arg(short = 'H', long = "hosts-file", help = "JSON list of the servers the guard sheds and wakes", value_name = "FILE", hide_short_help = true, env = "RACKMAINS_HOSTS_FILE", default_value = DEFAULT_HOSTS_FILE)]
     pub hosts_file: String,
     #[arg(
+        short = 'C',
         long = "local-host",
+        help = "this host, shed with asleep --shallow",
         value_name = "NAME",
         hide_short_help = true,
         env = "RACKMAINS_LOCAL_HOST",
         default_value = "max"
     )]
     pub local_host: String,
-    #[arg(long = "ssh-key", value_name = "FILE", hide_short_help = true, env = "RACKMAINS_SSH_KEY", default_value = DEFAULT_SSH_KEY)]
+    #[arg(short = 'S', long = "ssh-key", help = "private key for the shed and wake calls", value_name = "FILE", hide_short_help = true, env = "RACKMAINS_SSH_KEY", default_value = DEFAULT_SSH_KEY)]
     pub ssh_key: String,
-    #[arg(long = "known-hosts", value_name = "FILE", hide_short_help = true, env = "RACKMAINS_KNOWN_HOSTS", default_value = DEFAULT_KNOWN_HOSTS)]
+    #[arg(short = 'N', long = "known-hosts", help = "pinned host keys for the shed and wake calls", value_name = "FILE", hide_short_help = true, env = "RACKMAINS_KNOWN_HOSTS", default_value = DEFAULT_KNOWN_HOSTS)]
     pub known_hosts: String,
-    #[arg(long = "run-dir", value_name = "DIR", hide_short_help = true, env = "RACKMAINS_RUN_DIR", default_value = DEFAULT_RUN_DIR)]
+    #[arg(short = 'U', long = "run-dir", help = "directory of the liveness file", value_name = "DIR", hide_short_help = true, env = "RACKMAINS_RUN_DIR", default_value = DEFAULT_RUN_DIR)]
     pub run_dir: String,
-    #[arg(long = "plug-host", value_name = "HOST", hide_short_help = true, env = "RACKMAINS_PLUG_HOST", default_value = DEFAULT_PLUG_HOST)]
+    #[arg(short = 'G', long = "plug-host", help = "host of the rack plug", value_name = "HOST", hide_short_help = true, env = "RACKMAINS_PLUG_HOST", default_value = DEFAULT_PLUG_HOST)]
     pub plug_host: String,
 }
 
 #[derive(Debug, Args)]
 pub struct ServeArgs {
-    #[arg(short = 'P', long = "poll-period", value_name = "PERIOD", default_value = "1s")]
+    #[arg(
+        short = 'P',
+        long = "poll-period",
+        help = "how often the driver is read",
+        value_name = "PERIOD",
+        default_value = "1s"
+    )]
     pub poll_period: String,
-    #[arg(long = "mains-publish-period", value_name = "PERIOD", default_value = "5s")]
+    #[arg(
+        short = 'A',
+        long = "mains-publish-period",
+        help = "how often mains is published, every poll on battery",
+        value_name = "PERIOD",
+        default_value = "5s"
+    )]
     pub mains_publish_period: String,
     #[arg(
         short = 'B',
         long = "broker-host",
+        help = "MQTT broker host",
         value_name = "HOST",
         env = "BROKER_HOST",
         default_value = "localhost"
     )]
     pub broker_host: String,
     #[arg(
+        short = 'O',
         long = "broker-port",
+        help = "MQTT broker port",
         value_name = "PORT",
         hide_short_help = true,
         env = "BROKER_PORT",
@@ -154,7 +217,9 @@ pub struct ServeArgs {
     )]
     pub broker_port: u16,
     #[arg(
+        short = 'K',
         long = "broker-token",
+        help = "MQTT broker token",
         value_name = "TOKEN",
         hide_short_help = true,
         env = "BROKER_TOKEN",
@@ -162,7 +227,9 @@ pub struct ServeArgs {
     )]
     pub broker_token: String,
     #[arg(
+        short = 'E',
         long = "outage-keep",
+        help = "number of outage CSVs kept",
         value_name = "COUNT",
         hide_short_help = true,
         env = "RACKMAINS_OUTAGE_LOG_KEEP",
@@ -170,7 +237,9 @@ pub struct ServeArgs {
     )]
     pub outage_keep: usize,
     #[arg(
+        short = 'I',
         long = "battery-installed",
+        help = "date the battery was installed, YYYY-MM-DD, for its age",
         value_name = "DATE",
         hide_short_help = true,
         env = "RACKMAINS_BATTERY_INSTALLED",
@@ -178,18 +247,13 @@ pub struct ServeArgs {
     )]
     pub battery_installed: String,
     #[arg(
-        long,
-        help = "the guard sheds for real, otherwise dry-run",
-        env = "RACKMAINS_GUARD_LIVE",
-        value_parser = BoolishValueParser::new(),
-        num_args = 0..=1,
-        default_missing_value = "true",
-        default_value = "false"
+        long = "dry-run",
+        help = "log the shed and wake calls instead of making them, implied by the mock"
     )]
-    pub live: bool,
+    pub dry_run: bool,
     #[arg(
         short = 'L',
-        long = "log-level",
+        long = "log-level", help = "log verbosity",
         value_name = "LEVEL",
         default_value = "info",
         env = "RACKMAINS_LOG_LEVEL",
@@ -207,9 +271,18 @@ impl Cli {
         match &self.command {
             Commands::Serve(args) => serve::run(args, data_dir).map_err(ExitError::from),
             Commands::Check(common) => run_check(common, data_dir),
+            Commands::Completions { shell } => {
+                clap_complete::generate(*shell, &mut Cli::command(), "rackmains", &mut std::io::stdout());
+                Ok(())
+            }
             Commands::Guard { command } => match command {
-                GuardCommands::Drill { target, force, common } => {
-                    drill::run_drill(&drill_env(common, data_dir), target.as_deref(), *force)
+                GuardCommands::Drill { verb } => {
+                    let (verb, hold, args) = match verb {
+                        DrillCommands::Blip(args) => (Verb::Blip, args.hold.as_deref(), &args.drill),
+                        DrillCommands::Brownout(args) => (Verb::Brownout, args.hold.as_deref(), &args.drill),
+                        DrillCommands::Blackout(args) => (Verb::Blackout, None, args),
+                    };
+                    drill::run_drill(&drill_env(&args.common, data_dir), verb, hold, args.force)
                 }
                 GuardCommands::Stop { force, common } => drill::run_stop(&drill_env(common, data_dir), *force),
                 GuardCommands::Tail { file } => report::tail(
@@ -336,11 +409,8 @@ mod tests {
 
     #[test]
     fn cli_parses_serve_guard_and_outage_flags() {
-        assert!(!serve(&[]).live);
-        assert!(serve(&["--live"]).live);
-        assert!(serve(&["--live=1"]).live);
-        assert!(!serve(&["--live=0"]).live);
-        assert!(serve(&["--live", "true"]).live);
+        assert!(!serve(&[]).dry_run);
+        assert!(serve(&["--dry-run"]).dry_run);
         assert_eq!(serve(&[]).outage_keep, 100);
         assert_eq!(serve(&["--outage-keep", "7"]).outage_keep, 7);
         assert_eq!(
@@ -373,20 +443,30 @@ mod tests {
                 other => panic!("not guard [{other:?}]"),
             }
         };
-        assert!(matches!(
-            guard(&["drill"]),
-            GuardCommands::Drill {
-                target: None,
-                force: false,
-                ..
+        let drill = |arguments: &[&str]| {
+            let mut full = vec!["drill"];
+            full.extend_from_slice(arguments);
+            match guard(&full) {
+                GuardCommands::Drill { verb } => verb,
+                other => panic!("not drill [{other:?}]"),
             }
+        };
+        assert!(Cli::try_parse_from(["rackmains", "guard", "drill"]).is_err());
+        assert!(matches!(
+            drill(&["brownout-shed-wake"]),
+            DrillCommands::Brownout(DrillHoldArgs {
+                hold: None,
+                drill: DrillArgs { force: false, .. }
+            })
         ));
         assert!(
-            matches!(guard(&["drill", "4m", "--force"]), GuardCommands::Drill { target: Some(ref target), force: true, .. } if target == "4m")
+            matches!(drill(&["blip-watch", "-F", "90s", "--force"]), DrillCommands::Blip(DrillHoldArgs { hold: Some(ref hold), drill: DrillArgs { force: true, .. } }) if hold == "90s")
         );
-        assert!(
-            matches!(guard(&["drill", "drain"]), GuardCommands::Drill { target: Some(ref target), force: false, .. } if target == "drain")
-        );
+        assert!(matches!(
+            drill(&["blackout-shed"]),
+            DrillCommands::Blackout(DrillArgs { force: false, .. })
+        ));
+        assert!(Cli::try_parse_from(["rackmains", "guard", "drill", "blackout-shed", "--hold", "5m"]).is_err());
         assert!(matches!(guard(&["stop"]), GuardCommands::Stop { force: false, .. }));
         assert!(matches!(
             guard(&["stop", "--force"]),
@@ -409,5 +489,41 @@ mod tests {
     #[test]
     fn an_exit_error_from_a_string_exits_one() {
         assert_eq!(ExitError::from("x".to_string()).code, 1);
+    }
+
+    #[test]
+    fn every_command_and_option_is_described_and_named_alike() {
+        fn walk(command: &clap::Command, path: &str, seen: &mut usize) {
+            for arg in command
+                .get_arguments()
+                .filter(|arg| !matches!(arg.get_id().as_str(), "help" | "version"))
+            {
+                let name = format!("{path} {}", arg.get_id());
+                assert!(arg.get_help().is_some(), "no help [{name}]");
+                if let Some(short) = arg.get_short() {
+                    assert_eq!(
+                        arg.get_action().takes_values(),
+                        short.is_ascii_uppercase(),
+                        "short [{short}] case [{name}]"
+                    );
+                }
+                if let Some(env) = arg.get_env() {
+                    let env = env.to_string_lossy();
+                    assert!(
+                        env.starts_with("RACKMAINS_") || env.starts_with("BROKER_"),
+                        "env [{env}] [{name}]"
+                    );
+                }
+                *seen += 1;
+            }
+            for sub in command.get_subcommands() {
+                let name = format!("{path} {}", sub.get_name());
+                assert!(sub.get_about().is_some(), "no about [{name}]");
+                walk(sub, &name, seen);
+            }
+        }
+        let mut seen = 0;
+        walk(&Cli::command(), "rackmains", &mut seen);
+        assert!(seen > 20);
     }
 }

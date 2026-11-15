@@ -18,6 +18,7 @@
 #     rackmains_battery_volts,
 #     rackmains_mains_input_fault_volts,
 #     rackmains_mains_input_volts,
+#     rackmains_outage_last_battery_min_volts,
 #     rackmains_output_volts,
 #     server_lia_plug_voltage,
 #     statistics_weatherstation_console_battery_voltage_mean20,

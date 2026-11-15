@@ -798,7 +798,7 @@ pub fn run(args: &ServeArgs, data_dir: &Path) -> Result<(), String> {
     }
     let hosts = load_hosts(Path::new(&common.hosts_file), &common.local_host)?;
     let ssh_timeout = Duration::from_secs(SSH_TIMEOUT_SECONDS);
-    if args.live {
+    if !args.dry_run {
         let outcomes = check::run(&check::Target {
             model_dir: Path::new(&common.model_dir),
             hosts_file: Path::new(&common.hosts_file),
@@ -819,7 +819,10 @@ pub fn run(args: &ServeArgs, data_dir: &Path) -> Result<(), String> {
             return Err(format!("live mode refused, check failed [{}]", failed.join(",")));
         }
     }
-    let runner: Arc<dyn Runner> = if args.live {
+    let runner: Arc<dyn Runner> = if args.dry_run {
+        info!("{}", log_line("guard mode", "dry-run"));
+        Arc::new(DryRun)
+    } else {
         info!("{}", log_line("guard mode", "live"));
         Arc::new(Ssh {
             key: PathBuf::from(&common.ssh_key),
@@ -828,9 +831,6 @@ pub fn run(args: &ServeArgs, data_dir: &Path) -> Result<(), String> {
             limit: Duration::from_secs(SSH_LIMIT_SECONDS),
             log_dir: data_dir.join(DIR_OUTAGE),
         })
-    } else {
-        info!("{}", log_line("guard mode", "dry-run"));
-        Arc::new(DryRun)
     };
     let publisher = MqttPublisher::new(&args.broker_host, args.broker_port, &args.broker_token, STATUS_TOPIC)
         .map_err(|err| err.to_string())?;
@@ -846,7 +846,7 @@ pub fn run(args: &ServeArgs, data_dir: &Path) -> Result<(), String> {
         data_dir: data_dir.to_path_buf(),
         run_dir: PathBuf::from(&common.run_dir),
         outage_keep: args.outage_keep,
-        live: args.live,
+        live: !args.dry_run,
         version,
         battery_installed: args.battery_installed.clone(),
         ssh_timeout,
@@ -1312,7 +1312,7 @@ mod tests {
         let now = Local.with_ymd_and_hms(2026, 11, 12, 14, 0, 0).unwrap().naive_local();
         Marker {
             id: id.to_string(),
-            mode: drill::MODE_HOLD.to_string(),
+            mode: drill::MODE_BROWNOUT.to_string(),
             hold_seconds: 240,
             planned_cut: String::new(),
             expires: (now + chrono::Duration::hours(2))
@@ -1332,7 +1332,7 @@ mod tests {
         rig.run("OL", 3);
         let events = rig.events();
         assert_eq!(events[0].0, "start");
-        assert!(events[0].1.contains("drill [abc] mode [hold]"));
+        assert!(events[0].1.contains("drill [abc] mode [brownout-shed-wake]"));
         assert_eq!(events.len(), 3);
     }
 
@@ -1587,7 +1587,7 @@ mod tests {
     #[test]
     fn a_drill_runs_end_to_end_cut_shed_restore_and_end_row() {
         let live = Live::new("drill-flow", "OL", true);
-        drill::run_drill(&live.env, Some("1s"), true).unwrap();
+        drill::run_drill(&live.env, drill::Verb::Blip, Some("1s"), true).unwrap();
         let sent = live.sent();
         let off = sent.iter().position(|sent| sent == "Power Off").unwrap();
         let arm = sent.iter().position(|sent| sent.starts_with("Rule1 ON")).unwrap();
@@ -1638,7 +1638,7 @@ mod tests {
         }
         .write(&live.dir.join("run").join(FILE_LIVENESS))
         .unwrap();
-        let error = drill::run_drill(&live.env, Some("1s"), true).unwrap_err();
+        let error = drill::run_drill(&live.env, drill::Verb::Blip, Some("1s"), true).unwrap_err();
         assert_eq!(error.code, drill::EXIT_TIMEOUT);
         assert!(!live.sent().iter().any(|sent| sent == "Power Off"));
         assert!(!live.dir.join(DIR_STATE).join(drill::FILE_MARKER).exists());
@@ -1647,7 +1647,7 @@ mod tests {
     #[test]
     fn a_lead_in_that_is_not_ol_refuses_to_cut() {
         let live = Live::new("drill-runtime", "OL OVER", true);
-        let error = drill::run_drill(&live.env, Some("1s"), true).unwrap_err();
+        let error = drill::run_drill(&live.env, drill::Verb::Blip, Some("1s"), true).unwrap_err();
         assert_eq!(error.code, 1);
         assert!(!live.sent().iter().any(|sent| sent == "Power Off"));
         assert!(!live.sent().iter().any(|sent| sent.starts_with("Rule1 ON")));
@@ -1659,7 +1659,7 @@ mod tests {
     fn a_deadman_that_cannot_be_set_is_disarmed_and_nothing_is_cut() {
         let live = Live::new("drill-deadman", "OL", true);
         *live.plug.refuse.lock().unwrap() = Some("Rule1 1");
-        let error = drill::run_drill(&live.env, Some("1s"), true).unwrap_err();
+        let error = drill::run_drill(&live.env, drill::Verb::Blip, Some("1s"), true).unwrap_err();
         assert_eq!(error.code, 1);
         let sent = live.sent();
         assert!(!sent.iter().any(|sent| sent == "Power Off"));
@@ -1671,7 +1671,7 @@ mod tests {
     fn a_panic_after_the_cut_still_restores_the_plug() {
         let live = Live::new("drill-panic", "OL", true);
         *live.plug.panic_on.lock().unwrap() = Some("Power Off");
-        let error = drill::run_drill(&live.env, Some("1s"), true).unwrap_err();
+        let error = drill::run_drill(&live.env, drill::Verb::Blip, Some("1s"), true).unwrap_err();
         assert_eq!(error.code, 1);
         assert!(live.plug.on.load(Ordering::SeqCst));
         assert_eq!(live.sent().last().map(String::as_str), Some("Rule1 0"));
@@ -1681,7 +1681,7 @@ mod tests {
     #[test]
     fn a_plan_without_force_cuts_nothing() {
         let live = Live::new("drill-plan", "OL", true);
-        drill::run_drill(&live.env, None, false).unwrap();
+        drill::run_drill(&live.env, drill::Verb::Brownout, None, false).unwrap();
         assert!(live.sent().iter().all(|sent| sent == "Status 0"));
         assert!(live.finish().is_empty());
     }

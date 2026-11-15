@@ -177,7 +177,7 @@ mod tests {
             "2026-01-01_00-00-00",
             1,
             &[
-                ("2026-01-01_00-00-00", "start", "drill [a] mode [hold]"),
+                ("2026-01-01_00-00-00", "start", "drill [a] mode [brownout-shed-wake]"),
                 (
                     "2026-01-01_00-01-00",
                     outage::EVENT_END,

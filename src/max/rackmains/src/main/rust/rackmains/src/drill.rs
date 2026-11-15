@@ -25,8 +25,9 @@ use crate::shed::load_hosts;
 pub const FILE_MARKER: &str = "drill.json";
 pub const STATE_ARMED: &str = "armed";
 pub const STATE_ABORTED: &str = "aborted";
-pub const MODE_HOLD: &str = "hold";
-pub const MODE_DRAIN: &str = "drain";
+pub const MODE_BLIP: &str = "blip-watch";
+pub const MODE_BROWNOUT: &str = "brownout-shed-wake";
+pub const MODE_BLACKOUT: &str = "blackout-shed";
 pub const PLUG_PORT: u16 = 80;
 pub const PLUG_SAMPLE_TIMEOUT: Duration = Duration::from_millis(500);
 pub const PLUG_COMMAND_TIMEOUT: Duration = Duration::from_secs(5);
@@ -196,8 +197,9 @@ pub const GUARD_STALE_MS: u64 = 3000;
 pub const AFTER_RESTORE_CAP: Duration = Duration::from_mins(30);
 pub const MARKER_MARGIN: Duration = Duration::from_mins(5);
 pub const DEADMAN_MARGIN: Duration = Duration::from_mins(5);
-pub const DEADMAN_DRAIN: Duration = Duration::from_hours(3);
+pub const DEADMAN_BLACKOUT: Duration = Duration::from_hours(3);
 pub const HOLD_PAST_SHED: Duration = Duration::from_secs(120);
+pub const RECOVER_BEFORE_SHED: u64 = 30;
 pub const CUT_TO_BATTERY: Duration = Duration::from_secs(10);
 pub const RESTORE_VERIFY: Duration = Duration::from_secs(60);
 pub const RECHARGE_WARNING: Duration = Duration::from_hours(6);
@@ -206,10 +208,18 @@ const BACKUP_WINDOW: (u32, u32, u32, u32) = (0, 45, 1, 45);
 
 static SIGNALLED: AtomicBool = AtomicBool::new(false);
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Verb {
+    Blip,
+    Brownout,
+    Blackout,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Target {
-    Hold(Duration),
-    Drain,
+    Blip(Duration),
+    Brownout(Duration),
+    Blackout,
 }
 
 pub struct Timing {
@@ -275,26 +285,68 @@ pub enum LeadIn {
     Refuse(String),
 }
 
-pub fn parse_target(raw: Option<&str>, effective: &Effective) -> Result<Target, String> {
-    match raw {
-        None => Ok(Target::Hold(
-            Duration::from_secs(effective.guard_shed_battery_seconds) + HOLD_PAST_SHED,
-        )),
-        Some("drain") => Ok(Target::Drain),
-        Some(raw) => crate::parse_duration(raw).and_then(|hold| {
-            if hold.is_zero() {
-                Err("hold must be over zero".to_string())
+pub fn parse_target(verb: Verb, hold: Option<&str>, effective: &Effective) -> Result<Target, String> {
+    let shed = effective.guard_shed_battery_seconds;
+    let parsed = hold
+        .map(|raw| {
+            crate::parse_duration(raw)
+                .map(|hold| hold.as_secs())
+                .and_then(|seconds| {
+                    if seconds == 0 {
+                        Err("hold must be over zero".to_string())
+                    } else {
+                        Ok(seconds)
+                    }
+                })
+        })
+        .transpose()?;
+    match verb {
+        Verb::Blackout if parsed.is_some() => Err("blackout-shed runs to the UPS cutoff and takes no hold".to_string()),
+        Verb::Blackout => Ok(Target::Blackout),
+        Verb::Blip => {
+            let seconds = parsed.unwrap_or(if shed > RECOVER_BEFORE_SHED {
+                shed - RECOVER_BEFORE_SHED
             } else {
-                Ok(Target::Hold(hold))
+                shed / 2
+            });
+            if seconds >= shed {
+                return Err(format!(
+                    "blip-watch hold [{seconds}s] must be under the shed point [{shed}s]"
+                ));
             }
-        }),
+            Ok(Target::Blip(Duration::from_secs(seconds)))
+        }
+        Verb::Brownout => {
+            let seconds = parsed.unwrap_or(shed + HOLD_PAST_SHED.as_secs());
+            if seconds < shed {
+                return Err(format!(
+                    "brownout-shed-wake hold [{seconds}s] must be at or over the shed point [{shed}s]"
+                ));
+            }
+            Ok(Target::Brownout(Duration::from_secs(seconds)))
+        }
+    }
+}
+
+fn target_mode(target: &Target) -> &'static str {
+    match target {
+        Target::Blip(_) => MODE_BLIP,
+        Target::Brownout(_) => MODE_BROWNOUT,
+        Target::Blackout => MODE_BLACKOUT,
+    }
+}
+
+fn target_hold(target: &Target) -> Duration {
+    match target {
+        Target::Blip(hold) | Target::Brownout(hold) => *hold,
+        Target::Blackout => Duration::ZERO,
     }
 }
 
 pub fn deadman_seconds(target: &Target) -> u64 {
     match target {
-        Target::Hold(hold) => (*hold + DEADMAN_MARGIN).as_secs(),
-        Target::Drain => DEADMAN_DRAIN.as_secs(),
+        Target::Blip(hold) | Target::Brownout(hold) => (*hold + DEADMAN_MARGIN).as_secs(),
+        Target::Blackout => DEADMAN_BLACKOUT.as_secs(),
     }
 }
 
@@ -368,10 +420,7 @@ pub fn assess(inputs: &Assessment) -> Preflight {
 }
 
 pub fn plan_text(effective: &Effective, target: &Target, assessment: &Preflight, plug_host: &str) -> String {
-    let (mode, hold) = match target {
-        Target::Hold(hold) => (MODE_HOLD, hold.as_secs()),
-        Target::Drain => (MODE_DRAIN, 0),
-    };
+    let (mode, hold) = (target_mode(target), target_hold(target).as_secs());
     let shed = effective.guard_shed_battery_seconds;
     let restore_mains = effective.guard_restore_mains_seconds;
     let mut lines = vec![
@@ -393,25 +442,23 @@ pub fn plan_text(effective: &Effective, target: &Target, assessment: &Preflight,
         "timeline".to_string(),
     ];
     let ending = match target {
-        Target::Hold(hold) => format!(
+        Target::Blip(hold) | Target::Brownout(hold) => format!(
             "T+{} plug on, T+{} awake, end",
             hold.as_secs(),
             hold.as_secs() + restore_mains
         ),
-        Target::Drain => "runs to the UPS cutoff, the deadman restores mains".to_string(),
+        Target::Blackout => "runs to the UPS cutoff, the deadman restores mains".to_string(),
     };
     lines.push(format!(
         "  T-{}s lead-in starts, T+0 plug off, about T+2 OB, T+{shed} shed, {ending}",
         LEAD_IN.as_secs()
     ));
-    if let Target::Hold(hold) = target {
-        if hold.as_secs() < shed {
-            lines.push(format!(
-                "WARNING hold [{}s] is under the shed point [{shed}s], the guard will not shed",
-                hold.as_secs()
-            ));
-        }
-    }
+    lines.push("tests".to_string());
+    lines.push(match target {
+        Target::Blip(_) => "  restore before the shed, the guard only watches".to_string(),
+        Target::Brownout(_) => "  the shed, then restore and awake".to_string(),
+        Target::Blackout => "  the shed, then the UPS cutoff, the plug's deadman brings mains back".to_string(),
+    });
     if !effective.guard_live {
         lines.push("WARNING the guard is in dry-run, the test proves nothing about the shed".to_string());
     }
@@ -483,9 +530,9 @@ pub fn low_raised(table: &Table) -> bool {
         .any(|row| table.cell(row, metrics::BATTERY_LOW) == "1")
 }
 
-pub fn run_drill(env: &Env, raw_target: Option<&str>, force: bool) -> Result<(), ExitError> {
+pub fn run_drill(env: &Env, verb: Verb, hold: Option<&str>, force: bool) -> Result<(), ExitError> {
     let liveness = Liveness::read(&env.run_dir.join(FILE_LIVENESS))?;
-    let target = parse_target(raw_target, &liveness.effective)?;
+    let target = parse_target(verb, hold, &liveness.effective)?;
     let outage_dir = env.data_dir.join(DIR_OUTAGE);
     let marker_path = env.data_dir.join(DIR_STATE).join(FILE_MARKER);
     let preflight = assess(&gather(env, &liveness, &outage_dir, &marker_path));
@@ -500,18 +547,15 @@ pub fn run_drill(env: &Env, raw_target: Option<&str>, force: bool) -> Result<(),
     if !preflight.refusals.is_empty() {
         return Err(ExitError::new(1, "preflight refused, nothing was cut"));
     }
-    if target == Target::Drain && !confirmed_drain()? {
-        return Err(ExitError::new(1, "drain was not confirmed, nothing was cut"));
+    if target == Target::Blackout && !confirmed_blackout()? {
+        return Err(ExitError::new(1, "blackout-shed was not confirmed, nothing was cut"));
     }
     install_signal_handlers();
-    let hold = match &target {
-        Target::Hold(hold) => *hold,
-        Target::Drain => Duration::ZERO,
-    };
+    let hold = target_hold(&target);
     let now = (env.clock)();
     let marker = Marker {
         id: format!("{}-{}", now.format("%Y%m%d%H%M%S"), std::process::id()),
-        mode: if target == Target::Drain { MODE_DRAIN } else { MODE_HOLD }.to_string(),
+        mode: target_mode(&target).to_string(),
         hold_seconds: hold.as_secs(),
         planned_cut: now.format("%Y-%m-%d_%H-%M-%S").to_string(),
         expires: (now
@@ -666,7 +710,7 @@ fn drive(env: &Env, target: &Target, marker: &Marker, marker_path: &Path, outage
         if table.ended() {
             break;
         }
-        if let Target::Hold(hold) = target {
+        if let Target::Blip(hold) | Target::Brownout(hold) = target {
             if restored.is_none()
                 && (held_seconds(&table).is_some_and(|held| held >= hold.as_secs()) || low_raised(&table))
             {
@@ -813,13 +857,13 @@ fn gather(env: &Env, liveness: &Liveness, outage_dir: &Path, marker_path: &Path)
     }
 }
 
-fn confirmed_drain() -> Result<bool, String> {
-    println!("drain keeps mains off until the UPS cuts its own output and max is cut while running, type [drain] to continue");
+fn confirmed_blackout() -> Result<bool, String> {
+    println!("blackout-shed keeps mains off until the UPS cuts its own output and max is cut while running, type [blackout] to continue");
     let mut line = String::new();
     std::io::stdin()
         .read_line(&mut line)
         .map_err(|err| format!("failed to read confirmation [{err}]"))?;
-    Ok(line.trim() == "drain")
+    Ok(line.trim() == "blackout")
 }
 
 fn install_signal_handlers() {
@@ -873,7 +917,7 @@ mod tests {
     fn marker(expires: &str, state: &str) -> Marker {
         Marker {
             id: "a".to_string(),
-            mode: MODE_HOLD.to_string(),
+            mode: MODE_BROWNOUT.to_string(),
             hold_seconds: 240,
             planned_cut: "2026-01-01_00-00-00".to_string(),
             expires: expires.to_string(),
@@ -932,24 +976,33 @@ mod tests {
     }
 
     #[test]
-    fn the_default_hold_is_the_shed_point_plus_two_minutes_and_drain_is_a_word() {
+    fn each_verb_defaults_to_its_side_of_the_shed_point_and_refuses_the_other() {
+        let target = |verb, hold| parse_target(verb, hold, &effective());
         assert_eq!(
-            parse_target(None, &effective()),
-            Ok(Target::Hold(Duration::from_secs(240)))
+            target(Verb::Brownout, None),
+            Ok(Target::Brownout(Duration::from_secs(240)))
         );
         assert_eq!(
-            parse_target(Some("90s"), &effective()),
-            Ok(Target::Hold(Duration::from_secs(90)))
+            target(Verb::Brownout, Some("120s")),
+            Ok(Target::Brownout(Duration::from_secs(120)))
         );
-        assert_eq!(parse_target(Some("drain"), &effective()), Ok(Target::Drain));
-        assert!(parse_target(Some("0"), &effective()).is_err());
-        assert!(parse_target(Some("soon"), &effective()).is_err());
+        assert!(target(Verb::Brownout, Some("119s")).is_err());
+        assert_eq!(target(Verb::Blip, None), Ok(Target::Blip(Duration::from_secs(90))));
+        assert_eq!(
+            target(Verb::Blip, Some("119s")),
+            Ok(Target::Blip(Duration::from_secs(119)))
+        );
+        assert!(target(Verb::Blip, Some("120s")).is_err());
+        assert_eq!(target(Verb::Blackout, None), Ok(Target::Blackout));
+        assert!(target(Verb::Blackout, Some("5m")).is_err());
+        assert!(target(Verb::Brownout, Some("0")).is_err());
+        assert!(target(Verb::Blip, Some("soon")).is_err());
     }
 
     #[test]
-    fn the_deadman_outlasts_the_hold_and_a_drain_gets_three_hours() {
-        assert_eq!(deadman_seconds(&Target::Hold(Duration::from_secs(240))), 540);
-        assert_eq!(deadman_seconds(&Target::Drain), 10_800);
+    fn the_deadman_outlasts_the_hold_and_a_blackout_gets_three_hours() {
+        assert_eq!(deadman_seconds(&Target::Brownout(Duration::from_secs(240))), 540);
+        assert_eq!(deadman_seconds(&Target::Blackout), 10_800);
         assert!(deadman_command(540).contains("RuleTimer1 540 ENDON"));
         assert!(deadman_command(540).contains("Power1 1; Rule1 0"));
     }
@@ -1069,27 +1122,23 @@ mod tests {
     }
 
     #[test]
-    fn the_plan_warns_when_the_hold_is_under_the_shed_point_or_the_guard_is_dry() {
-        let plan = |hold: u64, live: bool| {
+    fn the_plan_names_its_test_and_warns_when_the_guard_is_dry() {
+        let plan = |target: Target, live: bool| {
             let mut effective = effective();
             effective.guard_live = live;
-            plan_text(
-                &effective,
-                &Target::Hold(Duration::from_secs(hold)),
-                &Preflight::default(),
-                "plug",
-            )
+            plan_text(&effective, &target, &Preflight::default(), "plug")
         };
-        assert!(plan(60, true).contains("will not shed"));
-        assert!(!plan(240, true).contains("will not shed"));
-        assert!(plan(240, false).contains("dry-run"));
-        assert!(plan(240, true).contains("T+120 shed"));
-        assert!(plan_text(&effective(), &Target::Drain, &Preflight::default(), "plug").contains("UPS cutoff"));
+        let brownout = || Target::Brownout(Duration::from_secs(240));
+        assert!(plan(brownout(), false).contains("dry-run"));
+        assert!(plan(brownout(), true).contains("T+120 shed"));
+        assert!(plan(brownout(), true).contains("restore and awake"));
+        assert!(plan(Target::Blip(Duration::from_secs(60)), true).contains("only watches"));
+        assert!(plan(Target::Blackout, true).contains("UPS cutoff"));
         let refused = Preflight {
             refusals: vec!["why".to_string()],
             warnings: Vec::new(),
         };
-        assert!(plan_text(&effective(), &Target::Drain, &refused, "plug").contains("REFUSED why"));
+        assert!(plan_text(&effective(), &Target::Blackout, &refused, "plug").contains("REFUSED why"));
     }
 
     #[test]
@@ -1159,9 +1208,12 @@ mod tests {
             )));
             fs::write(dir.join(outage::file_name(stem, 1)), text).unwrap();
         };
-        write("2026-01-01_00-00-00", "drill [other] mode [hold]");
+        write("2026-01-01_00-00-00", "drill [other] mode [brownout-shed-wake]");
         assert!(find_ack(&dir, "mine").is_none());
-        write("2026-01-01_00-01-00", "version [x] drill [mine] mode [hold]");
+        write(
+            "2026-01-01_00-01-00",
+            "version [x] drill [mine] mode [brownout-shed-wake]",
+        );
         assert_eq!(find_ack(&dir, "mine").unwrap().0.stem, "2026-01-01_00-01-00");
     }
 

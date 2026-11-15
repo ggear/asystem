@@ -1111,6 +1111,7 @@
               "rack_printer_plug_energy_monthly",
               "rack_printer_plug_energy_weekly",
               "rack_printer_plug_energy_yearly",
+              "rackmains_guard_last_action_result",
               "rackmains_guard_state",
               "rackmains_output_load_pct",
               "rackmains_read_failures",
@@ -1447,7 +1448,8 @@
             "entities": [
               "rackmains_battery_age_days",
               "rackmains_guard_battery_seconds",
-              "rackmains_guard_mains_seconds"
+              "rackmains_guard_mains_seconds",
+              "rackmains_outage_last_duration_seconds"
             ]
           },
           {
@@ -2971,6 +2973,7 @@
               "bom_darlington_uv_start_time_2",
               "bom_darlington_uv_start_time_3",
               "bom_darlington_uv_start_time_4",
+              "rackmains_outage_last_end_epoch_seconds",
               "rackmains_read_last_epoch_seconds"
             ]
           }
@@ -3010,6 +3013,7 @@
               "rackmains_battery_volts",
               "rackmains_mains_input_fault_volts",
               "rackmains_mains_input_volts",
+              "rackmains_outage_last_battery_min_volts",
               "rackmains_output_volts",
               "server_lia_plug_voltage",
               "statistics_weatherstation_console_battery_voltage_mean20",

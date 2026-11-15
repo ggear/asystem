@@ -9,11 +9,11 @@
 | Host side of the shed (`asleep`, `awake`, power-on-after-cut setting, in the `system` module) | built, tested on `max`; a deep run and the power-on-after-cut test are not done |
 | Battery model (`ups/battery` notebook, `static` project `rackmains_ups_battery`) | built, released, embedded; signature prefixed `rackmains_`, optional inputs (calibrating, battery low, volts, replace due, age, read failures, state) and outputs (runtime and energy remaining, energy used, refit due and reason, state) wired through `serve.rs` and `policy.rs`; the model is called through failed reads; the guard validates the policy at start |
 | Metrics, outage CSV, liveness-file health that does not need MQTT, watchdog, backup enrolment | built, unit tested and run in the container against the mock driver |
-| Guard (shed, restore, state machine), dry-run by default | built as a pure state machine with table tests, called from the poll loop; ssh runner built, calling `asleep` and `awake` by absolute path over an unrestricted root key (`asleep --except` in the `system` module), not run against a host; dry-run by default |
+| Guard (shed, restore, state machine), live by default | built as a pure state machine with table tests, called from the poll loop; ssh runner built, calling `asleep` and `awake` by absolute path over an unrestricted root key (`asleep --except` in the `system` module), not run against a host; live by default, dry-run only with `--dry-run` |
 | The root CLI, `check`, `guard tail` and `guard list` | built |
 | `rackmains guard drill` and `guard stop` | built and exercised end to end against a simulated plug and a real poller; the deadman rule and the `Status 0` parse are unproven on the real plug |
 | Workbook rows | done: 29 metric rows (indexes 2450 to 2478) and `service_rackmains`; the topic and schema checks pass |
-| Release | not done, waits for R4; the first release is the publisher and the guard in dry-run, `.env_prod` sets `RACKMAINS_GUARD_LIVE=0` |
+| Release | not done, waits for R4; the guard is live by default and dry-run only with `--dry-run`, which the entrypoint adds under the mock (decided 2026-11-15, replacing `--live`); there is no dry-run first stage, the static model ships live and a stateful model follows once outage data is collected (decided 2026-11-15) |
 
 **Decided 2026-11-11, not built: no final UPS command, run to failure.** The guard sheds the followers and then does nothing more. `max` stays up in
 `asleep --shallow` with rackmains and the guard recording until the UPS cuts its own output at its low-battery cutoff, and every host boots on AC restore. There is no
@@ -53,7 +53,7 @@ battery. Thresholds are outputs of a model that is fitted offline (the Intent of
   `offline`. A cut during the 01:00 nightly backup interrupts it; the guard does not coordinate.
 - **No `upsmon` or `upssched`.** They stay disabled; see the designs left out.
 - **No in-process calibration.** No runtime `calibrate` tool, no reloaded `calibration.json`, no battery-model `calibrating` flag (unrelated to the NUT `CAL` status, which is `rackmains_ups_calibrating`), no
-  battery-health entity, no accumulator or Peukert model. Those were designed and dropped for the offline fit. No calibration is scheduled; a drain is run by hand only, with `rackmains guard drill drain --force` (decided 2026-11-12).
+  battery-health entity, no accumulator or Peukert model. Those were designed and dropped for the offline fit. No calibration is scheduled; a drain is run by hand only, with `rackmains guard drill blackout-shed --force` (decided 2026-11-12).
 
 ## The host, `max`
 
@@ -391,7 +391,7 @@ service.
 never uses it.
 
 **Guard metrics.** The guard's metrics join the payload when the guard exists, and each gets its own workbook row, `Enabled` for the
-dry-run release, so nothing is added later by surprise. `rackmains_guard_state` is one of `idle`, `waiting`, `shedding`, `holding`,
+first release, so nothing is added later by surprise. `rackmains_guard_state` is one of `idle`, `waiting`, `shedding`, `holding`,
 `restoring`; `rackmains_guard_live` is off while in dry-run; `rackmains_guard_mains_seconds` is the seconds on line since
 the previous outage ended, absent when unknown; `rackmains_guard_battery_seconds` is the guard's accumulated time on battery.
 
@@ -532,8 +532,7 @@ next section). A host is never powered off.
    healthy (`6` is a container not running or healthy). `asleep` is undone by `awake`, so unlike
    a `poweroff` there is nothing to wait on being down.
 5. **Blind restore (decided 2026-11-12).** If reads fail continuously for 2 x `rackmains_guard_restore_mains_seconds` (10 min) after a shed, the guard runs step 4 without having seen `OL`. The broker and Home Assistant are on `meg`, which is shed, so no alert can reach you, and without this rule the hosts stay asleep after mains returns if the UPS link is lost. The cost is waking hosts on a guess when the outage is still going; a host woken that way is cut by the UPS cutoff exactly as it would have been, so the downside is bounded. It is a `decision` row and a WARN. You can raise the wait or turn it into a stay-asleep rule by changing this one step.
-**Safety rails.** It ships in dry-run, logging the exact commands it would run, and goes live only after the trials (see "Trials, tests and rollout") show the
-conservative timers fit. In dry-run the `LB` override is logged as the command it would run and nothing is shed. It compiles in one absolute ceiling on `rackmains_guard_shed_battery_seconds` (nameplate-derived, about 3,600 s) and treats a larger model response as invalid, so a bad fit cannot set a shed time longer than the battery lasts (decided 2026-11-12). The keys can
+**Safety rails.** It ships live on the static model's conservative timers (decided 2026-11-15, no dry-run first stage), and the trials (see "Trials, tests and rollout") follow the release. In dry-run, which is only the mock or a start by hand with `--dry-run`, the `LB` override is logged as the command it would run and nothing is shed. It compiles in one absolute ceiling on `rackmains_guard_shed_battery_seconds` (nameplate-derived, about 3,600 s) and treats a larger model response as invalid, so a bad fit cannot set a shed time longer than the battery lasts (decided 2026-11-12). The keys can
 run `asleep` and `awake` and nothing else. Any status flag that is not `OL` is surfaced; an alarm or fault flag raises an alert in Home
 Assistant.
 
@@ -640,7 +639,8 @@ rackmains [-V|--version] [--data-dir <dir>]     root flags, inherited by every c
 
 rackmains serve [options]                       run the reader, publisher and guard
 rackmains check                                 validate the model, host file, ssh keys, data dir and driver socket, then exit
-rackmains guard drill [<dur>|drain]             rehearse a power cut: print the plan without --force; default hold is the shed point plus 120s
+rackmains guard drill blip-watch|brownout-shed-wake|blackout-shed  rehearse a power cut: print the plan without --force
+                      [-F|--hold <dur>]         blip-watch (default shed point less 30s, must be under it) and brownout-shed-wake (default shed point plus 120s, must be at or over it); not blackout-shed
                       [--force]                 --force cuts mains
 rackmains guard stop [--force]                  abort the active drill: mains on, deadman disarmed
 rackmains guard tail [<file>]                   follow the newest outage CSV, or the given file, as rows arrive
@@ -648,7 +648,7 @@ rackmains guard list                            show the recent outages and how 
 ```
 
 - **Drill and stop behaviour (decided 2026-11-12).**
-  - `drill drain` runs to the UPS cutoff with the deadman as the only stop; at least one such trial is run, once per battery, to collect the data.
+  - `drill blackout-shed` runs to the UPS cutoff with the deadman as the only stop; at least one such trial is run, once per battery, to collect the data.
   - `drill --force` is allowed against a dry-run guard (trial 1 runs that way) with a loud warning.
   - `guard stop` with no drill running reports the state and changes nothing, so it cannot override a plug that is off for a legitimate reason; `guard stop --force` is the unconditional emergency form.
 - **Drill constants (decided 2026-11-12).**
@@ -660,14 +660,14 @@ rackmains guard list                            show the recent outages and how 
   - `-V/--version` (clap's, as `tempstat`'s; supervisor's is `-v`) prints `SERVICE_VERSION_ABSOLUTE` and exits.
   - `-L/--log-level [debug, info, warn, error]` on `serve`, default `info`, its default overridable by `RACKMAINS_LOG_LEVEL` as supervisor's is by its environment variable. Supervisor's source, subject and action log filters
     are not copied, since rackmains has no such vocabulary.
-  - A short list of common flags is shown and the rest are advanced, hidden behind `--help-all`. Shown on `serve`: `-P`, `-B`, `--mains-publish-period`, `--live`, `-L`. Advanced: `-D`, `-M`, `-T`, `--broker-port`,
+  - A short list of common flags is shown and the rest are advanced, hidden behind `--help-all`. Shown on `serve`: `-P`, `-B`, `--mains-publish-period`, `-L`. Advanced: `-D`, `-M`, `-T`, `--broker-port`,
     `--broker-token`, `--outage-keep`.
   - Errors go to stderr and exit `1`; a command that has already reported its failure returns a reported error so it is not printed twice; a command that must exit with its own code (a `drill` aborted with mains restored)
     returns an exit error carrying it. The codes mirror `asleep` (`0` ok, `1` error, `2` usage, `4` timeout) plus one code for "aborted, mains restored" (decided 2026-11-12).
   - The `guard` verbs are one table (name, usage, help, argument count), as `backupVerbs`, not separate handlers.
 - **Crate: `clap` 4 with `derive` and `env`, already a dependency (4.6.7 locked), and nothing new is added.** The root is a `Parser` with a `Subcommand` enum, `guard` a nested `Subcommand` enum, and the root flags `global = true`.
   Advanced flags use `hide_short_help = true`, so `-h` omits them and `--help` shows them, which replaces supervisor's `--help-all` without custom code. Choices use the existing `PossibleValuesParser`. Durations (`<dur>`, the
-  period flags) use `humantime`, also already a dependency. Version stays clap's `-V/--version`, as `tempstat`'s, not supervisor's `-v`. The typed `drain` confirmation reads one line from stdin, with no prompt crate. Exit
+  period flags) use `humantime`, also already a dependency. Version stays clap's `-V/--version`, as `tempstat`'s, not supervisor's `-v`. The typed `blackout` confirmation reads one line from stdin, with no prompt crate. Exit
   codes come from a typed error matched in `main`. No completion crate.
 - **`serve` options.** The existing flags move across unchanged (`-P/--poll-period`, `-D/--device`, `-M/--model-dir`, `-T/--timeout`, `-B/--broker-host`, `--broker-port`, `--broker-token`, `-L/--log-level`). Added:
 
@@ -675,18 +675,18 @@ rackmains guard list                            show the recent outages and how 
   |---|---|---|
   | `--mains-publish-period` | `5s` | publish on mains even if unchanged; no short form, `-B` is the broker |
   | `--outage-keep` | `100`, env `RACKMAINS_OUTAGE_LOG_KEEP` | newest outage files kept |
-  | `--live` | off, env `RACKMAINS_GUARD_LIVE`, set in `.env_prod` | the guard sheds for real; without it the guard is in dry-run; refused if `check` fails |
+  | `--dry-run` | off, added by the entrypoint under the mock | the guard logs its shed and wake calls instead of making them; a live start is refused if `check` fails |
 
   No flag sets `rackmains_guard_shed_battery_seconds` or `rackmains_guard_restore_mains_seconds`: thresholds come from the released model, never from flags or constants.
 - **`check`** loads the model and verifies its hashes and signature, reads the generated host file and checks the ssh keys exist with the right modes, the data dir is writable and the driver socket reachable, then exits `0`
-  or non-zero. `fab systest`, the install hook and an operator can run it, and `--live` uses the same checks, so the guard's "refuses live mode if the model fails" has one implementation.
-- **`guard tail`** and **`guard list`** are read-only and share the one typed outage CSV reader. `tail` is what follows an outage after the drill has gone (a `drain` ends with `max` dying, and the record is read afterwards);
+  or non-zero. `fab systest`, the install hook and an operator can run it, and a live start uses the same checks, so the guard's "refuses live mode if the model fails" has one implementation.
+- **`guard tail`** and **`guard list`** are read-only and share the one typed outage CSV reader. `tail` is what follows an outage after the drill has gone (a `blackout-shed` ends with `max` dying, and the record is read afterwards);
   `list` prints each recent outage with its start, duration, minimum battery voltage, hosts shed and whether it was a real outage or a `drill`, taken from the `start` and `end` rows.
-- **`<dur>` or `drain`** is one positional on `drill`. `drain` keeps mains off until the UPS cuts its own output.
-- **`drain`** keeps mains off until the UPS cuts its own output, so the guard sheds as for any outage and `max` is then cut while running. It needs a typed `drain` even with `--force`.
+- **`blip-watch`, `brownout-shed-wake` or `blackout-shed`** is the verb of `drill`, so the test is always named and a `--hold` on the wrong side of the shed point is refused; the plan prints which test it is. `blackout-shed` keeps mains off until the UPS cuts its own output.
+- **`blackout-shed`** keeps mains off until the UPS cuts its own output, so the guard sheds as for any outage and `max` is then cut while running. It needs a typed `blackout` even with `--force`.
 - **No `plan` or `run` command, no `--yes`, no `--label`:** a bare `drill` is the plan and `--force` acts. `drill` follows its own run and keeps following after Ctrl-C; `docker logs -f rackmains` carries the same events at INFO.
 - **From the environment, not flags:** `RACKMAINS_PLUG_HOST` (`10.0.4.102`), set in `.env_all`.
-- **Fixed, not options:** recording continues after restore until the outage CSV's `end` row, capped at 30 min; the 60 s lead-in; the plug deadman is hold plus 5 min, or 3 h for `drain` until the first measured run (Decided). Changing
+- **Fixed, not options:** recording continues after restore until the outage CSV's `end` row, capped at 30 min; the 60 s lead-in; the plug deadman is hold plus 5 min, or 3 h for `blackout-shed` until the first measured run (Decided). Changing
   either is a release.
 - **Container-free fallback.** If Docker or the rackmains container is down, `guard stop` cannot run; the plug deadman is the backstop and the operator command is
   `curl 'http://10.0.4.102/cm?cmnd=Power%20On'` followed by `curl 'http://10.0.4.102/cm?cmnd=Rule1%200'` to disarm the rule.
@@ -806,8 +806,8 @@ project is discarded; and a failed call keeps the last valid answer.
 
 **The shipped model** lives in the image as the embedded project (`project.json`, `signature.json` and `golden.json`), so
 changing it is a release. The first release is the `static` day-one project and a fitted
-project later replaces it; there is no floor beside it. The guard validates it at start, checks its hashes, and **refuses live mode** if it fails; it stays in dry-run and says so.
-Dry-run versus live is deployment config in `.env_prod`, never in a model document.
+project later replaces it; there is no floor beside it. The guard validates it at start, checks its hashes, and **refuses to start live** if it fails.
+Dry-run versus live is the `--dry-run` flag, never in a model document.
 
 **What is implemented (2026-11-05).** The project is written by the notebook and passes every project check of `model.md` section 9 (the five inputs, nine outputs (twelve before the halt thresholds were removed) and six state slots of `signature.json`, and a golden file with a first
 call with no state, a row mid-drain with state, a row with the replace flag raised, and a request with the utilisation missing that
@@ -954,11 +954,11 @@ Recovered from the model plan deleted in commit `ca0c83150` (`git show ca0c83150
 
 | # | Trial | Command | Needs first | Decides |
 |---|---|---|---|---|
-| 1 | Hold at service load | by hand, plug off for 10 min, guard in dry-run | the guard built, the plug deadman proven by hand (test 8) | the conservative timers fit; the knee if it appears |
+| 1 | Hold at service load | by hand, plug off for 10 min, guard started with `--dry-run` | the guard built, the plug deadman proven by hand (test 8) | the conservative timers fit; the knee if it appears |
 | 2 | Recover before the shed | by hand, plug off for 90 s, guard live | trial 1 | nothing is shed, the reset works |
 | 3 | Recover after the shed | by hand, plug off for 4 min, guard live, followers shed then woken | tests 3, 4 and 5 | the restart path |
 | 4 | (dropped) Halt and UPS cut/restore | | | there is no halt and no `shutdown.return`; test 6 stays only as the fallback if outlets do not restore |
-| 5 | Run to failure, once per battery | `guard drill drain --force`, guard armed | the drill built, trial 1 | the real knee and cutoff, whether `LB` raises, whether outlets restore, the offline fit |
+| 5 | Run to failure, once per battery | `guard drill blackout-shed --force`, guard armed | the drill built, trial 1 | the real knee and cutoff, whether `LB` raises, whether outlets restore, the offline fit |
 
 **Trials 1 to 3 by hand (decided 2026-11-12).** The commands the drill would issue, typed on `max`: arm the plug's deadman rule (the `Rule1` line in "The guard CLI", with the hold plus 5 min) and read `Rule1` back, `Power Off`, watch `docker logs -f rackmains`, `Power On` at the end of the hold, `Rule1 0`, and wait for the CSV's `end` row. These runs have no lead-in, no plug columns and no marker, so the CSV is not tagged `drill` and has no plug watts baseline; note the run's label by hand. The container-free fallback in "The guard CLI" is the way out if anything goes wrong.
 
@@ -991,14 +991,13 @@ and the time cap carries that job.
 
 | Step | Thresholds | Mode | Allowed by | Evidence it produces |
 |---|---|---|---|---|
-| A, floor | `rackmains_guard_shed_battery_seconds` 120, inside the proven 145 s at service load with no knee | dry-run | the per-host `asleep` times (test 4) and the forced-command test (3) | the guard's decisions on real mains events, logged but not acted on |
-| B, live and cautious | the same | live | trial 1 at worst-case load with no knee and no `LB`; trials 2 and 3 pass; the restart path chosen | real outages and drills exercise the whole chain |
-| C, measured | `rackmains_guard_shed_battery_seconds` set to the knee time less `rackmains_guard_shed_runtime_seconds` | live | trial 5 once on this battery, plus any real outage, fitted offline | the knee at service load, the cutoff, whether `LB` raises |
+| A, floor, live from the first release | `rackmains_guard_shed_battery_seconds` 120, inside the proven 145 s at service load with no knee | live | the per-host `asleep` times (test 4) and the forced-command test (3); trial 1 at worst-case load with no knee and no `LB`, then trials 2 and 3 and the restart path follow the release | real outages and drills exercise the whole chain |
+| B, measured | `rackmains_guard_shed_battery_seconds` set to the knee time less `rackmains_guard_shed_runtime_seconds` | live | trial 5 once on this battery, plus any real outage, fitted offline | the knee at service load, the cutoff, whether `LB` raises |
 | reset | recomputed | live | a battery replacement, a load change over about 30%, or a time to the floor 20% below the last fit | a new trial and a release |
 
 - `rackmains_guard_restore_mains_seconds` is the shortest run of `OL` that a flapping grid has not been seen to break, and long enough that a drained battery has begun to recover (about 6 hours to 90% per the manual, so longer is safer; there is no measure, it is a judgement).
-- A single run to the cutoff costs some battery life, so trial 5 is made once per battery. Without it the thresholds stay at step B and waste battery but never risk the servers.
-- A reset is a refit from the outage CSVs and history, a new project, a release, and a dry-run period before live; the previous project stays in git.
+- A single run to the cutoff costs some battery life, so trial 5 is made once per battery. Without it the thresholds stay at step A and waste battery but never risk the servers.
+- A reset is a refit from the outage CSVs and history, a new project and a release; the previous project stays in git.
 
 **Gaps carried from that plan, still open**
 
@@ -1025,24 +1024,23 @@ Hands-on steps the code cannot do, in the order they unblock work. Results of th
 3. **Tests 3 and 4** (ssh key, per-host `asleep` time), then the **spare-plug deadman proof** (test 8) and the **retained `cmnd/POWER` check**.
 4. **`mad`'s macOS step** for power-on after a cut, then test 5 on all four hosts.
 5. **List what else is on the UPS** (switch, router, access point, the Mac): the plug's WiFi and the followers' ssh path depend on them.
-6. **Releases and trials:** the dry-run release, trial 1, trials 2 and 3, and trial 5 once per battery.
-7. **Until the guard goes live** the rack is exactly as exposed as it is today, so the dry-run release protects nothing.
+6. **Releases and trials:** the live release, trial 1 by hand with the guard started `--dry-run`, trials 2 and 3, and trial 5 once per battery.
 
 ## Remaining phases
 
-Decided: step A starts inside the proven 145 s (`rackmains_guard_shed_battery_seconds` 120); trial 5 goes to the cutoff once; trials 1 to 3 are cut by hand and trial 5 with `rackmains guard drill`; and there is **one first release carrying the publisher and the guard in
-dry-run**, not a publisher alone. Each build step ends in a review (R1 to R4, defined in the next section), and the release waits for R4.
+Decided: step A starts inside the proven 145 s (`rackmains_guard_shed_battery_seconds` 120); trial 5 goes to the cutoff once; trials 1 to 3 are cut by hand and trial 5 with `rackmains guard drill`; and there is **one first release carrying the publisher and the guard,
+live**, not a publisher alone. Each build step ends in a review (R1 to R4, defined in the next section), and the release waits for R4.
 
 1. **R1, done in the build pass (2026-11-12):** review `rackmains`, `mockdriver`, `tools/schema`, the install hooks and `policy.rs`.
 2. **Build metrics and the outage CSV:** the `nut.rs` flag function and `SAMPLES` with the canonical names, the flat MQTT payload and the poll and publish cadence, the outage CSV writer and its backup enrolment (`backup.sh`,
    `write_container_backup()`, the `.env_all` keep values), the liveness file, the watchdog and an MQTT-independent `checkhealthy.sh`, the model seam, the module `CLAUDE.md`. Then **R2**.
 3. **Yours (not done, no longer blocks the build):** tests 3 and 4, the spare-plug deadman proof and the retained-command check ("Yours to do").
-4. **Build the guard, dry-run only:** the root CLI (`serve`, `check`, `guard`) with the image entrypoint and compose command changed to `rackmains serve`; `run` restructured so the poll, the CSV writer and the guard start
+4. **Build the guard:** the root CLI (`serve`, `check`, `guard`) with the image entrypoint and compose command changed to `rackmains serve`; `run` restructured so the poll, the CSV writer and the guard start
    before, and never wait on, the broker connect; the generated host file; `liveness.json` on tmpfs; the ssh runners for `asleep` and `awake`; the state machine with mock sequences; `rackmains guard tail|list`. Then **R3**.
-5. **R4, final review of the whole module,** then **yours:** the workbook rows and the dry-run release; confirm `rackmains/status` is `online`, the entities appear, and a short by-hand plug cut turns `rackmains_mains_failed` on within one poll and off when mains returns.
+5. **R4, final review of the whole module,** then **yours:** the workbook rows and the first release; confirm `rackmains/status` is `online`, the entities appear, and a short by-hand plug cut turns `rackmains_mains_failed` on within one poll and off when mains returns.
 6. **Trial 1 by hand, then test 5 and the restart tests, then trials 2 and 3 live by hand,** recording each result.
 7. **Build `rackmains guard drill` and `guard stop`,** then **R5**, a review of what they added.
-8. **Trial 5 once per battery** (`rackmains guard drill drain --force`), fit the model's outputs offline (a new project), release the measured thresholds.
+8. **Trial 5 once per battery** (`rackmains guard drill blackout-shed --force`), fit the model's outputs offline (a new project), release the measured thresholds.
 
 ## Open decisions
 
@@ -1058,9 +1056,9 @@ Consolidated 2026-11-11 and renumbered Q1 to Q21. Each has the question, why it 
 - **Q1 to Q17 and Q20 (2026-11-12)** are settled and folded into the sections above: alerting, health from the UPS and the staleness reminder (rejected) under "Metrics, MQTT and the outage CSV"; calibration under "Goal and shape"; the exit codes, the drill and stop behaviour in "The guard CLI"; the model ceiling in "The shutdown guard"; the plug password in "Trials, tests and rollout"; trial 5 in the same section. Q11 closed with no action. Q12 to Q15 are accepted: every shed and wake call runs in its own worker thread with a 30 s connect and silence timeout that frees the worker on error and never interrupts other calls, and a call still running after 600 s is killed and recorded as failed with status 124 ("The shutdown guard"); the poll, the CSV row and the model call are both 1 s on battery, in step with the poll ("Metrics, MQTT and the outage CSV", "The model seam"); 100 files kept, 1 MB per file, whole-document rewrite. Q16 and Q17 (drill constants, plug sampling and the backup window) are in "The guard CLI". Q18, Q19, Q21 and Q22 keep their numbers. The CLI's tests (Q20) are a parsing test per flag and subcommand, as `tempstat`'s `cli_parses_*`, written in the CLI build step.
 - **Run to failure, no final UPS command** (2026-11-11), at the top of this file.
 - **Model promotion** (2026-11-11). The first release ships the constants project, so a model is always present, and later releases replace it with a fitted one as part of the codebase once data is collected. There are no `static`, `shadow` or `live` modes and no `guard_mode`; `rackmains_guard_live`
-  (dry-run or live) stays deployment config in `.env_prod`. A refit is a release.
+  (dry-run or live) is the `--dry-run` flag, which the entrypoint adds under the mock. A refit is a release.
 - **Guard status** (2026-11-12). One `liveness.json` on tmpfs, replacing `rackmains_guard_state.json`, `guard_heartbeat`, `rackmains_battery_state.json` and `status.json`, as written in "Control plane". The ack is a CSV row, host results are CSV rows, and the publisher is fed over a channel.
-- **`drain` deadman** (2026-11-11). 3 h for the first run with the guard armed, printed in the plan, then set from the measured time to cutoff plus a margin.
+- **`blackout-shed` deadman** (2026-11-11). 3 h for the first run with the guard armed, printed in the plan, then set from the measured time to cutoff plus a margin.
 - **Trials, tests and rollout restated** from the model plan deleted in commit `ca0c83150`, and **reachability during a drain**, in the sections of those names.
 - **The guard CLI** (2026-11-11): `rackmains serve|check|guard drill|stop|tail|list`, plan-only without `--force`, one binary, plug columns in the outage CSV, recording after restore
   until the CSV `end` row capped at 30 min.
