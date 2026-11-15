@@ -57,6 +57,19 @@ pub fn log_prefix(level: log::Level) -> String {
     )
 }
 
+pub fn log_prefix_at(level: log::Level, epoch_seconds: f64) -> String {
+    chrono::DateTime::from_timestamp(epoch_seconds.floor() as i64, (epoch_seconds.fract() * 1e9) as u32).map_or_else(
+        || log_prefix(level),
+        |time| {
+            format!(
+                "[{} {:<5}]",
+                time.with_timezone(&chrono::Local).format("%Y-%m-%dT%H:%M:%S%.3f%:z"),
+                level
+            )
+        },
+    )
+}
+
 pub fn say(level: log::Level, line: &str) {
     println!("{} {line}", log_prefix(level));
 }

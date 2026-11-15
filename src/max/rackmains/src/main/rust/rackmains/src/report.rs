@@ -6,14 +6,14 @@ use std::time::Duration;
 use log::Level;
 
 use crate::metrics::{
-    BATTERY_VOLTS, COLUMN_DETAIL, COLUMN_ELAPSED, COLUMN_EVENT, COLUMN_TIME, GUARD_STATE, PLUG_WATTS, STATUS,
+    BATTERY_VOLTS, CLOCK, COLUMN_DETAIL, COLUMN_ELAPSED, COLUMN_EVENT, COLUMN_TIME, GUARD_STATE, PLUG_WATTS, STATUS,
     UTILISATION,
 };
 use crate::nut::describe;
 use crate::outage::{
     self, OutageFile, Table, EVENT_COMMAND, EVENT_DECISION, EVENT_END, EVENT_NOTE, EVENT_START, EVENT_STATUS,
 };
-use crate::{log_change, log_line, log_prefix};
+use crate::{log_change, log_line, log_prefix, log_prefix_at};
 
 const TAIL_POLL: Duration = Duration::from_secs(1);
 const PROGRESS_SECONDS: u64 = 10;
@@ -113,6 +113,17 @@ pub fn event_lines(event: &str, detail: &str) -> Vec<String> {
                 log_line(&label, &value)
             })
             .collect(),
+        EVENT_START => pairs(detail)
+            .into_iter()
+            .map(|(key, value)| {
+                let value = if key == "model" {
+                    value.split(' ').next().unwrap_or("").to_string()
+                } else {
+                    value
+                };
+                log_line(&format!("outage start {}", words(&key)), &value)
+            })
+            .collect(),
         EVENT_NOTE => vec![log_line("guard note", detail)],
         EVENT_END => pairs(detail)
             .into_iter()
@@ -143,25 +154,36 @@ pub fn progress_lines(table: &Table, row: &[String]) -> Vec<String> {
     .collect()
 }
 
-pub fn row_lines(table: &Table, row: &[String], next_progress: &mut u64) -> Vec<String> {
+#[derive(Debug, Default)]
+pub struct Progress {
+    next: u64,
+    last: Vec<String>,
+}
+
+pub fn row_lines(table: &Table, row: &[String], progress: &mut Progress) -> Vec<String> {
     let event = table.cell(row, COLUMN_EVENT);
-    if event == EVENT_START {
-        return Vec::new();
-    }
     if !event.is_empty() {
         return event_lines(event, table.cell(row, COLUMN_DETAIL));
     }
     let elapsed = table.cell(row, COLUMN_ELAPSED).parse::<u64>().unwrap_or(0);
-    if elapsed < *next_progress {
+    if elapsed < progress.next {
         return Vec::new();
     }
-    *next_progress = elapsed + PROGRESS_SECONDS;
-    progress_lines(table, row)
+    progress.next = elapsed + PROGRESS_SECONDS;
+    let lines = progress_lines(table, row);
+    let changed = lines
+        .iter()
+        .enumerate()
+        .filter(|(index, line)| progress.last.get(*index) != Some(line))
+        .map(|(_, line)| line.clone())
+        .collect();
+    progress.last = lines;
+    changed
 }
 
 pub fn tail(dir: &Path, file: Option<&Path>, follow: bool, out: &mut dyn Write) -> Result<(), String> {
     let mut printed = 0usize;
-    let mut next_progress = 0u64;
+    let mut progress = Progress::default();
     let mut current: Option<String> = None;
     loop {
         let parts: Vec<OutageFile> = if let Some(path) = file {
@@ -184,7 +206,7 @@ pub fn tail(dir: &Path, file: Option<&Path>, follow: bool, out: &mut dyn Write) 
         if stem != current {
             current = stem;
             printed = 0;
-            next_progress = 0;
+            progress = Progress::default();
         }
         let mut seen = 0usize;
         let mut ended = false;
@@ -192,9 +214,12 @@ pub fn tail(dir: &Path, file: Option<&Path>, follow: bool, out: &mut dyn Write) 
             let table = Table::read(&part.path)?;
             for row in &table.rows {
                 if seen >= printed {
-                    for line in row_lines(&table, row, &mut next_progress) {
-                        writeln!(out, "{} {line}", log_prefix(Level::Info))
-                            .map_err(|err| format!("failed to write [{err}]"))?;
+                    let prefix = table
+                        .cell(row, CLOCK)
+                        .parse::<f64>()
+                        .map_or_else(|_| log_prefix(Level::Info), |at| log_prefix_at(Level::Info, at));
+                    for line in row_lines(&table, row, &mut progress) {
+                        writeln!(out, "{prefix} {line}").map_err(|err| format!("failed to write [{err}]"))?;
                     }
                     printed += 1;
                 }
@@ -348,6 +373,56 @@ mod tests {
     }
 
     #[test]
+    fn tail_starts_with_the_start_row_and_stamps_each_line_with_its_own_time() {
+        let dir = directory("tail-start");
+        let mut text = outage::encode_row(&metrics::header());
+        text.push('\n');
+        for (clock, event, detail) in [
+            (
+                1_700_000_000.25,
+                "start",
+                "version [10.200.2070] model [rackmains_ups_battery c517] pollfreq [1] drill [d] mode [blip-watch]",
+            ),
+            (1_700_000_060.75, "note", "later"),
+        ] {
+            let mut frame = Frame::default();
+            frame.set_number(metrics::CLOCK, clock);
+            text.push_str(&outage::encode_row(&outage::row(
+                "2026-01-01_00-00-00",
+                1,
+                event,
+                detail,
+                &frame,
+            )));
+            text.push('\n');
+        }
+        text.push_str(&outage::encode_row(&outage::row(
+            "2026-01-01_00-02-00",
+            2,
+            outage::EVENT_END,
+            "reason [restored]",
+            &Frame::default(),
+        )));
+        text.push('\n');
+        fs::write(dir.join(outage::file_name("2026-01-01_00-00-00", 1)), text).unwrap();
+        let mut out = Vec::new();
+        tail(&dir, None, true, &mut out).unwrap();
+        let text = String::from_utf8(out).unwrap();
+        let lines: Vec<&str> = text.lines().collect();
+        assert!(
+            lines[0].contains("outage start version")
+                && lines[0].starts_with(&log_prefix_at(Level::Info, 1_700_000_000.25))
+        );
+        assert!(
+            text.contains("outage start model ") && text.contains("[rackmains_ups_battery]") && !text.contains("c517")
+        );
+        assert!(text.contains("outage start mode") && text.contains("[blip-watch]"));
+        let note = lines.iter().find(|line| line.contains("guard note")).unwrap();
+        assert!(note.starts_with(&log_prefix_at(Level::Info, 1_700_000_060.75)));
+        assert_ne!(lines[0][..32], note[..32]);
+    }
+
+    #[test]
     fn a_detail_is_split_into_its_bracketed_pairs() {
         assert_eq!(
             pairs("host [max] command [asleep --shallow] status [0] reason []"),
@@ -386,24 +461,26 @@ mod tests {
         assert!(event_lines("", "").is_empty());
         let mut text = outage::encode_row(&metrics::header());
         text.push('\n');
-        for elapsed in [0u64, 4, 12] {
+        for (elapsed, volts) in [(0u64, 13.3), (4, 13.3), (12, 13.3), (24, 12.1)] {
+            let mut frame = Frame::default();
+            frame.set_number(metrics::BATTERY_VOLTS, volts);
             text.push_str(&outage::encode_row(&outage::row(
                 "2026-01-01_00-00-00",
                 elapsed,
                 "",
                 "",
-                &Frame::default(),
+                &frame,
             )));
             text.push('\n');
         }
         let table = Table::parse(&text);
-        let mut next = 0u64;
+        let mut progress = Progress::default();
         let counts: Vec<usize> = table
             .rows
             .iter()
-            .map(|row| row_lines(&table, row, &mut next).len())
+            .map(|row| row_lines(&table, row, &mut progress).len())
             .collect();
-        assert_eq!(counts, vec![5, 0, 5]);
+        assert_eq!(counts, vec![5, 0, 0, 1]);
     }
 
     #[test]

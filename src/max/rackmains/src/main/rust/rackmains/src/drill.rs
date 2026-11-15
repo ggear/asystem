@@ -553,23 +553,27 @@ pub struct LeadInWindow {
 }
 
 pub fn lead_in_window(table: &Table, lead: Duration) -> Option<LeadInWindow> {
-    let points: Vec<(u64, i64)> = table
+    let points: Vec<(f64, i64)> = table
         .rows
         .iter()
         .filter_map(|row| {
-            let seconds = table.cell(row, COLUMN_ELAPSED).parse::<u64>().ok()?;
+            let seconds = table
+                .cell(row, metrics::CLOCK)
+                .parse::<f64>()
+                .or_else(|_| table.cell(row, COLUMN_ELAPSED).parse::<f64>())
+                .ok()?;
             Some((seconds, table.cell(row, "rackmains_plug_watts").parse::<i64>().ok()?))
         })
         .collect();
     let (&(start, _), &(end, last)) = (points.first()?, points.last()?);
     let mut recent: Vec<i64> = points
         .iter()
-        .filter(|(seconds, _)| end - seconds <= lead.as_secs())
+        .filter(|(seconds, _)| end - seconds <= lead.as_secs_f64())
         .map(|(_, watts)| *watts)
         .collect();
     recent.sort_unstable();
     Some(LeadInWindow {
-        span: end - start,
+        span: (end - start).floor() as u64,
         low: *recent.first()?,
         high: *recent.last()?,
         median: recent[recent.len() / 2],
@@ -928,7 +932,7 @@ fn drive(
     say(Level::Info, &log_change("drill plug", "on", "off"));
     let cut_at = Instant::now();
     let mut printed = reload().rows.len();
-    let mut next_progress = 0u64;
+    let mut progress = report::Progress::default();
     let mut restored: Option<Instant> = None;
     loop {
         let table = reload();
@@ -938,7 +942,7 @@ fn drive(
             .skip(printed)
             .filter(|row| table.cell(row, COLUMN_EVENT) != EVENT_END)
         {
-            for line in report::row_lines(&table, row, &mut next_progress) {
+            for line in report::row_lines(&table, row, &mut progress) {
                 say(Level::Info, &line);
             }
         }
@@ -988,11 +992,18 @@ fn drive(
                 ),
             );
             say(
-                Level::Info,
+                Level::Warn,
                 &log_line(
-                    "drill awake",
-                    "the main program finishes the run and runs it after the restore period of mains",
+                    "drill run open",
+                    &end_row_in(&table).map_or_else(
+                        || "the guard writes the end row after the restore period of mains".to_string(),
+                        |seconds| format!("the guard writes the end row in about {seconds}s"),
+                    ),
                 ),
+            );
+            say(
+                Level::Info,
+                &log_line("drill run done when", "guard outage list shows the run as restored"),
             );
             break;
         }
@@ -1010,14 +1021,55 @@ fn drive(
     Ok(())
 }
 
+pub fn end_row_in(table: &Table) -> Option<u64> {
+    let row = table.rows.last()?;
+    let restore = table.cell(row, metrics::GUARD_RESTORE_MAINS).parse::<u64>().ok()?;
+    let mains = table.cell(row, metrics::GUARD_MAINS_SECONDS).parse::<u64>().ok()?;
+    Some(restore.saturating_sub(mains))
+}
+
 fn follow_over(restored: Option<Instant>, follow: Option<Duration>) -> bool {
     matches!((restored, follow), (Some(at), Some(limit)) if at.elapsed() >= limit)
 }
 
+fn run_detail(table: &Table) -> String {
+    if let Some(row) = table.rows.iter().find(|row| table.cell(row, COLUMN_EVENT) == EVENT_END) {
+        return table.cell(row, COLUMN_DETAIL).to_string();
+    }
+    let mut stats = outage::Stats::default();
+    for row in &table.rows {
+        let mut frame = Frame::default();
+        for name in [
+            metrics::BATTERY_VOLTS,
+            metrics::UTILISATION,
+            metrics::BATTERY_CHARGE_PCT,
+        ] {
+            if let Ok(value) = table.cell(row, name).parse::<f64>() {
+                frame.set_number(name, value);
+            }
+        }
+        let (flags, _) = crate::nut::Flags::parse(table.cell(row, metrics::STATUS));
+        stats.observe(&frame, flags, table.cell(row, COLUMN_TIME), Duration::from_secs(1));
+    }
+    let mut shed: Vec<&str> = table
+        .rows
+        .iter()
+        .filter(|row| table.cell(row, COLUMN_EVENT) == EVENT_COMMAND)
+        .map(|row| table.cell(row, COLUMN_DETAIL))
+        .filter(|command| {
+            report::field(command, "command").starts_with("asleep") && report::field(command, "status") == "0"
+        })
+        .map(|command| report::field(command, "host"))
+        .collect();
+    shed.sort_unstable();
+    shed.dedup();
+    stats.detail("open", shed.len())
+}
+
 pub fn run_issues(table: &Table, target: &Target, abort_volts: f64, followed: bool) -> Vec<(&'static str, String)> {
     let end = table.rows.iter().find(|row| table.cell(row, COLUMN_EVENT) == EVENT_END);
-    let detail = end.map_or("", |row| table.cell(row, COLUMN_DETAIL));
-    let field = |name: &str| report::field(detail, name);
+    let detail = run_detail(table);
+    let field = |name: &str| report::field(&detail, name);
     let mut issues = Vec::new();
     match end {
         None if !followed => issues.push(("run open", "the main program finishes it".to_string())),
@@ -1076,8 +1128,8 @@ pub fn run_issues(table: &Table, target: &Target, abort_volts: f64, followed: bo
 
 pub fn run_summary(table: &Table, target: &Target, abort_volts: f64, followed: bool) -> Vec<(Level, String)> {
     let end = table.rows.iter().find(|row| table.cell(row, COLUMN_EVENT) == EVENT_END);
-    let detail = end.map_or("", |row| table.cell(row, COLUMN_DETAIL));
-    let field = |name: &str| report::field(detail, name);
+    let detail = run_detail(table);
+    let field = |name: &str| report::field(&detail, name);
     let value = |name: &str, unit: &str| {
         let value = field(name);
         if value.is_empty() {
@@ -1562,6 +1614,34 @@ mod tests {
     }
 
     #[test]
+    fn the_lead_in_counts_exact_seconds_from_the_clock_when_the_elapsed_column_jitters() {
+        let mut text = outage::encode_row(&crate::metrics::header());
+        text.push('\n');
+        for (elapsed, clock) in [
+            (0u64, 1000.0),
+            (1, 1001.0),
+            (2, 1002.0),
+            (2, 1003.0),
+            (3, 1004.0),
+            (4, 1005.0),
+        ] {
+            let mut frame = Frame::default();
+            frame.set_number(crate::metrics::CLOCK, clock);
+            frame.set_int(PLUG_WATTS, 90);
+            text.push_str(&outage::encode_row(&outage::row(
+                "2026-01-01_12-00-00",
+                elapsed,
+                "",
+                "",
+                &frame,
+            )));
+            text.push('\n');
+        }
+        let window = lead_in_window(&Table::parse(&text), Duration::from_secs(60)).unwrap();
+        assert_eq!(window.span, 5);
+    }
+
+    #[test]
     fn the_lead_in_needs_a_minute_of_ol_and_only_reports_the_plug_watts() {
         let lead = Duration::from_secs(60);
         let series = |points: &[(u64, i64)], status: &str| {
@@ -1711,6 +1791,80 @@ mod tests {
         assert!(warned.iter().any(|(level, line)| *level == Level::Warn
             && line.contains("drill issue volts margin")
             && line.contains("[0.3V")));
+    }
+
+    #[test]
+    fn a_run_still_open_is_summarised_from_its_rows() {
+        let mut text = outage::encode_row(&crate::metrics::header());
+        text.push('\n');
+        for (status, volts, load, charge) in [
+            ("OL", 13.3, 10.0, 100.0),
+            ("OB DISCHRG", 12.0, 13.0, 62.0),
+            ("OB DISCHRG", 11.8, 17.0, 58.0),
+            ("OB DISCHRG", 12.0, 13.0, 62.0),
+            ("OL CHRG", 12.5, 10.0, 81.0),
+        ] {
+            let mut frame = Frame::default();
+            frame.set_text(crate::metrics::STATUS, status);
+            frame.set_number(crate::metrics::BATTERY_VOLTS, volts);
+            frame.set_number(crate::metrics::UTILISATION, load);
+            frame.set_number(crate::metrics::BATTERY_CHARGE_PCT, charge);
+            frame.set_int(PLUG_WATTS, 90);
+            text.push_str(&outage::encode_row(&outage::row(
+                "2026-01-01_12-00-00",
+                0,
+                "",
+                "",
+                &frame,
+            )));
+            text.push('\n');
+        }
+        let table = Table::parse(&text);
+        let detail = run_detail(&table);
+        for part in [
+            "seconds_on_battery [3]",
+            "battery_min_volts [11.8]",
+            "battery_last_volts [12]",
+            "utilisation_peak_pct [17]",
+            "charge_start_pct [100]",
+            "charge_end_pct [62]",
+        ] {
+            assert!(detail.contains(part), "missing [{part}] in [{detail}]");
+        }
+        let summary = run_summary(&table, &Target::Blip(Duration::from_secs(100)), 11.5, true);
+        assert!(summary
+            .iter()
+            .any(|(_, line)| line.contains("drill battery volts min ") && line.contains("[11.8V]")));
+        assert!(summary
+            .iter()
+            .any(|(_, line)| line.contains("drill issue volts margin")));
+    }
+
+    #[test]
+    fn the_time_to_the_end_row_is_the_restore_period_less_the_mains_seconds_so_far() {
+        let table = |restore: Option<i64>, mains: Option<i64>| {
+            let mut frame = Frame::default();
+            if let Some(restore) = restore {
+                frame.set_int(crate::metrics::GUARD_RESTORE_MAINS, restore);
+            }
+            if let Some(mains) = mains {
+                frame.set_int(crate::metrics::GUARD_MAINS_SECONDS, mains);
+            }
+            let mut text = outage::encode_row(&crate::metrics::header());
+            text.push('\n');
+            text.push_str(&outage::encode_row(&outage::row(
+                "2026-01-01_12-00-00",
+                0,
+                "",
+                "",
+                &frame,
+            )));
+            Table::parse(&text)
+        };
+        assert_eq!(end_row_in(&table(Some(300), Some(40))), Some(260));
+        assert_eq!(end_row_in(&table(Some(300), Some(400))), Some(0));
+        assert_eq!(end_row_in(&table(Some(300), None)), None);
+        assert_eq!(end_row_in(&table(None, Some(40))), None);
     }
 
     #[test]
