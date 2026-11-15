@@ -512,16 +512,19 @@ pub fn lead_in_verdict(table: &Table, lead: Duration) -> LeadIn {
             crate::nut::describe(table.cell(row, crate::metrics::STATUS))
         ));
     }
-    let readings: Vec<i64> = window.iter().filter_map(|row| watts(row)).collect();
+    let (Some(start), Some(end)) = (window.first(), window.last()) else {
+        return LeadIn::Wait;
+    };
+    let readings: Vec<i64> = window
+        .iter()
+        .filter(|row| seconds(end).saturating_sub(seconds(row)) <= lead.as_secs())
+        .filter_map(|row| watts(row))
+        .collect();
     let spread = readings.iter().max().unwrap_or(&0) - readings.iter().min().unwrap_or(&0);
-    if spread > LEAD_IN_WATTS_SPREAD {
-        return LeadIn::Refuse(format!(
-            "lead-in plug watts moved [{spread}] over [{LEAD_IN_WATTS_SPREAD}]"
-        ));
-    }
-    match (window.first(), window.last()) {
-        (Some(start), Some(end)) if seconds(end).saturating_sub(seconds(start)) >= lead.as_secs() => LeadIn::Ready,
-        _ => LeadIn::Wait,
+    if spread <= LEAD_IN_WATTS_SPREAD && seconds(end).saturating_sub(seconds(start)) >= lead.as_secs() {
+        LeadIn::Ready
+    } else {
+        LeadIn::Wait
     }
 }
 
@@ -1226,7 +1229,7 @@ mod tests {
     }
 
     #[test]
-    fn the_lead_in_needs_a_minute_of_ol_with_steady_plug_watts() {
+    fn the_lead_in_needs_a_minute_of_ol_with_steady_plug_watts_and_an_early_spike_ages_out() {
         let lead = Duration::from_secs(60);
         assert_eq!(
             lead_in_verdict(&csv(&[("0", "OL", "", "start"), ("1", "OL", "", "")]), lead),
@@ -1244,10 +1247,24 @@ mod tests {
             lead_in_verdict(&csv(&[("1", "OL", "90", ""), ("61", "OL OVER", "90", "")]), lead),
             LeadIn::Refuse(_)
         ));
-        assert!(matches!(
+        assert_eq!(
             lead_in_verdict(&csv(&[("1", "OL", "90", ""), ("61", "OL", "94", "")]), lead),
-            LeadIn::Refuse(_)
-        ));
+            LeadIn::Wait
+        );
+        assert_eq!(
+            lead_in_verdict(
+                &csv(&[("1", "OL", "90", ""), ("5", "OL", "99", ""), ("65", "OL", "90", "")]),
+                lead
+            ),
+            LeadIn::Wait
+        );
+        assert_eq!(
+            lead_in_verdict(
+                &csv(&[("1", "OL", "90", ""), ("5", "OL", "99", ""), ("66", "OL", "90", "")]),
+                lead
+            ),
+            LeadIn::Ready
+        );
         assert_eq!(
             lead_in_verdict(
                 &csv(&[("1", "OL CHRG", "90", ""), ("61", "OL CHRG BOOST", "90", "")]),

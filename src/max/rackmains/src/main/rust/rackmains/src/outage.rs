@@ -553,6 +553,9 @@ pub fn last_outage(dir: &Path) -> Frame {
         let Some(end) = table.rows.last().filter(|_| table.ended()) else {
             continue;
         };
+        if crate::report::field(table.cell(end, COLUMN_DETAIL), "reason") == END_ABORTED {
+            continue;
+        }
         let seconds = table.cell(end, LAST_OUTAGE_SECONDS);
         if seconds.is_empty() {
             continue;
@@ -846,6 +849,20 @@ mod tests {
         fs::write(
             dir.join(file_name("2026-01-02_00-00-00", 1)),
             format!("{header}\n{}\n", encode_row(&interrupted)),
+        )
+        .unwrap();
+        let mut stub = Frame::default();
+        stub.set_int(LAST_OUTAGE_SECONDS, 0);
+        let aborted = row(
+            "2026-01-03_00-10-00",
+            6,
+            EVENT_END,
+            &format!("reason [{END_ABORTED}] seconds [0]"),
+            &stub,
+        );
+        fs::write(
+            dir.join(file_name("2026-01-03_00-00-00", 1)),
+            format!("{header}\n{}\n", encode_row(&aborted)),
         )
         .unwrap();
         let frame = last_outage(&dir);
