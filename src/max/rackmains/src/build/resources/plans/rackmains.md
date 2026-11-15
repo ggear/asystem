@@ -1005,11 +1005,50 @@ and the time cap carries that job.
 
 | # | Gap | Closed by |
 |---|---|---|
-| 1 | trials run at average load; the 01:00 backup and service starts raise it | take the worst-case `ups.load` over a week of history and run trial 1 at it, or add the load by hand; `LB` is the backstop |
+| 1 | trials run at average load; the 01:00 backup and service starts raise it | **closed 2026-11-15:** Home Assistant's 68 hours show 74% of the time at 10 to 11% load, 98% at 14% or under and only 0.1% at 18% or over (43 samples, mostly the 01:00 backup, one 26% spike at 19:37 on 11-14); trial 1 already met 17% (11.8 V), so the peak sustained load of 18 to 20% is expected near 11.7 V, above the 11.5 V abort volts, and no artificial load is needed |
 | 2 | a second dip soon after the first finds a partly drained battery (about 6 hours to 90%) | the guard's clock resets after `rackmains_guard_restore_mains_seconds` of mains |
 | 3 | the battery's condition is unknown; its age is assumed, installed 2024-11-12 | `RACKMAINS_BATTERY_INSTALLED` and the `battery_age_*` metrics give the age; condition is not a model input, the fit is of this battery, and a replacement means a new fit |
 | 4 | what else is on the UPS (switch, router, access point, the Mac) is not inventoried | **yours:** list the loads on the UPS; the plug's WiFi and the followers' ssh path both depend on them |
 | 5 | the offline fit's data path is unchecked | Home Assistant's history of the rackmains entities plus the outage CSVs; confirm Home Assistant records the entities at battery cadence |
+
+### Trial log and the way to the brownout trial (2026-11-15)
+
+Two `blip-watch` runs on `max`, both ended `restored` with no shed, no `LB`, no read failures and no knee; `guard outage list` holds them.
+
+| | Trial 1, `pollfreq 4` | Trial 2, `pollfreq 1` |
+|---|---|---|
+| Run | `13-37-17`, hold 110 s | `14-11-50`, hold 100 s |
+| Guard counted on battery, of 120 s | 113 s, margin 7 s | 104 s, margin 16 s |
+| Battery volts | 13.3 on mains, 12.5 at the cut, 12.0 flat, low 11.8 | the same shape, low 11.9 |
+| Load on battery | 12 to 17%, mean 13.6 | 12 to 15%, mean 13.1 |
+| Lead-in plug watts | median 84 W, range 83 to 96 W | median 85 W, range 84 to 102 W |
+| Cut seen, return seen | 2.5 s and 3 s, `pollfreq 4` and `1` alike | 2.5 s and 3 s |
+| Load and output volts refresh | every 6 s | every 2 s |
+
+- **The guard's clock is accurate.** The counted 104 s equals the 104.0 s the plug was off, because the 2.5 s to see the cut and the 3 s to see the return nearly cancel. The UPS takes that long to report a transfer whatever `pollfreq` is; `pollfreq 1` only makes the data three times finer.
+- **`blip-watch` is done.** The shed point is proven at average load and at 17%, so `-F 100s` is the repeat command and no heavier run is needed (gap 1 above). The abort volts stays at 11.5 V; its margin was 0.3 V and 0.4 V, flagged by the issue list, not a fault.
+- **Keep both CSVs for the offline fit,** and do not run `guard outage clean` while they are the only runs. The four `aborted` stubs from the early refused attempts are harmless: the guard ignores them for the last-outage values, and deleting only them would trip the backup's regression guard.
+
+**Before the brownout trial (`brownout-shed-wake`, trial 3).** It sheds `mad`, `may` and `meg` for real and wakes them after the restore, so these come first, in order:
+
+1. **Release the working tree** so the run uses the current output (`tail` start lines and row times, the summary from rows, change-only progress).
+2. **Spare-plug deadman proof** (test 8) and **no retained `cmnd/POWER` for `rack_outlet_plug`** on the broker (Q19), the two checks `guard drill` is trusted on.
+3. **Test 4, per-host `asleep` time**, `may`, then `mad`, then `meg` last, since it carries the broker and Home Assistant. For each host, from `max`, note the `RESULT` line's `took` and the slowest container stop, then wake it and check it is healthy:
+   ```
+   ssh root@macmini-may '/usr/local/bin/asleep --deep'
+   ssh root@macmini-may 'grep RESULT /run/asleep.log | tail -1'
+   ssh root@macmini-may '/usr/local/bin/awake'
+   ```
+   The longest `took` must be well inside the margin left after the 120 s shed point, since the guard's shed runs the hosts in parallel with `meg` last.
+4. **`awake` on an awake host** (test 11): run it on each host that was never put asleep and confirm it changes nothing and returns 0.
+5. **Test 5, power on after a cut,** per host, with `mad`'s macOS step first (the plan above). A deep shed followed by a cord pull for 10 s is the test; a clean `poweroff` is not.
+6. **The trial,** at an average load outside 00:45 to 01:45 and with the battery settled for 12 hours:
+   ```
+   docker exec -it rackmains rackmains guard drill plan  brownout-shed-wake
+   docker exec -it rackmains rackmains guard drill start brownout-shed-wake
+   ```
+   Leave `-W` off so the run ends with the end row. Watch `docker logs -f rackmains` on `max` as well, since `meg` is shed and the broker, Home Assistant and InfluxDB go quiet until the wake.
+7. **After it:** `guard outage list` shows `restored` with `SHED 3`, the summary's `drill hosts shed` is 3, the issue list is `none`, every host is back and its containers healthy, and each `guard command` row has status 0 with the `took` from step 3.
 
 ## Yours to do
 
