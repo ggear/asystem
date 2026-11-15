@@ -724,7 +724,7 @@ rackmains guard outage clean                    delete every outage CSV, call lo
 retries, alarming loudly with `rackmains guard drill stop` and the container-free fallback otherwise. After the plug reports off it requires `rackmains_mains_failed` in the CSV within 10 s, else it restores and fails. The tool runs
 detached from the ssh session.
 
-**Preflight** refuses on: an outage in progress, an existing marker whose run is still open, a stale guard stamp, an unreachable host and the 01:00 backup window. It **warns only** when the last outage ended under 6 hours ago (the manual's recharge time), the battery is not at 100%, or the guard is in dry-run (the run proves nothing about the shed). The plug deadman does not depend on the tool.
+**Preflight** refuses on: an outage in progress, an existing marker whose run is still open, a stale guard stamp, an unreachable host and the 01:00 backup window. It **warns only** when the last outage of 5 minutes or more on battery ended under 6 hours ago (the manual's recharge time; a 100 s blip uses a few percent of the battery and is back to float within minutes, so short runs and aborted stubs do not count, decided 2026-11-15), the battery is not at 100%, or the guard is in dry-run (the run proves nothing about the shed). The plug deadman does not depend on the tool.
 
 **Interaction tests** (the system test with the mock driver and a mock plug):
 | # | Scenario | Expected |
@@ -1029,7 +1029,7 @@ Two `blip-watch` runs on `max`, both ended `restored` with no shed, no `LB`, no 
 - **`blip-watch` is done.** The shed point is proven at average load and at 17%, so `-F 100s` is the repeat command and no heavier run is needed (gap 1 above). The abort volts stays at 11.5 V; its margin was 0.3 V and 0.4 V, flagged by the issue list, not a fault.
 - **Keep both CSVs for the offline fit,** and do not run `guard outage clean` while they are the only runs. The four `aborted` stubs from the early refused attempts are harmless: the guard ignores them for the last-outage values, and deleting only them would trip the backup's regression guard.
 
-**Before the brownout trial (`brownout-shed-wake`, trial 3).** It sheds `mad`, `may` and `meg` for real and wakes them after the restore, so these come first, in order:
+**Before the brownout trial (`brownout-shed-wake`, trial 3).** It sheds `mad`, `max` (shallow, `rackmains` left running), `may` and `meg` for real and wakes them after the restore, so these come first, in order:
 
 1. **Release the working tree** so the run uses the current output (`tail` start lines and row times, the summary from rows, change-only progress).
 2. **Spare-plug deadman proof** (test 8) and **no retained `cmnd/POWER` for `rack_outlet_plug`** on the broker (Q19), the two checks `guard drill` is trusted on.
@@ -1048,7 +1048,7 @@ Two `blip-watch` runs on `max`, both ended `restored` with no shed, no `LB`, no 
    docker exec -it rackmains rackmains guard drill start brownout-shed-wake
    ```
    Leave `-W` off so the run ends with the end row. Watch `docker logs -f rackmains` on `max` as well, since `meg` is shed and the broker, Home Assistant and InfluxDB go quiet until the wake.
-7. **After it:** `guard outage list` shows `restored` with `SHED 3`, the summary's `drill hosts shed` is 3, the issue list is `none`, every host is back and its containers healthy, and each `guard command` row has status 0 with the `took` from step 3.
+7. **After it:** `guard outage list` shows `restored` with `SHED 4` (the guard counts every host once the shed starts, `max` included), the summary's `drill hosts shed` is 4, the issue list is `none`, every host is back and its containers healthy, and each `guard command` row has status 0 with the `took` from step 3.
 
 ## Yours to do
 

@@ -209,6 +209,7 @@ pub const RECOVER_BEFORE_SHED: u64 = 30;
 pub const CUT_TO_BATTERY: Duration = Duration::from_secs(10);
 pub const RESTORE_VERIFY: Duration = Duration::from_secs(60);
 pub const RECHARGE_WARNING: Duration = Duration::from_hours(6);
+pub const RECHARGE_MIN_BATTERY_SECONDS: u64 = 300;
 const CONNECT_PROBE: Duration = Duration::from_secs(2);
 const BACKUP_WINDOW: (u32, u32, u32, u32) = (0, 45, 1, 45);
 
@@ -933,6 +934,7 @@ fn drive(
     let cut_at = Instant::now();
     let mut printed = reload().rows.len();
     let mut progress = report::Progress::default();
+    let mut hold_mark = 0u64;
     let mut restored: Option<Instant> = None;
     loop {
         let table = reload();
@@ -961,6 +963,13 @@ fn drive(
             break;
         }
         if let Target::Blip(hold) | Target::Brownout(hold) = target {
+            if let Some(held) = held_seconds(&table).filter(|held| held / 10 > hold_mark && restored.is_none()) {
+                hold_mark = held / 10;
+                say(
+                    Level::Info,
+                    &log_line("drill hold", &format!("{held}s of {}s", hold.as_secs())),
+                );
+            }
             let volts_low = volts_aborted(&table, abort_volts);
             if restored.is_none()
                 && (held_seconds(&table).is_some_and(|held| held >= hold.as_secs()) || low_raised(&table) || volts_low)
@@ -1252,17 +1261,26 @@ fn stale(env: &Env) -> bool {
     })
 }
 
+pub fn deep_outage_end(table: &Table) -> Option<NaiveDateTime> {
+    let last = table.rows.last().filter(|_| table.ended())?;
+    let seconds = report::field(table.cell(last, COLUMN_DETAIL), "seconds_on_battery")
+        .parse::<u64>()
+        .ok()?;
+    (seconds >= RECHARGE_MIN_BATTERY_SECONDS)
+        .then(|| parse_stamp(table.cell(last, COLUMN_TIME)))
+        .flatten()
+}
+
 fn gather(env: &Env, liveness: &Liveness, outage_dir: &Path, marker_path: &Path) -> Assessment {
     let now = (env.clock)();
     let newest = outage::files(outage_dir)
         .into_iter()
         .last()
         .and_then(|file| Table::read(&file.path).ok());
-    let last_end = outage::files(outage_dir).into_iter().rev().find_map(|file| {
-        let table = Table::read(&file.path).ok()?;
-        let last = table.rows.last().filter(|_| table.ended())?;
-        parse_stamp(table.cell(last, COLUMN_TIME))
-    });
+    let last_end = outage::files(outage_dir)
+        .into_iter()
+        .rev()
+        .find_map(|file| deep_outage_end(&Table::read(&file.path).ok()?));
     let marker_run_open = Marker::read(marker_path).is_some_and(|marker| {
         marker.live(now)
             && find_ack(outage_dir, &marker.id).is_some_and(|(file, _)| !follow_run(outage_dir, &file.stem).ended())
@@ -1865,6 +1883,51 @@ mod tests {
         assert_eq!(end_row_in(&table(Some(300), Some(400))), Some(0));
         assert_eq!(end_row_in(&table(Some(300), None)), None);
         assert_eq!(end_row_in(&table(None, Some(40))), None);
+    }
+
+    #[test]
+    fn only_an_outage_of_five_minutes_or_more_on_battery_counts_for_the_recharge_warning() {
+        let table = |end: Option<&str>| {
+            let mut text = outage::encode_row(&crate::metrics::header());
+            text.push('\n');
+            text.push_str(&outage::encode_row(&outage::row(
+                "2026-01-01_12-00-00",
+                0,
+                "start",
+                "",
+                &Frame::default(),
+            )));
+            text.push('\n');
+            if let Some(end) = end {
+                text.push_str(&outage::encode_row(&outage::row(
+                    "2026-01-01_12-09-00",
+                    540,
+                    EVENT_END,
+                    end,
+                    &Frame::default(),
+                )));
+                text.push('\n');
+            }
+            Table::parse(&text)
+        };
+        assert_eq!(deep_outage_end(&table(None)), None);
+        assert_eq!(
+            deep_outage_end(&table(Some("reason [aborted] seconds_on_battery [0]"))),
+            None
+        );
+        assert_eq!(
+            deep_outage_end(&table(Some("reason [restored] seconds_on_battery [104]"))),
+            None
+        );
+        assert_eq!(
+            deep_outage_end(&table(Some("reason [restored] seconds_on_battery [299]"))),
+            None
+        );
+        assert_eq!(deep_outage_end(&table(Some("reason [restored]"))), None);
+        assert_eq!(
+            deep_outage_end(&table(Some("reason [restored] seconds_on_battery [300]"))),
+            parse_stamp("2026-01-01_12-09-00")
+        );
     }
 
     #[test]

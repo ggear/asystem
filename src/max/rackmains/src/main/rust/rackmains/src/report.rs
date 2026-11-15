@@ -6,8 +6,8 @@ use std::time::Duration;
 use log::Level;
 
 use crate::metrics::{
-    BATTERY_VOLTS, CLOCK, COLUMN_DETAIL, COLUMN_ELAPSED, COLUMN_EVENT, COLUMN_TIME, GUARD_STATE, PLUG_WATTS, STATUS,
-    UTILISATION,
+    BATTERY_VOLTS, CLOCK, COLUMN_DETAIL, COLUMN_ELAPSED, COLUMN_EVENT, COLUMN_TIME, GUARD_BATTERY_SECONDS,
+    GUARD_MAINS_SECONDS, GUARD_RESTORE_MAINS, GUARD_SHED_BATTERY, GUARD_STATE, PLUG_WATTS, STATUS, UTILISATION,
 };
 use crate::nut::describe;
 use crate::outage::{
@@ -142,12 +142,25 @@ pub fn progress_lines(table: &Table, row: &[String]) -> Vec<String> {
             format!("{value}{unit}")
         }
     };
+    let clock = |name: &str, limit: &str| {
+        let value = table.cell(row, name);
+        if value.is_empty() {
+            "unknown".to_string()
+        } else {
+            format!("{value} of {limit}", limit = table.cell(row, limit))
+        }
+    };
     [
         ("ups state", describe(table.cell(row, STATUS))),
         ("output load pct", shown(UTILISATION, "")),
         ("battery volts", shown(BATTERY_VOLTS, "")),
         ("plug watts", shown(PLUG_WATTS, "")),
         ("guard state", shown(GUARD_STATE, "")),
+        (
+            "guard battery seconds",
+            clock(GUARD_BATTERY_SECONDS, GUARD_SHED_BATTERY),
+        ),
+        ("guard mains seconds", clock(GUARD_MAINS_SECONDS, GUARD_RESTORE_MAINS)),
     ]
     .iter()
     .map(|(label, value)| log_line(&format!("progress {label}"), value))
@@ -464,6 +477,8 @@ mod tests {
         for (elapsed, volts) in [(0u64, 13.3), (4, 13.3), (12, 13.3), (24, 12.1)] {
             let mut frame = Frame::default();
             frame.set_number(metrics::BATTERY_VOLTS, volts);
+            frame.set_int(metrics::GUARD_BATTERY_SECONDS, elapsed as i64);
+            frame.set_int(metrics::GUARD_SHED_BATTERY, 120);
             text.push_str(&outage::encode_row(&outage::row(
                 "2026-01-01_00-00-00",
                 elapsed,
@@ -480,7 +495,16 @@ mod tests {
             .iter()
             .map(|row| row_lines(&table, row, &mut progress).len())
             .collect();
-        assert_eq!(counts, vec![5, 0, 0, 1]);
+        assert_eq!(counts, vec![7, 0, 1, 2]);
+        let mut progress = Progress::default();
+        let heartbeat: Vec<String> = table
+            .rows
+            .iter()
+            .flat_map(|row| row_lines(&table, row, &mut progress))
+            .collect();
+        assert!(heartbeat
+            .iter()
+            .any(|line| line.contains("progress guard battery seconds") && line.ends_with("[12 of 120]")));
     }
 
     #[test]
