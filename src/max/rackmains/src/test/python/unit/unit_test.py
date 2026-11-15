@@ -72,7 +72,7 @@ class InstallPrepShellTest(ShellHookTest):
         self.assertIn("MODE=standalone", self.read("nut.conf"))
         self.assertIn("LISTEN 127.0.0.1 3493", self.read("upsd.conf"))
         ups = self.read("ups.conf")
-        for line in ("[powershield]", "driver = nutdrv_qx", "vendorid = 0665", "productid = 5161", "protocol = voltronic-qs", "pollfreq = 4"):
+        for line in ("[powershield]", "driver = nutdrv_qx", "vendorid = 0665", "productid = 5161", "protocol = voltronic-qs", "pollfreq = 1"):
             self.assertIn(line, ups)
         self.assertEqual(reported.count("Updated ["), 3)
         calls = self.calls()

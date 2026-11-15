@@ -49,24 +49,110 @@ pub fn log_change(label: &str, from: &str, to: &str) -> String {
     format!("{leader:.<LOG_LABEL_WIDTH$} [{from}] to [{to}]")
 }
 
+pub fn log_prefix(level: log::Level) -> String {
+    format!(
+        "[{} {:<5}]",
+        chrono::Local::now().format("%Y-%m-%dT%H:%M:%S%.3f%:z"),
+        level
+    )
+}
+
+pub fn say(level: log::Level, line: &str) {
+    println!("{} {line}", log_prefix(level));
+}
+
 pub fn init_logging(level: LevelFilter) {
     let _ = env_logger::Builder::new()
         .filter_level(level)
-        .format(|buf, record| {
-            writeln!(
-                buf,
-                "[{} {:<5}] {}",
-                chrono::Local::now().format("%Y-%m-%dT%H:%M:%S%.3f%:z"),
-                record.level(),
-                record.args()
-            )
-        })
+        .format(|buf, record| writeln!(buf, "{} {}", log_prefix(record.level()), record.args()))
         .try_init();
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn calls<'a>(source: &'a str, opener: &str) -> Vec<&'a str> {
+        let body = source.split("#[cfg(test)]").next().unwrap_or(source);
+        let mut found = Vec::new();
+        let mut from = 0;
+        while let Some(at) = body[from..].find(opener) {
+            let start = from + at;
+            let (mut depth, mut index, bytes) = (0usize, start + opener.len() - 1, body.as_bytes());
+            while index < bytes.len() {
+                match bytes[index] {
+                    b'(' => depth += 1,
+                    b')' => {
+                        depth -= 1;
+                        if depth == 0 {
+                            break;
+                        }
+                    }
+                    b'"' => {
+                        index += 1;
+                        while bytes[index] != b'"' {
+                            index += usize::from(bytes[index] == b'\\') + 1;
+                        }
+                    }
+                    _ => {}
+                }
+                index += 1;
+            }
+            found.push(&body[start..=index]);
+            from = index;
+        }
+        found
+    }
+
+    #[test]
+    fn every_log_line_is_a_label_and_a_bracketed_value_with_no_separators() {
+        let sources = [
+            ("broker", include_str!("broker.rs")),
+            ("check", include_str!("check.rs")),
+            ("cli", include_str!("cli.rs")),
+            ("drill", include_str!("drill.rs")),
+            ("guard", include_str!("guard.rs")),
+            ("liveness", include_str!("liveness.rs")),
+            ("main", include_str!("main.rs")),
+            ("mock", include_str!("mock.rs")),
+            ("mockdriver", include_str!("bin/mockdriver.rs")),
+            ("nut", include_str!("nut.rs")),
+            ("outage", include_str!("outage.rs")),
+            ("policy", include_str!("policy.rs")),
+            ("report", include_str!("report.rs")),
+            ("serve", include_str!("serve.rs")),
+            ("shed", include_str!("shed.rs")),
+        ];
+        let mut checked = 0;
+        for (name, source) in sources {
+            for opener in ["info!(", "warn!(", "error!(", "debug!(", "trace!(", "eprintln!("] {
+                for call in calls(source, opener) {
+                    checked += 1;
+                    assert!(
+                        call.contains("log_line(") || call.contains("log_change("),
+                        "[{name}] log call not built by log_line or log_change [{call}]"
+                    );
+                }
+            }
+            for opener in ["log_line(", "log_change("] {
+                for call in calls(source, opener) {
+                    let rest = call[opener.len()..].trim_start().trim_start_matches("&format!(");
+                    let Some(literal) = rest.strip_prefix('"').and_then(|rest| rest.split('"').next()) else {
+                        continue;
+                    };
+                    assert!(
+                        !literal.contains([':', '\u{2014}', '\u{2013}', '(', ',']),
+                        "[{name}] a separator, clause or bracket in a log label [{literal}]"
+                    );
+                    assert!(
+                        !literal.ends_with([' ', '.']),
+                        "[{name}] trailing punctuation in a log label [{literal}]"
+                    );
+                }
+            }
+        }
+        assert!(checked > 80, "the scan found too few log calls [{checked}]");
+    }
 
     #[test]
     fn parse_duration_zero_is_zero() {

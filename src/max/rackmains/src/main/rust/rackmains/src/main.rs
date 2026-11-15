@@ -18,7 +18,11 @@ fn main() -> ExitCode {
     match cli.run() {
         Ok(()) => ExitCode::SUCCESS,
         Err(err) => {
-            eprintln!("rackmains failed [{err}]");
+            eprintln!(
+                "{} {}",
+                rackmains::log_prefix(log::Level::Error),
+                rackmains::log_line("rackmains failed", &err.to_string())
+            );
             ExitCode::from(err.code)
         }
     }

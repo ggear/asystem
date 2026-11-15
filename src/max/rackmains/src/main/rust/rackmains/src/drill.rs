@@ -13,15 +13,18 @@ use serde_json::Value;
 
 use crate::cli::ExitError;
 use crate::liveness::{boot_ms, Effective, Liveness, FILE_LIVENESS};
-use crate::log_line;
 use crate::metrics::{
     self, Frame, COLUMN_DETAIL, COLUMN_ELAPSED, COLUMN_EVENT, COLUMN_TIME, PLUG_AMPS, PLUG_ENERGY, PLUG_POWER_STATE,
     PLUG_VOLTS, PLUG_WATTS,
 };
 use crate::nut::{TOKEN_OB, TOKEN_OL};
-use crate::outage::{self, parse_stamp, write_atomic, OutageFile, Table, DIR_OUTAGE, DIR_STATE, EVENT_START};
+use crate::outage::{
+    self, parse_stamp, write_atomic, OutageFile, Table, DIR_OUTAGE, DIR_STATE, EVENT_COMMAND, EVENT_END, EVENT_START,
+};
 use crate::report;
 use crate::shed::load_hosts;
+use crate::{log_change, log_line, say};
+use log::Level;
 
 pub const FILE_MARKER: &str = "drill.json";
 pub const STATE_ARMED: &str = "armed";
@@ -193,7 +196,7 @@ pub const EXIT_ABORTED: u8 = 7;
 pub const EXIT_TIMEOUT: u8 = 4;
 pub const LEAD_IN: Duration = Duration::from_secs(60);
 pub const LEAD_IN_WATTS_WARN: i64 = 20;
-const LEAD_IN_PROGRESS: Duration = Duration::from_secs(1);
+const ABORT_MARGIN_VOLTS: f64 = 0.5;
 pub const ACK_TIMEOUT: Duration = Duration::from_secs(10);
 pub const GUARD_STALE_MS: u64 = 3000;
 pub const AFTER_RESTORE_CAP: Duration = Duration::from_mins(30);
@@ -437,53 +440,97 @@ pub fn assess(inputs: &Assessment) -> Preflight {
     result
 }
 
-pub fn plan_text(effective: &Effective, target: &Target, assessment: &Preflight, plug_host: &str) -> String {
-    let (mode, hold) = (target_mode(target), target_hold(target).as_secs());
+pub fn plan_lines(
+    effective: &Effective,
+    target: &Target,
+    follow: Option<Duration>,
+    assessment: &Preflight,
+    plug_host: &str,
+) -> Vec<(Level, String)> {
+    let hold = target_hold(target).as_secs();
     let shed = effective.guard_shed_battery_seconds;
-    let restore_mains = effective.guard_restore_mains_seconds;
-    let abort = effective.guard_abort_battery_volts;
     let mut lines = vec![
-        "tool".to_string(),
-        format!(
-            "  mode [{mode}] hold [{hold}s] after [{restore_mains}s] deadman [{}s] plug [{plug_host}]",
-            deadman_seconds(target)
+        log_line("drill test", target_mode(target)),
+        log_line(
+            "drill test goal",
+            match target {
+                Target::Blip(_) => "restore before the shed, the guard only watches",
+                Target::Brownout(_) => "the shed, then restore and awake",
+                Target::Blackout => "the shed, then the UPS cutoff, the plug's deadman brings mains back",
+            },
         ),
-        "main program".to_string(),
-        format!(
-            "  guard_live [{}] model [{} {}] rackmains_guard_shed_battery_seconds [{shed}] rackmains_guard_restore_mains_seconds [{restore_mains}] rackmains_guard_abort_battery_volts [{abort}] poll [{}s] ssh_timeout [{}s] shed_order [{}]",
-            u8::from(effective.guard_live),
-            effective.model_name,
-            effective.model_hash,
-            effective.poll_s,
-            effective.ssh_timeout_s,
-            effective.shed_order.join(",")
-        ),
-        "timeline".to_string(),
     ];
-    let ending = match target {
-        Target::Blip(hold) | Target::Brownout(hold) => format!(
-            "T+{} plug on, T+{} awake, end",
-            hold.as_secs(),
-            hold.as_secs() + restore_mains
-        ),
-        Target::Blackout => "runs to the UPS cutoff, the deadman restores mains".to_string(),
-    };
-    lines.push(format!(
-        "  T-{}s lead-in starts, T+0 plug off, about T+2 OB, T+{shed} shed, {ending}",
-        LEAD_IN.as_secs()
-    ));
-    lines.push("tests".to_string());
-    lines.push(match target {
-        Target::Blip(_) => "  restore before the shed, the guard only watches".to_string(),
-        Target::Brownout(_) => "  the shed, then restore and awake".to_string(),
-        Target::Blackout => "  the shed, then the UPS cutoff, the plug's deadman brings mains back".to_string(),
-    });
-    if !effective.guard_live {
-        lines.push("WARNING the guard is in dry-run, the test proves nothing about the shed".to_string());
+    if *target != Target::Blackout {
+        lines.push(log_line("drill hold", &format!("{hold}s")));
+        lines.push(log_line(
+            "drill follow",
+            &follow.map_or_else(|| "end".to_string(), |follow| format!("{}s", follow.as_secs())),
+        ));
     }
-    lines.extend(assessment.refusals.iter().map(|refusal| format!("REFUSED {refusal}")));
-    lines.extend(assessment.warnings.iter().map(|warning| format!("WARNING {warning}")));
-    lines.join("\n") + "\n"
+    lines.extend([
+        log_line(
+            "drill restore period",
+            &format!("{}s", effective.guard_restore_mains_seconds),
+        ),
+        log_line("drill deadman", &format!("{}s", deadman_seconds(target))),
+        log_line("drill plug host", plug_host),
+        log_line("guard live", &u8::from(effective.guard_live).to_string()),
+        log_line(
+            "guard model",
+            &format!("{} {}", effective.model_name, effective.model_version),
+        ),
+        log_line("guard shed battery seconds", &shed.to_string()),
+        log_line(
+            "guard restore mains seconds",
+            &effective.guard_restore_mains_seconds.to_string(),
+        ),
+        log_line(
+            "guard abort battery volts",
+            &effective.guard_abort_battery_volts.to_string(),
+        ),
+        log_line("guard shed order", &effective.shed_order.join(",")),
+        log_line("drill timeline lead-in", &format!("T-{}s", LEAD_IN.as_secs())),
+        log_line("drill timeline plug off", "T+0s"),
+    ]);
+    if matches!(target, Target::Brownout(_) | Target::Blackout) {
+        lines.push(log_line("drill timeline shed", &format!("T+{shed}s")));
+    }
+    match target {
+        Target::Blip(hold) | Target::Brownout(hold) => {
+            lines.push(log_line("drill timeline plug on", &format!("T+{}s", hold.as_secs())));
+            lines.push(log_line(
+                "drill timeline awake",
+                &format!("T+{}s", hold.as_secs() + effective.guard_restore_mains_seconds),
+            ));
+        }
+        Target::Blackout => lines.push(log_line(
+            "drill timeline plug on",
+            "after the UPS cutoff, by the deadman",
+        )),
+    }
+    let mut lines: Vec<(Level, String)> = lines.into_iter().map(|line| (Level::Info, line)).collect();
+    if !effective.guard_live {
+        lines.push((
+            Level::Warn,
+            log_line(
+                "drill warning",
+                "the guard is in dry-run, the test proves nothing about the shed",
+            ),
+        ));
+    }
+    lines.extend(
+        assessment
+            .refusals
+            .iter()
+            .map(|refusal| (Level::Error, log_line("drill refused", refusal))),
+    );
+    lines.extend(
+        assessment
+            .warnings
+            .iter()
+            .map(|warning| (Level::Warn, log_line("drill warning", warning))),
+    );
+    lines
 }
 
 pub fn find_ack(dir: &Path, id: &str) -> Option<(OutageFile, Table)> {
@@ -572,13 +619,16 @@ pub fn on_battery_seen(table: &Table) -> bool {
     held_seconds(table).is_some()
 }
 
-pub fn volts_aborted(table: &Table, abort_volts: f64) -> bool {
+pub fn battery_volts(table: &Table) -> Option<f64> {
     table
         .rows
         .iter()
         .rev()
         .find_map(|row| table.cell(row, metrics::BATTERY_VOLTS).parse::<f64>().ok())
-        .is_some_and(|volts| volts <= abort_volts)
+}
+
+pub fn volts_aborted(table: &Table, abort_volts: f64) -> bool {
+    battery_volts(table).is_some_and(|volts| volts <= abort_volts)
 }
 
 pub fn low_raised(table: &Table) -> bool {
@@ -588,18 +638,31 @@ pub fn low_raised(table: &Table) -> bool {
         .any(|row| table.cell(row, metrics::BATTERY_LOW) == "1")
 }
 
-pub fn run_drill(env: &Env, test: Test, hold: Option<&str>, cut: bool) -> Result<(), ExitError> {
+pub fn run_drill(env: &Env, test: Test, hold: Option<&str>, follow: Option<&str>, cut: bool) -> Result<(), ExitError> {
     let liveness = Liveness::read(&env.run_dir.join(FILE_LIVENESS))?;
     let target = parse_target(test, hold, &liveness.effective)?;
+    let follow = follow
+        .map(|raw| {
+            crate::parse_duration(raw).and_then(|follow| {
+                if follow.is_zero() {
+                    Err("follow must be over zero".to_string())
+                } else {
+                    Ok(follow)
+                }
+            })
+        })
+        .transpose()?;
     let outage_dir = env.data_dir.join(DIR_OUTAGE);
     let marker_path = env.data_dir.join(DIR_STATE).join(FILE_MARKER);
     let preflight = assess(&gather(env, &liveness, &outage_dir, &marker_path));
-    print!(
-        "{}",
-        plan_text(&liveness.effective, &target, &preflight, &env.plug_host)
-    );
+    for (level, line) in plan_lines(&liveness.effective, &target, follow, &preflight, &env.plug_host) {
+        say(level, &line);
+    }
     if !cut {
-        println!("plan only, nothing was cut, run start to cut");
+        say(
+            Level::Info,
+            &log_line("drill plan only", "nothing was cut, run start to cut"),
+        );
         return Ok(());
     }
     if !preflight.refusals.is_empty() {
@@ -633,6 +696,7 @@ pub fn run_drill(env: &Env, test: Test, hold: Option<&str>, cut: bool) -> Result
         drive(
             env,
             &target,
+            follow,
             liveness.effective.guard_abort_battery_volts,
             &marker,
             &marker_path,
@@ -657,10 +721,16 @@ fn stop_state(env: &Env) -> (PathBuf, Option<Marker>, Option<String>) {
         .command("Power", PLUG_COMMAND_TIMEOUT)
         .ok()
         .and_then(|reply| reply["POWER"].as_str().map(str::to_string));
-    println!(
-        "marker [{}] plug [{}]",
-        marker.as_ref().map_or("none", |marker| marker.state.as_str()),
-        power.as_deref().unwrap_or("unreachable")
+    say(
+        Level::Info,
+        &log_line(
+            "drill marker",
+            marker.as_ref().map_or("none", |marker| marker.state.as_str()),
+        ),
+    );
+    say(
+        Level::Info,
+        &log_line("drill plug", power.as_deref().unwrap_or("unreachable")),
     );
     (marker_path, marker, power)
 }
@@ -672,7 +742,14 @@ fn restore_drill(env: &Env, marker_path: &Path, marker: Option<Marker>) -> Resul
         marker.write(marker_path)?;
         let _ = fs::remove_file(marker_path);
     }
-    println!("mains restored, the main program runs awake after the restore period of mains");
+    say(Level::Info, &log_change("drill plug", "off", "on"));
+    say(
+        Level::Info,
+        &log_line(
+            "drill awake",
+            "the main program runs it after the restore period of mains",
+        ),
+    );
     Ok(())
 }
 
@@ -689,7 +766,10 @@ pub fn run_stop(env: &Env, confirm: impl FnOnce(&str, &str) -> Result<bool, Stri
                 }
             }
             Some(_) => {
-                println!("no drill is running and the plug is on, nothing changed");
+                say(
+                    Level::Info,
+                    &log_line("drill stop", "no drill is running and the plug is on, nothing changed"),
+                );
                 return Ok(());
             }
             None => {
@@ -727,6 +807,7 @@ pub fn restore_plug(plug: &dyn Plug, retry: Duration) -> Result<(), String> {
 fn drive(
     env: &Env,
     target: &Target,
+    follow: Option<Duration>,
     abort_volts: f64,
     marker: &Marker,
     marker_path: &Path,
@@ -739,11 +820,20 @@ fn drive(
             "the main program did not acknowledge the marker, nothing was cut",
         )
     })?;
-    println!("{}", log_line("acknowledged", &file.path.display().to_string()));
     let stem = file.stem.clone();
     let reload = || -> Table { follow_run(outage_dir, &stem) };
+    say(
+        Level::Info,
+        &log_line(
+            "drill acknowledged",
+            &file
+                .path
+                .file_name()
+                .map_or_else(String::new, |name| name.to_string_lossy().to_string()),
+        ),
+    );
     let waiting = Instant::now();
-    let mut reported = Instant::now();
+    let mut last_span = u64::MAX;
     loop {
         if SIGNALLED.load(Ordering::SeqCst) {
             return Err(abort(env, marker, marker_path, outage_dir, &stem, false));
@@ -762,33 +852,42 @@ fn drive(
         match lead_in_verdict(&table, timing.lead_in) {
             LeadIn::Ready => {
                 if let Some(window) = window {
-                    println!(
-                        "{}",
-                        log_line(
-                            "lead-in plug watts",
-                            &format!("median {}W range {}W to {}W", window.median, window.low, window.high)
-                        )
+                    say(
+                        Level::Info,
+                        &log_line("drill lead-in plug watts median", &format!("{}W", window.median)),
+                    );
+                    say(
+                        Level::Info,
+                        &log_line(
+                            "drill lead-in plug watts range",
+                            &format!("{}W to {}W", window.low, window.high),
+                        ),
                     );
                     if window.high - window.low > LEAD_IN_WATTS_WARN {
-                        println!(
-                            "WARNING plug watts moved [{}W] over [{LEAD_IN_WATTS_WARN}W] in the last [{}s], the baseline is not settled, the cut goes ahead",
-                            window.high - window.low,
-                            timing.lead_in.as_secs()
+                        say(
+                            Level::Warn,
+                            &log_line(
+                                "drill warning",
+                                &format!(
+                                    "plug watts moved {}W over {LEAD_IN_WATTS_WARN}W in the last {}s, the baseline is not settled, the cut goes ahead",
+                                    window.high - window.low,
+                                    timing.lead_in.as_secs()
+                                ),
+                            ),
                         );
                     }
                 }
                 break;
             }
             LeadIn::Wait => {
-                if let Some(window) = window.filter(|_| reported.elapsed() >= LEAD_IN_PROGRESS) {
-                    reported = Instant::now();
-                    println!(
-                        "{} of [{}s] plug watts [{}W] range [{}W] to [{}W]",
-                        log_line("lead-in", &format!("{}s", window.span)),
-                        timing.lead_in.as_secs(),
-                        window.last,
-                        window.low,
-                        window.high
+                if let Some(window) = window.filter(|window| window.span != last_span) {
+                    last_span = window.span;
+                    say(
+                        Level::Info,
+                        &log_line(
+                            "drill lead-in",
+                            &format!("{}s of {}s", window.span, timing.lead_in.as_secs()),
+                        ),
                     );
                 }
             }
@@ -817,7 +916,7 @@ fn drive(
         let _ = env.plug.command("Rule1 0", PLUG_COMMAND_TIMEOUT);
         return Err(ExitError::new(1, &format!("{problem}, nothing was cut")));
     }
-    println!("{}", log_line("deadman armed", &format!("{seconds}s")));
+    say(Level::Info, &log_line("drill deadman armed", &format!("{seconds}s")));
     let off = env.plug.command("Power Off", PLUG_COMMAND_TIMEOUT);
     if off
         .as_ref()
@@ -826,14 +925,22 @@ fn drive(
         restore_plug(env.plug.as_ref(), env.timing.poll)?;
         return Err(ExitError::new(1, "the plug did not read OFF, mains restored"));
     }
-    println!("{}", log_line("mains", "cut"));
+    say(Level::Info, &log_change("drill plug", "on", "off"));
     let cut_at = Instant::now();
     let mut printed = reload().rows.len();
+    let mut next_progress = 0u64;
     let mut restored: Option<Instant> = None;
     loop {
         let table = reload();
-        for row in table.rows.iter().skip(printed) {
-            println!("{}", report::format_row(&table, row));
+        for row in table
+            .rows
+            .iter()
+            .skip(printed)
+            .filter(|row| table.cell(row, COLUMN_EVENT) != EVENT_END)
+        {
+            for line in report::row_lines(&table, row, &mut next_progress) {
+                say(Level::Info, &line);
+            }
         }
         printed = table.rows.len();
         if SIGNALLED.load(Ordering::SeqCst) {
@@ -855,19 +962,39 @@ fn drive(
                 && (held_seconds(&table).is_some_and(|held| held >= hold.as_secs()) || low_raised(&table) || volts_low)
             {
                 if volts_low {
-                    println!(
-                        "{}",
-                        log_line(
-                            "battery volts at or under the abort volts",
-                            &format!("{abort_volts}V restoring mains")
-                        )
+                    say(
+                        Level::Warn,
+                        &log_line(
+                            "drill abort battery volts",
+                            &format!(
+                                "{:.1}V at or under {abort_volts:.1}V, restoring mains",
+                                battery_volts(&table).unwrap_or_default()
+                            ),
+                        ),
                     );
                 }
                 restore_plug(env.plug.as_ref(), env.timing.poll)?;
-                println!("{}", log_line("mains", "restored"));
+                say(Level::Info, &log_change("drill plug", "off", "on"));
                 restored = Some(Instant::now());
                 verify_restored(env, outage_dir, &stem)?;
             }
+        }
+        if follow_over(restored, follow) {
+            say(
+                Level::Info,
+                &log_line(
+                    "drill follow over",
+                    &format!("{}s", follow.map_or(0, |follow| follow.as_secs())),
+                ),
+            );
+            say(
+                Level::Info,
+                &log_line(
+                    "drill awake",
+                    "the main program finishes the run and runs it after the restore period of mains",
+                ),
+            );
+            break;
         }
         if restored.is_some_and(|at| at.elapsed() > timing.after_cap) {
             return Err(ExitError::new(
@@ -877,11 +1004,127 @@ fn drive(
         }
         thread::sleep(timing.poll);
     }
+    for (level, line) in run_summary(&reload(), target, abort_volts, follow.is_some()) {
+        say(level, &line);
+    }
     Ok(())
 }
 
+fn follow_over(restored: Option<Instant>, follow: Option<Duration>) -> bool {
+    matches!((restored, follow), (Some(at), Some(limit)) if at.elapsed() >= limit)
+}
+
+pub fn run_issues(table: &Table, target: &Target, abort_volts: f64, followed: bool) -> Vec<(&'static str, String)> {
+    let end = table.rows.iter().find(|row| table.cell(row, COLUMN_EVENT) == EVENT_END);
+    let detail = end.map_or("", |row| table.cell(row, COLUMN_DETAIL));
+    let field = |name: &str| report::field(detail, name);
+    let mut issues = Vec::new();
+    match end {
+        None if !followed => issues.push(("run open", "the main program finishes it".to_string())),
+        Some(_) if field("reason") != "restored" => issues.push(("run ended", format!("reason {}", field("reason")))),
+        _ => {}
+    }
+    let shed = field("hosts_shed").parse::<u64>().unwrap_or(0);
+    if shed > 0 && matches!(target, Target::Blip(_)) {
+        issues.push(("hosts shed", format!("{shed} during a blip-watch")));
+    }
+    if let Ok(minimum) = field("battery_min_volts").parse::<f64>() {
+        if minimum - abort_volts < ABORT_MARGIN_VOLTS {
+            issues.push((
+                "volts margin",
+                format!(
+                    "{:.1}V under the {ABORT_MARGIN_VOLTS:.1}V margin to the abort volts {abort_volts:.1}V",
+                    minimum - abort_volts
+                ),
+            ));
+        }
+    }
+    if field("battery_low") == "1" {
+        issues.push(("low battery", "the UPS raised its flag".to_string()));
+    }
+    for row in table
+        .rows
+        .iter()
+        .filter(|row| table.cell(row, COLUMN_EVENT) == EVENT_COMMAND)
+    {
+        let command = table.cell(row, COLUMN_DETAIL);
+        if report::field(command, "status") != "0" {
+            issues.push((
+                "host command",
+                format!(
+                    "{} status {}",
+                    report::field(command, "host"),
+                    report::field(command, "status")
+                ),
+            ));
+        }
+    }
+    let samples: Vec<&Vec<String>> = table
+        .rows
+        .iter()
+        .filter(|row| table.cell(row, COLUMN_EVENT).is_empty())
+        .collect();
+    let missing = samples
+        .iter()
+        .filter(|row| table.cell(row, PLUG_WATTS).is_empty())
+        .count();
+    if missing * 100 > samples.len() {
+        issues.push(("plug watts", format!("missing on {missing} of {} rows", samples.len())));
+    }
+    issues
+}
+
+pub fn run_summary(table: &Table, target: &Target, abort_volts: f64, followed: bool) -> Vec<(Level, String)> {
+    let end = table.rows.iter().find(|row| table.cell(row, COLUMN_EVENT) == EVENT_END);
+    let detail = end.map_or("", |row| table.cell(row, COLUMN_DETAIL));
+    let field = |name: &str| report::field(detail, name);
+    let value = |name: &str, unit: &str| {
+        let value = field(name);
+        if value.is_empty() {
+            "unknown".to_string()
+        } else {
+            format!("{value}{unit}")
+        }
+    };
+    let mut lines = vec![
+        log_line("drill result", if end.is_some() { field("reason") } else { "open" }),
+        log_line("drill seconds on battery", &value("seconds_on_battery", "s")),
+        log_line("drill battery volts min", &value("battery_min_volts", "V")),
+        log_line("drill battery volts min at", &value("battery_min_at", "")),
+        log_line("drill battery volts last", &value("battery_last_volts", "V")),
+        log_line(
+            "drill abort volts margin",
+            &field("battery_min_volts").parse::<f64>().map_or_else(
+                |_| "unknown".to_string(),
+                |minimum| format!("{:.1}V", minimum - abort_volts),
+            ),
+        ),
+        log_line("drill load peak", &value("utilisation_peak_pct", "%")),
+        log_line("drill load mean", &value("utilisation_mean_pct", "%")),
+        log_change(
+            "drill charge",
+            &value("charge_start_pct", "%"),
+            &value("charge_end_pct", "%"),
+        ),
+        log_line("drill hosts shed", &value("hosts_shed", "")),
+    ]
+    .into_iter()
+    .map(|line| (Level::Info, line))
+    .collect::<Vec<_>>();
+    let issues = run_issues(table, target, abort_volts, followed);
+    if issues.is_empty() {
+        lines.push((Level::Info, log_line("drill issues", "none")));
+    }
+    lines.extend(
+        issues
+            .iter()
+            .map(|(tag, detail)| (Level::Warn, log_line(&format!("drill issue {tag}"), detail))),
+    );
+    lines
+}
+
 fn abort(env: &Env, marker: &Marker, marker_path: &Path, outage_dir: &Path, stem: &str, cut: bool) -> ExitError {
-    println!("{}", log_line("signalled", "restoring mains first"));
+    say(Level::Warn, &log_line("drill signalled", "restoring mains first"));
     if cut || env.plug.command("Rule1", PLUG_COMMAND_TIMEOUT).is_ok() {
         if let Err(err) = restore_plug(env.plug.as_ref(), env.timing.poll) {
             return ExitError::new(1, &err);
@@ -890,12 +1133,13 @@ fn abort(env: &Env, marker: &Marker, marker_path: &Path, outage_dir: &Path, stem
     let mut aborted = marker.clone();
     aborted.state = STATE_ABORTED.to_string();
     let _ = aborted.write(marker_path);
-    println!(
-        "{}",
-        log_line(
-            "aborted",
-            "the main program runs awake after the restore period of mains, following until the end row"
-        )
+    say(Level::Warn, &log_line("drill aborted", "mains restored"));
+    say(
+        Level::Info,
+        &log_line(
+            "drill awake",
+            "the main program runs it after the restore period of mains, following until the end row",
+        ),
     );
     let started = Instant::now();
     while started.elapsed() < env.timing.after_cap {
@@ -1013,7 +1257,10 @@ fn gather(env: &Env, liveness: &Liveness, outage_dir: &Path, marker_path: &Path)
 }
 
 pub fn confirm_typed(prompt: &str, word: &str) -> Result<bool, String> {
-    println!("{prompt}, type [{word}] to continue");
+    say(
+        Level::Warn,
+        &log_line("drill confirm", &format!("{prompt}, type {word} to continue")),
+    );
     let mut line = String::new();
     std::io::stdin()
         .read_line(&mut line)
@@ -1289,19 +1536,29 @@ mod tests {
         let plan = |target: Target, live: bool| {
             let mut effective = effective();
             effective.guard_live = live;
-            plan_text(&effective, &target, &Preflight::default(), "plug")
+            plan_lines(&effective, &target, None, &Preflight::default(), "plug")
+                .into_iter()
+                .map(|(level, line)| format!("{level} {line}"))
+                .collect::<Vec<_>>()
+                .join("\n")
         };
         let brownout = || Target::Brownout(Duration::from_secs(240));
-        assert!(plan(brownout(), false).contains("dry-run"));
-        assert!(plan(brownout(), true).contains("T+120 shed"));
+        assert!(plan(brownout(), false).contains("WARN drill warning") && plan(brownout(), false).contains("dry-run"));
+        assert!(!plan(brownout(), true).contains("dry-run"));
+        assert!(plan(brownout(), true).contains("drill timeline shed ") && plan(brownout(), true).contains("[T+120s]"));
         assert!(plan(brownout(), true).contains("restore and awake"));
         assert!(plan(Target::Blip(Duration::from_secs(60)), true).contains("only watches"));
+        assert!(!plan(Target::Blip(Duration::from_secs(60)), true).contains("timeline shed"));
         assert!(plan(Target::Blackout, true).contains("UPS cutoff"));
+        assert!(!plan(Target::Blackout, true).contains("drill hold"));
         let refused = Preflight {
             refusals: vec!["why".to_string()],
             warnings: Vec::new(),
         };
-        assert!(plan_text(&effective(), &Target::Blackout, &refused, "plug").contains("REFUSED why"));
+        let lines = plan_lines(&effective(), &Target::Blackout, None, &refused, "plug");
+        assert!(lines
+            .iter()
+            .any(|(level, line)| *level == Level::Error && line.contains("drill refused") && line.contains("[why]")));
     }
 
     #[test]
@@ -1368,6 +1625,102 @@ mod tests {
             lead_in_verdict(&csv(&[("1", "OB", "90", "")]), lead),
             LeadIn::Refuse(_)
         ));
+    }
+
+    #[test]
+    fn a_run_reports_what_went_wrong_and_nothing_when_it_went_well() {
+        let table = |end: Option<&str>, commands: &[&str], samples: &[Option<i64>]| {
+            let mut text = outage::encode_row(&crate::metrics::header());
+            text.push('\n');
+            let mut line = |event: &str, detail: &str, watts: Option<i64>| {
+                let mut frame = Frame::default();
+                if let Some(watts) = watts {
+                    frame.set_int(PLUG_WATTS, watts);
+                }
+                text.push_str(&outage::encode_row(&outage::row(
+                    "2026-01-01_12-00-00",
+                    0,
+                    event,
+                    detail,
+                    &frame,
+                )));
+                text.push('\n');
+            };
+            for watts in samples {
+                line("", "", *watts);
+            }
+            for command in commands {
+                line(EVENT_COMMAND, command, None);
+            }
+            if let Some(end) = end {
+                line(EVENT_END, end, None);
+            }
+            Table::parse(&text)
+        };
+        let good = "reason [restored] seconds_on_battery [113] battery_min_volts [12.0] hosts_shed [0] battery_low [0]";
+        let blip = Target::Blip(Duration::from_secs(110));
+        let ok = [Some(90), Some(91)];
+        assert!(run_issues(&table(Some(good), &[], &ok), &blip, 11.5, false).is_empty());
+        assert_eq!(run_issues(&table(None, &[], &ok), &blip, 11.5, false).len(), 1);
+        assert!(run_issues(&table(None, &[], &ok), &blip, 11.5, true).is_empty());
+        let aborted = "reason [aborted] battery_min_volts [12.0] hosts_shed [0]";
+        assert_eq!(run_issues(&table(Some(aborted), &[], &ok), &blip, 11.5, false).len(), 1);
+        let shed = "reason [restored] battery_min_volts [12.0] hosts_shed [2]";
+        assert_eq!(run_issues(&table(Some(shed), &[], &ok), &blip, 11.5, false).len(), 1);
+        assert!(run_issues(
+            &table(Some(shed), &[], &ok),
+            &Target::Brownout(Duration::from_secs(240)),
+            11.5,
+            false
+        )
+        .is_empty());
+        let close = "reason [restored] battery_min_volts [11.8] hosts_shed [0]";
+        assert_eq!(run_issues(&table(Some(close), &[], &ok), &blip, 11.5, false).len(), 1);
+        let edge = "reason [restored] battery_min_volts [12.0] hosts_shed [0]";
+        assert!(run_issues(&table(Some(edge), &[], &ok), &blip, 11.5, false).is_empty());
+        let low = "reason [restored] battery_min_volts [12.0] hosts_shed [0] battery_low [1]";
+        assert_eq!(run_issues(&table(Some(low), &[], &ok), &blip, 11.5, false).len(), 1);
+        let failed = [
+            "host [max] command [asleep] status [5] reason []",
+            "host [may] command [awake] status [0] reason []",
+        ];
+        assert_eq!(
+            run_issues(&table(Some(good), &failed, &ok), &blip, 11.5, false).len(),
+            1
+        );
+        assert_eq!(
+            run_issues(&table(Some(good), &[], &[Some(90), None, Some(91)]), &blip, 11.5, false).len(),
+            1
+        );
+        let mostly: Vec<Option<i64>> = std::iter::once(None).chain(std::iter::repeat_n(Some(90), 49)).collect();
+        assert_eq!(
+            run_issues(&table(Some(good), &[], &mostly), &blip, 11.5, false).len(),
+            1
+        );
+        let rarely: Vec<Option<i64>> = std::iter::once(None)
+            .chain(std::iter::repeat_n(Some(90), 120))
+            .collect();
+        assert!(run_issues(&table(Some(good), &[], &rarely), &blip, 11.5, false).is_empty());
+        let summary = run_summary(&table(Some(good), &[], &ok), &blip, 11.5, false);
+        assert!(summary.iter().any(|(_, line)| line.contains("drill issues")));
+        assert!(!summary.iter().any(|(level, _)| *level == Level::Warn));
+        assert!(run_summary(&table(None, &[], &ok), &blip, 11.5, true)
+            .iter()
+            .any(|(_, line)| line.contains("drill result") && line.contains("[open]")));
+        let warned = run_summary(&table(Some(close), &[], &ok), &blip, 11.5, false);
+        assert!(warned.iter().any(|(level, line)| *level == Level::Warn
+            && line.contains("drill issue volts margin")
+            && line.contains("[0.3V")));
+    }
+
+    #[test]
+    fn the_follow_is_over_only_once_the_plug_is_restored_and_the_time_has_passed() {
+        let past = Instant::now().checked_sub(Duration::from_secs(40)).unwrap();
+        let limit = Some(Duration::from_secs(30));
+        assert!(!follow_over(None, limit));
+        assert!(!follow_over(Some(past), None));
+        assert!(!follow_over(Some(Instant::now()), limit));
+        assert!(follow_over(Some(past), limit));
     }
 
     #[test]

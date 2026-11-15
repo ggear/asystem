@@ -6,10 +6,10 @@ use std::time::Duration;
 use clap::builder::{PossibleValuesParser, TypedValueParser};
 use clap::{Args, CommandFactory, Parser, Subcommand};
 use clap_complete::Shell;
-use log::LevelFilter;
+use log::{Level, LevelFilter};
 
 use crate::drill::{self, Env, Tasmota, Test, Timing};
-use crate::{check, init_logging, parse_duration, report, serve, DEFAULT_DEVICE, LEVEL_NAMES};
+use crate::{check, init_logging, log_line, parse_duration, report, say, serve, DEFAULT_DEVICE, LEVEL_NAMES};
 
 pub const DEFAULT_DATA_DIR: &str = "/asystem/mnt";
 pub const DEFAULT_MODEL_DIR: &str = "/asystem/etc/model";
@@ -134,6 +134,13 @@ pub struct DrillTestArgs {
         value_name = "DUR"
     )]
     pub hold: Option<String>,
+    #[arg(
+        short = 'W',
+        long,
+        help = "time to keep following and recording plug data after the plug is restored, default until the end row",
+        value_name = "DUR"
+    )]
+    pub follow: Option<String>,
     #[command(flatten)]
     pub common: CommonArgs,
 }
@@ -277,12 +284,14 @@ impl Cli {
                         &drill_env(&args.common, data_dir),
                         args.test,
                         args.hold.as_deref(),
+                        args.follow.as_deref(),
                         false,
                     ),
                     DrillCommands::Start(args) => drill::run_drill(
                         &drill_env(&args.common, data_dir),
                         args.test,
                         args.hold.as_deref(),
+                        args.follow.as_deref(),
                         true,
                     ),
                     DrillCommands::Stop { common } => {
@@ -327,7 +336,13 @@ pub fn run_clean(data_dir: &Path, confirm: impl FnOnce(&str, &str) -> Result<boo
         paths.push(marker_path);
     }
     if paths.is_empty() {
-        println!("nothing to delete under [{}]", data_dir.display());
+        say(
+            Level::Info,
+            &log_line(
+                "outage clean",
+                &format!("nothing to delete under {}", data_dir.display()),
+            ),
+        );
         return Ok(());
     }
     let bytes: u64 = paths
@@ -336,7 +351,7 @@ pub fn run_clean(data_dir: &Path, confirm: impl FnOnce(&str, &str) -> Result<boo
         .map(|metadata| metadata.len())
         .sum();
     let prompt = format!(
-        "this deletes [{}] files [{bytes}] bytes under [{}], real outages included, and cannot be undone",
+        "this deletes {} files of {bytes} bytes under {}, real outages included, and cannot be undone",
         paths.len(),
         data_dir.display()
     );
@@ -346,13 +361,23 @@ pub fn run_clean(data_dir: &Path, confirm: impl FnOnce(&str, &str) -> Result<boo
     for path in &paths {
         std::fs::remove_file(path).map_err(|err| format!("failed to delete [{}] [{err}]", path.display()))?;
     }
-    println!(
-        "deleted [{}] files, restart the container to clear the last outage values the main program still holds",
-        paths.len()
+    say(Level::Info, &log_line("outage clean deleted", &paths.len().to_string()));
+    say(
+        Level::Warn,
+        &log_line(
+            "outage clean restart",
+            "restart the container to clear the last outage values the main program still holds",
+        ),
     );
     let version = std::env::var("SERVICE_VERSION_ABSOLUTE").unwrap_or_else(|_| "unknown".to_string());
-    println!(
-        "the next backup will report a shrink and refuse the next install, accept it on the host from the running version with [/var/lib/asystem/install/rackmains/{version}/backup.sh --accept=<timestamp of the regressed backup>]"
+    say(
+        Level::Warn,
+        &log_line(
+            "outage clean next backup",
+            &format!(
+                "it will report a shrink and refuse the next install, accept it on the host with /var/lib/asystem/install/rackmains/{version}/backup.sh --accept=<timestamp of the regressed backup>"
+            ),
+        ),
     );
     Ok(())
 }
@@ -371,8 +396,19 @@ pub fn run_check(common: &CommonArgs, data_dir: &Path) -> Result<(), ExitError> 
     });
     for outcome in &outcomes {
         match &outcome.result {
-            Ok(detail) => println!("ok   {} {detail}", outcome.name),
-            Err(err) => println!("FAIL {} {err}", outcome.name),
+            Ok(detail) => {
+                say(Level::Info, &log_line(&format!("check {}", outcome.name), "ok"));
+                for (key, value) in report::pairs(detail) {
+                    say(
+                        Level::Info,
+                        &log_line(&format!("check {} {}", outcome.name, key.replace('_', " ")), &value),
+                    );
+                }
+            }
+            Err(err) => {
+                say(Level::Error, &log_line(&format!("check {}", outcome.name), "failed"));
+                say(Level::Error, &log_line(&format!("check {} error", outcome.name), err));
+            }
         }
     }
     let failed = check::failed(&outcomes);
@@ -530,6 +566,9 @@ mod tests {
                 ..
             })
         ));
+        assert!(
+            matches!(drill(&["start", "blip-watch", "-W", "30s"]), DrillCommands::Start(DrillTestArgs { follow: Some(ref follow), .. }) if follow == "30s")
+        );
         assert!(matches!(drill(&["stop"]), DrillCommands::Stop { .. }));
         assert!(Cli::try_parse_from(["rackmains", "guard", "drill", "restore"]).is_err());
         assert!(Cli::try_parse_from(["rackmains", "guard", "drill", "stop", "--force"]).is_err());

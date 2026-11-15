@@ -86,6 +86,7 @@ pub struct Stats {
     peak_utilisation: i64,
     utilisation_sum: i64,
     utilisation_count: i64,
+    charge_before: Option<i64>,
     charge_start: Option<i64>,
     charge_end: Option<i64>,
     low_raised: bool,
@@ -95,6 +96,11 @@ pub struct Stats {
 impl Stats {
     pub fn observe(&mut self, frame: &Frame, flags: Flags, stamp: &str, dt: Duration) {
         if !flags.raw_on_battery {
+            if self.seconds_on_battery.is_zero() {
+                if let Some(charge) = frame.number(metrics::BATTERY_CHARGE_PCT) {
+                    self.charge_before = Some(charge as i64);
+                }
+            }
             return;
         }
         self.seconds_on_battery += dt;
@@ -112,7 +118,8 @@ impl Stats {
             self.utilisation_count += 1;
         }
         if let Some(charge) = frame.number(metrics::BATTERY_CHARGE_PCT) {
-            self.charge_start.get_or_insert(charge as i64);
+            self.charge_start
+                .get_or_insert(self.charge_before.unwrap_or(charge as i64));
             self.charge_end = Some(charge as i64);
         }
     }
@@ -332,7 +339,8 @@ impl Spool {
                 }
                 Err(err) => {
                     failed = true;
-                    warn!("{}", log_line("outage write failed, rows kept", &err));
+                    warn!("{}", log_line("outage write failed", &err));
+                    warn!("{}", log_line("outage rows", "kept for the next write"));
                 }
             }
         }
@@ -771,6 +779,37 @@ mod tests {
         fs::write(dir.join(file_name("2026-01-01_00-00-00", 1)), body("")).unwrap();
         fs::write(dir.join(file_name("2026-01-01_00-00-00", 2)), body(EVENT_END)).unwrap();
         assert!(recover(&dir).is_empty());
+    }
+
+    #[test]
+    fn the_charge_at_the_start_is_the_last_reading_on_mains_when_there_was_one() {
+        let on_battery = Flags {
+            raw_on_battery: true,
+            on_battery: true,
+            ..Flags::default()
+        };
+        let frame = |charge: f64| {
+            let mut frame = Frame::default();
+            frame.set_number("rackmains_battery_charge_pct", charge);
+            frame
+        };
+        let run = |before: Option<f64>| {
+            let mut stats = Stats::default();
+            if let Some(before) = before {
+                stats.observe(&frame(before), Flags::default(), "a", Duration::from_secs(1));
+            }
+            stats.observe(&frame(81.0), on_battery, "b", Duration::from_secs(1));
+            stats.observe(&frame(62.0), on_battery, "c", Duration::from_secs(1));
+            stats.observe(&frame(100.0), Flags::default(), "d", Duration::from_secs(1));
+            stats.detail(END_RESTORED, 0)
+        };
+        let with = run(Some(100.0));
+        assert!(
+            with.contains("charge_start_pct [100]") && with.contains("charge_end_pct [62]"),
+            "{with}"
+        );
+        let without = run(None);
+        assert!(without.contains("charge_start_pct [81]"), "{without}");
     }
 
     #[test]

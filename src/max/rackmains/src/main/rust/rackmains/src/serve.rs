@@ -483,7 +483,7 @@ impl Poller {
                     if self.settings.live {
                         "guard call"
                     } else {
-                        "guard call (dry-run)"
+                        "guard call dry run"
                     },
                     &format!("{} {}", call.host, call.command.remote())
                 )
@@ -625,7 +625,8 @@ impl Poller {
                 self.guard.set_runtime_remaining(None);
                 self.model_failures += 1;
                 if self.model_failures == 1 {
-                    warn!("{}", log_line("model call failed, keeping last answer", &err));
+                    warn!("{}", log_line("model call failed", &err));
+                    warn!("{}", log_line("model answer", "kept from the last good call"));
                 } else {
                     debug!("{}", log_line("model call still failing", &err));
                 }
@@ -1592,7 +1593,7 @@ mod tests {
     #[test]
     fn a_drill_runs_end_to_end_cut_shed_restore_and_end_row() {
         let live = Live::new("drill-flow", "OL", true);
-        drill::run_drill(&live.env, drill::Test::Blip, Some("1s"), true).unwrap();
+        drill::run_drill(&live.env, drill::Test::Blip, Some("1s"), None, true).unwrap();
         let sent = live.sent();
         let off = sent.iter().position(|sent| sent == "Power Off").unwrap();
         let arm = sent.iter().position(|sent| sent.starts_with("Rule1 ON")).unwrap();
@@ -1627,7 +1628,7 @@ mod tests {
     #[test]
     fn a_holding_drill_restores_at_the_first_battery_row_once_the_volts_reach_the_abort_volts() {
         let live = Live::build("drill-abort-volts", "OL", true, "11.4");
-        drill::run_drill(&live.env, drill::Test::Brownout, Some("30m"), true).unwrap();
+        drill::run_drill(&live.env, drill::Test::Brownout, Some("30m"), None, true).unwrap();
         assert!(live.plug.on.load(Ordering::SeqCst));
         let tables = live.finish();
         let table = &tables[0];
@@ -1658,7 +1659,7 @@ mod tests {
         }
         .write(&live.dir.join("run").join(FILE_LIVENESS))
         .unwrap();
-        let error = drill::run_drill(&live.env, drill::Test::Blip, Some("1s"), true).unwrap_err();
+        let error = drill::run_drill(&live.env, drill::Test::Blip, Some("1s"), None, true).unwrap_err();
         assert_eq!(error.code, drill::EXIT_TIMEOUT);
         assert!(!live.sent().iter().any(|sent| sent == "Power Off"));
         assert!(!live.dir.join(DIR_STATE).join(drill::FILE_MARKER).exists());
@@ -1667,7 +1668,7 @@ mod tests {
     #[test]
     fn a_lead_in_that_is_not_ol_refuses_to_cut() {
         let live = Live::new("drill-runtime", "OL OVER", true);
-        let error = drill::run_drill(&live.env, drill::Test::Blip, Some("1s"), true).unwrap_err();
+        let error = drill::run_drill(&live.env, drill::Test::Blip, Some("1s"), None, true).unwrap_err();
         assert_eq!(error.code, 1);
         assert!(!live.sent().iter().any(|sent| sent == "Power Off"));
         assert!(!live.sent().iter().any(|sent| sent.starts_with("Rule1 ON")));
@@ -1679,7 +1680,7 @@ mod tests {
     fn a_deadman_that_cannot_be_set_is_disarmed_and_nothing_is_cut() {
         let live = Live::new("drill-deadman", "OL", true);
         *live.plug.refuse.lock().unwrap() = Some("Rule1 1");
-        let error = drill::run_drill(&live.env, drill::Test::Blip, Some("1s"), true).unwrap_err();
+        let error = drill::run_drill(&live.env, drill::Test::Blip, Some("1s"), None, true).unwrap_err();
         assert_eq!(error.code, 1);
         let sent = live.sent();
         assert!(!sent.iter().any(|sent| sent == "Power Off"));
@@ -1691,7 +1692,7 @@ mod tests {
     fn a_panic_after_the_cut_still_restores_the_plug() {
         let live = Live::new("drill-panic", "OL", true);
         *live.plug.panic_on.lock().unwrap() = Some("Power Off");
-        let error = drill::run_drill(&live.env, drill::Test::Blip, Some("1s"), true).unwrap_err();
+        let error = drill::run_drill(&live.env, drill::Test::Blip, Some("1s"), None, true).unwrap_err();
         assert_eq!(error.code, 1);
         assert!(live.plug.on.load(Ordering::SeqCst));
         assert_eq!(live.sent().last().map(String::as_str), Some("Rule1 0"));
@@ -1701,7 +1702,7 @@ mod tests {
     #[test]
     fn a_plan_without_force_cuts_nothing() {
         let live = Live::new("drill-plan", "OL", true);
-        drill::run_drill(&live.env, drill::Test::Brownout, None, false).unwrap();
+        drill::run_drill(&live.env, drill::Test::Brownout, None, None, false).unwrap();
         assert!(live.sent().iter().all(|sent| sent == "Status 0"));
         assert!(live.finish().is_empty());
     }

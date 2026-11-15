@@ -8,7 +8,11 @@ fn main() -> ExitCode {
     match rackmains::mock::run(Path::new(&path)) {
         Ok(()) => ExitCode::SUCCESS,
         Err(err) => {
-            eprintln!("mockdriver failed [{err}]");
+            eprintln!(
+                "{} {}",
+                rackmains::log_prefix(log::Level::Error),
+                rackmains::log_line("mockdriver failed", &err)
+            );
             ExitCode::FAILURE
         }
     }

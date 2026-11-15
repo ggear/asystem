@@ -50,7 +50,7 @@ maxretry = 3
     vendorid = 0665
     productid = 5161
     protocol = voltronic-qs
-    pollfreq = 4
+    pollfreq = 1
     desc = "PowerShield UPS"
 EOT
 

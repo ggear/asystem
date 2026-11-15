@@ -59,7 +59,7 @@ battery. Thresholds are outputs of a model that is fitted offline (the Intent of
 
 Set up by the module's own `install_prep.sh`, which runs on `install` and is idempotent. It installs `nut` and `nut-client`
 with `dnf` when `rpm` says they are missing and writes `nut.conf` (`MODE=standalone`), `ups.conf` (`driver = nutdrv_qx`,
-`port = auto`, `vendorid = 0665`, `productid = 5161`, `protocol = voltronic-qs`, `pollfreq = 4`, to become `1` after trial 1) and `upsd.conf` (`LISTEN`
+`port = auto`, `vendorid = 0665`, `productid = 5161`, `protocol = voltronic-qs`, `pollfreq = 1`, changed from 4 on 2026-11-15 after trial 1, where values refreshed every 5 to 7 s and the cut took about 2 s to appear and the return about 4 s) and `upsd.conf` (`LISTEN`
 127.0.0.1 only), each only when its content differs. It then enables `nut-driver@<ups>` and `nut-server` and restarts both
 once, only when a file changed. The UPS name comes from `RACKMAINS_DEVICE`, a `nutdrv_qx-<ups>` socket, so there is one
 source. It creates no `upsd` users, never touches `upsmon`, and exits 0 whatever happens. `install_pre.sh` publishes the
@@ -641,7 +641,7 @@ rackmains [-V|--version] [--data-dir <dir>]     root flags, inherited by every c
 rackmains serve [options]                       run the reader, publisher and guard
 rackmains check                                 validate the model, host file, ssh keys, data dir and driver socket, then exit
 rackmains guard drill plan <test> [-F <dur>]    print the plan and preflight of a test, cut nothing
-rackmains guard drill start <test> [-F <dur>]   the same, then cut mains and run the test; blackout-shed asks for a typed `blackout`
+rackmains guard drill start <test> [-F <dur>] [-W <dur>]   the same, then cut mains and run the test; blackout-shed asks for a typed `blackout`; -W is how long to keep following and recording after the restore, default until the end row (the guard finishes the run either way)
                                                 <test> is blip-watch (default hold shed point less 30s, must be under it), brownout-shed-wake (default shed point plus 120s, must be at or over it) or blackout-shed (no hold)
 rackmains guard drill stop                      abort the running drill: mains on, deadman disarmed; with none running, nothing changes unless the plug is OFF, then a typed `on` turns it on
 rackmains guard outage tail [<file>]            follow the newest outage CSV, or the given file, as rows arrive
@@ -702,8 +702,7 @@ rackmains guard outage clean                    delete every outage CSV, call lo
 3. the derived timeline (T-60 lead-in starts, T+0 plug off, about T+2 `OB`, T+120 shed, T+hold plug on, T+hold+300 `awake`, `end`), with a loud warning if hold is under the shed point (the guard will not shed)
    or the guard is in dry-run (the test proves nothing about the shed), and the preflight results.
 
-**While running.** It tails the CSV by row count (the file is replaced every 1 s and continues in the next numbered file, so `tail -F` is no use) and prints one line per new row: elapsed, status, volts,
-utilisation, `rackmains_guard_state`, host results and plug watts. The hold is counted from the first `OB` row, not from the command. It also stops early in a holding verb if `LB` is raised or the battery volts reach `rackmains_guard_abort_battery_volts`, and restores the plug as for the end of the hold.
+**While running.** It tails the CSV by row count (the file is replaced every 1 s and continues in the next numbered file, so `tail -F` is no use) and prints the run in the service's own log style (decided 2026-11-15): the same `[timestamp LEVEL] label ........ [value]` lines the poller writes to `docker logs`, one fact per line, with no padding inside the brackets. The plan is a list of `drill` and `guard` lines, the live run prints the lead-in second by second, each event of the CSV (`ups status changed`, `guard decision`, `guard command`) and a `progress` block every 10 s with the same labels as the service's, then ends with a summary and the issues it spotted. Per-poll rows are not printed, and values that add nothing (the poll period, the SSH timeout, a zero `took ms`, a repeat of the summary) are dropped. `guard outage tail` prints the same lines. `guard outage list` is the one exception and follows the backups list: the same boxed table, newest first, one row per outage with `STARTED (OUTAGE-ID)`, `FINISHED`, `DURATION`, `BATTERY`, `TRIGGER`, `TEST`, `ROWS`, `MIN VOLTS`, `SHED` and `RESULT`. The hold is counted from the first `OB` row, not from the command. It also stops early in a holding verb if `LB` is raised or the battery volts reach `rackmains_guard_abort_battery_volts`, and restores the plug as for the end of the hold.
 
 **Arming is read back.** After the lead-in, immediately before the cut, the tool arms the deadman, then reads `Rule1` and its timer back from the plug and refuses to cut if either is wrong; after the cut it requires `Power` to read `OFF`.
 
@@ -981,7 +980,7 @@ Trial 5 was written as "to the 11.5 V floor or `LB`, not to the UPS cutting out"
    "The guard CLI and the test command" is the design, and it is proven on the spare plug first.
 9. **Reachability**: the plug console and all four hosts are reachable from where the cut is made, and that place is not on the UPS. The plug's API is open without a password on the LAN, so anything on that network can cut the rack, and no password is set or planned, the risk being accepted (decided 2026-11-12); `max` and a
    bridge container both reach it (a bridge container on `max` was confirmed on 2026-11-11).
-10. **Reaction latency and `pollfreq`**: set `pollfreq = 1` in `ups.conf`, check the unit and the driver tolerate it, and time the cut to `OB` and the restore to `OL` in the published entities and the CSV. This decides whether `pollfreq` stays at 1.
+10. **Reaction latency and `pollfreq`**: `pollfreq = 1` is set in `ups.conf` (2026-11-15, after trial 1 showed readings refreshing every 5 to 7 s at 4); check the unit and the driver tolerate it, and time the cut to `OB` and the restore to `OL` in the CSV with the next `blip-watch`. This decides whether `pollfreq` stays at 1.
 11. **`awake` on an awake host**: run `awake` on each of the four hosts when it was never put asleep and when it was asleep, and confirm it changes nothing in the first case and returns 0. The guard's restore, which runs `awake` on every host, rests on this.
 12. **Restart policy**: `docker inspect` the restart policy of the running container in every environment, and `kill -9` the process once to confirm Docker restarts it. The watchdog's abort relies on this.
 

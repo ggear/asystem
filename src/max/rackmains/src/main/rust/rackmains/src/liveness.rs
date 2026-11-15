@@ -95,7 +95,8 @@ pub fn watchdog(name: &'static str, progress: Progress, limit: Duration, tick: D
 }
 
 pub fn abort_on_stall(name: &str) {
-    error!("{}", log_line("watchdog stalled, aborting", name));
+    error!("{}", log_line("watchdog stalled", name));
+    error!("{}", log_line("watchdog action", "aborting the process"));
     std::process::abort();
 }
 
