@@ -384,6 +384,7 @@ mod tests {
         Policy {
             shed_battery: Duration::from_secs(120),
             restore_mains: Duration::from_secs(300),
+            abort_battery: 11.5,
             shed_runtime: None,
         }
     }

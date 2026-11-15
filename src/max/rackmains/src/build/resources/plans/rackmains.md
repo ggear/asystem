@@ -222,6 +222,7 @@ and the workbook templates all move to these names when built.
 | `rackmains_ups_trim` | `TRIM` | yes | yes | DEBUG on change |
 | `rackmains_guard_state` | the guard, text | yes | yes | INFO on every transition, with the inputs and the threshold compared (a `decision` row); derived: seconds to each step |
 | `rackmains_guard_live` | the guard | yes | yes | in the `start` row's detail; in dry-run every command is logged as would-run |
+| `rackmains_guard_abort_battery_volts` | the model | no | yes | the battery volts at or under which a holding drill restores the plug; from the model, 10.5 to 12.5 V, in the `effective` block and every row |
 | `rackmains_guard_mains_seconds` | the guard | yes | yes | `note` rows counting down to `rackmains_guard_restore_mains_seconds` |
 | `rackmains_guard_battery_seconds` | the guard | yes | yes | on every `decision` row |
 | `rackmains_guard_failed_hosts` | the guard, hosts whose last `asleep` or `awake` returned non-zero | yes, same | yes | WARN on a change to non-zero, naming the hosts |
@@ -583,7 +584,7 @@ stays writable under `asleep --shallow`, and the tool runs in the same container
 
 **Request and reply over files, without a listener.** A file has no reply, so the reply is an echo the tool checks.
 - The marker carries an `id`. The guard reads it on its next poll (at most 1 s) and, when it accepts, opens the run's CSV, whose `start` row carries the marker's `id`: that row is the ack. The tool waits at most 10 s for a file whose `start` row carries its own `id` and **will not arm or cut without one**. A rejection (an outage in progress, the guard not ready) is a `note` row in the open file naming the `id` and the reason, or, with no file to write it in, no ack within 10 s, which means no cut.
-- `rackmains guard drill` without `--force` prints the `effective` block of `liveness.json`, which the guard writes once at start (`rackmains_guard_live`, the model name, version and hash, `rackmains_guard_shed_battery_seconds`, `rackmains_guard_restore_mains_seconds`, `poll_s`, `ssh_timeout_s`, the shed order), so what the operator reads is what the process that will act has loaded, not a recomputation by the tool.
+- `rackmains guard drill` without `--force` prints the `effective` block of `liveness.json`, which the guard writes once at start (`rackmains_guard_live`, the model name, version and hash, `rackmains_guard_shed_battery_seconds`, `rackmains_guard_restore_mains_seconds`, `rackmains_guard_abort_battery_volts`, `poll_s`, `ssh_timeout_s`, the shed order), so what the operator reads is what the process that will act has loaded, not a recomputation by the tool.
 - Liveness is the `guard_boot_ms` stamp in `liveness.json`, replaced every poll with no fsync. The tool refuses to arm or cut if it is more than 3 s old, which is the proof a socket would give.
 
 **Marker staleness.** The guard honours a marker only if it acked that `id` **before** the first `OB` of the outage and the marker is unexpired; a marker that appears after `OB`, was never acked, or has expired marks nothing.
@@ -652,6 +653,7 @@ rackmains guard list                            show the recent outages and how 
   - `drill --force` is allowed against a dry-run guard (trial 1 runs that way) with a loud warning.
   - `guard stop` with no drill running reports the state and changes nothing, so it cannot override a plug that is off for a legitimate reason; `guard stop --force` is the unconditional emergency form.
 - **Drill constants (decided 2026-11-12).**
+  - A hold over 30 minutes is refused (decided 2026-11-15), so a typo cannot keep mains off for hours; the abort volts is the model's, bounded to 10.5 to 12.5 V by the crate.
   - The ack timeout is 10 s and a stalled guard is a `guard_boot_ms` more than 3 s old.
   - The marker expiry is the planned cut plus hold plus the after-restore cap plus 5 min.
   - The plug is sampled with `Status 8` every poll (1 s, in step with the CSV; whole watts only). The CSV columns are `rackmains_plug_power_state`, `rackmains_plug_watts`, `rackmains_plug_volts`, `rackmains_plug_amps` and `rackmains_plug_energy_today_wh`, all CSV only, never in the payload.
@@ -677,7 +679,7 @@ rackmains guard list                            show the recent outages and how 
   | `--outage-keep` | `100`, env `RACKMAINS_OUTAGE_LOG_KEEP` | newest outage files kept |
   | `--dry-run` | off, added by the entrypoint under the mock | the guard logs its shed and wake calls instead of making them; a live start is refused if `check` fails |
 
-  No flag sets `rackmains_guard_shed_battery_seconds` or `rackmains_guard_restore_mains_seconds`: thresholds come from the released model, never from flags or constants.
+  No flag sets `rackmains_guard_shed_battery_seconds`, `rackmains_guard_restore_mains_seconds` or `rackmains_guard_abort_battery_volts`: thresholds come from the released model, never from flags or constants.
 - **`check`** loads the model and verifies its hashes and signature, reads the generated host file and checks the ssh keys exist with the right modes, the data dir is writable and the driver socket reachable, then exits `0`
   or non-zero. `fab systest`, the install hook and an operator can run it, and a live start uses the same checks, so the guard's "refuses live mode if the model fails" has one implementation.
 - **`guard tail`** and **`guard list`** are read-only and share the one typed outage CSV reader. `tail` is what follows an outage after the drill has gone (a `blackout-shed` ends with `max` dying, and the record is read afterwards);
@@ -694,13 +696,13 @@ rackmains guard list                            show the recent outages and how 
 
 **What it prints before cutting**, in three blocks so the drain is clearly understood:
 1. the tool's settings (mode, hold, after, deadman, guard posture, plug);
-2. what the main program will observe, read live from the `effective` block of `liveness.json` (dry-run or live, version, model project and mode, `rackmains_guard_shed_battery_seconds`, `rackmains_guard_restore_mains_seconds`,
+2. what the main program will observe, read live from the `effective` block of `liveness.json` (dry-run or live, version, model project and mode, `rackmains_guard_shed_battery_seconds`, `rackmains_guard_restore_mains_seconds`, `rackmains_guard_abort_battery_volts`,
    the poll and CSV row intervals, the ssh timeout, and the shed order);
 3. the derived timeline (T-60 lead-in starts, T+0 plug off, about T+2 `OB`, T+120 shed, T+hold plug on, T+hold+300 `awake`, `end`), with a loud warning if hold is under the shed point (the guard will not shed)
    or the guard is in dry-run (the test proves nothing about the shed), and the preflight results.
 
 **While running.** It tails the CSV by row count (the file is replaced every 1 s and continues in the next numbered file, so `tail -F` is no use) and prints one line per new row: elapsed, status, volts,
-utilisation, `rackmains_guard_state`, host results and plug watts. The hold is counted from the first `OB` row, not from the command. It also stops early in hold mode if `LB` is raised.
+utilisation, `rackmains_guard_state`, host results and plug watts. The hold is counted from the first `OB` row, not from the command. It also stops early in a holding verb if `LB` is raised or the battery volts reach `rackmains_guard_abort_battery_volts`, and restores the plug as for the end of the hold.
 
 **Arming is read back.** After the lead-in, immediately before the cut, the tool arms the deadman, then reads `Rule1` and its timer back from the plug and refuses to cut if either is wrong; after the cut it requires `Power` to read `OFF`.
 
@@ -815,10 +817,10 @@ must give a signature error). It is embedded into `src/build/resources/model/bat
 refusal of live mode on a failed validation.
 
 **Starting values, the default model.** Constants only: `rackmains_guard_shed_battery_seconds` 120, inside the 145 s already held at service
-load with no knee; and `rackmains_guard_restore_mains_seconds` 300. They shed early on short outages and so
+load with no knee; `rackmains_guard_restore_mains_seconds` 300; and `rackmains_guard_abort_battery_volts` 11.5. They shed early on short outages and so
 waste battery, but never outrun what is proven. The values are the constants of the notebook's `define_model` call. A refit replaces the project, which is a release.
 The halt thresholds (`guard_halt_max_seconds`, `guard_halt_delay_seconds`, `guard_halt_lead_seconds`) were removed from the signature in place, before it was released, so the project, its golden file, the generated
-`battery.rs` and `policy.rs` no longer carry them; the signature now has the five inputs and nine outputs, two of them required (`rackmains_guard_shed_battery_seconds`, `rackmains_guard_restore_mains_seconds`).
+`battery.rs` and `policy.rs` no longer carry them; the signature now has the five inputs and ten outputs, three of them required (`rackmains_guard_shed_battery_seconds`, `rackmains_guard_restore_mains_seconds`, `rackmains_guard_abort_battery_volts`).
 
 ## Deploy and the vernemq release lifecycle
 

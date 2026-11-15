@@ -10,12 +10,15 @@ pub const SHED_BATTERY_FLOOR: Duration = Duration::from_secs(30);
 pub const SHED_BATTERY_CEILING: Duration = Duration::from_secs(3600);
 pub const RESTORE_MAINS_FLOOR: Duration = Duration::from_secs(60);
 pub const RESTORE_MAINS_CEILING: Duration = Duration::from_hours(24);
+pub const ABORT_BATTERY_FLOOR: f64 = 10.5;
+pub const ABORT_BATTERY_CEILING: f64 = 12.5;
 pub const RUNTIME_REMAINING_CEILING: Duration = Duration::from_hours(24);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Policy {
     pub shed_battery: Duration,
     pub restore_mains: Duration,
+    pub abort_battery: f64,
     pub shed_runtime: Option<Duration>,
 }
 
@@ -30,6 +33,7 @@ impl Policy {
         vec![
             ("shed battery", format!("{}s", self.shed_battery.as_secs())),
             ("restore mains", format!("{}s", self.restore_mains.as_secs())),
+            ("abort battery", format!("{}V", self.abort_battery)),
             (
                 "shed runtime",
                 self.shed_runtime
@@ -68,6 +72,13 @@ impl TryFrom<&Response> for Policy {
             RESTORE_MAINS_FLOOR,
             RESTORE_MAINS_CEILING,
         )?;
+        let abort_battery = response.rackmains_guard_abort_battery_volts;
+        if !(ABORT_BATTERY_FLOOR..=ABORT_BATTERY_CEILING).contains(&abort_battery) {
+            return Err(format!(
+                "guard threshold [{}] [{abort_battery}] outside [{ABORT_BATTERY_FLOOR}] to [{ABORT_BATTERY_CEILING}]",
+                crate::metrics::GUARD_ABORT_BATTERY
+            ));
+        }
         let shed_runtime = response
             .rackmains_guard_shed_runtime_seconds
             .map(|value| seconds(crate::metrics::GUARD_SHED_RUNTIME, value, Duration::ZERO, shed_battery))
@@ -75,6 +86,7 @@ impl TryFrom<&Response> for Policy {
         Ok(Self {
             shed_battery,
             restore_mains,
+            abort_battery,
             shed_runtime,
         })
     }
@@ -210,6 +222,7 @@ mod tests {
         Response {
             rackmains_guard_shed_battery_seconds: shed_battery,
             rackmains_guard_restore_mains_seconds: 300,
+            rackmains_guard_abort_battery_volts: 11.5,
             rackmains_guard_shed_runtime_seconds: None,
             rackmains_battery_runtime_remaining_seconds: None,
             rackmains_battery_energy_remaining_pct: None,
@@ -246,6 +259,7 @@ mod tests {
         .unwrap();
         assert_eq!(Duration::from_secs(120), policy.shed_battery);
         assert_eq!(Duration::from_secs(300), policy.restore_mains);
+        assert!((policy.abort_battery - 11.5).abs() < f64::EPSILON);
         assert_eq!(Some(Duration::from_secs(45)), policy.shed_runtime);
     }
 
@@ -268,6 +282,13 @@ mod tests {
         assert!(restore(seconds(RESTORE_MAINS_FLOOR) - 1).is_err());
         assert!(restore(seconds(RESTORE_MAINS_CEILING)).is_ok());
         assert!(restore(seconds(RESTORE_MAINS_CEILING) + 1).is_err());
+        let abort =
+            |value: f64| Policy::try_from(&with(|response| response.rackmains_guard_abort_battery_volts = value));
+        assert!(abort(ABORT_BATTERY_FLOOR).is_ok());
+        assert!(abort(ABORT_BATTERY_FLOOR - 0.1).is_err());
+        assert!(abort(ABORT_BATTERY_CEILING).is_ok());
+        assert!(abort(ABORT_BATTERY_CEILING + 0.1).is_err());
+        assert!(abort(f64::NAN).is_err());
         assert!(runtime(0).is_ok());
         assert!(runtime(120).is_ok());
         assert!(runtime(121).is_err());

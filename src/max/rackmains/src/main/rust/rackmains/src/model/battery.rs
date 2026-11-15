@@ -2,7 +2,7 @@
 // WARNING: This file is written by the build process, any manual edits will be lost!
 ////////////////////////////////////////////////////////////////////////////////
 
-// project rackmains_ups_battery sha256 30a4f8a750beff595cef875973be8ad97aeefc898fa7c132005d2804a78716e5
+// project rackmains_ups_battery sha256 c517baef41df675abc0b89a50622862b1957edba83280d34900df1ae0fa1c576
 
 use std::path::Path;
 
@@ -27,6 +27,7 @@ pub const INPUT_NAMES: &[&str] = &[
 pub const OUTPUT_NAMES: &[&str] = &[
     "rackmains_guard_shed_battery_seconds",
     "rackmains_guard_restore_mains_seconds",
+    "rackmains_guard_abort_battery_volts",
     "rackmains_guard_shed_runtime_seconds",
     "rackmains_battery_runtime_remaining_seconds",
     "rackmains_battery_energy_remaining_pct",
@@ -43,6 +44,7 @@ pub const REQUIRED_INPUT_NAMES: &[&str] = &[
 pub const REQUIRED_OUTPUT_NAMES: &[&str] = &[
     "rackmains_guard_shed_battery_seconds",
     "rackmains_guard_restore_mains_seconds",
+    "rackmains_guard_abort_battery_volts",
 ];
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -70,6 +72,7 @@ pub struct Request {
 pub struct Response {
     pub rackmains_guard_shed_battery_seconds: i64,
     pub rackmains_guard_restore_mains_seconds: i64,
+    pub rackmains_guard_abort_battery_volts: f64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rackmains_guard_shed_runtime_seconds: Option<i64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -170,6 +173,19 @@ impl TryFrom<Tensors> for Response {
                         kind: Kind::Signature,
                         gate: "response".to_string(),
                         cause: "output [rackmains_guard_restore_mains_seconds] is absent or not one value".to_string(),
+                    })
+                }
+            },
+            rackmains_guard_abort_battery_volts: match tensors
+                .get("rackmains_guard_abort_battery_volts")
+                .map(Vec::as_slice)
+            {
+                Some([value]) => *value,
+                _ => {
+                    return Err(ModelError {
+                        kind: Kind::Signature,
+                        gate: "response".to_string(),
+                        cause: "output [rackmains_guard_abort_battery_volts] is absent or not one value".to_string(),
                     })
                 }
             },

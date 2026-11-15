@@ -137,6 +137,16 @@
       }
     },
     {
+      "name": "rackmains_guard_abort_battery_volts",
+      "datatype": "FP64",
+      "shape": [1],
+      "parameters": {
+        "unit": "volts",
+        "required": true,
+        "description": "Battery voltage at or under which a drill restores the plug and ends, the backstop against holding mains off too long. Compared with rackmains_battery_volts. Never outside 10.5 to 12.5."
+      }
+    },
+    {
       "name": "rackmains_guard_shed_runtime_seconds",
       "datatype": "INT64",
       "shape": [1],

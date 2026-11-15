@@ -199,6 +199,7 @@ pub const MARKER_MARGIN: Duration = Duration::from_mins(5);
 pub const DEADMAN_MARGIN: Duration = Duration::from_mins(5);
 pub const DEADMAN_BLACKOUT: Duration = Duration::from_hours(3);
 pub const HOLD_PAST_SHED: Duration = Duration::from_secs(120);
+pub const HOLD_CEILING: Duration = Duration::from_mins(30);
 pub const RECOVER_BEFORE_SHED: u64 = 30;
 pub const CUT_TO_BATTERY: Duration = Duration::from_secs(10);
 pub const RESTORE_VERIFY: Duration = Duration::from_secs(60);
@@ -300,6 +301,12 @@ pub fn parse_target(verb: Verb, hold: Option<&str>, effective: &Effective) -> Re
                 })
         })
         .transpose()?;
+    if let Some(seconds) = parsed.filter(|seconds| *seconds > HOLD_CEILING.as_secs()) {
+        return Err(format!(
+            "hold [{seconds}s] is over the ceiling [{}s]",
+            HOLD_CEILING.as_secs()
+        ));
+    }
     match verb {
         Verb::Blackout if parsed.is_some() => Err("blackout-shed runs to the UPS cutoff and takes no hold".to_string()),
         Verb::Blackout => Ok(Target::Blackout),
@@ -423,6 +430,7 @@ pub fn plan_text(effective: &Effective, target: &Target, assessment: &Preflight,
     let (mode, hold) = (target_mode(target), target_hold(target).as_secs());
     let shed = effective.guard_shed_battery_seconds;
     let restore_mains = effective.guard_restore_mains_seconds;
+    let abort = effective.guard_abort_battery_volts;
     let mut lines = vec![
         "tool".to_string(),
         format!(
@@ -431,7 +439,7 @@ pub fn plan_text(effective: &Effective, target: &Target, assessment: &Preflight,
         ),
         "main program".to_string(),
         format!(
-            "  guard_live [{}] model [{} {}] rackmains_guard_shed_battery_seconds [{shed}] rackmains_guard_restore_mains_seconds [{restore_mains}] poll [{}s] ssh_timeout [{}s] shed_order [{}]",
+            "  guard_live [{}] model [{} {}] rackmains_guard_shed_battery_seconds [{shed}] rackmains_guard_restore_mains_seconds [{restore_mains}] rackmains_guard_abort_battery_volts [{abort}] poll [{}s] ssh_timeout [{}s] shed_order [{}]",
             u8::from(effective.guard_live),
             effective.model_name,
             effective.model_hash,
@@ -523,6 +531,15 @@ pub fn on_battery_seen(table: &Table) -> bool {
     held_seconds(table).is_some()
 }
 
+pub fn volts_aborted(table: &Table, abort_volts: f64) -> bool {
+    table
+        .rows
+        .iter()
+        .rev()
+        .find_map(|row| table.cell(row, metrics::BATTERY_VOLTS).parse::<f64>().ok())
+        .is_some_and(|volts| volts <= abort_volts)
+}
+
 pub fn low_raised(table: &Table) -> bool {
     table
         .rows
@@ -567,7 +584,14 @@ pub fn run_drill(env: &Env, verb: Verb, hold: Option<&str>, force: bool) -> Resu
     };
     marker.write(&marker_path)?;
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        drive(env, &target, &marker, &marker_path, &outage_dir)
+        drive(
+            env,
+            &target,
+            liveness.effective.guard_abort_battery_volts,
+            &marker,
+            &marker_path,
+            &outage_dir,
+        )
     }))
     .unwrap_or_else(|_| {
         Err(match restore_plug(env.plug.as_ref(), env.timing.poll) {
@@ -627,7 +651,14 @@ pub fn restore_plug(plug: &dyn Plug, retry: Duration) -> Result<(), String> {
     ))
 }
 
-fn drive(env: &Env, target: &Target, marker: &Marker, marker_path: &Path, outage_dir: &Path) -> Result<(), ExitError> {
+fn drive(
+    env: &Env,
+    target: &Target,
+    abort_volts: f64,
+    marker: &Marker,
+    marker_path: &Path,
+    outage_dir: &Path,
+) -> Result<(), ExitError> {
     let timing = &env.timing;
     let (file, _) = wait_for_ack(outage_dir, &marker.id, timing).ok_or_else(|| {
         ExitError::new(
@@ -711,9 +742,13 @@ fn drive(env: &Env, target: &Target, marker: &Marker, marker_path: &Path, outage
             break;
         }
         if let Target::Blip(hold) | Target::Brownout(hold) = target {
+            let volts_low = volts_aborted(&table, abort_volts);
             if restored.is_none()
-                && (held_seconds(&table).is_some_and(|held| held >= hold.as_secs()) || low_raised(&table))
+                && (held_seconds(&table).is_some_and(|held| held >= hold.as_secs()) || low_raised(&table) || volts_low)
             {
+                if volts_low {
+                    println!("battery volts at or under the abort volts [{abort_volts}], restoring mains");
+                }
                 restore_plug(env.plug.as_ref(), env.timing.poll)?;
                 println!("mains restored");
                 restored = Some(Instant::now());
@@ -930,6 +965,7 @@ mod tests {
             guard_live: true,
             guard_shed_battery_seconds: 120,
             guard_restore_mains_seconds: 300,
+            guard_abort_battery_volts: 11.5,
             ..Effective::default()
         }
     }
@@ -996,6 +1032,8 @@ mod tests {
         assert_eq!(target(Verb::Blackout, None), Ok(Target::Blackout));
         assert!(target(Verb::Blackout, Some("5m")).is_err());
         assert!(target(Verb::Brownout, Some("0")).is_err());
+        assert!(target(Verb::Brownout, Some("30m")).is_ok());
+        assert!(target(Verb::Brownout, Some("31m")).is_err());
         assert!(target(Verb::Blip, Some("soon")).is_err());
     }
 
@@ -1189,6 +1227,35 @@ mod tests {
         assert!(on_battery_seen(&table));
         assert!(!on_battery_seen(&csv(&[("0", "OL", "90", "start")])));
         assert!(!low_raised(&table));
+    }
+
+    #[test]
+    fn the_latest_battery_volts_at_or_under_the_abort_volts_aborts_and_a_blank_or_higher_reading_does_not() {
+        let table = |readings: &[Option<f64>]| {
+            let mut text = outage::encode_row(&crate::metrics::header());
+            text.push('\n');
+            for (elapsed, volts) in readings.iter().enumerate() {
+                let mut frame = Frame::default();
+                if let Some(volts) = volts {
+                    frame.set_number(crate::metrics::BATTERY_VOLTS, *volts);
+                }
+                text.push_str(&outage::encode_row(&outage::row(
+                    "2026-01-01_12-00-00",
+                    elapsed as u64,
+                    "",
+                    "",
+                    &frame,
+                )));
+                text.push('\n');
+            }
+            Table::parse(&text)
+        };
+        assert!(!volts_aborted(&table(&[]), 11.5));
+        assert!(!volts_aborted(&table(&[None, None]), 11.5));
+        assert!(!volts_aborted(&table(&[Some(12.8), Some(11.6)]), 11.5));
+        assert!(volts_aborted(&table(&[Some(12.8), Some(11.5)]), 11.5));
+        assert!(volts_aborted(&table(&[Some(11.4), None]), 11.5));
+        assert!(!volts_aborted(&table(&[Some(11.4), Some(12.0)]), 11.5));
     }
 
     #[test]

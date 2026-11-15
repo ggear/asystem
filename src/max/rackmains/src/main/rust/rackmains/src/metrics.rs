@@ -39,6 +39,7 @@ pub const GUARD_FAILED_HOSTS: &str = "rackmains_guard_failed_hosts";
 pub const GUARD_LAST_ACTION: &str = "rackmains_guard_last_action_result";
 pub const GUARD_SHED_BATTERY: &str = "rackmains_guard_shed_battery_seconds";
 pub const GUARD_RESTORE_MAINS: &str = "rackmains_guard_restore_mains_seconds";
+pub const GUARD_ABORT_BATTERY: &str = "rackmains_guard_abort_battery_volts";
 pub const GUARD_SHED_RUNTIME: &str = "rackmains_guard_shed_runtime_seconds";
 pub const BATTERY_ENERGY_REMAINING_PCT: &str = "rackmains_battery_energy_remaining_pct";
 pub const BATTERY_RUNTIME_REMAINING_SECONDS: &str = "rackmains_battery_runtime_remaining_seconds";
@@ -131,6 +132,7 @@ pub const COLUMNS: &[Column] = &[
     later(MODEL_REFIT_REASON_CODE, Kind::Int),
     recorded(GUARD_SHED_BATTERY, Kind::Int),
     recorded(GUARD_RESTORE_MAINS, Kind::Int),
+    recorded(GUARD_ABORT_BATTERY, Kind::Float),
     recorded(GUARD_SHED_RUNTIME, Kind::Int),
     recorded(MODEL_STATE, Kind::Text),
     recorded(PLUG_POWER_STATE, Kind::Text),

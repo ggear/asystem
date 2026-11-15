@@ -323,6 +323,7 @@ impl Poller {
         self.guard.metrics(&mut frame);
         frame.set_int(metrics::GUARD_SHED_BATTERY, self.policy.shed_battery.as_secs() as i64);
         frame.set_int(metrics::GUARD_RESTORE_MAINS, self.policy.restore_mains.as_secs() as i64);
+        frame.set_number(metrics::GUARD_ABORT_BATTERY, self.policy.abort_battery);
         if let Some(runtime) = self.policy.shed_runtime {
             frame.set_int(metrics::GUARD_SHED_RUNTIME, runtime.as_secs() as i64);
         }
@@ -740,6 +741,7 @@ impl Poller {
             model_hash: info.content_sha256.clone(),
             guard_shed_battery_seconds: self.policy.shed_battery.as_secs(),
             guard_restore_mains_seconds: self.policy.restore_mains.as_secs(),
+            guard_abort_battery_volts: self.policy.abort_battery,
             poll_s: self.settings.period.as_secs(),
             ssh_timeout_s: self.settings.ssh_timeout.as_secs(),
             shed_order: shed::shed_order(&self.hosts),
@@ -1447,18 +1449,16 @@ mod tests {
     struct PlugSource {
         on: Arc<AtomicBool>,
         status: &'static str,
+        volts: &'static str,
     }
 
     impl Source for PlugSource {
         fn read(&mut self) -> nut::Result<Reading> {
-            Ok(reading(
-                if self.on.load(Ordering::SeqCst) {
-                    self.status
-                } else {
-                    "OB DISCHRG"
-                },
-                "13.4",
-            ))
+            Ok(if self.on.load(Ordering::SeqCst) {
+                reading(self.status, "13.4")
+            } else {
+                reading("OB DISCHRG", self.volts)
+            })
         }
     }
 
@@ -1473,6 +1473,10 @@ mod tests {
 
     impl Live {
         fn new(name: &str, status: &'static str, run_poller: bool) -> Live {
+            Live::build(name, status, run_poller, "13.4")
+        }
+
+        fn build(name: &str, status: &'static str, run_poller: bool, volts: &'static str) -> Live {
             let dir = scratch(name);
             let on = Arc::new(AtomicBool::new(true));
             let plug = Arc::new(RigPlug {
@@ -1504,6 +1508,7 @@ mod tests {
                         source: Box::new(PlugSource {
                             on: Arc::clone(&on),
                             status,
+                            volts,
                         }),
                         publisher: Box::new(RecordingPublisher {
                             messages: Messages::default(),
@@ -1617,6 +1622,21 @@ mod tests {
         assert!(table
             .cell(table.rows.last().unwrap(), "detail")
             .contains("reason [restored]"));
+    }
+
+    #[test]
+    fn a_holding_drill_restores_at_the_first_battery_row_once_the_volts_reach_the_abort_volts() {
+        let live = Live::build("drill-abort-volts", "OL", true, "11.4");
+        drill::run_drill(&live.env, drill::Verb::Brownout, Some("30m"), true).unwrap();
+        assert!(live.plug.on.load(Ordering::SeqCst));
+        let tables = live.finish();
+        let table = &tables[0];
+        let on_battery = table
+            .rows
+            .iter()
+            .filter(|row| table.cell(row, crate::metrics::STATUS).contains("OB"))
+            .count();
+        assert!((1..5).contains(&on_battery), "rows on battery [{on_battery}]");
     }
 
     #[test]

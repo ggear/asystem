@@ -26,6 +26,7 @@ pub struct Effective {
     pub model_hash: String,
     pub guard_shed_battery_seconds: u64,
     pub guard_restore_mains_seconds: u64,
+    pub guard_abort_battery_volts: f64,
     pub poll_s: u64,
     pub ssh_timeout_s: u64,
     pub shed_order: Vec<String>,
