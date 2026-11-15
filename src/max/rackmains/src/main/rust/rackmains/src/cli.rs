@@ -8,7 +8,7 @@ use clap::{Args, CommandFactory, Parser, Subcommand};
 use clap_complete::Shell;
 use log::LevelFilter;
 
-use crate::drill::{self, Env, Tasmota, Timing, Verb};
+use crate::drill::{self, Env, Tasmota, Test, Timing};
 use crate::{check, init_logging, parse_duration, report, serve, DEFAULT_DEVICE, LEVEL_NAMES};
 
 pub const DEFAULT_DATA_DIR: &str = "/asystem/mnt";
@@ -81,21 +81,38 @@ pub enum Commands {
 
 #[derive(Debug, Subcommand)]
 pub enum GuardCommands {
-    #[command(
-        about = "rehearse a power cut, print the plan without --force",
-        arg_required_else_help = true
-    )]
+    #[command(about = "rehearse a power cut", arg_required_else_help = true)]
     Drill {
         #[command(subcommand)]
-        verb: DrillCommands,
+        command: Box<DrillCommands>,
     },
-    #[command(about = "abort the active drill, mains on and deadman disarmed")]
+    #[command(about = "read the recorded outages", arg_required_else_help = true)]
+    Outage {
+        #[command(subcommand)]
+        command: OutageCommands,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum DrillCommands {
+    #[command(about = "print the plan and preflight of a test, cut nothing")]
+    Plan(DrillTestArgs),
+    #[command(about = "cut mains and run a test, blackout-shed asks for a typed confirmation")]
+    Start(DrillTestArgs),
+    #[command(about = "abort the running drill, mains on and deadman disarmed, nothing changes with none running")]
     Stop {
-        #[arg(long, help = "restore the plug even with no drill running")]
-        force: bool,
         #[command(flatten)]
         common: CommonArgs,
     },
+    #[command(about = "turn the plug on and disarm the deadman, drill or no drill")]
+    Restore {
+        #[command(flatten)]
+        common: CommonArgs,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum OutageCommands {
     #[command(about = "follow the newest outage CSV, or the given file, as rows arrive")]
     Tail {
         #[arg(value_name = "FILE", help = "outage CSV to follow, default the newest")]
@@ -105,24 +122,10 @@ pub enum GuardCommands {
     List,
 }
 
-#[derive(Debug, Subcommand)]
-pub enum DrillCommands {
-    #[command(name = "blip-watch", about = "restore before the shed, the guard only watches")]
-    Blip(DrillHoldArgs),
-    #[command(
-        name = "brownout-shed-wake",
-        about = "hold past the shed, then restore, the guard sheds and wakes"
-    )]
-    Brownout(DrillHoldArgs),
-    #[command(
-        name = "blackout-shed",
-        about = "run to the UPS cutoff and end there, the plug's deadman brings mains back"
-    )]
-    Blackout(DrillArgs),
-}
-
 #[derive(Debug, Args)]
-pub struct DrillHoldArgs {
+pub struct DrillTestArgs {
+    #[arg(value_enum, help = "test to run")]
+    pub test: Test,
     #[arg(
         short = 'F',
         long,
@@ -130,14 +133,6 @@ pub struct DrillHoldArgs {
         value_name = "DUR"
     )]
     pub hold: Option<String>,
-    #[command(flatten)]
-    pub drill: DrillArgs,
-}
-
-#[derive(Debug, Args)]
-pub struct DrillArgs {
-    #[arg(long, help = "cut mains")]
-    pub force: bool,
     #[command(flatten)]
     pub common: CommonArgs,
 }
@@ -276,28 +271,37 @@ impl Cli {
                 Ok(())
             }
             Commands::Guard { command } => match command {
-                GuardCommands::Drill { verb } => {
-                    let (verb, hold, args) = match verb {
-                        DrillCommands::Blip(args) => (Verb::Blip, args.hold.as_deref(), &args.drill),
-                        DrillCommands::Brownout(args) => (Verb::Brownout, args.hold.as_deref(), &args.drill),
-                        DrillCommands::Blackout(args) => (Verb::Blackout, None, args),
-                    };
-                    drill::run_drill(&drill_env(&args.common, data_dir), verb, hold, args.force)
-                }
-                GuardCommands::Stop { force, common } => drill::run_stop(&drill_env(common, data_dir), *force),
-                GuardCommands::Tail { file } => report::tail(
-                    &data_dir.join(crate::outage::DIR_OUTAGE),
-                    file.as_deref().map(Path::new),
-                    true,
-                    &mut std::io::stdout(),
-                )
-                .map_err(ExitError::from),
-                GuardCommands::List => {
-                    for line in report::list(&data_dir.join(crate::outage::DIR_OUTAGE), LIST_LIMIT) {
-                        println!("{line}");
+                GuardCommands::Drill { command } => match command.as_ref() {
+                    DrillCommands::Plan(args) => drill::run_drill(
+                        &drill_env(&args.common, data_dir),
+                        args.test,
+                        args.hold.as_deref(),
+                        false,
+                    ),
+                    DrillCommands::Start(args) => drill::run_drill(
+                        &drill_env(&args.common, data_dir),
+                        args.test,
+                        args.hold.as_deref(),
+                        true,
+                    ),
+                    DrillCommands::Stop { common } => drill::run_stop(&drill_env(common, data_dir)),
+                    DrillCommands::Restore { common } => drill::run_restore(&drill_env(common, data_dir)),
+                },
+                GuardCommands::Outage { command } => match command {
+                    OutageCommands::Tail { file } => report::tail(
+                        &data_dir.join(crate::outage::DIR_OUTAGE),
+                        file.as_deref().map(Path::new),
+                        true,
+                        &mut std::io::stdout(),
+                    )
+                    .map_err(ExitError::from),
+                    OutageCommands::List => {
+                        for line in report::list(&data_dir.join(crate::outage::DIR_OUTAGE), LIST_LIMIT) {
+                            println!("{line}");
+                        }
+                        Ok(())
                     }
-                    Ok(())
-                }
+                },
             },
         }
     }
@@ -422,13 +426,16 @@ mod tests {
 
     #[test]
     fn cli_parses_the_root_data_dir_before_or_after_the_subcommand() {
-        assert_eq!(Cli::parse_from(["rackmains", "guard", "list"]).data_dir, "/asystem/mnt");
         assert_eq!(
-            Cli::parse_from(["rackmains", "--data-dir", "/x", "guard", "list"]).data_dir,
+            Cli::parse_from(["rackmains", "guard", "outage", "list"]).data_dir,
+            "/asystem/mnt"
+        );
+        assert_eq!(
+            Cli::parse_from(["rackmains", "--data-dir", "/x", "guard", "outage", "list"]).data_dir,
             "/x"
         );
         assert_eq!(
-            Cli::parse_from(["rackmains", "guard", "list", "--data-dir", "/y"]).data_dir,
+            Cli::parse_from(["rackmains", "guard", "outage", "list", "--data-dir", "/y"]).data_dir,
             "/y"
         );
     }
@@ -443,38 +450,43 @@ mod tests {
                 other => panic!("not guard [{other:?}]"),
             }
         };
-        let drill = |arguments: &[&str]| {
-            let mut full = vec!["drill"];
-            full.extend_from_slice(arguments);
-            match guard(&full) {
-                GuardCommands::Drill { verb } => verb,
-                other => panic!("not drill [{other:?}]"),
-            }
+        let drill = |arguments: &[&str]| match guard(&[&["drill"], arguments].concat()) {
+            GuardCommands::Drill { command } => *command,
+            other @ GuardCommands::Outage { .. } => panic!("not drill [{other:?}]"),
+        };
+        let outage = |arguments: &[&str]| match guard(&[&["outage"], arguments].concat()) {
+            GuardCommands::Outage { command } => command,
+            other @ GuardCommands::Drill { .. } => panic!("not outage [{other:?}]"),
         };
         assert!(Cli::try_parse_from(["rackmains", "guard", "drill"]).is_err());
+        assert!(Cli::try_parse_from(["rackmains", "guard", "drill", "start"]).is_err());
+        assert!(Cli::try_parse_from(["rackmains", "guard", "drill", "start", "soon"]).is_err());
         assert!(matches!(
-            drill(&["brownout-shed-wake"]),
-            DrillCommands::Brownout(DrillHoldArgs {
+            drill(&["plan", "brownout-shed-wake"]),
+            DrillCommands::Plan(DrillTestArgs {
+                test: Test::Brownout,
                 hold: None,
-                drill: DrillArgs { force: false, .. }
+                ..
             })
         ));
         assert!(
-            matches!(drill(&["blip-watch", "-F", "90s", "--force"]), DrillCommands::Blip(DrillHoldArgs { hold: Some(ref hold), drill: DrillArgs { force: true, .. } }) if hold == "90s")
+            matches!(drill(&["start", "blip-watch", "-F", "90s"]), DrillCommands::Start(DrillTestArgs { test: Test::Blip, hold: Some(ref hold), .. }) if hold == "90s")
         );
         assert!(matches!(
-            drill(&["blackout-shed"]),
-            DrillCommands::Blackout(DrillArgs { force: false, .. })
+            drill(&["start", "blackout-shed"]),
+            DrillCommands::Start(DrillTestArgs {
+                test: Test::Blackout,
+                hold: None,
+                ..
+            })
         ));
-        assert!(Cli::try_parse_from(["rackmains", "guard", "drill", "blackout-shed", "--hold", "5m"]).is_err());
-        assert!(matches!(guard(&["stop"]), GuardCommands::Stop { force: false, .. }));
-        assert!(matches!(
-            guard(&["stop", "--force"]),
-            GuardCommands::Stop { force: true, .. }
-        ));
-        assert!(matches!(guard(&["tail"]), GuardCommands::Tail { file: None }));
-        assert!(matches!(guard(&["tail", "x.csv"]), GuardCommands::Tail { file: Some(ref file) } if file == "x.csv"));
-        assert!(matches!(guard(&["list"]), GuardCommands::List));
+        assert!(matches!(drill(&["stop"]), DrillCommands::Stop { .. }));
+        assert!(matches!(drill(&["restore"]), DrillCommands::Restore { .. }));
+        assert!(Cli::try_parse_from(["rackmains", "guard", "drill", "stop", "--force"]).is_err());
+        assert!(matches!(outage(&["tail"]), OutageCommands::Tail { file: None }));
+        assert!(matches!(outage(&["tail", "x.csv"]), OutageCommands::Tail { file: Some(ref file) } if file == "x.csv"));
+        assert!(matches!(outage(&["list"]), OutageCommands::List));
+        assert!(Cli::try_parse_from(["rackmains", "guard", "list"]).is_err());
     }
 
     #[test]

@@ -209,10 +209,19 @@ const BACKUP_WINDOW: (u32, u32, u32, u32) = (0, 45, 1, 45);
 
 static SIGNALLED: AtomicBool = AtomicBool::new(false);
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Verb {
+#[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
+pub enum Test {
+    #[value(name = "blip-watch", help = "restore before the shed, the guard only watches")]
     Blip,
+    #[value(
+        name = "brownout-shed-wake",
+        help = "hold past the shed, then restore, the guard sheds and wakes"
+    )]
     Brownout,
+    #[value(
+        name = "blackout-shed",
+        help = "run to the UPS cutoff and end there, the plug's deadman brings mains back"
+    )]
     Blackout,
 }
 
@@ -286,7 +295,7 @@ pub enum LeadIn {
     Refuse(String),
 }
 
-pub fn parse_target(verb: Verb, hold: Option<&str>, effective: &Effective) -> Result<Target, String> {
+pub fn parse_target(test: Test, hold: Option<&str>, effective: &Effective) -> Result<Target, String> {
     let shed = effective.guard_shed_battery_seconds;
     let parsed = hold
         .map(|raw| {
@@ -307,10 +316,10 @@ pub fn parse_target(verb: Verb, hold: Option<&str>, effective: &Effective) -> Re
             HOLD_CEILING.as_secs()
         ));
     }
-    match verb {
-        Verb::Blackout if parsed.is_some() => Err("blackout-shed runs to the UPS cutoff and takes no hold".to_string()),
-        Verb::Blackout => Ok(Target::Blackout),
-        Verb::Blip => {
+    match test {
+        Test::Blackout if parsed.is_some() => Err("blackout-shed runs to the UPS cutoff and takes no hold".to_string()),
+        Test::Blackout => Ok(Target::Blackout),
+        Test::Blip => {
             let seconds = parsed.unwrap_or(if shed > RECOVER_BEFORE_SHED {
                 shed - RECOVER_BEFORE_SHED
             } else {
@@ -323,7 +332,7 @@ pub fn parse_target(verb: Verb, hold: Option<&str>, effective: &Effective) -> Re
             }
             Ok(Target::Blip(Duration::from_secs(seconds)))
         }
-        Verb::Brownout => {
+        Test::Brownout => {
             let seconds = parsed.unwrap_or(shed + HOLD_PAST_SHED.as_secs());
             if seconds < shed {
                 return Err(format!(
@@ -547,9 +556,9 @@ pub fn low_raised(table: &Table) -> bool {
         .any(|row| table.cell(row, metrics::BATTERY_LOW) == "1")
 }
 
-pub fn run_drill(env: &Env, verb: Verb, hold: Option<&str>, force: bool) -> Result<(), ExitError> {
+pub fn run_drill(env: &Env, test: Test, hold: Option<&str>, cut: bool) -> Result<(), ExitError> {
     let liveness = Liveness::read(&env.run_dir.join(FILE_LIVENESS))?;
-    let target = parse_target(verb, hold, &liveness.effective)?;
+    let target = parse_target(test, hold, &liveness.effective)?;
     let outage_dir = env.data_dir.join(DIR_OUTAGE);
     let marker_path = env.data_dir.join(DIR_STATE).join(FILE_MARKER);
     let preflight = assess(&gather(env, &liveness, &outage_dir, &marker_path));
@@ -557,8 +566,8 @@ pub fn run_drill(env: &Env, verb: Verb, hold: Option<&str>, force: bool) -> Resu
         "{}",
         plan_text(&liveness.effective, &target, &preflight, &env.plug_host)
     );
-    if !force {
-        println!("plan only, nothing was cut, add --force to cut");
+    if !cut {
+        println!("plan only, nothing was cut, run start to cut");
         return Ok(());
     }
     if !preflight.refusals.is_empty() {
@@ -603,7 +612,7 @@ pub fn run_drill(env: &Env, verb: Verb, hold: Option<&str>, force: bool) -> Resu
     result
 }
 
-pub fn run_stop(env: &Env, force: bool) -> Result<(), ExitError> {
+fn stop_state(env: &Env) -> (PathBuf, Option<Marker>) {
     let marker_path = env.data_dir.join(DIR_STATE).join(FILE_MARKER);
     let marker = Marker::read(&marker_path);
     let power = env
@@ -616,18 +625,34 @@ pub fn run_stop(env: &Env, force: bool) -> Result<(), ExitError> {
         marker.as_ref().map_or("none", |marker| marker.state.as_str()),
         power.as_deref().unwrap_or("unreachable")
     );
-    if marker.is_none() && !force {
-        println!("no drill is running, nothing changed, use --force to restore the plug regardless");
-        return Ok(());
-    }
+    (marker_path, marker)
+}
+
+fn restore_drill(env: &Env, marker_path: &Path, marker: Option<Marker>) -> Result<(), ExitError> {
     restore_plug(env.plug.as_ref(), env.timing.poll)?;
     if let Some(mut marker) = marker {
         marker.state = STATE_ABORTED.to_string();
-        marker.write(&marker_path)?;
-        let _ = fs::remove_file(&marker_path);
+        marker.write(marker_path)?;
+        let _ = fs::remove_file(marker_path);
     }
     println!("mains restored, the main program runs awake after the restore period of mains");
     Ok(())
+}
+
+pub fn run_stop(env: &Env) -> Result<(), ExitError> {
+    let (marker_path, marker) = stop_state(env);
+    if marker.is_none() {
+        println!(
+            "no drill is running, nothing changed, run `rackmains guard drill restore` to restore the plug regardless"
+        );
+        return Ok(());
+    }
+    restore_drill(env, &marker_path, marker)
+}
+
+pub fn run_restore(env: &Env) -> Result<(), ExitError> {
+    let (marker_path, marker) = stop_state(env);
+    restore_drill(env, &marker_path, marker)
 }
 
 pub fn restore_plug(plug: &dyn Plug, retry: Duration) -> Result<(), String> {
@@ -647,7 +672,7 @@ pub fn restore_plug(plug: &dyn Plug, retry: Duration) -> Result<(), String> {
         thread::sleep(retry);
     }
     Err(format!(
-        "PLUG NOT CONFIRMED ON [{last}], run `rackmains guard stop --force` or curl the plug's Power On and Rule1 0"
+        "PLUG NOT CONFIRMED ON [{last}], run `rackmains guard drill restore` or curl the plug's Power On and Rule1 0"
     ))
 }
 
@@ -804,7 +829,7 @@ fn verify_restored(env: &Env, outage_dir: &Path, stem: &str) -> Result<(), ExitE
     let _ = restore_plug(env.plug.as_ref(), env.timing.poll);
     Err(ExitError::new(
         1,
-        "OL was not seen after the restore, run `rackmains guard stop --force`",
+        "OL was not seen after the restore, run `rackmains guard drill restore`",
     ))
 }
 
@@ -1012,29 +1037,29 @@ mod tests {
     }
 
     #[test]
-    fn each_verb_defaults_to_its_side_of_the_shed_point_and_refuses_the_other() {
-        let target = |verb, hold| parse_target(verb, hold, &effective());
+    fn each_test_defaults_to_its_side_of_the_shed_point_and_refuses_the_other() {
+        let target = |test, hold| parse_target(test, hold, &effective());
         assert_eq!(
-            target(Verb::Brownout, None),
+            target(Test::Brownout, None),
             Ok(Target::Brownout(Duration::from_secs(240)))
         );
         assert_eq!(
-            target(Verb::Brownout, Some("120s")),
+            target(Test::Brownout, Some("120s")),
             Ok(Target::Brownout(Duration::from_secs(120)))
         );
-        assert!(target(Verb::Brownout, Some("119s")).is_err());
-        assert_eq!(target(Verb::Blip, None), Ok(Target::Blip(Duration::from_secs(90))));
+        assert!(target(Test::Brownout, Some("119s")).is_err());
+        assert_eq!(target(Test::Blip, None), Ok(Target::Blip(Duration::from_secs(90))));
         assert_eq!(
-            target(Verb::Blip, Some("119s")),
+            target(Test::Blip, Some("119s")),
             Ok(Target::Blip(Duration::from_secs(119)))
         );
-        assert!(target(Verb::Blip, Some("120s")).is_err());
-        assert_eq!(target(Verb::Blackout, None), Ok(Target::Blackout));
-        assert!(target(Verb::Blackout, Some("5m")).is_err());
-        assert!(target(Verb::Brownout, Some("0")).is_err());
-        assert!(target(Verb::Brownout, Some("30m")).is_ok());
-        assert!(target(Verb::Brownout, Some("31m")).is_err());
-        assert!(target(Verb::Blip, Some("soon")).is_err());
+        assert!(target(Test::Blip, Some("120s")).is_err());
+        assert_eq!(target(Test::Blackout, None), Ok(Target::Blackout));
+        assert!(target(Test::Blackout, Some("5m")).is_err());
+        assert!(target(Test::Brownout, Some("0")).is_err());
+        assert!(target(Test::Brownout, Some("30m")).is_ok());
+        assert!(target(Test::Brownout, Some("31m")).is_err());
+        assert!(target(Test::Blip, Some("soon")).is_err());
     }
 
     #[test]
@@ -1348,14 +1373,14 @@ mod tests {
             clock: || at("2026-01-01_12-00-00"),
             refuse_in_backup_window: true,
         };
-        run_stop(&env, false).unwrap();
+        run_stop(&env).unwrap();
         assert!(!plug.sent.lock().unwrap().iter().any(|sent| sent == "Power On"));
-        run_stop(&env, true).unwrap();
+        run_restore(&env).unwrap();
         assert!(plug.sent.lock().unwrap().iter().any(|sent| sent == "Power On"));
         marker("2026-01-01_14-00-00", STATE_ARMED)
             .write(&dir.join(DIR_STATE).join(FILE_MARKER))
             .unwrap();
-        run_stop(&env, false).unwrap();
+        run_stop(&env).unwrap();
         assert!(Marker::read(&dir.join(DIR_STATE).join(FILE_MARKER)).is_none());
     }
 
