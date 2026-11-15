@@ -1,11 +1,11 @@
 {
   "schema": 2,
-  "version": "10.200.2054",
-  "content_sha256": "30a4f8a750beff595cef875973be8ad97aeefc898fa7c132005d2804a78716e5",
-  "inputs_sha256": "3d3c8fcf906cc366678ae8137c57ae06b3131e1bb4a40670afd0e0cdcd45f37e",
+  "version": "10.200.2064",
+  "content_sha256": "c517baef41df675abc0b89a50622862b1957edba83280d34900df1ae0fa1c576",
+  "inputs_sha256": "ef3fb16fd4a32d6fa99aefb123e6da67da3465d486c3f8d2dfbbaca5da6ec92f",
   "target": {"kind": "embedded", "language": "rust"},
   "release": {
-    "timestamp": "2026-11-14T04:52:01Z",
+    "timestamp": "2026-11-15T03:04:15Z",
     "signature": {
       "schema": 1,
       "signature_version": 1000,
@@ -142,6 +142,16 @@
             "unit": "seconds",
             "required": true,
             "description": "Seconds of unbroken mains after which the on-battery clock resets and every server put to sleep is woken. Compared with rackmains_guard_mains_seconds."
+          }
+        },
+        {
+          "name": "rackmains_guard_abort_battery_volts",
+          "datatype": "FP64",
+          "shape": [1],
+          "parameters": {
+            "unit": "volts",
+            "required": true,
+            "description": "Battery voltage at or under which a drill restores the plug and ends, the backstop against holding mains off too long. Compared with rackmains_battery_volts. Never outside 10.5 to 12.5."
           }
         },
         {
