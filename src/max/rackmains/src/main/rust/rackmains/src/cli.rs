@@ -99,13 +99,10 @@ pub enum DrillCommands {
     Plan(DrillTestArgs),
     #[command(about = "cut mains and run a test, blackout-shed asks for a typed confirmation")]
     Start(DrillTestArgs),
-    #[command(about = "abort the running drill, mains on and deadman disarmed, nothing changes with none running")]
+    #[command(
+        about = "abort the running drill, mains on and deadman disarmed, or with none running ask to turn an OFF plug on"
+    )]
     Stop {
-        #[command(flatten)]
-        common: CommonArgs,
-    },
-    #[command(about = "turn the plug on and disarm the deadman, drill or no drill")]
-    Restore {
         #[command(flatten)]
         common: CommonArgs,
     },
@@ -120,6 +117,10 @@ pub enum OutageCommands {
     },
     #[command(about = "show the recent outages and how each ended")]
     List,
+    #[command(
+        about = "delete every outage CSV, call log and stray temporary file and a stale drill marker, asks for a typed `clean`, refuses while an outage or drill is open"
+    )]
+    Clean,
 }
 
 #[derive(Debug, Args)]
@@ -284,8 +285,9 @@ impl Cli {
                         args.hold.as_deref(),
                         true,
                     ),
-                    DrillCommands::Stop { common } => drill::run_stop(&drill_env(common, data_dir)),
-                    DrillCommands::Restore { common } => drill::run_restore(&drill_env(common, data_dir)),
+                    DrillCommands::Stop { common } => {
+                        drill::run_stop(&drill_env(common, data_dir), drill::confirm_typed)
+                    }
                 },
                 GuardCommands::Outage { command } => match command {
                     OutageCommands::Tail { file } => report::tail(
@@ -301,10 +303,54 @@ impl Cli {
                         }
                         Ok(())
                     }
+                    OutageCommands::Clean => run_clean(data_dir, drill::confirm_typed),
                 },
             },
         }
     }
+}
+
+pub fn run_clean(data_dir: &Path, confirm: impl FnOnce(&str, &str) -> Result<bool, String>) -> Result<(), ExitError> {
+    let outage_dir = data_dir.join(crate::outage::DIR_OUTAGE);
+    let marker_path = data_dir.join(crate::outage::DIR_STATE).join(drill::FILE_MARKER);
+    if drill::Marker::read(&marker_path).is_some_and(|marker| marker.live(chrono::Local::now().naive_local())) {
+        return Err(ExitError::new(1, "a drill is armed, nothing was deleted"));
+    }
+    if crate::outage::open_file(&outage_dir).is_some() {
+        return Err(ExitError::new(
+            1,
+            "an outage is open and being written, nothing was deleted",
+        ));
+    }
+    let mut paths = crate::outage::removable(&outage_dir);
+    if marker_path.is_file() {
+        paths.push(marker_path);
+    }
+    if paths.is_empty() {
+        println!("nothing to delete under [{}]", data_dir.display());
+        return Ok(());
+    }
+    let bytes: u64 = paths
+        .iter()
+        .filter_map(|path| std::fs::metadata(path).ok())
+        .map(|metadata| metadata.len())
+        .sum();
+    let prompt = format!(
+        "this deletes [{}] files [{bytes}] bytes under [{}], real outages included, and cannot be undone",
+        paths.len(),
+        data_dir.display()
+    );
+    if !confirm(&prompt, "clean")? {
+        return Err(ExitError::new(1, "clean was not confirmed, nothing was deleted"));
+    }
+    for path in &paths {
+        std::fs::remove_file(path).map_err(|err| format!("failed to delete [{}] [{err}]", path.display()))?;
+    }
+    println!(
+        "deleted [{}] files, restart the container to clear the last outage values the main program still holds",
+        paths.len()
+    );
+    Ok(())
 }
 
 pub fn run_check(common: &CommonArgs, data_dir: &Path) -> Result<(), ExitError> {
@@ -481,11 +527,12 @@ mod tests {
             })
         ));
         assert!(matches!(drill(&["stop"]), DrillCommands::Stop { .. }));
-        assert!(matches!(drill(&["restore"]), DrillCommands::Restore { .. }));
+        assert!(Cli::try_parse_from(["rackmains", "guard", "drill", "restore"]).is_err());
         assert!(Cli::try_parse_from(["rackmains", "guard", "drill", "stop", "--force"]).is_err());
         assert!(matches!(outage(&["tail"]), OutageCommands::Tail { file: None }));
         assert!(matches!(outage(&["tail", "x.csv"]), OutageCommands::Tail { file: Some(ref file) } if file == "x.csv"));
         assert!(matches!(outage(&["list"]), OutageCommands::List));
+        assert!(matches!(outage(&["clean"]), OutageCommands::Clean));
         assert!(Cli::try_parse_from(["rackmains", "guard", "list"]).is_err());
     }
 
@@ -537,5 +584,56 @@ mod tests {
         let mut seen = 0;
         walk(&Cli::command(), "rackmains", &mut seen);
         assert!(seen > 20);
+    }
+
+    #[test]
+    fn clean_deletes_outage_files_only_when_idle_and_confirmed() {
+        use crate::drill::{Marker, FILE_MARKER, STATE_ABORTED, STATE_ARMED};
+        use crate::metrics::{header, Frame};
+        use crate::outage::{encode_row, file_name, row, DIR_OUTAGE, DIR_STATE};
+        let dir = std::env::temp_dir().join(format!("rackmains-clean-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let (outage, state) = (dir.join(DIR_OUTAGE), dir.join(DIR_STATE));
+        std::fs::create_dir_all(&outage).unwrap();
+        std::fs::create_dir_all(&state).unwrap();
+        let write = |stem: &str, ended: bool| {
+            let mut text = encode_row(&header());
+            text.push('\n');
+            let mut events = vec!["start"];
+            events.extend(ended.then_some("end"));
+            for event in events {
+                text.push_str(&encode_row(&row(stem, 0, event, "", &Frame::default())));
+                text.push('\n');
+            }
+            std::fs::write(outage.join(file_name(stem, 1)), text).unwrap();
+        };
+        let marker = |state: &str| Marker {
+            id: "a".to_string(),
+            mode: "blip-watch".to_string(),
+            hold_seconds: 90,
+            planned_cut: "2999-01-01_00-00-00".to_string(),
+            expires: "2999-01-01_00-10-00".to_string(),
+            state: state.to_string(),
+        };
+        let never = |_: &str, _: &str| -> Result<bool, String> { panic!("no confirmation expected") };
+        run_clean(&dir, never).unwrap();
+        write("2026-01-01_00-00-00", true);
+        std::fs::write(outage.join("rackmains_call_2026-01-01_00-00-00_max_asleep.log"), "log").unwrap();
+        std::fs::write(outage.join("rackmains_outage_2026-01-01_00-00-00_2.csv.tmp"), "junk").unwrap();
+        std::fs::write(outage.join("notes.txt"), "keep").unwrap();
+        marker(STATE_ABORTED).write(&state.join(FILE_MARKER)).unwrap();
+        assert_eq!(run_clean(&dir, |_, word| Ok(word != "clean")).unwrap_err().code, 1);
+        assert_eq!(std::fs::read_dir(&outage).unwrap().count(), 4);
+        marker(STATE_ARMED).write(&state.join(FILE_MARKER)).unwrap();
+        assert_eq!(run_clean(&dir, never).unwrap_err().code, 1);
+        marker(STATE_ABORTED).write(&state.join(FILE_MARKER)).unwrap();
+        write("2026-01-02_00-00-00", false);
+        assert_eq!(run_clean(&dir, never).unwrap_err().code, 1);
+        assert!(outage.join(file_name("2026-01-02_00-00-00", 1)).exists());
+        std::fs::remove_file(outage.join(file_name("2026-01-02_00-00-00", 1))).unwrap();
+        run_clean(&dir, |_, word| Ok(word == "clean")).unwrap();
+        assert_eq!(std::fs::read_dir(&outage).unwrap().count(), 1);
+        assert!(outage.join("notes.txt").exists());
+        assert!(!state.join(FILE_MARKER).exists());
     }
 }

@@ -573,7 +573,12 @@ pub fn run_drill(env: &Env, test: Test, hold: Option<&str>, cut: bool) -> Result
     if !preflight.refusals.is_empty() {
         return Err(ExitError::new(1, "preflight refused, nothing was cut"));
     }
-    if target == Target::Blackout && !confirmed_blackout()? {
+    if target == Target::Blackout
+        && !confirm_typed(
+            "blackout-shed keeps mains off until the UPS cuts its own output and max is cut while running",
+            "blackout",
+        )?
+    {
         return Err(ExitError::new(1, "blackout-shed was not confirmed, nothing was cut"));
     }
     install_signal_handlers();
@@ -612,7 +617,7 @@ pub fn run_drill(env: &Env, test: Test, hold: Option<&str>, cut: bool) -> Result
     result
 }
 
-fn stop_state(env: &Env) -> (PathBuf, Option<Marker>) {
+fn stop_state(env: &Env) -> (PathBuf, Option<Marker>, Option<String>) {
     let marker_path = env.data_dir.join(DIR_STATE).join(FILE_MARKER);
     let marker = Marker::read(&marker_path);
     let power = env
@@ -625,7 +630,7 @@ fn stop_state(env: &Env) -> (PathBuf, Option<Marker>) {
         marker.as_ref().map_or("none", |marker| marker.state.as_str()),
         power.as_deref().unwrap_or("unreachable")
     );
-    (marker_path, marker)
+    (marker_path, marker, power)
 }
 
 fn restore_drill(env: &Env, marker_path: &Path, marker: Option<Marker>) -> Result<(), ExitError> {
@@ -639,19 +644,30 @@ fn restore_drill(env: &Env, marker_path: &Path, marker: Option<Marker>) -> Resul
     Ok(())
 }
 
-pub fn run_stop(env: &Env) -> Result<(), ExitError> {
-    let (marker_path, marker) = stop_state(env);
+pub fn run_stop(env: &Env, confirm: impl FnOnce(&str, &str) -> Result<bool, String>) -> Result<(), ExitError> {
+    let (marker_path, marker, power) = stop_state(env);
     if marker.is_none() {
-        println!(
-            "no drill is running, nothing changed, run `rackmains guard drill restore` to restore the plug regardless"
-        );
-        return Ok(());
+        match power.as_deref() {
+            Some("OFF") => {
+                if !confirm("the plug is OFF with no drill running", "on")? {
+                    return Err(ExitError::new(
+                        1,
+                        "turning the plug on was not confirmed, nothing changed",
+                    ));
+                }
+            }
+            Some(_) => {
+                println!("no drill is running and the plug is on, nothing changed");
+                return Ok(());
+            }
+            None => {
+                return Err(ExitError::new(
+                    1,
+                    "no drill is running and the plug is unreachable, nothing changed",
+                ))
+            }
+        }
     }
-    restore_drill(env, &marker_path, marker)
-}
-
-pub fn run_restore(env: &Env) -> Result<(), ExitError> {
-    let (marker_path, marker) = stop_state(env);
     restore_drill(env, &marker_path, marker)
 }
 
@@ -672,7 +688,7 @@ pub fn restore_plug(plug: &dyn Plug, retry: Duration) -> Result<(), String> {
         thread::sleep(retry);
     }
     Err(format!(
-        "PLUG NOT CONFIRMED ON [{last}], run `rackmains guard drill restore` or curl the plug's Power On and Rule1 0"
+        "PLUG NOT CONFIRMED ON [{last}], run `rackmains guard drill stop` or curl the plug's Power On and Rule1 0"
     ))
 }
 
@@ -829,7 +845,7 @@ fn verify_restored(env: &Env, outage_dir: &Path, stem: &str) -> Result<(), ExitE
     let _ = restore_plug(env.plug.as_ref(), env.timing.poll);
     Err(ExitError::new(
         1,
-        "OL was not seen after the restore, run `rackmains guard drill restore`",
+        "OL was not seen after the restore, run `rackmains guard drill stop`",
     ))
 }
 
@@ -917,13 +933,13 @@ fn gather(env: &Env, liveness: &Liveness, outage_dir: &Path, marker_path: &Path)
     }
 }
 
-fn confirmed_blackout() -> Result<bool, String> {
-    println!("blackout-shed keeps mains off until the UPS cuts its own output and max is cut while running, type [blackout] to continue");
+pub fn confirm_typed(prompt: &str, word: &str) -> Result<bool, String> {
+    println!("{prompt}, type [{word}] to continue");
     let mut line = String::new();
     std::io::stdin()
         .read_line(&mut line)
         .map_err(|err| format!("failed to read confirmation [{err}]"))?;
-    Ok(line.trim() == "blackout")
+    Ok(line.trim() == word)
 }
 
 fn install_signal_handlers() {
@@ -939,6 +955,7 @@ fn install_signal_handlers() {
 
 #[cfg(test)]
 pub mod mock {
+    use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Mutex;
 
     use super::*;
@@ -946,6 +963,7 @@ pub mod mock {
     #[derive(Default)]
     pub struct MockPlug {
         pub reachable: bool,
+        pub off: AtomicBool,
         pub sent: Mutex<Vec<String>>,
         pub reading: Option<PlugReading>,
     }
@@ -956,7 +974,10 @@ pub mod mock {
                 return Err("unreachable".to_string());
             }
             self.sent.lock().unwrap().push(command.to_string());
-            Ok(serde_json::json!({"POWER": "ON"}))
+            if command == "Power On" {
+                self.off.store(false, Ordering::SeqCst);
+            }
+            Ok(serde_json::json!({"POWER": if self.off.load(Ordering::SeqCst) { "OFF" } else { "ON" }}))
         }
 
         fn status(&self, _timeout: Duration) -> Result<PlugReading, String> {
@@ -1354,33 +1375,47 @@ mod tests {
     }
 
     #[test]
-    fn stop_with_no_drill_changes_nothing_and_force_restores() {
+    fn stop_acts_on_a_drill_and_on_an_off_plug_only_when_confirmed() {
         let dir = std::env::temp_dir().join(format!("rackmains-stop-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(dir.join(DIR_STATE)).unwrap();
-        let plug = Arc::new(mock::MockPlug {
-            reachable: true,
-            ..mock::MockPlug::default()
-        });
-        let env = Env {
-            data_dir: dir.clone(),
-            run_dir: dir.clone(),
-            hosts_file: dir.join("hosts.json"),
-            local_host: "max".to_string(),
-            plug: plug.clone(),
-            plug_host: "plug".to_string(),
-            timing: Timing::default(),
-            clock: || at("2026-01-01_12-00-00"),
-            refuse_in_backup_window: true,
+        let rig = |reachable: bool| {
+            let plug = Arc::new(mock::MockPlug {
+                reachable,
+                ..mock::MockPlug::default()
+            });
+            let env = Env {
+                data_dir: dir.clone(),
+                run_dir: dir.clone(),
+                hosts_file: dir.join("hosts.json"),
+                local_host: "max".to_string(),
+                plug: plug.clone(),
+                plug_host: "plug".to_string(),
+                timing: Timing::default(),
+                clock: || at("2026-01-01_12-00-00"),
+                refuse_in_backup_window: true,
+            };
+            (plug, env)
         };
-        run_stop(&env).unwrap();
-        assert!(!plug.sent.lock().unwrap().iter().any(|sent| sent == "Power On"));
-        run_restore(&env).unwrap();
-        assert!(plug.sent.lock().unwrap().iter().any(|sent| sent == "Power On"));
+        let powered_on = |plug: &mock::MockPlug| plug.sent.lock().unwrap().iter().any(|sent| sent == "Power On");
+        let never = |_: &str, _: &str| -> Result<bool, String> { panic!("no confirmation expected") };
+        let (plug, env) = rig(true);
+        run_stop(&env, never).unwrap();
+        assert!(!powered_on(&plug));
+        plug.off.store(true, std::sync::atomic::Ordering::SeqCst);
+        assert_eq!(run_stop(&env, |_, word| Ok(word != "on")).unwrap_err().code, 1);
+        assert!(!powered_on(&plug));
+        run_stop(&env, |_, word| Ok(word == "on")).unwrap();
+        assert!(powered_on(&plug));
+        let (plug, env) = rig(false);
+        assert_eq!(run_stop(&env, never).unwrap_err().code, 1);
+        assert!(!powered_on(&plug));
+        let (plug, env) = rig(true);
         marker("2026-01-01_14-00-00", STATE_ARMED)
             .write(&dir.join(DIR_STATE).join(FILE_MARKER))
             .unwrap();
-        run_stop(&env).unwrap();
+        run_stop(&env, never).unwrap();
+        assert!(powered_on(&plug));
         assert!(Marker::read(&dir.join(DIR_STATE).join(FILE_MARKER)).is_none());
     }
 

@@ -11,7 +11,7 @@
 | Metrics, outage CSV, liveness-file health that does not need MQTT, watchdog, backup enrolment | built, unit tested and run in the container against the mock driver |
 | Guard (shed, restore, state machine), live by default | built as a pure state machine with table tests, called from the poll loop; ssh runner built, calling `asleep` and `awake` by absolute path over an unrestricted root key (`asleep --except` in the `system` module), not run against a host; live by default, dry-run only with `--dry-run` |
 | The root CLI, `check`, `guard outage tail` and `guard outage list` | built |
-| `rackmains guard drill plan`, `start`, `stop` and `restore` | built and exercised end to end against a simulated plug and a real poller; the deadman rule and the `Status 0` parse are unproven on the real plug |
+| `rackmains guard drill plan`, `start` and `stop` | built and exercised end to end against a simulated plug and a real poller; the deadman rule and the `Status 0` parse are unproven on the real plug |
 | Workbook rows | done: 29 metric rows (indexes 2450 to 2478) and `service_rackmains`; the topic and schema checks pass |
 | Release | not done, waits for R4; the guard is live by default and dry-run only with `--dry-run`, which the entrypoint adds under the mock (decided 2026-11-15, replacing `--live`); there is no dry-run first stage, the static model ships live and a stateful model follows once outage data is collected (decided 2026-11-15) |
 
@@ -643,16 +643,16 @@ rackmains check                                 validate the model, host file, s
 rackmains guard drill plan <test> [-F <dur>]    print the plan and preflight of a test, cut nothing
 rackmains guard drill start <test> [-F <dur>]   the same, then cut mains and run the test; blackout-shed asks for a typed `blackout`
                                                 <test> is blip-watch (default hold shed point less 30s, must be under it), brownout-shed-wake (default shed point plus 120s, must be at or over it) or blackout-shed (no hold)
-rackmains guard drill stop                      abort the running drill: mains on, deadman disarmed; nothing changes with none running
-rackmains guard drill restore                   turn the plug on and disarm the deadman, drill or no drill
+rackmains guard drill stop                      abort the running drill: mains on, deadman disarmed; with none running, nothing changes unless the plug is OFF, then a typed `on` turns it on
 rackmains guard outage tail [<file>]            follow the newest outage CSV, or the given file, as rows arrive
 rackmains guard outage list                     show the recent outages and how each ended
+rackmains guard outage clean                    delete every outage CSV, call log and stray temporary file and a stale drill marker; refuses while an outage or drill is open, asks for a typed `clean`
 ```
 
 - **Drill, stop and restore behaviour (decided 2026-11-12, verbs 2026-11-15).**
   - `drill start blackout-shed` runs to the UPS cutoff with the deadman as the only stop; at least one such trial is run, once per battery, to collect the data.
   - `drill start` is allowed against a dry-run guard (trial 1 runs that way) with a loud warning.
-  - `guard drill stop` with no drill running reports the state and changes nothing, so it cannot override a plug that is off for a legitimate reason; `guard drill restore` is the unconditional emergency form.
+  - `guard drill stop` with no drill running reports the state and changes nothing, unless the plug reads OFF, when it asks for a typed `on` first, so a plug that is off for a legitimate reason is never turned on by mistake; this is also the way out of a failed drill or a hand cut, with the container-free curl as the fallback.
 - **Drill constants (decided 2026-11-12).**
   - A hold over 30 minutes is refused (decided 2026-11-15), so a typo cannot keep mains off for hours; the abort volts is the model's, bounded to 10.5 to 12.5 V by the crate.
   - The ack timeout is 10 s and a stalled guard is a `guard_boot_ms` more than 3 s old.
@@ -683,7 +683,7 @@ rackmains guard outage list                     show the recent outages and how 
   No flag sets `rackmains_guard_shed_battery_seconds`, `rackmains_guard_restore_mains_seconds` or `rackmains_guard_abort_battery_volts`: thresholds come from the released model, never from flags or constants.
 - **`check`** loads the model and verifies its hashes and signature, reads the generated host file and checks the ssh keys exist with the right modes, the data dir is writable and the driver socket reachable, then exits `0`
   or non-zero. `fab systest`, the install hook and an operator can run it, and a live start uses the same checks, so the guard's "refuses live mode if the model fails" has one implementation.
-- **`guard outage tail`** and **`guard outage list`** are read-only and share the one typed outage CSV reader. `tail` is what follows an outage after the drill has gone (a `blackout-shed` ends with `max` dying, and the record is read afterwards);
+- **`guard outage clean`** (2026-11-15) clears the trial data, but deletes real outages too, so it is all or nothing, behind a typed word; the backup is the way back. **`guard outage tail`** and **`guard outage list`** are read-only and share the one typed outage CSV reader. `tail` is what follows an outage after the drill has gone (a `blackout-shed` ends with `max` dying, and the record is read afterwards);
   `list` prints each recent outage with its start, duration, minimum battery voltage, hosts shed and whether it was a real outage or a `drill`, taken from the `start` and `end` rows.
 - **`blip-watch`, `brownout-shed-wake` or `blackout-shed`** is the test of `drill plan` and `drill start`, so the test is always named and a `--hold` on the wrong side of the shed point is refused; the plan prints which test it is. `blackout-shed` keeps mains off until the UPS cuts its own output.
 - **`blackout-shed`** keeps mains off until the UPS cuts its own output, so the guard sheds as for any outage and `max` is then cut while running. It needs a typed `blackout` on `start`.
@@ -722,7 +722,7 @@ utilisation, `rackmains_guard_state`, host results and plug watts. The hold is c
 
 **Exit paths.** On Ctrl-C, SIGTERM or SIGHUP the plug goes on first, a second Ctrl-C is ignored until the plug reads back `ON`, then the marker becomes
 `aborted`, and the tool says the main program will run `awake` after `rackmains_guard_restore_mains_seconds` of mains and keeps following until `end`. After a normal restore it verifies `OL` within a bound and
-retries, alarming loudly with `rackmains guard drill restore` and the container-free fallback otherwise. After the plug reports off it requires `rackmains_mains_failed` in the CSV within 10 s, else it restores and fails. The tool runs
+retries, alarming loudly with `rackmains guard drill stop` and the container-free fallback otherwise. After the plug reports off it requires `rackmains_mains_failed` in the CSV within 10 s, else it restores and fails. The tool runs
 detached from the ssh session.
 
 **Preflight** refuses on: an outage in progress, an existing marker whose run is still open, a stale guard stamp, an unreachable host and the 01:00 backup window. It **warns only** when the last outage ended under 6 hours ago (the manual's recharge time), the battery is not at 100%, or the guard is in dry-run (the run proves nothing about the shed). The plug deadman does not depend on the tool.
@@ -1063,7 +1063,7 @@ Consolidated 2026-11-11 and renumbered Q1 to Q21. Each has the question, why it 
 - **Guard status** (2026-11-12). One `liveness.json` on tmpfs, replacing `rackmains_guard_state.json`, `guard_heartbeat`, `rackmains_battery_state.json` and `status.json`, as written in "Control plane". The ack is a CSV row, host results are CSV rows, and the publisher is fed over a channel.
 - **`blackout-shed` deadman** (2026-11-11). 3 h for the first run with the guard armed, printed in the plan, then set from the measured time to cutoff plus a margin.
 - **Trials, tests and rollout restated** from the model plan deleted in commit `ca0c83150`, and **reachability during a drain**, in the sections of those names.
-- **The guard CLI** (2026-11-11): `rackmains serve|check|guard drill plan|start|stop|restore|guard outage tail|list` (restructured 2026-11-15, no `--force`), one binary, plug columns in the outage CSV, recording after restore
+- **The guard CLI** (2026-11-11): `rackmains serve|check|guard drill plan|start|stop|guard outage tail|list` (restructured 2026-11-15, no `--force`), one binary, plug columns in the outage CSV, recording after restore
   until the CSV `end` row capped at 30 min.
 - **Restart shape.** `awake` when mains returns early, `AFTERG3_EN` after a cut; the power-on-after-cut test (5) confirms it per host.
 - **`rackmains_mains_failed` was replaced by `rackmains_mains_present` (1 on mains, 0 on battery) on 2026-11-14, in the payload, the CSV, the Home Assistant entity and the model signature, so a switch-like on/off history needs no second metric; earlier mentions of the old name in this plan are historical. It stays a read-only `binary_sensor`;** there is no switch row, since `guard_auto` was dropped on 2026-11-12.

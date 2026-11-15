@@ -465,6 +465,23 @@ pub fn files(dir: &Path) -> Vec<OutageFile> {
     found
 }
 
+pub fn removable(dir: &Path) -> Vec<PathBuf> {
+    fs::read_dir(dir)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter(|entry| {
+            let name = entry.file_name().to_string_lossy().to_string();
+            let call_log =
+                name.starts_with(crate::shed::CALL_LOG_PREFIX) && name.ends_with(crate::shed::CALL_LOG_SUFFIX);
+            let csv = name.starts_with(FILE_PREFIX) && name.ends_with(FILE_SUFFIX);
+            let stray = name.starts_with(FILE_PREFIX) && name.ends_with(&format!("{FILE_SUFFIX}.tmp"));
+            entry.path().is_file() && (call_log || csv || stray)
+        })
+        .map(|entry| entry.path())
+        .collect()
+}
+
 pub fn prune(dir: &Path, keep: usize, current_stem: &str) {
     let all = files(dir);
     let excess = all.len().saturating_sub(keep.max(1));
