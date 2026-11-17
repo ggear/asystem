@@ -16,24 +16,6 @@ use crate::metrics::{
 };
 use crate::nut::{Flags, TOKEN_OB};
 
-pub const DIR_OUTAGE: &str = "outage";
-pub const DIR_STATE: &str = "state";
-pub const FILE_LIMIT_BYTES: usize = 1_000_000;
-pub const EVENT_START: &str = "start";
-pub const EVENT_STATUS: &str = "status";
-pub const EVENT_DECISION: &str = "decision";
-pub const EVENT_COMMAND: &str = "command";
-pub const EVENT_NOTE: &str = "note";
-pub const EVENT_END: &str = "end";
-pub const DECISION_SHED: &str = "shed";
-pub const END_INTERRUPTED: &str = "interrupted";
-pub const END_ABORTED: &str = "aborted";
-pub const END_RESTORED: &str = "restored";
-const STAMP_FORMAT: &str = "%Y-%m-%d_%H-%M-%S";
-const FILE_PREFIX: &str = "rackmains_outage_";
-const FILE_SUFFIX: &str = ".csv";
-const FLUSH_RETRY: Duration = Duration::from_secs(1);
-
 #[derive(Debug, Default, PartialEq)]
 pub struct Table {
     pub header: Vec<String>,
@@ -176,6 +158,7 @@ pub enum WriterCommand {
     Open(String),
     Row(Vec<String>),
     Close,
+    #[cfg(test)]
     Sync(Sender<()>),
     Stop,
 }
@@ -194,6 +177,7 @@ impl Writer {
                 match receiver.recv_timeout(FLUSH_RETRY) {
                     Ok(WriterCommand::Stop) | Err(RecvTimeoutError::Disconnected) => break,
                     Ok(command) => {
+                        #[cfg(test)]
                         let mut acks = Vec::new();
                         let mut stopped = false;
                         let mut next = Some(command);
@@ -203,12 +187,14 @@ impl Writer {
                                     stopped = true;
                                     break;
                                 }
+                                #[cfg(test)]
                                 WriterCommand::Sync(ack) => acks.push(ack),
                                 other => spool.apply(other),
                             }
                             next = receiver.try_recv().ok();
                         }
                         spool.flush();
+                        #[cfg(test)]
                         for ack in acks {
                             let _ = ack.send(());
                         }
@@ -233,6 +219,7 @@ impl Writer {
         }
     }
 
+    #[cfg(test)]
     pub fn sync(&self) {
         let (ack, done) = mpsc::channel();
         if self.sender.send(WriterCommand::Sync(ack)).is_ok() {
@@ -248,131 +235,12 @@ impl Writer {
     }
 }
 
-struct Part {
-    path: PathBuf,
-    text: String,
-    written: bool,
-}
-
-struct Spool {
-    dir: PathBuf,
-    keep: usize,
-    stem: String,
-    number: u32,
-    parts: Vec<Part>,
-    current: Option<usize>,
-    failing: bool,
-}
-
-impl Spool {
-    fn new(dir: PathBuf, keep: usize) -> Spool {
-        Spool {
-            dir,
-            keep,
-            stem: String::new(),
-            number: 0,
-            parts: Vec::new(),
-            current: None,
-            failing: false,
-        }
-    }
-
-    fn apply(&mut self, command: WriterCommand) {
-        match command {
-            WriterCommand::Open(stem) => {
-                self.stem = stem;
-                self.number = 0;
-                self.next_part();
-            }
-            WriterCommand::Row(cells) => {
-                let Some(index) = self.current else {
-                    warn!("{}", log_line("outage row dropped", "no file open"));
-                    return;
-                };
-                let part = &mut self.parts[index];
-                part.text.push_str(&encode_row(&cells));
-                part.text.push('\n');
-                part.written = false;
-                if part.text.len() >= FILE_LIMIT_BYTES {
-                    self.next_part();
-                }
-            }
-            WriterCommand::Close => {
-                self.current = None;
-            }
-            WriterCommand::Sync(_) | WriterCommand::Stop => {}
-        }
-    }
-
-    fn next_part(&mut self) {
-        self.number += 1;
-        let mut text = encode_row(&metrics::header());
-        text.push('\n');
-        self.parts.push(Part {
-            path: self.dir.join(file_name(&self.stem, self.number)),
-            text,
-            written: false,
-        });
-        self.current = Some(self.parts.len() - 1);
-        let label = if self.number == 1 {
-            "outage file opened"
-        } else {
-            "outage file continued"
-        };
-        info!(
-            "{}",
-            log_line(label, &base_name(&self.parts[self.parts.len() - 1].path))
-        );
-    }
-
-    fn flush(&mut self) {
-        let mut created = false;
-        let mut failed = false;
-        let mut attempted = false;
-        for part in self.parts.iter_mut().filter(|part| !part.written) {
-            attempted = true;
-            let fresh = !part.path.exists();
-            match write_atomic(&part.path, part.text.as_bytes()) {
-                Ok(()) => {
-                    part.written = true;
-                    created |= fresh;
-                }
-                Err(err) => {
-                    failed = true;
-                    warn!("{}", log_line("outage write failed", &err));
-                    warn!("{}", log_line("outage rows", "kept for the next write"));
-                }
-            }
-        }
-        if failed {
-            self.failing = true;
-        } else if attempted && self.failing {
-            self.failing = false;
-            info!("{}", log_line("outage writer recovered", "rows written"));
-        }
-        if created {
-            prune(&self.dir, self.keep, &self.stem);
-        }
-        let current = self.current.map(|index| self.parts[index].path.clone());
-        self.parts
-            .retain(|part| !part.written || current.as_ref() == Some(&part.path));
-        self.current = current.and_then(|path| self.parts.iter().position(|part| part.path == path));
-    }
-}
-
 pub fn stamp(now: chrono::DateTime<Local>) -> String {
     now.format(STAMP_FORMAT).to_string()
 }
 
 pub fn file_name(stem: &str, number: u32) -> String {
     format!("{FILE_PREFIX}{stem}_{number}{FILE_SUFFIX}")
-}
-
-fn base_name(path: &Path) -> String {
-    path.file_name().map_or_else(
-        || path.display().to_string(),
-        |name| name.to_string_lossy().into_owned(),
-    )
 }
 
 pub fn parse_stamp(text: &str) -> Option<NaiveDateTime> {
@@ -635,6 +503,161 @@ pub fn clocks(table: &Table, now: NaiveDateTime) -> Option<(Duration, Duration, 
     });
     Some((battery, mains, shed))
 }
+
+fn base_name(path: &Path) -> String {
+    path.file_name().map_or_else(
+        || path.display().to_string(),
+        |name| name.to_string_lossy().into_owned(),
+    )
+}
+
+struct Part {
+    path: PathBuf,
+    text: String,
+    written: bool,
+}
+
+struct Spool {
+    dir: PathBuf,
+    keep: usize,
+    stem: String,
+    number: u32,
+    parts: Vec<Part>,
+    current: Option<usize>,
+    failing: bool,
+}
+
+impl Spool {
+    fn new(dir: PathBuf, keep: usize) -> Spool {
+        Spool {
+            dir,
+            keep,
+            stem: String::new(),
+            number: 0,
+            parts: Vec::new(),
+            current: None,
+            failing: false,
+        }
+    }
+
+    fn apply(&mut self, command: WriterCommand) {
+        match command {
+            WriterCommand::Open(stem) => {
+                self.stem = stem;
+                self.number = 0;
+                self.next_part();
+            }
+            WriterCommand::Row(cells) => {
+                let Some(index) = self.current else {
+                    warn!("{}", log_line("outage row dropped", "no file open"));
+                    return;
+                };
+                let part = &mut self.parts[index];
+                part.text.push_str(&encode_row(&cells));
+                part.text.push('\n');
+                part.written = false;
+                if part.text.len() >= FILE_LIMIT_BYTES {
+                    self.next_part();
+                }
+            }
+            WriterCommand::Close => {
+                self.current = None;
+            }
+            #[cfg(test)]
+            WriterCommand::Sync(_) => {}
+            WriterCommand::Stop => {}
+        }
+    }
+
+    fn next_part(&mut self) {
+        self.number += 1;
+        let mut text = encode_row(&metrics::header());
+        text.push('\n');
+        self.parts.push(Part {
+            path: self.dir.join(file_name(&self.stem, self.number)),
+            text,
+            written: false,
+        });
+        self.current = Some(self.parts.len() - 1);
+        let label = if self.number == 1 {
+            "outage file opened"
+        } else {
+            "outage file continued"
+        };
+        info!(
+            "{}",
+            log_line(label, &base_name(&self.parts[self.parts.len() - 1].path))
+        );
+    }
+
+    fn flush(&mut self) {
+        let mut created = false;
+        let mut failed = false;
+        let mut attempted = false;
+        for part in self.parts.iter_mut().filter(|part| !part.written) {
+            attempted = true;
+            let fresh = !part.path.exists();
+            match write_atomic(&part.path, part.text.as_bytes()) {
+                Ok(()) => {
+                    part.written = true;
+                    created |= fresh;
+                }
+                Err(err) => {
+                    failed = true;
+                    warn!("{}", log_line("outage write failed", &err));
+                    warn!("{}", log_line("outage rows", "kept for the next write"));
+                }
+            }
+        }
+        if failed {
+            self.failing = true;
+        } else if attempted && self.failing {
+            self.failing = false;
+            info!("{}", log_line("outage writer recovered", "rows written"));
+        }
+        if created {
+            prune(&self.dir, self.keep, &self.stem);
+        }
+        let current = self.current.map(|index| self.parts[index].path.clone());
+        self.parts
+            .retain(|part| !part.written || current.as_ref() == Some(&part.path));
+        self.current = current.and_then(|path| self.parts.iter().position(|part| part.path == path));
+    }
+}
+
+pub const DIR_OUTAGE: &str = "outage";
+
+pub const DIR_STATE: &str = "state";
+
+pub const FILE_LIMIT_BYTES: usize = 1_000_000;
+
+pub const EVENT_START: &str = "start";
+
+pub const EVENT_STATUS: &str = "status";
+
+pub const EVENT_DECISION: &str = "decision";
+
+pub const EVENT_COMMAND: &str = "command";
+
+pub const EVENT_NOTE: &str = "note";
+
+pub const EVENT_END: &str = "end";
+
+pub const DECISION_SHED: &str = "shed";
+
+pub const END_INTERRUPTED: &str = "interrupted";
+
+pub const END_ABORTED: &str = "aborted";
+
+pub const END_RESTORED: &str = "restored";
+
+const STAMP_FORMAT: &str = "%Y-%m-%d_%H-%M-%S";
+
+const FILE_PREFIX: &str = "rackmains_outage_";
+
+const FILE_SUFFIX: &str = ".csv";
+
+const FLUSH_RETRY: Duration = Duration::from_secs(1);
 
 #[cfg(test)]
 mod tests {

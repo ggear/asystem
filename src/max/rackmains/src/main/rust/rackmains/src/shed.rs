@@ -15,18 +15,6 @@ use crate::guard::{Call, Command, Host, HOST_SHED_LAST};
 use crate::log_line;
 use crate::outage;
 
-pub const SSH_STATUS_UNREACHABLE: i32 = 255;
-pub const SSH_STATUS_SPAWN: i32 = 127;
-pub const SSH_STATUS_LIMIT: i32 = 124;
-const LIMIT_POLL: Duration = Duration::from_millis(100);
-const SSH_KEEPALIVE: Duration = Duration::from_secs(10);
-const SSH_KEEPALIVE_COUNT: u32 = 3;
-const RESULT_PREFIX: &str = "RESULT ";
-const REMOTE_BIN_DIR: &str = "/usr/local/bin";
-pub const CALL_LOG_PREFIX: &str = "rackmains_call_";
-pub const CALL_LOG_SUFFIX: &str = ".log";
-const CALL_LOG_KEEP: usize = 400;
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Outcome {
     pub status: i32,
@@ -47,12 +35,6 @@ pub struct Ssh {
 }
 
 pub struct DryRun;
-
-#[derive(Deserialize)]
-struct HostEntry {
-    name: String,
-    address: String,
-}
 
 pub struct Finished {
     pub host: String,
@@ -265,6 +247,34 @@ impl Runner for DryRun {
         }
     }
 }
+
+#[derive(Deserialize)]
+struct HostEntry {
+    name: String,
+    address: String,
+}
+
+pub const SSH_STATUS_UNREACHABLE: i32 = 255;
+
+pub const SSH_STATUS_SPAWN: i32 = 127;
+
+pub const SSH_STATUS_LIMIT: i32 = 124;
+
+const LIMIT_POLL: Duration = Duration::from_millis(100);
+
+const SSH_KEEPALIVE: Duration = Duration::from_secs(10);
+
+const SSH_KEEPALIVE_COUNT: u32 = 3;
+
+const RESULT_PREFIX: &str = "RESULT ";
+
+const REMOTE_BIN_DIR: &str = "/usr/local/bin";
+
+pub const CALL_LOG_PREFIX: &str = "rackmains_call_";
+
+pub const CALL_LOG_SUFFIX: &str = ".log";
+
+const CALL_LOG_KEEP: usize = 400;
 
 #[cfg(test)]
 pub mod mock {

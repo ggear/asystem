@@ -30,12 +30,6 @@ use crate::schema::{AVAILABILITY_ONLINE, KEY_PERIOD_MS, KEY_TIMESTAMP};
 use crate::shed::{self, load_hosts, DryRun, Finished, Runner, Ssh};
 use crate::{check, drill, log_change, log_line, parse_duration, STATE_TOPIC, STATUS_TOPIC};
 
-static STOP_SIGNAL: AtomicI32 = AtomicI32::new(0);
-const REPORT_PERIOD: Duration = Duration::from_secs(60);
-const REPORT_PERIOD_BATTERY: Duration = Duration::from_secs(1);
-const SSH_TIMEOUT_SECONDS: u64 = 30;
-const SSH_LIMIT_SECONDS: u64 = 600;
-
 pub struct Settings {
     pub period: Duration,
     pub mains_publish_period: Duration,
@@ -57,14 +51,6 @@ pub struct Parts {
     pub policy: Policy,
     pub hosts: Vec<Host>,
     pub progress: Progress,
-}
-
-struct Session {
-    started: NaiveDateTime,
-    stats: Stats,
-    drill: Option<String>,
-    on_battery_seen: bool,
-    hosts_shed: usize,
 }
 
 pub struct Poller {
@@ -750,23 +736,6 @@ impl Poller {
     }
 }
 
-fn sample_state(frame: &mut Frame, names: &[String], state: Option<&Vec<f64>>) {
-    if let Some(state) = state {
-        frame.set_text(MODEL_STATE, &policy::state_to_object(names, state).to_string());
-    }
-}
-
-fn install_signal_handlers() {
-    extern "C" fn handler(signal: libc::c_int) {
-        STOP_SIGNAL.store(signal, Ordering::SeqCst);
-    }
-    for signal in [libc::SIGINT, libc::SIGTERM] {
-        unsafe {
-            libc::signal(signal, handler as extern "C" fn(libc::c_int) as libc::sighandler_t);
-        }
-    }
-}
-
 pub fn run(args: &ServeArgs, data_dir: &Path) -> Result<(), String> {
     let period = parse_duration(&args.poll_period)?;
     init_serve_logging(args, period);
@@ -802,16 +771,7 @@ pub fn run(args: &ServeArgs, data_dir: &Path) -> Result<(), String> {
     let hosts = load_hosts(Path::new(&common.hosts_file), &common.local_host)?;
     let ssh_timeout = Duration::from_secs(SSH_TIMEOUT_SECONDS);
     if !args.dry_run {
-        let outcomes = check::run(&check::Target {
-            model_dir: Path::new(&common.model_dir),
-            hosts_file: Path::new(&common.hosts_file),
-            local_host: &common.local_host,
-            ssh_key: Path::new(&common.ssh_key),
-            known_hosts: Path::new(&common.known_hosts),
-            data_dir,
-            device: Path::new(&common.device),
-            timeout,
-        });
+        let outcomes = check::run(&common.check_target(data_dir, timeout));
         for outcome in &outcomes {
             if let Ok(detail) = &outcome.result {
                 info!("{}", log_line(&format!("check {}", outcome.name), detail));
@@ -835,8 +795,7 @@ pub fn run(args: &ServeArgs, data_dir: &Path) -> Result<(), String> {
             log_dir: data_dir.join(DIR_OUTAGE),
         })
     };
-    let publisher = MqttPublisher::new(&args.broker_host, args.broker_port, &args.broker_token, STATUS_TOPIC)
-        .map_err(|err| err.to_string())?;
+    let publisher = MqttPublisher::new(&args.broker_host, args.broker_port, &args.broker_token, STATUS_TOPIC);
     if period.is_zero() {
         publisher
             .wait_connected(Duration::from_secs(30))
@@ -919,6 +878,41 @@ pub fn run(args: &ServeArgs, data_dir: &Path) -> Result<(), String> {
     }
 }
 
+fn sample_state(frame: &mut Frame, names: &[String], state: Option<&Vec<f64>>) {
+    if let Some(state) = state {
+        frame.set_text(MODEL_STATE, &policy::state_to_object(names, state).to_string());
+    }
+}
+
+fn install_signal_handlers() {
+    extern "C" fn handler(signal: libc::c_int) {
+        STOP_SIGNAL.store(signal, Ordering::SeqCst);
+    }
+    for signal in [libc::SIGINT, libc::SIGTERM] {
+        unsafe {
+            libc::signal(signal, handler as extern "C" fn(libc::c_int) as libc::sighandler_t);
+        }
+    }
+}
+
+struct Session {
+    started: NaiveDateTime,
+    stats: Stats,
+    drill: Option<String>,
+    on_battery_seen: bool,
+    hosts_shed: usize,
+}
+
+static STOP_SIGNAL: AtomicI32 = AtomicI32::new(0);
+
+const REPORT_PERIOD: Duration = Duration::from_secs(60);
+
+const REPORT_PERIOD_BATTERY: Duration = Duration::from_secs(1);
+
+const SSH_TIMEOUT_SECONDS: u64 = 30;
+
+const SSH_LIMIT_SECONDS: u64 = 600;
+
 #[cfg(test)]
 mod tests {
     use std::collections::VecDeque;
@@ -929,7 +923,7 @@ mod tests {
 
     use super::*;
     use crate::broker;
-    use crate::drill::STATE_ARMED;
+    use crate::drill::MarkerState;
     use crate::liveness::Effective;
     use crate::nut::{self, Reading};
     use crate::outage::{Table, END_INTERRUPTED};
@@ -1311,7 +1305,7 @@ mod tests {
         assert_eq!(after.effective.shed_order, vec!["mad", "max", "may", "meg"]);
     }
 
-    fn marker(rig: &Rig, id: &str, state: &str) {
+    fn marker(rig: &Rig, id: &str, state: MarkerState) {
         let now = Local.with_ymd_and_hms(2026, 11, 12, 14, 0, 0).unwrap().naive_local();
         Marker {
             id: id.to_string(),
@@ -1321,7 +1315,7 @@ mod tests {
             expires: (now + chrono::Duration::hours(2))
                 .format("%Y-%m-%d_%H-%M-%S")
                 .to_string(),
-            state: state.to_string(),
+            state,
         }
         .write(&rig.data_dir.join(DIR_STATE).join(drill::FILE_MARKER))
         .unwrap();
@@ -1331,7 +1325,7 @@ mod tests {
     fn a_marker_is_acked_by_opening_a_file_whose_start_row_carries_its_id() {
         let mut rig = Rig::new("marker-ack");
         rig.run("OL", 1);
-        marker(&rig, "abc", STATE_ARMED);
+        marker(&rig, "abc", MarkerState::Armed);
         rig.run("OL", 3);
         let events = rig.events();
         assert_eq!(events[0].0, "start");
@@ -1342,7 +1336,7 @@ mod tests {
     #[test]
     fn a_marker_deleted_before_the_cut_closes_the_file_aborted() {
         let mut rig = Rig::new("marker-abort");
-        marker(&rig, "abc", STATE_ARMED);
+        marker(&rig, "abc", MarkerState::Armed);
         rig.run("OL", 3);
         fs::remove_file(rig.data_dir.join(DIR_STATE).join(drill::FILE_MARKER)).unwrap();
         rig.run("OL", 2);
@@ -1362,7 +1356,7 @@ mod tests {
     fn a_marker_arriving_during_an_outage_is_rejected_with_a_note_and_marks_nothing() {
         let mut rig = Rig::new("marker-late");
         rig.run("OB DISCHRG", 3);
-        marker(&rig, "late", STATE_ARMED);
+        marker(&rig, "late", MarkerState::Armed);
         rig.run("OB DISCHRG", 3);
         let events = rig.events();
         assert!(events
@@ -1374,7 +1368,7 @@ mod tests {
     #[test]
     fn a_marker_that_is_aborted_or_expired_marks_nothing() {
         let mut rig = Rig::new("marker-dead");
-        marker(&rig, "gone", drill::STATE_ABORTED);
+        marker(&rig, "gone", MarkerState::Aborted);
         rig.run("OL", 3);
         assert!(rig.tables().is_empty());
     }
@@ -1383,7 +1377,7 @@ mod tests {
     fn a_surviving_marker_is_acked_again_after_a_restart() {
         let data_dir = scratch("marker-restart");
         let mut first = Rig::at(&data_dir, 0);
-        marker(&first, "keep", STATE_ARMED);
+        marker(&first, "keep", MarkerState::Armed);
         first.run("OL", 3);
         first.poller.stop();
         let mut second = Rig::at(&data_dir, 4);

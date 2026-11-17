@@ -6,14 +6,6 @@ use serde_json::{Map, Value};
 use crate::model::battery::{load, Request, Response};
 use crate::model::loader::{Info, Model};
 
-pub const SHED_BATTERY_FLOOR: Duration = Duration::from_secs(30);
-pub const SHED_BATTERY_CEILING: Duration = Duration::from_secs(3600);
-pub const RESTORE_MAINS_FLOOR: Duration = Duration::from_secs(60);
-pub const RESTORE_MAINS_CEILING: Duration = Duration::from_hours(24);
-pub const ABORT_BATTERY_FLOOR: f64 = 10.5;
-pub const ABORT_BATTERY_CEILING: f64 = 12.5;
-pub const RUNTIME_REMAINING_CEILING: Duration = Duration::from_hours(24);
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct Policy {
     pub shed_battery: Duration,
@@ -105,7 +97,8 @@ impl TryFrom<&Response> for Estimate {
                     .filter(|duration| *duration <= RUNTIME_REMAINING_CEILING)
                     .ok_or_else(|| {
                         format!(
-                            "estimate [rackmains_battery_runtime_remaining_seconds] [{value}] outside [0] to [{}]",
+                            "estimate [{}] [{value}] outside [0] to [{}]",
+                            crate::metrics::BATTERY_RUNTIME_REMAINING_SECONDS,
                             RUNTIME_REMAINING_CEILING.as_secs()
                         )
                     })
@@ -118,7 +111,8 @@ impl TryFrom<&Response> for Estimate {
                     Ok(value)
                 } else {
                     Err(format!(
-                        "estimate [rackmains_battery_energy_remaining_pct] [{value}] outside [0] to [100]"
+                        "estimate [{}] [{value}] outside [0] to [100]",
+                        crate::metrics::BATTERY_ENERGY_REMAINING_PCT
                     ))
                 }
             })
@@ -208,6 +202,20 @@ pub fn load_model(directory: &Path) -> Result<(Loaded, Policy), String> {
     })?;
     Ok((loaded, initial.policy))
 }
+
+pub const SHED_BATTERY_FLOOR: Duration = Duration::from_secs(30);
+
+pub const SHED_BATTERY_CEILING: Duration = Duration::from_secs(3600);
+
+pub const RESTORE_MAINS_FLOOR: Duration = Duration::from_secs(60);
+
+pub const RESTORE_MAINS_CEILING: Duration = Duration::from_hours(24);
+
+pub const ABORT_BATTERY_FLOOR: f64 = 10.5;
+
+pub const ABORT_BATTERY_CEILING: f64 = 12.5;
+
+pub const RUNTIME_REMAINING_CEILING: Duration = Duration::from_hours(24);
 
 #[cfg(test)]
 mod tests {
@@ -381,22 +389,18 @@ mod tests {
         std::fs::write(directory.join("signature.json"), &bytes).unwrap();
         let mut manifest: Value =
             serde_json::from_slice(&std::fs::read(directory.join("project.json")).unwrap()).unwrap();
-        let digest = Sha256::digest(&bytes).iter().fold(String::new(), |mut out, byte| {
-            let _ = write!(out, "{byte:02x}");
-            out
-        });
-        manifest["files"]["signature.json"] = Value::from(digest);
+        let hex = |bytes: &[u8]| {
+            Sha256::digest(bytes).iter().fold(String::new(), |mut out, byte| {
+                let _ = write!(out, "{byte:02x}");
+                out
+            })
+        };
+        manifest["files"]["signature.json"] = Value::from(hex(&bytes));
         let manifest_bytes = serde_json::to_vec(&manifest).unwrap();
         std::fs::write(directory.join("project.json"), &manifest_bytes).unwrap();
         let mut release: Value =
             serde_json::from_slice(&std::fs::read(directory.join("release.json")).unwrap()).unwrap();
-        release["content_sha256"] = Value::from(Sha256::digest(&manifest_bytes).iter().fold(
-            String::new(),
-            |mut out, byte| {
-                let _ = write!(out, "{byte:02x}");
-                out
-            },
-        ));
+        release["content_sha256"] = Value::from(hex(&manifest_bytes));
         std::fs::write(directory.join("release.json"), serde_json::to_vec(&release).unwrap()).unwrap();
         let error = load(&directory).err().unwrap();
         std::fs::remove_dir_all(&directory).unwrap();

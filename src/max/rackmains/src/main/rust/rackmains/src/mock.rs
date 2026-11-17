@@ -6,22 +6,6 @@ use std::thread;
 
 use crate::nut::COMMAND_DUMP;
 
-pub const DUMP: &str = concat!(
-    "SETINFO battery.charge \"100\"\n",
-    "SETINFO battery.voltage \"13.4\"\n",
-    "SETINFO device.type \"ups\"\n",
-    "SETINFO input.voltage \"241.4\"\n",
-    "SETINFO input.voltage.fault \"241.4\"\n",
-    "SETINFO output.frequency \"50.1\"\n",
-    "SETINFO output.voltage \"241.4\"\n",
-    "SETINFO ups.load \"13\"\n",
-    "SETINFO ups.status \"OL\"\n",
-    "DATAOK\n",
-    "DUMPDONE\n",
-);
-
-pub const STATUS_SUFFIX: &str = ".status";
-
 pub fn run(path: &Path) -> Result<(), String> {
     let _ = fs::remove_file(path);
     let listener =
@@ -70,6 +54,22 @@ fn answer(stream: UnixStream, status: &Path) {
         }
     }
 }
+
+pub const DUMP: &str = concat!(
+    "SETINFO battery.charge \"100\"\n",
+    "SETINFO battery.voltage \"13.4\"\n",
+    "SETINFO device.type \"ups\"\n",
+    "SETINFO input.voltage \"241.4\"\n",
+    "SETINFO input.voltage.fault \"241.4\"\n",
+    "SETINFO output.frequency \"50.1\"\n",
+    "SETINFO output.voltage \"241.4\"\n",
+    "SETINFO ups.load \"13\"\n",
+    "SETINFO ups.status \"OL\"\n",
+    "DATAOK\n",
+    "DUMPDONE\n",
+);
+
+pub const STATUS_SUFFIX: &str = ".status";
 
 #[cfg(test)]
 mod tests {

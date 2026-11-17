@@ -1,3 +1,4 @@
+use std::fmt;
 use std::fs;
 use std::io::{Read, Write};
 use std::net::{TcpStream, ToSocketAddrs};
@@ -26,18 +27,21 @@ use crate::shed::load_hosts;
 use crate::{log_change, log_line, say};
 use log::Level;
 
-pub const FILE_MARKER: &str = "drill.json";
-pub const STATE_ARMED: &str = "armed";
-pub const STATE_ABORTED: &str = "aborted";
-pub const MODE_BLIP: &str = "blip-watch";
-pub const MODE_BROWNOUT: &str = "brownout-shed-wake";
-pub const MODE_BLACKOUT: &str = "blackout-shed";
-pub const PLUG_PORT: u16 = 80;
-pub const PLUG_SAMPLE_TIMEOUT: Duration = Duration::from_millis(500);
-pub const PLUG_COMMAND_TIMEOUT: Duration = Duration::from_secs(5);
-pub const PLUG_SAMPLE_MAX_AGE: Duration = Duration::from_secs(2);
-const PLUG_SAMPLE_PERIOD: Duration = Duration::from_secs(1);
-const HTTP_LIMIT_BYTES: u64 = 65_536;
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum MarkerState {
+    Armed,
+    Aborted,
+}
+
+impl fmt::Display for MarkerState {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            MarkerState::Armed => "armed",
+            MarkerState::Aborted => "aborted",
+        })
+    }
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Marker {
@@ -46,7 +50,7 @@ pub struct Marker {
     pub hold_seconds: u64,
     pub planned_cut: String,
     pub expires: String,
-    pub state: String,
+    pub state: MarkerState,
 }
 
 impl Marker {
@@ -59,12 +63,8 @@ impl Marker {
         write_atomic(path, &bytes)
     }
 
-    pub fn expired(&self, now: NaiveDateTime) -> bool {
-        parse_stamp(&self.expires).is_none_or(|expires| now >= expires)
-    }
-
     pub fn live(&self, now: NaiveDateTime) -> bool {
-        self.state == STATE_ARMED && !self.expired(now)
+        self.state == MarkerState::Armed && parse_stamp(&self.expires).is_some_and(|expires| now < expires)
     }
 }
 
@@ -192,40 +192,17 @@ impl Drop for Sampler {
     }
 }
 
-pub const EXIT_ABORTED: u8 = 7;
-pub const EXIT_TIMEOUT: u8 = 4;
-pub const LEAD_IN: Duration = Duration::from_secs(60);
-pub const LEAD_IN_WATTS_WARN: i64 = 20;
-const ABORT_MARGIN_VOLTS: f64 = 0.5;
-pub const ACK_TIMEOUT: Duration = Duration::from_secs(10);
-pub const GUARD_STALE_MS: u64 = 3000;
-pub const AFTER_RESTORE_CAP: Duration = Duration::from_mins(30);
-pub const MARKER_MARGIN: Duration = Duration::from_mins(5);
-pub const DEADMAN_MARGIN: Duration = Duration::from_mins(5);
-pub const DEADMAN_BLACKOUT: Duration = Duration::from_hours(3);
-pub const HOLD_PAST_SHED: Duration = Duration::from_secs(120);
-pub const HOLD_CEILING: Duration = Duration::from_mins(30);
-pub const RECOVER_BEFORE_SHED: u64 = 30;
-pub const CUT_TO_BATTERY: Duration = Duration::from_secs(10);
-pub const RESTORE_VERIFY: Duration = Duration::from_secs(60);
-pub const RECHARGE_WARNING: Duration = Duration::from_hours(6);
-pub const RECHARGE_MIN_BATTERY_SECONDS: u64 = 300;
-const CONNECT_PROBE: Duration = Duration::from_secs(2);
-const BACKUP_WINDOW: (u32, u32, u32, u32) = (0, 45, 1, 45);
-
-static SIGNALLED: AtomicBool = AtomicBool::new(false);
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
 pub enum Test {
-    #[value(name = "blip-watch", help = "restore before the shed, the guard only watches")]
+    #[value(name = MODE_BLIP, help = "restore before the shed, the guard only watches")]
     Blip,
     #[value(
-        name = "brownout-shed-wake",
+        name = MODE_BROWNOUT,
         help = "hold past the shed, then restore, the guard sheds and wakes"
     )]
     Brownout,
     #[value(
-        name = "blackout-shed",
+        name = MODE_BLACKOUT,
         help = "run to the UPS cutoff and end there, the plug's deadman brings mains back"
     )]
     Blackout,
@@ -350,21 +327,6 @@ pub fn parse_target(test: Test, hold: Option<&str>, effective: &Effective) -> Re
     }
 }
 
-fn target_mode(target: &Target) -> &'static str {
-    match target {
-        Target::Blip(_) => MODE_BLIP,
-        Target::Brownout(_) => MODE_BROWNOUT,
-        Target::Blackout => MODE_BLACKOUT,
-    }
-}
-
-fn target_hold(target: &Target) -> Duration {
-    match target {
-        Target::Blip(hold) | Target::Brownout(hold) => *hold,
-        Target::Blackout => Duration::ZERO,
-    }
-}
-
 pub fn deadman_seconds(target: &Target) -> u64 {
     match target {
         Target::Blip(hold) | Target::Brownout(hold) => (*hold + DEADMAN_MARGIN).as_secs(),
@@ -385,14 +347,7 @@ pub fn deadman_armed(reply: &Value, seconds: u64) -> bool {
 }
 
 pub fn in_backup_window(now: NaiveDateTime) -> bool {
-    let (from_hour, from_minute, to_hour, to_minute) = BACKUP_WINDOW;
-    match (
-        NaiveTime::from_hms_opt(from_hour, from_minute, 0),
-        NaiveTime::from_hms_opt(to_hour, to_minute, 0),
-    ) {
-        (Some(from), Some(to)) => (from..=to).contains(&now.time()),
-        _ => false,
-    }
+    (BACKUP_WINDOW_FROM..=BACKUP_WINDOW_TO).contains(&now.time())
 }
 
 pub fn assess(inputs: &Assessment) -> Preflight {
@@ -563,7 +518,7 @@ pub fn lead_in_window(table: &Table, lead: Duration) -> Option<LeadInWindow> {
                 .parse::<f64>()
                 .or_else(|_| table.cell(row, COLUMN_ELAPSED).parse::<f64>())
                 .ok()?;
-            Some((seconds, table.cell(row, "rackmains_plug_watts").parse::<i64>().ok()?))
+            Some((seconds, table.cell(row, PLUG_WATTS).parse::<i64>().ok()?))
         })
         .collect();
     let (&(start, _), &(end, last)) = (points.first()?, points.last()?);
@@ -589,7 +544,7 @@ pub fn lead_in_verdict(table: &Table, lead: Duration) -> LeadIn {
     let first = table
         .rows
         .iter()
-        .position(|row| table.cell(row, "rackmains_plug_watts").parse::<i64>().is_ok())
+        .position(|row| table.cell(row, PLUG_WATTS).parse::<i64>().is_ok())
         .unwrap_or(0);
     let unsteady = |row: &&Vec<String>| {
         let status = table.cell(row, crate::metrics::STATUS);
@@ -694,7 +649,7 @@ pub fn run_drill(env: &Env, test: Test, hold: Option<&str>, follow: Option<&str>
                 .unwrap_or_default())
         .format("%Y-%m-%d_%H-%M-%S")
         .to_string(),
-        state: STATE_ARMED.to_string(),
+        state: MarkerState::Armed,
     };
     marker.write(&marker_path)?;
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
@@ -718,7 +673,7 @@ pub fn run_drill(env: &Env, test: Test, hold: Option<&str>, follow: Option<&str>
     result
 }
 
-fn stop_state(env: &Env) -> (PathBuf, Option<Marker>, Option<String>) {
+pub fn run_stop(env: &Env, confirm: impl FnOnce(&str, &str) -> Result<bool, String>) -> Result<(), ExitError> {
     let marker_path = env.data_dir.join(DIR_STATE).join(FILE_MARKER);
     let marker = Marker::read(&marker_path);
     let power = env
@@ -730,36 +685,15 @@ fn stop_state(env: &Env) -> (PathBuf, Option<Marker>, Option<String>) {
         Level::Info,
         &log_line(
             "drill marker",
-            marker.as_ref().map_or("none", |marker| marker.state.as_str()),
+            &marker
+                .as_ref()
+                .map_or_else(|| "none".to_string(), |marker| marker.state.to_string()),
         ),
     );
     say(
         Level::Info,
         &log_line("drill plug", power.as_deref().unwrap_or("unreachable")),
     );
-    (marker_path, marker, power)
-}
-
-fn restore_drill(env: &Env, marker_path: &Path, marker: Option<Marker>) -> Result<(), ExitError> {
-    restore_plug(env.plug.as_ref(), env.timing.poll)?;
-    if let Some(mut marker) = marker {
-        marker.state = STATE_ABORTED.to_string();
-        marker.write(marker_path)?;
-        let _ = fs::remove_file(marker_path);
-    }
-    say(Level::Info, &log_change("drill plug", "off", "on"));
-    say(
-        Level::Info,
-        &log_line(
-            "drill awake",
-            "the main program runs it after the restore period of mains",
-        ),
-    );
-    Ok(())
-}
-
-pub fn run_stop(env: &Env, confirm: impl FnOnce(&str, &str) -> Result<bool, String>) -> Result<(), ExitError> {
-    let (marker_path, marker, power) = stop_state(env);
     if marker.is_none() {
         match power.as_deref() {
             Some("OFF") => {
@@ -785,7 +719,25 @@ pub fn run_stop(env: &Env, confirm: impl FnOnce(&str, &str) -> Result<bool, Stri
             }
         }
     }
-    restore_drill(env, &marker_path, marker)
+    restore_plug(env.plug.as_ref(), env.timing.poll)?;
+    if let Some(mut marker) = marker {
+        marker.state = MarkerState::Aborted;
+        marker.write(&marker_path)?;
+        let _ = fs::remove_file(&marker_path);
+    }
+    if power.as_deref() == Some("OFF") {
+        say(Level::Info, &log_change("drill plug", "off", "on"));
+    } else {
+        say(Level::Info, &log_line("drill plug", "on"));
+    }
+    say(
+        Level::Info,
+        &log_line(
+            "drill awake",
+            "the main program runs it after the restore period of mains",
+        ),
+    );
+    Ok(())
 }
 
 pub fn restore_plug(plug: &dyn Plug, retry: Duration) -> Result<(), String> {
@@ -807,6 +759,159 @@ pub fn restore_plug(plug: &dyn Plug, retry: Duration) -> Result<(), String> {
     Err(format!(
         "PLUG NOT CONFIRMED ON [{last}], run `rackmains guard drill stop` or curl the plug's Power On and Rule1 0"
     ))
+}
+
+pub fn end_row_in(table: &Table) -> Option<u64> {
+    let row = table.rows.last()?;
+    let restore = table.cell(row, metrics::GUARD_RESTORE_MAINS).parse::<u64>().ok()?;
+    let mains = table.cell(row, metrics::GUARD_MAINS_SECONDS).parse::<u64>().ok()?;
+    Some(restore.saturating_sub(mains))
+}
+
+pub fn run_issues(table: &Table, target: &Target, abort_volts: f64, followed: bool) -> Vec<(&'static str, String)> {
+    let end = table.rows.iter().find(|row| table.cell(row, COLUMN_EVENT) == EVENT_END);
+    let detail = run_detail(table);
+    let field = |name: &str| report::field(&detail, name);
+    let mut issues = Vec::new();
+    match end {
+        None if !followed => issues.push(("run open", "the main program finishes it".to_string())),
+        Some(_) if field("reason") != "restored" => issues.push(("run ended", format!("reason {}", field("reason")))),
+        _ => {}
+    }
+    let shed = field("hosts_shed").parse::<u64>().unwrap_or(0);
+    if shed > 0 && matches!(target, Target::Blip(_)) {
+        issues.push(("hosts shed", format!("{shed} during a blip-watch")));
+    }
+    if let Ok(minimum) = field("battery_min_volts").parse::<f64>() {
+        if minimum - abort_volts < ABORT_MARGIN_VOLTS {
+            issues.push((
+                "volts margin",
+                format!(
+                    "{:.1}V under the {ABORT_MARGIN_VOLTS:.1}V margin to the abort volts {abort_volts:.1}V",
+                    minimum - abort_volts
+                ),
+            ));
+        }
+    }
+    if field("battery_low") == "1" {
+        issues.push(("low battery", "the UPS raised its flag".to_string()));
+    }
+    for row in table
+        .rows
+        .iter()
+        .filter(|row| table.cell(row, COLUMN_EVENT) == EVENT_COMMAND)
+    {
+        let command = table.cell(row, COLUMN_DETAIL);
+        if report::field(command, "status") != "0" {
+            issues.push((
+                "host command",
+                format!(
+                    "{} status {}",
+                    report::field(command, "host"),
+                    report::field(command, "status")
+                ),
+            ));
+        }
+    }
+    let samples: Vec<&Vec<String>> = table
+        .rows
+        .iter()
+        .filter(|row| table.cell(row, COLUMN_EVENT).is_empty())
+        .collect();
+    let missing = samples
+        .iter()
+        .filter(|row| table.cell(row, PLUG_WATTS).is_empty())
+        .count();
+    if missing * 100 > samples.len() {
+        issues.push(("plug watts", format!("missing on {missing} of {} rows", samples.len())));
+    }
+    issues
+}
+
+pub fn run_summary(table: &Table, target: &Target, abort_volts: f64, followed: bool) -> Vec<(Level, String)> {
+    let end = table.rows.iter().find(|row| table.cell(row, COLUMN_EVENT) == EVENT_END);
+    let detail = run_detail(table);
+    let field = |name: &str| report::field(&detail, name);
+    let value = |name: &str, unit: &str| {
+        let value = field(name);
+        if value.is_empty() {
+            "unknown".to_string()
+        } else {
+            format!("{value}{unit}")
+        }
+    };
+    let mut lines = vec![
+        log_line("drill result", if end.is_some() { field("reason") } else { "open" }),
+        log_line("drill seconds on battery", &value("seconds_on_battery", "s")),
+        log_line("drill battery volts min", &value("battery_min_volts", "V")),
+        log_line("drill battery volts min at", &value("battery_min_at", "")),
+        log_line("drill battery volts last", &value("battery_last_volts", "V")),
+        log_line(
+            "drill abort volts margin",
+            &field("battery_min_volts").parse::<f64>().map_or_else(
+                |_| "unknown".to_string(),
+                |minimum| format!("{:.1}V", minimum - abort_volts),
+            ),
+        ),
+        log_line("drill load peak", &value("utilisation_peak_pct", "%")),
+        log_line("drill load mean", &value("utilisation_mean_pct", "%")),
+        log_change(
+            "drill charge",
+            &value("charge_start_pct", "%"),
+            &value("charge_end_pct", "%"),
+        ),
+        log_line("drill hosts shed", &value("hosts_shed", "")),
+    ]
+    .into_iter()
+    .map(|line| (Level::Info, line))
+    .collect::<Vec<_>>();
+    let issues = run_issues(table, target, abort_volts, followed);
+    if issues.is_empty() {
+        lines.push((Level::Info, log_line("drill issues", "none")));
+    }
+    lines.extend(
+        issues
+            .iter()
+            .map(|(tag, detail)| (Level::Warn, log_line(&format!("drill issue {tag}"), detail))),
+    );
+    lines
+}
+
+pub fn deep_outage_end(table: &Table) -> Option<NaiveDateTime> {
+    let last = table.rows.last().filter(|_| table.ended())?;
+    let seconds = report::field(table.cell(last, COLUMN_DETAIL), "seconds_on_battery")
+        .parse::<u64>()
+        .ok()?;
+    (seconds >= RECHARGE_MIN_BATTERY_SECONDS)
+        .then(|| parse_stamp(table.cell(last, COLUMN_TIME)))
+        .flatten()
+}
+
+pub fn confirm_typed(prompt: &str, word: &str) -> Result<bool, String> {
+    say(
+        Level::Warn,
+        &log_line("drill confirm", &format!("{prompt}, type {word} to continue")),
+    );
+    let mut line = String::new();
+    std::io::stdin()
+        .read_line(&mut line)
+        .map_err(|err| format!("failed to read confirmation [{err}]"))?;
+    Ok(line.trim() == word)
+}
+
+fn target_mode(target: &Target) -> &'static str {
+    match target {
+        Target::Blip(_) => MODE_BLIP,
+        Target::Brownout(_) => MODE_BROWNOUT,
+        Target::Blackout => MODE_BLACKOUT,
+    }
+}
+
+fn target_hold(target: &Target) -> Duration {
+    match target {
+        Target::Blip(hold) | Target::Brownout(hold) => *hold,
+        Target::Blackout => Duration::ZERO,
+    }
 }
 
 fn drive(
@@ -1030,13 +1135,6 @@ fn drive(
     Ok(())
 }
 
-pub fn end_row_in(table: &Table) -> Option<u64> {
-    let row = table.rows.last()?;
-    let restore = table.cell(row, metrics::GUARD_RESTORE_MAINS).parse::<u64>().ok()?;
-    let mains = table.cell(row, metrics::GUARD_MAINS_SECONDS).parse::<u64>().ok()?;
-    Some(restore.saturating_sub(mains))
-}
-
 fn follow_over(restored: Option<Instant>, follow: Option<Duration>) -> bool {
     matches!((restored, follow), (Some(at), Some(limit)) if at.elapsed() >= limit)
 }
@@ -1075,115 +1173,6 @@ fn run_detail(table: &Table) -> String {
     stats.detail("open", shed.len())
 }
 
-pub fn run_issues(table: &Table, target: &Target, abort_volts: f64, followed: bool) -> Vec<(&'static str, String)> {
-    let end = table.rows.iter().find(|row| table.cell(row, COLUMN_EVENT) == EVENT_END);
-    let detail = run_detail(table);
-    let field = |name: &str| report::field(&detail, name);
-    let mut issues = Vec::new();
-    match end {
-        None if !followed => issues.push(("run open", "the main program finishes it".to_string())),
-        Some(_) if field("reason") != "restored" => issues.push(("run ended", format!("reason {}", field("reason")))),
-        _ => {}
-    }
-    let shed = field("hosts_shed").parse::<u64>().unwrap_or(0);
-    if shed > 0 && matches!(target, Target::Blip(_)) {
-        issues.push(("hosts shed", format!("{shed} during a blip-watch")));
-    }
-    if let Ok(minimum) = field("battery_min_volts").parse::<f64>() {
-        if minimum - abort_volts < ABORT_MARGIN_VOLTS {
-            issues.push((
-                "volts margin",
-                format!(
-                    "{:.1}V under the {ABORT_MARGIN_VOLTS:.1}V margin to the abort volts {abort_volts:.1}V",
-                    minimum - abort_volts
-                ),
-            ));
-        }
-    }
-    if field("battery_low") == "1" {
-        issues.push(("low battery", "the UPS raised its flag".to_string()));
-    }
-    for row in table
-        .rows
-        .iter()
-        .filter(|row| table.cell(row, COLUMN_EVENT) == EVENT_COMMAND)
-    {
-        let command = table.cell(row, COLUMN_DETAIL);
-        if report::field(command, "status") != "0" {
-            issues.push((
-                "host command",
-                format!(
-                    "{} status {}",
-                    report::field(command, "host"),
-                    report::field(command, "status")
-                ),
-            ));
-        }
-    }
-    let samples: Vec<&Vec<String>> = table
-        .rows
-        .iter()
-        .filter(|row| table.cell(row, COLUMN_EVENT).is_empty())
-        .collect();
-    let missing = samples
-        .iter()
-        .filter(|row| table.cell(row, PLUG_WATTS).is_empty())
-        .count();
-    if missing * 100 > samples.len() {
-        issues.push(("plug watts", format!("missing on {missing} of {} rows", samples.len())));
-    }
-    issues
-}
-
-pub fn run_summary(table: &Table, target: &Target, abort_volts: f64, followed: bool) -> Vec<(Level, String)> {
-    let end = table.rows.iter().find(|row| table.cell(row, COLUMN_EVENT) == EVENT_END);
-    let detail = run_detail(table);
-    let field = |name: &str| report::field(&detail, name);
-    let value = |name: &str, unit: &str| {
-        let value = field(name);
-        if value.is_empty() {
-            "unknown".to_string()
-        } else {
-            format!("{value}{unit}")
-        }
-    };
-    let mut lines = vec![
-        log_line("drill result", if end.is_some() { field("reason") } else { "open" }),
-        log_line("drill seconds on battery", &value("seconds_on_battery", "s")),
-        log_line("drill battery volts min", &value("battery_min_volts", "V")),
-        log_line("drill battery volts min at", &value("battery_min_at", "")),
-        log_line("drill battery volts last", &value("battery_last_volts", "V")),
-        log_line(
-            "drill abort volts margin",
-            &field("battery_min_volts").parse::<f64>().map_or_else(
-                |_| "unknown".to_string(),
-                |minimum| format!("{:.1}V", minimum - abort_volts),
-            ),
-        ),
-        log_line("drill load peak", &value("utilisation_peak_pct", "%")),
-        log_line("drill load mean", &value("utilisation_mean_pct", "%")),
-        log_change(
-            "drill charge",
-            &value("charge_start_pct", "%"),
-            &value("charge_end_pct", "%"),
-        ),
-        log_line("drill hosts shed", &value("hosts_shed", "")),
-    ]
-    .into_iter()
-    .map(|line| (Level::Info, line))
-    .collect::<Vec<_>>();
-    let issues = run_issues(table, target, abort_volts, followed);
-    if issues.is_empty() {
-        lines.push((Level::Info, log_line("drill issues", "none")));
-    }
-    lines.extend(
-        issues
-            .iter()
-            .map(|(tag, detail)| (Level::Warn, log_line(&format!("drill issue {tag}"), detail))),
-    );
-    lines
-}
-
 fn abort(env: &Env, marker: &Marker, marker_path: &Path, outage_dir: &Path, stem: &str, cut: bool) -> ExitError {
     say(Level::Warn, &log_line("drill signalled", "restoring mains first"));
     if cut || env.plug.command("Rule1", PLUG_COMMAND_TIMEOUT).is_ok() {
@@ -1192,7 +1181,7 @@ fn abort(env: &Env, marker: &Marker, marker_path: &Path, outage_dir: &Path, stem
         }
     }
     let mut aborted = marker.clone();
-    aborted.state = STATE_ABORTED.to_string();
+    aborted.state = MarkerState::Aborted;
     let _ = aborted.write(marker_path);
     say(Level::Warn, &log_line("drill aborted", "mains restored"));
     say(
@@ -1261,16 +1250,6 @@ fn stale(env: &Env) -> bool {
     })
 }
 
-pub fn deep_outage_end(table: &Table) -> Option<NaiveDateTime> {
-    let last = table.rows.last().filter(|_| table.ended())?;
-    let seconds = report::field(table.cell(last, COLUMN_DETAIL), "seconds_on_battery")
-        .parse::<u64>()
-        .ok()?;
-    (seconds >= RECHARGE_MIN_BATTERY_SECONDS)
-        .then(|| parse_stamp(table.cell(last, COLUMN_TIME)))
-        .flatten()
-}
-
 fn gather(env: &Env, liveness: &Liveness, outage_dir: &Path, marker_path: &Path) -> Assessment {
     let now = (env.clock)();
     let newest = outage::files(outage_dir)
@@ -1326,18 +1305,6 @@ fn gather(env: &Env, liveness: &Liveness, outage_dir: &Path, marker_path: &Path)
     }
 }
 
-pub fn confirm_typed(prompt: &str, word: &str) -> Result<bool, String> {
-    say(
-        Level::Warn,
-        &log_line("drill confirm", &format!("{prompt}, type {word} to continue")),
-    );
-    let mut line = String::new();
-    std::io::stdin()
-        .read_line(&mut line)
-        .map_err(|err| format!("failed to read confirmation [{err}]"))?;
-    Ok(line.trim() == word)
-}
-
 fn install_signal_handlers() {
     extern "C" fn handler(_: libc::c_int) {
         SIGNALLED.store(true, Ordering::SeqCst);
@@ -1348,6 +1315,70 @@ fn install_signal_handlers() {
         }
     }
 }
+
+pub const FILE_MARKER: &str = "drill.json";
+
+pub const MODE_BLIP: &str = "blip-watch";
+
+pub const MODE_BROWNOUT: &str = "brownout-shed-wake";
+
+pub const MODE_BLACKOUT: &str = "blackout-shed";
+
+pub const PLUG_PORT: u16 = 80;
+
+pub const PLUG_SAMPLE_TIMEOUT: Duration = Duration::from_millis(500);
+
+pub const PLUG_COMMAND_TIMEOUT: Duration = Duration::from_secs(5);
+
+pub const PLUG_SAMPLE_MAX_AGE: Duration = Duration::from_secs(2);
+
+const PLUG_SAMPLE_PERIOD: Duration = Duration::from_secs(1);
+
+const HTTP_LIMIT_BYTES: u64 = 65_536;
+
+pub const EXIT_ABORTED: u8 = 7;
+
+pub const EXIT_TIMEOUT: u8 = 4;
+
+pub const LEAD_IN: Duration = Duration::from_secs(60);
+
+pub const LEAD_IN_WATTS_WARN: i64 = 20;
+
+const ABORT_MARGIN_VOLTS: f64 = 0.5;
+
+pub const ACK_TIMEOUT: Duration = Duration::from_secs(10);
+
+pub const GUARD_STALE_MS: u64 = 3000;
+
+pub const AFTER_RESTORE_CAP: Duration = Duration::from_mins(30);
+
+pub const MARKER_MARGIN: Duration = Duration::from_mins(5);
+
+pub const DEADMAN_MARGIN: Duration = Duration::from_mins(5);
+
+pub const DEADMAN_BLACKOUT: Duration = Duration::from_hours(3);
+
+pub const HOLD_PAST_SHED: Duration = Duration::from_secs(120);
+
+pub const HOLD_CEILING: Duration = Duration::from_mins(30);
+
+pub const RECOVER_BEFORE_SHED: u64 = 30;
+
+pub const CUT_TO_BATTERY: Duration = Duration::from_secs(10);
+
+pub const RESTORE_VERIFY: Duration = Duration::from_secs(60);
+
+pub const RECHARGE_WARNING: Duration = Duration::from_hours(6);
+
+pub const RECHARGE_MIN_BATTERY_SECONDS: u64 = 300;
+
+const CONNECT_PROBE: Duration = Duration::from_secs(2);
+
+const BACKUP_WINDOW_FROM: NaiveTime = NaiveTime::from_hms_opt(0, 45, 0).unwrap();
+
+const BACKUP_WINDOW_TO: NaiveTime = NaiveTime::from_hms_opt(1, 45, 0).unwrap();
+
+static SIGNALLED: AtomicBool = AtomicBool::new(false);
 
 #[cfg(test)]
 pub mod mock {
@@ -1391,14 +1422,14 @@ mod tests {
 
     const STATUS: &str = r#"{"StatusSTS":{"POWER":"ON"},"StatusSNS":{"ENERGY":{"Today":0.512,"Voltage":241,"Current":0.371,"Power":89.6}}}"#;
 
-    fn marker(expires: &str, state: &str) -> Marker {
+    fn marker(expires: &str, state: MarkerState) -> Marker {
         Marker {
             id: "a".to_string(),
             mode: MODE_BROWNOUT.to_string(),
             hold_seconds: 240,
             planned_cut: "2026-01-01_00-00-00".to_string(),
             expires: expires.to_string(),
-            state: state.to_string(),
+            state,
         }
     }
 
@@ -2045,12 +2076,12 @@ mod tests {
             clock: || at("2026-01-01_12-00-00"),
             refuse_in_backup_window: true,
         };
-        let marker = marker("2026-01-01_14-00-00", STATE_ARMED);
+        let marker = marker("2026-01-01_14-00-00", MarkerState::Armed);
         let path = dir.join(DIR_STATE).join(FILE_MARKER);
         let error = abort(&env, &marker, &path, &dir.join(DIR_OUTAGE), "stem", true);
         assert_eq!(error.code, EXIT_ABORTED);
         assert_eq!(plug.sent.lock().unwrap().first().map(String::as_str), Some("Power On"));
-        assert_eq!(Marker::read(&path).unwrap().state, STATE_ABORTED);
+        assert_eq!(Marker::read(&path).unwrap().state, MarkerState::Aborted);
     }
 
     #[test]
@@ -2090,7 +2121,7 @@ mod tests {
         assert_eq!(run_stop(&env, never).unwrap_err().code, 1);
         assert!(!powered_on(&plug));
         let (plug, env) = rig(true);
-        marker("2026-01-01_14-00-00", STATE_ARMED)
+        marker("2026-01-01_14-00-00", MarkerState::Armed)
             .write(&dir.join(DIR_STATE).join(FILE_MARKER))
             .unwrap();
         run_stop(&env, never).unwrap();
@@ -2118,16 +2149,16 @@ mod tests {
     #[test]
     fn a_marker_is_live_only_while_armed_and_unexpired() {
         let now = parse_stamp("2026-01-01_00-10-00").unwrap();
-        assert!(marker("2026-01-01_00-20-00", STATE_ARMED).live(now));
-        assert!(!marker("2026-01-01_00-10-00", STATE_ARMED).live(now));
-        assert!(!marker("2026-01-01_00-20-00", STATE_ABORTED).live(now));
-        assert!(!marker("garbled", STATE_ARMED).live(now));
+        assert!(marker("2026-01-01_00-20-00", MarkerState::Armed).live(now));
+        assert!(!marker("2026-01-01_00-10-00", MarkerState::Armed).live(now));
+        assert!(!marker("2026-01-01_00-20-00", MarkerState::Aborted).live(now));
+        assert!(!marker("garbled", MarkerState::Armed).live(now));
     }
 
     #[test]
     fn a_marker_round_trips_and_a_garbled_one_reads_as_none() {
         let path = std::env::temp_dir().join(format!("rackmains-marker-{}.json", std::process::id()));
-        let original = marker("2026-01-01_00-20-00", STATE_ARMED);
+        let original = marker("2026-01-01_00-20-00", MarkerState::Armed);
         original.write(&path).unwrap();
         assert_eq!(Marker::read(&path), Some(original));
         fs::write(&path, "{").unwrap();

@@ -11,13 +11,6 @@ use serde::{Deserialize, Serialize};
 use crate::log_line;
 use crate::outage::write_replace;
 
-pub const FILE_LIVENESS: &str = "liveness.json";
-pub const WATCHDOG_LIMIT: Duration = Duration::from_secs(10);
-pub const WATCHDOG_TICK: Duration = Duration::from_secs(1);
-const UPTIME: &str = "/proc/uptime";
-
-static PROCESS_START: LazyLock<Instant> = LazyLock::new(Instant::now);
-
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
 pub struct Effective {
     pub guard_live: bool,
@@ -99,6 +92,16 @@ pub fn abort_on_stall(name: &str) {
     error!("{}", log_line("watchdog action", "aborting the process"));
     std::process::abort();
 }
+
+pub const FILE_LIVENESS: &str = "liveness.json";
+
+pub const WATCHDOG_LIMIT: Duration = Duration::from_secs(10);
+
+pub const WATCHDOG_TICK: Duration = Duration::from_secs(1);
+
+const UPTIME: &str = "/proc/uptime";
+
+static PROCESS_START: LazyLock<Instant> = LazyLock::new(Instant::now);
 
 #[cfg(test)]
 mod tests {

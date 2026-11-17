@@ -12,10 +12,6 @@ use rumqttc::{Client, Event, LastWill, MqttOptions, Outgoing, Packet, QoS};
 use crate::log_line;
 use crate::schema::{AVAILABILITY_OFFLINE, AVAILABILITY_ONLINE};
 
-const CHANNEL_CAPACITY: usize = 10;
-const RECONNECT_DELAY: Duration = Duration::from_secs(5);
-const RECONNECT_POLL: Duration = Duration::from_millis(100);
-
 #[derive(Debug)]
 pub enum Error {
     Mqtt(String),
@@ -51,10 +47,9 @@ pub struct MqttPublisher {
 }
 
 impl MqttPublisher {
-    pub fn new(host: &str, port: u16, token: &str, status_topic: &str) -> Result<Self> {
+    pub fn new(host: &str, port: u16, token: &str, status_topic: &str) -> Self {
         let mut options = MqttOptions::new("rackmains", host, port);
-        let has_token = !token.is_empty();
-        if has_token {
+        if !token.is_empty() {
             options.set_credentials("rackmains", token);
         }
         options.set_last_will(LastWill::new(
@@ -148,14 +143,14 @@ impl MqttPublisher {
             }
             debug!("{}", log_line("broker event loop", "stopped"));
         });
-        Ok(MqttPublisher {
+        MqttPublisher {
             client,
             shutdown,
             connected,
             handle: Some(handle),
             status_topic: status_topic.to_string(),
             retained,
-        })
+        }
     }
 
     pub fn wait_connected(&self, timeout: Duration) -> Result<()> {
@@ -206,28 +201,11 @@ impl Publisher for MqttPublisher {
     }
 }
 
-#[cfg(test)]
-pub mod mock {
-    use super::{Publisher, Result};
+const CHANNEL_CAPACITY: usize = 10;
 
-    #[derive(Default)]
-    pub struct MockPublisher {
-        pub messages: Vec<(String, Vec<u8>)>,
-    }
+const RECONNECT_DELAY: Duration = Duration::from_secs(5);
 
-    impl MockPublisher {
-        pub fn new() -> Self {
-            MockPublisher { messages: Vec::new() }
-        }
-    }
-
-    impl Publisher for MockPublisher {
-        fn publish(&mut self, topic: &str, payload: &[u8]) -> Result<()> {
-            self.messages.push((topic.to_string(), payload.to_vec()));
-            Ok(())
-        }
-    }
-}
+const RECONNECT_POLL: Duration = Duration::from_millis(100);
 
 #[cfg(test)]
 mod tests {
@@ -235,7 +213,7 @@ mod tests {
 
     #[test]
     fn closing_against_a_dead_broker_returns_well_inside_the_reconnect_delay() {
-        let mut publisher = MqttPublisher::new("127.0.0.1", 1, "", "rackmains/status").unwrap();
+        let mut publisher = MqttPublisher::new("127.0.0.1", 1, "", "rackmains/status");
         thread::sleep(Duration::from_millis(500));
         let started = Instant::now();
         let _ = publisher.close();

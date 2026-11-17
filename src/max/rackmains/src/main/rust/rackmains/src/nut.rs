@@ -4,35 +4,6 @@ use std::os::unix::net::UnixStream;
 use std::path::PathBuf;
 use std::time::Duration;
 
-pub const VARIABLE_STATUS: &str = "ups.status";
-pub const COMMAND_DUMP: &str = "DUMPALL";
-pub const LINE_DONE: &str = "DUMPDONE";
-pub const LINE_OK: &str = "DATAOK";
-pub const LINE_STALE: &str = "DATASTALE";
-pub const TOKEN_OB: &str = "OB";
-pub const TOKEN_OL: &str = "OL";
-pub const TOKEN_CHRG: &str = "CHRG";
-pub const TOKEN_DISCHRG: &str = "DISCHRG";
-pub const FULL_HOLD: Duration = Duration::from_secs(15);
-
-const WORDS: [(&str, &str); 15] = [
-    (TOKEN_OL, "on mains"),
-    (TOKEN_OB, "on battery"),
-    ("LB", "battery low"),
-    ("HB", "battery high"),
-    ("RB", "battery replace due"),
-    (TOKEN_CHRG, "charging"),
-    (TOKEN_DISCHRG, "discharging"),
-    ("CAL", "calibrating"),
-    ("OVER", "overloaded"),
-    ("BYPASS", "bypass"),
-    ("OFF", "output off"),
-    ("FSD", "forced shutdown"),
-    ("ALARM", "alarm"),
-    ("BOOST", "boosting"),
-    ("TRIM", "trimming"),
-];
-
 #[derive(Debug, Default)]
 pub struct Flow {
     charging: bool,
@@ -88,37 +59,6 @@ pub struct Sample {
     pub variable: &'static str,
     pub key: &'static str,
 }
-
-pub const SAMPLES: [Sample; 7] = [
-    Sample {
-        variable: "input.voltage",
-        key: crate::metrics::MAINS_INPUT_VOLTS,
-    },
-    Sample {
-        variable: "input.voltage.fault",
-        key: "rackmains_mains_input_fault_volts",
-    },
-    Sample {
-        variable: "output.voltage",
-        key: "rackmains_output_volts",
-    },
-    Sample {
-        variable: "output.frequency",
-        key: "rackmains_output_hertz",
-    },
-    Sample {
-        variable: "ups.load",
-        key: "rackmains_output_load_pct",
-    },
-    Sample {
-        variable: "battery.charge",
-        key: "rackmains_battery_charge_pct",
-    },
-    Sample {
-        variable: "battery.voltage",
-        key: "rackmains_battery_volts",
-    },
-];
 
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 pub struct Flags {
@@ -260,33 +200,74 @@ impl Source for Nut {
     }
 }
 
-#[cfg(test)]
-pub mod mock {
-    use std::collections::VecDeque;
+pub const VARIABLE_STATUS: &str = "ups.status";
 
-    use super::{Error, Reading, Result, Source};
+pub const COMMAND_DUMP: &str = "DUMPALL";
 
-    #[derive(Default)]
-    pub struct MockSource {
-        pub readings: VecDeque<Result<Reading>>,
-    }
+pub const LINE_DONE: &str = "DUMPDONE";
 
-    impl MockSource {
-        pub fn new() -> Self {
-            MockSource {
-                readings: VecDeque::new(),
-            }
-        }
-    }
+pub const LINE_OK: &str = "DATAOK";
 
-    impl Source for MockSource {
-        fn read(&mut self) -> Result<Reading> {
-            self.readings
-                .pop_front()
-                .unwrap_or_else(|| Err(Error::Read("no reading queued".to_string())))
-        }
-    }
-}
+pub const LINE_STALE: &str = "DATASTALE";
+
+pub const TOKEN_OB: &str = "OB";
+
+pub const TOKEN_OL: &str = "OL";
+
+pub const TOKEN_CHRG: &str = "CHRG";
+
+pub const TOKEN_DISCHRG: &str = "DISCHRG";
+
+pub const FULL_HOLD: Duration = Duration::from_secs(15);
+
+const WORDS: [(&str, &str); 15] = [
+    (TOKEN_OL, "on mains"),
+    (TOKEN_OB, "on battery"),
+    ("LB", "battery low"),
+    ("HB", "battery high"),
+    ("RB", "battery replace due"),
+    (TOKEN_CHRG, "charging"),
+    (TOKEN_DISCHRG, "discharging"),
+    ("CAL", "calibrating"),
+    ("OVER", "overloaded"),
+    ("BYPASS", "bypass"),
+    ("OFF", "output off"),
+    ("FSD", "forced shutdown"),
+    ("ALARM", "alarm"),
+    ("BOOST", "boosting"),
+    ("TRIM", "trimming"),
+];
+
+pub const SAMPLES: [Sample; 7] = [
+    Sample {
+        variable: "input.voltage",
+        key: crate::metrics::MAINS_INPUT_VOLTS,
+    },
+    Sample {
+        variable: "input.voltage.fault",
+        key: crate::metrics::MAINS_INPUT_FAULT_VOLTS,
+    },
+    Sample {
+        variable: "output.voltage",
+        key: crate::metrics::OUTPUT_VOLTS,
+    },
+    Sample {
+        variable: "output.frequency",
+        key: crate::metrics::OUTPUT_HERTZ,
+    },
+    Sample {
+        variable: "ups.load",
+        key: crate::metrics::UTILISATION,
+    },
+    Sample {
+        variable: "battery.charge",
+        key: crate::metrics::BATTERY_CHARGE_PCT,
+    },
+    Sample {
+        variable: "battery.voltage",
+        key: crate::metrics::BATTERY_VOLTS,
+    },
+];
 
 #[cfg(test)]
 mod tests {

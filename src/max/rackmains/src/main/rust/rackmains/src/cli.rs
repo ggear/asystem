@@ -11,15 +11,6 @@ use log::{Level, LevelFilter};
 use crate::drill::{self, Env, Tasmota, Test, Timing};
 use crate::{check, init_logging, log_line, parse_duration, report, say, serve, DEFAULT_DEVICE, LEVEL_NAMES};
 
-pub const DEFAULT_DATA_DIR: &str = "/asystem/mnt";
-pub const DEFAULT_MODEL_DIR: &str = "/asystem/etc/model";
-pub const DEFAULT_HOSTS_FILE: &str = "/asystem/etc/hosts.json";
-pub const DEFAULT_SSH_KEY: &str = "/asystem/ssh/id_rsa";
-pub const DEFAULT_KNOWN_HOSTS: &str = "/asystem/ssh/known_hosts";
-pub const DEFAULT_RUN_DIR: &str = "/run/rackmains";
-pub const DEFAULT_PLUG_HOST: &str = "10.0.4.102";
-const LIST_LIMIT: usize = 20;
-
 #[derive(Debug)]
 pub struct ExitError {
     pub code: u8,
@@ -182,6 +173,21 @@ pub struct CommonArgs {
     pub plug_host: String,
 }
 
+impl CommonArgs {
+    pub fn check_target<'a>(&'a self, data_dir: &'a Path, timeout: Duration) -> check::Target<'a> {
+        check::Target {
+            model_dir: Path::new(&self.model_dir),
+            hosts_file: Path::new(&self.hosts_file),
+            local_host: &self.local_host,
+            ssh_key: Path::new(&self.ssh_key),
+            known_hosts: Path::new(&self.known_hosts),
+            data_dir,
+            device: Path::new(&self.device),
+            timeout,
+        }
+    }
+}
+
 #[derive(Debug, Args)]
 pub struct ServeArgs {
     #[arg(
@@ -273,7 +279,7 @@ impl Cli {
         let data_dir = Path::new(&self.data_dir);
         match &self.command {
             Commands::Serve(args) => serve::run(args, data_dir).map_err(ExitError::from),
-            Commands::Check(common) => run_check(common, data_dir),
+            Commands::Check(common) => check(common, data_dir),
             Commands::Completions { shell } => {
                 clap_complete::generate(*shell, &mut Cli::command(), "rackmains", &mut std::io::stdout());
                 Ok(())
@@ -338,10 +344,7 @@ pub fn run_clean(data_dir: &Path, confirm: impl FnOnce(&str, &str) -> Result<boo
     if paths.is_empty() {
         say(
             Level::Info,
-            &log_line(
-                "outage clean",
-                &format!("nothing to delete under {}", data_dir.display()),
-            ),
+            &log_line("outage clean nothing to delete", &data_dir.display().to_string()),
         );
         return Ok(());
     }
@@ -382,18 +385,9 @@ pub fn run_clean(data_dir: &Path, confirm: impl FnOnce(&str, &str) -> Result<boo
     Ok(())
 }
 
-pub fn run_check(common: &CommonArgs, data_dir: &Path) -> Result<(), ExitError> {
+pub fn check(common: &CommonArgs, data_dir: &Path) -> Result<(), ExitError> {
     let timeout = parse_duration(&common.timeout)?;
-    let outcomes = check::run(&check::Target {
-        model_dir: Path::new(&common.model_dir),
-        hosts_file: Path::new(&common.hosts_file),
-        local_host: &common.local_host,
-        ssh_key: Path::new(&common.ssh_key),
-        known_hosts: Path::new(&common.known_hosts),
-        data_dir,
-        device: Path::new(&common.device),
-        timeout,
-    });
+    let outcomes = check::run(&common.check_target(data_dir, timeout));
     for outcome in &outcomes {
         match &outcome.result {
             Ok(detail) => {
@@ -419,6 +413,14 @@ pub fn run_check(common: &CommonArgs, data_dir: &Path) -> Result<(), ExitError> 
     }
 }
 
+pub fn init_serve_logging(args: &ServeArgs, period: Duration) {
+    init_logging(if period.is_zero() {
+        args.log_level.max(LevelFilter::Debug)
+    } else {
+        args.log_level
+    });
+}
+
 fn drill_env(common: &CommonArgs, data_dir: &Path) -> Env {
     Env {
         data_dir: data_dir.to_path_buf(),
@@ -435,13 +437,21 @@ fn drill_env(common: &CommonArgs, data_dir: &Path) -> Env {
     }
 }
 
-pub fn init_serve_logging(args: &ServeArgs, period: Duration) {
-    init_logging(if period.is_zero() {
-        args.log_level.max(LevelFilter::Debug)
-    } else {
-        args.log_level
-    });
-}
+pub const DEFAULT_DATA_DIR: &str = "/asystem/mnt";
+
+pub const DEFAULT_MODEL_DIR: &str = "/asystem/etc/model";
+
+pub const DEFAULT_HOSTS_FILE: &str = "/asystem/etc/hosts.json";
+
+pub const DEFAULT_SSH_KEY: &str = "/asystem/ssh/id_rsa";
+
+pub const DEFAULT_KNOWN_HOSTS: &str = "/asystem/ssh/known_hosts";
+
+pub const DEFAULT_RUN_DIR: &str = "/run/rackmains";
+
+pub const DEFAULT_PLUG_HOST: &str = "10.0.4.102";
+
+const LIST_LIMIT: usize = 20;
 
 #[cfg(test)]
 mod tests {
@@ -631,7 +641,7 @@ mod tests {
 
     #[test]
     fn clean_deletes_outage_files_only_when_idle_and_confirmed() {
-        use crate::drill::{Marker, FILE_MARKER, STATE_ABORTED, STATE_ARMED};
+        use crate::drill::{Marker, MarkerState, FILE_MARKER};
         use crate::metrics::{header, Frame};
         use crate::outage::{encode_row, file_name, row, DIR_OUTAGE, DIR_STATE};
         let dir = std::env::temp_dir().join(format!("rackmains-clean-{}", std::process::id()));
@@ -650,13 +660,13 @@ mod tests {
             }
             std::fs::write(outage.join(file_name(stem, 1)), text).unwrap();
         };
-        let marker = |state: &str| Marker {
+        let marker = |state: MarkerState| Marker {
             id: "a".to_string(),
             mode: "blip-watch".to_string(),
             hold_seconds: 90,
             planned_cut: "2999-01-01_00-00-00".to_string(),
             expires: "2999-01-01_00-10-00".to_string(),
-            state: state.to_string(),
+            state,
         };
         let never = |_: &str, _: &str| -> Result<bool, String> { panic!("no confirmation expected") };
         run_clean(&dir, never).unwrap();
@@ -664,12 +674,12 @@ mod tests {
         std::fs::write(outage.join("rackmains_call_2026-01-01_00-00-00_max_asleep.log"), "log").unwrap();
         std::fs::write(outage.join("rackmains_outage_2026-01-01_00-00-00_2.csv.tmp"), "junk").unwrap();
         std::fs::write(outage.join("notes.txt"), "keep").unwrap();
-        marker(STATE_ABORTED).write(&state.join(FILE_MARKER)).unwrap();
+        marker(MarkerState::Aborted).write(&state.join(FILE_MARKER)).unwrap();
         assert_eq!(run_clean(&dir, |_, word| Ok(word != "clean")).unwrap_err().code, 1);
         assert_eq!(std::fs::read_dir(&outage).unwrap().count(), 4);
-        marker(STATE_ARMED).write(&state.join(FILE_MARKER)).unwrap();
+        marker(MarkerState::Armed).write(&state.join(FILE_MARKER)).unwrap();
         assert_eq!(run_clean(&dir, never).unwrap_err().code, 1);
-        marker(STATE_ABORTED).write(&state.join(FILE_MARKER)).unwrap();
+        marker(MarkerState::Aborted).write(&state.join(FILE_MARKER)).unwrap();
         write("2026-01-02_00-00-00", false);
         assert_eq!(run_clean(&dir, never).unwrap_err().code, 1);
         assert!(outage.join(file_name("2026-01-02_00-00-00", 1)).exists());

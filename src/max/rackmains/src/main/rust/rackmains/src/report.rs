@@ -15,11 +15,9 @@ use crate::outage::{
 };
 use crate::{log_change, log_line, log_prefix, log_prefix_at};
 
-const TAIL_POLL: Duration = Duration::from_secs(1);
-const PROGRESS_SECONDS: u64 = 10;
-
 pub fn list(dir: &Path, limit: usize) -> Vec<String> {
-    let mut stems: Vec<String> = outage::files(dir).into_iter().map(|file| file.stem).collect();
+    let files = outage::files(dir);
+    let mut stems: Vec<&str> = files.iter().map(|file| file.stem.as_str()).collect();
     stems.dedup();
     let skip = stems.len().saturating_sub(limit);
     let rows: Vec<Vec<String>> = stems
@@ -27,11 +25,8 @@ pub fn list(dir: &Path, limit: usize) -> Vec<String> {
         .skip(skip)
         .rev()
         .map(|stem| {
-            let parts: Vec<OutageFile> = outage::files(dir)
-                .into_iter()
-                .filter(|file| file.stem == stem)
-                .collect();
-            summarise(&stem, &parts)
+            let parts: Vec<&OutageFile> = files.iter().filter(|file| file.stem == stem).collect();
+            summarise(stem, &parts)
         })
         .collect();
     let mut table = comfy_table::Table::new();
@@ -78,10 +73,6 @@ pub fn pairs(detail: &str) -> Vec<(String, String)> {
         rest = &rest[open + close + 1..];
     }
     found
-}
-
-fn words(key: &str) -> String {
-    key.replace('_', " ")
 }
 
 pub fn event_lines(event: &str, detail: &str) -> Vec<String> {
@@ -133,40 +124,6 @@ pub fn event_lines(event: &str, detail: &str) -> Vec<String> {
     }
 }
 
-pub fn progress_lines(table: &Table, row: &[String]) -> Vec<String> {
-    let shown = |name: &str, unit: &str| {
-        let value = table.cell(row, name);
-        if value.is_empty() {
-            "unknown".to_string()
-        } else {
-            format!("{value}{unit}")
-        }
-    };
-    let clock = |name: &str, limit: &str| {
-        let value = table.cell(row, name);
-        if value.is_empty() {
-            "unknown".to_string()
-        } else {
-            format!("{value} of {limit}", limit = table.cell(row, limit))
-        }
-    };
-    [
-        ("ups state", describe(table.cell(row, STATUS))),
-        ("output load pct", shown(UTILISATION, "")),
-        ("battery volts", shown(BATTERY_VOLTS, "")),
-        ("plug watts", shown(PLUG_WATTS, "")),
-        ("guard state", shown(GUARD_STATE, "")),
-        (
-            "guard battery seconds",
-            clock(GUARD_BATTERY_SECONDS, GUARD_SHED_BATTERY),
-        ),
-        ("guard mains seconds", clock(GUARD_MAINS_SECONDS, GUARD_RESTORE_MAINS)),
-    ]
-    .iter()
-    .map(|(label, value)| log_line(&format!("progress {label}"), value))
-    .collect()
-}
-
 #[derive(Debug, Default)]
 pub struct Progress {
     next: u64,
@@ -183,7 +140,37 @@ pub fn row_lines(table: &Table, row: &[String], progress: &mut Progress) -> Vec<
         return Vec::new();
     }
     progress.next = elapsed + PROGRESS_SECONDS;
-    let lines = progress_lines(table, row);
+    let shown = |name: &str| {
+        let value = table.cell(row, name);
+        if value.is_empty() {
+            "unknown".to_string()
+        } else {
+            value.to_string()
+        }
+    };
+    let clock = |name: &str, limit: &str| {
+        let value = table.cell(row, name);
+        if value.is_empty() {
+            "unknown".to_string()
+        } else {
+            format!("{value} of {limit}", limit = table.cell(row, limit))
+        }
+    };
+    let lines: Vec<String> = [
+        ("ups state", describe(table.cell(row, STATUS))),
+        ("output load pct", shown(UTILISATION)),
+        ("battery volts", shown(BATTERY_VOLTS)),
+        ("plug watts", shown(PLUG_WATTS)),
+        ("guard state", shown(GUARD_STATE)),
+        (
+            "guard battery seconds",
+            clock(GUARD_BATTERY_SECONDS, GUARD_SHED_BATTERY),
+        ),
+        ("guard mains seconds", clock(GUARD_MAINS_SECONDS, GUARD_RESTORE_MAINS)),
+    ]
+    .iter()
+    .map(|(label, value)| log_line(&format!("progress {label}"), value))
+    .collect();
     let changed = lines
         .iter()
         .enumerate()
@@ -251,11 +238,15 @@ pub fn tail(dir: &Path, file: Option<&Path>, follow: bool, out: &mut dyn Write) 
     }
 }
 
+fn words(key: &str) -> String {
+    key.replace('_', " ")
+}
+
 fn hms(seconds: u64) -> String {
     format!("{:02}h{:02}m{:02}s", seconds / 3600, seconds % 3600 / 60, seconds % 60)
 }
 
-fn summarise(stem: &str, parts: &[OutageFile]) -> Vec<String> {
+fn summarise(stem: &str, parts: &[&OutageFile]) -> Vec<String> {
     let mut rows = 0usize;
     let mut trigger = "outage";
     let mut test = String::new();
@@ -315,6 +306,10 @@ fn summarise(stem: &str, parts: &[OutageFile]) -> Vec<String> {
         result,
     ]
 }
+
+const TAIL_POLL: Duration = Duration::from_secs(1);
+
+const PROGRESS_SECONDS: u64 = 10;
 
 #[cfg(test)]
 mod tests {

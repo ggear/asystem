@@ -44,3 +44,35 @@ ${SERVICE_INSTALL}/image/backups.sh "\$@"
 
 EOF
 chmod +x /usr/local/bin/abackups
+if [ -d /etc/bash_completion.d ]; then
+  completion="$(mktemp)"
+  {
+    "${SERVICE_INSTALL}/supervisor" completion bash &&
+      cat <<EOF
+
+__supervisor_alias() {
+  local typed="\${COMP_WORDS[0]}" bin="${SERVICE_INSTALL}/supervisor" verb="\$1"
+  local words=("\${bin}" "\${verb}" "\${COMP_WORDS[@]:1}")
+  local line="\${bin} \${verb}\${COMP_LINE#"\${typed}"}"
+  local point=\$((COMP_POINT + \${#line} - \${#COMP_LINE}))
+  local COMP_WORDS=("\${words[@]}") COMP_CWORD=\$((COMP_CWORD + 1)) COMP_LINE="\${line}" COMP_POINT="\${point}"
+  __start_supervisor
+}
+_abackup() { __supervisor_alias backup; }
+_atop() { __supervisor_alias watch; }
+complete -o default -F _abackup abackup
+complete -o default -F _atop atop atops
+
+_abackups() {
+  local cur="\${COMP_WORDS[COMP_CWORD]}"
+  if [ "\${COMP_CWORD}" -eq 1 ]; then
+    mapfile -t COMPREPLY < <(compgen -W "start stop tail list clean help" -- "\${cur}")
+  elif [ "\${COMP_WORDS[1]}" = "start" ]; then
+    mapfile -t COMPREPLY < <(compgen -W "--scrub" -- "\${cur}")
+  fi
+}
+complete -F _abackups abackups
+EOF
+  } >"${completion}" && install -m 644 "${completion}" /etc/bash_completion.d/supervisor
+  rm -f "${completion}"
+fi

@@ -67,9 +67,10 @@ func newBackupModuleCmd(verb backupModuleVerb) *cobra.Command {
 
 func newBackupVerbCmd(verb backupVerb, opts *backupOptions) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   verb.use,
-		Short: verb.short,
-		Args:  cobra.MaximumNArgs(verb.arguments),
+		Use:       verb.use,
+		Short:     verb.short,
+		Args:      cobra.MaximumNArgs(verb.arguments),
+		ValidArgs: verb.choices,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			configPath, _ := cmd.Flags().GetString("config")
 			request := engine.BackupRequest{
@@ -144,6 +145,7 @@ type backupVerb struct {
 	command   engine.BackupCommand
 	use       string
 	short     string
+	choices   []string
 	arguments int
 }
 
@@ -152,7 +154,7 @@ var backupVerbs = []backupVerb{
 	{command: engine.BackupCommandStop, use: "stop [run-id]", short: "stop the active run, or the given run id", arguments: 1},
 	{command: engine.BackupCommandTail, use: "tail [run-id]", short: "follow the newest, or the given, run's progress", arguments: 1},
 	{command: engine.BackupCommandList, use: "list", short: "show the recent runs and their result"},
-	{command: engine.BackupCommandAuto, use: "auto [on|off]", short: "query or set the reaper's power-management switch", arguments: 1},
+	{command: engine.BackupCommandAuto, use: "auto [on|off]", short: "query or set the reaper's power-management switch", choices: []string{"on", "off"}, arguments: 1},
 	{command: engine.BackupCommandClean, use: "clean", short: "remove every run from the history and any unfinished scrub"},
 }
 

@@ -4,12 +4,6 @@ use serde::Serialize;
 
 use crate::metrics::{self, COLUMNS};
 
-pub const MODULE: &str = "rackmains";
-pub const KEY_TIMESTAMP: &str = "timestamp";
-pub const KEY_PERIOD_MS: &str = "period_ms";
-pub const AVAILABILITY_ONLINE: &str = "online";
-pub const AVAILABILITY_OFFLINE: &str = "offline";
-
 #[derive(Serialize, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
 pub enum Kind {
@@ -149,3 +143,13 @@ fn kind(kind: metrics::Kind) -> Kind {
         metrics::Kind::Text => Kind::Str,
     }
 }
+
+pub const MODULE: &str = "rackmains";
+
+pub const KEY_TIMESTAMP: &str = "timestamp";
+
+pub const KEY_PERIOD_MS: &str = "period_ms";
+
+pub const AVAILABILITY_ONLINE: &str = "online";
+
+pub const AVAILABILITY_OFFLINE: &str = "offline";

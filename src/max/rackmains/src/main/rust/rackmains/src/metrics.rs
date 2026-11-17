@@ -3,56 +3,6 @@ use std::collections::HashMap;
 use chrono::NaiveDate;
 use serde_json::{json, Map, Value};
 
-pub const BATTERY_AGE_DUE_DAYS: i64 = 1095;
-
-pub const COLUMN_TIME: &str = "time";
-pub const COLUMN_ELAPSED: &str = "elapsed_seconds";
-pub const COLUMN_EVENT: &str = "event";
-pub const COLUMN_DETAIL: &str = "detail";
-
-pub const MAINS_INPUT_VOLTS: &str = "rackmains_mains_input_volts";
-pub const BATTERY_LOW: &str = "rackmains_battery_low";
-pub const BATTERY_CHARGE_PCT: &str = "rackmains_battery_charge_pct";
-pub const BATTERY_REPLACE: &str = "rackmains_battery_replace_due";
-pub const BATTERY_CHARGING: &str = "rackmains_battery_charging";
-pub const UPS_PROBLEM: &str = "rackmains_ups_problem";
-pub const UPS_CALIBRATING: &str = "rackmains_ups_calibrating";
-pub const UPS_BOOST: &str = "rackmains_ups_boost";
-pub const UPS_TRIM: &str = "rackmains_ups_trim";
-pub const CLOCK: &str = "clock_epoch_seconds";
-pub const READ_FAILURES: &str = "rackmains_read_failures";
-pub const LAST_READ: &str = "rackmains_read_last_epoch_seconds";
-pub const BATTERY_AGE_DAYS: &str = "rackmains_battery_age_days";
-pub const BATTERY_AGE_DUE: &str = "rackmains_battery_age_due";
-pub const BATTERY_VOLTS: &str = "rackmains_battery_volts";
-pub const UTILISATION: &str = "rackmains_output_load_pct";
-pub const STATUS: &str = "rackmains_ups_status";
-pub const MAINS_PRESENT: &str = "rackmains_mains_present";
-pub const LAST_OUTAGE_SECONDS: &str = "rackmains_outage_last_duration_seconds";
-pub const LAST_OUTAGE_MIN_VOLTS: &str = "rackmains_outage_last_battery_min_volts";
-pub const LAST_OUTAGE_END: &str = "rackmains_outage_last_end_epoch_seconds";
-pub const GUARD_STATE: &str = "rackmains_guard_state";
-pub const GUARD_LIVE: &str = "rackmains_guard_live";
-pub const GUARD_MAINS_SECONDS: &str = "rackmains_guard_mains_seconds";
-pub const GUARD_BATTERY_SECONDS: &str = "rackmains_guard_battery_seconds";
-pub const GUARD_FAILED_HOSTS: &str = "rackmains_guard_failed_hosts";
-pub const GUARD_LAST_ACTION: &str = "rackmains_guard_last_action_result";
-pub const GUARD_SHED_BATTERY: &str = "rackmains_guard_shed_battery_seconds";
-pub const GUARD_RESTORE_MAINS: &str = "rackmains_guard_restore_mains_seconds";
-pub const GUARD_ABORT_BATTERY: &str = "rackmains_guard_abort_battery_volts";
-pub const GUARD_SHED_RUNTIME: &str = "rackmains_guard_shed_runtime_seconds";
-pub const BATTERY_ENERGY_REMAINING_PCT: &str = "rackmains_battery_energy_remaining_pct";
-pub const BATTERY_RUNTIME_REMAINING_SECONDS: &str = "rackmains_battery_runtime_remaining_seconds";
-pub const BATTERY_ENERGY_USED_WH: &str = "rackmains_battery_energy_used_wh";
-pub const MODEL_REFIT_DUE: &str = "rackmains_model_refit_due";
-pub const MODEL_REFIT_REASON_CODE: &str = "rackmains_model_refit_reason_code";
-pub const MODEL_STATE: &str = "rackmains_battery_state";
-pub const PLUG_POWER_STATE: &str = "rackmains_plug_power_state";
-pub const PLUG_WATTS: &str = "rackmains_plug_watts";
-pub const PLUG_VOLTS: &str = "rackmains_plug_volts";
-pub const PLUG_AMPS: &str = "rackmains_plug_amps";
-pub const PLUG_ENERGY: &str = "rackmains_plug_energy_today_wh";
-
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Kind {
     Float,
@@ -66,81 +16,6 @@ pub struct Column {
     pub mqtt: bool,
     pub declared: bool,
 }
-
-const fn column(name: &'static str, kind: Kind) -> Column {
-    Column {
-        name,
-        kind,
-        mqtt: true,
-        declared: true,
-    }
-}
-
-const fn later(name: &'static str, kind: Kind) -> Column {
-    Column {
-        name,
-        kind,
-        mqtt: true,
-        declared: false,
-    }
-}
-
-const fn recorded(name: &'static str, kind: Kind) -> Column {
-    Column {
-        name,
-        kind,
-        mqtt: false,
-        declared: false,
-    }
-}
-
-pub const COLUMNS: &[Column] = &[
-    column(CLOCK, Kind::Float),
-    column(READ_FAILURES, Kind::Int),
-    column(LAST_READ, Kind::Float),
-    column("rackmains_mains_input_volts", Kind::Float),
-    column("rackmains_mains_input_fault_volts", Kind::Float),
-    column("rackmains_output_volts", Kind::Float),
-    column("rackmains_output_hertz", Kind::Float),
-    column(UTILISATION, Kind::Int),
-    column(BATTERY_VOLTS, Kind::Float),
-    column(BATTERY_CHARGE_PCT, Kind::Int),
-    column(BATTERY_CHARGING, Kind::Int),
-    column(BATTERY_LOW, Kind::Int),
-    column(BATTERY_REPLACE, Kind::Int),
-    column(BATTERY_AGE_DAYS, Kind::Int),
-    column(BATTERY_AGE_DUE, Kind::Int),
-    later(BATTERY_ENERGY_REMAINING_PCT, Kind::Int),
-    later(BATTERY_RUNTIME_REMAINING_SECONDS, Kind::Int),
-    column(STATUS, Kind::Text),
-    column(MAINS_PRESENT, Kind::Int),
-    column(UPS_PROBLEM, Kind::Int),
-    column(UPS_CALIBRATING, Kind::Int),
-    column(UPS_BOOST, Kind::Int),
-    column(UPS_TRIM, Kind::Int),
-    column(LAST_OUTAGE_SECONDS, Kind::Int),
-    column(LAST_OUTAGE_MIN_VOLTS, Kind::Float),
-    column(LAST_OUTAGE_END, Kind::Float),
-    column(GUARD_STATE, Kind::Text),
-    column(GUARD_LIVE, Kind::Int),
-    column(GUARD_MAINS_SECONDS, Kind::Int),
-    column(GUARD_BATTERY_SECONDS, Kind::Int),
-    column(GUARD_FAILED_HOSTS, Kind::Text),
-    column(GUARD_LAST_ACTION, Kind::Text),
-    later(BATTERY_ENERGY_USED_WH, Kind::Float),
-    later(MODEL_REFIT_DUE, Kind::Int),
-    later(MODEL_REFIT_REASON_CODE, Kind::Int),
-    recorded(GUARD_SHED_BATTERY, Kind::Int),
-    recorded(GUARD_RESTORE_MAINS, Kind::Int),
-    recorded(GUARD_ABORT_BATTERY, Kind::Float),
-    recorded(GUARD_SHED_RUNTIME, Kind::Int),
-    recorded(MODEL_STATE, Kind::Text),
-    recorded(PLUG_POWER_STATE, Kind::Text),
-    recorded(PLUG_WATTS, Kind::Int),
-    recorded(PLUG_VOLTS, Kind::Int),
-    recorded(PLUG_AMPS, Kind::Float),
-    recorded(PLUG_ENERGY, Kind::Int),
-];
 
 #[derive(Clone, Default, Debug, PartialEq)]
 pub struct Frame {
@@ -204,7 +79,7 @@ impl Frame {
 
     pub fn merge_sticky(&mut self, other: &Frame) {
         for (name, value) in &other.values {
-            if sticky(name) {
+            if *name != MODEL_STATE && !name.starts_with("rackmains_plug_") {
                 self.values.insert(name, value.clone());
             }
         }
@@ -243,6 +118,33 @@ pub fn cell(value: &Value) -> String {
     }
 }
 
+const fn column(name: &'static str, kind: Kind) -> Column {
+    Column {
+        name,
+        kind,
+        mqtt: true,
+        declared: true,
+    }
+}
+
+const fn later(name: &'static str, kind: Kind) -> Column {
+    Column {
+        name,
+        kind,
+        mqtt: true,
+        declared: false,
+    }
+}
+
+const fn recorded(name: &'static str, kind: Kind) -> Column {
+    Column {
+        name,
+        kind,
+        mqtt: false,
+        declared: false,
+    }
+}
+
 fn kind(name: &str) -> Option<Kind> {
     COLUMNS
         .iter()
@@ -250,9 +152,153 @@ fn kind(name: &str) -> Option<Kind> {
         .map(|column| column.kind)
 }
 
-fn sticky(name: &str) -> bool {
-    name != MODEL_STATE && !name.starts_with("rackmains_plug_")
-}
+pub const BATTERY_AGE_DUE_DAYS: i64 = 1095;
+
+pub const COLUMN_TIME: &str = "time";
+
+pub const COLUMN_ELAPSED: &str = "elapsed_seconds";
+
+pub const COLUMN_EVENT: &str = "event";
+
+pub const COLUMN_DETAIL: &str = "detail";
+
+pub const MAINS_INPUT_VOLTS: &str = "rackmains_mains_input_volts";
+
+pub const MAINS_INPUT_FAULT_VOLTS: &str = "rackmains_mains_input_fault_volts";
+
+pub const OUTPUT_VOLTS: &str = "rackmains_output_volts";
+
+pub const OUTPUT_HERTZ: &str = "rackmains_output_hertz";
+
+pub const BATTERY_LOW: &str = "rackmains_battery_low";
+
+pub const BATTERY_CHARGE_PCT: &str = "rackmains_battery_charge_pct";
+
+pub const BATTERY_REPLACE: &str = "rackmains_battery_replace_due";
+
+pub const BATTERY_CHARGING: &str = "rackmains_battery_charging";
+
+pub const UPS_PROBLEM: &str = "rackmains_ups_problem";
+
+pub const UPS_CALIBRATING: &str = "rackmains_ups_calibrating";
+
+pub const UPS_BOOST: &str = "rackmains_ups_boost";
+
+pub const UPS_TRIM: &str = "rackmains_ups_trim";
+
+pub const CLOCK: &str = "clock_epoch_seconds";
+
+pub const READ_FAILURES: &str = "rackmains_read_failures";
+
+pub const LAST_READ: &str = "rackmains_read_last_epoch_seconds";
+
+pub const BATTERY_AGE_DAYS: &str = "rackmains_battery_age_days";
+
+pub const BATTERY_AGE_DUE: &str = "rackmains_battery_age_due";
+
+pub const BATTERY_VOLTS: &str = "rackmains_battery_volts";
+
+pub const UTILISATION: &str = "rackmains_output_load_pct";
+
+pub const STATUS: &str = "rackmains_ups_status";
+
+pub const MAINS_PRESENT: &str = "rackmains_mains_present";
+
+pub const LAST_OUTAGE_SECONDS: &str = "rackmains_outage_last_duration_seconds";
+
+pub const LAST_OUTAGE_MIN_VOLTS: &str = "rackmains_outage_last_battery_min_volts";
+
+pub const LAST_OUTAGE_END: &str = "rackmains_outage_last_end_epoch_seconds";
+
+pub const GUARD_STATE: &str = "rackmains_guard_state";
+
+pub const GUARD_LIVE: &str = "rackmains_guard_live";
+
+pub const GUARD_MAINS_SECONDS: &str = "rackmains_guard_mains_seconds";
+
+pub const GUARD_BATTERY_SECONDS: &str = "rackmains_guard_battery_seconds";
+
+pub const GUARD_FAILED_HOSTS: &str = "rackmains_guard_failed_hosts";
+
+pub const GUARD_LAST_ACTION: &str = "rackmains_guard_last_action_result";
+
+pub const GUARD_SHED_BATTERY: &str = "rackmains_guard_shed_battery_seconds";
+
+pub const GUARD_RESTORE_MAINS: &str = "rackmains_guard_restore_mains_seconds";
+
+pub const GUARD_ABORT_BATTERY: &str = "rackmains_guard_abort_battery_volts";
+
+pub const GUARD_SHED_RUNTIME: &str = "rackmains_guard_shed_runtime_seconds";
+
+pub const BATTERY_ENERGY_REMAINING_PCT: &str = "rackmains_battery_energy_remaining_pct";
+
+pub const BATTERY_RUNTIME_REMAINING_SECONDS: &str = "rackmains_battery_runtime_remaining_seconds";
+
+pub const BATTERY_ENERGY_USED_WH: &str = "rackmains_battery_energy_used_wh";
+
+pub const MODEL_REFIT_DUE: &str = "rackmains_model_refit_due";
+
+pub const MODEL_REFIT_REASON_CODE: &str = "rackmains_model_refit_reason_code";
+
+pub const MODEL_STATE: &str = "rackmains_battery_state";
+
+pub const PLUG_POWER_STATE: &str = "rackmains_plug_power_state";
+
+pub const PLUG_WATTS: &str = "rackmains_plug_watts";
+
+pub const PLUG_VOLTS: &str = "rackmains_plug_volts";
+
+pub const PLUG_AMPS: &str = "rackmains_plug_amps";
+
+pub const PLUG_ENERGY: &str = "rackmains_plug_energy_today_wh";
+
+pub const COLUMNS: &[Column] = &[
+    column(CLOCK, Kind::Float),
+    column(READ_FAILURES, Kind::Int),
+    column(LAST_READ, Kind::Float),
+    column(MAINS_INPUT_VOLTS, Kind::Float),
+    column(MAINS_INPUT_FAULT_VOLTS, Kind::Float),
+    column(OUTPUT_VOLTS, Kind::Float),
+    column(OUTPUT_HERTZ, Kind::Float),
+    column(UTILISATION, Kind::Int),
+    column(BATTERY_VOLTS, Kind::Float),
+    column(BATTERY_CHARGE_PCT, Kind::Int),
+    column(BATTERY_CHARGING, Kind::Int),
+    column(BATTERY_LOW, Kind::Int),
+    column(BATTERY_REPLACE, Kind::Int),
+    column(BATTERY_AGE_DAYS, Kind::Int),
+    column(BATTERY_AGE_DUE, Kind::Int),
+    later(BATTERY_ENERGY_REMAINING_PCT, Kind::Int),
+    later(BATTERY_RUNTIME_REMAINING_SECONDS, Kind::Int),
+    column(STATUS, Kind::Text),
+    column(MAINS_PRESENT, Kind::Int),
+    column(UPS_PROBLEM, Kind::Int),
+    column(UPS_CALIBRATING, Kind::Int),
+    column(UPS_BOOST, Kind::Int),
+    column(UPS_TRIM, Kind::Int),
+    column(LAST_OUTAGE_SECONDS, Kind::Int),
+    column(LAST_OUTAGE_MIN_VOLTS, Kind::Float),
+    column(LAST_OUTAGE_END, Kind::Float),
+    column(GUARD_STATE, Kind::Text),
+    column(GUARD_LIVE, Kind::Int),
+    column(GUARD_MAINS_SECONDS, Kind::Int),
+    column(GUARD_BATTERY_SECONDS, Kind::Int),
+    column(GUARD_FAILED_HOSTS, Kind::Text),
+    column(GUARD_LAST_ACTION, Kind::Text),
+    later(BATTERY_ENERGY_USED_WH, Kind::Float),
+    later(MODEL_REFIT_DUE, Kind::Int),
+    later(MODEL_REFIT_REASON_CODE, Kind::Int),
+    recorded(GUARD_SHED_BATTERY, Kind::Int),
+    recorded(GUARD_RESTORE_MAINS, Kind::Int),
+    recorded(GUARD_ABORT_BATTERY, Kind::Float),
+    recorded(GUARD_SHED_RUNTIME, Kind::Int),
+    recorded(MODEL_STATE, Kind::Text),
+    recorded(PLUG_POWER_STATE, Kind::Text),
+    recorded(PLUG_WATTS, Kind::Int),
+    recorded(PLUG_VOLTS, Kind::Int),
+    recorded(PLUG_AMPS, Kind::Float),
+    recorded(PLUG_ENERGY, Kind::Int),
+];
 
 #[cfg(test)]
 mod tests {

@@ -9,9 +9,6 @@ use crate::nut::Flags;
 use crate::outage::{DECISION_SHED, EVENT_DECISION};
 use crate::policy::Policy;
 
-pub const HOST_SHED_LAST: &str = "meg";
-const BLIND_RESTORE_FACTOR: u32 = 2;
-
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum State {
     Idle,
@@ -75,12 +72,6 @@ pub struct Output {
     pub calls: Vec<Call>,
     pub rows: Vec<Row>,
     pub ended: bool,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-enum Sequence {
-    Shed,
-    Restore,
 }
 
 pub struct Guard {
@@ -277,7 +268,12 @@ impl Guard {
         }
         if self.in_flight.is_empty() {
             match self.waves.pop_front() {
-                Some(wave) => self.dispatch(wave, out),
+                Some(wave) => {
+                    for call in wave {
+                        self.in_flight.insert(call.host.clone());
+                        out.calls.push(call);
+                    }
+                }
                 None => {
                     if self.sequence == Some(Sequence::Restore) {
                         self.sequence = None;
@@ -301,13 +297,6 @@ impl Guard {
         self.waves = self.plan(sequence);
         if sequence == Sequence::Shed {
             self.shed_started = true;
-        }
-    }
-
-    fn dispatch(&mut self, wave: Vec<Call>, out: &mut Output) {
-        for call in wave {
-            self.in_flight.insert(call.host.clone());
-            out.calls.push(call);
         }
     }
 
@@ -373,6 +362,16 @@ impl Guard {
         waves.into()
     }
 }
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Sequence {
+    Shed,
+    Restore,
+}
+
+pub const HOST_SHED_LAST: &str = "meg";
+
+const BLIND_RESTORE_FACTOR: u32 = 2;
 
 #[cfg(test)]
 mod tests {
