@@ -41,6 +41,10 @@ pub fn log_change(label: &str, from: &str, to: &str) -> String {
     format!("{leader:.<LOG_LABEL_WIDTH$} [{from}] to [{to}]")
 }
 
+pub fn log_seconds(seconds: impl std::fmt::Display) -> String {
+    format!("{seconds:>3}s")
+}
+
 pub fn log_prefix(level: log::Level) -> String {
     format!(
         "[{} {:<5}]",

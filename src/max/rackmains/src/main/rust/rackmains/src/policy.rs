@@ -3,6 +3,7 @@ use std::time::Duration;
 
 use serde_json::{Map, Value};
 
+use crate::log_seconds;
 use crate::model::battery::{load, Request, Response};
 use crate::model::loader::{Info, Model};
 
@@ -23,13 +24,13 @@ pub struct Estimate {
 impl Policy {
     pub fn fields(&self) -> Vec<(&'static str, String)> {
         vec![
-            ("shed battery", format!("{}s", self.shed_battery.as_secs())),
-            ("restore mains", format!("{}s", self.restore_mains.as_secs())),
+            ("shed battery", log_seconds(self.shed_battery.as_secs())),
+            ("restore mains", log_seconds(self.restore_mains.as_secs())),
             ("abort battery", format!("{}V", self.abort_battery)),
             (
                 "shed runtime",
                 self.shed_runtime
-                    .map_or_else(|| "none".to_string(), |runtime| format!("{}s", runtime.as_secs())),
+                    .map_or_else(|| "none".to_string(), |runtime| log_seconds(runtime.as_secs())),
             ),
         ]
     }

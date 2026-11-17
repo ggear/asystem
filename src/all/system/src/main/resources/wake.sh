@@ -282,6 +282,27 @@ else
 fi
 
 ################################################################################
+# Mount readiness
+################################################################################
+section "Mount readiness"
+for TARGET in "${MOUNTS[@]}"; do
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    log_info "+ ls [${TARGET}]"
+    continue
+  fi
+  DEADLINE=$((SECONDS + 5))
+  until timeout 5 ls -A "${TARGET}" >/dev/null 2>&1; do
+    if ((SECONDS >= DEADLINE)); then
+      log_warn "Mount [${TARGET}] not listable after [5] seconds, docker may start without it"
+      WARNED+=("not listable ${TARGET}")
+      continue 2
+    fi
+    sleep 1
+  done
+  log_debug "Mount [${TARGET}] ready"
+done
+
+################################################################################
 # Docker
 ################################################################################
 section "Docker"

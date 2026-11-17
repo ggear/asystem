@@ -28,7 +28,7 @@ use crate::outage::{
 use crate::policy::{self, load_model, Loaded, Policy};
 use crate::schema::{AVAILABILITY_ONLINE, KEY_PERIOD_MS, KEY_TIMESTAMP};
 use crate::shed::{self, load_hosts, DryRun, Finished, Runner, Ssh};
-use crate::{check, drill, log_change, log_line, parse_duration, STATE_TOPIC, STATUS_TOPIC};
+use crate::{check, drill, log_change, log_line, log_seconds, parse_duration, STATE_TOPIC, STATUS_TOPIC};
 
 pub struct Settings {
     pub period: Duration,
@@ -632,10 +632,15 @@ impl Poller {
             }
         {
             self.report_since = Duration::ZERO;
-            let shown = |name: &str| {
+            let shown = |name: &str, unit: &str| {
                 self.last.get(name).map_or_else(
                     || "unknown".to_string(),
-                    |value| value.as_str().map_or_else(|| value.to_string(), str::to_string),
+                    |value| {
+                        format!(
+                            "{}{unit}",
+                            value.as_str().map_or_else(|| value.to_string(), str::to_string)
+                        )
+                    },
                 )
             };
             let state = self
@@ -646,17 +651,17 @@ impl Poller {
             for (label, value) in [
                 ("ups read failures", self.read_failures_total.to_string()),
                 ("ups state", state),
-                ("mains input volts", shown(metrics::MAINS_INPUT_VOLTS)),
-                ("output load pct", shown(metrics::UTILISATION)),
-                ("battery volts", shown(metrics::BATTERY_VOLTS)),
-                ("battery charge pct", shown(metrics::BATTERY_CHARGE_PCT)),
+                ("mains input volts", shown(metrics::MAINS_INPUT_VOLTS, "V")),
+                ("output load pct", shown(metrics::UTILISATION, "%")),
+                ("battery volts", shown(metrics::BATTERY_VOLTS, "V")),
+                ("battery charge pct", shown(metrics::BATTERY_CHARGE_PCT, "%")),
                 (
                     "battery remaining",
                     self.last
                         .number(metrics::BATTERY_RUNTIME_REMAINING_SECONDS)
-                        .map_or_else(|| "unknown".to_string(), |seconds| format!("{}s", seconds as i64)),
+                        .map_or_else(|| "unknown".to_string(), |seconds| log_seconds(seconds as i64)),
                 ),
-                ("guard state", shown(metrics::GUARD_STATE)),
+                ("guard state", shown(metrics::GUARD_STATE, "")),
             ] {
                 info!("{}", log_line(&format!("progress {label}"), &value));
             }
@@ -751,7 +756,7 @@ pub fn run(args: &ServeArgs, data_dir: &Path) -> Result<(), String> {
     } else {
         let age = metrics::battery_age_days(&args.battery_installed, Local::now().date_naive())?;
         info!("{}", log_line("battery installed", &args.battery_installed));
-        info!("{}", log_line("battery age days", &age.to_string()));
+        info!("{}", log_line("battery age days", &format!("{age}d")));
     }
     let (loaded, policy) = load_model(Path::new(&common.model_dir))?;
     let model = loaded.info();
@@ -760,7 +765,7 @@ pub fn run(args: &ServeArgs, data_dir: &Path) -> Result<(), String> {
     info!(
         "{}",
         log_line(
-            "model version",
+            "guard model version",
             model.release_version.as_deref().unwrap_or("unreleased")
         )
     );

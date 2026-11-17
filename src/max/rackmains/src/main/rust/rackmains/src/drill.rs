@@ -24,7 +24,7 @@ use crate::outage::{
 };
 use crate::report;
 use crate::shed::load_hosts;
-use crate::{log_change, log_line, say};
+use crate::{log_change, log_line, log_seconds, say};
 use log::Level;
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -417,46 +417,48 @@ pub fn plan_lines(
         ),
     ];
     if *target != Target::Blackout {
-        lines.push(log_line("drill hold", &format!("{hold}s")));
+        lines.push(log_line("drill test hold", &log_seconds(hold)));
         lines.push(log_line(
-            "drill follow",
-            &follow.map_or_else(|| "end".to_string(), |follow| format!("{}s", follow.as_secs())),
+            "drill test follow",
+            &follow.map_or_else(|| "end".to_string(), |follow| log_seconds(follow.as_secs())),
         ));
     }
     lines.extend([
-        log_line(
-            "drill restore period",
-            &format!("{}s", effective.guard_restore_mains_seconds),
-        ),
-        log_line("drill deadman", &format!("{}s", deadman_seconds(target))),
+        log_line("drill plug deadman", &log_seconds(deadman_seconds(target))),
         log_line("drill plug host", plug_host),
-        log_line("guard live", &u8::from(effective.guard_live).to_string()),
+        log_line("drill guard live", &u8::from(effective.guard_live).to_string()),
+        log_line("drill guard model version", &effective.model_version),
+        log_line("drill guard shed battery seconds", &log_seconds(shed)),
         log_line(
-            "guard model",
-            &format!("{} {}", effective.model_name, effective.model_version),
-        ),
-        log_line("guard shed battery seconds", &shed.to_string()),
-        log_line(
-            "guard restore mains seconds",
-            &effective.guard_restore_mains_seconds.to_string(),
+            "drill guard restore mains seconds",
+            &log_seconds(effective.guard_restore_mains_seconds),
         ),
         log_line(
-            "guard abort battery volts",
-            &effective.guard_abort_battery_volts.to_string(),
+            "drill guard abort battery volts",
+            &format!("{}V", effective.guard_abort_battery_volts),
         ),
-        log_line("guard shed order", &effective.shed_order.join(",")),
-        log_line("drill timeline lead-in", &format!("T-{}s", LEAD_IN.as_secs())),
-        log_line("drill timeline plug off", "T+0s"),
+        log_line("drill guard shed order", &effective.shed_order.join(",")),
+        log_line(
+            "drill timeline lead-in",
+            &format!("T-{}", log_seconds(LEAD_IN.as_secs())),
+        ),
+        log_line("drill timeline plug off", &format!("T+{}", log_seconds(0))),
     ]);
     if matches!(target, Target::Brownout(_) | Target::Blackout) {
-        lines.push(log_line("drill timeline shed", &format!("T+{shed}s")));
+        lines.push(log_line("drill timeline shed", &format!("T+{}", log_seconds(shed))));
     }
     match target {
         Target::Blip(hold) | Target::Brownout(hold) => {
-            lines.push(log_line("drill timeline plug on", &format!("T+{}s", hold.as_secs())));
+            lines.push(log_line(
+                "drill timeline plug on",
+                &format!("T+{}", log_seconds(hold.as_secs())),
+            ));
             lines.push(log_line(
                 "drill timeline awake",
-                &format!("T+{}s", hold.as_secs() + effective.guard_restore_mains_seconds),
+                &format!(
+                    "T+{}",
+                    log_seconds(hold.as_secs() + effective.guard_restore_mains_seconds)
+                ),
             ));
         }
         Target::Blackout => lines.push(log_line(
@@ -469,7 +471,7 @@ pub fn plan_lines(
         lines.push((
             Level::Warn,
             log_line(
-                "drill warning",
+                "drill test warning",
                 "the guard is in dry-run, the test proves nothing about the shed",
             ),
         ));
@@ -478,13 +480,13 @@ pub fn plan_lines(
         assessment
             .refusals
             .iter()
-            .map(|refusal| (Level::Error, log_line("drill refused", refusal))),
+            .map(|refusal| (Level::Error, log_line("drill test refused", refusal))),
     );
     lines.extend(
         assessment
             .warnings
             .iter()
-            .map(|warning| (Level::Warn, log_line("drill warning", warning))),
+            .map(|warning| (Level::Warn, log_line("drill test warning", warning))),
     );
     lines
 }
@@ -621,7 +623,7 @@ pub fn run_drill(env: &Env, test: Test, hold: Option<&str>, follow: Option<&str>
     if !cut {
         say(
             Level::Info,
-            &log_line("drill plan only", "nothing was cut, run start to cut"),
+            &log_line("drill test plan only", "nothing was cut, run start to cut"),
         );
         return Ok(());
     }
@@ -684,7 +686,7 @@ pub fn run_stop(env: &Env, confirm: impl FnOnce(&str, &str) -> Result<bool, Stri
     say(
         Level::Info,
         &log_line(
-            "drill marker",
+            "drill test marker",
             &marker
                 .as_ref()
                 .map_or_else(|| "none".to_string(), |marker| marker.state.to_string()),
@@ -707,7 +709,10 @@ pub fn run_stop(env: &Env, confirm: impl FnOnce(&str, &str) -> Result<bool, Stri
             Some(_) => {
                 say(
                     Level::Info,
-                    &log_line("drill stop", "no drill is running and the plug is on, nothing changed"),
+                    &log_line(
+                        "drill test stop",
+                        "no drill is running and the plug is on, nothing changed",
+                    ),
                 );
                 return Ok(());
             }
@@ -733,7 +738,7 @@ pub fn run_stop(env: &Env, confirm: impl FnOnce(&str, &str) -> Result<bool, Stri
     say(
         Level::Info,
         &log_line(
-            "drill awake",
+            "drill test awake",
             "the main program runs it after the restore period of mains",
         ),
     );
@@ -840,39 +845,50 @@ pub fn run_summary(table: &Table, target: &Target, abort_volts: f64, followed: b
             format!("{value}{unit}")
         }
     };
+    let seconds = |name: &str| {
+        let value = field(name);
+        if value.is_empty() {
+            "unknown".to_string()
+        } else {
+            log_seconds(value)
+        }
+    };
     let mut lines = vec![
-        log_line("drill result", if end.is_some() { field("reason") } else { "open" }),
-        log_line("drill seconds on battery", &value("seconds_on_battery", "s")),
+        log_line(
+            "drill test result",
+            if end.is_some() { field("reason") } else { "open" },
+        ),
+        log_line("drill outage battery seconds", &seconds("seconds_on_battery")),
         log_line("drill battery volts min", &value("battery_min_volts", "V")),
         log_line("drill battery volts min at", &value("battery_min_at", "")),
         log_line("drill battery volts last", &value("battery_last_volts", "V")),
         log_line(
-            "drill abort volts margin",
+            "drill battery volts margin",
             &field("battery_min_volts").parse::<f64>().map_or_else(
                 |_| "unknown".to_string(),
                 |minimum| format!("{:.1}V", minimum - abort_volts),
             ),
         ),
-        log_line("drill load peak", &value("utilisation_peak_pct", "%")),
-        log_line("drill load mean", &value("utilisation_mean_pct", "%")),
+        log_line("drill output load peak", &value("utilisation_peak_pct", "%")),
+        log_line("drill output load mean", &value("utilisation_mean_pct", "%")),
         log_change(
-            "drill charge",
+            "drill battery charge",
             &value("charge_start_pct", "%"),
             &value("charge_end_pct", "%"),
         ),
-        log_line("drill hosts shed", &value("hosts_shed", "")),
+        log_line("drill guard hosts shed", &value("hosts_shed", "")),
     ]
     .into_iter()
     .map(|line| (Level::Info, line))
     .collect::<Vec<_>>();
     let issues = run_issues(table, target, abort_volts, followed);
     if issues.is_empty() {
-        lines.push((Level::Info, log_line("drill issues", "none")));
+        lines.push((Level::Info, log_line("drill test issues", "none")));
     }
     lines.extend(
         issues
             .iter()
-            .map(|(tag, detail)| (Level::Warn, log_line(&format!("drill issue {tag}"), detail))),
+            .map(|(tag, detail)| (Level::Warn, log_line(&format!("drill test issue {tag}"), detail))),
     );
     lines
 }
@@ -890,7 +906,7 @@ pub fn deep_outage_end(table: &Table) -> Option<NaiveDateTime> {
 pub fn confirm_typed(prompt: &str, word: &str) -> Result<bool, String> {
     say(
         Level::Warn,
-        &log_line("drill confirm", &format!("{prompt}, type {word} to continue")),
+        &log_line("drill test confirm", &format!("{prompt}, type {word} to continue")),
     );
     let mut line = String::new();
     std::io::stdin()
@@ -935,7 +951,7 @@ fn drive(
     say(
         Level::Info,
         &log_line(
-            "drill acknowledged",
+            "drill test acknowledged",
             &file
                 .path
                 .file_name()
@@ -964,12 +980,12 @@ fn drive(
                 if let Some(window) = window {
                     say(
                         Level::Info,
-                        &log_line("drill lead-in plug watts median", &format!("{}W", window.median)),
+                        &log_line("drill plug lead-in watts median", &format!("{}W", window.median)),
                     );
                     say(
                         Level::Info,
                         &log_line(
-                            "drill lead-in plug watts range",
+                            "drill plug lead-in watts range",
                             &format!("{}W to {}W", window.low, window.high),
                         ),
                     );
@@ -977,7 +993,7 @@ fn drive(
                         say(
                             Level::Warn,
                             &log_line(
-                                "drill warning",
+                                "drill test warning",
                                 &format!(
                                     "plug watts moved {}W over {LEAD_IN_WATTS_WARN}W in the last {}s, the baseline is not settled, the cut goes ahead",
                                     window.high - window.low,
@@ -995,8 +1011,12 @@ fn drive(
                     say(
                         Level::Info,
                         &log_line(
-                            "drill lead-in",
-                            &format!("{}s of {}s", window.span, timing.lead_in.as_secs()),
+                            "drill test lead-in",
+                            &format!(
+                                "{} of {}",
+                                log_seconds(window.span),
+                                log_seconds(timing.lead_in.as_secs())
+                            ),
                         ),
                     );
                 }
@@ -1026,7 +1046,10 @@ fn drive(
         let _ = env.plug.command("Rule1 0", PLUG_COMMAND_TIMEOUT);
         return Err(ExitError::new(1, &format!("{problem}, nothing was cut")));
     }
-    say(Level::Info, &log_line("drill deadman armed", &format!("{seconds}s")));
+    say(
+        Level::Info,
+        &log_line("drill plug deadman armed", &log_seconds(seconds)),
+    );
     let off = env.plug.command("Power Off", PLUG_COMMAND_TIMEOUT);
     if off
         .as_ref()
@@ -1049,7 +1072,7 @@ fn drive(
             .skip(printed)
             .filter(|row| table.cell(row, COLUMN_EVENT) != EVENT_END)
         {
-            for line in report::row_lines(&table, row, &mut progress) {
+            for line in report::row_lines(&table, row, &mut progress, "drill ") {
                 say(Level::Info, &line);
             }
         }
@@ -1072,7 +1095,10 @@ fn drive(
                 hold_mark = held / 10;
                 say(
                     Level::Info,
-                    &log_line("drill hold", &format!("{held}s of {}s", hold.as_secs())),
+                    &log_line(
+                        "drill test hold",
+                        &format!("{} of {}", log_seconds(held), log_seconds(hold.as_secs())),
+                    ),
                 );
             }
             let volts_low = volts_aborted(&table, abort_volts);
@@ -1083,7 +1109,7 @@ fn drive(
                     say(
                         Level::Warn,
                         &log_line(
-                            "drill abort battery volts",
+                            "drill guard abort",
                             &format!(
                                 "{:.1}V at or under {abort_volts:.1}V, restoring mains",
                                 battery_volts(&table).unwrap_or_default()
@@ -1101,14 +1127,14 @@ fn drive(
             say(
                 Level::Info,
                 &log_line(
-                    "drill follow over",
+                    "drill test follow over",
                     &format!("{}s", follow.map_or(0, |follow| follow.as_secs())),
                 ),
             );
             say(
                 Level::Warn,
                 &log_line(
-                    "drill run open",
+                    "drill test run open",
                     &end_row_in(&table).map_or_else(
                         || "the guard writes the end row after the restore period of mains".to_string(),
                         |seconds| format!("the guard writes the end row in about {seconds}s"),
@@ -1117,7 +1143,10 @@ fn drive(
             );
             say(
                 Level::Info,
-                &log_line("drill run done when", "guard outage list shows the run as restored"),
+                &log_line(
+                    "drill test run done when",
+                    "guard outage list shows the run as restored",
+                ),
             );
             break;
         }
@@ -1174,7 +1203,7 @@ fn run_detail(table: &Table) -> String {
 }
 
 fn abort(env: &Env, marker: &Marker, marker_path: &Path, outage_dir: &Path, stem: &str, cut: bool) -> ExitError {
-    say(Level::Warn, &log_line("drill signalled", "restoring mains first"));
+    say(Level::Warn, &log_line("drill test signalled", "restoring mains first"));
     if cut || env.plug.command("Rule1", PLUG_COMMAND_TIMEOUT).is_ok() {
         if let Err(err) = restore_plug(env.plug.as_ref(), env.timing.poll) {
             return ExitError::new(1, &err);
@@ -1183,11 +1212,11 @@ fn abort(env: &Env, marker: &Marker, marker_path: &Path, outage_dir: &Path, stem
     let mut aborted = marker.clone();
     aborted.state = MarkerState::Aborted;
     let _ = aborted.write(marker_path);
-    say(Level::Warn, &log_line("drill aborted", "mains restored"));
+    say(Level::Warn, &log_line("drill test aborted", "mains restored"));
     say(
         Level::Info,
         &log_line(
-            "drill awake",
+            "drill test awake",
             "the main program runs it after the restore period of mains, following until the end row",
         ),
     );
@@ -1644,22 +1673,24 @@ mod tests {
                 .join("\n")
         };
         let brownout = || Target::Brownout(Duration::from_secs(240));
-        assert!(plan(brownout(), false).contains("WARN drill warning") && plan(brownout(), false).contains("dry-run"));
+        assert!(
+            plan(brownout(), false).contains("WARN drill test warning") && plan(brownout(), false).contains("dry-run")
+        );
         assert!(!plan(brownout(), true).contains("dry-run"));
         assert!(plan(brownout(), true).contains("drill timeline shed ") && plan(brownout(), true).contains("[T+120s]"));
         assert!(plan(brownout(), true).contains("restore and awake"));
         assert!(plan(Target::Blip(Duration::from_secs(60)), true).contains("only watches"));
         assert!(!plan(Target::Blip(Duration::from_secs(60)), true).contains("timeline shed"));
         assert!(plan(Target::Blackout, true).contains("UPS cutoff"));
-        assert!(!plan(Target::Blackout, true).contains("drill hold"));
+        assert!(!plan(Target::Blackout, true).contains("drill test hold"));
         let refused = Preflight {
             refusals: vec!["why".to_string()],
             warnings: Vec::new(),
         };
         let lines = plan_lines(&effective(), &Target::Blackout, None, &refused, "plug");
-        assert!(lines
-            .iter()
-            .any(|(level, line)| *level == Level::Error && line.contains("drill refused") && line.contains("[why]")));
+        assert!(lines.iter().any(|(level, line)| *level == Level::Error
+            && line.contains("drill test refused")
+            && line.contains("[why]")));
     }
 
     #[test]
@@ -1831,14 +1862,14 @@ mod tests {
             .collect();
         assert!(run_issues(&table(Some(good), &[], &rarely), &blip, 11.5, false).is_empty());
         let summary = run_summary(&table(Some(good), &[], &ok), &blip, 11.5, false);
-        assert!(summary.iter().any(|(_, line)| line.contains("drill issues")));
+        assert!(summary.iter().any(|(_, line)| line.contains("drill test issues")));
         assert!(!summary.iter().any(|(level, _)| *level == Level::Warn));
         assert!(run_summary(&table(None, &[], &ok), &blip, 11.5, true)
             .iter()
-            .any(|(_, line)| line.contains("drill result") && line.contains("[open]")));
+            .any(|(_, line)| line.contains("drill test result") && line.contains("[open]")));
         let warned = run_summary(&table(Some(close), &[], &ok), &blip, 11.5, false);
         assert!(warned.iter().any(|(level, line)| *level == Level::Warn
-            && line.contains("drill issue volts margin")
+            && line.contains("drill test issue volts margin")
             && line.contains("[0.3V")));
     }
 
@@ -1886,7 +1917,7 @@ mod tests {
             .any(|(_, line)| line.contains("drill battery volts min ") && line.contains("[11.8V]")));
         assert!(summary
             .iter()
-            .any(|(_, line)| line.contains("drill issue volts margin")));
+            .any(|(_, line)| line.contains("drill test issue volts margin")));
     }
 
     #[test]
