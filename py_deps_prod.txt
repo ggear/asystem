@@ -21,10 +21,10 @@ pyright==$PYRIGHT_VERSION
 datetime==6.0
 pytz==2026.6
 python-dateutil==4.0.0
-types-python-dateutil==2.9.0.20261104
+types-python-dateutil==2.9.0.20261116
 
 # Numeric/scientific
-numpy==2.5.4
+numpy==2.5.5
 scipy==1.18.1
 scikit-learn==1.9.1
 sortedcontainers==2.4.0
@@ -50,7 +50,7 @@ notebook==7.6.5
 pdftotext==4.0.0
 jupyterlab==4.6.6
 matplotlib==3.11.2
-virtualenv==21.15.6
+virtualenv==21.15.7
 matplotlib-inline==0.2.2
 mlflow==$MLFLOW_VERSION
 onnx==1.23.2
