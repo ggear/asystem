@@ -157,7 +157,8 @@ the 4 weekday ones of 19 and 20 Oct (found 27 Oct) with the 12 before them.
   the bank reversed.
   - **Check one** against the bank's export for the days between its two readings: a missing line of that amount is a true
     positive, so add it by hand on Drive; the error clears on the next run.
-  - **False positive, likely causes:** Redbark listing a transaction more than a week after the balance moved (raise
+  - **False positive, likely causes:** Redbark dating a charge up to `BALANCES_RECONCILE_LAG_DAYS` (3) after a linked balance that already
+    holds it (never a manual one) is tolerated as in flight unless that would pass the cap on those in flight, so one dated later than that raises it (raise the constant); Redbark listing a transaction more than a week after the balance moved (raise
     `BALANCES_RECONCILE_SETTLE_DAYS`); a pre-authorisation held in the balance for over a week then released (a break and its
     reversal, a few days apart, same amount); more than 16 transactions in flight on one day, where the check falls back to all or
     none (`BALANCES_RECONCILE_IN_FLIGHT`) and a break is raised as the warning `BALANCE_UNRECONCILED_UNJUDGED`, not an error: check it

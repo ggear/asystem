@@ -4,7 +4,7 @@ source "$(cd "$(dirname "$0")" && pwd)/../../../refresh_lib.sh"
 refresh_setup "$0"
 BANK_FILE_REGEX='.*/(redbark|manual)_(balances|transactions)_[0-9]{4}\.csv'
 
-# Download from the release Drive, sheet and live source into a clean cache, take its year files and exports, leaving out the caches and change logs, then
+# Download from the release Drive, sheet and live source into a clean cache, take its year files and exports and the latest of each sheet tab, leaving out the other caches and change logs, then
 # drop the current month's readings of the balances year file so the test always fetches a reading afresh; the transactions year files stay whole, since
 # rows Redbark no longer lists (drops, statement history, AMEX imports) exist only there and a trim would lose them
 rm -rf "${REPO_TEST_RUN_DIR}"
@@ -12,6 +12,9 @@ mkdir -p "${REPO_TEST_RUN_DIR}"
 refresh_run_plugin "$(dirname "${REPO_TEST_RUN_DIR}")" online
 find "${REPO_TEST_DIR}" -mindepth 1 ! -name '.git*' -delete
 find "${REPO_TEST_RUN_DIR}" -maxdepth 1 -type f -name '[!_]*' ! -name 'bank_reclassified_*' -exec cp -vpf {} "${REPO_TEST_DIR}"/ \;
+for SHEET in $(find "${REPO_TEST_RUN_DIR}" -maxdepth 1 -type f -name '_sheet_*_v*.csv' | sed -E 's/_v[0-9]+\.csv$//' | sort -u); do
+  cp -vpf "$(find "$(dirname "${SHEET}")" -maxdepth 1 -type f -name "$(basename "${SHEET}")_v*.csv" | sort -V | tail -1)" "${REPO_TEST_DIR}"/
+done
 refresh_python - "${REPO_TEST_DIR}" "$(date +%Y-%m-01)" <<'PYEOF'
 import os, sys
 import polars

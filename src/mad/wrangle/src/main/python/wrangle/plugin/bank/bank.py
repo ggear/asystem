@@ -137,6 +137,7 @@ BALANCES_MANUAL_TIME = "23:59:59"
 BALANCES_RECONCILE_DAYS = 35
 BALANCES_RECONCILE_SETTLE_DAYS = 7
 BALANCES_RECONCILE_IN_FLIGHT = 16
+BALANCES_RECONCILE_LAG_DAYS = 3
 BALANCES_BALANCE_FORMULA = '=IF({Balance Manual}<>"",{Balance Manual},{Balance Auto})'
 BALANCE_ID_NAMESPACE = uuid.uuid5(uuid.NAMESPACE_URL, "wrangle/balance/v2")
 BALANCES_KEY_COLUMNS = ["Date", "Time", "Account ID"]
@@ -2349,8 +2350,16 @@ class Bank(plugin.Plugin):
                     day = reading["Date"]
                     in_flight = account_postings_df.filter((pl.col("Date") <= day) & (pl.col("__posted") >= day))["__cents"].to_list()
                     capped = len(in_flight) > BALANCES_RECONCILE_IN_FLIGHT
+                    lagged = (
+                        []
+                        if reading["__manual"]
+                        else account_postings_df.filter((pl.col("Date") > day) & (pl.col("Date") <= day + timedelta(days=BALANCES_RECONCILE_LAG_DAYS)) & (pl.col("__posted") >= day))[
+                            "__cents"
+                        ].to_list()
+                    )
+                    candidates = in_flight if capped or len(in_flight) + len(lagged) > BALANCES_RECONCILE_IN_FLIGHT else in_flight + lagged
                     in_flight_sums = {0: 0}
-                    for cents in [sum(in_flight)] if capped else in_flight:
+                    for cents in [sum(in_flight)] if capped else candidates:
                         for total, count in list(in_flight_sums.items()):
                             in_flight_sums[total + cents] = min(in_flight_sums.get(total + cents, count + 1), count + 1)
                     applied = account_postings_df.filter(pl.col("__posted") < day)["__cents"].sum()

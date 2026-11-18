@@ -1372,6 +1372,32 @@ class WrangleTest(unittest.TestCase):
             },
         )
 
+    # A balance already holding a charge Redbark dated a couple of days later reconciles
+    def test_bank_local_partial_81(self):
+        self._bank_run(
+            "partial_81",
+            standing=2,
+            rerun=False,
+            file_asserts={
+                "__bank_logs.csv": [
+                    assert_file_column_values("Code", ["TRANSACTIONS_UNCLASSIFIED", "TRANSACTIONS_UNVETTED"], sort_by=["Code"]),
+                ],
+            },
+        )
+
+    # Charges dated after a reading are not let tip the check over its cap, so a real break stays an error
+    def test_bank_local_partial_82(self):
+        self._bank_run(
+            "partial_82",
+            standing=3,
+            rerun=False,
+            file_asserts={
+                "__bank_logs.csv": [
+                    assert_file_column_values("Code", ["BALANCE_UNRECONCILED", "TRANSACTIONS_UNCLASSIFIED", "TRANSACTIONS_UNVETTED"], sort_by=["Code"]),
+                ],
+            },
+        )
+
     # An HSBC transaction is dated by its Sydney day, other banks by Redbark's date
     def test_bank_local_partial_55(self):
         self._bank_run(
