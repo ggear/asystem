@@ -3,7 +3,7 @@
   "name": "rackmains_ups_battery",
   "flavour": "static",
   "model_id": 1000,
-  "constants": {"rackmains_guard_shed_battery_seconds": 120, "rackmains_guard_restore_mains_seconds": 300, "rackmains_guard_abort_battery_volts": 11.5},
+  "constants": {"rackmains_guard_shed_battery_seconds": 120, "rackmains_guard_restore_mains_seconds": 60, "rackmains_guard_abort_battery_volts": 11.5},
   "provenance": {"source": "static", "trained_on": "none", "inputs": [], "notes": "A conservative starting set of guard times, not fitted"},
-  "files": {"signature.json": "856bda2f9918e30e4fc3d50e874e6793f716e70c45d31814f5e1dd565eb5ad0e", "golden.json": "c3abd08edd0e41f85621a0f01a05eda36fe9c6deb52bc3997dcaa57caffa8b05"}
+  "files": {"signature.json": "856bda2f9918e30e4fc3d50e874e6793f716e70c45d31814f5e1dd565eb5ad0e", "golden.json": "224c1f0d68481f565fb6879a979cba8cb384889985ee06b06c4cb87cb40b154b"}
 }
