@@ -57,8 +57,8 @@
 #   field used_network_trend % 6s [network throughput used by the service against a 1000 Mbit per second budget, smoothed across the trend window]
 #   field up_time s 6s [time the service container has been running] (not persisted)
 #   field max_memory MiB 6s [memory ceiling configured for this service] (not persisted)
-#   field restart_count - 6s [restarts of the service container since it was created, by docker or by supervisor]
-#   field restart_count_trend - 6s [restarts of the service container since it was created, by docker or by supervisor, smoothed across the trend window]
+#   field restart_count - 6s [restarts of the service container in the last day, by docker or by supervisor]
+#   field restart_count_trend - 6s [restarts of the service container in the last day, by docker or by supervisor, smoothed across the trend window]
 #   field restart_attempts - 6s [restarts the restart plugin made of this service in the last day, red once the budget is spent]
 #   field restart_attempts_trend - 6s [restarts the restart plugin made of this service in the last day, red once the budget is spent, smoothed across the trend window]
 

@@ -1,6 +1,6 @@
 {
   "warning": "WARNING: This file is written by the build process, any manual edits will be lost!",
-  "source": "7b1afdf68d1e07cac71ce73b0b301250fccf6e9cf7bc2b324152db78f05910e8",
+  "source": "909636f56d28e045cb04eae45c48f9a20f67e1c2dcb899844674785e61c7fe21",
   "module": "supervisor",
   "discovered": false,
   "database": {
@@ -920,7 +920,7 @@
             "key": "restart_count",
             "kind": "float",
             "unit": "",
-            "description": "restarts of the service container since it was created, by docker or by supervisor",
+            "description": "restarts of the service container in the last day, by docker or by supervisor",
             "persist": true,
             "period": "",
             "levels": {
@@ -935,7 +935,7 @@
             "key": "restart_count_trend",
             "kind": "float",
             "unit": "",
-            "description": "restarts of the service container since it was created, by docker or by supervisor, smoothed across the trend window",
+            "description": "restarts of the service container in the last day, by docker or by supervisor, smoothed across the trend window",
             "persist": true,
             "period": "",
             "levels": {
