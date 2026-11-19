@@ -1,13 +1,14 @@
 # https://github.com/timescale/timescaledb/releases
-FROM timescale/timescaledb:2.31.0-pg18 AS image_upstream
+FROM timescale/timescaledb:2.32.0-pg18 AS image_upstream
 USER root
 RUN apk update && \
-    apk add --upgrade --no-cache bash=5.3.3-r1 && \
-    apk add --upgrade --no-cache coreutils=9.8-r1 && \
-    apk add --upgrade --no-cache less=685-r0 && \
-    apk add --upgrade --no-cache vim=9.2.1202-r0 && \
+    apk add --upgrade --no-cache bash=5.3.9-r1 && \
+    apk add --upgrade --no-cache coreutils=9.11-r0 && \
+    apk add --upgrade --no-cache less=702-r0 && \
+    apk add --upgrade --no-cache vim=9.2.1352-r0 && \
     (apk cache clean || true) && rm -rf /var/cache/apk/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
+ENV PATH=${PATH}:/asystem/bin
 
 FROM image_upstream AS image_base
 ENV TZ=Australia/Perth
