@@ -549,8 +549,7 @@ impl Poller {
         let gone = marker
             .as_ref()
             .is_none_or(|marker| marker.id != *id || !marker.live(naive));
-        let runtime = (naive - session.started).to_std().unwrap_or_default() >= self.policy.restore_mains;
-        if gone || runtime {
+        if gone {
             rows.push((EVENT_NOTE, format!("drill [{id}] ended before the cut")));
             *ended = true;
         }
@@ -1358,6 +1357,15 @@ mod tests {
         assert_eq!(events[0].0, "start");
         assert!(events[0].1.contains("drill [abc] mode [brownout-shed-wake]"));
         assert_eq!(events.len(), 3);
+    }
+
+    #[test]
+    fn a_drill_outside_the_restore_period_is_not_ended_while_its_marker_is_live() {
+        let mut rig = Rig::new("marker-lead-in");
+        rig.run("OL", 1);
+        marker(&rig, "abc", MarkerState::Armed);
+        rig.run("OL", 400);
+        assert!(rig.events().iter().all(|event| event.0 != "end"));
     }
 
     #[test]

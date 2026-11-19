@@ -36,6 +36,8 @@ RUN cd /asystem/bin/rackmains && cargo build --release --locked
 FROM image_upstream AS image_runtime
 COPY --from=image_base /asystem/bin/rackmains/target/release/rackmains /asystem/bin/rackmains
 COPY --from=image_base /asystem/bin/rackmains/target/release/mockdriver /asystem/bin/mockdriver
+RUN /asystem/bin/rackmains completions bash > /asystem/etc/rackmains.completion.bash && \
+    echo '. /asystem/etc/rackmains.completion.bash' >> /etc/bash.bashrc
 COPY src/main/resources/image /asystem/etc
 COPY src/build/resources/model/battery /asystem/etc/model
 WORKDIR /asystem/etc

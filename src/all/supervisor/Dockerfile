@@ -39,6 +39,8 @@ RUN CGO_ENABLED=0 GOFLAGS=-mod=readonly go build -trimpath -o /asystem/bin/super
 
 FROM image_upstream AS image_runtime
 COPY --from=image_build /asystem/bin/supervisor /asystem/bin/supervisor
+RUN /asystem/bin/supervisor completion bash > /asystem/etc/supervisor.completion.bash && \
+    echo '. /asystem/etc/supervisor.completion.bash' >> /etc/bash.bashrc
 COPY target/package/main/resources/image/. /asystem/etc
 WORKDIR /asystem/etc
 CMD ["/asystem/bin/supervisor", "serve", "-L", "info", "-c", "/asystem/etc/config.json"]
