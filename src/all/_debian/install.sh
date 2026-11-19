@@ -41,6 +41,7 @@ fi
 ################################################################################
 # Python
 ################################################################################
+apt-get install -y git build-essential
 if [ ! -d /root/.pyenv/.git ]; then
   rm -rf /root/.pyenv
   git clone https://github.com/pyenv/pyenv.git /root/.pyenv
