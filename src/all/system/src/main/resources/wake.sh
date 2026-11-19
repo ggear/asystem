@@ -113,10 +113,17 @@ try() {
 has() { command -v "$1" >/dev/null 2>&1; }
 
 startable() {
-  local unit
+  local unit dependency
   while read -r unit; do
     [[ -n "${unit}" ]] || continue
-    [[ "$(systemctl show --property=LoadState --value "${unit}" 2>/dev/null)" == "masked" ]] || printf '%s\n' "${unit}"
+    [[ "$(systemctl show --property=LoadState --value "${unit}" 2>/dev/null)" == "masked" ]] && continue
+    for dependency in $(systemctl show --property=Requires,BindsTo,Requisite --value "${unit}" 2>/dev/null); do
+      if [[ "$(systemctl show --property=LoadState --value "${dependency}" 2>/dev/null)" == "masked" ]]; then
+        log_debug "Unit [${unit}] left stopped, requires masked [${dependency}]" >&2
+        continue 2
+      fi
+    done
+    printf '%s\n' "${unit}"
   done
 }
 

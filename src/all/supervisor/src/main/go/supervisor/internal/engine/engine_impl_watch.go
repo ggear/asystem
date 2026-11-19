@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"sort"
+	"strconv"
 	"strings"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
@@ -157,6 +158,18 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Infof("observed", reviveStart, "[online] resub [%2d], retry [%2d] s", topics, int64(reconcileDelay.Seconds()))
 		return true
 	}
+	shown := func(detail *metric.ValueDataDetail) string {
+		if detail == nil {
+			return "nil"
+		}
+		return strconv.FormatBool(detail.OK)
+	}
+	abbreviated := func(name string) string {
+		if len(name) > 18 {
+			return name[:17] + "~"
+		}
+		return name
+	}
 	onData := func(client mqtt.Client, msg mqtt.Message) {
 		subscribedMu.Lock()
 		guid, known := subscribed[msg.Topic()]
@@ -190,6 +203,14 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		if value.Pulse == nil {
 			removeService(guid)
 			return
+		}
+		previous, _ := cache.Load(guid)
+		before := metric.NewNilValue()
+		if previous != nil {
+			before = previous.Value
+		}
+		if !before.Equal(&value) {
+			scribe.Log(scribe.SourceEngine, scribe.SubjectService(guid.ServiceName), scribe.ActionSubscribe).Debugf("recorded", streamStart, "[%-11.11s] [%-18s] pulse [%-5s] was [%-5s], trend [%-5s]", guid.Host, abbreviated(metric.GetIDName(guid.ID)), shown(value.Pulse), shown(before.Pulse), shown(value.Trend))
 		}
 		value.Timestamp = time.Now().Unix()
 		record := metric.NewRecord(value)

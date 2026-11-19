@@ -7,7 +7,7 @@ use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant, SystemTime};
 
-use chrono::{DateTime, Local, NaiveDateTime};
+use chrono::{DateTime, Local, NaiveDateTime, Timelike};
 use log::{debug, info, warn};
 use serde_json::{json, Map, Value};
 
@@ -202,8 +202,11 @@ impl Poller {
     //    12. Record Rows: the CSV rows for the writer thread
     //    13. Finish: close the session, send rows, liveness and progress
     pub fn tick(&mut self, dt: Duration, wall: DateTime<Local>) -> Result<(), String> {
-        let stamp = outage::stamp(wall);
-        let naive = wall.naive_local();
+        let wall_second = (wall + chrono::Duration::milliseconds(500))
+            .with_nanosecond(0)
+            .unwrap_or(wall);
+        let stamp = outage::stamp(wall_second);
+        let naive = wall_second.naive_local();
         let epoch = SystemTime::from(wall)
             .duration_since(SystemTime::UNIX_EPOCH)
             .map_or(0.0, |elapsed| elapsed.as_secs_f64());
@@ -387,7 +390,7 @@ impl Poller {
             let sample_row = WriterCommand::Row(outage::row(&stamp, elapsed, event, &detail, &sample));
             let event_rows = rows
                 .into_iter()
-                .map(|(event, detail)| WriterCommand::Row(outage::row(&stamp, elapsed, event, &detail, &self.last)));
+                .map(|(event, detail)| WriterCommand::Row(outage::row(&stamp, elapsed, event, &detail, &sample)));
             if start_detail.is_some() {
                 commands.push(sample_row);
                 commands.extend(event_rows);
@@ -403,6 +406,9 @@ impl Poller {
                 };
                 let mut end = self.last.clone();
                 sample_state(&mut end, &self.state_names, self.battery_state.as_ref());
+                if let Some(sampler) = &self.sampler {
+                    sampler.fill(&mut end);
+                }
                 let detail = session.stats.detail(reason, session.hosts_shed);
                 for (key, value) in
                     session
@@ -1348,6 +1354,30 @@ mod tests {
     }
 
     #[test]
+    fn the_elapsed_seconds_count_whole_seconds_when_the_poll_clock_jitters() {
+        let mut rig = Rig::new("elapsed-jitter");
+        let base = Local.with_ymd_and_hms(2026, 11, 12, 14, 0, 0).unwrap();
+        for (second, micros) in [0i64, 1, 2, 3, 4, 5, 6, 7]
+            .into_iter()
+            .zip([0i64, -70, 60, -40, 80, -90, 0, 50])
+        {
+            rig.readings
+                .lock()
+                .unwrap()
+                .push_back(Ok(reading("OB DISCHRG", "13.4")));
+            let wall = base + chrono::Duration::seconds(second) + chrono::Duration::microseconds(micros);
+            rig.poller.tick(Duration::from_secs(1), wall).unwrap();
+        }
+        let tables = rig.tables();
+        let elapsed: Vec<u64> = tables[0]
+            .rows
+            .iter()
+            .map(|row| tables[0].cell(row, "elapsed_seconds").parse().unwrap())
+            .collect();
+        assert_eq!(elapsed, vec![0, 1, 2, 3, 4, 5, 6, 7]);
+    }
+
+    #[test]
     fn a_marker_is_acked_by_opening_a_file_whose_start_row_carries_its_id() {
         let mut rig = Rig::new("marker-ack");
         rig.run("OL", 1);
@@ -1650,6 +1680,9 @@ mod tests {
         assert!(table
             .cell(table.rows.last().unwrap(), "detail")
             .contains("reason [restored]"));
+        assert!(!table
+            .cell(table.rows.last().unwrap(), "rackmains_plug_watts")
+            .is_empty());
     }
 
     #[test]

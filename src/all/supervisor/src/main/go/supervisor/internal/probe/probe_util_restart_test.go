@@ -23,7 +23,7 @@ type restartRig struct {
 	mutex   sync.Mutex
 }
 
-func newRestartRig(t *testing.T, mode string, policyText string) *restartRig {
+func newRestartRig(t *testing.T, policyText string) *restartRig {
 	t.Helper()
 	rig := &restartRig{t: t, clock: time.Date(2026, 11, 19, 12, 0, 0, 0, time.UTC), script: &restartScript{}}
 	install := t.TempDir()
@@ -48,7 +48,6 @@ func newRestartRig(t *testing.T, mode string, policyText string) *restartRig {
 		ledger:   newRestartLedger(filepath.Join(t.TempDir(), "ledger.json")),
 		checker:  restartChecker{run: rig.script.run, dial: func(string, time.Duration) error { return nil }, fstab: filepath.Join(t.TempDir(), "fstab")},
 		loader:   loader,
-		mode:     mode,
 		started:  rig.clock.Add(-time.Hour),
 		now:      func() time.Time { return rig.clock },
 		bootID:   func() string { return "boot-1" },
@@ -99,7 +98,6 @@ func (r *restartRig) restarted() []string {
 func TestProbeUtilRestart_Evaluate(t *testing.T) {
 	tests := []struct {
 		name            string
-		mode            string
 		policy          string
 		prepare         func(*restartRig)
 		steps           func(*restartRig) map[string]restartStatus
@@ -108,16 +106,7 @@ func TestProbeUtilRestart_Evaluate(t *testing.T) {
 		expectedAttempt int
 	}{
 		{
-			name: "observe_mode_decides_but_never_restarts_or_spends_an_attempt", mode: restartModeObserve,
-			steps: func(r *restartRig) map[string]restartStatus {
-				r.evaluate(r.observation("plex", "unhealthy"))
-				r.advance(3 * time.Minute)
-				return r.evaluate(r.observation("plex", "unhealthy"))
-			},
-			expectedState: metric.RestartStateWaiting, expectedRuns: nil, expectedAttempt: 0,
-		},
-		{
-			name: "act_mode_restarts_an_unhealthy_service_after_its_grace_and_counts_the_attempt", mode: restartModeAct,
+			name: "act_mode_restarts_an_unhealthy_service_after_its_grace_and_counts_the_attempt",
 			steps: func(r *restartRig) map[string]restartStatus {
 				r.evaluate(r.observation("plex", "unhealthy"))
 				r.advance(3 * time.Minute)
@@ -126,7 +115,7 @@ func TestProbeUtilRestart_Evaluate(t *testing.T) {
 			expectedState: metric.RestartStateRestarting, expectedRuns: []string{"plex"}, expectedAttempt: 1,
 		},
 		{
-			name: "a_healthy_service_is_never_restarted", mode: restartModeAct,
+			name: "a_healthy_service_is_never_restarted",
 			steps: func(r *restartRig) map[string]restartStatus {
 				r.advance(time.Hour)
 				return r.evaluate(r.observation("plex", "healthy"))
@@ -134,7 +123,7 @@ func TestProbeUtilRestart_Evaluate(t *testing.T) {
 			expectedState: metric.RestartStateOK, expectedRuns: nil, expectedAttempt: 0,
 		},
 		{
-			name: "a_host_that_is_asleep_or_waking_restarts_nothing", mode: restartModeAct,
+			name:    "a_host_that_is_asleep_or_waking_restarts_nothing",
 			prepare: func(r *restartRig) { r.engine.held = func() bool { return true } },
 			steps: func(r *restartRig) map[string]restartStatus {
 				r.evaluate(r.observation("plex", "unhealthy"))
@@ -144,7 +133,7 @@ func TestProbeUtilRestart_Evaluate(t *testing.T) {
 			expectedState: metric.RestartStateWaiting, expectedRuns: nil, expectedAttempt: 0,
 		},
 		{
-			name: "a_ledger_that_cannot_be_written_fails_closed", mode: restartModeAct,
+			name: "a_ledger_that_cannot_be_written_fails_closed",
 			prepare: func(r *restartRig) {
 				r.engine.ledger = newRestartLedger(filepath.Join(os.DevNull, "ledger.json"))
 			},
@@ -156,7 +145,7 @@ func TestProbeUtilRestart_Evaluate(t *testing.T) {
 			expectedState: metric.RestartStateWaiting, expectedRuns: nil, expectedAttempt: 0,
 		},
 		{
-			name: "unreadable_install_limits_fail_closed", mode: restartModeAct,
+			name: "unreadable_install_limits_fail_closed",
 			prepare: func(r *restartRig) {
 				r.engine.limit = func(string) (time.Duration, error) { return 0, os.ErrNotExist }
 			},
@@ -168,7 +157,7 @@ func TestProbeUtilRestart_Evaluate(t *testing.T) {
 			expectedState: metric.RestartStateWaiting, expectedRuns: nil, expectedAttempt: 0,
 		},
 		{
-			name: "a_restart_the_installer_skipped_is_refunded", mode: restartModeAct,
+			name:    "a_restart_the_installer_skipped_is_refunded",
 			prepare: func(r *restartRig) { r.runExit = restartExitSkipped },
 			steps: func(r *restartRig) map[string]restartStatus {
 				r.evaluate(r.observation("plex", "unhealthy"))
@@ -180,7 +169,7 @@ func TestProbeUtilRestart_Evaluate(t *testing.T) {
 			expectedState: metric.RestartStateRestarting, expectedRuns: []string{"plex", "plex"}, expectedAttempt: 1,
 		},
 		{
-			name: "only_one_service_is_restarted_per_pass_and_the_first_in_name_order_goes_first", mode: restartModeAct,
+			name: "only_one_service_is_restarted_per_pass_and_the_first_in_name_order_goes_first",
 			steps: func(r *restartRig) map[string]restartStatus {
 				r.evaluate(r.observation("sonarr", "unhealthy"), r.observation("plex", "unhealthy"))
 				r.advance(3 * time.Minute)
@@ -189,7 +178,7 @@ func TestProbeUtilRestart_Evaluate(t *testing.T) {
 			expectedState: metric.RestartStateRestarting, expectedRuns: []string{"plex"}, expectedAttempt: 1,
 		},
 		{
-			name: "an_unmet_prerequisite_holds_the_restart", mode: restartModeAct, policy: "requires=tcp:broker:32404\n",
+			name: "an_unmet_prerequisite_holds_the_restart", policy: "requires=tcp:broker:32404\n",
 			prepare: func(r *restartRig) {
 				r.engine.checker.dial = func(string, time.Duration) error { return os.ErrNotExist }
 			},
@@ -201,7 +190,7 @@ func TestProbeUtilRestart_Evaluate(t *testing.T) {
 			expectedState: metric.RestartStateWaiting, expectedRuns: nil, expectedAttempt: 0,
 		},
 		{
-			name: "a_prerequisite_must_hold_for_the_stable_period_before_the_restart", mode: restartModeAct, policy: "requires=tcp:broker:32404\nrequires_stable=5m\n",
+			name: "a_prerequisite_must_hold_for_the_stable_period_before_the_restart", policy: "requires=tcp:broker:32404\nrequires_stable=5m\n",
 			steps: func(r *restartRig) map[string]restartStatus {
 				r.evaluate(r.observation("plex", "unhealthy"))
 				r.advance(3 * time.Minute)
@@ -210,7 +199,7 @@ func TestProbeUtilRestart_Evaluate(t *testing.T) {
 			expectedState: metric.RestartStateWaiting, expectedRuns: nil, expectedAttempt: 0,
 		},
 		{
-			name: "a_prerequisite_that_has_held_long_enough_allows_the_restart", mode: restartModeAct, policy: "requires=tcp:broker:32404\nrequires_stable=5m\n",
+			name: "a_prerequisite_that_has_held_long_enough_allows_the_restart", policy: "requires=tcp:broker:32404\nrequires_stable=5m\n",
 			steps: func(r *restartRig) map[string]restartStatus {
 				r.evaluate(r.observation("plex", "unhealthy"))
 				r.advance(6 * time.Minute)
@@ -219,7 +208,7 @@ func TestProbeUtilRestart_Evaluate(t *testing.T) {
 			expectedState: metric.RestartStateRestarting, expectedRuns: []string{"plex"}, expectedAttempt: 1,
 		},
 		{
-			name: "a_prerequisite_that_drops_restarts_the_stable_clock", mode: restartModeAct, policy: "requires=tcp:broker:32404\nrequires_stable=5m\n",
+			name: "a_prerequisite_that_drops_restarts_the_stable_clock", policy: "requires=tcp:broker:32404\nrequires_stable=5m\n",
 			steps: func(r *restartRig) map[string]restartStatus {
 				r.evaluate(r.observation("plex", "unhealthy"))
 				r.advance(3 * time.Minute)
@@ -232,7 +221,7 @@ func TestProbeUtilRestart_Evaluate(t *testing.T) {
 			expectedState: metric.RestartStateWaiting, expectedRuns: nil, expectedAttempt: 0,
 		},
 		{
-			name: "a_module_hook_that_is_not_ready_holds_the_restart", mode: restartModeAct, policy: "requires=tcp:broker:32404\n",
+			name: "a_module_hook_that_is_not_ready_holds_the_restart", policy: "requires=tcp:broker:32404\n",
 			prepare: func(r *restartRig) {
 				plain := r.engine.loader.run
 				r.engine.loader.run = func(ctx context.Context, limit time.Duration, name string, args ...string) (string, int, bool) {
@@ -250,7 +239,7 @@ func TestProbeUtilRestart_Evaluate(t *testing.T) {
 			expectedState: metric.RestartStateWaiting, expectedRuns: nil, expectedAttempt: 0,
 		},
 		{
-			name: "a_budget_spent_in_the_ledger_exhausts_the_service", mode: restartModeAct,
+			name: "a_budget_spent_in_the_ledger_exhausts_the_service",
 			prepare: func(r *restartRig) {
 				for index := range restartAttemptsMax {
 					_ = r.engine.ledger.record("plex", "plex-1", r.clock.Add(-time.Duration(20-index)*time.Hour))
@@ -264,7 +253,7 @@ func TestProbeUtilRestart_Evaluate(t *testing.T) {
 			expectedState: metric.RestartStateExhausted, expectedRuns: nil, expectedAttempt: restartAttemptsMax,
 		},
 		{
-			name: "a_recreated_container_starts_with_a_fresh_budget", mode: restartModeAct,
+			name: "a_recreated_container_starts_with_a_fresh_budget",
 			prepare: func(r *restartRig) {
 				for index := range restartAttemptsMax {
 					_ = r.engine.ledger.record("plex", "plex-0", r.clock.Add(-time.Duration(20-index)*time.Hour))
@@ -280,7 +269,7 @@ func TestProbeUtilRestart_Evaluate(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			rig := newRestartRig(t, test.mode, test.policy)
+			rig := newRestartRig(t, test.policy)
 			if test.prepare != nil {
 				test.prepare(rig)
 			}
@@ -298,7 +287,7 @@ func TestProbeUtilRestart_Evaluate(t *testing.T) {
 }
 
 func TestProbeUtilRestart_NotEnrolled(t *testing.T) {
-	rig := newRestartRig(t, restartModeAct, "")
+	rig := newRestartRig(t, "")
 	rig.engine.loader.run = func(context.Context, time.Duration, string, ...string) (string, int, bool) { return "", 1, false }
 	if statuses := rig.evaluate(rig.observation("plex", "unhealthy")); len(statuses) != 0 {
 		t.Fatalf("statuses for a service that is not enrolled: got %v want none", statuses)
@@ -306,7 +295,7 @@ func TestProbeUtilRestart_NotEnrolled(t *testing.T) {
 }
 
 func TestProbeUtilRestart_Settled(t *testing.T) {
-	rig := newRestartRig(t, restartModeAct, "")
+	rig := newRestartRig(t, "")
 	if err := rig.engine.ledger.record("plex", "plex-1", rig.clock.Add(-30*time.Minute)); err != nil {
 		t.Fatalf("record failed with [%v]", err)
 	}
@@ -322,7 +311,7 @@ func TestProbeUtilRestart_Settled(t *testing.T) {
 }
 
 func TestProbeUtilRestart_Reported(t *testing.T) {
-	rig := newRestartRig(t, restartModeAct, "")
+	rig := newRestartRig(t, "")
 	for range 3 {
 		rig.evaluate(rig.observation("plex", "healthy"))
 	}
@@ -391,7 +380,7 @@ func TestProbeUtilRestart_HostBudget(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			rig := newRestartRig(t, restartModeAct, "")
+			rig := newRestartRig(t, "")
 			release := make(chan struct{})
 			if test.holdRun {
 				rig.engine.run = func(_ context.Context, service string, _ time.Duration) (int, string) {
@@ -458,7 +447,7 @@ func TestProbeUtilRestart_Tracking(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			rig := newRestartRig(t, restartModeAct, test.policy)
+			rig := newRestartRig(t, test.policy)
 			statuses := test.steps(rig)
 			if got := statuses["plex"].state; got != test.expectedState || len(rig.restarted()) != 0 {
 				t.Fatalf("got state [%s] reason [%s] runs %v want state [%s] and no restart", got, statuses["plex"].reason, rig.restarted(), test.expectedState)
@@ -468,7 +457,7 @@ func TestProbeUtilRestart_Tracking(t *testing.T) {
 }
 
 func TestProbeUtilRestart_NeverItself(t *testing.T) {
-	rig := newRestartRig(t, restartModeAct, "")
+	rig := newRestartRig(t, "")
 	rig.engine.loader.install = func() string {
 		install := t.TempDir()
 		directory := filepath.Join(install, "supervisor", "latest")

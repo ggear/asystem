@@ -457,6 +457,31 @@ else
 fi
 
 ################################################################################
+# Watchers
+################################################################################
+section "Watchers"
+while read -r PID; do
+  [[ -n "${PID}" ]] || continue
+  COMMAND="$(tr '\0' ' ' <"/proc/${PID}/cmdline" 2>/dev/null)"
+  COMMAND="${COMMAND% }"
+  [[ -n "${COMMAND}" ]] || continue
+  log_info "Watcher [${PID}] to stop, it logs to a writable mount, command [${COMMAND}]"
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    log_info "+ kill [${PID}]"
+    continue
+  fi
+  kill "${PID}" 2>/dev/null
+  for _ in 1 2 3 4 5 6; do
+    kill -0 "${PID}" 2>/dev/null || break
+    sleep 0.5
+  done
+  if kill -0 "${PID}" 2>/dev/null; then
+    log_warn "Watcher [${PID}] still running"
+    WARNED+=("watcher ${PID}")
+  fi
+done < <(pgrep -f '/supervisor watch( |$)')
+
+################################################################################
 # Held mounts
 ################################################################################
 section "Held mounts"

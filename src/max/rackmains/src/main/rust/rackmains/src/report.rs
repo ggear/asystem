@@ -139,7 +139,6 @@ pub fn event_lines(event: &str, detail: &str, prefix: &str) -> Vec<String> {
 #[derive(Debug, Default)]
 pub struct Progress {
     next: u64,
-    last: Vec<String>,
 }
 
 pub fn row_lines(table: &Table, row: &[String], progress: &mut Progress, prefix: &str) -> Vec<String> {
@@ -175,7 +174,7 @@ pub fn row_lines(table: &Table, row: &[String], progress: &mut Progress, prefix:
             }
         }
     };
-    let lines: Vec<String> = [
+    [
         ("ups state", describe(table.cell(row, STATUS))),
         ("output load pct", shown(UTILISATION, "%")),
         ("battery volts", shown(BATTERY_VOLTS, "V")),
@@ -190,15 +189,7 @@ pub fn row_lines(table: &Table, row: &[String], progress: &mut Progress, prefix:
     ]
     .iter()
     .map(|(label, value)| line(&format!("progress {label}"), value))
-    .collect();
-    let changed = lines
-        .iter()
-        .enumerate()
-        .filter(|(index, line)| progress.last.get(*index) != Some(line))
-        .map(|(_, line)| line.clone())
-        .collect();
-    progress.last = lines;
-    changed
+    .collect()
 }
 
 pub fn tail(dir: &Path, file: Option<&Path>, follow: bool, out: &mut dyn Write) -> Result<(), String> {
@@ -524,7 +515,7 @@ mod tests {
             .iter()
             .map(|row| row_lines(&table, row, &mut progress, "").len())
             .collect();
-        assert_eq!(counts, vec![8, 0, 1, 2, 2]);
+        assert_eq!(counts, vec![8, 0, 8, 8, 8]);
         let mut progress = Progress::default();
         let heartbeat: Vec<String> = table
             .rows

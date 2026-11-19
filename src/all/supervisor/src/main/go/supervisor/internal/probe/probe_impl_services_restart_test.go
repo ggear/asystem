@@ -74,26 +74,21 @@ func TestProbeImplServicesRestart_Attempts(t *testing.T) {
 	}
 }
 
-func TestProbeImplServicesRestart_Mode(t *testing.T) {
+func TestProbeImplServicesRestart_FastPath(t *testing.T) {
 	tests := []struct {
 		name         string
-		mode         string
 		fast         string
-		expectedMode string
 		expectedFast bool
 	}{
-		{name: "unset_observes_and_has_no_fast_path", expectedMode: restartModeObserve},
-		{name: "act_acts", mode: "act", expectedMode: restartModeAct},
-		{name: "anything_else_observes", mode: "yes", expectedMode: restartModeObserve},
-		{name: "the_fast_path_is_on_only_when_asked", fast: "on", expectedMode: restartModeObserve, expectedFast: true},
+		{name: "unset_has_no_fast_path"},
+		{name: "the_fast_path_is_on_only_when_asked", fast: "on", expectedFast: true},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			t.Setenv(restartModeEnv, test.mode)
 			t.Setenv(restartFastPathEnv, test.fast)
 			engine := newRestartEngine()
-			if engine.mode != test.expectedMode || engine.fastPath != test.expectedFast {
-				t.Fatalf("engine: got mode [%s] fast %v want mode [%s] fast %v", engine.mode, engine.fastPath, test.expectedMode, test.expectedFast)
+			if engine.fastPath != test.expectedFast {
+				t.Fatalf("engine: got fast %v want fast %v", engine.fastPath, test.expectedFast)
 			}
 		})
 	}

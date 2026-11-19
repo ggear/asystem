@@ -27,7 +27,7 @@ dependency**.
 
 ## Status
 
-Built 2026-11-19 and tested, nothing released or deployed, and every host defaults to `SUPERVISOR_RESTART_MODE=observe`.
+Built 2026-11-19 and tested, nothing released or deployed. The observe mode was removed on 2026-11-19, so the plugin always acts.
 
 - `install.sh restart` (exit 0 restarted, 10 skipped, 1 failed) with `restart_service` shared with `schema`, whose
   output is unchanged; proven on a stub docker, and each rule fails its test when removed.
@@ -37,9 +37,9 @@ Built 2026-11-19 and tested, nothing released or deployed, and every host defaul
   refund, boot reset), the host sleep hold, the module log, the engine, and one metric beside `RST`. Every decision
   rule and every gate fails its test when deleted.
 - The `/run` mount (`SUPERVISOR_RUN_SOURCE`) and the `awoke` line in `awake`.
-- Enrolled, in observe mode: `zigbee2mqtt`, `sonarr`, `plex`.
+- Enrolled: `zigbee2mqtt`, `sonarr`, `plex`.
 - Closed on 2026-11-19 on the live hosts, see scenario 29 and the `plex` findings below.
-- Not done, because it needs time on a real host: the observe week, and switching any host to `act`.
+- Skipped by decision: the observe week. A drill on 2026-11-19 left `zigbee2mqtt` and `sonarr` unhealthy and the engine judged both restartable.
 
 ## Design
 
@@ -152,8 +152,8 @@ In order of importance:
    enrolled services unhealthy together are taken one at a time in a fixed order.
 4. **Fail closed.** The attempt is written to the ledger **before** `install.sh restart` runs. If the ledger cannot be
    written, no restart is made. A restart that fails still counts.
-5. **Observe first.** A global `RESTART_MODE=observe` does everything except run `install.sh restart`. It is the default
-   for the first release.
+5. **No observe mode.** It was designed as a first-release default and removed on 2026-11-19, so every decision runs
+   `install.sh restart`.
 
 ### Host sleep hold
 

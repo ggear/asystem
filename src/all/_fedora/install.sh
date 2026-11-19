@@ -323,6 +323,7 @@ services_to_disable=(
   ntpd
   cups
   cups.path
+  cups-browsed
   abrtd
   abrt-oops
   abrt-xorg

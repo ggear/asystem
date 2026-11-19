@@ -545,6 +545,47 @@ func TestEngineImplWatch_RunListeningStreamLoop(t *testing.T) {
 			},
 		},
 		{
+			name:  "happy_revived_host_follows_later_updates",
+			topic: "supervisor/alpha/status",
+			setupFunc: func(_ *testing.T, _ *metric.RecordCache, _ metric.TopicBinding) []byte {
+				return []byte(metric.AvailabilityOffline)
+			},
+			checkFunc: func(t *testing.T, cache *metric.RecordCache, b metric.TopicBinding) {
+				publish := func(ok bool) {
+					value := nonNilValue
+					value.Timestamp = time.Now().Unix()
+					value.Pulse = &metric.ValueDataDetail{OK: ok, Kind: metric.ValueString, ValueString: "svc-a"}
+					payload, marshalErr := json.Marshal(value)
+					if marshalErr != nil {
+						t.Fatalf("marshal value failed: %v", marshalErr)
+					}
+					mqttClient.Publish(b.Topic, 0, true, payload)
+				}
+				defer mqttClient.Publish(b.Topic, 0, true, []byte{})
+				await := func(expected bool) bool {
+					deadline := time.Now().Add(5 * time.Second)
+					for time.Now().Before(deadline) {
+						record, ok := cache.Load(b.GUID)
+						if ok && record != nil && record.Value.Pulse != nil && record.Value.Pulse.OK == expected {
+							return true
+						}
+						time.Sleep(50 * time.Millisecond)
+					}
+					return false
+				}
+				time.Sleep(time.Second)
+				publish(false)
+				if !await(false) {
+					t.Fatalf("Got no unhealthy record after the host was revived, expected the first fresh value stored")
+				}
+				time.Sleep(time.Second)
+				publish(true)
+				if !await(true) {
+					t.Fatalf("Got a record still unhealthy after a later healthy publish, expected the revived host to follow updates")
+				}
+			},
+		},
+		{
 			name:  "sad_offline_host_ignores_earlier_data",
 			topic: "supervisor/alpha/status",
 			setupFunc: func(_ *testing.T, _ *metric.RecordCache, _ metric.TopicBinding) []byte {

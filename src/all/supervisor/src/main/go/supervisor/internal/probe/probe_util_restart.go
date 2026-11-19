@@ -21,16 +21,11 @@ import (
 
 func newRestartEngine() *restartEngine {
 	log := newRestartLog(config.DirServiceHome)
-	mode := restartModeObserve
-	if os.Getenv(restartModeEnv) == restartModeAct {
-		mode = restartModeAct
-	}
 	engine := &restartEngine{
 		ledger:   newRestartLedger(restartLedgerPath),
 		checker:  newRestartChecker(),
 		loader:   newRestartPolicyLoader(),
 		log:      log,
-		mode:     mode,
 		fastPath: os.Getenv(restartFastPathEnv) == "on",
 		started:  time.Now(),
 		now:      time.Now,
@@ -200,11 +195,6 @@ func (e *restartEngine) step(ctx context.Context, now time.Time, held bool, poli
 	if !decision.act {
 		return status
 	}
-	if e.mode != restartModeAct {
-		status.state = metric.RestartStateWaiting
-		status.reason = "observe mode, would restart now"
-		return status
-	}
 	limit, err := e.limit(observation.service)
 	if err != nil {
 		status.state = metric.RestartStateWaiting
@@ -324,7 +314,6 @@ type restartEngine struct {
 	checker      restartChecker
 	loader       *restartPolicyLoader
 	log          *restartLog
-	mode         string
 	fastPath     bool
 	started      time.Time
 	now          func() time.Time
@@ -343,8 +332,6 @@ type restartEngine struct {
 }
 
 const (
-	restartModeObserve  = "observe"
-	restartModeAct      = "act"
 	restartExitSkipped  = 10
 	restartRunMargin    = 30 * time.Second
 	restartInstallLeaf  = "install.sh"
@@ -352,7 +339,6 @@ const (
 	restartJitterSpread = 21
 
 	restartSelf                  = "supervisor"
-	restartModeEnv               = "SUPERVISOR_RESTART_MODE"
 	restartFastPathEnv           = "SUPERVISOR_RESTART_FAST"
 	restartDockerDefaultInterval = 30 * time.Second
 	restartDockerDefaultRetries  = 3
