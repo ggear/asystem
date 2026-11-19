@@ -2,7 +2,7 @@
   "schema": 2,
   "version": "10.200.2024-SNAPSHOT",
   "content_sha256": "5601141d0ea187c6de9ddda72098fdd7632b06c46f0e022c1c5a75dc8c886997",
-  "inputs_sha256": "ae6585f6642e36b177bef85c7ff0c56ee77d57d16163c94fae3fc339f35304e0",
+  "inputs_sha256": "9c43a3d93f7aaf94b14740b33c9a874e250fa60bf7dc86b99cf15fdf161f3663",
   "target": {"kind": "embedded", "language": "rust"},
   "release": null
 }

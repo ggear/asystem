@@ -42,6 +42,7 @@ type servicesProbe struct {
 	upTimeFloat            map[string]*stats.FloatStats
 	maxMemoryFloat         map[string]*stats.FloatStats
 	restartCountFloat      map[string]*stats.FloatStats
+	restartAttemptsInt     map[string]*stats.IntStats
 
 	configuredServiceNames []string
 	installMissingLogged   string
@@ -54,6 +55,7 @@ type servicesProbe struct {
 	statsOneShot     func(context.Context, *client.Client, string) (container.StatsResponseReader, error)
 	inspectContainer func(context.Context, *client.Client, string) (container.InspectResponse, error)
 	hostUptime       func() (uint64, error)
+	restart          *restartEngine
 }
 
 func newServicesProbe() *servicesProbe {
@@ -73,6 +75,7 @@ func newServicesProbe() *servicesProbe {
 		upTimeFloat:          make(map[string]*stats.FloatStats),
 		maxMemoryFloat:       make(map[string]*stats.FloatStats),
 		restartCountFloat:    make(map[string]*stats.FloatStats),
+		restartAttemptsInt:   make(map[string]*stats.IntStats),
 		prevCPUStats:         make(map[string]container.CPUStats),
 		prevIOStats:          make(map[string]serviceIOSample),
 		newDockerClient: func() (*client.Client, error) {
@@ -88,6 +91,7 @@ func newServicesProbe() *servicesProbe {
 			return dockerClient.ContainerInspect(ctx, id)
 		},
 		hostUptime: host.Uptime,
+		restart:    newRestartEngine(),
 	}
 }
 
@@ -113,6 +117,7 @@ func (p *servicesProbe) metrics() []metric.ID {
 		metric.MetricServiceUpTime,
 		metric.MetricServiceMaxMemory,
 		metric.MetricServiceRestartCount,
+		metric.MetricServiceRestartAttempts,
 	}
 }
 
@@ -183,6 +188,16 @@ func (p *servicesProbe) poll(ctx context.Context, isPulse bool) error {
 	upTimeFloats := syncStatsFields(p.upTimeFloat, polledServiceNames, newFloat)
 	maxMemoryFloats := syncStatsFields(p.maxMemoryFloat, polledServiceNames, newFloat)
 	restartCountFloats := syncStatsFields(p.restartCountFloat, polledServiceNames, newFloat)
+	restartAttemptsInts := syncStatsFields(p.restartAttemptsInt, polledServiceNames, newInt)
+	observations := make([]restartObservation, 0, len(servicesByName))
+	for _, polledService := range servicesByName {
+		if polledService.restartObserved {
+			observations = append(observations, polledService.restartObservation)
+		}
+	}
+	if isPulse {
+		p.restart.tick(ctx, observations)
+	}
 	for polledServiceName, polledService := range servicesByName {
 		serviceStart := time.Now()
 		healthStatus, _, _ := polledService.healthStatus()
@@ -312,6 +327,15 @@ func (p *servicesProbe) poll(ctx context.Context, isPulse bool) error {
 				restartCountFloats[polledServiceName],
 				func() float64 { return restartCountFloats[polledServiceName].PulseLast() },
 				func() float64 { return restartCountFloats[polledServiceName].TrendMax() },
+			),
+			newCacheMetricTask(
+				metric.ValueInt,
+				metric.MetricServiceRestartAttempts,
+				polledService.name(),
+				func() (int8, derivation, error) { return p.restartAttempts(polledServiceName) },
+				restartAttemptsInts[polledServiceName],
+				func() int8 { return restartAttemptsInts[polledServiceName].PulseMax() },
+				func() int8 { return restartAttemptsInts[polledServiceName].TrendMax() },
 			),
 		})
 	}
@@ -487,6 +511,7 @@ func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot)
 				service.restartCountValue = restartCountValue
 				service.restartCountDerived = restartDerived
 			}
+			service.restartObservation, service.restartObserved = restartObservationOf(name, fetchedInspect)
 			versionValue, versionDerived, versionErr := p.version(snapshot, fetchedInspect)
 			if versionErr != nil {
 				service.versionErr = versionErr
@@ -609,6 +634,8 @@ type service struct {
 	upTimeErr             error
 	restartCountValue     float64
 	restartCountErr       error
+	restartObservation    restartObservation
+	restartObserved       bool
 }
 
 type serviceIOSample struct {
@@ -866,8 +893,9 @@ func (p *servicesProbe) restartCount(name string, containerInfo container.Inspec
 	if containerInfo.ContainerJSONBase == nil {
 		return 0, derivation{}, fmt.Errorf("no restart count read, docker returned an inspect response for service [%s] with no base section", name)
 	}
-	return float64(containerInfo.RestartCount), derivedf(scribe.ActionSample, "computed [%d] restarts, service [%s] as counted by docker since the container was created",
-		containerInfo.RestartCount, name), nil
+	supervised := p.restart.ledger.count(name, containerInfo.ID)
+	return float64(containerInfo.RestartCount + supervised), derivedf(scribe.ActionSample, "computed [%d] restarts, service [%s] as [%d] counted by docker and [%d] made by supervisor since the container was created",
+		containerInfo.RestartCount+supervised, name, containerInfo.RestartCount, supervised), nil
 }
 
 func (p *servicesProbe) version(snapshot *installSnapshot, containerInfo container.InspectResponse) (string, derivation, error) {
@@ -975,3 +1003,37 @@ const (
 	bitsPerByte = 8.0
 	bitsPerMbit = 1000000.0
 )
+
+func (p *servicesProbe) restartAttempts(name string) (int8, derivation, error) {
+	status, _ := p.restart.status(name)
+	return int8(min(status.attempts, 100)), derivedf(scribe.ActionSample, "computed [%d] restarts, service [%s] in the last [%s]", status.attempts, name, restartWindow), nil
+}
+
+func restartObservationOf(name string, inspect container.InspectResponse) (restartObservation, bool) {
+	if inspect.ContainerJSONBase == nil || inspect.State == nil || inspect.State.Health == nil || inspect.Config == nil || inspect.Config.Healthcheck == nil {
+		return restartObservation{}, false
+	}
+	startedAt, err := time.Parse(time.RFC3339Nano, inspect.State.StartedAt)
+	if err != nil {
+		return restartObservation{}, false
+	}
+	healthcheck := inspect.Config.Healthcheck
+	interval, retries := healthcheck.Interval, healthcheck.Retries
+	if interval <= 0 {
+		interval = restartDockerDefaultInterval
+	}
+	if retries <= 0 {
+		retries = restartDockerDefaultRetries
+	}
+	return restartObservation{
+		service:   name,
+		container: inspect.ID,
+		health:    inspect.State.Health.Status,
+		startedAt: startedAt,
+		healthcheck: restartHealthcheck{
+			interval:    interval,
+			startPeriod: healthcheck.StartPeriod,
+			retries:     retries,
+		},
+	}, true
+}

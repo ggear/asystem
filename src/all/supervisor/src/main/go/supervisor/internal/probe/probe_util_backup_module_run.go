@@ -61,9 +61,13 @@ func BackupModuleRun(ctx context.Context, request BackupModuleRequest, stdout, s
 	hooks := moduleHooks{script: request.Script, env: []string{
 		"BACKUP_RUN_TIMESTAMP=" + stamp, "BACKUP_STATE_DIR=" + state, "BACKUP_SUPERVISOR=" + binary,
 		"BACKUP_FORCE_FULL=" + strconv.FormatBool(request.ForceFull), "BACKUP_SKIP_HOURS=" + strconv.Itoa(int(request.SkipPeriod.Hours())),
-		"BACKUP_TIMEOUT_HOURS=" + strconv.Itoa(int(request.TimeoutPeriod.Hours())), "BACKUP_SERVICE_RESTART=" + strconv.FormatBool(!request.NoRestart),
+		"BACKUP_TIMEOUT_HOURS=" + strconv.Itoa(int(request.TimeoutPeriod.Hours())),
 		"BACKUP_SOURCE_PATH=" + source,
 	}}
+	restart := !request.NoRestart && backupServiceRunning(ctx, module)
+	ensure := func() bool {
+		return !restart || startBackupService(context.WithoutCancel(ctx), module, stderr)
+	}
 	defined := map[string]bool{}
 	declared, _ := hooks.command(ctx, "declare", "-F", moduleHookInterrupted, moduleHookCompleted, moduleHookFingerprint, moduleHookPrunedStore).Output()
 	for line := range strings.SplitSeq(string(declared), "\n") {
@@ -108,10 +112,12 @@ func BackupModuleRun(ctx context.Context, request BackupModuleRequest, stdout, s
 		if defined[moduleHookInterrupted] {
 			_ = hooks.run(context.WithoutCancel(ctx), stdout, stderr, moduleHookInterrupted)
 		}
+		ensure()
 		discarded(targeted())
 		return map[os.Signal]int{syscall.SIGINT: 130, syscall.SIGTERM: 143, syscall.SIGHUP: 129}[caught]
 	default:
 	}
+	restarted := ensure()
 	target := targeted()
 	verified := func() bool {
 		if target == "" {
@@ -228,6 +234,9 @@ func BackupModuleRun(ctx context.Context, request BackupModuleRequest, stdout, s
 			status = 1
 		}
 	}
+	if !restarted {
+		status = 1
+	}
 	var directories []string
 	_ = filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
 		if err == nil && entry.IsDir() {
@@ -239,6 +248,27 @@ func BackupModuleRun(ctx context.Context, request BackupModuleRequest, stdout, s
 		_ = os.Remove(directory)
 	}
 	return status
+}
+
+func startBackupService(ctx context.Context, module string, stderr io.Writer) bool {
+	for attempt := 1; attempt <= backupRestartTries; attempt++ {
+		if backupServiceRunning(ctx, module) {
+			return true
+		}
+		if err := backupServiceStart(ctx, module); err != nil {
+			fmt.Fprintf(stderr, "Start failed [%s] [%v] on attempt [%d] of [%d]\n", module, err, attempt, backupRestartTries)
+		}
+		if backupServiceRunning(ctx, module) {
+			if attempt > 1 {
+				fmt.Fprintf(stderr, "Started [%s] on attempt [%d]\n", module, attempt)
+			}
+			return true
+		}
+		if attempt < backupRestartTries {
+			time.Sleep(backupRestartWait)
+		}
+	}
+	return false
 }
 
 type moduleHooks struct {
@@ -271,4 +301,20 @@ const (
 	moduleTargetLeaf       = "target"
 	moduleIncludesLeaf     = "includes"
 	moduleToolWait         = 30 * time.Minute
+	backupRestartTries     = 5
+)
+
+var (
+	backupServiceRunning = func(ctx context.Context, module string) bool {
+		running, _ := dockerServiceState(ctx, module)
+		return running
+	}
+	backupServiceStart = func(ctx context.Context, module string) error {
+		out, code, abandoned := bounded(ctx, stageBoundedWait, "docker", "start", module)
+		if abandoned || code != 0 {
+			return fmt.Errorf("%s", strings.TrimSpace(out))
+		}
+		return nil
+	}
+	backupRestartWait = 10 * time.Second
 )

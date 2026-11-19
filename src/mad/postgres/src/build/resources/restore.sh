@@ -1,22 +1,16 @@
-# The engine owns the run, this snippet owns the restore. `supervisor backup restore` resolves the chain, checks
-# its integrity, takes a safety backup, stops or starts the service, counts faults and sets the exit code, calling
-# this snippet's hooks, each in its own bash. Define restore_applied below, reading "${RESTORE_SOURCE_FILE}" and
-# writing it back into the service, and optionally restore_planned to describe that in the dry run. Declare
-# RESTORE_SERVICE_STATE as "stopped" when the restore replaces files the service holds open, or "running" when
-# it is applied through the service itself. A snippet with a scratch copy also defines restore_staged (print the
-# scratch address), restore_sealed, restore_teardown and restore_checked, one with live history to merge
-# restore_merged, and one with units still being written restore_settled, a stdin to stdout filter dropping the
-# open ones. No hook may rely on a variable another set. Never assign another wrapper variable, prefix this
-# snippet's own state with the module name, and expand a value read from .env as "${VAR:?}", so a missing key
-# fails by name rather than corrupting the restore.
+# The engine (`supervisor backup restore`) owns the run, this snippet owns the restore, as hooks each in its own bash.
+# Define restore_applied, writing "${RESTORE_SOURCE_FILE}" back into the service, and declare RESTORE_SERVICE_STATE.
+# Optional hooks: restore_planned, restore_staged, restore_sealed, restore_teardown, restore_checked, restore_merged,
+# restore_settled.
+# No hook relies on a variable another set, own state is prefixed with the module name, .env values expand as "${VAR:?}".
 #
 # RESTORE_MODULE_NAME     this module's name
 # RESTORE_SOURCE_PATH     this module's data path, the restore target
-# RESTORE_SOURCE_FILE     the artefact being restored from
+# RESTORE_SOURCE_FILE     the artefact being restored
 # RESTORE_CHAIN_FILES     every artefact of the chain, oldest first
 # RESTORE_RUN_TIMESTAMP   the timestamp of the run the artefact belongs to
-# RESTORE_FULL_SUFFIX     the file suffix marking a full backup
-# RESTORE_DELTA_SUFFIX    the file suffix marking a delta backup
+# RESTORE_FULL_SUFFIX     suffix of a full backup
+# RESTORE_DELTA_SUFFIX    suffix of a delta backup
 # RESTORE_SERVICE_STATE   the state the service must be in, stopped or running
 RESTORE_SERVICE_STATE="running"
 

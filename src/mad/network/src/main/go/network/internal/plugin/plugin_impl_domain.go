@@ -7,6 +7,7 @@ import (
 	"net"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"network/internal/schema"
@@ -60,29 +61,28 @@ func (p *domainPlugin) Name() string { return "domain" }
 func (p *domainPlugin) Mode() Mode { return ModeSnapshot }
 
 func (p *domainPlugin) Poll(ctx context.Context) (Sample, error) {
-	readings := make([]domainReading, 0, len(domainServers))
-	for _, r := range domainServers {
-		result, err := p.probe(ctx, r.address, domainName)
-		if err != nil || len(result.addresses) == 0 {
-			scribe.LogDebug("domain", "probe of resolver [%s] server [%s] failed [%v]", r.name, r.address, err)
-			readings = append(readings, domainReading{resolver: r.name})
-			continue
-		}
-		addresses := strings.Join(result.addresses, ",")
-		latency := float64(result.latency) / float64(time.Millisecond)
-		scribe.LogDebug("domain", "probed resolver [%s] server [%s] addresses [%s] latency_ms [%.1f]", r.name, r.address, addresses, latency)
-		readings = append(readings, domainReading{
-			resolver: r.name, addresses: addresses, resolved: true, latencyMs: latency})
+	readings := make([]domainReading, len(domainServers))
+	var wg sync.WaitGroup
+	for i, r := range domainServers {
+		wg.Go(func() {
+			result, err := p.probe(ctx, r.address, domainName)
+			if err != nil || len(result.addresses) == 0 {
+				scribe.LogDebug("domain", "probe of resolver [%s] server [%s] failed [%v]", r.name, r.address, err)
+				readings[i] = domainReading{resolver: r.name}
+				return
+			}
+			addresses := strings.Join(result.addresses, ",")
+			latency := float64(result.latency) / float64(time.Millisecond)
+			scribe.LogDebug("domain", "probed resolver [%s] server [%s] addresses [%s] latency_ms [%.1f]", r.name, r.address, addresses, latency)
+			readings[i] = domainReading{resolver: r.name, addresses: addresses, resolved: true, latencyMs: latency}
+		})
 	}
+	wg.Wait()
 	return Sample{Readings: readings}, nil
 }
 
 func (p *domainPlugin) Aggregate(samples []Sample) (Aggregate, error) {
 	return diagnoseDomain(samples), nil
-}
-
-func (p *domainPlugin) Command(context.Context, State) error {
-	return nil
 }
 
 func (p *domainPlugin) State() *StateTracker { return p.state }

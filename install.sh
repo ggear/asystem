@@ -37,7 +37,7 @@ run_backup() {
     log_info "Backup skipped, reinstalling the current version [${SERVICE_VERSION_ABSOLUTE}]"
     return 0
   fi
-  if ! docker ps --format '{{.Names}}' | grep -Fxq "${SERVICE_NAME}"; then
+  if ! running_container "${SERVICE_NAME}"; then
     if [[ "${INSTALL_MODE}" == "force" ]]; then
       log_warn "Backup skipped, container is not running [${SERVICE_NAME}], forcing the install of [${SERVICE_VERSION_ABSOLUTE}] unbacked"
       return 0
@@ -84,6 +84,7 @@ SERVICE_WAIT_EXECUTING_SECONDS=300
 SERVICE_WAIT_HEALTHY_SECONDS=900
 SERVICE_WAIT_RESTART_SECONDS=120
 SERVICE_SETTLE_RESTART_SECONDS=30
+SERVICE_SKIPPED=10
 
 wait_service() {
   local script="$1" label="$2" interval="$3" timeout="$4" fatal="$5" waited=0 grace=5 report=5
@@ -137,6 +138,10 @@ present_container() {
   docker ps -a --format '{{.Names}}' | grep -Fxq "$1"
 }
 
+running_container() {
+  docker ps --format '{{.Names}}' | grep -Fxq "$1"
+}
+
 report_container() {
   local container="$1" pid
   pid="$(docker inspect --format '{{.State.Pid}}' "${container}" 2>/dev/null)" || pid=""
@@ -166,14 +171,15 @@ start_service() {
 }
 
 restart_service() {
-  if ! docker ps --format '{{.Names}}' | grep -Fxq "${SERVICE_NAME}"; then
-    log_warn "Restart skipped, container is not running [${SERVICE_NAME}]"
-    return 0
+  local reason="$1"
+  if ! running_container "${SERVICE_NAME}"; then
+    log_warn "Restart skipped, not running [${SERVICE_NAME}]"
+    return "${SERVICE_SKIPPED}"
   fi
-  log_info "Restarting service to republish its retained topics [${SERVICE_NAME}]"
-  if ! docker restart "${SERVICE_NAME}" >/dev/null 2>&1; then
+  log_info "Restarting service to ${reason} [${SERVICE_NAME}]"
+  if ! timeout "${SERVICE_STOP_SECONDS}" docker restart "${SERVICE_NAME}" >/dev/null 2>&1; then
     log_warn "Restart failed [${SERVICE_NAME}]"
-    return 0
+    return 1
   fi
   if [[ -f "image/checkexecuting.sh" ]]; then
     wait_service "checkexecuting.sh" "start executing" 1 "${SERVICE_WAIT_RESTART_SECONDS}" false || true
@@ -185,8 +191,8 @@ restart_service() {
 COMMAND="start"
 [[ "$#" -ge 1 ]] && COMMAND="$1"
 case "${COMMAND}" in
-install | start | stop | sleep | schema) ;;
-*) log_error "Unknown command [${COMMAND}] expected [install] [start] [stop] [sleep] or [schema]" ;;
+install | start | stop | sleep | restart | schema) ;;
+*) log_error "Unknown command [${COMMAND}] expected [install] [start] [stop] [sleep] [restart] or [schema]" ;;
 esac
 SCHEMA_ROLE="all"
 [[ "${COMMAND}" == "schema" && "$#" -ge 2 ]] && SCHEMA_ROLE="$2"
@@ -213,12 +219,23 @@ if [[ "${COMMAND}" == "stop" || "${COMMAND}" == "sleep" ]]; then
   stop_service
   if [[ "${COMMAND}" == "sleep" ]]; then
     touch "${SERVICE_SLEEP}"
-    log_info "Service put to sleep"
+    log_info "Slept [${SERVICE_NAME}]"
   else
     rm -f "${SERVICE_SLEEP}"
-    log_info "Service stopped"
+    log_info "Stopped [${SERVICE_NAME}]"
   fi
   exit 0
+fi
+
+if [[ "${COMMAND}" == "restart" ]]; then
+  if [[ -f "${SERVICE_SLEEP}" ]]; then
+    log_warn "Restart skipped, asleep [${SERVICE_NAME}]"
+    exit "${SERVICE_SKIPPED}"
+  fi
+  RESTART_STATUS=0
+  restart_service "recover it" || RESTART_STATUS=$?
+  [[ "${RESTART_STATUS}" -ne 0 ]] || log_info "Restarted [${SERVICE_NAME}]"
+  exit "${RESTART_STATUS}"
 fi
 
 run_hook "./install_prep.sh"
@@ -233,13 +250,16 @@ if [[ "${COMMAND}" == "schema" ]]; then
     ./image/database.sh
   fi
   if [[ "${SCHEMA_ROLE}" != "database" && -x "image/broker.sh" ]]; then
-    restart_service
+    restart_service "republish its retained topics" || true
     ./image/broker.sh publish
   fi
   exit 0
 fi
 
-rm -f "${SERVICE_SLEEP}"
+if [[ -f "${SERVICE_SLEEP}" ]]; then
+  rm -f "${SERVICE_SLEEP}"
+  log_info "Woke [${SERVICE_NAME}]"
+fi
 
 if [[ "${SERVICE_FORM_FACTOR:-}" == "edge" || "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
   SERVICE_HOME="/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}"
@@ -301,7 +321,7 @@ if [[ "${SERVICE_FORM_FACTOR:-}" == "edge" || "${SERVICE_FORM_FACTOR:-}" == "ser
   run_hook "./install_pre.sh"
   if [[ -f "docker-compose.yml" ]]; then
     start_service
-    if docker ps --format '{{.Names}}' | grep -Fxq "${SERVICE_NAME}_bootstrap"; then
+    if running_container "${SERVICE_NAME}_bootstrap"; then
       sleep 1
       docker logs "${SERVICE_NAME}_bootstrap" -f
     fi
@@ -325,11 +345,11 @@ if [[ "${SERVICE_FORM_FACTOR:-}" == "edge" || "${SERVICE_FORM_FACTOR:-}" == "ser
     echo "--------------------------------------------------------------------------------"
     docker logs "${SERVICE_NAME}"
     echo "--------------------------------------------------------------------------------"
-    if ! docker ps --format '{{.Names}}' | grep -Fxq "${SERVICE_NAME}"; then
-      log_error "Service failed to start"
+    if ! running_container "${SERVICE_NAME}"; then
+      log_error "Start failed, not running [${SERVICE_NAME}]"
     else
       docker system prune --volumes -f -a >/dev/null 2>&1 || true
-      echo "Service started successfully"
+      log_info "Started [${SERVICE_NAME}]"
       echo "--------------------------------------------------------------------------------"
       run_drill
     fi

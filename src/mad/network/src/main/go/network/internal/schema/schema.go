@@ -203,10 +203,6 @@ func (b *Builder) Plugin() string {
 	return b.relation.Path[:strings.Index(b.relation.Path, "/")]
 }
 
-func (b *Builder) Scope() string {
-	return b.relation.Path[strings.Index(b.relation.Path, "/")+1:]
-}
-
 func (b *Builder) Subject(key, description string) DimensionKey {
 	return b.dimension(key, description, true)
 }

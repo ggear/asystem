@@ -2,6 +2,7 @@ use std::io::Write;
 
 use serde::Serialize;
 
+use crate::hostswitch::{self, COMMAND_OFF, COMMAND_ON};
 use crate::metrics::{self, COLUMNS};
 
 #[derive(Serialize, Clone, Copy)]
@@ -74,6 +75,11 @@ pub struct RackMains;
 impl BrokerSchema for RackMains {
     fn payloads(&self) -> Vec<Payload> {
         vec![
+            Payload {
+                role: Role::State,
+                match_glob: hostswitch::state_topic("*"),
+                root: Member::options(&[COMMAND_ON, COMMAND_OFF]),
+            },
             Payload {
                 role: Role::State,
                 match_glob: String::new(),

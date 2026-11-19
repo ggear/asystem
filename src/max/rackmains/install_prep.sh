@@ -58,7 +58,7 @@ put upsd.conf <<EOT
 LISTEN 127.0.0.1 3493
 EOT
 
-UNITS=("nut-driver@${UPS_NAME}.service" nut-server.service)
+UNITS=(nut.target "nut-driver@${UPS_NAME}.service" nut-server.service)
 systemctl enable --now "${UNITS[@]}" || echo "Could not enable [${UNITS[*]}]" >&2
 if [[ "${CHANGED}" == "true" ]]; then
   systemctl restart "${UNITS[@]}" || echo "Could not restart [${UNITS[*]}]" >&2

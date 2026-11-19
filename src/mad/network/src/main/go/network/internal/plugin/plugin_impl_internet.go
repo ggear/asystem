@@ -120,10 +120,6 @@ func (p *internetPlugin) Aggregate(samples []Sample) (Aggregate, error) {
 	return diagnoseInternet(samples), nil
 }
 
-func (p *internetPlugin) Command(context.Context, State) error {
-	return nil
-}
-
 func (p *internetPlugin) State() *StateTracker { return p.state }
 
 func probeInternet(ctx context.Context, ip string) (time.Duration, error) {

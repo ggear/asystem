@@ -528,8 +528,7 @@ next section). A host is never powered off.
    recording until the UPS cuts its own output at its low-battery cutoff, and every host then boots on AC restore (power-on-after-cut
    test, below). If mains returns at any point before the cut, step 4 runs as normal, because nothing was ever past the point of return.
 4. **Mains returns first.** After `rackmains_guard_restore_mains_seconds` of continuous `OL`, run `awake` on `max` to restart what was
-   stopped, and on every follower, whether or not its `asleep` ran, in the reverse of the shed order: `max`
-   first, then `meg`, then the remaining followers in parallel (decided 2026-10-30). Each call is synchronous and its exit status says whether the host came back
+   stopped, and on every follower, whether or not its `asleep` ran, in the reverse of the alphabetical shed order, `meg`, `may`, `max` then `mad`, one at a time, (decided 2026-11-19, since `max`'s `supervisor` cannot turn healthy until the broker on `meg` is up, and an `awake` that returns `unhealthy` (status 6) is a note, not a failed host). Each call is synchronous and its exit status says whether the host came back
    healthy (`6` is a container not running or healthy). `asleep` is undone by `awake`, so unlike
    a `poweroff` there is nothing to wait on being down.
 5. **Blind restore (decided 2026-11-12).** If reads fail continuously for 2 x `rackmains_guard_restore_mains_seconds` (10 min) after a shed, the guard runs step 4 without having seen `OL`. The broker and Home Assistant are on `meg`, which is shed, so no alert can reach you, and without this rule the hosts stay asleep after mains returns if the UPS link is lost. The cost is waking hosts on a guess when the outage is still going; a host woken that way is cut by the UPS cutoff exactly as it would have been, so the downside is bounded. It is a `decision` row and a WARN. You can raise the wait or turn it into a stay-asleep rule by changing this one step.

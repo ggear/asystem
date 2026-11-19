@@ -153,16 +153,6 @@ pub struct CommonArgs {
     pub timeout: String,
     #[arg(short = 'H', long = "hosts-file", help = "JSON list of the servers the guard sheds and wakes", value_name = "FILE", hide_short_help = true, env = "RACKMAINS_HOSTS_FILE", default_value = DEFAULT_HOSTS_FILE)]
     pub hosts_file: String,
-    #[arg(
-        short = 'C',
-        long = "local-host",
-        help = "this host, shed with asleep --shallow",
-        value_name = "NAME",
-        hide_short_help = true,
-        env = "RACKMAINS_LOCAL_HOST",
-        default_value = "max"
-    )]
-    pub local_host: String,
     #[arg(short = 'S', long = "ssh-key", help = "private key for the shed and wake calls", value_name = "FILE", hide_short_help = true, env = "RACKMAINS_SSH_KEY", default_value = DEFAULT_SSH_KEY)]
     pub ssh_key: String,
     #[arg(short = 'N', long = "known-hosts", help = "pinned host keys for the shed and wake calls", value_name = "FILE", hide_short_help = true, env = "RACKMAINS_KNOWN_HOSTS", default_value = DEFAULT_KNOWN_HOSTS)]
@@ -178,7 +168,6 @@ impl CommonArgs {
         check::Target {
             model_dir: Path::new(&self.model_dir),
             hosts_file: Path::new(&self.hosts_file),
-            local_host: &self.local_host,
             ssh_key: Path::new(&self.ssh_key),
             known_hosts: Path::new(&self.known_hosts),
             data_dir,
@@ -426,7 +415,6 @@ fn drill_env(common: &CommonArgs, data_dir: &Path) -> Env {
         data_dir: data_dir.to_path_buf(),
         run_dir: PathBuf::from(&common.run_dir),
         hosts_file: PathBuf::from(&common.hosts_file),
-        local_host: common.local_host.clone(),
         plug: Arc::new(Tasmota {
             host: common.plug_host.clone(),
         }),
@@ -517,7 +505,6 @@ mod tests {
             serve(&["--battery-installed", "2024-11-12"]).battery_installed,
             "2024-11-12"
         );
-        assert_eq!(serve(&["--local-host", "may"]).common.local_host, "may");
     }
 
     #[test]

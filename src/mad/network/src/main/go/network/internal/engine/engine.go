@@ -26,6 +26,10 @@ type Engine struct {
 	sampleBuffers      map[string][]plugin.Sample
 	pollStrides        map[string]int
 	polls              int
+	refreshMu          sync.Mutex
+	refreshGap         time.Duration
+	refreshing         map[string]bool
+	refreshed          map[string]time.Time
 	lineProtocolMu     sync.Mutex
 	lineProtocolBuffer bytes.Buffer
 	broker             *remote.Broker
@@ -52,6 +56,9 @@ func Create(e *Engine) error {
 	e.sampleWindows = map[string]int{}
 	e.sampleBuffers = map[string][]plugin.Sample{}
 	e.pollStrides = map[string]int{}
+	e.refreshGap = refreshGap
+	e.refreshing = map[string]bool{}
+	e.refreshed = map[string]time.Time{}
 	pluginNames := make(map[string]struct{}, len(e.Plugins))
 	for _, p := range e.Plugins {
 		if p == nil {
@@ -70,16 +77,16 @@ func Create(e *Engine) error {
 			return fmt.Errorf("duplicate plugin [%s]", name)
 		}
 		pluginNames[name] = struct{}{}
-		if p.Mode() == plugin.ModeWindowed {
-			e.sampleBuffers[name] = nil
-			if paced, ok := p.(plugin.Paced); ok && paced.PollPeriod() > e.PollPeriod {
-				period := paced.PollPeriod()
-				if period%e.PollPeriod != 0 || e.AggregatePeriod%period != 0 {
-					return fmt.Errorf("invalid poll period [%s] of plugin [%s] must be a whole multiple of poll period [%s] dividing aggregate period [%s]", period, name, e.PollPeriod, e.AggregatePeriod)
-				}
-				e.pollStrides[name] = int(period / e.PollPeriod)
-				e.sampleWindows[name] = int(e.AggregatePeriod / period)
+		e.sampleBuffers[name] = nil
+		if p.Mode() == plugin.ModeSnapshot {
+			e.sampleWindows[name] = 1
+		} else if paced, ok := p.(plugin.Paced); ok && paced.PollPeriod() > e.PollPeriod {
+			period := paced.PollPeriod()
+			if period%e.PollPeriod != 0 || e.AggregatePeriod%period != 0 {
+				return fmt.Errorf("invalid poll period [%s] of plugin [%s] must be a whole multiple of poll period [%s] dividing aggregate period [%s]", period, name, e.PollPeriod, e.AggregatePeriod)
 			}
+			e.pollStrides[name] = int(period / e.PollPeriod)
+			e.sampleWindows[name] = int(e.AggregatePeriod / period)
 		}
 	}
 	return nil
@@ -96,7 +103,7 @@ func (e *Engine) Run(ctx context.Context) error {
 	}
 	if e.PublishData {
 		cfg := config.Load()
-		onCommand := func(name string, payload []byte) { e.handleCommand(ctx, name, payload) }
+		onCommand := func(name string, payload []byte) { go e.handleCommand(ctx, name, payload) }
 		if broker, err := remote.NewBroker(cfg.Broker(), cfg.BrokerToken(), onCommand); err != nil {
 			scribe.LogError(scribe.Global, "failed to connect to broker [%v]", err)
 		} else {
@@ -151,10 +158,12 @@ func (e *Engine) PollSamples(ctx context.Context) {
 	e.sampleMu.Unlock()
 	var wg sync.WaitGroup
 	for _, p := range e.Plugins {
-		if p.Mode() != plugin.ModeWindowed {
+		tracker := p.State()
+		down := tracker != nil && tracker.Get() == plugin.StateOff
+		if p.Mode() == plugin.ModeSnapshot && !down {
 			continue
 		}
-		if stride, paced := e.pollStrides[p.Name()]; paced && tick%stride != 0 {
+		if stride, paced := e.pollStrides[p.Name()]; paced && !down && tick%stride != 0 {
 			continue
 		}
 		wg.Add(1)
@@ -210,7 +219,7 @@ func (e *Engine) AggregateChanges() []plugin.Aggregate {
 	var aggregates []plugin.Aggregate
 	for _, p := range e.Plugins {
 		tracker := p.State()
-		if p.Mode() != plugin.ModeWindowed || tracker == nil {
+		if tracker == nil || (p.Mode() == plugin.ModeSnapshot && tracker.Get() == plugin.StateOn) {
 			continue
 		}
 		start := time.Now()
@@ -281,14 +290,20 @@ func (e *Engine) publishStatus() {
 	}
 }
 
-func (e *Engine) publishAggregate(ctx context.Context, m plugin.Aggregate) {
-	if e.broker != nil {
-		if payload, err := m.MarshalJSON(); err != nil {
-			scribe.LogWarn(m.Plugin, "marshal for broker failed [%v]", err)
-		} else {
-			e.broker.Publish(remote.DataTopic(m.Plugin), payload)
-		}
+func (e *Engine) publishBroker(m plugin.Aggregate) {
+	if e.broker == nil {
+		return
 	}
+	payload, err := m.MarshalJSON()
+	if err != nil {
+		scribe.LogWarn(m.Plugin, "marshal for broker failed [%v]", err)
+		return
+	}
+	e.broker.Publish(remote.DataTopic(m.Plugin), payload)
+}
+
+func (e *Engine) publishAggregate(ctx context.Context, m plugin.Aggregate) {
+	e.publishBroker(m)
 	if e.database != nil {
 		e.lineProtocolMu.Lock()
 		e.lineProtocolBuffer.Reset()
@@ -302,25 +317,45 @@ func (e *Engine) publishAggregate(ctx context.Context, m plugin.Aggregate) {
 }
 
 func (e *Engine) handleCommand(ctx context.Context, name string, payload []byte) {
-	state, ok := plugin.ParseState(string(payload))
-	if !ok {
+	if _, ok := plugin.ParseState(string(payload)); !ok {
 		scribe.LogWarn(name, "command ignored because payload [%s] is unparseable", string(payload))
 		return
 	}
-	e.runCommand(ctx, name, state)
-}
-
-func (e *Engine) runCommand(ctx context.Context, name string, state plugin.State) {
 	p, ok := e.findPlugin(name)
 	if !ok {
 		scribe.LogWarn(name, "command ignored because plugin is unknown")
 		return
 	}
-	if err := p.Command(ctx, state); err != nil {
-		scribe.LogWarn(name, "command to state [%s] failed [%v]", state.String(), err)
+	e.refreshMu.Lock()
+	if e.refreshing[name] || time.Since(e.refreshed[name]) < e.refreshGap {
+		e.refreshMu.Unlock()
+		scribe.LogDebug(name, "command ignored because a refresh is running or recent")
 		return
 	}
-	scribe.LogInfo(name, "command received to set state to [%s]", state.String())
+	e.refreshing[name] = true
+	e.refreshMu.Unlock()
+	defer func() {
+		e.refreshMu.Lock()
+		delete(e.refreshing, name)
+		e.refreshed[name] = time.Now()
+		e.refreshMu.Unlock()
+	}()
+	start := time.Now()
+	m := e.safePoll(ctx, p)
+	e.sampleMu.Lock()
+	e.addSample(name, m)
+	samples := e.copySamples(name)
+	e.sampleMu.Unlock()
+	v := e.safeAggregate(p, samples)
+	if tracker := p.State(); tracker != nil {
+		state := plugin.StateOff
+		if v.OK {
+			state = plugin.StateOn
+		}
+		tracker.Set(state)
+	}
+	e.publishBroker(v)
+	scribe.LogDiagnosis(name, string(v.Status), v.Score, time.Since(start), v.Reason)
 }
 
 func (e *Engine) shutdown() {
@@ -364,3 +399,5 @@ func (e *Engine) copySamples(name string) []plugin.Sample {
 	}
 	return append([]plugin.Sample(nil), buffer...)
 }
+
+const refreshGap = 5 * time.Second

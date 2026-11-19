@@ -108,7 +108,6 @@ func runOneService(ctx context.Context, request stageRequest, loaded *config.Con
 	command.Stderr = logFile
 	command.Env = append(os.Environ(),
 		scriptSkipHoursVariable+"="+strconv.Itoa(scriptSkipHours()),
-		scriptRestartVariable+"=true",
 		backupTimeoutVariable+"="+strconv.Itoa(scriptTimeoutHours(loaded, request)))
 	runErr := command.Run()
 	ok := runErr == nil

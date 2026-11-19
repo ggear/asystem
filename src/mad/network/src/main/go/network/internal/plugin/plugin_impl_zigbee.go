@@ -119,10 +119,6 @@ func (p *zigbeePlugin) Aggregate(samples []Sample) (Aggregate, error) {
 	return diagnoseZigbee(samples), nil
 }
 
-func (p *zigbeePlugin) Command(context.Context, State) error {
-	return nil
-}
-
 func (p *zigbeePlugin) State() *StateTracker { return p.state }
 
 func probeZigbee(ctx context.Context, topics []string) (map[string][]byte, error) {

@@ -43,7 +43,7 @@ fi
 shopt -s expand_aliases
 
 if
-  /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && { /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" >/dev/null 2>&1 && vmq-admin node status | awk -F '|' '/num_offline/ {gsub(/ /,"",$3); offline=$3} /num_online/ {gsub(/ /,"",$3); online=$3} END {exit (offline>0 || online==0)?1:0}'; } >/dev/null 2>&1
+  /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && { /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" >/dev/null 2>&1 && vmq-admin node status | awk -F '|' '/num_offline/ {gsub(/ /,"",$3); offline=$3} /num_online/ {gsub(/ /,"",$3); online=$3} END {exit (offline>0 || online==0)?1:0}' && vmq-admin plugin show | grep -q 'vmq_acl:auth_on_publish'; } >/dev/null 2>&1
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && exec {HEALTHCHECK_TRACE}>&- && wait "${HEALTHCHECK_TRACER}"

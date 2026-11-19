@@ -11,7 +11,7 @@ use chrono::Local;
 use log::{info, warn};
 use serde::Deserialize;
 
-use crate::guard::{Call, Command, Host, HOST_SHED_LAST};
+use crate::guard::{Call, Command, Host, HEALTH_WAIT_BROKER_SECONDS, HEALTH_WAIT_FOLLOWER_SECONDS};
 use crate::log_line;
 use crate::outage;
 
@@ -32,6 +32,7 @@ pub struct Ssh {
     pub timeout: Duration,
     pub limit: Duration,
     pub log_dir: PathBuf,
+    pub awake_first: String,
 }
 
 pub struct DryRun;
@@ -42,34 +43,26 @@ pub struct Finished {
     pub outcome: Outcome,
 }
 
-pub fn load_hosts(path: &Path, local: &str) -> Result<Vec<Host>, String> {
+pub fn load_hosts(path: &Path) -> Result<Vec<Host>, String> {
     let bytes = fs::read(path).map_err(|err| format!("failed to read hosts [{}] [{err}]", path.display()))?;
     let entries: Vec<HostEntry> =
         serde_json::from_slice(&bytes).map_err(|err| format!("invalid hosts [{}] [{err}]", path.display()))?;
     if entries.is_empty() {
         return Err(format!("no hosts [{}]", path.display()));
     }
-    let hosts: Vec<Host> = entries
+    let mut hosts: Vec<Host> = entries
         .into_iter()
         .map(|entry| Host {
-            local: entry.name == local,
             name: entry.name,
             address: entry.address,
         })
         .collect();
-    if !hosts.iter().any(|host| host.local) {
-        return Err(format!("local host [{local}] not in hosts [{}]", path.display()));
-    }
+    hosts.sort_by(|left, right| left.name.cmp(&right.name));
     Ok(hosts)
 }
 
 pub fn shed_order(hosts: &[Host]) -> Vec<String> {
-    hosts
-        .iter()
-        .filter(|host| host.name != HOST_SHED_LAST)
-        .chain(hosts.iter().filter(|host| host.name == HOST_SHED_LAST))
-        .map(|host| host.name.clone())
-        .collect()
+    hosts.iter().map(|host| host.name.clone()).collect()
 }
 
 pub fn spawn(runner: &Arc<dyn Runner>, hosts: &[Host], call: Call, results: &Sender<Finished>) {
@@ -147,6 +140,20 @@ pub fn parse_result(output: &str) -> String {
         .to_string()
 }
 
+pub fn remote_command(command: Command, first: bool) -> String {
+    match command {
+        Command::Awake => {
+            let seconds = if first {
+                HEALTH_WAIT_BROKER_SECONDS
+            } else {
+                HEALTH_WAIT_FOLLOWER_SECONDS
+            };
+            format!("{REMOTE_BIN_DIR}/{} --health-timeout {seconds}", command.remote())
+        }
+        Command::Asleep => format!("{REMOTE_BIN_DIR}/{}", command.remote()),
+    }
+}
+
 impl Runner for Ssh {
     fn run(&self, host: &Host, command: Command) -> Outcome {
         let started = Instant::now();
@@ -171,7 +178,7 @@ impl Runner for Ssh {
                 .arg("-o")
                 .arg(format!("ServerAliveCountMax={SSH_KEEPALIVE_COUNT}"))
                 .arg(format!("root@{}", host.address))
-                .arg(format!("{REMOTE_BIN_DIR}/{}", command.remote())),
+                .arg(remote_command(command, host.name == self.awake_first)),
             self.limit,
         );
         let took = started.elapsed();
@@ -312,39 +319,31 @@ mod tests {
         path
     }
 
-    #[test]
-    fn hosts_load_in_file_order_with_the_local_one_marked() {
-        let path = write(
-            "ok",
-            r#"[{"name":"mad","address":"macmini-mad"},{"name":"max","address":"macmini-max"},{"name":"meg","address":"macmini-meg"}]"#,
-        );
-        let hosts = load_hosts(&path, "max").unwrap();
-        assert_eq!(
-            hosts.iter().map(|host| host.local).collect::<Vec<_>>(),
-            vec![false, true, false]
-        );
-        assert_eq!(shed_order(&hosts), vec!["mad", "max", "meg"]);
+    const THREE_HOSTS: &str = r#"[{"name":"meg","address":"macmini-meg"},{"name":"max","address":"macmini-max"},{"name":"mad","address":"macmini-mad"}]"#;
+
+    fn names(hosts: &[Host]) -> Vec<&str> {
+        hosts.iter().map(|host| host.name.as_str()).collect()
     }
 
     #[test]
-    fn meg_is_shed_last_wherever_it_is_listed() {
-        let hosts: Vec<Host> = ["meg", "mad", "max"]
-            .iter()
-            .map(|name| Host {
-                name: (*name).to_string(),
-                address: String::new(),
-                local: false,
-            })
-            .collect();
+    fn hosts_load_alphabetically_whatever_the_file_order_and_the_shed_runs_in_that_order() {
+        let hosts = load_hosts(&write("ok", THREE_HOSTS)).unwrap();
+        assert_eq!(names(&hosts), vec!["mad", "max", "meg"]);
         assert_eq!(shed_order(&hosts), vec!["mad", "max", "meg"]);
     }
 
     #[test]
     fn a_bad_host_file_is_refused() {
-        assert!(load_hosts(Path::new("/nonexistent"), "max").is_err());
-        assert!(load_hosts(&write("garbled", "{"), "max").is_err());
-        assert!(load_hosts(&write("empty", "[]"), "max").is_err());
-        assert!(load_hosts(&write("nolocal", r#"[{"name":"mad","address":"a"}]"#), "max").is_err());
+        assert!(load_hosts(Path::new("/nonexistent")).is_err());
+        assert!(load_hosts(&write("garbled", "{")).is_err());
+        assert!(load_hosts(&write("empty", "[]")).is_err());
+    }
+
+    #[test]
+    fn an_awake_waits_longer_for_the_first_host_and_a_shed_never_takes_a_wait() {
+        assert!(remote_command(Command::Awake, true).ends_with("awake --health-timeout 60"));
+        assert!(remote_command(Command::Awake, false).ends_with("awake --health-timeout 30"));
+        assert!(remote_command(Command::Asleep, true).ends_with("/asleep"));
     }
 
     #[test]
@@ -370,7 +369,6 @@ mod tests {
         let hosts = vec![Host {
             name: "mad".to_string(),
             address: "macmini-mad".to_string(),
-            local: false,
         }];
         let (sender, receiver) = mpsc::channel();
         spawn(
@@ -378,7 +376,7 @@ mod tests {
             &hosts,
             Call {
                 host: "mad".to_string(),
-                command: Command::AsleepDeep,
+                command: Command::Asleep,
             },
             &sender,
         );
@@ -415,7 +413,6 @@ mod tests {
         let host = Host {
             name: "mad".to_string(),
             address: "x".to_string(),
-            local: false,
         };
         assert_eq!(DryRun.run(&host, Command::Awake).status, 0);
     }

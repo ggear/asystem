@@ -114,6 +114,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 				subject = scribe.SubjectMetric(metric.MetricCluster)
 			case metric.EntityService:
 				subject = scribe.SubjectService(tokens[4])
+				probe.Switch(ctx, hostName, msg.Topic(), msg.Payload())
 			case metric.EntityHost:
 				subject = scribe.SubjectHost(tokens[1])
 			default:

@@ -70,3 +70,9 @@ func TestConfig_Resolution(t *testing.T) {
 	}
 	Reset()
 }
+
+func Reset() {
+	cachedMu.Lock()
+	defer cachedMu.Unlock()
+	cached = nil
+}

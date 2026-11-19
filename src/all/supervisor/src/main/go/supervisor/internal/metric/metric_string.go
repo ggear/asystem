@@ -42,15 +42,16 @@ func _() {
 	_ = x[MetricServiceUpTime-31]
 	_ = x[MetricServiceMaxMemory-32]
 	_ = x[MetricServiceRestartCount-33]
-	_ = x[MetricHostFailedDrives-34]
-	_ = x[MetricHostHaltedBackupStages-35]
-	_ = x[MetricMax-36]
+	_ = x[MetricServiceRestartAttempts-34]
+	_ = x[MetricHostFailedDrives-35]
+	_ = x[MetricHostHaltedBackupStages-36]
+	_ = x[MetricMax-37]
 	_ = x[Self - -1]
 }
 
-const _ID_name = "SelfMetricClusterMetricHostMetricHostUsedProcessorMetricHostUsedMemoryMetricHostAllocatedMemoryMetricHostFailedLogsMetricHostFailedSharesMetricHostFailedBackupStagesMetricHostWarnTemperatureMetricHostSpinFanSpeedMetricHostUsedDriveLifeMetricHostUsedHomeSpaceMetricHostUsedShareSpaceMetricHostUsedBackupSpaceMetricHostUsedSwapSpaceMetricHostUsedDiskTimeMetricHostUsedNetworkMetricHostUpTimeMetricHostTemperatureMetricHostServicesStatusMetricHostServicesMaxMemoryMetricServiceMetricServiceBackupStatusMetricServiceHealthStatusMetricServiceConfiguredStatusMetricServiceNameMetricServiceVersionMetricServiceUsedProcessorMetricServiceUsedMemoryMetricServiceUsedDiskRateMetricServiceUsedNetworkMetricServiceUpTimeMetricServiceMaxMemoryMetricServiceRestartCountMetricHostFailedDrivesMetricHostHaltedBackupStagesMetricMax"
+const _ID_name = "SelfMetricClusterMetricHostMetricHostUsedProcessorMetricHostUsedMemoryMetricHostAllocatedMemoryMetricHostFailedLogsMetricHostFailedSharesMetricHostFailedBackupStagesMetricHostWarnTemperatureMetricHostSpinFanSpeedMetricHostUsedDriveLifeMetricHostUsedHomeSpaceMetricHostUsedShareSpaceMetricHostUsedBackupSpaceMetricHostUsedSwapSpaceMetricHostUsedDiskTimeMetricHostUsedNetworkMetricHostUpTimeMetricHostTemperatureMetricHostServicesStatusMetricHostServicesMaxMemoryMetricServiceMetricServiceBackupStatusMetricServiceHealthStatusMetricServiceConfiguredStatusMetricServiceNameMetricServiceVersionMetricServiceUsedProcessorMetricServiceUsedMemoryMetricServiceUsedDiskRateMetricServiceUsedNetworkMetricServiceUpTimeMetricServiceMaxMemoryMetricServiceRestartCountMetricServiceRestartAttemptsMetricHostFailedDrivesMetricHostHaltedBackupStagesMetricMax"
 
-var _ID_index = [...]uint16{0, 4, 17, 27, 50, 70, 95, 115, 137, 165, 190, 212, 235, 258, 282, 307, 330, 352, 373, 389, 410, 434, 461, 474, 499, 524, 553, 570, 590, 616, 639, 664, 688, 707, 729, 754, 776, 804, 813}
+var _ID_index = [...]uint16{0, 4, 17, 27, 50, 70, 95, 115, 137, 165, 190, 212, 235, 258, 282, 307, 330, 352, 373, 389, 410, 434, 461, 474, 499, 524, 553, 570, 590, 616, 639, 664, 688, 707, 729, 754, 782, 804, 832, 841}
 
 func (i ID) String() string {
 	idx := int(i) - -1

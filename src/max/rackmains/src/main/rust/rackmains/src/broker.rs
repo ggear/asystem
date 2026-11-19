@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{self, Receiver};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
@@ -35,6 +36,10 @@ pub trait Publisher {
     fn close(&mut self) -> Result<()> {
         Ok(())
     }
+
+    fn commands(&mut self) -> Option<Receiver<(String, Vec<u8>)>> {
+        None
+    }
 }
 
 pub struct MqttPublisher {
@@ -44,10 +49,11 @@ pub struct MqttPublisher {
     handle: Option<JoinHandle<()>>,
     status_topic: String,
     retained: Arc<Mutex<HashMap<String, Vec<u8>>>>,
+    commands: Option<Receiver<(String, Vec<u8>)>>,
 }
 
 impl MqttPublisher {
-    pub fn new(host: &str, port: u16, token: &str, status_topic: &str) -> Self {
+    pub fn new(host: &str, port: u16, token: &str, status_topic: &str, command_filter: &str) -> Self {
         let mut options = MqttOptions::new("rackmains", host, port);
         if !token.is_empty() {
             options.set_credentials("rackmains", token);
@@ -67,6 +73,8 @@ impl MqttPublisher {
         let thread_retained = Arc::clone(&retained);
         let thread_client = client.clone();
         let thread_status_topic = status_topic.to_string();
+        let thread_filter = command_filter.to_string();
+        let (command_sender, commands) = mpsc::channel();
         let address = format!("{host}:{port}");
         let handle = thread::spawn(move || {
             let mut seen = false;
@@ -86,6 +94,9 @@ impl MqttPublisher {
                             thread_client.try_publish(&thread_status_topic, QoS::AtLeastOnce, true, AVAILABILITY_ONLINE)
                         {
                             warn!("{}", log_line("broker status publish failed", &err.to_string()));
+                        }
+                        if let Err(err) = thread_client.try_subscribe(&thread_filter, QoS::AtLeastOnce) {
+                            warn!("{}", log_line("broker command subscribe failed", &err.to_string()));
                         }
                         let replay: Vec<(String, Vec<u8>)> = match thread_retained.lock() {
                             Ok(cache) => cache
@@ -111,6 +122,9 @@ impl MqttPublisher {
                                 log_line("broker republished retained topics", &replay.len().to_string())
                             );
                         }
+                    }
+                    Ok(Event::Incoming(Packet::Publish(received))) => {
+                        let _ = command_sender.send((received.topic.clone(), received.payload.to_vec()));
                     }
                     Ok(Event::Incoming(Packet::PubAck(ack))) => {
                         debug!("{}", log_line("broker ack", &ack.pkid.to_string()));
@@ -150,6 +164,7 @@ impl MqttPublisher {
             handle: Some(handle),
             status_topic: status_topic.to_string(),
             retained,
+            commands: Some(commands),
         }
     }
 
@@ -166,6 +181,10 @@ impl MqttPublisher {
 }
 
 impl Publisher for MqttPublisher {
+    fn commands(&mut self) -> Option<Receiver<(String, Vec<u8>)>> {
+        self.commands.take()
+    }
+
     fn close(&mut self) -> Result<()> {
         let status_topic = self.status_topic.clone();
         let published = self.publish(&status_topic, AVAILABILITY_OFFLINE.as_bytes());
@@ -213,7 +232,7 @@ mod tests {
 
     #[test]
     fn closing_against_a_dead_broker_returns_well_inside_the_reconnect_delay() {
-        let mut publisher = MqttPublisher::new("127.0.0.1", 1, "", "rackmains/status");
+        let mut publisher = MqttPublisher::new("127.0.0.1", 1, "", "rackmains/status", "supervisor/+/command/host/+");
         thread::sleep(Duration::from_millis(500));
         let started = Instant::now();
         let _ = publisher.close();

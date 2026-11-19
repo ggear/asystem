@@ -18,7 +18,6 @@ type Plugin interface {
 	Mode() Mode
 	Poll(ctx context.Context) (Sample, error)
 	Aggregate(samples []Sample) (Aggregate, error)
-	Command(ctx context.Context, newState State) error
 	State() *StateTracker
 }
 

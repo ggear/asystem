@@ -86,3 +86,63 @@ func TestProbeUtilBackupModuleRun_Lifecycle(t *testing.T) {
 		})
 	}
 }
+
+func TestProbeUtilBackupModuleRun_EngineRestartsWhatWasRunning(t *testing.T) {
+	if _, err := exec.LookPath("bash"); err != nil {
+		t.Skip("no bash")
+	}
+	tests := []struct {
+		name           string
+		wasRunning     bool
+		noRestart      bool
+		startWorks     bool
+		expectedStarts int
+		expectedCode   int
+	}{
+		{name: "a_service_that_was_running_and_was_stopped_is_started", wasRunning: true, startWorks: true, expectedStarts: 1},
+		{name: "a_service_that_was_not_running_is_left_alone", expectedStarts: 0},
+		{name: "the_caller_can_decline_the_restart", wasRunning: true, noRestart: true, expectedStarts: 0},
+		{name: "a_service_that_will_not_start_fails_the_run_after_every_try", wasRunning: true, expectedStarts: backupRestartTries, expectedCode: 1},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			dir := t.TempDir()
+			source := filepath.Join(dir, "mod", "1.0")
+			if err := os.MkdirAll(source, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			calls, starts, started := 0, 0, false
+			runningOriginal, startOriginal, waitOriginal := backupServiceRunning, backupServiceStart, backupRestartWait
+			t.Cleanup(func() {
+				backupServiceRunning, backupServiceStart, backupRestartWait = runningOriginal, startOriginal, waitOriginal
+			})
+			backupRestartWait = time.Millisecond
+			backupServiceRunning = func(context.Context, string) bool {
+				calls++
+				if calls == 1 {
+					return testCase.wasRunning
+				}
+				return started
+			}
+			backupServiceStart = func(context.Context, string) error {
+				starts++
+				started = testCase.startWorks
+				return nil
+			}
+			body := `backup_written() { local target="$(dirname "$BACKUP_SOURCE_PATH")/backup/${BACKUP_RUN_TIMESTAMP}/mod_at_${BACKUP_RUN_TIMESTAMP}_from_1.0_full.sql.gz"; mkdir -p "$(dirname "$target")"; echo "$target" >"${BACKUP_STATE_DIR}/target"; echo x | gzip >"$target.tmp"; }`
+			script := filepath.Join(dir, "backup.sh")
+			if err := os.WriteFile(script, []byte(body+"\n"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			t.Setenv(moduleLockHeldVariable, "")
+			request := BackupModuleRequest{Arguments: []string{"mod"}, Source: source, Script: script, ShrinkPercent: 20, LockPeriod: time.Second, TimeoutPeriod: time.Hour, NoRestart: testCase.noRestart}
+			var stdout, stderr bytes.Buffer
+			if code := BackupModuleRun(context.Background(), request, &stdout, &stderr); code != testCase.expectedCode {
+				t.Fatalf("BackupModuleRun: got code [%d] want [%d] stderr [%s]", code, testCase.expectedCode, stderr.String())
+			}
+			if starts != testCase.expectedStarts {
+				t.Fatalf("starts: got %d want %d", starts, testCase.expectedStarts)
+			}
+		})
+	}
+}

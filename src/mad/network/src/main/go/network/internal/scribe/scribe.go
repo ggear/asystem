@@ -18,28 +18,8 @@ func EnableStdout(level slog.Level) {
 	scribeMutex.Lock()
 	defer scribeMutex.Unlock()
 	scribeLevel = level
-	scribeMode = "stdout"
 	scribeWriter = os.Stdout
 	slog.SetDefault(slog.New(&handler{}))
-}
-
-func Disable() {
-	scribeMutex.Lock()
-	defer scribeMutex.Unlock()
-	scribeMode = "disabled"
-	scribeWriter = io.Discard
-}
-
-func Level() slog.Level {
-	scribeMutex.Lock()
-	defer scribeMutex.Unlock()
-	return scribeLevel
-}
-
-func Mode() string {
-	scribeMutex.Lock()
-	defer scribeMutex.Unlock()
-	return scribeMode
 }
 
 func ParseLevel(raw string) (slog.Level, error) {
@@ -170,6 +150,5 @@ const (
 var (
 	scribeMutex  sync.Mutex
 	scribeLevel  slog.Level
-	scribeMode   string
 	scribeWriter io.Writer
 )

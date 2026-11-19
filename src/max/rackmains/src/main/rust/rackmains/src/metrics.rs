@@ -388,7 +388,10 @@ mod tests {
             .collect();
         declared.sort();
         let payloads = RackMains.payloads();
-        let mut reflected: Vec<String> = payloads[0]
+        let mut reflected: Vec<String> = payloads
+            .iter()
+            .find(|payload| matches!(payload.role, crate::schema::Role::State) && payload.match_glob.is_empty())
+            .expect("a state payload with no match")
             .root
             .members
             .iter()

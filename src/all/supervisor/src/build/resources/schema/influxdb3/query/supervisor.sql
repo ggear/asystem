@@ -487,7 +487,7 @@ GROUP BY "Bucket", host
 ORDER BY "Bucket", host;
 
 -- supervisor/service [health and utilisation of one service on one host] every 6s, bucketed [15 minute] across the newest two buckets
--- part 1 of 10:
+-- part 1 of 11:
 SELECT
     date_bin(INTERVAL '15 minute', time + INTERVAL '480 minute') AS "Bucket",
     host                                                         AS "Host",
@@ -512,7 +512,7 @@ GROUP BY "Bucket", host, service
 ORDER BY "Bucket", host, service;
 
 -- supervisor/service [health and utilisation of one service on one host] every 6s, bucketed [15 minute] across the newest two buckets
--- part 2 of 10:
+-- part 2 of 11:
 SELECT
     date_bin(INTERVAL '15 minute', time + INTERVAL '480 minute') AS "Bucket",
     host                                                         AS "Host",
@@ -537,7 +537,7 @@ GROUP BY "Bucket", host, service
 ORDER BY "Bucket", host, service;
 
 -- supervisor/service [health and utilisation of one service on one host] every 6s, bucketed [15 minute] across the newest two buckets
--- part 3 of 10:
+-- part 3 of 11:
 SELECT
     date_bin(INTERVAL '15 minute', time + INTERVAL '480 minute') AS "Bucket",
     host                                                         AS "Host",
@@ -562,7 +562,7 @@ GROUP BY "Bucket", host, service
 ORDER BY "Bucket", host, service;
 
 -- supervisor/service [health and utilisation of one service on one host] every 6s, bucketed [15 minute] across the newest two buckets
--- part 4 of 10:
+-- part 4 of 11:
 SELECT
     date_bin(INTERVAL '15 minute', time + INTERVAL '480 minute') AS "Bucket",
     host                                                         AS "Host",
@@ -587,7 +587,7 @@ GROUP BY "Bucket", host, service
 ORDER BY "Bucket", host, service;
 
 -- supervisor/service [health and utilisation of one service on one host] every 6s, bucketed [15 minute] across the newest two buckets
--- part 5 of 10:
+-- part 5 of 11:
 SELECT
     date_bin(INTERVAL '15 minute', time + INTERVAL '480 minute') AS "Bucket",
     host                                                         AS "Host",
@@ -612,7 +612,7 @@ GROUP BY "Bucket", host, service
 ORDER BY "Bucket", host, service;
 
 -- supervisor/service [health and utilisation of one service on one host] every 6s, bucketed [15 minute] across the newest two buckets
--- part 6 of 10:
+-- part 6 of 11:
 SELECT
     date_bin(INTERVAL '15 minute', time + INTERVAL '480 minute') AS "Bucket",
     host                                                         AS "Host",
@@ -637,7 +637,7 @@ GROUP BY "Bucket", host, service
 ORDER BY "Bucket", host, service;
 
 -- supervisor/service [health and utilisation of one service on one host] every 6s, bucketed [15 minute] across the newest two buckets
--- part 7 of 10:
+-- part 7 of 11:
 SELECT
     date_bin(INTERVAL '15 minute', time + INTERVAL '480 minute') AS "Bucket",
     host                                                         AS "Host",
@@ -662,7 +662,7 @@ GROUP BY "Bucket", host, service
 ORDER BY "Bucket", host, service;
 
 -- supervisor/service [health and utilisation of one service on one host] every 6s, bucketed [15 minute] across the newest two buckets
--- part 8 of 10:
+-- part 8 of 11:
 SELECT
     date_bin(INTERVAL '15 minute', time + INTERVAL '480 minute') AS "Bucket",
     host                                                         AS "Host",
@@ -687,7 +687,7 @@ GROUP BY "Bucket", host, service
 ORDER BY "Bucket", host, service;
 
 -- supervisor/service [health and utilisation of one service on one host] every 6s, bucketed [15 minute] across the newest two buckets
--- part 9 of 10:
+-- part 9 of 11:
 SELECT
     date_bin(INTERVAL '15 minute', time + INTERVAL '480 minute') AS "Bucket",
     host                                                         AS "Host",
@@ -711,7 +711,7 @@ GROUP BY "Bucket", host, service
 ORDER BY "Bucket", host, service;
 
 -- supervisor/service [health and utilisation of one service on one host] every 6s, bucketed [15 minute] across the newest two buckets
--- part 10 of 10:
+-- part 10 of 11:
 SELECT
     date_bin(INTERVAL '15 minute', time + INTERVAL '480 minute') AS "Bucket",
     host                                                         AS "Host",
@@ -724,6 +724,31 @@ SELECT
     round(max(restart_count_trend), 1)                           AS "Restart Count Trend Max",
     count(restart_count_trend)                                   AS "Restart Count Trend Count",
     count(DISTINCT restart_count_trend)                          AS "Restart Count Trend Distinct"
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NOT NULL
+    AND time >= now() - INTERVAL '1500 minute'
+    AND time >= (SELECT max(time) FROM supervisor) - INTERVAL '15 minute'
+GROUP BY "Bucket", host, service
+ORDER BY "Bucket", host, service;
+
+-- supervisor/service [health and utilisation of one service on one host] every 6s, bucketed [15 minute] across the newest two buckets
+-- part 11 of 11:
+SELECT
+    date_bin(INTERVAL '15 minute', time + INTERVAL '480 minute') AS "Bucket",
+    host                                                         AS "Host",
+    service                                                      AS "Service",
+    count(*)                                                     AS "Rows",
+    min(time) + INTERVAL '480 minute'                            AS "Oldest",
+    max(time) + INTERVAL '480 minute'                            AS "Newest",
+    round(last_value(restart_attempts ORDER BY time), 1)         AS "Restart Attempts",
+    count(restart_attempts)                                      AS "Restart Attempts Count",
+    count(DISTINCT restart_attempts)                             AS "Restart Attempts Distinct",
+    round(last_value(restart_attempts_trend ORDER BY time), 1)   AS "Restart Attempts Trend",
+    count(restart_attempts_trend)                                AS "Restart Attempts Trend Count",
+    count(DISTINCT restart_attempts_trend)                       AS "Restart Attempts Trend Distinct"
 FROM supervisor
 WHERE
     module = 'supervisor'

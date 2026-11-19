@@ -21,6 +21,15 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install unzip=6.0-28+deb12u1 && \
     DEBIAN_FRONTEND=noninteractive apt-get clean && rm -rf /var/lib/apt/lists/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
+ARG ASYSTEM_DOCKER_COMPOSE_VERSION
+RUN mkdir -p /usr/libexec/docker/cli-plugins && \
+    asset="docker-compose-linux-$(uname -m)" && \
+    curl -fsSL -o "/tmp/${asset}" "https://github.com/docker/compose/releases/download/v${ASYSTEM_DOCKER_COMPOSE_VERSION}/${asset}" && \
+    curl -fsSL -o "/tmp/${asset}.sha256" "https://github.com/docker/compose/releases/download/v${ASYSTEM_DOCKER_COMPOSE_VERSION}/${asset}.sha256" && \
+    (cd /tmp && sha256sum -c "${asset}.sha256") && \
+    install -m 0755 "/tmp/${asset}" /usr/libexec/docker/cli-plugins/docker-compose && \
+    rm -f "/tmp/${asset}" "/tmp/${asset}.sha256" && \
+    docker compose version
 ENV PATH=${PATH}:/asystem/bin
 
 FROM golang:${ASYSTEM_GO_VERSION}-bookworm AS image_build

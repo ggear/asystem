@@ -3,6 +3,7 @@ mod check;
 mod cli;
 mod drill;
 mod guard;
+mod hostswitch;
 mod liveness;
 mod metrics;
 pub mod mock;

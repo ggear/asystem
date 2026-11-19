@@ -30,17 +30,3 @@ func TestScribe_ParseLevel(t *testing.T) {
 		})
 	}
 }
-
-func TestScribe_EnableStdout(t *testing.T) {
-	EnableStdout(slog.LevelDebug)
-	if Level() != slog.LevelDebug {
-		t.Fatalf("level: got %v want debug", Level())
-	}
-	if Mode() != "stdout" {
-		t.Fatalf("mode: got %q want stdout", Mode())
-	}
-	Disable()
-	if Mode() != "disabled" {
-		t.Fatalf("mode: got %q want disabled", Mode())
-	}
-}

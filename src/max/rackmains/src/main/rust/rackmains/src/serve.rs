@@ -14,7 +14,8 @@ use serde_json::{json, Map, Value};
 use crate::broker::{MqttPublisher, Publisher};
 use crate::cli::{init_serve_logging, ServeArgs};
 use crate::drill::{Marker, Plug, Sampler, Tasmota};
-use crate::guard::{Guard, Host, Output};
+use crate::guard::{Guard, Host, Output, State};
+use crate::hostswitch::{HostSwitch, COMMAND_FILTER};
 use crate::liveness::{
     abort_on_stall, boot_ms, watchdog, Effective, Liveness, Progress, FILE_LIVENESS, WATCHDOG_LIMIT, WATCHDOG_TICK,
 };
@@ -67,6 +68,7 @@ pub struct Poller {
     writer: Writer,
     results: Receiver<Finished>,
     results_sender: Sender<Finished>,
+    host_switch: HostSwitch,
     sampler: Option<Sampler>,
     session: Option<Session>,
     last: Frame,
@@ -91,7 +93,7 @@ pub struct Poller {
 }
 
 impl Poller {
-    pub fn new(settings: Settings, parts: Parts, now: NaiveDateTime) -> Result<Poller, String> {
+    pub fn new(settings: Settings, mut parts: Parts, now: NaiveDateTime) -> Result<Poller, String> {
         let outage_dir = settings.data_dir.join(DIR_OUTAGE);
         let state_dir = settings.data_dir.join(DIR_STATE);
         for directory in [&outage_dir, &state_dir, &settings.run_dir] {
@@ -134,6 +136,7 @@ impl Poller {
         }
         let writer = Writer::start(outage_dir, settings.outage_keep);
         let (results_sender, results) = mpsc::channel();
+        let host_switch = HostSwitch::new(parts.publisher.commands());
         Ok(Poller {
             writer,
             guard,
@@ -147,6 +150,7 @@ impl Poller {
             progress: parts.progress,
             results,
             results_sender,
+            host_switch,
             sampler: None,
             session: None,
             last: Frame::default(),
@@ -184,7 +188,7 @@ impl Poller {
     }
 
     // Poller tick flow, one pass per poll
-    //     1. Collect Calls: finished shed and wake calls into the guard
+    //     1. Collect Calls: finished shed and wake calls into the guard, and the host switch's commands and states
     //     2. Read UPS: the driver socket, a failed read only counted
     //     3. Build Frame: samples, flags and status changes
     //     4. Open Session: the first raw OB opens the outage file
@@ -206,7 +210,12 @@ impl Poller {
         // 1. Collect Calls
         let mut rows: Vec<(&'static str, String)> = Vec::new();
         let mut ended = false;
+        let mut host_states = Vec::new();
         while let Ok(finished) = self.results.try_recv() {
+            host_states.extend(
+                self.host_switch
+                    .observe(&finished.host, finished.command, finished.outcome.status),
+            );
             rows.push((
                 EVENT_COMMAND,
                 format!(
@@ -222,6 +231,13 @@ impl Poller {
                 .guard
                 .complete(&finished.host, finished.command, finished.outcome.status);
             ended |= self.apply(out, &mut rows);
+        }
+        let idle = self.guard.state() == State::Idle && self.session.is_none();
+        host_states.extend(self.host_switch.tick(idle, &self.runner, &self.hosts));
+        for (topic, payload) in host_states {
+            if let Err(err) = self.publisher.publish(&topic, &payload) {
+                warn!("{}", log_line("host state publish failed", &err.to_string()));
+            }
         }
         // 2. Read UPS
         let reading = match self.source.read() {
@@ -773,7 +789,7 @@ pub fn run(args: &ServeArgs, data_dir: &Path) -> Result<(), String> {
     for (name, value) in policy.fields() {
         info!("{}", log_line(&format!("guard policy {name}"), &value));
     }
-    let hosts = load_hosts(Path::new(&common.hosts_file), &common.local_host)?;
+    let hosts = load_hosts(Path::new(&common.hosts_file))?;
     let ssh_timeout = Duration::from_secs(SSH_TIMEOUT_SECONDS);
     if !args.dry_run {
         let outcomes = check::run(&common.check_target(data_dir, timeout));
@@ -797,10 +813,17 @@ pub fn run(args: &ServeArgs, data_dir: &Path) -> Result<(), String> {
             known_hosts: PathBuf::from(&common.known_hosts),
             timeout: ssh_timeout,
             limit: Duration::from_secs(SSH_LIMIT_SECONDS),
+            awake_first: hosts[hosts.len() - 1].name.clone(),
             log_dir: data_dir.join(DIR_OUTAGE),
         })
     };
-    let publisher = MqttPublisher::new(&args.broker_host, args.broker_port, &args.broker_token, STATUS_TOPIC);
+    let publisher = MqttPublisher::new(
+        &args.broker_host,
+        args.broker_port,
+        &args.broker_token,
+        STATUS_TOPIC,
+        COMMAND_FILTER,
+    );
     if period.is_zero() {
         publisher
             .wait_connected(Duration::from_secs(30))
@@ -914,9 +937,9 @@ const REPORT_PERIOD: Duration = Duration::from_secs(60);
 
 const REPORT_PERIOD_BATTERY: Duration = Duration::from_secs(1);
 
-const SSH_TIMEOUT_SECONDS: u64 = 30;
+const SSH_TIMEOUT_SECONDS: u64 = 10;
 
-const SSH_LIMIT_SECONDS: u64 = 600;
+const SSH_LIMIT_SECONDS: u64 = 300;
 
 #[cfg(test)]
 mod tests {
@@ -1010,7 +1033,6 @@ mod tests {
                 .map(|name| Host {
                     name: (*name).to_string(),
                     address: format!("macmini-{name}"),
-                    local: *name == "max",
                 })
                 .collect();
             let readings = Readings::default();
@@ -1186,7 +1208,7 @@ mod tests {
         rig.run("OL", 3);
         rig.run("OB DISCHRG", 119);
         assert!(rig.calls().is_empty());
-        rig.run("OB DISCHRG", 3);
+        rig.run("OB DISCHRG", 8);
         assert_eq!(rig.calls().len(), 4);
         rig.run("OL", 305);
         let calls = rig.calls();
@@ -1205,9 +1227,9 @@ mod tests {
         let end = table.rows.last().unwrap();
         assert!(table.cell(end, "detail").contains("reason [restored]"));
         assert!(table.cell(end, "detail").contains("hosts_shed [4]"));
-        assert_eq!(table.cell(end, "rackmains_outage_last_duration_seconds"), "122");
+        assert_eq!(table.cell(end, "rackmains_outage_last_duration_seconds"), "127");
         let payloads = rig.payloads();
-        assert_eq!(payloads.last().unwrap()["rackmains_outage_last_duration_seconds"], 122);
+        assert_eq!(payloads.last().unwrap()["rackmains_outage_last_duration_seconds"], 127);
         assert_eq!(payloads.last().unwrap()["rackmains_guard_state"], "idle");
     }
 
@@ -1521,7 +1543,6 @@ mod tests {
                         hosts: vec![Host {
                             name: "max".to_string(),
                             address: "macmini-max".to_string(),
-                            local: true,
                         }],
                         progress: Progress::default(),
                     },
@@ -1541,7 +1562,6 @@ mod tests {
                 data_dir: dir.clone(),
                 run_dir: dir.join("run"),
                 hosts_file: dir.join("hosts.json"),
-                local_host: "max".to_string(),
                 plug: plug.clone(),
                 plug_host: "plug".to_string(),
                 timing: drill::Timing {
@@ -1606,7 +1626,7 @@ mod tests {
         let calls = live.runner.calls.lock().unwrap().clone();
         assert!(calls
             .iter()
-            .any(|(_, command)| *command == crate::guard::Command::AsleepShallow));
+            .any(|(_, command)| *command == crate::guard::Command::Asleep));
         assert!(calls
             .iter()
             .any(|(_, command)| *command == crate::guard::Command::Awake));

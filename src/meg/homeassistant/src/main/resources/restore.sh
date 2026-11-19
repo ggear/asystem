@@ -5,23 +5,10 @@
 
 # shellcheck disable=SC1090,SC2034,SC2329
 
-#   restore.sh [--mode=replace|merge|drill] [--from=<timestamp>] [--file=<path>] [--runs=<dir>]
-#              [--record=<stage>] [--keep-scratch] [--force] [--no-backup]
-#
-#   bare      read only, resolves the chain and prints the plan, changes nothing
-#   --force   applies the plan, the only destructive form
-#
-#   mode      replace restores wholesale, drill proves the backup restores without touching live,
-#             merge puts back history live lost, offered only to a module defining restore_merged
-#   from      the run to restore, a backup timestamp, defaulting to the newest run not regressed
-#   file      an artefact path outright, for one lifted off the share or elsewhere
-#   runs      a directory of runs searched alone, for a chain pinned outside the stages
-#   record    the stage under whose .meta a drill writes its verdict, primary or secondary
-#   keep-scratch  leave the scratch directory behind for inspection
-#   no-backup skip the safety backup taken of the current data before applying
-#
-# The run is `supervisor backup restore|drill|merge`, this script holds only the module's own hooks.
-# Only install.sh runs it unprompted, as a drill after a release, which touches nothing live. Applying is only ever by hand.
+# restore.sh [--mode=replace|merge|drill] [--from=<run>] [--file=<path>] [--runs=<dir>] [--record=<stage>]
+#            [--keep-scratch] [--force] [--no-backup]
+# Bare is a read-only plan, --force applies it. The run is `supervisor backup restore|drill|merge`, this file holds only
+# the module's hooks. merge needs restore_merged, and only a drill after a release runs unprompted.
 
 set -uo pipefail
 
@@ -67,25 +54,19 @@ restore_files() {
     --target "${2:-${RESTORE_SOURCE_PATH}}" --file "${RESTORE_SOURCE_FILE}" --paths "${1:-}" "${arguments[@]}"
 }
 
-# The engine owns the run, this snippet owns the restore. `supervisor backup restore` resolves the chain, checks
-# its integrity, takes a safety backup, stops or starts the service, counts faults and sets the exit code, calling
-# this snippet's hooks, each in its own bash. Define restore_applied below, reading "${RESTORE_SOURCE_FILE}" and
-# writing it back into the service, and optionally restore_planned to describe that in the dry run. Declare
-# RESTORE_SERVICE_STATE as "stopped" when the restore replaces files the service holds open, or "running" when
-# it is applied through the service itself. A snippet with a scratch copy also defines restore_staged (print the
-# scratch address), restore_sealed, restore_teardown and restore_checked, one with live history to merge
-# restore_merged, and one with units still being written restore_settled, a stdin to stdout filter dropping the
-# open ones. No hook may rely on a variable another set. Never assign another wrapper variable, prefix this
-# snippet's own state with the module name, and expand a value read from .env as "${VAR:?}", so a missing key
-# fails by name rather than corrupting the restore.
+# The engine (`supervisor backup restore`) owns the run, this snippet owns the restore, as hooks each in its own bash.
+# Define restore_applied, writing "${RESTORE_SOURCE_FILE}" back into the service, and declare RESTORE_SERVICE_STATE.
+# Optional hooks: restore_planned, restore_staged, restore_sealed, restore_teardown, restore_checked, restore_merged,
+# restore_settled.
+# No hook relies on a variable another set, own state is prefixed with the module name, .env values expand as "${VAR:?}".
 #
 # RESTORE_MODULE_NAME     this module's name
 # RESTORE_SOURCE_PATH     this module's data path, the restore target
-# RESTORE_SOURCE_FILE     the artefact being restored from
+# RESTORE_SOURCE_FILE     the artefact being restored
 # RESTORE_CHAIN_FILES     every artefact of the chain, oldest first
 # RESTORE_RUN_TIMESTAMP   the timestamp of the run the artefact belongs to
-# RESTORE_FULL_SUFFIX     the file suffix marking a full backup
-# RESTORE_DELTA_SUFFIX    the file suffix marking a delta backup
+# RESTORE_FULL_SUFFIX     suffix of a full backup
+# RESTORE_DELTA_SUFFIX    suffix of a delta backup
 # RESTORE_SERVICE_STATE   the state the service must be in, stopped or running
 RESTORE_SERVICE_STATE="stopped"
 

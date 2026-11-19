@@ -39,6 +39,7 @@ const (
 	MetricServiceUpTime
 	MetricServiceMaxMemory
 	MetricServiceRestartCount
+	MetricServiceRestartAttempts
 	MetricHostFailedDrives
 	MetricHostHaltedBackupStages
 	MetricMax

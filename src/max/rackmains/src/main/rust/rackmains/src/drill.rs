@@ -243,7 +243,6 @@ pub struct Env {
     pub data_dir: PathBuf,
     pub run_dir: PathBuf,
     pub hosts_file: PathBuf,
-    pub local_host: String,
     pub plug: Arc<dyn Plug>,
     pub plug_host: String,
     pub timing: Timing,
@@ -1293,12 +1292,11 @@ fn gather(env: &Env, liveness: &Liveness, outage_dir: &Path, marker_path: &Path)
         marker.live(now)
             && find_ack(outage_dir, &marker.id).is_some_and(|(file, _)| !follow_run(outage_dir, &file.stem).ended())
     });
-    let unreachable_hosts = load_hosts(&env.hosts_file, &env.local_host).map_or_else(
+    let unreachable_hosts = load_hosts(&env.hosts_file).map_or_else(
         |_| vec!["hosts file".to_string()],
         |hosts| {
             hosts
                 .into_iter()
-                .filter(|host| !host.local)
                 .filter(|host| {
                     (host.address.as_str(), 22u16)
                         .to_socket_addrs()
@@ -2096,7 +2094,6 @@ mod tests {
             data_dir: dir.clone(),
             run_dir: dir.clone(),
             hosts_file: dir.join("hosts.json"),
-            local_host: "max".to_string(),
             plug: plug.clone(),
             plug_host: "plug".to_string(),
             timing: Timing {
@@ -2129,7 +2126,6 @@ mod tests {
                 data_dir: dir.clone(),
                 run_dir: dir.clone(),
                 hosts_file: dir.join("hosts.json"),
-                local_host: "max".to_string(),
                 plug: plug.clone(),
                 plug_host: "plug".to_string(),
                 timing: Timing::default(),

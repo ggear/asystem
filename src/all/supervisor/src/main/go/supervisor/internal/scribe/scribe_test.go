@@ -1049,37 +1049,78 @@ func TestScribe_LogFilePID(t *testing.T) {
 }
 
 func TestScribe_PurgeLogFiles(t *testing.T) {
-	dir := t.TempDir()
-	keep := filepath.Join(dir, fmt.Sprintf("serve-pid-%d.log", os.Getpid()))
-	files := []string{
-		keep,
-		filepath.Join(dir, fmt.Sprintf("serve-pid-%d-2026-08-26T14-00-00.000.log.gz", os.Getpid())),
-		filepath.Join(dir, "serve-pid-999999.log"),
-		filepath.Join(dir, "watch-pid-999998.log.gz"),
-		filepath.Join(dir, fmt.Sprintf("watch-pid-%d-2026-08-26T02-26-08.340.log.gz", os.Getppid())),
-		filepath.Join(dir, fmt.Sprintf("watch-pid-%d.log", os.Getppid())),
-		filepath.Join(dir, "notes.txt"),
+	now := time.Now()
+	tests := []struct {
+		name         string
+		maxBackups   int
+		maxAgeDays   int
+		files        map[string]time.Duration
+		expectedKept []string
+	}{
+		{
+			name: "an_earlier_run_that_is_recent_is_kept_so_a_restart_leaves_its_evidence", maxBackups: 60, maxAgeDays: 40,
+			files: map[string]time.Duration{
+				"watch-pid-999999.log":                            time.Minute,
+				"watch-pid-999999-2026-11-18T07-47-49.324.log.gz": 20 * time.Hour,
+			},
+			expectedKept: []string{"watch-pid-999999.log", "watch-pid-999999-2026-11-18T07-47-49.324.log.gz"},
+		},
+		{
+			name: "an_earlier_run_past_the_age_is_purged", maxBackups: 60, maxAgeDays: 40,
+			files: map[string]time.Duration{
+				"watch-pid-999999.log": 41 * 24 * time.Hour,
+				"watch-pid-999998.log": time.Hour,
+			},
+			expectedKept: []string{"watch-pid-999998.log"},
+		},
+		{
+			name: "earlier_runs_past_the_count_are_purged_oldest_first", maxBackups: 2, maxAgeDays: 40,
+			files: map[string]time.Duration{
+				"watch-pid-999990.log": 3 * time.Hour,
+				"watch-pid-999991.log": 2 * time.Hour,
+				"watch-pid-999992.log": time.Hour,
+			},
+			expectedKept: []string{"watch-pid-999991.log", "watch-pid-999992.log"},
+		},
+		{
+			name: "a_running_process_and_a_foreign_file_are_never_purged", maxBackups: 1, maxAgeDays: 1,
+			files: map[string]time.Duration{
+				fmt.Sprintf("watch-pid-%d.log", os.Getppid()):                            90 * 24 * time.Hour,
+				fmt.Sprintf("watch-pid-%d-2026-08-26T02-26-08.340.log.gz", os.Getppid()): 90 * 24 * time.Hour,
+				"notes.txt": 90 * 24 * time.Hour,
+			},
+			expectedKept: []string{fmt.Sprintf("watch-pid-%d.log", os.Getppid()), fmt.Sprintf("watch-pid-%d-2026-08-26T02-26-08.340.log.gz", os.Getppid()), "notes.txt"},
+		},
 	}
-	for _, file := range files {
-		if err := os.WriteFile(file, []byte("x"), 0o600); err != nil {
-			t.Fatalf("write %s: %v", file, err)
-		}
-	}
-	purgeLogFiles(keep)
-	expected := map[string]bool{
-		keep:                            true,
-		filepath.Join(dir, "notes.txt"): true,
-		filepath.Join(dir, fmt.Sprintf("watch-pid-%d-2026-08-26T02-26-08.340.log.gz", os.Getppid())): true,
-		filepath.Join(dir, fmt.Sprintf("watch-pid-%d.log", os.Getppid())):                            true,
-	}
-	for _, file := range files {
-		_, err := os.Stat(file)
-		if expected[file] && err != nil {
-			t.Errorf("kept: %s got removed", filepath.Base(file))
-		}
-		if !expected[file] && err == nil {
-			t.Errorf("purged: %s got kept", filepath.Base(file))
-		}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			dir := t.TempDir()
+			keep := filepath.Join(dir, fmt.Sprintf("watch-pid-%d.log", os.Getpid()))
+			test.files[filepath.Base(keep)] = 0
+			for name, age := range test.files {
+				path := filepath.Join(dir, name)
+				if err := os.WriteFile(path, []byte("x"), 0o600); err != nil {
+					t.Fatalf("write %s: %v", name, err)
+				}
+				if err := os.Chtimes(path, now.Add(-age), now.Add(-age)); err != nil {
+					t.Fatalf("chtimes %s: %v", name, err)
+				}
+			}
+			purgeLogFiles(keep, test.maxBackups, test.maxAgeDays)
+			expected := map[string]bool{filepath.Base(keep): true}
+			for _, name := range test.expectedKept {
+				expected[name] = true
+			}
+			for name := range test.files {
+				_, err := os.Stat(filepath.Join(dir, name))
+				if expected[name] && err != nil {
+					t.Errorf("kept: %s got removed", name)
+				}
+				if !expected[name] && err == nil {
+					t.Errorf("purged: %s got kept", name)
+				}
+			}
+		})
 	}
 }
 
@@ -1487,7 +1528,7 @@ func EnableFile(level slog.Level, cmd, version string, maxSizeMB, maxBackups, ma
 	scribeLoggerInstance = installed(&streamHandler{level: level, writer: writer, sink: sinkFile()})
 	scribeLoggerWriter = writer
 	slog.SetDefault(scribeLoggerInstance)
-	purgeLogFiles(path)
+	purgeLogFiles(path, maxBackups, maxAgeDays)
 	return nil
 }
 

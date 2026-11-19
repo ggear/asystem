@@ -41,10 +41,6 @@ func (p *wirelessPlugin) Aggregate(samples []Sample) (Aggregate, error) {
 	return diagnoseDevices(latestReading[[]deviceReading](samples), wirelessDevice), nil
 }
 
-func (p *wirelessPlugin) Command(context.Context, State) error {
-	return nil
-}
-
 func (p *wirelessPlugin) State() *StateTracker { return p.state }
 
 func probeWireless(ctx context.Context) ([]remote.GatewayDevice, error) {

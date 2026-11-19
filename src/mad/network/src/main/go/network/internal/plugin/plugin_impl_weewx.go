@@ -66,10 +66,6 @@ func (p *weewxPlugin) Aggregate(samples []Sample) (Aggregate, error) {
 	return diagnoseWeewx(samples), nil
 }
 
-func (p *weewxPlugin) Command(context.Context, State) error {
-	return nil
-}
-
 func (p *weewxPlugin) State() *StateTracker { return p.state }
 
 func probeWeewx(ctx context.Context) (float64, bool, bool, error) {

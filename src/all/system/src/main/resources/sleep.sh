@@ -4,14 +4,13 @@
 # asleep, quiesce the host so a power cut lands on clean disks, never powers off
 #
 # Usage
-#   asleep [--deep | --shallow] [--keep UNIT]... [--stop CONTAINER]... [--except CONTAINER]... [--stop-timeout SECONDS] [--quiet] [--dry-run]
+#   asleep [--deep | --shallow] [--keep UNIT]... [--stop CONTAINER]... [--stop-timeout SECONDS] [--quiet] [--dry-run]
 #
 # Options
-#   --deep            stop everything, root and every mount read only (default)
+#   --deep            stop everything, root and every mount read only (default), shallow with rackmains spared while it runs
 #   --shallow         leave docker, swap, journal and root alone, unmount what no container holds
 #   --keep UNIT       spare a host service from the stop, may repeat
 #   --stop NAME       stop this container, shallow only, may repeat
-#   --except NAME     stop every running container but this one, shallow only, may repeat, not with --stop
 #   --stop-timeout    grace seconds per container before it is killed, default 120
 #   --quiet           drop DEBUG lines
 #   --dry-run         print the steps, change nothing
@@ -35,6 +34,7 @@ set -uo pipefail
 ################################################################################
 MODE=deep
 STOP_TIMEOUT=120
+SPARE_CONTAINER=rackmains
 DRY_RUN=false
 QUIET=false
 RUN_ID="$(date +%s)-$$"
@@ -162,9 +162,8 @@ units() {
 ARGS=("$@")
 KEEP_NAMES=()
 STOP_NAMES=()
-EXCEPT_NAMES=()
 usage() {
-  log_error "Usage, asleep [--deep | --shallow] [--keep UNIT] [--stop CONTAINER] [--except CONTAINER] [--quiet] [--dry-run]"
+  log_error "Usage, asleep [--deep | --shallow] [--keep UNIT] [--stop CONTAINER] [--quiet] [--dry-run]"
   log_error "Usage, asleep [--stop-timeout SECONDS], options marked [] may repeat or be omitted"
   exit 2
 }
@@ -184,11 +183,6 @@ while [[ $# -gt 0 ]]; do
     STOP_NAMES+=("$2")
     shift
     ;;
-  --except)
-    [[ $# -ge 2 ]] || usage
-    EXCEPT_NAMES+=("$2")
-    shift
-    ;;
   --stop-timeout)
     [[ $# -ge 2 && "$2" =~ ^[0-9]+$ ]] || usage
     STOP_TIMEOUT="$2"
@@ -200,14 +194,6 @@ while [[ $# -gt 0 ]]; do
 done
 if [[ ${#STOP_NAMES[@]} -gt 0 && "${MODE}" != "shallow" ]]; then
   log_error "Option [--stop] needs [--shallow], deep stops every container"
-  exit 2
-fi
-if [[ ${#EXCEPT_NAMES[@]} -gt 0 && "${MODE}" != "shallow" ]]; then
-  log_error "Option [--except] needs [--shallow], deep stops every container"
-  exit 2
-fi
-if [[ ${#EXCEPT_NAMES[@]} -gt 0 && ${#STOP_NAMES[@]} -gt 0 ]]; then
-  log_error "Options [--stop] and [--except] cannot be combined"
   exit 2
 fi
 
@@ -230,7 +216,7 @@ trap 'log_debug "Exiting, exit code [$?]"; rm -f "$0"' EXIT
 
 log_info "Starting, host [$(hostname)], mode [${MODE}], dry run [${DRY_RUN}], run [${RUN_ID}]"
 log_debug "Script [$(sha256sum "$0" | cut -c1-12)], user [$(id -un)], pid [$$], log [${LOG_FILE}], state [${STATE}]"
-log_debug "Keep [${KEEP_NAMES[*]:-}], stop [${STOP_NAMES[*]:-}], except [${EXCEPT_NAMES[*]:-}], stop timeout [${STOP_TIMEOUT}] seconds"
+log_debug "Keep [${KEEP_NAMES[*]:-}], stop [${STOP_NAMES[*]:-}], stop timeout [${STOP_TIMEOUT}] seconds"
 
 ################################################################################
 # Docker
@@ -243,6 +229,14 @@ if has docker && systemctl is-active --quiet docker.service; then
   mapfile -t RUNNING < <(docker ps --format '{{.ID}} {{.Names}}')
 fi
 log_debug "Docker up [${DOCKER_UP}], containers running [${#RUNNING[@]}]"
+SPARE_NAMES=()
+if [[ "${DOCKER_UP}" == "true" ]] && printf '%s\n' "${RUNNING[@]}" | awk '{print $2}' | grep -qxF "${SPARE_CONTAINER}"; then
+  SPARE_NAMES=("${SPARE_CONTAINER}")
+  if [[ "${MODE}" == "deep" ]]; then
+    MODE=shallow
+    log_info "Container [${SPARE_CONTAINER}] is running, so the host is put to sleep shallow, deep would stop the guard that wakes the others"
+  fi
+fi
 if [[ "${MODE}" == "deep" && "${DOCKER_UP}" == "true" && ${#KEEP_NAMES[@]} -gt 0 ]]; then
   for NAME in "${KEEP_NAMES[@]}"; do
     if printf '%s\n' "${RUNNING[@]}" | awk '{print $2}' | grep -qxF "${NAME}"; then
@@ -319,14 +313,14 @@ if [[ "${DOCKER_UP}" == "true" ]]; then
       fail "docker still running"
     fi
     RUNNING_AFTER=()
-  elif [[ ${#STOP_NAMES[@]} -gt 0 || ${#EXCEPT_NAMES[@]} -gt 0 ]]; then
+  elif [[ ${#STOP_NAMES[@]} -gt 0 || ${#SPARE_NAMES[@]} -gt 0 ]]; then
     STOP_IDS=()
     RUNNING_AFTER=()
     for LINE in "${RUNNING[@]}"; do
-      if [[ ${#EXCEPT_NAMES[@]} -gt 0 ]]; then
-        printf '%s\n' "${EXCEPT_NAMES[@]}" | grep -qxF "${LINE#* }" && STOPPING=false || STOPPING=true
-      else
+      if [[ ${#STOP_NAMES[@]} -gt 0 ]]; then
         printf '%s\n' "${STOP_NAMES[@]}" | grep -qxF "${LINE#* }" && STOPPING=true || STOPPING=false
+      else
+        printf '%s\n' "${SPARE_NAMES[@]}" | grep -qxF "${LINE#* }" && STOPPING=false || STOPPING=true
       fi
       if [[ "${STOPPING}" == "true" ]]; then
         STOP_IDS+=("${LINE%% *}")
@@ -343,7 +337,7 @@ if [[ "${DOCKER_UP}" == "true" ]]; then
   else
     log_debug "Shallow with nothing to stop, containers left running [${#RUNNING[@]}]"
   fi
-elif [[ ${#STOP_NAMES[@]} -gt 0 || ${#EXCEPT_NAMES[@]} -gt 0 ]]; then
+elif [[ ${#STOP_NAMES[@]} -gt 0 ]]; then
   log_warn "Docker not running, nothing to stop"
 fi
 
@@ -430,6 +424,36 @@ if [[ "${MODE}" == "deep" && -n "$(swapon --noheadings --show=NAME 2>/dev/null)"
   fi
 else
   log_debug "Swap left alone, mode [${MODE}]"
+fi
+
+################################################################################
+# Network leases
+################################################################################
+section "Network leases"
+if [[ "${MODE}" == "deep" ]]; then
+  while read -r PID; do
+    [[ -n "${PID}" ]] || continue
+    COMMAND="$(tr '\0' ' ' <"/proc/${PID}/cmdline" 2>/dev/null)"
+    COMMAND="${COMMAND% }"
+    [[ -n "${COMMAND}" ]] || continue
+    log_info "Lease client [${PID}] to stop, it holds its lease file open on a writable mount, command [${COMMAND}]"
+    if [[ "${DRY_RUN}" == "true" ]]; then
+      log_info "+ kill [${PID}]"
+      continue
+    fi
+    note "dhclient ${COMMAND}"
+    kill "${PID}" 2>/dev/null
+    for _ in 1 2 3 4 5 6; do
+      kill -0 "${PID}" 2>/dev/null || break
+      sleep 0.5
+    done
+    if kill -0 "${PID}" 2>/dev/null; then
+      log_warn "Lease client [${PID}] still running"
+      WARNED+=("lease client ${PID}")
+    fi
+  done < <(pgrep -x dhclient)
+else
+  log_debug "Lease client left alone, mode [shallow]"
 fi
 
 ################################################################################
@@ -536,17 +560,9 @@ while read -r DISK; do
     log_debug "Disk [${DISK}] skipped, has mounts"
     continue
   fi
-  log_info "Disk [${DISK}] to flush and detach, model [$(lsblk --nodeps --noheadings --output MODEL "/dev/${DISK}" | xargs)]"
+  log_info "Disk [${DISK}] to flush and stand by, model [$(lsblk --nodeps --noheadings --output MODEL "/dev/${DISK}" | xargs)], left attached, a deleted disk does not come back on a rescan"
   try 30 blockdev --flushbufs "/dev/${DISK}"
   if has hdparm; then try 30 hdparm -y "/dev/${DISK}"; fi
-  if [[ "${DRY_RUN}" == "true" ]]; then
-    log_info "+ detach [/dev/${DISK}]"
-  elif echo 1 >"/sys/block/${DISK}/device/delete"; then
-    log_info "Disk [${DISK}] detached"
-  else
-    log_warn "Disk [${DISK}] could not be detached"
-    WARNED+=("detach /dev/${DISK}")
-  fi
 done < <(lsblk --nodeps --noheadings --output NAME,TYPE | awk '$2 == "disk" {print $1}')
 
 ################################################################################
@@ -564,6 +580,12 @@ while read -r TARGET; do
 done < <(findmnt --raw --noheadings --output TARGET,SOURCE,OPTIONS | awk '$2 ~ /^\/dev\// && $3 ~ /(^|,)rw(,|$)/ {print $1}')
 if [[ ${#UNEXPECTED[@]} -gt 0 ]]; then
   fail "still writable [${UNEXPECTED[*]}]"
+  if has lsof; then
+    for TARGET in "${UNEXPECTED[@]}"; do
+      log_error "Writers on [${TARGET}]"
+      lsof +f -- "${TARGET}" 2>/dev/null | awk 'NR == 1 || $4 ~ /[0-9]+[uw]/' | head -20 | log_out
+    done
+  fi
 fi
 if [[ ${#UNCLEAN[@]} -gt 0 ]]; then
   fail "containers not stopped cleanly [${UNCLEAN[*]}]"

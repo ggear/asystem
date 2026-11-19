@@ -201,7 +201,7 @@ UNION ALL
 SELECT
     'supervisor/service'       AS relation,
     'host/service*'            AS dimension,
-    22                         AS measures,
+    24                         AS measures,
     '6s'                       AS cadence,
     count(*)                   AS rows,
     CAST(min(time) AS VARCHAR) AS oldest,
@@ -1085,6 +1085,36 @@ WHERE
     AND service IS NOT NULL
 UNION ALL
 SELECT
+    'supervisor/service'                                                   AS relation,
+    'restart_attempts'                                                     AS measure,
+    'int'                                                                  AS kind,
+    '-'                                                                    AS unit,
+    '6s'                                                                   AS period,
+    count(restart_attempts)                                                AS rows,
+    CAST(min(time) FILTER (WHERE restart_attempts IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE restart_attempts IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NOT NULL
+UNION ALL
+SELECT
+    'supervisor/service'                                                         AS relation,
+    'restart_attempts_trend'                                                     AS measure,
+    'int'                                                                        AS kind,
+    '-'                                                                          AS unit,
+    '6s'                                                                         AS period,
+    count(restart_attempts_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE restart_attempts_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE restart_attempts_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NOT NULL
+UNION ALL
+SELECT
     '-'                   AS relation,
     column_name           AS measure,
     '-'                   AS kind,
@@ -1104,11 +1134,11 @@ WHERE
         'failed_log_messages', 'failed_log_messages_trend', 'failed_shares',
         'failed_shares_trend', 'halted_backup_stages', 'halted_backup_stages_trend',
         'health_status', 'health_status_trend', 'host', 'life_used_drives',
-        'life_used_drives_trend', 'max_memory', 'module', 'name', 'restart_count',
-        'restart_count_trend', 'service', 'services_max_memory', 'services_status',
-        'spin_fan_speed', 'spin_fan_speed_of_max', 'spin_fan_speed_of_max_trend',
-        'spin_fan_speed_trend', 'status', 'status_trend', 'temperature',
-        'temperature_trend', 'time', 'up_time', 'used_backup_space',
+        'life_used_drives_trend', 'max_memory', 'module', 'name', 'restart_attempts',
+        'restart_attempts_trend', 'restart_count', 'restart_count_trend', 'service',
+        'services_max_memory', 'services_status', 'spin_fan_speed', 'spin_fan_speed_of_max',
+        'spin_fan_speed_of_max_trend', 'spin_fan_speed_trend', 'status', 'status_trend',
+        'temperature', 'temperature_trend', 'time', 'up_time', 'used_backup_space',
         'used_backup_space_trend', 'used_disk_ops', 'used_disk_ops_trend', 'used_disk_rate',
         'used_disk_rate_trend', 'used_disk_time', 'used_disk_time_trend', 'used_drive_life',
         'used_drive_life_trend', 'used_home_space', 'used_home_space_trend', 'used_memory',

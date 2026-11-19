@@ -79,10 +79,6 @@ func (p *certificatePlugin) Aggregate(samples []Sample) (Aggregate, error) {
 	return diagnoseCertificate(samples), nil
 }
 
-func (p *certificatePlugin) Command(context.Context, State) error {
-	return nil
-}
-
 func (p *certificatePlugin) State() *StateTracker { return p.state }
 
 func probeCertificate(ctx context.Context, address string) (certificateResult, error) {

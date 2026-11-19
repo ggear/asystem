@@ -11,7 +11,6 @@ use crate::shed::load_hosts;
 pub struct Target<'a> {
     pub model_dir: &'a Path,
     pub hosts_file: &'a Path,
-    pub local_host: &'a str,
     pub ssh_key: &'a Path,
     pub known_hosts: &'a Path,
     pub data_dir: &'a Path,
@@ -41,7 +40,7 @@ pub fn run(target: &Target) -> Vec<Outcome> {
         },
         Outcome {
             name: "hosts",
-            result: load_hosts(target.hosts_file, target.local_host).map(|hosts| format!("[{}] host(s)", hosts.len())),
+            result: load_hosts(target.hosts_file).map(|hosts| format!("[{}] host(s)", hosts.len())),
         },
         Outcome {
             name: "ssh key",
@@ -139,7 +138,6 @@ mod tests {
         let outcomes = run(&Target {
             model_dir: &model,
             hosts_file: &dir.join("hosts.json"),
-            local_host: "max",
             ssh_key: &dir.join("id"),
             known_hosts: &dir.join("known_hosts"),
             data_dir: &dir,

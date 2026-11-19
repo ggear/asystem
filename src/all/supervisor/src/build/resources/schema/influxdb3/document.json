@@ -1,6 +1,6 @@
 {
   "warning": "WARNING: This file is written by the build process, any manual edits will be lost!",
-  "source": "3afef57cc70b125c0cc4a519c8eb4d8eba7499abb62c04c29f0875711cffb7dc",
+  "source": "8040ff1bd1095f34899e6acb58c2c9b7fe772e405587ca02f2172902b675bde0",
   "module": "supervisor",
   "discovered": false,
   "database": {
@@ -920,7 +920,7 @@
             "key": "restart_count",
             "kind": "float",
             "unit": "",
-            "description": "restarts of the service container since it was created",
+            "description": "restarts of the service container since it was created, by docker or by supervisor",
             "persist": true,
             "period": "",
             "levels": {
@@ -935,12 +935,42 @@
             "key": "restart_count_trend",
             "kind": "float",
             "unit": "",
-            "description": "restarts of the service container since it was created, smoothed across the trend window",
+            "description": "restarts of the service container since it was created, by docker or by supervisor, smoothed across the trend window",
             "persist": true,
             "period": "",
             "levels": {
               "better": "lower",
               "amber": 0,
+              "red": null,
+              "inclusive": true,
+              "entities": {}
+            }
+          },
+          {
+            "key": "restart_attempts",
+            "kind": "int",
+            "unit": "",
+            "description": "restarts the restart plugin made of this service in the last day, red once the budget is spent",
+            "persist": true,
+            "period": "",
+            "levels": {
+              "better": "lower",
+              "amber": null,
+              "red": 2,
+              "inclusive": true,
+              "entities": {}
+            }
+          },
+          {
+            "key": "restart_attempts_trend",
+            "kind": "int",
+            "unit": "",
+            "description": "restarts the restart plugin made of this service in the last day, red once the budget is spent, smoothed across the trend window",
+            "persist": true,
+            "period": "",
+            "levels": {
+              "better": "lower",
+              "amber": 2,
               "red": null,
               "inclusive": true,
               "entities": {}

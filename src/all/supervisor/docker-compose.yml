@@ -8,6 +8,8 @@ x-common: &common
     - SUPERVISOR_MOUNT
     - SUPERVISOR_LOG_LEVEL
     - SUPERVISOR_TIMING_SCALE
+    - SUPERVISOR_RESTART_MODE
+    - SUPERVISOR_RESTART_FAST
     - BROKER_HOST
     - BROKER_PORT
     - DATABASE_HOST
@@ -28,10 +30,11 @@ x-common: &common
   volumes:
     - ${SERVICE_DATA_DIR}:/asystem/mnt
     - /var/run/docker.sock:/var/run/docker.sock
+    - ${SUPERVISOR_RUN_SOURCE}:/host/run:ro
     - ${SUPERVISOR_ROOT_SOURCE}:${SUPERVISOR_MOUNT}:ro
     - ${SUPERVISOR_FSTAB_SOURCE}:/etc/fstab:ro
     - ${SUPERVISOR_BTRFS_SOURCE}:/var/lib/btrfs:rw
-    - ${SUPERVISOR_INSTALL_SOURCE}:/var/lib/asystem/install:ro
+    - ${SUPERVISOR_INSTALL_SOURCE}:/var/lib/asystem/install:rw
     - ${SUPERVISOR_DEV_SOURCE}:${SUPERVISOR_DEV_TARGET}
     - ${SUPERVISOR_HOME_SOURCE}:/home/asystem:rw
     - type: bind

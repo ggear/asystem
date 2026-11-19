@@ -2,7 +2,7 @@
   "schema": 2,
   "version": "10.200.2024-SNAPSHOT",
   "content_sha256": "33ebb887ed5277590774bc793a3024fbb842d5a6ee3560dc7e2e1b68363ffc85",
-  "inputs_sha256": "c19621fe0f0750d4b087737dd286d0af096a58ab86907b1ba4e36b7b0c4c6b9b",
+  "inputs_sha256": "38f5fd6d489ad1520b6cf4f570e695ed303a1280be4bb7ababa4c2a987b91eb8",
   "target": {"kind": "embedded", "language": "go"},
   "release": null
 }

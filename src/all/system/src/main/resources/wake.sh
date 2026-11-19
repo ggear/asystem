@@ -4,11 +4,14 @@
 # awake, undo asleep when power returns before the UPS runs out
 #
 # Usage
-#   awake [--health-timeout SECONDS] [--quiet] [--dry-run]
+#   awake [--health-timeout SECONDS] [--share-timeout SECONDS] [--quiet] [--dry-run]
 #
 # Options
 #   --health-timeout  seconds to wait for starting or unhealthy containers to turn healthy,
 #                     default 60, 0 to report without waiting
+#   --share-timeout   seconds to wait for each samba share to answer before docker starts,
+#                     default 10, the shares are probed together, 0 to skip, a share that is
+#                     not up is a warning and stays on its automount
 #   --quiet           drop DEBUG lines
 #   --dry-run         print the steps, change nothing
 #
@@ -17,7 +20,7 @@
 #   1  error        a post-condition failed, a unit not active or a mount missing
 #   2  usage        bad arguments
 #   3  precondition not root
-#   4  timeout      a step hit its limit, or a container was still starting
+#   4  timeout      a step hit its limit
 #   6  unhealthy    a recorded container is not running or is unhealthy
 #
 # Run as root on the host, it restores from /run/asleep.state.
@@ -32,6 +35,7 @@ set -uo pipefail
 DRY_RUN=false
 QUIET=false
 HEALTH_TIMEOUT=60
+SHARE_TIMEOUT=10
 RUN_ID="$(date +%s)-$$"
 LOG_FILE="${AWAKE_LOG:-/run/awake.log}"
 STATE="${ASLEEP_STATE:-/run/asleep.state}"
@@ -108,6 +112,14 @@ try() {
 
 has() { command -v "$1" >/dev/null 2>&1; }
 
+startable() {
+  local unit
+  while read -r unit; do
+    [[ -n "${unit}" ]] || continue
+    [[ "$(systemctl show --property=LoadState --value "${unit}" 2>/dev/null)" == "masked" ]] || printf '%s\n' "${unit}"
+  done
+}
+
 units() {
   if [[ "$1" == "any" ]]; then
     systemctl list-units --state="$2" --plain --no-legend --no-pager | awk '{print $1}'
@@ -160,7 +172,7 @@ was() { grep -qxF "$1" "${STATE}" 2>/dev/null; }
 # Arguments
 ################################################################################
 usage() {
-  log_error "Usage, awake [--health-timeout SECONDS] [--quiet] [--dry-run]"
+  log_error "Usage, awake [--health-timeout SECONDS] [--share-timeout SECONDS] [--quiet] [--dry-run]"
   exit 2
 }
 while [[ $# -gt 0 ]]; do
@@ -170,6 +182,11 @@ while [[ $# -gt 0 ]]; do
   --health-timeout)
     [[ $# -ge 2 && "$2" =~ ^[0-9]+$ ]] || usage
     HEALTH_TIMEOUT="$2"
+    shift
+    ;;
+  --share-timeout)
+    [[ $# -ge 2 && "$2" =~ ^[0-9]+$ ]] || usage
+    SHARE_TIMEOUT="$2"
     shift
     ;;
   *) usage ;;
@@ -264,7 +281,8 @@ for TARGET in "${MOUNTS[@]}"; do
     fi
     ((RC != 124)) || TIMEOUTS=$((TIMEOUTS + 1))
     ((ATTEMPT < 5)) || log_warn "Mount [${TARGET}] failed after [${ATTEMPT}] attempts, exit code [${RC}]"
-    sleep 3
+    udevadm settle --timeout=3 >/dev/null 2>&1
+    sleep 2
   done
 done
 
@@ -303,6 +321,54 @@ for TARGET in "${MOUNTS[@]}"; do
 done
 
 ################################################################################
+# Shares
+################################################################################
+section "Shares"
+mapfile -t AUTOMOUNTS < <(recorded automount | startable)
+[[ ${#AUTOMOUNTS[@]} -eq 0 ]] || try 60 systemctl start "${AUTOMOUNTS[@]}"
+mapfile -t SHARES < <(findmnt --fstab --noheadings --raw --output TARGET,FSTYPE | awk '$2 == "cifs" {print $1}')
+SHARE_PIDS=()
+for TARGET in "${SHARES[@]}"; do
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    log_info "+ probe [${TARGET}]"
+  elif ((SHARE_TIMEOUT == 0)); then
+    log_debug "Share [${TARGET}] not probed, share timeout [0]"
+  else
+    timeout "${SHARE_TIMEOUT}" ls -A "${TARGET}" >/dev/null 2>&1 &
+    SHARE_PIDS+=("$!")
+  fi
+done
+for INDEX in "${!SHARE_PIDS[@]}"; do
+  if wait "${SHARE_PIDS[INDEX]}"; then
+    log_debug "Share [${SHARES[INDEX]}] ready"
+  else
+    log_warn "Share [${SHARES[INDEX]}] not available after [${SHARE_TIMEOUT}] seconds, docker starts without it"
+    WARNED+=("share not available ${SHARES[INDEX]}")
+  fi
+done
+
+################################################################################
+# Network leases
+################################################################################
+section "Network leases"
+while read -r COMMAND; do
+  [[ -n "${COMMAND}" ]] || continue
+  read -ra ARGV <<<"${COMMAND}"
+  PIDFILE=""
+  for INDEX in "${!ARGV[@]}"; do
+    [[ "${ARGV[INDEX]}" == "-pf" ]] && PIDFILE="${ARGV[INDEX + 1]:-}"
+  done
+  if [[ -n "${PIDFILE}" && -s "${PIDFILE}" ]] && kill -0 "$(cat "${PIDFILE}")" 2>/dev/null; then
+    log_debug "Lease client already running, command [${COMMAND}]"
+  elif [[ "${DRY_RUN}" == "true" ]]; then
+    log_info "+ start [${COMMAND}]"
+  else
+    log_info "Lease client to start, command [${COMMAND}]"
+    try 30 "${ARGV[@]}"
+  fi
+done < <(awk '$1 == "dhclient" {$1 = ""; print substr($0, 2)}' "${STATE}" 2>/dev/null)
+
+################################################################################
 # Docker
 ################################################################################
 section "Docker"
@@ -316,12 +382,10 @@ fi
 # Units
 ################################################################################
 section "Units"
-mapfile -t AUTOMOUNTS < <(recorded automount)
-mapfile -t SOCKETS < <(recorded socket)
-mapfile -t SERVICES < <(recorded service)
-mapfile -t TIMERS < <(recorded timer)
-log_debug "Automounts [${#AUTOMOUNTS[@]}], sockets [${#SOCKETS[@]}], services [${#SERVICES[@]}], timers [${#TIMERS[@]}]"
-[[ ${#AUTOMOUNTS[@]} -eq 0 ]] || try 60 systemctl start "${AUTOMOUNTS[@]}"
+mapfile -t SOCKETS < <(recorded socket | startable)
+mapfile -t SERVICES < <(recorded service | startable)
+mapfile -t TIMERS < <(recorded timer | startable)
+log_debug "Sockets [${#SOCKETS[@]}], services [${#SERVICES[@]}], timers [${#TIMERS[@]}]"
 [[ ${#SOCKETS[@]} -eq 0 ]] || try 60 systemctl start "${SOCKETS[@]}"
 [[ ${#SERVICES[@]} -eq 0 ]] || try 300 systemctl start "${SERVICES[@]}"
 if was auditd && has service; then
@@ -391,7 +455,7 @@ for KIND in automount socket service timer; do
     log_warn "Unit [${UNIT}] not active, starting again"
     try 60 systemctl start "${UNIT}"
     systemctl is-active --quiet "${UNIT}" || fail "not active [${UNIT}]"
-  done < <(recorded "${KIND}")
+  done < <(recorded "${KIND}" | startable)
 done
 if was auditd && ! systemctl is-active --quiet auditd.service; then
   fail "not active [auditd.service]"
@@ -408,8 +472,8 @@ done < <(recorded container)
 [[ "${WRITABLE_ROOT}" == "true" ]] || fail "root read only"
 [[ ${#UNHEALTHY[@]} -eq 0 ]] || fail "not healthy [${UNHEALTHY[*]}]"
 if [[ ${#STARTING[@]} -gt 0 ]]; then
-  fail "still starting [${STARTING[*]}]"
-  TIMEOUTS=$((TIMEOUTS + 1))
+  log_warn "Still starting [${STARTING[*]}]"
+  WARNED+=("still starting ${STARTING[*]}")
 fi
 if was swap && [[ -z "$(swapon --noheadings --show=NAME 2>/dev/null)" ]]; then
   log_warn "Swap not on"
@@ -433,6 +497,7 @@ if [[ ${STATUS} -eq 0 ]]; then
   rm -f "${STATE}"
   log_info "Host [$(hostname)] awake"
 else
+  printf 'awoke %s %s\n' "$(date +%s)" "${STATUS}" >>"${STATE}"
   log_error "Host [$(hostname)] not fully awake, record kept at [${STATE}] to retry"
 fi
 log_info "Log kept at [${LOG_FILE}], took [$(elapsed "${STARTED}")] ms"

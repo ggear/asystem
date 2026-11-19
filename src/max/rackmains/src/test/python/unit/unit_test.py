@@ -13,7 +13,7 @@ INSTALL_PREP_SCRIPT = join(DIR_ROOT, "install_prep.sh")
 INSTALL_PRE_SCRIPT = join(DIR_ROOT, "install_pre.sh")
 CHECK_HEALTHY_FRAGMENT = join(DIR_ROOT, "src/build/resources/checkhealthy.sh")
 DEVICE = "/run/nut/nutdrv_qx-powershield"
-RESTART = "systemctl restart nut-driver@powershield.service nut-server.service"
+RESTART = "systemctl restart nut.target nut-driver@powershield.service nut-server.service"
 
 
 class ShellHookTest(unittest.TestCase):
@@ -76,7 +76,7 @@ class InstallPrepShellTest(ShellHookTest):
             self.assertIn(line, ups)
         self.assertEqual(reported.count("Updated ["), 3)
         calls = self.calls()
-        self.assertIn("systemctl enable --now nut-driver@powershield.service nut-server.service", calls)
+        self.assertIn("systemctl enable --now nut.target nut-driver@powershield.service nut-server.service", calls)
         self.assertEqual(calls.count(RESTART), 1, "three changed files still restart the units once")
         self.assertTrue([call for call in calls if call.startswith("chown root:nut ") and call.endswith("ups.conf")])
 
@@ -137,7 +137,7 @@ class InstallPrepShellTest(ShellHookTest):
         self.environment(device="/run/nut/nutdrv_qx-rack")
         self.invoke()
         self.assertIn("[rack]", self.read("ups.conf"))
-        self.assertIn("systemctl enable --now nut-driver@rack.service nut-server.service", self.calls())
+        self.assertIn("systemctl enable --now nut.target nut-driver@rack.service nut-server.service", self.calls())
 
     def test_a_unit_that_will_not_start_warns_and_carries_on(self):
         self.environment()

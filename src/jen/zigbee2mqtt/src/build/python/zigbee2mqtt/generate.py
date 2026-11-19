@@ -17,6 +17,7 @@ if __name__ == "__main__":
     write_container_healthchecks()
     write_container_backup()
     write_container_restore()
+    write_container_restart()
 
     write_schema_broker(dialects.vernemq.Discover(f"{ZIGBEE_BASE_TOPIC}/#", label="Zigbee2MQTT").document())
 

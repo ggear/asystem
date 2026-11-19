@@ -26,6 +26,8 @@ const (
 	SourceProbeSensors
 	SourceProbeServices
 	SourceProbeBackup
+	SourceProbeRestart
+	SourceProbeSwitch
 	SourceBackup
 	SourceProbeBroker
 	SourceProbeCluster
@@ -65,6 +67,10 @@ func (s Source) String() string {
 		return "probe[services]"
 	case SourceProbeBackup:
 		return "probe[backup]"
+	case SourceProbeRestart:
+		return "probe[restart]"
+	case SourceProbeSwitch:
+		return "probe[switch]"
 	case SourceBackup:
 		return "backup"
 	case SourceProbeBroker:

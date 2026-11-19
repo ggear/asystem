@@ -128,7 +128,7 @@ func EnableStdoutAndFile(level slog.Level, cmd, version string, maxSizeMB, maxBa
 	scribeLoggerInstance = installed(&streamHandler{level: level, writer: io.MultiWriter(writers...), sink: sinkFile()})
 	scribeLoggerWriter = writer
 	slog.SetDefault(scribeLoggerInstance)
-	purgeLogFiles(path)
+	purgeLogFiles(path, maxBackups, maxAgeDays)
 	return nil
 }
 
@@ -189,7 +189,7 @@ func EnableBufferAndFile(level slog.Level, cmd, version string, capacity, maxSiz
 	}})
 	scribeLoggerWriter = writer
 	slog.SetDefault(scribeLoggerInstance)
-	purgeLogFiles(path)
+	purgeLogFiles(path, maxBackups, maxAgeDays)
 	return buf, nil
 }
 
@@ -212,7 +212,7 @@ func EnableBackupAndFile(level slog.Level, cmd, version string, quiet bool, maxS
 	scribeLoggerInstance = installed(&multiHandler{handlers: handlers})
 	scribeLoggerWriter = writer
 	slog.SetDefault(scribeLoggerInstance)
-	purgeLogFiles(path)
+	purgeLogFiles(path, maxBackups, maxAgeDays)
 	return nil
 }
 
@@ -873,7 +873,7 @@ func closeLoggerWriter() {
 	}
 }
 
-func purgeLogFiles(keep string) {
+func purgeLogFiles(keep string, maxBackups, maxAgeDays int) {
 	purgeStart := time.Now()
 	dir := filepath.Dir(keep)
 	entries, err := os.ReadDir(dir)
@@ -881,7 +881,13 @@ func purgeLogFiles(keep string) {
 		Log(SourceScribe, SubjectNone, ActionRemove).Warnf("faulting", purgeStart, "[unreadable] log dir for purge, [%v]", err)
 		return
 	}
-	removed, kept := 0, 0
+	type deadLog struct {
+		path    string
+		name    string
+		modTime time.Time
+	}
+	var dead []deadLog
+	live := 0
 	for _, entry := range entries {
 		name := entry.Name()
 		if entry.IsDir() || !strings.HasSuffix(name, logFileSuffix) && !strings.HasSuffix(name, logFileSuffix+logFileArchive) {
@@ -892,17 +898,31 @@ func purgeLogFiles(keep string) {
 			continue
 		}
 		if pid, ok := logFilePID(name); ok && pid != os.Getpid() && logProcessAlive(pid) {
+			live++
+			continue
+		}
+		info, infoErr := entry.Info()
+		if infoErr != nil {
+			continue
+		}
+		dead = append(dead, deadLog{path: path, name: name, modTime: info.ModTime()})
+	}
+	slices.SortFunc(dead, func(left, right deadLog) int { return right.modTime.Compare(left.modTime) })
+	cutoff := purgeStart.Add(-time.Duration(maxAgeDays) * 24 * time.Hour)
+	removed, kept := 0, 0
+	for index, candidate := range dead {
+		if index < maxBackups && candidate.modTime.After(cutoff) {
 			kept++
 			continue
 		}
-		if removeErr := os.Remove(path); removeErr != nil {
-			Log(SourceScribe, SubjectNone, ActionRemove).Warnf("faulting", purgeStart, "[%-16.16s] not removed, [%v]", name, removeErr)
+		if removeErr := os.Remove(candidate.path); removeErr != nil {
+			Log(SourceScribe, SubjectNone, ActionRemove).Warnf("faulting", purgeStart, "[%-16.16s] not removed, [%v]", candidate.name, removeErr)
 			continue
 		}
 		removed++
 	}
-	if removed > 0 {
-		Log(SourceScribe, SubjectNone, ActionRemove).Infof("removals", purgeStart, "[%3d] purged, [%3d] kept as live", removed, kept)
+	if removed > 0 || kept > 0 {
+		Log(SourceScribe, SubjectNone, ActionRemove).Infof("removals", purgeStart, "[%3d] purged older than [%d] days or past [%d] files, [%3d] earlier runs kept, [%3d] kept as live", removed, maxAgeDays, maxBackups, kept, live)
 	}
 }
 

@@ -42,24 +42,15 @@ BACKUP_WRAPPER = """
 
 set -o pipefail
 
-# Usage:
+# ./backup.sh [--full | --accept=<run>]
+# The run is `supervisor backup run`, this file holds only the module's hooks. A variable set in .env wins.
 #
-#   ./backup.sh                 take a backup, full or delta off an eligible parent
-#   ./backup.sh --accept=<run>  accept a regressed run, releasing the anchor
-#   ./backup.sh --full          take a full backup now, whatever the throttle and the module's own schedule say
-#
-#   BACKUP_SKIP_HOURS=0 ./backup.sh   take a backup now, whatever the throttle says
-#
-# The run is `supervisor backup run`, this script holds only the module's own hooks. Pruning belongs
-# to supervisor's stages, windows are read from its config.json.
-# Any variable below can be set on the command line, unless the module's .env already sets it.
-#
-# BACKUP_SOURCE_PATH      the data path backed up, defaulting to this module's own
-# BACKUP_SKIP_HOURS       skip the run when the newest backup is younger than this, zero to never skip
-# BACKUP_SERVICE_RESTART  start the service again after the copy, false when the caller starts it itself
-# BACKUP_TIMEOUT_HOURS    the budget a backup waiting on its service allows before abandoning the run
-# BACKUP_FORCE_FULL       true to take a full backup where the module would take a delta, set by --full
-# BACKUP_SHRINK_PERCENT   the fall in a module's total that marks a run regressed, zero to disable, the module's .env overriding it as PREFIX_TOKEN_BACKUP_SHRINK_PERCENT
+# BACKUP_SOURCE_PATH      data path backed up, defaulting to this module's own
+# BACKUP_SKIP_HOURS       skip when the newest backup is younger than this, zero never skips
+# BACKUP_SERVICE_RESTART  start the service after the copy, false when the caller does
+# BACKUP_TIMEOUT_HOURS    budget before abandoning a backup waiting on its service
+# BACKUP_FORCE_FULL       true takes a full backup, set by --full
+# BACKUP_SHRINK_PERCENT   fall in total marking a run regressed, zero disables, PREFIX_TOKEN_BACKUP_SHRINK_PERCENT overrides
 
 BACKUP_INTERNAL_ENV="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.env"
 [ -f "${BACKUP_INTERNAL_ENV}" ] && . "${BACKUP_INTERNAL_ENV}"
@@ -139,25 +130,19 @@ BACKUP_INTERNAL_ARGUMENTS=(--source "${BACKUP_INTERNAL_SOURCE_DIR}" --script "${
 backup_supervised run "${BACKUP_MODULE_NAME}" "${BACKUP_INTERNAL_ARGUMENTS[@]}"
 """
 
-RESTORE_CONTRACT = """# The engine owns the run, this snippet owns the restore. `supervisor backup restore` resolves the chain, checks
-# its integrity, takes a safety backup, stops or starts the service, counts faults and sets the exit code, calling
-# this snippet's hooks, each in its own bash. Define restore_applied below, reading "${RESTORE_SOURCE_FILE}" and
-# writing it back into the service, and optionally restore_planned to describe that in the dry run. Declare
-# RESTORE_SERVICE_STATE as "stopped" when the restore replaces files the service holds open, or "running" when
-# it is applied through the service itself. A snippet with a scratch copy also defines restore_staged (print the
-# scratch address), restore_sealed, restore_teardown and restore_checked, one with live history to merge
-# restore_merged, and one with units still being written restore_settled, a stdin to stdout filter dropping the
-# open ones. No hook may rely on a variable another set. Never assign another wrapper variable, prefix this
-# snippet's own state with the module name, and expand a value read from .env as "${VAR:?}", so a missing key
-# fails by name rather than corrupting the restore.
+RESTORE_CONTRACT = """# The engine (`supervisor backup restore`) owns the run, this snippet owns the restore, as hooks each in its own bash.
+# Define restore_applied, writing "${RESTORE_SOURCE_FILE}" back into the service, and declare RESTORE_SERVICE_STATE.
+# Optional hooks: restore_planned, restore_staged, restore_sealed, restore_teardown, restore_checked, restore_merged,
+# restore_settled.
+# No hook relies on a variable another set, own state is prefixed with the module name, .env values expand as "${VAR:?}".
 #
 # RESTORE_MODULE_NAME     this module's name
 # RESTORE_SOURCE_PATH     this module's data path, the restore target
-# RESTORE_SOURCE_FILE     the artefact being restored from
+# RESTORE_SOURCE_FILE     the artefact being restored
 # RESTORE_CHAIN_FILES     every artefact of the chain, oldest first
 # RESTORE_RUN_TIMESTAMP   the timestamp of the run the artefact belongs to
-# RESTORE_FULL_SUFFIX     the file suffix marking a full backup
-# RESTORE_DELTA_SUFFIX    the file suffix marking a delta backup
+# RESTORE_FULL_SUFFIX     suffix of a full backup
+# RESTORE_DELTA_SUFFIX    suffix of a delta backup
 # RESTORE_SERVICE_STATE   the state the service must be in, stopped or running"""
 
 RESTORE_WRAPPER = r"""
@@ -168,23 +153,10 @@ RESTORE_WRAPPER = r"""
 
 # shellcheck disable=SC1090,SC2034,SC2329
 
-#   restore.sh [--mode=replace|merge|drill] [--from=<timestamp>] [--file=<path>] [--runs=<dir>]
-#              [--record=<stage>] [--keep-scratch] [--force] [--no-backup]
-#
-#   bare      read only, resolves the chain and prints the plan, changes nothing
-#   --force   applies the plan, the only destructive form
-#
-#   mode      replace restores wholesale, drill proves the backup restores without touching live,
-#             merge puts back history live lost, offered only to a module defining restore_merged
-#   from      the run to restore, a backup timestamp, defaulting to the newest run not regressed
-#   file      an artefact path outright, for one lifted off the share or elsewhere
-#   runs      a directory of runs searched alone, for a chain pinned outside the stages
-#   record    the stage under whose .meta a drill writes its verdict, primary or secondary
-#   keep-scratch  leave the scratch directory behind for inspection
-#   no-backup skip the safety backup taken of the current data before applying
-#
-# The run is `supervisor backup restore|drill|merge`, this script holds only the module's own hooks.
-# Only install.sh runs it unprompted, as a drill after a release, which touches nothing live. Applying is only ever by hand.
+# restore.sh [--mode=replace|merge|drill] [--from=<run>] [--file=<path>] [--runs=<dir>] [--record=<stage>]
+#            [--keep-scratch] [--force] [--no-backup]
+# Bare is a read-only plan, --force applies it. The run is `supervisor backup restore|drill|merge`, this file holds only
+# the module's hooks. merge needs restore_merged, and only a drill after a release runs unprompted.
 
 set -uo pipefail
 
@@ -280,33 +252,20 @@ esac
 restore_supervised "${RESTORE_INTERNAL_VERB}" "${RESTORE_MODULE_NAME}" --source "${RESTORE_INTERNAL_SOURCE_DIR}" --script "${RESTORE_INTERNAL_SCRIPT}" "${RESTORE_INTERNAL_ARGUMENTS[@]}"
 """
 
-BACKUP_CONTRACT = """# The engine owns the run, this snippet owns the backup. `supervisor backup run` checks the throttle, calls
-# backup_written, checks the archive's integrity, renames the temporary file on success, writes the manifest and
-# sets the exit code, calling this snippet's hooks, each in its own bash. Define backup_written below, naming the
-# backup with backup_target (or letting backup_files do both) and writing "${BACKUP_TARGET_PATH}.tmp". A snippet
-# copying files passes backup_files a root under BACKUP_SOURCE_PATH and the names of its include and exclude
-# arrays, an absent include fails the backup and whatever under the root neither array covers is reported. A
-# snippet leaving the estate changed while it works, such as one stopping its own container, also defines
-# backup_interrupted, called on INT, TERM or HUP but never on a backup that merely fails, and backup_completed,
-# called once the archive has been named and kept whatever the outcome, whose non-zero return fails the run
-# without discarding the archive. A snippet whose service keeps its own store of backups defines
-# backup_pruned_store, called after every kept backup. A snippet whose restore depends on its software defines
-# backup_versioned, printing that software's version on one line, recorded with the backup so a drill skips a
-# point the running software cannot restore, and one whose restore never does prints "${BACKUP_VERSIONED_NONE}".
-# No hook may rely on a variable another set. Never assign another wrapper variable, prefix this snippet's own
-# state with the module name, and expand a value read from .env as "${VAR:?}", so a missing key fails by name
-# rather than corrupting the backup.
+BACKUP_CONTRACT = """# The engine (`supervisor backup run`) owns the run, this snippet owns the backup, as hooks each in its own bash.
+# Define backup_written, naming the target with backup_target or backup_files and writing "${BACKUP_TARGET_PATH}.tmp".
+# Optional hooks: backup_interrupted, backup_completed, backup_pruned_store, backup_versioned.
+# No hook relies on a variable another set, own state is prefixed with the module name, .env values expand as "${VAR:?}".
 #
 # BACKUP_MODULE_NAME      this module's name
-# BACKUP_SOURCE_PATH      this module's source data path
-# BACKUP_SOURCE_VERSION   the version the backup was extracted from
-# BACKUP_TARGET_PATH      this run's backup path, empty until backup_target names it
-# BACKUP_RUN_TIMESTAMP    this run's timestamp, shared by the directory and the filename
-# BACKUP_FULL_SUFFIX      the file suffix marking a full backup
-# BACKUP_DELTA_SUFFIX     the file suffix marking a delta backup, requiring a full backup proceeding it
-# BACKUP_VERSIONED_NONE   the version backup_versioned prints when the restore does not depend on the software
-# BACKUP_SKIP_HOURS       skip the run when the newest backup is younger than this, zero to never skip
-# BACKUP_SERVICE_RESTART  start the service again after the copy, false when the caller starts it itself"""
+# BACKUP_SOURCE_PATH      this module's data path
+# BACKUP_SOURCE_VERSION   the version being backed up
+# BACKUP_TARGET_PATH      this run's artefact path, set by backup_target
+# BACKUP_RUN_TIMESTAMP    this run's timestamp
+# BACKUP_FULL_SUFFIX      suffix of a full backup
+# BACKUP_DELTA_SUFFIX     suffix of a delta backup, which needs a full one before it
+# BACKUP_VERSIONED_NONE   what backup_versioned prints when a restore needs no software version
+# BACKUP_SKIP_HOURS       skip when the newest backup is younger than this, zero never skips"""
 
 
 def write_container_bootstrap(module_name=None, working_dir=None):
@@ -1224,6 +1183,92 @@ echo "✅ Volumes ${VOLUMES_ACTION} converged, changed [${VOLUMES_CHANGED}]" && 
         )
     os.chmod(script_path, os.stat(script_path).st_mode | stat.S_IEXEC)
     print("Build generate script [{}] script persisted to [{}]".format(module_name, script_path))
+
+
+RESTART_CONTRACT = """# The engine (`supervisor`) owns the watch and the restart, this snippet owns what must hold first, as hooks each in its
+# own bash. A module enrols with <MODULE>_RESTART=on in .env. Optional hooks: restart_policy, restart_ready.
+# No hook relies on a variable another set.
+#
+# restart_policy prints key=value lines:
+#   requires=mount:<path> | mounts:all-cifs | tcp:<host>:<port> | mqtt:<host>:<port> | healthy:<service>
+#   requires_stable=<n>s   how long every requirement must have held, default 60s
+#   settle_min=<n>s        least grace after a restart, never under the health check's own
+# restart_ready returns zero when what requires cannot say holds, called once every requirement has held.
+#
+# RESTART_MODULE_NAME     this module's name
+# RESTART_ENABLED         on when .env switches the restart on"""
+
+RESTART_WRAPPER = """
+#!/usr/bin/env bash
+################################################################################
+# WARNING: This file is written by the build process, any manual edits will be lost!
+################################################################################
+
+# shellcheck disable=SC1090,SC2034,SC2329
+
+set -o pipefail
+
+# ./restart.sh enabled|policy|ready
+# The watch is `supervisor serve`, this file holds only the module's hooks.
+
+RESTART_INTERNAL_ENV="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.env"
+[ -f "${RESTART_INTERNAL_ENV}" ] && . "${RESTART_INTERNAL_ENV}"
+
+RESTART_MODULE_NAME="MODULE_NAME_TOKEN"
+RESTART_ENABLED="${PREFIX_TOKEN_RESTART:-off}"
+
+restart_enabled() { [ "${RESTART_ENABLED}" = "on" ]; }
+
+restart_policy() { :; }
+
+restart_ready() { return 0; }
+
+SNIPPET_TOKEN
+
+[ "${BASH_SOURCE[0]}" = "${0}" ] || return 0
+
+case "${1:-}" in
+enabled) restart_enabled ;;
+policy) restart_policy ;;
+ready) restart_ready ;;
+*)
+  echo "Usage: restart.sh enabled|policy|ready" >&2
+  exit 2
+  ;;
+esac
+"""
+
+
+def write_container_restart(module_name=None, working_dir=None):
+    root_dir = abspath(join(dirname(realpath(realpath(sys.argv[0]))), "../../../.."))
+    if module_name is None:
+        module_name = basename(root_dir)
+    if working_dir is None:
+        working_dir = join(root_dir, "src/main/resources")
+    os.makedirs(working_dir, exist_ok=True)
+    script_source_path = join(root_dir, "src/build/resources/restart.sh")
+    prefix = "".join(character if character.isalnum() else "_" for character in module_name.upper())
+    if not isfile(script_source_path):
+        os.makedirs(os.path.dirname(script_source_path), exist_ok=True)
+        Path(script_source_path).write_text(
+            RESTART_CONTRACT
+            + """
+
+# TODO: Provide implementation
+
+restart_policy() {
+  echo "requires=mount:/share/10"
+}
+"""
+        )
+    script_source = Path(script_source_path).read_text().strip()
+    if not script_source.startswith(RESTART_CONTRACT):
+        raise ValueError("Snippet contract violated in [{}], its leading comment block must match RESTART_CONTRACT verbatim".format(script_source_path))
+    script_path = abspath(join(working_dir, "restart.sh"))
+    with open(script_path, "w") as script_file:
+        script_file.write(RESTART_WRAPPER.replace("MODULE_NAME_TOKEN", module_name).replace("PREFIX_TOKEN", prefix).replace("SNIPPET_TOKEN", script_source).strip())
+    os.chmod(script_path, os.stat(script_path).st_mode | stat.S_IEXEC)
+    print("Build generate script [{}] script persisted to [{}]".format(basename(root_dir), script_path))
 
 
 def write_container_backup(module_name=None, working_dir=None):

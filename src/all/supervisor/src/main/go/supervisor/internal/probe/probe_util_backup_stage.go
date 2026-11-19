@@ -364,7 +364,6 @@ const (
 	scriptSkipHoursDefault  = 1
 	scriptSkipHoursVariable = "BACKUP_SKIP_HOURS"
 	scriptStopGrace         = time.Minute
-	scriptRestartVariable   = "BACKUP_SERVICE_RESTART"
 	scriptLeaf              = "backup.sh"
 
 	scriptPathPattern = config.DirInstall + `/[a-z0-9_-]*/` + config.DirInstallLatestLink + `/` + scriptLeaf

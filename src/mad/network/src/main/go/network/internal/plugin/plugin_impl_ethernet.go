@@ -61,10 +61,6 @@ func (p *ethernetPlugin) Aggregate(samples []Sample) (Aggregate, error) {
 	return diagnoseEthernet(samples), nil
 }
 
-func (p *ethernetPlugin) Command(context.Context, State) error {
-	return nil
-}
-
 func (p *ethernetPlugin) State() *StateTracker { return p.state }
 
 func probeEthernet(ctx context.Context) ([]remote.GatewayDevice, []remote.GatewayClient, error) {

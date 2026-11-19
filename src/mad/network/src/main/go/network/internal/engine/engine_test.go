@@ -105,19 +105,6 @@ func TestEngine_PollSamplesPacedStride(t *testing.T) {
 	}
 }
 
-func TestEngine_CreateBuffersOnlyWindowed(t *testing.T) {
-	e := newEngine(t,
-		&fakePlugin{name: "windowed", mode: plugin.ModeWindowed},
-		&fakePlugin{name: "snapshot", mode: plugin.ModeSnapshot},
-	)
-	if _, ok := e.sampleBuffers["windowed"]; !ok {
-		t.Fatalf("windowed plugin should have a buffer")
-	}
-	if _, ok := e.sampleBuffers["snapshot"]; ok {
-		t.Fatalf("snapshot plugin should not have a buffer")
-	}
-}
-
 func TestEngine_RunAlreadyCanceled(t *testing.T) {
 	count := 0
 	e := newEngine(t, &fakePlugin{name: "a", mode: plugin.ModeWindowed, pollCount: &count})
@@ -343,7 +330,7 @@ func TestEngine_AggregateChangesPublishesOnlyStateChanges(t *testing.T) {
 		return plugin.Diagnose(plugin.StatusDead, 0, "DOWN")
 	}}
 	snapshotCount := 0
-	snapshot := &fakePlugin{name: "snapshot", mode: plugin.ModeSnapshot, pollCount: &snapshotCount, state: plugin.NewStateTracker(plugin.StateOff)}
+	snapshot := &fakePlugin{name: "snapshot", mode: plugin.ModeSnapshot, pollCount: &snapshotCount, state: plugin.NewStateTracker(plugin.StateOn)}
 	e := newEngine(t, windowed, snapshot)
 	if got := e.AggregateChanges(); len(got) != 0 {
 		t.Fatalf("changes before any poll: got %d want 0", len(got))
@@ -373,33 +360,153 @@ func TestEngine_AggregateChangesPublishesOnlyStateChanges(t *testing.T) {
 		}
 	}
 	if snapshotCount != 0 {
-		t.Fatalf("snapshot poll count: got %d want 0", snapshotCount)
+		t.Fatalf("snapshot poll count while on: got %d want 0", snapshotCount)
+	}
+}
+
+func TestEngine_PollSamplesRecoversDownPlugins(t *testing.T) {
+	snapshotCount, pacedCount := 0, 0
+	snapshot := &fakePlugin{name: "snapshot", mode: plugin.ModeSnapshot, pollCount: &snapshotCount, state: plugin.NewStateTracker(plugin.StateOn)}
+	paced := &fakePlugin{name: "paced", mode: plugin.ModeWindowed, pollCount: &pacedCount, pollPeriod: 5 * time.Minute, state: plugin.NewStateTracker(plugin.StateOn)}
+	e := &Engine{Plugins: []plugin.Plugin{snapshot, paced}, PollPeriod: time.Minute, AggregatePeriod: 15 * time.Minute}
+	if err := Create(e); err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	for range 3 {
+		e.PollSamples(context.Background())
+	}
+	if snapshotCount != 0 || pacedCount != 1 {
+		t.Fatalf("polls while up: got snapshot [%d] paced [%d] want 0 and 1", snapshotCount, pacedCount)
+	}
+	snapshot.state.Set(plugin.StateOff)
+	paced.state.Set(plugin.StateOff)
+	for range 3 {
+		e.PollSamples(context.Background())
+	}
+	if snapshotCount != 3 || pacedCount != 4 {
+		t.Fatalf("polls while down: got snapshot [%d] paced [%d] want 3 and 4", snapshotCount, pacedCount)
+	}
+	if got := len(e.copySamples("snapshot")); got != 1 {
+		t.Fatalf("snapshot window: got %d samples want 1", got)
+	}
+}
+
+func TestEngine_AggregateChangesRestoresSnapshotPlugin(t *testing.T) {
+	healthy := false
+	p := &fakePlugin{name: "snapshot", mode: plugin.ModeSnapshot, state: plugin.NewStateTracker(plugin.StateOn), aggregate: func([]plugin.Sample) plugin.Aggregate {
+		if healthy {
+			return plugin.Diagnose(plugin.StatusFit, 100, "UP")
+		}
+		return plugin.Diagnose(plugin.StatusDead, 0, "DOWN")
+	}}
+	e := newEngine(t, p)
+	e.AggregateSamples(context.Background(), e.Plugins)
+	if p.state.Get() != plugin.StateOff {
+		t.Fatalf("state after failed aggregate: got %s want OFF", p.state.Get())
+	}
+	e.PollSamples(context.Background())
+	if got := e.AggregateChanges(); len(got) != 0 {
+		t.Fatalf("changes while still down: got %d want 0", len(got))
+	}
+	healthy = true
+	e.PollSamples(context.Background())
+	if got := e.AggregateChanges(); len(got) != 1 || p.state.Get() != plugin.StateOn {
+		t.Fatalf("changes on restoration: got %d state %s want 1 and ON", len(got), p.state.Get())
+	}
+	e.PollSamples(context.Background())
+	if got := e.AggregateChanges(); len(got) != 0 {
+		t.Fatalf("changes once restored: got %d want 0", len(got))
+	}
+}
+
+func TestEngine_AggregateChangesIgnoresStaleSampleOfRecoveredSnapshotPlugin(t *testing.T) {
+	p := &fakePlugin{name: "snapshot", mode: plugin.ModeSnapshot, pollReading: -1, state: plugin.NewStateTracker(plugin.StateOn), aggregate: func(samples []plugin.Sample) plugin.Aggregate {
+		if samples[len(samples)-1].Readings.([]int)[0] < 0 {
+			return plugin.Diagnose(plugin.StatusDead, 0, "DOWN")
+		}
+		return plugin.Diagnose(plugin.StatusFit, 100, "UP")
+	}}
+	e := newEngine(t, p)
+	e.AggregateSamples(context.Background(), e.Plugins)
+	e.PollSamples(context.Background())
+	p.pollReading = 1
+	e.AggregateSamples(context.Background(), e.Plugins)
+	if got := e.AggregateChanges(); len(got) != 0 || p.state.Get() != plugin.StateOn {
+		t.Fatalf("changes after recovery at aggregate: got %d state %s want 0 and ON", len(got), p.state.Get())
 	}
 }
 
 func TestEngine_HandleCommand(t *testing.T) {
-	p := &fakePlugin{name: "agg"}
-	e := newEngine(t, p)
-	e.handleCommand(context.Background(), "agg", []byte("ON"))
-	if len(p.commandStates) != 1 || p.commandStates[0] != plugin.StateOn {
-		t.Fatalf("command states after ON: got %v want [ON]", p.commandStates)
+	tests := []struct {
+		name              string
+		plugin            string
+		payload           string
+		initialState      plugin.State
+		pollErr           error
+		aggregate         func([]plugin.Sample) plugin.Aggregate
+		gap               time.Duration
+		repeat            int
+		expectedPolls     int
+		expectedState     plugin.State
+		expectedSampleLen int
+	}{
+		{name: "on_repolls_and_recovers", plugin: "agg", payload: "ON", initialState: plugin.StateOff, repeat: 1, expectedPolls: 1, expectedState: plugin.StateOn, expectedSampleLen: 1},
+		{name: "off_repolls_and_stays_dead", plugin: "agg", payload: "OFF", initialState: plugin.StateOff, repeat: 1, expectedPolls: 1, expectedState: plugin.StateOff, expectedSampleLen: 1,
+			aggregate: func([]plugin.Sample) plugin.Aggregate { return plugin.Diagnose(plugin.StatusDead, 0, "DOWN") }},
+		{name: "off_repolls_and_goes_dead", plugin: "agg", payload: "off", initialState: plugin.StateOn, repeat: 1, expectedPolls: 1, expectedState: plugin.StateOff, expectedSampleLen: 1,
+			aggregate: func([]plugin.Sample) plugin.Aggregate { return plugin.Diagnose(plugin.StatusDead, 0, "DOWN") }},
+		{name: "repeat_inside_gap_is_dropped", plugin: "agg", payload: "ON", initialState: plugin.StateOff, repeat: 3, gap: time.Hour, expectedPolls: 1, expectedState: plugin.StateOn, expectedSampleLen: 1},
+		{name: "repeat_after_gap_polls_again", plugin: "agg", payload: "ON", initialState: plugin.StateOff, repeat: 3, expectedPolls: 3, expectedState: plugin.StateOn, expectedSampleLen: 1},
+		{name: "unparseable_payload", plugin: "agg", payload: "garbage", initialState: plugin.StateOff, repeat: 1, expectedPolls: 0, expectedState: plugin.StateOff},
+		{name: "unknown_plugin", plugin: "missing", payload: "ON", initialState: plugin.StateOff, repeat: 1, expectedPolls: 0, expectedState: plugin.StateOff},
 	}
-	e.handleCommand(context.Background(), "agg", []byte("garbage"))
-	if len(p.commandStates) != 1 {
-		t.Fatalf("unparseable payload should not dispatch: got %v", p.commandStates)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			polls := 0
+			p := &fakePlugin{name: "agg", pollCount: &polls, aggregate: test.aggregate, state: plugin.NewStateTracker(test.initialState)}
+			e := newEngine(t, p)
+			e.refreshGap = test.gap
+			for range test.repeat {
+				e.handleCommand(context.Background(), test.plugin, []byte(test.payload))
+			}
+			if polls != test.expectedPolls {
+				t.Errorf("polls: got %d want %d", polls, test.expectedPolls)
+			}
+			if got := p.state.Get(); got != test.expectedState {
+				t.Errorf("state: got %s want %s", got, test.expectedState)
+			}
+			if got := len(e.copySamples("agg")); got != test.expectedSampleLen {
+				t.Errorf("samples: got %d want %d", got, test.expectedSampleLen)
+			}
+		})
 	}
 }
 
-func TestEngine_RunCommandDispatchesToPlugin(t *testing.T) {
-	p := &fakePlugin{name: "agg"}
+func TestEngine_HandleCommandInFlight(t *testing.T) {
+	polls := 0
+	release := make(chan struct{})
+	p := &fakePlugin{name: "agg", pollCount: &polls, pollGate: release}
 	e := newEngine(t, p)
-	e.runCommand(context.Background(), "agg", plugin.StateOn)
-	if len(p.commandStates) != 1 || p.commandStates[0] != plugin.StateOn {
-		t.Fatalf("command states: got %v want [ON]", p.commandStates)
+	e.refreshGap = 0
+	time.AfterFunc(200*time.Millisecond, func() { close(release) })
+	done := make(chan struct{})
+	go func() {
+		e.handleCommand(context.Background(), "agg", []byte("ON"))
+		close(done)
+	}()
+	for {
+		e.refreshMu.Lock()
+		busy := e.refreshing["agg"]
+		e.refreshMu.Unlock()
+		if busy {
+			break
+		}
+		time.Sleep(time.Millisecond)
 	}
-	e.runCommand(context.Background(), "missing", plugin.StateOff)
-	if len(p.commandStates) != 1 {
-		t.Fatalf("unknown plugin should not dispatch: got %v", p.commandStates)
+	e.handleCommand(context.Background(), "agg", []byte("ON"))
+	<-done
+	if polls != 1 {
+		t.Errorf("polls: got %d want 1", polls)
 	}
 }
 
@@ -409,18 +516,18 @@ var (
 )
 
 type fakePlugin struct {
-	name          string
-	mode          plugin.Mode
-	pollErr       error
-	pollCount     *int
-	panicPoll     bool
-	aggregate     func(sampleBuffer []plugin.Sample) plugin.Aggregate
-	aggregateErr  error
-	panicAgg      bool
-	commandErr    error
-	commandStates []plugin.State
-	state         *plugin.StateTracker
-	pollPeriod    time.Duration
+	name         string
+	mode         plugin.Mode
+	pollErr      error
+	pollCount    *int
+	panicPoll    bool
+	aggregate    func(sampleBuffer []plugin.Sample) plugin.Aggregate
+	aggregateErr error
+	panicAgg     bool
+	pollGate     chan struct{}
+	state        *plugin.StateTracker
+	pollPeriod   time.Duration
+	pollReading  int
 }
 
 func (f *fakePlugin) Name() string { return f.name }
@@ -431,11 +538,17 @@ func (f *fakePlugin) Poll(context.Context) (plugin.Sample, error) {
 	if f.pollCount != nil {
 		*f.pollCount++
 	}
+	if f.pollGate != nil {
+		<-f.pollGate
+	}
 	if f.panicPoll {
 		panic("poll boom")
 	}
 	if f.pollErr != nil {
 		return plugin.Sample{}, f.pollErr
+	}
+	if f.pollReading != 0 {
+		return plugin.Sample{Readings: []int{f.pollReading}}, nil
 	}
 	return plugin.Sample{Readings: []int{1}}, nil
 }
@@ -448,11 +561,6 @@ func (f *fakePlugin) Aggregate(sampleBuffer []plugin.Sample) (plugin.Aggregate, 
 		return f.aggregate(sampleBuffer), f.aggregateErr
 	}
 	return plugin.Aggregate{Status: plugin.StatusFit, OK: true, Score: 100}, f.aggregateErr
-}
-
-func (f *fakePlugin) Command(_ context.Context, state plugin.State) error {
-	f.commandStates = append(f.commandStates, state)
-	return f.commandErr
 }
 
 func (f *fakePlugin) State() *plugin.StateTracker { return f.state }

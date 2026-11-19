@@ -29,12 +29,6 @@ var (
 	cachedMu sync.RWMutex
 )
 
-func Reset() {
-	cachedMu.Lock()
-	defer cachedMu.Unlock()
-	cached = nil
-}
-
 func Load() *Config {
 	cachedMu.RLock()
 	if cached != nil {
@@ -51,7 +45,7 @@ func Load() *Config {
 }
 
 func load() *Config {
-	c := &Config{
+	return &Config{
 		brokerHost:    os.Getenv("BROKER_HOST"),
 		brokerPort:    os.Getenv("BROKER_PORT"),
 		brokerToken:   os.Getenv("BROKER_TOKEN"),
@@ -66,7 +60,6 @@ func load() *Config {
 		unifiHost:     os.Getenv("UNIFI_HOST"),
 		weewxHost:     os.Getenv("WEEWX_HOST_PROD"),
 	}
-	return c
 }
 
 func (c *Config) Broker() string {

@@ -6,8 +6,9 @@ use std::time::Duration;
 use log::Level;
 
 use crate::metrics::{
-    BATTERY_VOLTS, CLOCK, COLUMN_DETAIL, COLUMN_ELAPSED, COLUMN_EVENT, COLUMN_TIME, GUARD_BATTERY_SECONDS,
-    GUARD_MAINS_SECONDS, GUARD_RESTORE_MAINS, GUARD_SHED_BATTERY, GUARD_STATE, PLUG_WATTS, STATUS, UTILISATION,
+    BATTERY_CHARGE_PCT, BATTERY_VOLTS, CLOCK, COLUMN_DETAIL, COLUMN_ELAPSED, COLUMN_EVENT, COLUMN_TIME,
+    GUARD_BATTERY_SECONDS, GUARD_MAINS_SECONDS, GUARD_RESTORE_MAINS, GUARD_SHED_BATTERY, GUARD_STATE, PLUG_WATTS,
+    STATUS, UTILISATION,
 };
 use crate::nut::describe;
 use crate::outage::{
@@ -84,12 +85,22 @@ pub fn event_lines(event: &str, detail: &str, prefix: &str) -> Vec<String> {
         }
         EVENT_DECISION => {
             let (head, counters) = detail.split_once(" guard_battery_seconds").unwrap_or((detail, ""));
-            let mut lines = vec![line("guard decision", head)];
+            let (decision, reason) = head.split_once(' ').unwrap_or((head, ""));
+            let mut lines = vec![line("guard decision", decision)];
+            if !reason.is_empty() {
+                lines.push(line("guard decision reason", reason));
+            }
             lines.extend(
                 pairs(&format!("guard_battery_seconds{counters}"))
                     .into_iter()
                     .filter(|(key, _)| key != "guard_live")
-                    .map(|(key, value)| line(&words(&key), &value)),
+                    .map(|(key, value)| {
+                        let seconds = value.parse::<i64>().map_or(value.clone(), log_seconds);
+                        line(
+                            &format!("guard decision {}", words(&key).trim_start_matches("guard ")),
+                            &seconds,
+                        )
+                    }),
             );
             lines
         }
@@ -155,13 +166,20 @@ pub fn row_lines(table: &Table, row: &[String], progress: &mut Progress, prefix:
         if value.is_empty() {
             "unknown".to_string()
         } else {
-            format!("{} of {}", log_seconds(value), log_seconds(table.cell(row, limit)))
+            let limit = table.cell(row, limit);
+            match (value.parse::<i64>(), limit.parse::<i64>()) {
+                (Ok(seconds), Ok(bound)) if seconds >= bound => {
+                    format!("{}, limit {} reached", log_seconds(seconds), log_seconds(bound))
+                }
+                _ => format!("{} of {}", log_seconds(value), log_seconds(limit)),
+            }
         }
     };
     let lines: Vec<String> = [
         ("ups state", describe(table.cell(row, STATUS))),
         ("output load pct", shown(UTILISATION, "%")),
         ("battery volts", shown(BATTERY_VOLTS, "V")),
+        ("battery charge pct", shown(BATTERY_CHARGE_PCT, "%")),
         ("plug watts", shown(PLUG_WATTS, "W")),
         ("guard state", shown(GUARD_STATE, "")),
         (
@@ -459,8 +477,17 @@ mod tests {
             "shed shed time reached guard_battery_seconds [200] guard_mains_seconds [0] guard_live [1]",
             "",
         );
-        assert_eq!(decision.len(), 3);
+        assert_eq!(decision.len(), 4);
         assert!(decision.iter().all(|line| !line.contains("guard live")));
+        assert!(decision
+            .iter()
+            .any(|line| line.starts_with("guard decision .") && line.ends_with("[shed]")));
+        assert!(decision
+            .iter()
+            .any(|line| line.starts_with("guard decision reason .") && line.ends_with("[shed time reached]")));
+        assert!(decision
+            .iter()
+            .any(|line| line.starts_with("guard decision battery seconds .") && line.ends_with("[200s]")));
         let command = event_lines(
             EVENT_COMMAND,
             "host [max] command [awake] status [0] reason [] took_ms [4]",
@@ -475,9 +502,10 @@ mod tests {
         assert!(prefixed[0].starts_with("drill guard note ."));
         let mut text = outage::encode_row(&metrics::header());
         text.push('\n');
-        for (elapsed, volts) in [(0u64, 13.3), (4, 13.3), (12, 13.3), (24, 12.1)] {
+        for (elapsed, volts) in [(0u64, 13.3), (4, 13.3), (12, 13.3), (24, 12.1), (130, 12.0)] {
             let mut frame = Frame::default();
             frame.set_number(metrics::BATTERY_VOLTS, volts);
+            frame.set_int(metrics::BATTERY_CHARGE_PCT, 58);
             frame.set_int(metrics::GUARD_BATTERY_SECONDS, elapsed as i64);
             frame.set_int(metrics::GUARD_SHED_BATTERY, 120);
             text.push_str(&outage::encode_row(&outage::row(
@@ -496,7 +524,7 @@ mod tests {
             .iter()
             .map(|row| row_lines(&table, row, &mut progress, "").len())
             .collect();
-        assert_eq!(counts, vec![7, 0, 1, 2]);
+        assert_eq!(counts, vec![8, 0, 1, 2, 2]);
         let mut progress = Progress::default();
         let heartbeat: Vec<String> = table
             .rows
@@ -506,6 +534,13 @@ mod tests {
         assert!(heartbeat
             .iter()
             .any(|line| line.contains("progress guard battery seconds") && line.ends_with("[ 12s of 120s]")));
+        assert!(heartbeat.iter().any(
+            |line| line.contains("progress guard battery seconds") && line.ends_with("[130s, limit 120s reached]")
+        ));
+        assert!(!heartbeat.iter().any(|line| line.contains("130s of 120s")));
+        assert!(heartbeat
+            .iter()
+            .any(|line| line.contains("progress battery charge pct") && line.ends_with("[58%]")));
     }
 
     #[test]
