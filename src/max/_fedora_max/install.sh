@@ -11,8 +11,7 @@ ${SERVICE_INSTALL}/volumes.sh apply || exit 1
 ################################################################################
 # mbpfan
 ################################################################################
-dnf copr enable dperson/mbpfan
-dnf install mbpfan
+dnf-3 install -y mbpfan
 echo applesmc >/etc/modules-load.d/applesmc.conf
 modprobe applesmc
 cat <<'EOF' >/etc/mbpfan.conf
