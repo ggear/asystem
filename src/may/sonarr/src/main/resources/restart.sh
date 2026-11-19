@@ -37,6 +37,7 @@ restart_ready() { return 0; }
 
 restart_policy() {
   echo "requires=mount:/share/10"
+  echo "requires=tcp:${SABNZBD_SERVICE_PROD:?}:${SABNZBD_HTTP_PORT:?}"
 }
 
 [ "${BASH_SOURCE[0]}" = "${0}" ] || return 0
