@@ -151,7 +151,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 				forceRepublish.Store(true)
 			}
 			client.Publish(statusTopic, 1, true, metric.AvailabilityOnline).WaitTimeout(brokerTimeout)
-			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Infof("observed", reconnectStart, "[online] re-asserted, read [%s], republish [%v]", seen, forceRepublish.Load())
+			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Infof("observed", reconnectStart, "[online] re-asserted, read [%s], republish [%s]", seen, scribe.Mark(forceRepublish.Load()))
 		}
 	}
 	clientStart := time.Now()

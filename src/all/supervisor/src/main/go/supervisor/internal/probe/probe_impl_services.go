@@ -159,7 +159,7 @@ func (p *servicesProbe) poll(ctx context.Context, isPulse bool) error {
 			tombstoned = append(tombstoned, cachedServiceName)
 		}
 	}
-	scribe.Log(scribe.SourceProbeServices, p.subject(), scribe.ActionCensus).Debugf("surveyed", tombstoneStart, "[%s] host, polled [%3d] services against cached [%3d], absent [%s]", p.hostName, len(servicesByName), len(cachedServiceNames), strings.Join(tombstoned, ","))
+	scribe.Log(scribe.SourceProbeServices, p.subject(), scribe.ActionCensus).Debugf("surveyed", tombstoneStart, "[%-11.11s] host, polled [%3d] services against cached [%3d], absent [%s]", p.hostName, len(servicesByName), len(cachedServiceNames), scribe.Fit(strings.Join(tombstoned, ","), servicesWidthAbsent))
 	if len(tombstoned) > 0 {
 		scribe.Log(scribe.SourceProbeServices, p.subject(), scribe.ActionRemove).Infof("removals", tombstoneStart, "[%s] host, [%d] services [%s]", p.hostName, len(tombstoned), strings.Join(tombstoned, ","))
 	}
@@ -205,8 +205,8 @@ func (p *servicesProbe) poll(ctx context.Context, isPulse bool) error {
 		sleepStatus, _, _ := polledService.sleepStatus()
 		aggregateStatus := sleepStatus || (healthStatus && configuredStatus)
 		reportPulsingf(scribe.Log(scribe.SourceProbeServices, scribe.SubjectService(polledServiceName), scribe.ActionSample), "computed", serviceStart,
-			"[%v] aggregate, service [%s] health [%v] configured [%v] sleeping [%v], every metric of this service is not ok while aggregate is false",
-			aggregateStatus, polledServiceName, healthStatus, configuredStatus, sleepStatus)
+			"[%s] aggregate, service [%s] health [%s] configured [%s] sleeping [%s], every metric of this service is not ok while aggregate is [-]",
+			scribe.Mark(aggregateStatus), polledServiceName, scribe.Mark(healthStatus), scribe.Mark(configuredStatus), scribe.Mark(sleepStatus))
 		gates := gateSet{metric.GateServiceAggregate: func() bool { return aggregateStatus }}
 		runCacheMetricTasks(p, isPulse, gates, []cacheMetricTask{
 			newCacheMetricTask(
@@ -683,13 +683,13 @@ func (s *service) healthStatus() (bool, derivation, error) {
 }
 
 func (s *service) configuredStatus() (bool, derivation, error) {
-	return s.configuredStatusValue, derivedf(scribe.ActionSample, "computed [%v] configured, service [%s] is %s named in the config file schema for this host",
-		s.configuredStatusValue, s.nameValue, configuredWord(s.configuredStatusValue)), s.configuredStatusErr
+	return s.configuredStatusValue, derivedf(scribe.ActionSample, "computed [%s] configured, service [%s] is %s named in the config file schema for this host",
+		scribe.Mark(s.configuredStatusValue), s.nameValue, configuredWord(s.configuredStatusValue)), s.configuredStatusErr
 }
 
 func (s *service) sleepStatus() (bool, derivation, error) {
-	return s.sleepStatusValue, derivedf(scribe.ActionSample, "computed [%v] sleeping, service [%s] holds %s marker in its install tree",
-		s.sleepStatusValue, s.nameValue, configuredWord(s.sleepStatusValue)), s.sleepStatusErr
+	return s.sleepStatusValue, derivedf(scribe.ActionSample, "computed [%s] sleeping, service [%s] holds %s marker in its install tree",
+		scribe.Mark(s.sleepStatusValue), s.nameValue, configuredWord(s.sleepStatusValue)), s.sleepStatusErr
 }
 
 func (s *service) name() string {
@@ -871,8 +871,8 @@ func (p *servicesProbe) healthStatus(name string, containerInfo container.Inspec
 		return false, derivedf(scribe.ActionSample, "computed [false] healthy, service [%s] declares no docker health check so docker reports no health state", name), nil
 	}
 	healthy := containerInfo.State.Health.Status == container.Healthy
-	return healthy, derivedf(scribe.ActionSample, "computed [%v] healthy, service [%s] docker health [%s] after [%d] failing streak",
-		healthy, name, containerInfo.State.Health.Status, containerInfo.State.Health.FailingStreak), nil
+	return healthy, derivedf(scribe.ActionSample, "computed [%s] healthy, service [%s] docker health [%s] after [%d] failing streak",
+		scribe.Mark(healthy), name, containerInfo.State.Health.Status, containerInfo.State.Health.FailingStreak), nil
 }
 
 func (p *servicesProbe) backupStatus(name string) (bool, derivation, error) {
@@ -886,16 +886,19 @@ func (p *servicesProbe) backupStatus(name string) (bool, derivation, error) {
 		}
 		return true, derivedInertf(scribe.ActionSample, "computed [true] backed up, service [%s] recorded no backup in run [%s], it ships no backup.sh or was not running when primary ran, so the metric is inert and always ok", name, run), nil
 	}
-	return success, derivedf(scribe.ActionSample, "computed [%v] backed up, service [%s] as reported by run [%s]", success, name, run), nil
+	return success, derivedf(scribe.ActionSample, "computed [%s] backed up, service [%s] as reported by run [%s]", scribe.Mark(success), name, run), nil
 }
 
 func (p *servicesProbe) restartCount(name string, containerInfo container.InspectResponse) (float64, derivation, error) {
 	if containerInfo.ContainerJSONBase == nil {
 		return 0, derivation{}, fmt.Errorf("no restart count read, docker returned an inspect response for service [%s] with no base section", name)
 	}
-	supervised := p.restart.ledger.count(name, containerInfo.ID)
-	return float64(containerInfo.RestartCount + supervised), derivedf(scribe.ActionSample, "computed [%d] restarts, service [%s] as [%d] counted by docker and [%d] made by supervisor since the container was created",
-		containerInfo.RestartCount+supervised, name, containerInfo.RestartCount, supervised), nil
+	byDocker, bySupervisor, err := p.restart.ledger.observed(name, containerInfo.ID, containerInfo.RestartCount, p.restart.now())
+	if err != nil {
+		return 0, derivation{}, fmt.Errorf("no restart count read, ledger could not be updated for service [%s] with [%w]", name, err)
+	}
+	return float64(byDocker + bySupervisor), derivedf(scribe.ActionSample, "computed [%d] restarts, service [%s] as [%d] counted by docker and [%d] made by supervisor in the last [%s]",
+		byDocker+bySupervisor, name, byDocker, bySupervisor, restartWindow), nil
 }
 
 func (p *servicesProbe) version(snapshot *installSnapshot, containerInfo container.InspectResponse) (string, derivation, error) {
@@ -999,6 +1002,7 @@ const (
 	servicesDockerContainerIgnorePattern = "reaper_"
 	servicesDockerContainerIgnoreSuffix  = "_restore"
 	servicesVersionUnknown               = "-"
+	servicesWidthAbsent                  = 28
 
 	bitsPerByte = 8.0
 	bitsPerMbit = 1000000.0

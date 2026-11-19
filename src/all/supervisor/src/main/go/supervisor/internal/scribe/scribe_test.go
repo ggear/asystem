@@ -1593,3 +1593,21 @@ func TestScribe_Fit(t *testing.T) {
 		})
 	}
 }
+
+func TestScribe_Mark(t *testing.T) {
+	tests := []struct {
+		name     string
+		ok       bool
+		expected string
+	}{
+		{"true is plus", true, "+"},
+		{"false is minus", false, "-"},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if got := Mark(testCase.ok); got != testCase.expected {
+				t.Errorf("mark: got [%s] want [%s]", got, testCase.expected)
+			}
+		})
+	}
+}

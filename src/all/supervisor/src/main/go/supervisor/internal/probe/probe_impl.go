@@ -124,7 +124,7 @@ func RunPoll(ctx context.Context, onPulse func(isHeartbeat bool)) error {
 			if err := p.poll(ctx, isPulse); err != nil {
 				scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionSample).Errorf("faulting", probeStart, "[%v] pulse with [%v]", isPulse, err)
 			}
-			scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionSample).Debugf("reported", probeStart, "[%v] pulse, metrics [%3d]", isPulse, len(p.metrics()))
+			scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionSample).Debugf("reported", probeStart, "[%s] pulse, metrics [%3d]", scribe.Mark(isPulse), len(p.metrics()))
 		}
 		if isPulse {
 			heartbeatPulseCount--
@@ -137,7 +137,7 @@ func RunPoll(ctx context.Context, onPulse func(isHeartbeat bool)) error {
 			}
 		}
 		execPolledAt.Store(time.Now().UnixNano())
-		scribe.Log(scribe.SourceProbe, scribe.SubjectHost(config.Load(execConfigPath).Host()), scribe.ActionSample).Debugf("reported", tickStart, "[%3d] probes, pulse [%v]", len(execProbes), isPulse)
+		scribe.Log(scribe.SourceProbe, scribe.SubjectHost(config.Load(execConfigPath).Host()), scribe.ActionSample).Debugf("reported", tickStart, "[%3d] probes, pulse [%s]", len(execProbes), scribe.Mark(isPulse))
 	}
 	tick()
 	for {
@@ -393,16 +393,8 @@ func runCacheMetricTasks(p probe, isPulse bool, gates gateSet, tasks []cacheMetr
 	if !isPulse || census.total == 0 {
 		return
 	}
-	scoped := ""
-	if census.service != metric.ServiceNameUnset {
-		scoped = fmt.Sprintf(" of service [%s]", census.service)
-	}
-	faults := ""
-	if len(census.faulted) > 0 {
-		faults = fmt.Sprintf(", not green [%s]", strings.Join(census.faulted, " "))
-	}
-	scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionCensus).Debugf("reported", tasksStart, "[%3d] metrics%s, green [%3d] amber [%3d] red [%3d] unknown [%3d]%s",
-		census.total, scoped, census.green, census.amber, census.red, census.unknown, faults)
+	scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionCensus).Debugf("reported", tasksStart, "[%3d] metrics of [%s], green [%3d] amber [%3d] red [%3d] unknown [%3d], not green [%s]",
+		census.total, scribe.Fit(census.service, censusWidthService), census.green, census.amber, census.red, census.unknown, scribe.Fit(strings.Join(census.faulted, " "), censusWidthFaulted))
 }
 
 func runCacheMetricTask(p probe, isPulse bool, gates gateSet, task cacheMetricTask) metricStatus {
@@ -469,10 +461,10 @@ func runCacheMetricTask(p probe, isPulse bool, gates gateSet, task cacheMetricTa
 	}
 	ruleLogger := scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionCompute)
 	if trendOK == nil {
-		reportPulsingf(ruleLogger, "computed", taskStart, "%s Pulse OK [%v] %s", metricValued(pulse, unit), pulseOK, pulseResult.Detail)
+		reportPulsingf(ruleLogger, "computed", taskStart, "%s Pulse OK [%s] %s", metricValued(pulse, unit), scribe.Mark(pulseOK), pulseResult.Detail)
 	} else {
-		reportPulsingf(ruleLogger, "computed", taskStart, "%s Pulse OK [%v] %s, %s Trend OK [%v] %s",
-			metricValued(pulse, unit), pulseOK, pulseResult.Detail, metricValued(trend, unit), *trendOK, trendResult.Detail)
+		reportPulsingf(ruleLogger, "computed", taskStart, "%s Pulse OK [%s] %s, %s Trend OK [%s] %s",
+			metricValued(pulse, unit), scribe.Mark(pulseOK), pulseResult.Detail, metricValued(trend, unit), scribe.Mark(*trendOK), trendResult.Detail)
 	}
 	if valueErr != nil {
 		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionCompute).Errorf("faulting", taskStart, "[builder] value failed with [%v]", valueErr)
@@ -555,13 +547,13 @@ func reportMetricStatus(task cacheMetricTask, taskStart time.Time, status metric
 	if seen {
 		was = previous.String()
 	}
-	trended := any("none")
+	trended := "?"
 	if trendOK != nil {
-		trended = *trendOK
+		trended = scribe.Mark(*trendOK)
 	}
 	unit := metric.GetIDUnit(task.metricID)
-	scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionCompute).Debugf("observed", taskStart, "%s %sstatus [%s] was [%s] Pulse OK [%v], %s Trend OK [%v], error [%v]",
-		metricValued(pulse, unit), metricScope(task), status, was, pulseOK, metricValued(trend, unit), trended, metricValued(err, ""))
+	scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionCompute).Debugf("observed", taskStart, "%s %sstatus [%s] was [%s] Pulse OK [%s], %s Trend OK [%s], error [%v]",
+		metricValued(pulse, unit), metricScope(task), status, was, scribe.Mark(pulseOK), metricValued(trend, unit), trended, metricValued(err, ""))
 }
 
 func reportPulsingf(logger scribe.Logger, verb string, started time.Time, detail string, args ...any) {
@@ -637,6 +629,9 @@ const (
 	cycleInterval     = time.Minute
 	pollStalePulses   = 5
 	pollStaleFloor    = 30 * time.Second
+
+	censusWidthService = 14
+	censusWidthFaulted = 40
 )
 
 var (

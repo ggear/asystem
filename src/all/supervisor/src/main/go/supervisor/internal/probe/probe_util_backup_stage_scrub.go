@@ -38,8 +38,8 @@ func runScrub(ctx context.Context, request stageRequest) bool {
 	statusOut, code, abandoned := bounded(ctx, stageBoundedWait, "btrfs", "scrub", "status", config.DirBackup)
 	if abandoned || code != 0 {
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Errorf("faulting", started,
-			"[%s] scrub status exited [%d] abandoned [%t] reporting [%s], the disk cannot be scrubbed", config.DirBackup, code,
-			abandoned, strings.Join(strings.Fields(statusOut), " "))
+			"[%s] scrub status exited [%d] abandoned [%s] reporting [%s], the disk cannot be scrubbed", config.DirBackup, code,
+			scribe.Mark(abandoned), strings.Join(strings.Fields(statusOut), " "))
 		publishScrubSummary(request, host, scrubDocument(request, metric.BackupStateFailure, false, started, scrubReading{}))
 		return false
 	}
@@ -62,8 +62,8 @@ func runScrub(ctx context.Context, request stageRequest) bool {
 	}
 	if abandoned || code != 0 {
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Errorf("faulting", started,
-			"[%s] scrub [%s] exited [%d] abandoned [%t] reporting [%s], the disk was not scrubbed", config.DirBackup, action, code,
-			abandoned, strings.Join(strings.Fields(out), " "))
+			"[%s] scrub [%s] exited [%d] abandoned [%s] reporting [%s], the disk was not scrubbed", config.DirBackup, action, code,
+			scribe.Mark(abandoned), strings.Join(strings.Fields(out), " "))
 		publishScrubSummary(request, host, scrubDocument(request, metric.BackupStateFailure, false, started, scrubReading{}))
 		return false
 	}
@@ -514,7 +514,7 @@ func runBalance(ctx context.Context, subject scribe.Subject) int {
 	out, code, abandoned := bounded(ctx, scrubBalanceWait, "btrfs", "balance", "start", "-dusage=10", "-musage=10", config.DirBackup)
 	if abandoned || code != 0 {
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Warnf("faulting", started,
-			"[%s] could not be balanced, exited [%d] abandoned [%t]", config.DirBackup, code, abandoned)
+			"[%s] could not be balanced, exited [%d] abandoned [%s]", config.DirBackup, code, scribe.Mark(abandoned))
 		return 0
 	}
 	relocated := 0

@@ -422,7 +422,7 @@ var metricBuildersByID = []builder{
 		valueKind:   ValueFloat,
 		label:       "RST",
 		unit:        "",
-		description: "restarts of the service container since it was created, by docker or by supervisor",
+		description: "restarts of the service container in the last day, by docker or by supervisor",
 		template:    "supervisor/$HOST/$SCOPE/service/$SERVICE/restart_count",
 		persisted:   true,
 		pulseRule:   All(Gated(GateServiceAggregate), Bounded(Self, AtMost, 5)), trendRule: All(Gated(GateServiceAggregate), Bounded(Self, AtMost, 0)),

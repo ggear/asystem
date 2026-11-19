@@ -350,6 +350,13 @@ func Head(text string, width int) string {
 	return string(runes[:width-len(clipMarker)]) + clipMarker
 }
 
+func Mark(ok bool) string {
+	if ok {
+		return "+"
+	}
+	return "-"
+}
+
 func Fit(text string, width int) string {
 	return pad(Head(text, width), width)
 }

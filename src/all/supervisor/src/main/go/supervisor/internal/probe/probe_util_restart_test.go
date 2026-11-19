@@ -305,8 +305,8 @@ func TestProbeUtilRestart_Settled(t *testing.T) {
 	if got := rig.engine.ledger.history("plex", "plex-1").streak; got != 0 {
 		t.Fatalf("streak after a service stayed healthy for two intervals: got %d want 0", got)
 	}
-	if got := rig.engine.ledger.count("plex", "plex-1"); got != 1 {
-		t.Fatalf("count after settling: got %d want 1", got)
+	if got := len(rig.engine.ledger.history("plex", "plex-1").attempts); got != 1 {
+		t.Fatalf("attempts after settling: got %d want 1", got)
 	}
 }
 

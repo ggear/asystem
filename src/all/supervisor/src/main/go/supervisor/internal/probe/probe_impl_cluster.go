@@ -117,10 +117,10 @@ func (p *clusterProbe) cluster() (bool, derivation, error) {
 	verdict := clusterHealth(hosts, retained, time.Now(), stale)
 	healthy := len(verdict.faults) == 0
 	if healthy {
-		return true, derivedf(scribe.ActionCompute, "computed [true] healthy, hosts [%d/%d] and services [%d/%d] ok",
+		return true, derivedf(scribe.ActionCompute, "computed [+] healthy, hosts [%d/%d] and services [%d/%d] ok",
 			verdict.hostsOK, len(hosts), verdict.servicesOK, verdict.services), nil
 	}
-	return false, derivedf(scribe.ActionCompute, "computed [false] healthy, hosts [%d/%d] and services [%d/%d] ok, faults [%s]",
+	return false, derivedf(scribe.ActionCompute, "computed [-] healthy, hosts [%d/%d] and services [%d/%d] ok, faults [%s]",
 		verdict.hostsOK, len(hosts), verdict.servicesOK, verdict.services, strings.Join(verdict.faults, ",")), nil
 }
 

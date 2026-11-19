@@ -405,8 +405,8 @@ func (c *leaderCampaign) census(now time.Time) {
 	}
 	if report {
 		slices.Sort(standing)
-		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionCensus).Debugf("reported", now, "[%s] election, holding [%v], attached [%v], standing [%v], settling [%s] s, lease [%s] aged [%s] s, candidates [%s]",
-			c.election.name, held, attached, standingSelf, elapsedSeconds(settling), leaseHost, elapsedSeconds(leaseAge), strings.Join(standing, ","))
+		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionCensus).Debugf("reported", now, "[%s] election, holding [%s], attached [%s], standing [%s], settling [%s] s, lease [%s] aged [%s] s, candidates [%s]",
+			c.election.name, scribe.Mark(held), scribe.Mark(attached), scribe.Mark(standingSelf), elapsedSeconds(settling), scribe.Fit(leaseHost, leaderWidthHost), elapsedSeconds(leaseAge), scribe.Fit(strings.Join(standing, ","), leaderWidthCandidates))
 	}
 }
 
@@ -531,7 +531,7 @@ func (c *leaderCampaign) vanish(reason string) {
 		cleared = token.WaitTimeout(min(c.timing.publishTimeout, leaderResignBudget)) && token.Error() == nil
 	}
 	present.Disconnect(250)
-	scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionPublish).Infof("released", vanishStart, "[%s] presence [%s] acknowledged [%v], %s", c.election.presence, metric.AvailabilityOffline, cleared, reason)
+	scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionPublish).Infof("released", vanishStart, "[%s] presence [%s] acknowledged [%s], %s", c.election.presence, metric.AvailabilityOffline, scribe.Mark(cleared), reason)
 }
 
 func (c *leaderCampaign) vacate(now time.Time) {
@@ -611,7 +611,7 @@ func (c *leaderCampaign) observe(client mqtt.Client, message mqtt.Message) {
 		return
 	}
 	if _, standing := c.candidates[host]; !standing || c.staleHosts[host] {
-		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(host), scribe.ActionSubscribe).Infof("observed", received, "[%s] election candidacy standing, retained [%-5v]", c.election.name, message.Retained())
+		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(host), scribe.ActionSubscribe).Infof("observed", received, "[%s] election candidacy standing, retained [%-5s]", c.election.name, scribe.Mark(message.Retained()))
 	}
 	c.candidates[host] = received
 	renewed, parseErr := time.Parse(time.RFC3339Nano, candidacy.RenewedTS)
@@ -669,10 +669,10 @@ func (c *leaderCampaign) withdrawCandidacy(now time.Time, reason string, faulted
 	cleared := c.publish(c.election.candidateTopic(c.host), []byte{})
 	logger := scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionRemove)
 	if faulted {
-		logger.Warnf("excluded", now, "[%s] election candidacy withdrawn, acknowledged [%v], %s", c.election.name, cleared, reason)
+		logger.Warnf("excluded", now, "[%s] election candidacy withdrawn, acknowledged [%s], %s", c.election.name, scribe.Mark(cleared), reason)
 		return
 	}
-	logger.Infof("excluded", now, "[%s] election candidacy withdrawn, acknowledged [%v], %s", c.election.name, cleared, reason)
+	logger.Infof("excluded", now, "[%s] election candidacy withdrawn, acknowledged [%s], %s", c.election.name, scribe.Mark(cleared), reason)
 }
 
 func (c *leaderCampaign) evaluate(now time.Time) {
@@ -710,7 +710,7 @@ func (c *leaderCampaign) evaluate(now time.Time) {
 	c.mutex.Unlock()
 	switch settleLog {
 	case "started":
-		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionRegister).Infof("schedule", now, "[%s] election elects this host, settling for [%s] before claiming, previous leader resigned [%v]", c.election.name, settle, settle != c.timing.settle)
+		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionRegister).Infof("schedule", now, "[%s] election elects this host, settling for [%s] before claiming, previous leader resigned [%s]", c.election.name, settle, scribe.Mark(settle != c.timing.settle))
 	case "abandoned":
 		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionRegister).Infof("deferred", now, "[%s] election settle abandoned, [%s] elected instead", c.election.name, leaderNamed(elected))
 	}
@@ -817,7 +817,7 @@ func (c *leaderCampaign) withdraw() {
 	if retired != nil {
 		retired.Disconnect(250)
 	}
-	scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionStop).Infof("released", resignStart, "[%s] election resigned, leading [%v], cleared [%d/%d] retained topics", c.election.name, holding, cleared, len(tokens))
+	scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionStop).Infof("released", resignStart, "[%s] election resigned, leading [%s], cleared [%d/%d] retained topics", c.election.name, scribe.Mark(holding), cleared, len(tokens))
 }
 
 func (c *leaderCampaign) publish(topic string, payload []byte) bool {
@@ -869,6 +869,9 @@ const (
 	leaderOrphanTicks   = 720
 	leaderRedialRestate = 100
 	leaderResignWindow  = 5 * time.Second
+
+	leaderWidthHost       = 11
+	leaderWidthCandidates = 47
 )
 
 var leaderTimingProduction = leaderTimingOf(config.TimingScale())

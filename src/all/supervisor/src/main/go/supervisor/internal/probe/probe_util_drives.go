@@ -286,7 +286,7 @@ func (s *mountSet) reading(physical string) driveWear {
 	if report.errors > identity.baseline {
 		wear.errored = true
 	}
-	scribe.Log(scribe.SourceProbeDrives, scribe.SubjectMetric(metric.MetricHostFailedDrives), scribe.ActionSample).Debugf("measured", readingStart, "[%s] errors [%3d] baseline [%3d] increased [%v], as [%s]", physical, report.errors, identity.baseline, wear.errored, identity.named())
+	scribe.Log(scribe.SourceProbeDrives, scribe.SubjectMetric(metric.MetricHostFailedDrives), scribe.ActionSample).Debugf("measured", readingStart, "[%s] errors [%3d] baseline [%3d] increased [%s], as [%s]", physical, report.errors, identity.baseline, scribe.Mark(wear.errored), identity.named())
 	if !identity.rated {
 		scribe.Log(scribe.SourceProbeDrives, scribe.SubjectMetric(metric.MetricHostUsedDriveLife), scribe.ActionSample).Debugf("excluded", readingStart, "[%s] not considered, %s, as [%s]", physical, identity.excluded, identity.named())
 		return wear
@@ -415,8 +415,8 @@ func (s *mountSet) identity(physical string) *driveIdentity {
 	identity.rotational, identity.removable, identity.transport, identity.hardware, identity.bridge = s.topology(block)
 	identity.kinds = driveKinds(physical, identity.bridge)
 	s.identities[physical] = identity
-	scribe.Log(scribe.SourceProbeDrives, scribe.SubjectMetric(metric.MetricHostUsedDriveLife), scribe.ActionDiscover).Debugf("topology", topologyStart, "[%s] as [%s] over [%s] bridge [%s], rotational [%v] removable [%v], node [%s], probing as [%s]",
-		physical, identity.hardware, identity.transport, identity.bridge, identity.rotational, identity.removable, identity.node, strings.Join(identity.kinds, ","))
+	scribe.Log(scribe.SourceProbeDrives, scribe.SubjectMetric(metric.MetricHostUsedDriveLife), scribe.ActionDiscover).Debugf("topology", topologyStart, "[%s] as [%s] over [%s] bridge [%s], rotational [%s] removable [%s], node [%s], probing as [%s]",
+		physical, identity.hardware, identity.transport, identity.bridge, scribe.Mark(identity.rotational), scribe.Mark(identity.removable), identity.node, strings.Join(identity.kinds, ","))
 	return identity
 }
 

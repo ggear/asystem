@@ -97,26 +97,41 @@ func TestProbeImplServicesRestart_FastPath(t *testing.T) {
 func TestProbeImplServicesRestart_Count(t *testing.T) {
 	tests := []struct {
 		name          string
+		firstSeen     int
 		dockerCount   int
 		supervised    int
+		age           time.Duration
 		expectedCount float64
 	}{
+		{name: "a_total_already_there_at_first_sight_is_not_counted", firstSeen: 4, dockerCount: 4, expectedCount: 0},
 		{name: "docker_alone", dockerCount: 2, expectedCount: 2},
 		{name: "supervisor_alone", supervised: 3, expectedCount: 3},
 		{name: "the_two_add_up", dockerCount: 2, supervised: 1, expectedCount: 3},
+		{name: "only_the_rise_since_first_sight_counts", firstSeen: 4, dockerCount: 6, expectedCount: 2},
+		{name: "a_rise_ages_out_on_the_engine_clock", dockerCount: 2, age: 25 * time.Hour, expectedCount: 0},
+		{name: "a_supervisor_attempt_ages_out_on_the_engine_clock", supervised: 1, age: 25 * time.Hour, expectedCount: 0},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			probe := newServicesProbe()
-			probe.restart = &restartEngine{ledger: newRestartLedger(t.TempDir() + "/ledger.json")}
+			clock := time.Date(2026, 11, 19, 12, 0, 0, 0, time.UTC)
+			probe.restart = &restartEngine{ledger: newRestartLedger(t.TempDir() + "/ledger.json"), now: func() time.Time { return clock }}
 			for range test.supervised {
-				if err := probe.restart.ledger.record("plex", "abc", time.Unix(1, 0)); err != nil {
+				if err := probe.restart.ledger.record("plex", "abc", clock); err != nil {
 					t.Fatalf("record failed with [%v]", err)
 				}
 			}
 			inspect := restartInspect("healthy", "2026-11-19T01:00:00Z", &container.HealthConfig{})
+			inspect.RestartCount = test.firstSeen
+			if _, _, err := probe.restartCount("plex", inspect); err != nil {
+				t.Fatalf("first restart count failed with [%v]", err)
+			}
 			inspect.RestartCount = test.dockerCount
 			got, _, err := probe.restartCount("plex", inspect)
+			if err == nil && test.age > 0 {
+				clock = clock.Add(test.age)
+				got, _, err = probe.restartCount("plex", inspect)
+			}
 			if err != nil || got != test.expectedCount {
 				t.Fatalf("restart count: got %f error [%v] want %f", got, err, test.expectedCount)
 			}

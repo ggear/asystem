@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"sort"
-	"strconv"
 	"strings"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
@@ -159,10 +158,13 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		return true
 	}
 	shown := func(detail *metric.ValueDataDetail) string {
-		if detail == nil {
-			return "nil"
+		switch {
+		case detail == nil:
+			return "?"
+		case detail.OK:
+			return "+"
 		}
-		return strconv.FormatBool(detail.OK)
+		return "-"
 	}
 	onData := func(client mqtt.Client, msg mqtt.Message) {
 		subscribedMu.Lock()
@@ -204,7 +206,11 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			before = previous.Value
 		}
 		if !before.Equal(&value) {
-			scribe.Log(scribe.SourceEngine, scribe.SubjectService(guid.ServiceName), scribe.ActionSubscribe).Debugf("recorded", streamStart, "[%-11.11s] [%s] pulse [%-5s] was [%-5s], trend [%-5s]", guid.Host, scribe.Fit(metric.GetIDName(guid.ID), 18), shown(value.Pulse), shown(before.Pulse), shown(value.Trend))
+			name := metric.GetIDName(guid.ID)
+			if _, leaf, found := strings.Cut(name, "/"); found {
+				name = leaf
+			}
+			scribe.Log(scribe.SourceEngine, scribe.SubjectService(guid.ServiceName), scribe.ActionSubscribe).Debugf("recorded", streamStart, "[%s] Pls [%s>%s] Tnd [%s]", scribe.Fit(name, 12), shown(before.Pulse), shown(value.Pulse), shown(value.Trend))
 		}
 		value.Timestamp = time.Now().Unix()
 		record := metric.NewRecord(value)
@@ -542,7 +548,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionSubscribe).Warnf("restored", resyncStart, "[%2d] wildcards restored @ resync", restored)
 			}
 			if !client.IsConnected() {
-				scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionConnect).Warnf("liveness", purgeStart, "[false] disconnected; revive now")
+				scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionConnect).Warnf("liveness", purgeStart, "[-] disconnected, revive now")
 				brokerRevive(ctx, client, 0)
 			}
 			rx := rxCount.Swap(0)

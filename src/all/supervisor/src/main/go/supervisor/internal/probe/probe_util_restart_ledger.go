@@ -5,6 +5,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 	"time"
 
@@ -20,26 +21,43 @@ func newRestartLedger(path string) *restartLedger {
 	return ledger
 }
 
-func (l *restartLedger) count(service string, container string) int {
-	if l == nil {
-		return 0
-	}
+func (l *restartLedger) observed(service string, container string, dockerCount int, now time.Time) (int, int, error) {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
-	record := l.document.Services[service]
-	if record.Container != container {
-		return 0
+	record, current := l.recordOf(service, container)
+	changed := !current
+	seen := dockerCount
+	if record.Seen != nil {
+		seen = *record.Seen
 	}
-	return record.Count
+	for range max(dockerCount-seen, 0) {
+		record.Rises = append(record.Rises, now.Unix())
+		changed = true
+	}
+	cutoff := now.Add(-restartWindow).Unix()
+	rises := slices.DeleteFunc(slices.Clone(record.Rises), func(at int64) bool { return at <= cutoff })
+	if record.Seen == nil || *record.Seen != dockerCount || len(rises) != len(record.Rises) {
+		changed = true
+	}
+	record.Seen, record.Rises = &dockerCount, rises
+	if changed {
+		if err := l.persist(l.replaced(service, record)); err != nil {
+			return 0, 0, err
+		}
+	}
+	supervised := 0
+	for _, attempt := range record.Attempts {
+		if attempt > cutoff {
+			supervised++
+		}
+	}
+	return len(rises), supervised, nil
 }
 
 func (l *restartLedger) history(service string, container string) restartHistory {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
-	record := l.document.Services[service]
-	if record.Container != container {
-		return restartHistory{}
-	}
+	record, _ := l.recordOf(service, container)
 	attempts := make([]time.Time, 0, len(record.Attempts))
 	for _, attempt := range record.Attempts {
 		attempts = append(attempts, time.Unix(attempt, 0))
@@ -49,7 +67,6 @@ func (l *restartLedger) history(service string, container string) restartHistory
 
 func (l *restartLedger) record(service string, container string, at time.Time) error {
 	return l.update(service, container, func(record *restartRecord) {
-		record.Count++
 		record.Streak++
 		record.Attempts = append(record.Attempts, at.Unix())
 		if len(record.Attempts) > restartAttemptsKept {
@@ -64,7 +81,6 @@ func (l *restartLedger) refund(service string, container string) error {
 			return
 		}
 		record.Attempts = record.Attempts[:len(record.Attempts)-1]
-		record.Count = max(record.Count-1, 0)
 		record.Streak = max(record.Streak-1, 0)
 	})
 }
@@ -91,15 +107,24 @@ func (l *restartLedger) booted(boot string) error {
 func (l *restartLedger) update(service string, container string, change func(*restartRecord)) error {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
-	record := l.document.Services[service]
-	if record.Container != container {
-		record = restartRecord{Container: container}
-	}
+	record, _ := l.recordOf(service, container)
 	change(&record)
+	return l.persist(l.replaced(service, record))
+}
+
+func (l *restartLedger) recordOf(service string, container string) (restartRecord, bool) {
+	record, found := l.document.Services[service]
+	if !found || record.Container != container {
+		return restartRecord{Container: container}, false
+	}
+	return record, true
+}
+
+func (l *restartLedger) replaced(service string, record restartRecord) restartDocument {
 	updated := restartDocument{Boot: l.document.Boot, Services: make(map[string]restartRecord, len(l.document.Services)+1)}
 	maps.Copy(updated.Services, l.document.Services)
 	updated.Services[service] = record
-	return l.persist(updated)
+	return updated
 }
 
 func (l *restartLedger) persist(updated restartDocument) error {
@@ -123,7 +148,8 @@ func (l *restartLedger) persist(updated restartDocument) error {
 
 type restartRecord struct {
 	Container string  `json:"container"`
-	Count     int     `json:"count"`
+	Seen      *int    `json:"seen,omitempty"`
+	Rises     []int64 `json:"rises,omitempty"`
 	Streak    int     `json:"streak"`
 	Attempts  []int64 `json:"attempts"`
 }
