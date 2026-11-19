@@ -92,10 +92,10 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			}
 			bindings := cache.RegisterService(hostName, serviceName, true)
 			if len(bindings) == 0 {
-				scribe.Log(scribe.SourceEngine, scribe.SubjectService(serviceName), scribe.ActionRegister).Infof("register", readbackStart, "[%s] host, rediscovered [  0] topics", hostName)
+				scribe.Log(scribe.SourceEngine, scribe.SubjectService(serviceName), scribe.ActionRegister).Infof("register", readbackStart, "[%-11.11s] host, rediscovered [  0] topics", hostName)
 				return
 			}
-			scribe.Log(scribe.SourceEngine, scribe.SubjectService(serviceName), scribe.ActionRegister).Infof("register", readbackStart, "[%s] host, rediscovered [%3d] topics", hostName, len(bindings))
+			scribe.Log(scribe.SourceEngine, scribe.SubjectService(serviceName), scribe.ActionRegister).Infof("register", readbackStart, "[%-11.11s] host, rediscovered [%3d] topics", hostName, len(bindings))
 		})
 		onCommand := func(_ mqtt.Client, msg mqtt.Message) {
 			commandStart := time.Now()
@@ -294,7 +294,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		if connected := db.Load(); lineBytes > 0 && connected != nil {
 			connected.write(ctx, batch.protocol.Bytes())
 		}
-		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionCensus).Infof("gathered", pulseStart, "[%3d] metrics, sent [%5d] bytes, kept [%5d] bytes, [%s]",
+		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionCensus).Infof("gathered", pulseStart, "[%3d] metrics, sent [%5d] bytes, kept [%5d] bytes, [%-9s]",
 			collected, txBytes, lineBytes, publishLabel)
 	})
 	if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {

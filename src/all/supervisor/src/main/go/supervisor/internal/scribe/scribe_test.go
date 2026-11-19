@@ -1571,3 +1571,25 @@ func TestScribe_Chunked(t *testing.T) {
 		})
 	}
 }
+
+func TestScribe_Fit(t *testing.T) {
+	tests := []struct {
+		name     string
+		text     string
+		width    int
+		expected string
+	}{
+		{"shorter is padded", "up_time", 10, "up_time   "},
+		{"exact is untouched", "up_time", 7, "up_time"},
+		{"longer is cut with a marker", "service/health_status", 18, "service/health_st~"},
+		{"multibyte counts runes", "héllo wörld", 8, "héllo w~"},
+		{"empty is all padding", "", 3, "   "},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if got := Fit(testCase.text, testCase.width); got != testCase.expected {
+				t.Errorf("fit: got [%s] want [%s]", got, testCase.expected)
+			}
+		})
+	}
+}

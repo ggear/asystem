@@ -350,6 +350,10 @@ func Head(text string, width int) string {
 	return string(runes[:width-len(clipMarker)]) + clipMarker
 }
 
+func Fit(text string, width int) string {
+	return pad(Head(text, width), width)
+}
+
 func Tail(text string, width int) string {
 	runes := []rune(text)
 	if len(runes) <= width {

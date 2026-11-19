@@ -627,7 +627,7 @@ func (s *networkUsageSampler) discover(roots []string) {
 				ratedBits:  float64(rated) * networkBitsPerMbit,
 			})
 		}
-		scribe.Log(scribe.SourceProbeHost, scribe.SubjectMetric(metric.MetricHostUsedNetwork), scribe.ActionDiscover).Infof("topology", discoverStart, "[%d] rated physical interfaces, [%d] virtual interfaces under [%s]",
+		scribe.Log(scribe.SourceProbeHost, scribe.SubjectMetric(metric.MetricHostUsedNetwork), scribe.ActionDiscover).Infof("topology", discoverStart, "[%2d] rated physical interfaces, [%3d] virtual interfaces under [%s]",
 			len(s.links), len(virtual), classDir)
 		return
 	}

@@ -463,7 +463,7 @@ func (c *leaderCampaign) attach(client mqtt.Client) {
 	if retired != nil {
 		retired.Disconnect(250)
 	}
-	scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionSubscribe).Infof("attached", attachStart, "[%s] election, settling for [%s] before any claim", c.election.name, c.timing.settle)
+	scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionSubscribe).Infof("attached", attachStart, "[%s] election, settling for [%s] before any claim", c.election.name, scribe.Fit(c.timing.settle.String(), 6))
 }
 
 func (c *leaderCampaign) detach(reason string) {
@@ -551,7 +551,7 @@ func (c *leaderCampaign) vacate(now time.Time) {
 	c.mutex.Lock()
 	c.vacated = true
 	c.mutex.Unlock()
-	scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionPublish).Infof("observed", now, "[%s] presence [%s], nobody has held election [%s] since this host attached", c.election.presence, metric.AvailabilityOffline, c.election.name)
+	scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionPublish).Infof("observed", now, "[%s] presence [%-7s], nobody has held election [%s] since this host attached", c.election.presence, metric.AvailabilityOffline, c.election.name)
 }
 
 func (c *leaderCampaign) leaseHeld(now time.Time) bool {
@@ -587,7 +587,7 @@ func (c *leaderCampaign) observe(client mqtt.Client, message mqtt.Message) {
 		}
 		if c.lease.Host != c.observedHost || c.lease.Epoch != c.observedFrom {
 			c.observedHost, c.observedFrom = c.lease.Host, c.lease.Epoch
-			scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionSubscribe).Infof("observed", received, "[%s] election led by [%s] at epoch [%d]", c.election.name, leaderNamed(c.lease.Host), c.lease.Epoch)
+			scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionSubscribe).Infof("observed", received, "[%s] election led by [%s] at epoch [%19d]", c.election.name, scribe.Fit(leaderNamed(c.lease.Host), 11), c.lease.Epoch)
 		}
 		return
 	}
@@ -611,7 +611,7 @@ func (c *leaderCampaign) observe(client mqtt.Client, message mqtt.Message) {
 		return
 	}
 	if _, standing := c.candidates[host]; !standing || c.staleHosts[host] {
-		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(host), scribe.ActionSubscribe).Infof("observed", received, "[%s] election candidacy standing, retained [%v]", c.election.name, message.Retained())
+		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(host), scribe.ActionSubscribe).Infof("observed", received, "[%s] election candidacy standing, retained [%-5v]", c.election.name, message.Retained())
 	}
 	c.candidates[host] = received
 	renewed, parseErr := time.Parse(time.RFC3339Nano, candidacy.RenewedTS)

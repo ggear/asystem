@@ -219,7 +219,7 @@ func (e *restartEngine) restart(ctx context.Context, observation restartObservat
 	started := e.now()
 	e.emit(observation.service, fmt.Sprintf("restart [%s] attempt [%d] of [%d] limit [%s]", observation.service, attempt, restartAttemptsMax, limit))
 	logger := scribe.Log(scribe.SourceProbeRestart, scribe.SubjectService(observation.service), scribe.ActionStart)
-	logger.Infof("restarts", started, "[%s] attempt [%d] of [%d], install.sh restart limited to [%s]", observation.service, attempt, restartAttemptsMax, limit)
+	logger.Infof("restarts", started, "[%s] attempt [%d] of [%d], install.sh restart limited to [%s]", scribe.Fit(observation.service, restartWidthService), attempt, restartAttemptsMax, scribe.Fit(limit.String(), restartWidthLimit))
 	code, output := e.run(ctx, observation.service, limit)
 	for line := range strings.SplitSeq(strings.TrimSpace(output), "\n") {
 		if line != "" {
@@ -228,9 +228,9 @@ func (e *restartEngine) restart(ctx context.Context, observation restartObservat
 	}
 	e.emit(observation.service, fmt.Sprintf("restart [%s] exit [%d] took [%s]", observation.service, code, e.now().Sub(started).Truncate(time.Millisecond)))
 	if code != 0 && code != restartExitSkipped {
-		logger.Warnf("restarts", started, "[%s] exit [%d], install.sh restart failed, the attempt stays counted", observation.service, code)
+		logger.Warnf("restarts", started, "[%s] exit [%3d], install.sh restart failed, the attempt stays counted", scribe.Fit(observation.service, restartWidthService), code)
 	} else {
-		logger.Infof("restarts", started, "[%s] exit [%d], install.sh restart finished", observation.service, code)
+		logger.Infof("restarts", started, "[%s] exit [%3d], install.sh restart finished", scribe.Fit(observation.service, restartWidthService), code)
 	}
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
@@ -256,11 +256,11 @@ func (e *restartEngine) report(service string, status restartStatus) {
 	logger := scribe.Log(scribe.SourceProbeRestart, scribe.SubjectService(service), scribe.ActionCompute)
 	switch status.state {
 	case metric.RestartStateExhausted:
-		logger.Warnf("deciding", e.now(), "[%s] state, because [%s]", status.state, status.reason)
+		logger.Warnf("deciding", e.now(), "[%s] state, because [%s]", scribe.Fit(status.state, restartWidthState), scribe.Fit(status.reason, restartWidthReason))
 	case metric.RestartStateRestarting:
-		logger.Infof("deciding", e.now(), "[%s] state, because [%s]", status.state, status.reason)
+		logger.Infof("deciding", e.now(), "[%s] state, because [%s]", scribe.Fit(status.state, restartWidthState), scribe.Fit(status.reason, restartWidthReason))
 	default:
-		logger.Debugf("deciding", e.now(), "[%s] state, because [%s]", status.state, status.reason)
+		logger.Debugf("deciding", e.now(), "[%s] state, because [%s]", scribe.Fit(status.state, restartWidthState), scribe.Fit(status.reason, restartWidthReason))
 	}
 }
 
@@ -337,6 +337,11 @@ const (
 	restartInstallLeaf  = "install.sh"
 	restartBootIDPath   = "/proc/sys/kernel/random/boot_id"
 	restartJitterSpread = 21
+
+	restartWidthService = 14
+	restartWidthState   = 10
+	restartWidthReason  = 44
+	restartWidthLimit   = 6
 
 	restartSelf                  = "supervisor"
 	restartFastPathEnv           = "SUPERVISOR_RESTART_FAST"
