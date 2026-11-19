@@ -5,6 +5,8 @@ SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOL
 
 set -ex
 
+grep -qiE '^ID(_LIKE)?=.*debian' /etc/os-release || exit 0
+
 ################################################################################
 # Modules
 ################################################################################
