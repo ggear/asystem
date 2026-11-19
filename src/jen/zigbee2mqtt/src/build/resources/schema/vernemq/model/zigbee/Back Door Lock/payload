@@ -1,4 +1,8 @@
 {
+  "action": "<text>",
+  "action_source": <number>,
+  "action_source_name": "<text>",
+  "action_user": "<text>",
   "battery": <number>,
   "battery_low": <true|false>,
   "last_seen": "<text>",

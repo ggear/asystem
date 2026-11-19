@@ -1,7 +1,7 @@
 ###############################################################################################################################################################
 # All
 ###############################################################################################################################################################
-Implement WireGuard on UDM Pro and drop firewall port forwarding
+Implement WireGuard on UDM Pro and drop firewall port forwarding - does it work for Google HA integration? probably not.
 Upgrade mad Asahi to latest, update macos?, delete current Asahi volumes, reinstall, https://asahilinux.org/docs/sw/partitioning-cheatsheet
 Update max to latest Fedora
 Port may/meg to Fedora
@@ -194,6 +194,9 @@ Update portfolio with FY28 tax immplications
 Make inflation rate input to wealth via model -  normalise against offcial data that i have versus my spend data in the same time frame, add an incrament to it, then apply and 40 year mean it to get adjusted inflation?
 Make porfolio return input to wealth via model
 Make investment allocation strategy confirmed by model - risk ananlysis via volatility etc
+Gitub repos:
+  - https://github.com/jaryaman/financial-decisions
+  - https://github.com/R4GoodAcademy/R4GoodPersonalFinances
 
 Super:
 https://www.afr.com/wealth/personal-finance/how-to-bank-40pc-more-profit-on-an-investment-property-after-the-budget-20260522-p5zzqh

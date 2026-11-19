@@ -50,7 +50,7 @@ notebook==7.6.5
 pdftotext==4.0.0
 jupyterlab==4.6.6
 matplotlib==3.11.2
-virtualenv==21.15.8
+virtualenv==21.15.9
 matplotlib-inline==0.2.2
 mlflow==$MLFLOW_VERSION
 onnx==1.23.2
