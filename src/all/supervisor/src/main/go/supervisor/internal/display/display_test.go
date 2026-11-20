@@ -1477,9 +1477,24 @@ func TestDisplay_Refresh(t *testing.T) {
 		name            string
 		refresh         bool
 		stall           time.Duration
+		hold            time.Duration
 		expectedRefresh bool
 		expectedError   bool
 	}{
+		{
+			name:            "happy_paint_held_defers_a_refresh_past_the_end_of_the_test",
+			refresh:         true,
+			stall:           defaultTickStall,
+			hold:            5 * time.Second,
+			expectedRefresh: false,
+		},
+		{
+			name:            "happy_paint_hold_that_ends_draws_the_refresh_it_deferred",
+			refresh:         true,
+			stall:           defaultTickStall,
+			hold:            700 * time.Millisecond,
+			expectedRefresh: true,
+		},
 		{
 			name:            "happy_refresh_signalled",
 			refresh:         true,
@@ -1544,6 +1559,9 @@ func TestDisplay_Refresh(t *testing.T) {
 			}()
 			time.Sleep(500 * time.Millisecond)
 			cache.ClearUpdateListeners()
+			if testCase.hold > 0 {
+				display.MarkHold(time.Now().Add(testCase.hold))
+			}
 			for host, ids := range cache.ListenerIDs() {
 				for _, id := range ids {
 					if metric.GetIDKind(id) == metric.MetricKindService {

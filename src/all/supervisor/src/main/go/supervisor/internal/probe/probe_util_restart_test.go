@@ -535,6 +535,42 @@ func TestProbeUtilRestart_Lapsed(t *testing.T) {
 	}
 }
 
+func TestProbeUtilRestart_LapsedWhileDockerStillHealthy(t *testing.T) {
+	tests := []struct {
+		name            string
+		failingWhenDown int
+		expectedRestart bool
+	}{
+		{name: "a_prerequisite_lost_while_the_probe_was_failing_restarts_the_service_the_moment_docker_flips", failingWhenDown: 1, expectedRestart: true},
+		{name: "a_prerequisite_lost_while_every_probe_passed_leaves_the_flip_to_docker", failingWhenDown: 0},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			rig := newRestartRig(t, "requires=tcp:broker:32404\n")
+			up := false
+			rig.engine.checker.dial = func(string, time.Duration) error {
+				if up {
+					return nil
+				}
+				return os.ErrDeadlineExceeded
+			}
+			healthy := rig.observation("sonarr", "healthy")
+			healthy.failingStreak = test.failingWhenDown
+			rig.evaluate(healthy)
+			up = true
+			rig.advance(2 * time.Minute)
+			rig.evaluate(healthy)
+			rig.advance(2 * time.Minute)
+			flipped := rig.observation("sonarr", "unhealthy")
+			flipped.probeFailed, flipped.probeEnd = true, rig.clock
+			statuses := rig.evaluate(flipped)
+			if got := len(rig.restarted()) == 1; got != test.expectedRestart {
+				t.Fatalf("restarted: got %v state [%s] reason [%s] want %v", rig.restarted(), statuses["sonarr"].state, statuses["sonarr"].reason, test.expectedRestart)
+			}
+		})
+	}
+}
+
 func TestProbeUtilRestart_Release(t *testing.T) {
 	tests := []struct {
 		name            string

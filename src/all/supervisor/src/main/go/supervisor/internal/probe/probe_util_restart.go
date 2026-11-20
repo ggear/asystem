@@ -139,8 +139,9 @@ func (e *restartEngine) step(ctx context.Context, now time.Time, held bool, poli
 	} else {
 		tracked.stableSince = time.Time{}
 	}
+	unwell := observation.health != restartHealthHealthy || observation.failingStreak > 0
 	met := true
-	if observation.health != restartHealthHealthy {
+	if unwell {
 		for _, requirement := range policy.requires {
 			satisfied, checked := e.checked[requirement]
 			if !checked {
@@ -153,16 +154,16 @@ func (e *restartEngine) step(ctx context.Context, now time.Time, held bool, poli
 			}
 		}
 	}
-	if met && observation.health != restartHealthHealthy && !e.loader.ready(ctx, observation.service) {
+	if met && unwell && !e.loader.ready(ctx, observation.service) {
 		met = false
 	}
-	if observation.health == restartHealthHealthy {
+	if !unwell {
 		tracked.requiresLapsed = false
 	} else if !met {
 		tracked.requiresLapsed = true
 	}
 	switch {
-	case observation.health == restartHealthHealthy || !met:
+	case !unwell || !met:
 		tracked.heldSince = time.Time{}
 	case tracked.heldSince.IsZero() && len(policy.requires) > 0:
 		tracked.heldSince = now
@@ -308,14 +309,15 @@ func (e *restartEngine) status(service string) (restartStatus, bool) {
 }
 
 type restartObservation struct {
-	service     string
-	container   string
-	image       string
-	health      string
-	startedAt   time.Time
-	healthcheck restartHealthcheck
-	probeEnd    time.Time
-	probeFailed bool
+	service       string
+	container     string
+	image         string
+	health        string
+	startedAt     time.Time
+	healthcheck   restartHealthcheck
+	probeEnd      time.Time
+	probeFailed   bool
+	failingStreak int
 }
 
 type restartStatus struct {

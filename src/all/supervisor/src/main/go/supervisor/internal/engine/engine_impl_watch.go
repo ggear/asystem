@@ -76,7 +76,7 @@ func RunListeningProbesLoop(ctx context.Context, configPath string, cache *metri
 //   - offline: evict every service to nil, store nil for the host metrics and cancel any pending reconcile, which keeps
 //     the slots for repopulation and stops a reap firing against a host that has stopped answering.
 //
-// On the live tick, twice a second, and at once when paho reports the connection lost, mark offline and blank every
+// On the live tick, ten times a second, and at once when paho reports the connection lost, mark offline and blank every
 // online host that has published nothing live inside the window, which is three pulses on the tick and none on a loss.
 // Retained deliveries never count, so a host that slept while the broker was down is not shown on a retained online, and
 // one whose newest retained timestamp predates the connect by the whole window is blanked as soon as the flood settles.
@@ -219,7 +219,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		}
 		rxCount.Add(1)
 		if msg.Retained() {
-			liveness.hearRetained(guid.Host, value.Timestamp)
+			liveness.hearRetained(guid.Host, value.Timestamp, time.Now())
 		} else {
 			liveness.hear(guid.Host)
 		}
@@ -457,6 +457,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 	}
 	onConnect := func(client mqtt.Client) {
 		connectStart := time.Now()
+		cache.Hold(connectStart.Add(watchPaintHold))
 		liveness.reset(connectStart)
 		subscribedMu.Lock()
 		clear(subscribed)
@@ -716,7 +717,8 @@ const (
 	loopListeningStream = "listening stream"
 
 	silenceTickCount  = 5
-	watchLiveInterval = 500 * time.Millisecond
+	watchLiveInterval = 100 * time.Millisecond
+	watchPaintHold    = 500 * time.Millisecond
 	watchKeepAlive    = 3 * time.Second
 	watchPingTimeout  = 2 * time.Second
 )

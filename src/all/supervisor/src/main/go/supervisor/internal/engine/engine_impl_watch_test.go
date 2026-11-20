@@ -693,6 +693,18 @@ func TestEngineImplWatch_StaleRetained(t *testing.T) {
 			}
 			mqttClient.Publish(binding.Topic, 1, true, payload).Wait()
 			t.Cleanup(func() { mqttClient.Publish(binding.Topic, 1, true, []byte{}).Wait() })
+			var holdMutex sync.Mutex
+			var holdUntil time.Time
+			cache.SubscribeHold(holdRecorder(func(until time.Time) {
+				holdMutex.Lock()
+				defer holdMutex.Unlock()
+				holdUntil = until
+			}))
+			held := func() time.Time {
+				holdMutex.Lock()
+				defer holdMutex.Unlock()
+				return holdUntil
+			}
 			ctx, cancel := context.WithCancel(context.Background())
 			done := make(chan struct{})
 			go func() {
@@ -703,6 +715,16 @@ func TestEngineImplWatch_StaleRetained(t *testing.T) {
 				cancel()
 				<-done
 			})
+			for heldDeadline := time.Now().Add(3 * time.Second); held().IsZero() && time.Now().Before(heldDeadline); time.Sleep(5 * time.Millisecond) {
+			}
+			if held().IsZero() {
+				t.Fatalf("Got no paint hold after the connect, expected the display held while the retained flood is judged")
+			}
+			time.Sleep(time.Until(held()))
+			atPaint, _ := cache.Load(binding.GUID)
+			if shownAtPaint := atPaint != nil && atPaint.Value.Pulse != nil; shownAtPaint != test.expectedShown {
+				t.Fatalf("shown when painting resumed: got %v want %v", shownAtPaint, test.expectedShown)
+			}
 			deadline := time.Now().Add(4 * time.Second)
 			blanked := false
 			for time.Now().Before(deadline) && !blanked {
@@ -726,3 +748,7 @@ func writeWatchConfig(t *testing.T, brokerHost, brokerPort string) string {
 	}
 	return configFile
 }
+
+type holdRecorder func(until time.Time)
+
+func (r holdRecorder) MarkHold(until time.Time) { r(until) }

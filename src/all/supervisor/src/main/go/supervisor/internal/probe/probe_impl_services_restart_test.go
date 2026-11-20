@@ -127,19 +127,22 @@ func TestProbeImplServicesRestart_ObservationProbe(t *testing.T) {
 	tests := []struct {
 		name           string
 		log            []*container.HealthcheckResult
+		failingStreak  int
 		expectedFailed bool
 		expectedEnd    time.Time
 	}{
 		{name: "no_probe_yet_reads_as_not_failed"},
 		{name: "the_last_probe_failing_is_failed", log: []*container.HealthcheckResult{{ExitCode: 0, End: ended.Add(-time.Minute)}, {ExitCode: 1, End: ended}}, expectedFailed: true, expectedEnd: ended},
+		{name: "the_failing_streak_is_carried_while_docker_still_says_healthy", failingStreak: 2},
 		{name: "the_last_probe_passing_is_not_failed", log: []*container.HealthcheckResult{{ExitCode: 1, End: ended.Add(-time.Minute)}, {ExitCode: 0, End: ended}}, expectedEnd: ended},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			inspect := restartInspect("starting", "2026-11-19T01:00:00Z", &container.HealthConfig{Interval: time.Minute})
 			inspect.State.Health.Log = test.log
+			inspect.State.Health.FailingStreak = test.failingStreak
 			observation, _ := restartObservationOf("plex", inspect)
-			if observation.probeFailed != test.expectedFailed || !observation.probeEnd.Equal(test.expectedEnd) {
+			if observation.probeFailed != test.expectedFailed || !observation.probeEnd.Equal(test.expectedEnd) || observation.failingStreak != test.failingStreak {
 				t.Fatalf("probe: got failed %v end %v want failed %v end %v", observation.probeFailed, observation.probeEnd, test.expectedFailed, test.expectedEnd)
 			}
 		})

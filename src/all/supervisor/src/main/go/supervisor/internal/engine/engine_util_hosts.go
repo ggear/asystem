@@ -42,14 +42,15 @@ func (h *hostLiveness) hear(hostName string) {
 	h.heardAt[hostName] = time.Now()
 }
 
-func (h *hostLiveness) hearRetained(hostName string, published int64) {
+func (h *hostLiveness) hearRetained(hostName string, published int64, at time.Time) {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+	h.floodAt = at
 	if published <= 0 {
 		return
 	}
-	h.mutex.Lock()
-	defer h.mutex.Unlock()
-	if at := time.Unix(published, 0); at.After(h.retainedAt[hostName]) {
-		h.retainedAt[hostName] = at
+	if stamped := time.Unix(published, 0); stamped.After(h.retainedAt[hostName]) {
+		h.retainedAt[hostName] = stamped
 	}
 }
 
@@ -60,6 +61,7 @@ func (h *hostLiveness) reset(opened time.Time) {
 	clear(h.offlineAt)
 	clear(h.retainedAt)
 	h.openedAt = opened
+	h.floodAt = time.Time{}
 }
 
 func (h *hostLiveness) quietAmong(hostNames []string, now time.Time, limits quietLimits) map[string]time.Duration {
@@ -75,7 +77,8 @@ func (h *hostLiveness) quietAmong(hostNames []string, now time.Time, limits quie
 		if !last.After(h.openedAt) {
 			last, window = h.openedAt, limits.unprovenAfter
 			freshest := h.retainedAt[hostName]
-			if limits.staleAfter > 0 && !freshest.IsZero() && now.Sub(h.openedAt) >= hostFloodSettle && h.openedAt.Sub(freshest) > limits.staleAfter {
+			flooded := !h.floodAt.IsZero() && now.Sub(h.floodAt) >= hostFloodQuiet
+			if limits.staleAfter > 0 && flooded && !freshest.IsZero() && h.openedAt.Sub(freshest) > limits.staleAfter {
 				quiet[hostName] = now.Sub(freshest)
 				continue
 			}
@@ -94,6 +97,7 @@ type hostLiveness struct {
 	heardAt    map[string]time.Time
 	retainedAt map[string]time.Time
 	openedAt   time.Time
+	floodAt    time.Time
 }
 
 type quietLimits struct {
@@ -102,4 +106,4 @@ type quietLimits struct {
 	staleAfter    time.Duration
 }
 
-const hostFloodSettle = time.Second
+const hostFloodQuiet = 150 * time.Millisecond

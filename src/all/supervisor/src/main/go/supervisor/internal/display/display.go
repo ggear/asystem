@@ -12,6 +12,7 @@ import (
 	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gdamore/tcell/v3"
@@ -63,11 +64,13 @@ type Display struct {
 	singleHostIndex int
 	serviceShown    []metric.ID
 
-	tickPeriod    time.Duration
-	tickStall     time.Duration
-	refreshPeriod time.Duration
-	forceRefresh  bool
-	signalRefresh chan struct{}
+	tickPeriod      time.Duration
+	tickStall       time.Duration
+	refreshPeriod   time.Duration
+	forceRefresh    bool
+	holdUntil       atomic.Pointer[time.Time]
+	deferredRefresh bool
+	signalRefresh   chan struct{}
 
 	boxes    []box
 	dirty    dirtyBoxes
@@ -415,7 +418,15 @@ func (d *Display) Load() error {
 	}
 	d.subscribeUpdates()
 	d.cache.SubscribeRefresh(d)
+	d.cache.SubscribeHold(d)
 	return nil
+}
+
+func (d *Display) MarkHold(until time.Time) {
+	if d == nil {
+		return
+	}
+	d.holdUntil.Store(&until)
 }
 
 func (d *Display) MarkRefresh() {
@@ -496,6 +507,10 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 		case <-refreshC:
 			d.refresh("period")
 		case <-d.signalRefresh:
+			if d.paintHeld() {
+				d.deferredRefresh = true
+				continue
+			}
 			d.refresh("stream")
 		case event, ok := <-d.terminal.events():
 			if !ok {
@@ -584,6 +599,13 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				d.refresh("wake")
 			}
 			ticked = config.NowIncludingSuspend()
+			if d.paintHeld() {
+				continue
+			}
+			if d.deferredRefresh {
+				d.deferredRefresh = false
+				d.refresh("stream")
+			}
 			drawStart := time.Now()
 			dirtyIndexes := d.takeDirtyIndexes()
 			drawnCount := 0
@@ -611,6 +633,11 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 			d.forceRefresh = false
 		}
 	}
+}
+
+func (d *Display) paintHeld() bool {
+	until := d.holdUntil.Load()
+	return until != nil && time.Now().Before(*until)
 }
 
 func (d *Display) rebuild(trigger string) {

@@ -1030,11 +1030,12 @@ func restartObservationOf(name string, inspect container.InspectResponse) (resta
 		retries = restartDockerDefaultRetries
 	}
 	observation := restartObservation{
-		service:   name,
-		container: inspect.ID,
-		image:     inspect.Config.Image,
-		health:    inspect.State.Health.Status,
-		startedAt: startedAt,
+		service:       name,
+		container:     inspect.ID,
+		image:         inspect.Config.Image,
+		health:        inspect.State.Health.Status,
+		failingStreak: inspect.State.Health.FailingStreak,
+		startedAt:     startedAt,
 		healthcheck: restartHealthcheck{
 			interval:    interval,
 			startPeriod: healthcheck.StartPeriod,

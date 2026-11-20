@@ -102,6 +102,10 @@ type AttachListener interface {
 	MarkAttach()
 }
 
+type HoldListener interface {
+	MarkHold(until time.Time)
+}
+
 type RecordCache struct {
 	mutex           sync.RWMutex
 	guids           []RecordGUID
@@ -112,6 +116,7 @@ type RecordCache struct {
 	refreshListener RefreshListener
 	wakeListener    WakeListener
 	attachListener  AttachListener
+	holdListener    HoldListener
 	dirty           map[guidKey]RecordGUID
 	hostLastSeen    map[string]int64
 }
@@ -647,6 +652,15 @@ func (c *RecordCache) SubscribeAttach(listener AttachListener) {
 	c.attachListener = listener
 }
 
+func (c *RecordCache) SubscribeHold(listener HoldListener) {
+	if c == nil || listener == nil {
+		return
+	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c.holdListener = listener
+}
+
 func (c *RecordCache) Refresh() {
 	if c == nil {
 		return
@@ -691,6 +705,18 @@ func (c *RecordCache) Attach() {
 	c.mutex.RUnlock()
 	if listener != nil {
 		listener.MarkAttach()
+	}
+}
+
+func (c *RecordCache) Hold(until time.Time) {
+	if c == nil {
+		return
+	}
+	c.mutex.RLock()
+	listener := c.holdListener
+	c.mutex.RUnlock()
+	if listener != nil {
+		listener.MarkHold(until)
 	}
 }
 

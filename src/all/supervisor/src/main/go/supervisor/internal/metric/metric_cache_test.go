@@ -2803,3 +2803,39 @@ func TestMetricCache_EvictHost(t *testing.T) {
 		})
 	}
 }
+
+type recordingHold struct {
+	until time.Time
+	calls int
+}
+
+func (r *recordingHold) MarkHold(until time.Time) {
+	r.until = until
+	r.calls++
+}
+
+func TestMetricCache_Hold(t *testing.T) {
+	until := time.Date(2026, 11, 20, 12, 0, 0, 0, time.UTC)
+	tests := []struct {
+		name          string
+		cache         *RecordCache
+		subscribe     bool
+		expectedCalls int
+	}{
+		{name: "a_subscribed_listener_is_told_the_deadline", cache: NewRecordCache(), subscribe: true, expectedCalls: 1},
+		{name: "no_listener_is_a_no_op", cache: NewRecordCache()},
+		{name: "a_nil_cache_is_a_no_op", cache: nil},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			listener := &recordingHold{}
+			if test.subscribe {
+				test.cache.SubscribeHold(listener)
+			}
+			test.cache.Hold(until)
+			if listener.calls != test.expectedCalls || (test.expectedCalls > 0 && !listener.until.Equal(until)) {
+				t.Fatalf("hold: got calls %d until %v want calls %d until %v", listener.calls, listener.until, test.expectedCalls, until)
+			}
+		})
+	}
+}

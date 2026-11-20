@@ -93,27 +93,34 @@ func TestEngineUtilHosts_Quiet(t *testing.T) {
 		}, provenAfter: 10 * time.Second, unprovenAfter: 5 * time.Second},
 		{name: "a_host_whose_freshest_retained_stamp_predates_the_open_is_quiet_at_once", steps: func(h *hostLiveness) {
 			h.reset(now.Add(-2 * time.Second))
-			h.hearRetained("alpha", now.Add(-time.Hour).Unix())
-			h.hearRetained("alpha", now.Add(-2*time.Hour).Unix())
-			h.hearRetained("beta", now.Add(-3*time.Second).Unix())
-			h.hearRetained("beta", now.Add(-time.Hour).Unix())
+			h.hearRetained("alpha", now.Add(-time.Hour).Unix(), now.Add(-time.Second))
+			h.hearRetained("alpha", now.Add(-2*time.Hour).Unix(), now.Add(-time.Second))
+			h.hearRetained("beta", now.Add(-3*time.Second).Unix(), now.Add(-time.Second))
+			h.hearRetained("beta", now.Add(-time.Hour).Unix(), now.Add(-time.Second))
 		}, provenAfter: time.Minute, unprovenAfter: time.Minute, staleAfter: 10 * time.Second, expectedQuiet: []string{"alpha"}},
-		{name: "an_old_stamp_is_not_judged_before_the_flood_settles", steps: func(h *hostLiveness) {
-			h.reset(now.Add(-200 * time.Millisecond))
-			h.hearRetained("alpha", now.Add(-time.Hour).Unix())
+		{name: "an_old_stamp_is_not_judged_while_the_flood_is_still_arriving", steps: func(h *hostLiveness) {
+			h.reset(now.Add(-5 * time.Second))
+			h.hearRetained("alpha", now.Add(-time.Hour).Unix(), now.Add(-50*time.Millisecond))
+		}, provenAfter: time.Minute, unprovenAfter: time.Minute, staleAfter: 10 * time.Second},
+		{name: "an_old_stamp_is_judged_once_the_flood_has_gone_quiet", steps: func(h *hostLiveness) {
+			h.reset(now.Add(-5 * time.Second))
+			h.hearRetained("alpha", now.Add(-time.Hour).Unix(), now.Add(-200*time.Millisecond))
+		}, provenAfter: time.Minute, unprovenAfter: time.Minute, staleAfter: 10 * time.Second, expectedQuiet: []string{"alpha"}},
+		{name: "a_host_with_no_retained_message_at_all_is_not_judged_on_stamps", steps: func(h *hostLiveness) {
+			h.reset(now.Add(-5 * time.Second))
 		}, provenAfter: time.Minute, unprovenAfter: time.Minute, staleAfter: 10 * time.Second},
 		{name: "a_host_heard_live_is_not_judged_on_its_stamps", steps: func(h *hostLiveness) {
 			h.reset(now.Add(-5 * time.Second))
-			h.hearRetained("alpha", now.Add(-time.Hour).Unix())
+			h.hearRetained("alpha", now.Add(-time.Hour).Unix(), now.Add(-time.Second))
 			h.heardAt["alpha"] = now.Add(-time.Second)
 		}, provenAfter: time.Minute, unprovenAfter: time.Minute, staleAfter: 10 * time.Second},
 		{name: "a_payload_without_a_timestamp_proves_nothing_either_way", steps: func(h *hostLiveness) {
 			h.reset(now.Add(-5 * time.Second))
-			h.hearRetained("alpha", 0)
+			h.hearRetained("alpha", 0, now.Add(-time.Second))
 		}, provenAfter: time.Minute, unprovenAfter: time.Minute, staleAfter: 10 * time.Second},
 		{name: "a_zero_stale_age_turns_the_stamp_rule_off", steps: func(h *hostLiveness) {
 			h.reset(now.Add(-5 * time.Second))
-			h.hearRetained("alpha", now.Add(-time.Hour).Unix())
+			h.hearRetained("alpha", now.Add(-time.Hour).Unix(), now.Add(-time.Second))
 		}, provenAfter: time.Minute, unprovenAfter: time.Minute},
 	}
 	for _, test := range tests {
