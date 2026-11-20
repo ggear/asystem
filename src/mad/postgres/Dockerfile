@@ -1,5 +1,5 @@
 # https://github.com/timescale/timescaledb/releases
-FROM timescale/timescaledb:2.32.0-pg18 AS image_upstream
+FROM timescale/timescaledb:2.32.1-pg18 AS image_upstream
 USER root
 RUN apk update && \
     apk add --upgrade --no-cache bash=5.3.9-r1 && \

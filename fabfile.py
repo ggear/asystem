@@ -532,6 +532,13 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
                 }
             )
     pyright_includes.extend(_python_files_adopted())
+    ruff_config_path = join(ROOT_DIR, "ruff.toml")
+    with open(ruff_config_path) as ruff_config_file:
+        ruff_config = ruff_config_file.read()
+    ruff_config_pinned = re.sub(r'^required-version = ".*"$', 'required-version = "=={}"'.format(GLOBAL_ENV["RUFF_VERSION"]), ruff_config, count=1, flags=re.MULTILINE)
+    if ruff_config_pinned != ruff_config:
+        with open(ruff_config_path, "w") as ruff_config_file:
+            ruff_config_file.write(ruff_config_pinned)
     with open(join(ROOT_DIR, "pyrightconfig.json"), "w") as pyright_config_file:
         json.dump(
             {

@@ -310,7 +310,7 @@ spec:
             queryOptions:
               interval: 6s
             transformations: []
-        description: 'Generated: restarts of the service container since it was created, by docker or by supervisor'
+        description: 'Generated: restarts of the service container in the last day, by docker or by supervisor'
         id: 12
         links: []
         title: Restarts
