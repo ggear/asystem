@@ -248,6 +248,10 @@ pub const PLUG_WATTS: &str = "rackmains_plug_watts";
 
 pub const PLUG_VOLTS: &str = "rackmains_plug_volts";
 
+pub const GUARD_ASLEEP_HOSTS: &str = "rackmains_guard_asleep_hosts";
+
+pub const OUTAGE_DRILL_PRESENT: &str = "rackmains_outage_drill_present";
+
 pub const PLUG_AMPS: &str = "rackmains_plug_amps";
 
 pub const PLUG_ENERGY: &str = "rackmains_plug_energy_today_wh";
@@ -292,6 +296,8 @@ pub const COLUMNS: &[Column] = &[
     recorded(GUARD_RESTORE_MAINS, Kind::Int),
     recorded(GUARD_ABORT_BATTERY, Kind::Float),
     recorded(GUARD_SHED_RUNTIME, Kind::Int),
+    recorded(GUARD_ASLEEP_HOSTS, Kind::Int),
+    recorded(OUTAGE_DRILL_PRESENT, Kind::Int),
     recorded(MODEL_STATE, Kind::Text),
     recorded(PLUG_POWER_STATE, Kind::Text),
     recorded(PLUG_WATTS, Kind::Int),

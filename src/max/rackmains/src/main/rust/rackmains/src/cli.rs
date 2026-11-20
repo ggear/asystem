@@ -654,6 +654,7 @@ mod tests {
             planned_cut: "2999-01-01_00-00-00".to_string(),
             expires: "2999-01-01_00-10-00".to_string(),
             state,
+            abort: None,
         };
         let never = |_: &str, _: &str| -> Result<bool, String> { panic!("no confirmation expected") };
         run_clean(&dir, never).unwrap();

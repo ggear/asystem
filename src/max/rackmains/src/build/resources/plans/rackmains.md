@@ -147,6 +147,7 @@ below follow its order, and a name that is not in it is not a metric.
 | `outage` | the last outage, from the CSV `end` row, absent until the first | `rackmains_outage_last_duration_seconds`, `rackmains_outage_last_battery_min_volts`, `rackmains_outage_last_end_epoch_seconds` |
 | `guard` | the shutdown guard | `rackmains_guard_state`, `rackmains_guard_live`, `rackmains_guard_mains_seconds`, `rackmains_guard_battery_seconds`, `rackmains_guard_failed_hosts`, `rackmains_guard_last_action_result` |
 | `model` | the fitted model's own outputs and state | `rackmains_battery_energy_used_wh`, `model_history_known`, `rackmains_model_refit_due`, `rackmains_battery_state` |
+| `guard` (CSV only) | what the guard has done to the hosts, and whether a drill owns the outage | `rackmains_guard_asleep_hosts`, `rackmains_outage_drill_present` |
 | `plug` | the rack plug's meter, CSV only, filled during a drill | `rackmains_plug_power_state`, `rackmains_plug_watts`, `rackmains_plug_volts`, `rackmains_plug_amps`, `rackmains_plug_energy_today_wh` |
 
 Bools are the integers `1` and `0`, never JSON `true` and `false`, in the payload and the CSV alike. `_pct` and `_seconds` values are
@@ -231,6 +232,8 @@ and the workbook templates all move to these names when built.
 | `model_history_known` | the model, an optional output | yes, once a fitted model returns it | yes | INFO on change |
 | `rackmains_model_refit_due` | the model, an optional output | yes, once the model returns it | yes | WARN on a change to 1, with the reason from the response `parameters` |
 | `rackmains_battery_state` | the model's state as one JSON text of the named state slots | no, not published | yes, on the `start` and `end` rows and on a restart, reset or project change, blank otherwise | INFO on those rows; DEBUG on every call when the debug switch is on |
+| `rackmains_guard_asleep_hosts` | the guard, hosts whose `asleep` returned 0 and whose `awake` has not since returned 0 or unhealthy (all hosts on a resume that had shed) | no | yes, every row | none |
+| `rackmains_outage_drill_present` | the poller, 1 while an acked drill marker owns the open outage | no | yes, every row | none |
 | `rackmains_plug_power_state`, `rackmains_plug_watts`, `rackmains_plug_volts`, `rackmains_plug_amps`, `rackmains_plug_energy_today_wh` | the plug sampler thread, only while an acked drill marker exists | no | yes, blank outside a drill and when the plug is unreachable | DEBUG per sample |
 | `timestamp`, `period_ms` | the poll | yes | `timestamp`, `elapsed_seconds` | DEBUG per poll |
 | events: transitions, decisions, commands, notes, summary | rackmains, the guard | **never** | yes, the `event` and `detail` columns | INFO. Command timings and host results (`asleep`, `awake`: start, `RESULT` status, `took`) live only here and in the CSV. The `end` row holds the summary: duration on battery, minimum voltage and when, peak utilisation, whether `LB` raised, steps reached, hosts shed |

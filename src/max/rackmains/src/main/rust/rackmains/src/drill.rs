@@ -20,7 +20,8 @@ use crate::metrics::{
 };
 use crate::nut::{TOKEN_OB, TOKEN_OL};
 use crate::outage::{
-    self, parse_stamp, write_atomic, OutageFile, Table, DIR_OUTAGE, DIR_STATE, EVENT_COMMAND, EVENT_END, EVENT_START,
+    self, parse_stamp, write_atomic, OutageFile, Table, DIR_OUTAGE, DIR_STATE, EVENT_COMMAND, EVENT_END, EVENT_NOTE,
+    EVENT_START,
 };
 use crate::report;
 use crate::shed::load_hosts;
@@ -51,6 +52,8 @@ pub struct Marker {
     pub planned_cut: String,
     pub expires: String,
     pub state: MarkerState,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub abort: Option<String>,
 }
 
 impl Marker {
@@ -651,6 +654,7 @@ pub fn run_drill(env: &Env, test: Test, hold: Option<&str>, follow: Option<&str>
         .format("%Y-%m-%d_%H-%M-%S")
         .to_string(),
         state: MarkerState::Armed,
+        abort: None,
     };
     marker.write(&marker_path)?;
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
@@ -785,6 +789,19 @@ pub fn run_issues(table: &Table, target: &Target, abort_volts: f64, followed: bo
     let shed = field("hosts_shed").parse::<u64>().unwrap_or(0);
     if shed > 0 && matches!(target, Target::Blip(_)) {
         issues.push(("hosts shed", format!("{shed} during a blip-watch")));
+    }
+    if shed == 0 && matches!(target, Target::Brownout(_)) && end.is_some() {
+        issues.push(("no host shed", "the brownout never reached the shed point".to_string()));
+    }
+    for row in table
+        .rows
+        .iter()
+        .filter(|row| table.cell(row, COLUMN_EVENT) == EVENT_NOTE)
+    {
+        let note = table.cell(row, COLUMN_DETAIL);
+        if let Some((_, reason)) = note.split_once("] aborted [").filter(|_| note.starts_with("drill [")) {
+            issues.push(("run aborted", reason.strip_suffix(']').unwrap_or(reason).to_string()));
+        }
     }
     if let Ok(minimum) = field("battery_min_volts").parse::<f64>() {
         if minimum - abort_volts < ABORT_MARGIN_VOLTS {
@@ -1115,6 +1132,16 @@ fn drive(
                             ),
                         ),
                     );
+                }
+                if volts_low {
+                    let _ = Marker {
+                        abort: Some(format!(
+                            "battery volts [{:.1}] at or under [{abort_volts:.1}]",
+                            battery_volts(&table).unwrap_or_default()
+                        )),
+                        ..marker.clone()
+                    }
+                    .write(marker_path);
                 }
                 restore_plug(env.plug.as_ref(), env.timing.poll)?;
                 say(Level::Info, &log_change("drill plug", "off", "on"));
@@ -1457,6 +1484,7 @@ mod tests {
             planned_cut: "2026-01-01_00-00-00".to_string(),
             expires: expires.to_string(),
             state,
+            abort: None,
         }
     }
 
@@ -1786,6 +1814,39 @@ mod tests {
     }
 
     #[test]
+    fn a_note_that_the_drill_aborted_is_an_issue_carrying_its_reason() {
+        let mut text = outage::encode_row(&crate::metrics::header());
+        text.push('\n');
+        for (event, detail) in [
+            (
+                EVENT_NOTE,
+                "drill [a] aborted [battery volts [11.5] at or under [11.5]]",
+            ),
+            (EVENT_END, "reason [restored] battery_min_volts [11.5] hosts_shed [0]"),
+        ] {
+            text.push_str(&outage::encode_row(&outage::row(
+                "2026-01-01_12-00-00",
+                0,
+                event,
+                detail,
+                &Frame::default(),
+            )));
+            text.push('\n');
+        }
+        let issues = run_issues(
+            &Table::parse(&text),
+            &Target::Brownout(Duration::from_secs(240)),
+            11.5,
+            false,
+        );
+        assert_eq!(
+            issues.iter().map(|issue| issue.0).collect::<Vec<_>>(),
+            vec!["no host shed", "run aborted", "volts margin"]
+        );
+        assert_eq!(issues[1].1, "battery volts [11.5] at or under [11.5]");
+    }
+
+    #[test]
     fn a_run_reports_what_went_wrong_and_nothing_when_it_went_well() {
         let table = |end: Option<&str>, commands: &[&str], samples: &[Option<i64>]| {
             let mut text = outage::encode_row(&crate::metrics::header());
@@ -1836,6 +1897,15 @@ mod tests {
         assert_eq!(run_issues(&table(Some(close), &[], &ok), &blip, 11.5, false).len(), 1);
         let edge = "reason [restored] battery_min_volts [12.0] hosts_shed [0]";
         assert!(run_issues(&table(Some(edge), &[], &ok), &blip, 11.5, false).is_empty());
+        let brownout = Target::Brownout(Duration::from_secs(240));
+        assert_eq!(
+            run_issues(&table(Some(edge), &[], &ok), &brownout, 11.5, false)
+                .iter()
+                .map(|issue| issue.0)
+                .collect::<Vec<_>>(),
+            vec!["no host shed"]
+        );
+        assert!(run_issues(&table(None, &[], &ok), &brownout, 11.5, true).is_empty());
         let low = "reason [restored] battery_min_volts [12.0] hosts_shed [0] battery_low [1]";
         assert_eq!(run_issues(&table(Some(low), &[], &ok), &blip, 11.5, false).len(), 1);
         let failed = [

@@ -322,10 +322,25 @@ impl Poller {
                 self.rejected = Some(marker.id);
             }
         }
+        if let Some(session) = &mut self.session {
+            if let Some(id) = session.drill.as_ref().filter(|_| !session.abort_noted) {
+                let aborted = Marker::read(&self.settings.data_dir.join(DIR_STATE).join(drill::FILE_MARKER))
+                    .filter(|marker| marker.id == *id)
+                    .and_then(|marker| marker.abort);
+                if let Some(reason) = aborted {
+                    rows.push((EVENT_NOTE, format!("drill [{id}] aborted [{reason}]")));
+                    session.abort_noted = true;
+                }
+            }
+        }
         // 6. Step Guard
         let out = self.guard.step(flags, dt);
         ended |= self.apply(out, &mut rows);
         self.guard.metrics(&mut frame);
+        frame.set_bool(
+            metrics::OUTAGE_DRILL_PRESENT,
+            self.session.as_ref().is_some_and(|session| session.drill.is_some()),
+        );
         frame.set_int(metrics::GUARD_SHED_BATTERY, self.policy.shed_battery.as_secs() as i64);
         frame.set_int(metrics::GUARD_RESTORE_MAINS, self.policy.restore_mains.as_secs() as i64);
         frame.set_number(metrics::GUARD_ABORT_BATTERY, self.policy.abort_battery);
@@ -535,6 +550,7 @@ impl Poller {
             stats: Stats::default(),
             drill: marker.map(|marker| marker.id.clone()),
             on_battery_seen: false,
+            abort_noted: false,
             hosts_shed: 0,
         });
         if marker.is_some() {
@@ -933,6 +949,7 @@ struct Session {
     stats: Stats,
     drill: Option<String>,
     on_battery_seen: bool,
+    abort_noted: bool,
     hosts_shed: usize,
 }
 
@@ -1348,6 +1365,7 @@ mod tests {
                 .format("%Y-%m-%d_%H-%M-%S")
                 .to_string(),
             state,
+            abort: None,
         }
         .write(&rig.data_dir.join(DIR_STATE).join(drill::FILE_MARKER))
         .unwrap();
@@ -1387,6 +1405,35 @@ mod tests {
         assert_eq!(events[0].0, "start");
         assert!(events[0].1.contains("drill [abc] mode [brownout-shed-wake]"));
         assert_eq!(events.len(), 3);
+    }
+
+    #[test]
+    fn an_abort_in_the_marker_is_noted_once_and_the_drill_flag_is_recorded_on_every_row() {
+        let mut rig = Rig::new("marker-volts-abort");
+        rig.run("OL", 1);
+        marker(&rig, "abc", MarkerState::Armed);
+        rig.run("OL", 3);
+        let mut aborted = Marker::read(&rig.data_dir.join(DIR_STATE).join(drill::FILE_MARKER)).unwrap();
+        aborted.abort = Some("battery volts [11.5] at or under [11.5]".to_string());
+        aborted
+            .write(&rig.data_dir.join(DIR_STATE).join(drill::FILE_MARKER))
+            .unwrap();
+        rig.run("OL", 5);
+        let notes: Vec<String> = rig
+            .events()
+            .into_iter()
+            .filter(|event| event.0 == "note")
+            .map(|event| event.1)
+            .collect();
+        assert_eq!(
+            notes,
+            vec!["drill [abc] aborted [battery volts [11.5] at or under [11.5]]"]
+        );
+        let table = &rig.tables()[0];
+        assert!(table
+            .rows
+            .iter()
+            .all(|row| table.cell(row, metrics::OUTAGE_DRILL_PRESENT) == "1"));
     }
 
     #[test]

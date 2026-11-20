@@ -3,7 +3,8 @@ use std::fmt;
 use std::time::Duration;
 
 use crate::metrics::{
-    Frame, GUARD_BATTERY_SECONDS, GUARD_FAILED_HOSTS, GUARD_LAST_ACTION, GUARD_LIVE, GUARD_MAINS_SECONDS, GUARD_STATE,
+    Frame, GUARD_ASLEEP_HOSTS, GUARD_BATTERY_SECONDS, GUARD_FAILED_HOSTS, GUARD_LAST_ACTION, GUARD_LIVE,
+    GUARD_MAINS_SECONDS, GUARD_STATE,
 };
 use crate::nut::Flags;
 use crate::outage::{DECISION_SHED, EVENT_DECISION, EVENT_NOTE};
@@ -88,6 +89,7 @@ pub struct Guard {
     waves: VecDeque<Vec<Call>>,
     in_flight: HashSet<String>,
     failed: BTreeSet<String>,
+    asleep: BTreeSet<String>,
     last_action: String,
 }
 
@@ -110,6 +112,7 @@ impl Guard {
             waves: VecDeque::new(),
             in_flight: HashSet::new(),
             failed: BTreeSet::new(),
+            asleep: BTreeSet::new(),
             last_action: String::new(),
         }
     }
@@ -117,6 +120,9 @@ impl Guard {
     pub fn resume(&mut self, battery: Duration, mains: Duration, shed: bool) {
         self.outage = true;
         self.shed_started = shed;
+        if shed {
+            self.asleep = self.hosts.iter().map(|host| host.name.clone()).collect();
+        }
         self.battery = battery;
         self.mains = mains;
     }
@@ -202,6 +208,15 @@ impl Guard {
         } else {
             self.failed.insert(host.to_string());
         }
+        match command {
+            Command::Asleep if status == 0 => {
+                self.asleep.insert(host.to_string());
+            }
+            Command::Awake if status == 0 || status == AWAKE_UNHEALTHY => {
+                self.asleep.remove(host);
+            }
+            _ => {}
+        }
         if command == Command::Awake && status == AWAKE_UNHEALTHY {
             out.rows.push(Row {
                 event: EVENT_NOTE,
@@ -220,6 +235,7 @@ impl Guard {
         frame.set_int(GUARD_MAINS_SECONDS, self.mains.as_secs() as i64);
         frame.set_int(GUARD_BATTERY_SECONDS, self.battery.as_secs() as i64);
         frame.set_text(GUARD_FAILED_HOSTS, &self.failed_hosts().join(","));
+        frame.set_int(GUARD_ASLEEP_HOSTS, self.asleep.len() as i64);
         if !self.last_action.is_empty() {
             frame.set_text(GUARD_LAST_ACTION, &self.last_action);
         }
@@ -734,6 +750,34 @@ mod tests {
         let mut guard = guard();
         guard.resume(Duration::from_secs(30), Duration::from_secs(299), false);
         assert!(guard.step(Some(mains()), SECOND).ended);
+    }
+
+    #[test]
+    fn the_asleep_hosts_count_follows_the_calls_that_succeeded_and_returns_to_zero_after_the_restore() {
+        let asleep = |guard: &Guard| {
+            let mut frame = Frame::default();
+            guard.metrics(&mut frame);
+            frame.number(GUARD_ASLEEP_HOSTS)
+        };
+        let mut guard = guard();
+        let shed = run(&mut guard, Some(battery()), 120);
+        assert_eq!(asleep(&guard), Some(0.0));
+        settle(&mut guard, &shed);
+        assert_eq!(asleep(&guard), Some(4.0));
+        assert!(run(&mut guard, Some(mains()), 299).is_empty());
+        let mut next = guard.step(Some(mains()), SECOND).calls;
+        let mut remaining = 4.0;
+        while !next.is_empty() {
+            next = finish_all(&mut guard, &next);
+            remaining -= 1.0;
+            assert_eq!(asleep(&guard), Some(remaining));
+        }
+        let mut failing = self::guard();
+        let shed = run(&mut failing, Some(battery()), 120);
+        let next = failing.complete("meg", Command::Asleep, 4).calls;
+        settle(&mut failing, &next);
+        assert_eq!(asleep(&failing), Some(3.0));
+        assert_eq!(shed.len(), 1);
     }
 
     #[test]
