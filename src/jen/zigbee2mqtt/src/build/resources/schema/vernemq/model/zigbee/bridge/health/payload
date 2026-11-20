@@ -17,25 +17,7 @@
     "received": <number>
   },
   "devices": {
-    "0x000d6f001127f08c": {
-      "messages": <number>,
-      "messages_per_sec": <number>,
-      "leave_count": <number>,
-      "network_address_changes": <number>
-    },
-    "0x8c65a3fffef0c92d": {
-      "messages": <number>,
-      "messages_per_sec": <number>,
-      "leave_count": <number>,
-      "network_address_changes": <number>
-    },
-    "0x1c34f1fffe7f7e96": {
-      "messages": <number>,
-      "messages_per_sec": <number>,
-      "leave_count": <number>,
-      "network_address_changes": <number>
-    },
-    "0x000d6f0011274420": {
+    "0x0017880108fd8633": {
       "messages": <number>,
       "messages_per_sec": <number>,
       "leave_count": <number>,
@@ -47,25 +29,7 @@
       "leave_count": <number>,
       "network_address_changes": <number>
     },
-    "0x00178801040edfae": {
-      "messages": <number>,
-      "messages_per_sec": <number>,
-      "leave_count": <number>,
-      "network_address_changes": <number>
-    },
-    "0x001788010f03f035": {
-      "messages": <number>,
-      "messages_per_sec": <number>,
-      "leave_count": <number>,
-      "network_address_changes": <number>
-    },
-    "0x00178801086168ac": {
-      "messages": <number>,
-      "messages_per_sec": <number>,
-      "leave_count": <number>,
-      "network_address_changes": <number>
-    },
-    "0x0017880108fd8633": {
+    "0x0017880104eaa272": {
       "messages": <number>,
       "messages_per_sec": <number>,
       "leave_count": <number>,
@@ -77,13 +41,13 @@
       "leave_count": <number>,
       "network_address_changes": <number>
     },
-    "0x2c1165fffe109407": {
+    "0x0017880109d4659c": {
       "messages": <number>,
       "messages_per_sec": <number>,
       "leave_count": <number>,
       "network_address_changes": <number>
     },
-    "0x9035eafffe404425": {
+    "0x8c65a3fffef0c92d": {
       "messages": <number>,
       "messages_per_sec": <number>,
       "leave_count": <number>,
@@ -95,7 +59,7 @@
       "leave_count": <number>,
       "network_address_changes": <number>
     },
-    "0x001788010343b9d8": {
+    "0x9035eafffe404425": {
       "messages": <number>,
       "messages_per_sec": <number>,
       "leave_count": <number>,
@@ -107,25 +71,7 @@
       "leave_count": <number>,
       "network_address_changes": <number>
     },
-    "0x001788010343c147": {
-      "messages": <number>,
-      "messages_per_sec": <number>,
-      "leave_count": <number>,
-      "network_address_changes": <number>
-    },
-    "0x0017880109d4659c": {
-      "messages": <number>,
-      "messages_per_sec": <number>,
-      "leave_count": <number>,
-      "network_address_changes": <number>
-    },
-    "0x00178801039f6b78": {
-      "messages": <number>,
-      "messages_per_sec": <number>,
-      "leave_count": <number>,
-      "network_address_changes": <number>
-    },
-    "0x001788010343c34f": {
+    "0x00178801086168ac": {
       "messages": <number>,
       "messages_per_sec": <number>,
       "leave_count": <number>,
@@ -137,19 +83,55 @@
       "leave_count": <number>,
       "network_address_changes": <number>
     },
+    "0x001788010f03f035": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x00178801040ede93": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x000d6f0011274420": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x00124b0029119f9a": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x000d6f001127f08c": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x00178801039f6b78": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x2c1165fffe109407": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
     "0x00178801039f6b4a": {
       "messages": <number>,
       "messages_per_sec": <number>,
       "leave_count": <number>,
       "network_address_changes": <number>
     },
-    "0x00178801040f8db2": {
-      "messages": <number>,
-      "messages_per_sec": <number>,
-      "leave_count": <number>,
-      "network_address_changes": <number>
-    },
-    "0x00178801039f585a": {
+    "0x1c34f1fffe7f7e96": {
       "messages": <number>,
       "messages_per_sec": <number>,
       "leave_count": <number>,
@@ -167,85 +149,7 @@
       "leave_count": <number>,
       "network_address_changes": <number>
     },
-    "0x00178801040ede93": {
-      "messages": <number>,
-      "messages_per_sec": <number>,
-      "leave_count": <number>,
-      "network_address_changes": <number>
-    },
-    "0x00178801040eddb2": {
-      "messages": <number>,
-      "messages_per_sec": <number>,
-      "leave_count": <number>,
-      "network_address_changes": <number>
-    },
-    "0x001788010444db4e": {
-      "messages": <number>,
-      "messages_per_sec": <number>,
-      "leave_count": <number>,
-      "network_address_changes": <number>
-    },
-    "0x00178801043283b0": {
-      "messages": <number>,
-      "messages_per_sec": <number>,
-      "leave_count": <number>,
-      "network_address_changes": <number>
-    },
-    "0x0017880104329975": {
-      "messages": <number>,
-      "messages_per_sec": <number>,
-      "leave_count": <number>,
-      "network_address_changes": <number>
-    },
-    "0x001788010432996f": {
-      "messages": <number>,
-      "messages_per_sec": <number>,
-      "leave_count": <number>,
-      "network_address_changes": <number>
-    },
-    "0x00178801039f4eed": {
-      "messages": <number>,
-      "messages_per_sec": <number>,
-      "leave_count": <number>,
-      "network_address_changes": <number>
-    },
-    "0x00178801039f56c4": {
-      "messages": <number>,
-      "messages_per_sec": <number>,
-      "leave_count": <number>,
-      "network_address_changes": <number>
-    },
-    "0x00178801039f574e": {
-      "messages": <number>,
-      "messages_per_sec": <number>,
-      "leave_count": <number>,
-      "network_address_changes": <number>
-    },
-    "0x00178801039f69d5": {
-      "messages": <number>,
-      "messages_per_sec": <number>,
-      "leave_count": <number>,
-      "network_address_changes": <number>
-    },
-    "0x00178801039f69d4": {
-      "messages": <number>,
-      "messages_per_sec": <number>,
-      "leave_count": <number>,
-      "network_address_changes": <number>
-    },
-    "0x00178801039f584a": {
-      "messages": <number>,
-      "messages_per_sec": <number>,
-      "leave_count": <number>,
-      "network_address_changes": <number>
-    },
-    "0x0017880104eaa272": {
-      "messages": <number>,
-      "messages_per_sec": <number>,
-      "leave_count": <number>,
-      "network_address_changes": <number>
-    },
-    "0x00124b0029119f9a": {
+    "0x00178801039f585a": {
       "messages": <number>,
       "messages_per_sec": <number>,
       "leave_count": <number>,
