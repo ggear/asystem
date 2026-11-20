@@ -491,7 +491,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		cache.Refresh()
 		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionDisconnect).Warnf("blanking", blankStart, "[broker] lost, [%2d] hosts", len(hosts))
 	}
-	client, err := brokerConnect(ctx, configPath, brokerSession{keepAlive: watchKeepAlive, pingTimeout: watchPingTimeout, onConnect: onConnect, onLost: func() { _ = blankAll }})
+	client, err := brokerConnect(ctx, configPath, brokerSession{keepAlive: watchKeepAlive, pingTimeout: watchPingTimeout, onConnect: onConnect, onLost: blankAll})
 	if err != nil {
 		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStop).Errorf("faulting", clientStart, "[%-16.16s] loop halted, [%v]", loopListeningStream, err)
 		return
