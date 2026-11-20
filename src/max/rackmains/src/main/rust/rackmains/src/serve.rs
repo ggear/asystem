@@ -1228,7 +1228,7 @@ mod tests {
     fn an_outage_is_recorded_shed_at_the_shed_time_and_restored_after_stable_mains() {
         let mut rig = Rig::new("outage");
         rig.run("OL", 3);
-        rig.run("OB DISCHRG", 119);
+        rig.run("OB DISCHRG", 59);
         assert!(rig.calls().is_empty());
         rig.run("OB DISCHRG", 8);
         assert_eq!(rig.calls().len(), 4);
@@ -1249,9 +1249,9 @@ mod tests {
         let end = table.rows.last().unwrap();
         assert!(table.cell(end, "detail").contains("reason [restored]"));
         assert!(table.cell(end, "detail").contains("hosts_shed [4]"));
-        assert_eq!(table.cell(end, "rackmains_outage_last_duration_seconds"), "127");
+        assert_eq!(table.cell(end, "rackmains_outage_last_duration_seconds"), "67");
         let payloads = rig.payloads();
-        assert_eq!(payloads.last().unwrap()["rackmains_outage_last_duration_seconds"], 127);
+        assert_eq!(payloads.last().unwrap()["rackmains_outage_last_duration_seconds"], 67);
         assert_eq!(payloads.last().unwrap()["rackmains_guard_state"], "idle");
     }
 
@@ -1350,7 +1350,7 @@ mod tests {
         thread::sleep(Duration::from_millis(30));
         rig.run("OL", 1);
         assert!(Liveness::read(&path).unwrap().last_read_boot_ms > first.last_read_boot_ms);
-        assert_eq!(after.effective.guard_shed_battery_seconds, 120);
+        assert_eq!(after.effective.guard_shed_battery_seconds, 60);
         assert_eq!(after.effective.shed_order, vec!["meg", "may", "max", "mad"]);
     }
 

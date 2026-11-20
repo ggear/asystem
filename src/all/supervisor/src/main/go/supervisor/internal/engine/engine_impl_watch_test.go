@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net"
 	"os"
 	"path/filepath"
 	"supervisor/internal/config"
@@ -343,12 +344,13 @@ func TestEngineImplWatch_RunListeningStreamLoop(t *testing.T) {
 	reconciles := &countingRefreshListener{}
 	var sizeBeforeOffline, topicsBeforeOffline int
 	reconcileGrace = time.Second
-	t.Cleanup(func() { reconcileGrace = 10 * time.Second })
+	t.Cleanup(func() { reconcileGrace = 10 * time.Second; watchSilentPulses = 3 })
 	tests := []struct {
-		name      string
-		topic     string
-		setupFunc func(*testing.T, *metric.RecordCache, metric.TopicBinding) []byte
-		checkFunc func(*testing.T, *metric.RecordCache, metric.TopicBinding)
+		name         string
+		topic        string
+		silentPulses int
+		setupFunc    func(*testing.T, *metric.RecordCache, metric.TopicBinding) []byte
+		checkFunc    func(*testing.T, *metric.RecordCache, metric.TopicBinding)
 	}{
 		{
 			name: "happy_nil_mqtt_value_deletes_service",
@@ -604,6 +606,41 @@ func TestEngineImplWatch_RunListeningStreamLoop(t *testing.T) {
 			},
 		},
 		{
+			name:         "happy_silent_online_host_is_blanked_then_revived_by_later_data",
+			topic:        "supervisor/alpha/status",
+			silentPulses: 3,
+			setupFunc: func(_ *testing.T, _ *metric.RecordCache, _ metric.TopicBinding) []byte {
+				return []byte(metric.AvailabilityOnline)
+			},
+			checkFunc: func(t *testing.T, cache *metric.RecordCache, b metric.TopicBinding) {
+				await := func(present bool, within time.Duration) bool {
+					deadline := time.Now().Add(within)
+					for time.Now().Before(deadline) {
+						record, ok := cache.Load(b.GUID)
+						if ok && (record != nil && record.Value.Pulse != nil) == present {
+							return true
+						}
+						time.Sleep(50 * time.Millisecond)
+					}
+					return false
+				}
+				if !await(false, 8*time.Second) {
+					t.Fatalf("Got a record still shown for a host online but silent, expected it blanked")
+				}
+				time.Sleep(1100 * time.Millisecond)
+				fresh := nonNilValue
+				fresh.Timestamp = time.Now().Unix()
+				payload, marshalErr := json.Marshal(fresh)
+				if marshalErr != nil {
+					t.Fatalf("marshal fresh value failed: %v", marshalErr)
+				}
+				mqttClient.Publish(b.Topic, 0, false, payload)
+				if !await(true, 3*time.Second) {
+					t.Fatalf("Got no record after the silent host published again, expected it revived")
+				}
+			},
+		},
+		{
 			name:  "sad_offline_host_ignores_earlier_data",
 			topic: "supervisor/alpha/status",
 			setupFunc: func(_ *testing.T, _ *metric.RecordCache, _ metric.TopicBinding) []byte {
@@ -647,6 +684,10 @@ func TestEngineImplWatch_RunListeningStreamLoop(t *testing.T) {
 			}
 			if binding.Topic == "" {
 				t.Fatalf("Got no binding for svc-a, expected topic to be set after store")
+			}
+			watchSilentPulses = 600
+			if tt.silentPulses > 0 {
+				watchSilentPulses = tt.silentPulses
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
@@ -716,4 +757,118 @@ func TestEngineImplWatch_Idle(t *testing.T) {
 			}
 		})
 	}
+}
+
+type severableListener struct {
+	net.Listener
+	mu          sync.Mutex
+	connections []net.Conn
+}
+
+func (l *severableListener) Accept() (net.Conn, error) {
+	connection, err := l.Listener.Accept()
+	if err == nil {
+		l.mu.Lock()
+		l.connections = append(l.connections, connection)
+		l.mu.Unlock()
+	}
+	return connection, err
+}
+
+func (l *severableListener) sever() {
+	_ = l.Listener.Close()
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	for _, connection := range l.connections {
+		_ = connection.Close()
+	}
+}
+
+func serveMuteBroker(listener net.Listener) {
+	for {
+		connection, err := listener.Accept()
+		if err != nil {
+			return
+		}
+		go func() {
+			defer func() { _ = connection.Close() }()
+			buffer := make([]byte, 4096)
+			if _, err := connection.Read(buffer); err != nil {
+				return
+			}
+			_, _ = connection.Write([]byte{0x20, 0x02, 0x00, 0x00})
+			for {
+				if _, err := connection.Read(buffer); err != nil {
+					return
+				}
+			}
+		}()
+	}
+}
+
+func TestEngineImplWatch_BrokerLost(t *testing.T) {
+	tests := []struct {
+		name        string
+		serve       func(net.Listener)
+		lose        func(*severableListener)
+		expectedMax time.Duration
+	}{
+		{name: "a_closed_connection_blanks_at_once", serve: serveFakeBroker, lose: (*severableListener).sever, expectedMax: 5 * time.Second},
+		{name: "a_broker_gone_silent_blanks_within_the_watch_keepalive", serve: serveMuteBroker, lose: func(*severableListener) {}, expectedMax: 9 * time.Second},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			inner, err := net.Listen("tcp", "127.0.0.1:0")
+			if err != nil {
+				t.Fatalf("listen failed with [%v]", err)
+			}
+			listener := &severableListener{Listener: inner}
+			t.Cleanup(listener.sever)
+			go test.serve(listener)
+			watchBrokerLost(t, inner, listener, test.lose, test.expectedMax)
+		})
+	}
+}
+
+func watchBrokerLost(t *testing.T, inner net.Listener, listener *severableListener, lose func(*severableListener), expectedMax time.Duration) {
+	t.Helper()
+	address := inner.Addr().(*net.TCPAddr)
+	configFile := filepath.Join(t.TempDir(), "config.json")
+	content := fmt.Sprintf(`{"asystem":{"version":"10.100.6000","host":"ahost","broker":{"host":"127.0.0.1","port":"%d"},"database":{"host":"db.local","port":"2000"}}}`, address.Port)
+	if err := os.WriteFile(configFile, []byte(content), 0644); err != nil {
+		t.Fatalf("write config file failed: %v", err)
+	}
+	watchSilentPulses = 600
+	t.Cleanup(func() { watchSilentPulses = 3 })
+	cache := metric.NewRecordCache()
+	guid := metric.NewServiceRecordGUID(metric.MetricServiceName, "alpha", "svc-a")
+	held := metric.ValueData{Timestamp: time.Now().Unix(), Pulse: &metric.ValueDataDetail{OK: true, Kind: metric.ValueString, ValueString: "svc-a"}}
+	cache.Store(guid, &metric.Record{Value: held})
+	attached := &countingRefreshListener{}
+	cache.SubscribeRefresh(attached)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		RunListeningStreamLoop(ctx, configFile, cache, config.Periods{PulseMillis: 1000, HeartbeatSecs: 30})
+	}()
+	t.Cleanup(func() {
+		cancel()
+		<-done
+	})
+	for deadline := time.Now().Add(15 * time.Second); attached.count() == 0; time.Sleep(10 * time.Millisecond) {
+		if !time.Now().Before(deadline) {
+			t.Fatalf("Got no refresh from the stream loop, expected it to attach")
+		}
+	}
+	if record, ok := cache.Load(guid); !ok || record == nil || record.Value.Pulse == nil {
+		t.Fatalf("Got no held record before the broker was lost, expected the stored value")
+	}
+	lose(listener)
+	for deadline := time.Now().Add(expectedMax); time.Now().Before(deadline); time.Sleep(50 * time.Millisecond) {
+		if record, ok := cache.Load(guid); ok && (record == nil || record.Value.Pulse == nil) {
+			return
+		}
+	}
+	t.Fatalf("Got a record still shown after the broker was lost, expected every metric blanked")
 }

@@ -341,8 +341,8 @@ mod tests {
 
     #[test]
     fn an_awake_waits_longer_for_the_first_host_and_a_shed_never_takes_a_wait() {
-        assert!(remote_command(Command::Awake, true).ends_with("awake --health-timeout 60"));
-        assert!(remote_command(Command::Awake, false).ends_with("awake --health-timeout 30"));
+        assert!(remote_command(Command::Awake, true).ends_with("awake --health-timeout 30"));
+        assert!(remote_command(Command::Awake, false).ends_with("awake --health-timeout 10"));
         assert!(remote_command(Command::Asleep, true).ends_with("/asleep"));
     }
 

@@ -374,9 +374,9 @@ enum Sequence {
 
 pub const AWAKE_UNHEALTHY: i32 = 6;
 
-pub const HEALTH_WAIT_BROKER_SECONDS: u32 = 60;
+pub const HEALTH_WAIT_BROKER_SECONDS: u32 = 30;
 
-pub const HEALTH_WAIT_FOLLOWER_SECONDS: u32 = 30;
+pub const HEALTH_WAIT_FOLLOWER_SECONDS: u32 = 10;
 
 const BLIND_RESTORE_FACTOR: u32 = 2;
 

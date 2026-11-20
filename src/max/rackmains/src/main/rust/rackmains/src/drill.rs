@@ -1133,6 +1133,9 @@ fn drive(
                         ),
                     );
                 }
+                restore_plug(env.plug.as_ref(), env.timing.poll)?;
+                say(Level::Info, &log_change("drill plug", "off", "on"));
+                restored = Some(Instant::now());
                 if volts_low {
                     let _ = Marker {
                         abort: Some(format!(
@@ -1143,9 +1146,6 @@ fn drive(
                     }
                     .write(marker_path);
                 }
-                restore_plug(env.plug.as_ref(), env.timing.poll)?;
-                say(Level::Info, &log_change("drill plug", "off", "on"));
-                restored = Some(Instant::now());
                 verify_restored(env, outage_dir, &stem)?;
             }
         }

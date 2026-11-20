@@ -101,7 +101,7 @@ func TestEngineUtilBroker_ConnectWaitsForTheBroker(t *testing.T) {
 			}
 			connected := make(chan struct{}, 1)
 			started := time.Now()
-			client, err := brokerConnect(ctx, configFile, func(mqtt.Client) { connected <- struct{}{} }, "", "")
+			client, err := brokerConnect(ctx, configFile, brokerSession{keepAlive: brokerInterval, pingTimeout: brokerTimeout, onConnect: func(mqtt.Client) { connected <- struct{}{} }})
 			if (err != nil) != test.expectedError {
 				t.Fatalf("connect: got error [%v] after [%s] want error %v", err, time.Since(started), test.expectedError)
 			}

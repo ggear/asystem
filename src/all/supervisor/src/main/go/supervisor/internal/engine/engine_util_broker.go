@@ -12,7 +12,7 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-func brokerConnect(ctx context.Context, configPath string, onConnect func(mqtt.Client), willTopic, willPayload string) (mqtt.Client, error) {
+func brokerConnect(ctx context.Context, configPath string, session brokerSession) (mqtt.Client, error) {
 	broker := config.Load(configPath).Broker()
 	if broker == "" {
 		return nil, errors.New("broker address is empty")
@@ -32,8 +32,8 @@ func brokerConnect(ctx context.Context, configPath string, onConnect func(mqtt.C
 		SetClientID(fmt.Sprintf("supervisor-subscriber-%d", time.Now().UnixNano())).
 		SetCleanSession(true).
 		SetConnectTimeout(brokerTimeout).
-		SetKeepAlive(brokerInterval).
-		SetPingTimeout(brokerTimeout).
+		SetKeepAlive(session.keepAlive).
+		SetPingTimeout(session.pingTimeout).
 		SetMaxReconnectInterval(brokerInterval).
 		SetAutoReconnect(true).
 		SetConnectRetry(true).
@@ -51,13 +51,16 @@ func brokerConnect(ctx context.Context, configPath string, onConnect func(mqtt.C
 				since = lostSince()
 			}
 			scribe.Log(scribe.SourceEngineBroker, scribe.SubjectNone, scribe.ActionConnect).Infof("sessions", since, "[broker] connect in [%d] attempts", retries)
-			if onConnect != nil {
-				onConnect(client)
+			if session.onConnect != nil {
+				session.onConnect(client)
 			}
 		}).
 		SetConnectionLostHandler(func(_ mqtt.Client, _ error) {
 			lostAt.Store(time.Now().UnixNano())
 			scribe.Log(scribe.SourceEngineBroker, scribe.SubjectNone, scribe.ActionDisconnect).Warnf("sessions", time.Now(), "[broker] disconnected by network")
+			if session.onLost != nil {
+				session.onLost()
+			}
 			select {
 			case lostSignal <- struct{}{}:
 			default:
@@ -77,8 +80,8 @@ func brokerConnect(ctx context.Context, configPath string, onConnect func(mqtt.C
 			}
 			scribe.Log(scribe.SourceEngineBroker, scribe.SubjectNone, scribe.ActionConnect).Debugf("sessions", lostSince(), "[broker] backed-off [%2d] attempt", attempt)
 		})
-	if willTopic != "" {
-		opts.SetWill(willTopic, willPayload, 1, true)
+	if session.willTopic != "" {
+		opts.SetWill(session.willTopic, session.willPayload, 1, true)
 	}
 	client := mqtt.NewClient(opts)
 	token := client.Connect()
@@ -155,6 +158,15 @@ func brokerReconnect(ctx context.Context, client mqtt.Client, reviveStart time.T
 		case <-time.After(backoff):
 		}
 	}
+}
+
+type brokerSession struct {
+	keepAlive   time.Duration
+	pingTimeout time.Duration
+	onConnect   func(mqtt.Client)
+	onLost      func()
+	willTopic   string
+	willPayload string
 }
 
 const (
