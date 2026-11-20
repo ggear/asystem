@@ -1,11 +1,11 @@
 {
   "schema": 2,
-  "version": "10.200.2080",
-  "content_sha256": "c013f443650f82183c887a212658c278d260a032fb5826bf1a74b476e56868dc",
-  "inputs_sha256": "78c7968420f5752ef7566b30bbba06222a2dfde47c07c0626eeaa69a9f4af362",
+  "version": "10.200.2141",
+  "content_sha256": "245d6fb719d7cd44ebf4dea3894a6be0e9268d368a6e5d5a56d160763b65ed3e",
+  "inputs_sha256": "ecf7b44b21d263a4f1c105370fc29de68a396585e01536f736573375928c382e",
   "target": {"kind": "embedded", "language": "rust"},
   "release": {
-    "timestamp": "2026-11-19T06:59:38Z",
+    "timestamp": "2026-11-20T05:26:23Z",
     "signature": {
       "schema": 1,
       "signature_version": 1000,

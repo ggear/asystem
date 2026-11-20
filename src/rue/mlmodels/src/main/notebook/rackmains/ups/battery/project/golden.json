@@ -18,7 +18,7 @@
             "model_name": "rackmains_ups_battery",
             "id": "s1-0",
             "outputs": [
-              {"name": "rackmains_guard_shed_battery_seconds", "datatype": "INT64", "shape": [1], "data": [120]},
+              {"name": "rackmains_guard_shed_battery_seconds", "datatype": "INT64", "shape": [1], "data": [60]},
               {"name": "rackmains_guard_restore_mains_seconds", "datatype": "INT64", "shape": [1], "data": [60]},
               {"name": "rackmains_guard_abort_battery_volts", "datatype": "FP64", "shape": [1], "data": [11.5]}
             ]
@@ -39,7 +39,7 @@
             "model_name": "rackmains_ups_battery",
             "id": "s1-1",
             "outputs": [
-              {"name": "rackmains_guard_shed_battery_seconds", "datatype": "INT64", "shape": [1], "data": [120]},
+              {"name": "rackmains_guard_shed_battery_seconds", "datatype": "INT64", "shape": [1], "data": [60]},
               {"name": "rackmains_guard_restore_mains_seconds", "datatype": "INT64", "shape": [1], "data": [60]},
               {"name": "rackmains_guard_abort_battery_volts", "datatype": "FP64", "shape": [1], "data": [11.5]}
             ]
@@ -60,7 +60,7 @@
             "model_name": "rackmains_ups_battery",
             "id": "s1-2",
             "outputs": [
-              {"name": "rackmains_guard_shed_battery_seconds", "datatype": "INT64", "shape": [1], "data": [120]},
+              {"name": "rackmains_guard_shed_battery_seconds", "datatype": "INT64", "shape": [1], "data": [60]},
               {"name": "rackmains_guard_restore_mains_seconds", "datatype": "INT64", "shape": [1], "data": [60]},
               {"name": "rackmains_guard_abort_battery_volts", "datatype": "FP64", "shape": [1], "data": [11.5]}
             ]
@@ -92,7 +92,7 @@
             "model_name": "rackmains_ups_battery",
             "id": "s1-4",
             "outputs": [
-              {"name": "rackmains_guard_shed_battery_seconds", "datatype": "INT64", "shape": [1], "data": [120]},
+              {"name": "rackmains_guard_shed_battery_seconds", "datatype": "INT64", "shape": [1], "data": [60]},
               {"name": "rackmains_guard_restore_mains_seconds", "datatype": "INT64", "shape": [1], "data": [60]},
               {"name": "rackmains_guard_abort_battery_volts", "datatype": "FP64", "shape": [1], "data": [11.5]}
             ]
@@ -118,7 +118,7 @@
             "model_name": "rackmains_ups_battery",
             "id": "s1-5",
             "outputs": [
-              {"name": "rackmains_guard_shed_battery_seconds", "datatype": "INT64", "shape": [1], "data": [120]},
+              {"name": "rackmains_guard_shed_battery_seconds", "datatype": "INT64", "shape": [1], "data": [60]},
               {"name": "rackmains_guard_restore_mains_seconds", "datatype": "INT64", "shape": [1], "data": [60]},
               {"name": "rackmains_guard_abort_battery_volts", "datatype": "FP64", "shape": [1], "data": [11.5]}
             ]
@@ -144,7 +144,7 @@
             "model_name": "rackmains_ups_battery",
             "id": "s1-6",
             "outputs": [
-              {"name": "rackmains_guard_shed_battery_seconds", "datatype": "INT64", "shape": [1], "data": [120]},
+              {"name": "rackmains_guard_shed_battery_seconds", "datatype": "INT64", "shape": [1], "data": [60]},
               {"name": "rackmains_guard_restore_mains_seconds", "datatype": "INT64", "shape": [1], "data": [60]},
               {"name": "rackmains_guard_abort_battery_volts", "datatype": "FP64", "shape": [1], "data": [11.5]}
             ]
