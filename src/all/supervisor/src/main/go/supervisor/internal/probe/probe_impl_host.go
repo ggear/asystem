@@ -158,7 +158,7 @@ func (p *hostProbe) poll(_ context.Context, isPulse bool) error {
 			p.failedShares,
 			p.failedSharesInt,
 			func() int8 { return p.failedSharesInt.PulseMax() },
-			func() int8 { return p.failedSharesInt.TrendMax() },
+			func() int8 { return p.failedSharesInt.TrendMean() },
 		),
 		newCacheMetricTask(
 			metric.ValueInt,

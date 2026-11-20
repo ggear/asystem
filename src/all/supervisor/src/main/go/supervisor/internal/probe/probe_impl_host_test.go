@@ -1,6 +1,7 @@
 package probe
 
 import (
+	"context"
 	"errors"
 	"maps"
 	"math"
@@ -432,6 +433,48 @@ func TestProbeImplHost_FailedShares(t *testing.T) {
 			}
 			if testCase.expectedOK && value != testCase.expectedValue {
 				t.Fatalf("expected %d, got %d", testCase.expectedValue, value)
+			}
+		})
+	}
+}
+
+func TestProbeImplHost_FailedSharesTrend(t *testing.T) {
+	tests := []struct {
+		name          string
+		failingTicks  int
+		failingValue  int8
+		expectedTrend bool
+	}{
+		{name: "a_few_minutes_of_failure_inside_a_day_of_health_is_forgiven", failingTicks: 180, failingValue: 55, expectedTrend: true},
+		{name: "a_long_failure_still_shows", failingTicks: 40_000, failingValue: 55},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Cleanup(resetMounts)
+			seedHostMounts(t)
+			periods := config.Periods{PollMillis: 1000, PulseMillis: 1000, TrendHours: 24, HeartbeatSecs: 300}
+			cache := metric.NewRecordCache()
+			var mask [metric.MetricMax]bool
+			mask[metric.MetricHostFailedShares] = true
+			probe := newHostProbe()
+			if err := probe.create("", cache, mask, periods); err != nil {
+				t.Fatalf("create failed with [%v]", err)
+			}
+			for range test.failingTicks {
+				probe.failedSharesInt.PushAndTick(test.failingValue)
+			}
+			for range 43_200 {
+				probe.failedSharesInt.PushAndTick(0)
+			}
+			if err := probe.poll(context.Background(), true); err != nil {
+				t.Fatalf("poll failed with [%v]", err)
+			}
+			record, found := cache.Load(metric.NewRecordGUID(metric.MetricHostFailedShares, config.Load("").Host()))
+			if !found || record.Value.Trend == nil {
+				t.Fatalf("record: got found %v want a stored trend", found)
+			}
+			if record.Value.Trend.OK != test.expectedTrend {
+				t.Fatalf("trend: got ok %v value [%d] want ok %v", record.Value.Trend.OK, record.Value.Trend.ValueInt, test.expectedTrend)
 			}
 		})
 	}

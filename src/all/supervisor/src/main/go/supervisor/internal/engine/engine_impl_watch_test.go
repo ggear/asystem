@@ -752,3 +752,45 @@ func writeWatchConfig(t *testing.T, brokerHost, brokerPort string) string {
 type holdRecorder func(until time.Time)
 
 func (r holdRecorder) MarkHold(until time.Time) { r(until) }
+
+type unusedUpdates struct{}
+
+func (unusedUpdates) MarkDirty() {}
+
+func TestEngineImplWatch_LivenessMetricIsAlwaysSubscribed(t *testing.T) {
+	tests := []struct {
+		name          string
+		shown         metric.ID
+		expectedTopic bool
+	}{
+		{name: "a_layout_without_up_time_still_subscribes_it", shown: metric.MetricHostUsedMemory, expectedTopic: true},
+		{name: "a_layout_with_up_time_subscribes_it_once", shown: metric.MetricHostUpTime, expectedTopic: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cache := metric.NewRecordCache()
+			cache.SubscribeUpdates(metric.NewRecordGUID(test.shown, "alpha"), unusedUpdates{})
+			ctx, cancel := context.WithCancel(context.Background())
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				RunListeningStreamLoop(ctx, writeWatchConfig(t, "127.0.0.1", "1"), cache, config.Periods{PulseMillis: 1000, HeartbeatSecs: 30})
+			}()
+			t.Cleanup(func() {
+				cancel()
+				<-done
+			})
+			upTimes := 0
+			for deadline := time.Now().Add(3 * time.Second); time.Now().Before(deadline) && upTimes == 0; time.Sleep(10 * time.Millisecond) {
+				for _, binding := range cache.Topics() {
+					if binding.GUID.ID == metric.MetricHostUpTime && binding.GUID.Host == "alpha" {
+						upTimes++
+					}
+				}
+			}
+			if (upTimes == 1) != test.expectedTopic {
+				t.Fatalf("up_time topics for alpha: got %d want one [%v]", upTimes, test.expectedTopic)
+			}
+		})
+	}
+}

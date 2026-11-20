@@ -106,11 +106,13 @@ func RunListeningProbesLoop(ctx context.Context, configPath string, cache *metri
 //   - An unknown host counts as online, so a watch started before its first status message still renders.
 //   - A service name topic is a bound metric as well as the discovery wildcard, so an empty payload on it removes the
 //     service through the data path above, discovery itself never removing anything, and only while the host is online.
+//   - Every host is also subscribed to its `up_time`, whether or not a layout shows it, because it changes every pulse and so
+//     is the one metric that proves a host alive; a compact layout without it blanked live hosts whose shown metrics held still.
 //   - The reconcile exists for a module removed from a host across a release, where the sweep destroys the retained name
 //     the next serve would read back and the host is already offline when the tombstones arrive, so nothing else clears it.
 func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metric.RecordCache, periods config.Periods) {
 	for host, ids := range cache.ListenerIDs() {
-		for _, id := range ids {
+		for _, id := range append(ids, metric.MetricHostUpTime) {
 			record := metric.NewRecord(metric.NewNilValue())
 			cache.Store(metric.NewServiceSchemaRecordGUID(id, host, 0), &record)
 		}
