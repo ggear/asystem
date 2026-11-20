@@ -98,7 +98,7 @@ func (w *brokerWatcher) readRetained() (map[string]string, bool) {
 	w.mutex.Lock()
 	ready := w.ready
 	w.mutex.Unlock()
-	if !w.client.IsConnected() {
+	if !w.client.IsConnectionOpen() {
 		return w.snapshot(), false
 	}
 	if !ready {

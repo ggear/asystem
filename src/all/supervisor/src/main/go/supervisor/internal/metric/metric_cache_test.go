@@ -2759,3 +2759,47 @@ type mockAttachListener struct {
 func (m *mockAttachListener) MarkAttach() {
 	m.attachCount++
 }
+
+func TestMetricCache_EvictHost(t *testing.T) {
+	value := ValueData{Pulse: &ValueDataDetail{OK: true, Kind: ValueString, ValueString: "v"}}
+	tests := []struct {
+		name            string
+		host            string
+		expectedSize    int
+		expectedEvicted bool
+		expectedHostNil bool
+	}{
+		{name: "evicts_the_host_metrics_it_holds_and_nothing_else", host: "alpha", expectedSize: 4, expectedEvicted: true, expectedHostNil: true},
+		{name: "a_host_with_no_records_changes_nothing", host: "gamma", expectedSize: 4},
+		{name: "an_empty_host_changes_nothing", host: "", expectedSize: 4},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cache := NewRecordCache()
+			cache.Store(NewRecordGUID(MetricHostUsedMemory, "alpha"), &Record{Value: value})
+			cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: value})
+			cache.Store(NewRecordGUID(MetricHostUsedMemory, "beta"), &Record{Value: value})
+			cache.Store(NewServiceRecordGUID(MetricServiceName, "beta", "svc-b"), &Record{Value: value})
+			listener := &mockListener{}
+			cache.SubscribeUpdates(NewRecordGUID(MetricHostUsedMemory, "alpha"), listener)
+			if got := cache.EvictHost(test.host); got != test.expectedEvicted {
+				t.Fatalf("Got EvictHost = %v, expected %v", got, test.expectedEvicted)
+			}
+			if got := cache.Size(); got != test.expectedSize {
+				t.Fatalf("Got size = %d, expected %d (no record created)", got, test.expectedSize)
+			}
+			held, _ := cache.Load(NewRecordGUID(MetricHostUsedMemory, "alpha"))
+			if (held.Value.Pulse == nil) != test.expectedHostNil {
+				t.Fatalf("Got alpha host metric nil = %v, expected %v", held.Value.Pulse == nil, test.expectedHostNil)
+			}
+			service, _ := cache.Load(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"))
+			other, _ := cache.Load(NewRecordGUID(MetricHostUsedMemory, "beta"))
+			if service.Value.Pulse == nil || other.Value.Pulse == nil {
+				t.Fatalf("Got a service or another host evicted, expected only the named host metrics")
+			}
+			if test.expectedEvicted && listener.dirtyCount == 0 {
+				t.Fatalf("Got no listener notification, expected the display told")
+			}
+		})
+	}
+}

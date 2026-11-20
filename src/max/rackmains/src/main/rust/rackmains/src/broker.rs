@@ -16,6 +16,7 @@ use crate::schema::{AVAILABILITY_OFFLINE, AVAILABILITY_ONLINE};
 #[derive(Debug)]
 pub enum Error {
     Mqtt(String),
+    Down,
     Timeout,
 }
 
@@ -23,6 +24,7 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Error::Mqtt(msg) => write!(f, "mqtt error [{msg}]"),
+            Error::Down => write!(f, "broker down"),
             Error::Timeout => write!(f, "timed out connecting to broker"),
         }
     }
@@ -109,17 +111,19 @@ impl MqttPublisher {
                             }
                         };
                         if !replay.is_empty() {
+                            let mut republished = 0;
                             for (topic, payload) in &replay {
-                                if let Err(err) =
-                                    thread_client.try_publish(topic, QoS::AtLeastOnce, true, payload.clone())
-                                {
-                                    warn!("{}", log_line("broker retained republish failed", topic));
-                                    warn!("{}", log_line("broker retained republish error", &err.to_string()));
+                                match thread_client.try_publish(topic, QoS::AtLeastOnce, true, payload.clone()) {
+                                    Ok(()) => republished += 1,
+                                    Err(err) => {
+                                        warn!("{}", log_line("broker retained republish failed", topic));
+                                        warn!("{}", log_line("broker retained republish error", &err.to_string()));
+                                    }
                                 }
                             }
                             info!(
                                 "{}",
-                                log_line("broker republished retained topics", &replay.len().to_string())
+                                log_line("broker republished retained topics", &republished.to_string())
                             );
                         }
                     }
@@ -214,13 +218,16 @@ impl Publisher for MqttPublisher {
                 }
             }
         }
+        if !self.connected.load(Ordering::SeqCst) {
+            return Err(Error::Down);
+        }
         self.client
             .try_publish(topic, QoS::AtLeastOnce, true, payload.to_vec())
             .map_err(|err| Error::Mqtt(err.to_string()))
     }
 }
 
-const CHANNEL_CAPACITY: usize = 10;
+const CHANNEL_CAPACITY: usize = 64;
 
 const RECONNECT_DELAY: Duration = Duration::from_secs(5);
 
@@ -241,5 +248,25 @@ mod tests {
             "close took [{:?}]",
             started.elapsed()
         );
+    }
+
+    #[test]
+    fn publishing_to_a_dead_broker_is_refused_and_cached_never_queued_behind_the_connection() {
+        let mut publisher = MqttPublisher::new("127.0.0.1", 1, "", "rackmains/status", "supervisor/+/command/host/+");
+        thread::sleep(Duration::from_millis(500));
+        for round in 0..(CHANNEL_CAPACITY * 3) {
+            let result = publisher.publish("rackmains/data", round.to_string().as_bytes());
+            assert!(
+                matches!(result, Err(Error::Down)),
+                "round [{round}] result [{result:?}]"
+            );
+        }
+        let cache = publisher.retained.lock().unwrap();
+        assert_eq!(
+            cache.get("rackmains/data"),
+            Some(&(CHANNEL_CAPACITY * 3 - 1).to_string().into_bytes())
+        );
+        drop(cache);
+        let _ = publisher.close();
     }
 }

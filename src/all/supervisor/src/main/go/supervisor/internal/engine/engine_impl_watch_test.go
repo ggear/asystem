@@ -341,6 +341,7 @@ func TestEngineImplWatch_RunListeningStreamLoop(t *testing.T) {
 	}
 	refreshes := &countingRefreshListener{}
 	reconciles := &countingRefreshListener{}
+	var sizeBeforeOffline, topicsBeforeOffline int
 	reconcileGrace = time.Second
 	t.Cleanup(func() { reconcileGrace = 10 * time.Second })
 	tests := []struct {
@@ -519,6 +520,23 @@ func TestEngineImplWatch_RunListeningStreamLoop(t *testing.T) {
 			},
 		},
 		{
+			name:  "happy_offline_adds_no_records_for_metrics_never_held",
+			topic: "supervisor/alpha/status",
+			setupFunc: func(_ *testing.T, cache *metric.RecordCache, _ metric.TopicBinding) []byte {
+				sizeBeforeOffline, topicsBeforeOffline = cache.Size(), len(cache.Topics())
+				return []byte(metric.AvailabilityOffline)
+			},
+			checkFunc: func(t *testing.T, cache *metric.RecordCache, _ metric.TopicBinding) {
+				time.Sleep(1500 * time.Millisecond)
+				if got := cache.Size(); got != sizeBeforeOffline {
+					t.Fatalf("Got [%d] records after the offline, expected [%d] as before", got, sizeBeforeOffline)
+				}
+				if got := len(cache.Topics()); got != topicsBeforeOffline {
+					t.Fatalf("Got [%d] topics after the offline, expected [%d] as before", got, topicsBeforeOffline)
+				}
+			},
+		},
+		{
 			name:  "happy_offline_host_revived_by_later_data",
 			topic: "supervisor/alpha/status",
 			setupFunc: func(_ *testing.T, _ *metric.RecordCache, _ metric.TopicBinding) []byte {
@@ -674,4 +692,28 @@ func (l *countingRefreshListener) count() int {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 	return l.refreshes
+}
+
+func TestEngineImplWatch_Idle(t *testing.T) {
+	tests := []struct {
+		name         string
+		rx           int64
+		attached     int
+		open         bool
+		anyOnline    bool
+		expectedIdle bool
+	}{
+		{name: "nothing_received_with_a_host_online_is_idle", attached: 5, open: true, anyOnline: true, expectedIdle: true},
+		{name: "traffic_received_is_not_idle", rx: 3, attached: 5, open: true, anyOnline: true},
+		{name: "nothing_subscribed_is_not_idle", open: true, anyOnline: true},
+		{name: "a_connection_not_open_is_not_idle", attached: 5, anyOnline: true},
+		{name: "every_host_offline_is_not_idle", attached: 5, open: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := watchIdle(test.rx, test.attached, test.open, test.anyOnline); got != test.expectedIdle {
+				t.Fatalf("idle: got %v want %v", got, test.expectedIdle)
+			}
+		})
+	}
 }

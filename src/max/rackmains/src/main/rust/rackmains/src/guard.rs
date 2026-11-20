@@ -335,12 +335,8 @@ impl Guard {
     }
 
     fn plan(&self, sequence: Sequence) -> VecDeque<Vec<Call>> {
-        let mut ordered: Vec<&Host> = self.hosts.iter().collect();
-        if sequence == Sequence::Restore {
-            ordered.reverse();
-        }
-        ordered
-            .into_iter()
+        self.hosts
+            .iter()
             .map(|host| {
                 vec![Call {
                     host: host.name.clone(),
@@ -384,7 +380,7 @@ mod tests {
     }
 
     fn hosts() -> Vec<Host> {
-        ["mad", "max", "may", "meg"]
+        ["meg", "may", "max", "mad"]
             .iter()
             .map(|name| Host {
                 name: (*name).to_string(),
@@ -451,22 +447,22 @@ mod tests {
     }
 
     #[test]
-    fn the_shed_time_sheds_one_host_at_a_time_in_alphabetical_order_all_with_the_same_command() {
+    fn the_shed_time_sheds_one_host_at_a_time_in_reverse_alphabetical_order_all_with_the_same_command() {
         let mut guard = guard();
         run(&mut guard, Some(battery()), 119);
         let first = guard.step(Some(battery()), SECOND).calls;
-        assert_eq!(names(&first), vec!["mad"]);
+        assert_eq!(names(&first), vec!["meg"]);
         assert_eq!(first[0].command, Command::Asleep);
         assert_eq!(guard.state(), State::Shedding);
-        let second = guard.complete("mad", Command::Asleep, 0).calls;
-        assert_eq!(names(&second), vec!["max"]);
+        let second = guard.complete("meg", Command::Asleep, 0).calls;
+        assert_eq!(names(&second), vec!["may"]);
         assert_eq!(second[0].command, Command::Asleep);
-        let third = guard.complete("max", Command::Asleep, 0).calls;
-        assert_eq!(names(&third), vec!["may"]);
-        let fourth = guard.complete("may", Command::Asleep, 0).calls;
-        assert_eq!(names(&fourth), vec!["meg"]);
+        let third = guard.complete("may", Command::Asleep, 0).calls;
+        assert_eq!(names(&third), vec!["max"]);
+        let fourth = guard.complete("max", Command::Asleep, 0).calls;
+        assert_eq!(names(&fourth), vec!["mad"]);
         assert_eq!(guard.state(), State::Shedding);
-        guard.complete("meg", Command::Asleep, 0);
+        guard.complete("mad", Command::Asleep, 0);
         assert_eq!(guard.state(), State::Holding);
         assert!(run(&mut guard, Some(battery()), 600).is_empty());
     }
@@ -546,7 +542,7 @@ mod tests {
     }
 
     #[test]
-    fn mains_after_a_shed_wakes_meg_then_may_then_max_then_mad() {
+    fn mains_after_a_shed_wakes_in_the_same_order_meg_then_may_then_max_then_mad() {
         let mut guard = guard();
         let shed = run(&mut guard, Some(battery()), 120);
         settle(&mut guard, &shed);
@@ -574,9 +570,9 @@ mod tests {
     fn a_restore_waits_for_a_shed_call_still_in_flight() {
         let mut guard = guard();
         let shed = run(&mut guard, Some(battery()), 120);
-        assert_eq!(names(&shed), vec!["mad"]);
+        assert_eq!(names(&shed), vec!["meg"]);
         assert!(run(&mut guard, Some(mains()), 300).is_empty());
-        let awake = guard.complete("mad", Command::Asleep, 0).calls;
+        let awake = guard.complete("meg", Command::Asleep, 0).calls;
         assert_eq!(names(&awake), vec!["meg"]);
         assert!(awake.iter().all(|call| call.command == Command::Awake));
     }
@@ -661,9 +657,9 @@ mod tests {
         let mut guard = guard();
         let shed = run(&mut guard, Some(battery()), 120);
         assert_eq!(shed.len(), 1);
-        assert_eq!(names(&guard.complete("mad", Command::Asleep, 4).calls), vec!["max"]);
-        assert_eq!(guard.failed_hosts(), vec!["mad".to_string()]);
-        guard.complete("mad", Command::Awake, 0);
+        assert_eq!(names(&guard.complete("meg", Command::Asleep, 4).calls), vec!["may"]);
+        assert_eq!(guard.failed_hosts(), vec!["meg".to_string()]);
+        guard.complete("meg", Command::Awake, 0);
         assert!(guard.failed_hosts().is_empty());
     }
 
@@ -702,8 +698,8 @@ mod tests {
         assert_eq!(run(&mut guard, Some(battery()), 120).len(), 1);
         assert!(run(&mut guard, Some(mains()), 300).is_empty());
         assert!(run(&mut guard, Some(battery()), 1).is_empty());
-        let again = guard.complete("mad", Command::Asleep, 0).calls;
-        assert_eq!(names(&again), vec!["mad"]);
+        let again = guard.complete("meg", Command::Asleep, 0).calls;
+        assert_eq!(names(&again), vec!["meg"]);
         assert!(again.iter().all(|call| call.command != Command::Awake));
         settle(&mut guard, &again);
         assert_eq!(guard.state(), State::Holding);
@@ -744,11 +740,11 @@ mod tests {
     fn metrics_report_the_state_and_failed_hosts() {
         let mut guard = guard();
         run(&mut guard, Some(battery()), 120);
-        guard.complete("mad", Command::Asleep, 5);
+        guard.complete("meg", Command::Asleep, 5);
         let mut frame = Frame::default();
         guard.metrics(&mut frame);
         assert_eq!(frame.text(GUARD_STATE), Some("shedding"));
-        assert_eq!(frame.text(GUARD_FAILED_HOSTS), Some("mad"));
+        assert_eq!(frame.text(GUARD_FAILED_HOSTS), Some("meg"));
         assert!(frame.flag(GUARD_LIVE));
     }
 

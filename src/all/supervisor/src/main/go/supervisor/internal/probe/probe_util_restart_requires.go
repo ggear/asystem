@@ -49,7 +49,7 @@ func (c restartChecker) met(ctx context.Context, requirement restartRequirement)
 		return c.dial(requirement.target, restartDialWait) == nil
 	case restartKindMQTT:
 		host, port, _ := strings.Cut(requirement.target, ":")
-		script := `topic="supervisor/restart/probe/$$"; timeout 8 mosquitto_sub -h "$1" -p "$2" -t "$topic" -C 1 -W 5 & sleep 1; mosquitto_pub -h "$1" -p "$2" -t "$topic" -m ok; wait`
+		script := `topic="supervisor/restart/probe/$$"; timeout 8 mosquitto_sub -h "$1" -p "$2" -t "$topic" -C 1 -W 5 & sub=$!; for _ in 1 2 3 4 5 6 7 8 9 10; do mosquitto_pub -h "$1" -p "$2" -t "$topic" -m ok; kill -0 "$sub" 2>/dev/null || break; sleep 0.5; done; wait "$sub"`
 		out, code, abandoned := c.run(ctx, restartCheckWait, "bash", "-c", script, "restart", host, port)
 		return !abandoned && code == 0 && strings.TrimSpace(out) == "ok"
 	case restartKindHealthy:

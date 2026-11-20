@@ -11,7 +11,7 @@ import (
 func restartInspect(health string, startedAt string, healthcheck *container.HealthConfig) container.InspectResponse {
 	response := container.InspectResponse{
 		ContainerJSONBase: &container.ContainerJSONBase{ID: "abc", State: &container.State{StartedAt: startedAt}},
-		Config:            &container.Config{Healthcheck: healthcheck},
+		Config:            &container.Config{Image: "plex:1", Healthcheck: healthcheck},
 	}
 	if health != "" {
 		response.State.Health = &container.Health{Status: health}
@@ -42,6 +42,9 @@ func TestProbeImplServicesRestart_ObservationOf(t *testing.T) {
 			if observed != test.expectedObserved {
 				t.Fatalf("observed: got %v want %v", observed, test.expectedObserved)
 			}
+			if observed && observation.image != "plex:1" {
+				t.Fatalf("image: got [%s] want [plex:1]", observation.image)
+			}
 			if observed && (observation.health != test.expectedHealth || observation.healthcheck != test.expectedCheck || observation.container != "abc" || observation.service != "plex" || observation.startedAt.IsZero()) {
 				t.Fatalf("observation: got %+v want health [%s] check %+v", observation, test.expectedHealth, test.expectedCheck)
 			}
@@ -69,26 +72,6 @@ func TestProbeImplServicesRestart_Attempts(t *testing.T) {
 			attempts, _, err := probe.restartAttempts("plex")
 			if err != nil || attempts != test.expectedAttempts {
 				t.Fatalf("attempts: got %d error [%v] want %d", attempts, err, test.expectedAttempts)
-			}
-		})
-	}
-}
-
-func TestProbeImplServicesRestart_FastPath(t *testing.T) {
-	tests := []struct {
-		name         string
-		fast         string
-		expectedFast bool
-	}{
-		{name: "unset_has_no_fast_path"},
-		{name: "the_fast_path_is_on_only_when_asked", fast: "on", expectedFast: true},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Setenv(restartFastPathEnv, test.fast)
-			engine := newRestartEngine()
-			if engine.fastPath != test.expectedFast {
-				t.Fatalf("engine: got fast %v want fast %v", engine.fastPath, test.expectedFast)
 			}
 		})
 	}
@@ -134,6 +117,30 @@ func TestProbeImplServicesRestart_Count(t *testing.T) {
 			}
 			if err != nil || got != test.expectedCount {
 				t.Fatalf("restart count: got %f error [%v] want %f", got, err, test.expectedCount)
+			}
+		})
+	}
+}
+
+func TestProbeImplServicesRestart_ObservationProbe(t *testing.T) {
+	ended := time.Date(2026, 11, 19, 1, 2, 3, 0, time.UTC)
+	tests := []struct {
+		name           string
+		log            []*container.HealthcheckResult
+		expectedFailed bool
+		expectedEnd    time.Time
+	}{
+		{name: "no_probe_yet_reads_as_not_failed"},
+		{name: "the_last_probe_failing_is_failed", log: []*container.HealthcheckResult{{ExitCode: 0, End: ended.Add(-time.Minute)}, {ExitCode: 1, End: ended}}, expectedFailed: true, expectedEnd: ended},
+		{name: "the_last_probe_passing_is_not_failed", log: []*container.HealthcheckResult{{ExitCode: 1, End: ended.Add(-time.Minute)}, {ExitCode: 0, End: ended}}, expectedEnd: ended},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			inspect := restartInspect("starting", "2026-11-19T01:00:00Z", &container.HealthConfig{Interval: time.Minute})
+			inspect.State.Health.Log = test.log
+			observation, _ := restartObservationOf("plex", inspect)
+			if observation.probeFailed != test.expectedFailed || !observation.probeEnd.Equal(test.expectedEnd) {
+				t.Fatalf("probe: got failed %v end %v want failed %v end %v", observation.probeFailed, observation.probeEnd, test.expectedFailed, test.expectedEnd)
 			}
 		})
 	}

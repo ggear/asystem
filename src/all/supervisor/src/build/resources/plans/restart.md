@@ -118,9 +118,11 @@ the module already owns.
 
 - Acts only on a container that is running and `unhealthy`. A stopped container (a shallow shed, a backup) is out of
   scope by construction.
-- `settle = start_period + interval x retries`. A container whose `State.StartedAt` is younger than `settle` is not
-  judged. It is `StartedAt`, not `Created`, because `docker start` after a wake resets the first and not the second.
-  Docker cannot report `unhealthy` before `settle` has passed anyway, so this only guards a restart that has just been made.
+- `settle = start_period + interval x retries`. A restart just made is judged for `settle` before another. A container
+  is not judged before its grace: `interval x retries`, or the `start_period` for a release (an image the ledger has not
+  recorded as settled), never under `settle_min`. It is `StartedAt`, not `Created`, because `docker start` after a wake
+  resets the first and not the second. Docker cannot report `unhealthy` before `start_period` and `retries` failures have
+  passed, so the engine does not wait for them a second time.
 - Eligible once it has reported `unhealthy` for one further `interval`, which filters a flapping check.
 - Between attempts: after `k` attempts since the last stable health, `wait = min(1 h, max(settle, 60 s) x 2^(k-1))`,
   jittered by a deterministic 10%. The first attempt has no wait. A module whose service legitimately takes longer than `settle` to turn healthy
@@ -176,17 +178,18 @@ host that is asleep, being put to sleep or being woken.
 
 A service that started before its dependency (plex before a share, `sonarr` before `/share/10`, `zigbee2mqtt` before the
 broker) cannot recover by itself, and Docker takes `settle` plus one interval, 9 minutes for every service enrolled
-here, to say so. When the cause is known that wait is waste. After the first week in observe mode, S4 adds a fast path:
+here, to say so. When the cause is known that wait is waste. S4 adds a fast path, always on:
 
-- eligible at once when the service is not `healthy`, has been up for at least its `start_period`, every prerequisite
-  has held continuously for `requires_stable`, and **`StartedAt` is earlier than the moment the prerequisite became
-  stable**, so the service demonstrably started without it;
+- eligible when the service is not `healthy`, a prerequisite was **seen unmet while this container was not healthy**
+  (so the service demonstrably started without it), and every prerequisite has since held continuously for
+  `requires_stable` and a health probe that ended after that point still fails, once past its grace;
 - the budgets, the host hold and the sleep hold apply to it unchanged, and it never fires for a service that is
   `healthy`.
 
 ### State that survives
 
-- The ledger keeps, per service: container id, total count, and the epoch seconds of recent attempts. It is
+- The ledger keeps, per service: container id, the image last seen settled (which survives a new container id, and is
+  what tells a release from a normal start), total count, and the epoch seconds of recent attempts. It is
   `/home/asystem/supervisor/restart/ledger.json`, one writer, written atomically.
 - A new container id (a release recreated it) resets that service. A change of host boot id resets the budget, because a
   reboot is a natural reset and a bad night must not leave nothing for the boot that follows.

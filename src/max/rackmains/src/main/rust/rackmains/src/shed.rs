@@ -57,7 +57,7 @@ pub fn load_hosts(path: &Path) -> Result<Vec<Host>, String> {
             address: entry.address,
         })
         .collect();
-    hosts.sort_by(|left, right| left.name.cmp(&right.name));
+    hosts.sort_by(|left, right| right.name.cmp(&left.name));
     Ok(hosts)
 }
 
@@ -326,10 +326,10 @@ mod tests {
     }
 
     #[test]
-    fn hosts_load_alphabetically_whatever_the_file_order_and_the_shed_runs_in_that_order() {
+    fn hosts_load_in_reverse_alphabetical_order_whatever_the_file_order_and_the_shed_runs_in_that_order() {
         let hosts = load_hosts(&write("ok", THREE_HOSTS)).unwrap();
-        assert_eq!(names(&hosts), vec!["mad", "max", "meg"]);
-        assert_eq!(shed_order(&hosts), vec!["mad", "max", "meg"]);
+        assert_eq!(names(&hosts), vec!["meg", "max", "mad"]);
+        assert_eq!(shed_order(&hosts), vec!["meg", "max", "mad"]);
     }
 
     #[test]

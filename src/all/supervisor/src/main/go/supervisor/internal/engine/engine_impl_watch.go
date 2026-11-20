@@ -217,6 +217,9 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		cache.Store(guid, &record)
 	}
 	subscribeTopics := func(client mqtt.Client, bindings []metric.TopicBinding) int {
+		if !client.IsConnectionOpen() {
+			return 0
+		}
 		filters := make(map[string]byte, len(bindings))
 		subscribedMu.Lock()
 		for _, b := range bindings {
@@ -387,10 +390,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			pending.deadline = time.Time{}
 			reconciles[hostName] = pending
 			reconcileMu.Unlock()
-			for _, id := range metric.GetIDsByKind([]metric.MetricKind{metric.MetricKindHost}) {
-				record := metric.NewRecord(metric.NewNilValue())
-				cache.Store(metric.NewRecordGUID(id, hostName), &record)
-			}
+			cache.EvictHost(hostName)
 			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionDisconnect).Warnf("observed", statusStart, "[offline] evicted [%3d] services", len(evicted))
 		default:
 			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionSubscribe).Errorf("observed", statusStart, "[%-14.14s] unknown payload", payload)
@@ -401,6 +401,9 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		topicStatus:    onStatus,
 	}
 	subscribeWildcards := func(client mqtt.Client) int {
+		if !client.IsConnectionOpen() {
+			return 0
+		}
 		var pending []string
 		wildcardMu.Lock()
 		for topic := range wildcardHandlers {
@@ -460,7 +463,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionSubscribe).Infof("retained", connectStart, "[%3d] hosts, holding [%4d] recs", len(cache.Hosts()), cache.Size())
 	}
 	clientStart := time.Now()
-	client, err := brokerConnect(configPath, onConnect, "", "")
+	client, err := brokerConnect(ctx, configPath, onConnect, "", "")
 	if err != nil {
 		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStop).Errorf("faulting", clientStart, "[%-16.16s] loop halted, [%v]", loopListeningStream, err)
 		return
@@ -560,7 +563,13 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			subscribedMu.Lock()
 			attached := len(subscribed)
 			subscribedMu.Unlock()
-			if rx == 0 && attached > 0 && client.IsConnectionOpen() {
+			anyOnline := false
+			for hostName := range cache.Hosts() {
+				if anyOnline = assertHostOnline(hostName); anyOnline {
+					break
+				}
+			}
+			if watchIdle(rx, attached, client.IsConnectionOpen(), anyOnline) {
 				silent++
 			} else {
 				silent = 0
@@ -648,6 +657,10 @@ type hostReconcile struct {
 	started  time.Time
 	deadline time.Time
 	retried  bool
+}
+
+func watchIdle(rx int64, attached int, open, anyOnline bool) bool {
+	return rx == 0 && attached > 0 && open && anyOnline
 }
 
 func assertHostOnline(hostName string) bool {

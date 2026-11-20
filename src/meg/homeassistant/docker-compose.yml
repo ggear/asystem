@@ -35,6 +35,7 @@ services:
     container_name: homeassistant
     <<: *common
     restart: ${SERVICE_RESTART}
+    stop_grace_period: 30s
 
     # TODO: Cant deploy with network_mode host, need to think how to run locally
     #    ports:

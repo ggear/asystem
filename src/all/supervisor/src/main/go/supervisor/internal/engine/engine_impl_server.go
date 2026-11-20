@@ -155,7 +155,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		}
 	}
 	clientStart := time.Now()
-	client, err := brokerConnect(configPath, onConnect, statusTopic, metric.AvailabilityOffline)
+	client, err := brokerConnect(ctx, configPath, onConnect, statusTopic, metric.AvailabilityOffline)
 	if err != nil {
 		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStop).Errorf("faulting", clientStart, "[%s] loop with [%v]", loopAllProbesPublish, err)
 		return

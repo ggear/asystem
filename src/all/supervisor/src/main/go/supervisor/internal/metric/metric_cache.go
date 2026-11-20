@@ -282,6 +282,17 @@ func (c *RecordCache) Evict(hostName, serviceName string) bool {
 	if c == nil || hostName == "" || serviceName == ServiceNameUnset || strings.HasPrefix(serviceName, ServiceNameSchema) {
 		return false
 	}
+	return c.evict(hostName, serviceName)
+}
+
+func (c *RecordCache) EvictHost(hostName string) bool {
+	if c == nil || hostName == "" {
+		return false
+	}
+	return c.evict(hostName, ServiceNameUnset)
+}
+
+func (c *RecordCache) evict(hostName, serviceName string) bool {
 	nilValue := NewNilValue()
 	c.mutex.Lock()
 	var allListeners []UpdatesListener

@@ -349,7 +349,7 @@ for INDEX in "${!SHARE_PIDS[@]}"; do
   if wait "${SHARE_PIDS[INDEX]}"; then
     log_debug "Share [${SHARES[INDEX]}] ready"
   else
-    log_warn "Share [${SHARES[INDEX]}] not available after [${SHARE_TIMEOUT}] seconds, docker starts without it"
+    log_warn "Share [${SHARES[INDEX]}] not available within [${SHARE_TIMEOUT}] seconds, docker starts without it"
     WARNED+=("share not available ${SHARES[INDEX]}")
   fi
 done

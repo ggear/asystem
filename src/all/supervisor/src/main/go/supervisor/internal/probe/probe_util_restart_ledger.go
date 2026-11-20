@@ -62,7 +62,7 @@ func (l *restartLedger) history(service string, container string) restartHistory
 	for _, attempt := range record.Attempts {
 		attempts = append(attempts, time.Unix(attempt, 0))
 	}
-	return restartHistory{attempts: attempts, streak: record.Streak}
+	return restartHistory{attempts: attempts, streak: record.Streak, image: record.Image}
 }
 
 func (l *restartLedger) record(service string, container string, at time.Time) error {
@@ -87,6 +87,10 @@ func (l *restartLedger) refund(service string, container string) error {
 
 func (l *restartLedger) settled(service string, container string) error {
 	return l.update(service, container, func(record *restartRecord) { record.Streak = 0 })
+}
+
+func (l *restartLedger) imaged(service string, container string, image string) error {
+	return l.update(service, container, func(record *restartRecord) { record.Image = image })
 }
 
 func (l *restartLedger) booted(boot string) error {
@@ -115,7 +119,7 @@ func (l *restartLedger) update(service string, container string, change func(*re
 func (l *restartLedger) recordOf(service string, container string) (restartRecord, bool) {
 	record, found := l.document.Services[service]
 	if !found || record.Container != container {
-		return restartRecord{Container: container}, false
+		return restartRecord{Container: container, Image: record.Image}, false
 	}
 	return record, true
 }
@@ -148,6 +152,7 @@ func (l *restartLedger) persist(updated restartDocument) error {
 
 type restartRecord struct {
 	Container string  `json:"container"`
+	Image     string  `json:"image,omitempty"`
 	Seen      *int    `json:"seen,omitempty"`
 	Rises     []int64 `json:"rises,omitempty"`
 	Streak    int     `json:"streak"`
@@ -162,6 +167,7 @@ type restartDocument struct {
 type restartHistory struct {
 	attempts []time.Time
 	streak   int
+	image    string
 }
 
 type restartLedger struct {

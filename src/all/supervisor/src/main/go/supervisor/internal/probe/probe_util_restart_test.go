@@ -45,17 +45,16 @@ func newRestartRig(t *testing.T, policyText string) *restartRig {
 		return policyText, 0, false
 	}
 	rig.engine = &restartEngine{
-		ledger:   newRestartLedger(filepath.Join(t.TempDir(), "ledger.json")),
-		checker:  restartChecker{run: rig.script.run, dial: func(string, time.Duration) error { return nil }, fstab: filepath.Join(t.TempDir(), "fstab")},
-		loader:   loader,
-		started:  rig.clock.Add(-time.Hour),
-		now:      func() time.Time { return rig.clock },
-		bootID:   func() string { return "boot-1" },
-		held:     func() bool { return false },
-		limit:    func(string) (time.Duration, error) { return 5 * time.Minute, nil },
-		tracked:  make(map[string]*restartTracked),
-		emit:     func(service string, line string) { rig.record(&rig.emitted, service+" "+line) },
-		fastPath: false,
+		ledger:  newRestartLedger(filepath.Join(t.TempDir(), "ledger.json")),
+		checker: restartChecker{run: rig.script.run, dial: func(string, time.Duration) error { return nil }, fstab: filepath.Join(t.TempDir(), "fstab")},
+		loader:  loader,
+		started: rig.clock.Add(-time.Hour),
+		now:     func() time.Time { return rig.clock },
+		bootID:  func() string { return "boot-1" },
+		held:    func() bool { return false },
+		limit:   func(string) (time.Duration, error) { return 5 * time.Minute, nil },
+		tracked: make(map[string]*restartTracked),
+		emit:    func(service string, line string) { rig.record(&rig.emitted, service+" "+line) },
 	}
 	_ = rig.engine.ledger.booted("boot-1")
 	rig.engine.run = func(_ context.Context, service string, _ time.Duration) (int, string) {
@@ -75,6 +74,7 @@ func (r *restartRig) observation(service string, health string) restartObservati
 	return restartObservation{
 		service:     service,
 		container:   service + "-1",
+		image:       service + ":1",
 		health:      health,
 		startedAt:   r.clock.Add(-time.Hour),
 		healthcheck: restartHealthcheck{interval: 2 * time.Minute, startPeriod: time.Minute, retries: 3},
@@ -473,5 +473,98 @@ func TestProbeUtilRestart_NeverItself(t *testing.T) {
 	rig.advance(10 * time.Minute)
 	if statuses := rig.evaluate(rig.observation("supervisor", "unhealthy")); len(statuses) != 0 || len(rig.restarted()) != 0 {
 		t.Fatalf("supervisor: got statuses %v runs %v want none", statuses, rig.restarted())
+	}
+}
+
+func TestProbeUtilRestart_Lapsed(t *testing.T) {
+	tests := []struct {
+		name            string
+		lapse           bool
+		expectedRestart bool
+	}{
+		{name: "a_prerequisite_that_came_back_after_the_service_started_restarts_it_without_waiting_for_docker", lapse: true, expectedRestart: true},
+		{name: "a_prerequisite_that_was_always_there_leaves_a_starting_service_to_docker"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			rig := newRestartRig(t, "requires=tcp:broker:32404\n")
+			up := !test.lapse
+			rig.engine.checker.dial = func(string, time.Duration) error {
+				if up {
+					return nil
+				}
+				return os.ErrDeadlineExceeded
+			}
+			starting := rig.observation("sonarr", "starting")
+			starting.startedAt = rig.clock
+			rig.evaluate(starting)
+			up = true
+			rig.advance(time.Minute)
+			rig.evaluate(starting)
+			rig.advance(7 * time.Minute)
+			starting.probeFailed, starting.probeEnd = true, rig.clock
+			statuses := rig.evaluate(starting)
+			if got := len(rig.restarted()) == 1; got != test.expectedRestart {
+				t.Fatalf("restarted: got %v state [%s] reason [%s] want %v", rig.restarted(), statuses["sonarr"].state, statuses["sonarr"].reason, test.expectedRestart)
+			}
+		})
+	}
+}
+
+func TestProbeUtilRestart_Release(t *testing.T) {
+	tests := []struct {
+		name            string
+		image           string
+		wait            time.Duration
+		expectedRestart bool
+	}{
+		{name: "the_image_that_last_settled_is_a_normal_start_and_is_judged_after_the_normal_grace", image: "sonarr:1", wait: 8 * time.Minute, expectedRestart: true},
+		{name: "a_new_image_is_a_release_and_is_not_judged_inside_the_start_period", image: "sonarr:2", wait: 8 * time.Minute},
+		{name: "a_new_image_is_judged_once_the_start_period_has_passed", image: "sonarr:2", wait: 16 * time.Minute, expectedRestart: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			rig := newRestartRig(t, "requires=tcp:broker:32404\n")
+			rig.evaluate(rig.observation("sonarr", "healthy"))
+			rig.advance(5 * time.Minute)
+			rig.evaluate(rig.observation("sonarr", "healthy"))
+			up := false
+			rig.engine.checker.dial = func(string, time.Duration) error {
+				if up {
+					return nil
+				}
+				return os.ErrDeadlineExceeded
+			}
+			starting := rig.observation("sonarr", "starting")
+			starting.image, starting.startedAt = test.image, rig.clock
+			starting.healthcheck.startPeriod = 15 * time.Minute
+			rig.evaluate(starting)
+			up = true
+			rig.advance(time.Minute)
+			rig.evaluate(starting)
+			rig.advance(test.wait - time.Minute)
+			starting.probeFailed, starting.probeEnd = true, rig.clock
+			statuses := rig.evaluate(starting)
+			if got := len(rig.restarted()) == 1; got != test.expectedRestart {
+				t.Fatalf("restarted: got %v state [%s] reason [%s] want %v", rig.restarted(), statuses["sonarr"].state, statuses["sonarr"].reason, test.expectedRestart)
+			}
+		})
+	}
+}
+
+func TestProbeUtilRestart_SharedRequirement(t *testing.T) {
+	rig := newRestartRig(t, "requires=tcp:broker:32404\n")
+	dials := 0
+	rig.engine.checker.dial = func(string, time.Duration) error {
+		dials++
+		return os.ErrDeadlineExceeded
+	}
+	rig.evaluate(rig.observation("plex", "unhealthy"), rig.observation("sonarr", "unhealthy"))
+	if dials != 1 {
+		t.Fatalf("dials for one requirement shared by two services: got %d want 1", dials)
+	}
+	rig.evaluate(rig.observation("plex", "unhealthy"), rig.observation("sonarr", "unhealthy"))
+	if dials != 2 {
+		t.Fatalf("dials after a second pass: got %d want 2", dials)
 	}
 }

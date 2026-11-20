@@ -22,13 +22,12 @@ import (
 func newRestartEngine() *restartEngine {
 	log := newRestartLog(config.DirServiceHome)
 	engine := &restartEngine{
-		ledger:   newRestartLedger(restartLedgerPath),
-		checker:  newRestartChecker(),
-		loader:   newRestartPolicyLoader(),
-		log:      log,
-		fastPath: os.Getenv(restartFastPathEnv) == "on",
-		started:  time.Now(),
-		now:      time.Now,
+		ledger:  newRestartLedger(restartLedgerPath),
+		checker: newRestartChecker(),
+		loader:  newRestartPolicyLoader(),
+		log:     log,
+		started: time.Now(),
+		now:     time.Now,
 		bootID: func() string {
 			data, err := os.ReadFile(restartBootIDPath)
 			if err != nil {
@@ -98,6 +97,7 @@ func (e *restartEngine) evaluate(ctx context.Context, observations []restartObse
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
 	statuses := make(map[string]restartStatus, len(observations))
+	e.checked = make(map[restartRequirement]bool)
 	now := e.now()
 	_ = e.ledger.booted(e.bootID())
 	held := e.held()
@@ -106,7 +106,7 @@ func (e *restartEngine) evaluate(ctx context.Context, observations []restartObse
 		policy, enabled, err := e.loader.load(ctx, observation.service)
 		if err != nil {
 			statuses[observation.service] = restartStatus{state: metric.RestartStateWaiting, reason: "policy unreadable [" + err.Error() + "]"}
-			e.report(observation.service, statuses[observation.service])
+			e.report(observation, statuses[observation.service])
 			continue
 		}
 		if !enabled || observation.service == restartSelf {
@@ -114,17 +114,13 @@ func (e *restartEngine) evaluate(ctx context.Context, observations []restartObse
 			continue
 		}
 		statuses[observation.service] = e.step(ctx, now, held, policy, observation)
-		e.report(observation.service, statuses[observation.service])
+		e.report(observation, statuses[observation.service])
 	}
 	return statuses
 }
 
 func (e *restartEngine) step(ctx context.Context, now time.Time, held bool, policy restartPolicy, observation restartObservation) restartStatus {
-	tracked := e.tracked[observation.service]
-	if tracked == nil || tracked.container != observation.container {
-		tracked = &restartTracked{container: observation.container}
-		e.tracked[observation.service] = tracked
-	}
+	tracked := e.trackedOf(observation.service, observation.container)
 	if observation.health == restartHealthUnhealthy {
 		if tracked.unhealthySince.IsZero() {
 			tracked.unhealthySince = now
@@ -142,7 +138,12 @@ func (e *restartEngine) step(ctx context.Context, now time.Time, held bool, poli
 	met := true
 	if observation.health != restartHealthHealthy {
 		for _, requirement := range policy.requires {
-			if !e.checker.met(ctx, requirement) {
+			satisfied, checked := e.checked[requirement]
+			if !checked {
+				satisfied = e.checker.met(ctx, requirement)
+				e.checked[requirement] = satisfied
+			}
+			if !satisfied {
 				met = false
 				break
 			}
@@ -150,6 +151,11 @@ func (e *restartEngine) step(ctx context.Context, now time.Time, held bool, poli
 	}
 	if met && observation.health != restartHealthHealthy && !e.loader.ready(ctx, observation.service) {
 		met = false
+	}
+	if observation.health == restartHealthHealthy {
+		tracked.requiresLapsed = false
+	} else if !met {
+		tracked.requiresLapsed = true
 	}
 	switch {
 	case observation.health == restartHealthHealthy || !met:
@@ -180,11 +186,17 @@ func (e *restartEngine) step(ctx context.Context, now time.Time, held bool, poli
 		hostInFlight:      e.inFlight,
 		hostLast:          hostLast,
 		hostHour:          len(e.hostRestarts),
-		fastPath:          e.fastPath,
+		requiresLapsed:    tracked.requiresLapsed,
+		release:           history.image == "" || history.image != observation.image,
+		probeEnd:          observation.probeEnd,
+		probeFailed:       observation.probeFailed,
 		jitter:            restartJitter(observation.service, history.streak),
 	})
 	if decision.reset && history.streak > 0 {
 		_ = e.ledger.settled(observation.service, observation.container)
+	}
+	if decision.reset && observation.image != "" && observation.image != history.image {
+		_ = e.ledger.imaged(observation.service, observation.container, observation.image)
 	}
 	status := restartStatus{state: decision.state, reason: decision.reason}
 	for _, attempt := range history.attempts {
@@ -241,12 +253,18 @@ func (e *restartEngine) restart(ctx context.Context, observation restartObservat
 	e.inFlight = false
 }
 
-func (e *restartEngine) report(service string, status restartStatus) {
+func (e *restartEngine) trackedOf(service string, container string) *restartTracked {
 	tracked := e.tracked[service]
-	if tracked == nil {
-		tracked = &restartTracked{}
+	if tracked == nil || tracked.container != container {
+		tracked = &restartTracked{container: container}
 		e.tracked[service] = tracked
 	}
+	return tracked
+}
+
+func (e *restartEngine) report(observation restartObservation, status restartStatus) {
+	service := observation.service
+	tracked := e.trackedOf(service, observation.container)
 	line := fmt.Sprintf("state [%s] reason [%s]", status.state, status.reason)
 	if tracked.reported == line {
 		return
@@ -288,9 +306,12 @@ func (e *restartEngine) status(service string) (restartStatus, bool) {
 type restartObservation struct {
 	service     string
 	container   string
+	image       string
 	health      string
 	startedAt   time.Time
 	healthcheck restartHealthcheck
+	probeEnd    time.Time
+	probeFailed bool
 }
 
 type restartStatus struct {
@@ -304,6 +325,7 @@ type restartTracked struct {
 	unhealthySince time.Time
 	stableSince    time.Time
 	heldSince      time.Time
+	requiresLapsed bool
 	reported       string
 }
 
@@ -314,7 +336,6 @@ type restartEngine struct {
 	checker      restartChecker
 	loader       *restartPolicyLoader
 	log          *restartLog
-	fastPath     bool
 	started      time.Time
 	now          func() time.Time
 	bootID       func() string
@@ -323,6 +344,7 @@ type restartEngine struct {
 	run          func(ctx context.Context, service string, limit time.Duration) (int, string)
 	emit         func(service string, line string)
 	tracked      map[string]*restartTracked
+	checked      map[restartRequirement]bool
 	hostRestarts []time.Time
 	inFlight     bool
 
@@ -344,7 +366,6 @@ const (
 	restartWidthLimit   = 6
 
 	restartSelf                  = "supervisor"
-	restartFastPathEnv           = "SUPERVISOR_RESTART_FAST"
 	restartDockerDefaultInterval = 30 * time.Second
 	restartDockerDefaultRetries  = 3
 )

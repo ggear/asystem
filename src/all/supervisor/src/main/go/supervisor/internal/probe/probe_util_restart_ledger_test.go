@@ -192,3 +192,34 @@ func TestProbeUtilRestartLedger_Unwritable(t *testing.T) {
 }
 
 //go:fix inline
+
+func TestProbeUtilRestartLedger_Imaged(t *testing.T) {
+	tests := []struct {
+		name          string
+		steps         func(*restartLedger)
+		expectedImage string
+	}{
+		{name: "an_unseen_service_has_no_image", steps: func(*restartLedger) {}},
+		{name: "a_recorded_image_is_read_back", steps: func(l *restartLedger) { _ = l.imaged("plex", "a", "plex:1") }, expectedImage: "plex:1"},
+		{name: "a_recreated_container_keeps_the_image_but_not_the_attempts", steps: func(l *restartLedger) {
+			_ = l.imaged("plex", "a", "plex:1")
+			_ = l.record("plex", "a", time.Unix(1, 0))
+		}, expectedImage: "plex:1"},
+		{name: "a_new_boot_keeps_the_image", steps: func(l *restartLedger) {
+			_ = l.imaged("plex", "a", "plex:1")
+			_ = l.booted("boot-2")
+		}, expectedImage: "plex:1"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ledger, _ := newTestLedger(t)
+			test.steps(ledger)
+			if got := ledger.history("plex", "a").image; got != test.expectedImage {
+				t.Fatalf("image: got [%s] want [%s]", got, test.expectedImage)
+			}
+			if got := ledger.history("plex", "b"); got.image != test.expectedImage || len(got.attempts) != 0 {
+				t.Fatalf("recreated container: got image [%s] attempts %v want image [%s] and no attempts", got.image, got.attempts, test.expectedImage)
+			}
+		})
+	}
+}

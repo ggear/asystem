@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
 	"supervisor/internal/config"
 	"supervisor/internal/display"
 	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
+	"syscall"
 	"time"
 	"unicode"
 
@@ -165,7 +167,7 @@ func executeWatch(configPath string, opts *watchOptions) error {
 	if refreshPeriod <= 0 {
 		return fmt.Errorf("invalid refresh period [%s] must be above zero", opts.refreshPeriod)
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 	defer cancel()
 	d, err := display.NewDisplay(
 		hosts,

@@ -18,6 +18,11 @@ func restartBackoff(settle time.Duration, streak int, jitter float64) time.Durat
 func decideRestart(in restartInput) restartDecision {
 	settle := max(in.healthcheck.startPeriod+in.healthcheck.interval*time.Duration(in.healthcheck.retries), in.policy.settleMin)
 	interval := in.healthcheck.interval
+	grace := interval * time.Duration(in.healthcheck.retries)
+	if in.release {
+		grace = in.healthcheck.startPeriod
+	}
+	grace = max(grace, in.policy.settleMin)
 	var last time.Time
 	recent := 0
 	for _, attempt := range in.attempts {
@@ -41,8 +46,8 @@ func decideRestart(in restartInput) restartDecision {
 		return restartDecision{state: metric.RestartStateSettling, reason: "judging the service after its restart"}
 	}
 	age := in.now.Sub(in.startedAt)
-	unhealthy := in.health == restartHealthUnhealthy && !in.unhealthySince.IsZero() && in.now.Sub(in.unhealthySince) >= interval && age >= settle
-	late := in.fastPath && in.requiresMet && age >= in.healthcheck.startPeriod && in.startedAt.Before(in.requiresHeldSince)
+	unhealthy := in.health == restartHealthUnhealthy && !in.unhealthySince.IsZero() && in.now.Sub(in.unhealthySince) >= interval && age >= grace
+	late := in.requiresLapsed && in.requiresMet && !in.requiresHeldSince.IsZero() && in.probeFailed && in.probeEnd.After(in.requiresHeldSince.Add(in.policy.stable)) && age >= grace
 	if !unhealthy && !late {
 		if in.health == restartHealthUnhealthy {
 			return restartDecision{state: metric.RestartStateSuspect, reason: "unhealthy, inside its grace"}
@@ -107,7 +112,10 @@ type restartInput struct {
 	hostInFlight      bool
 	hostLast          time.Time
 	hostHour          int
-	fastPath          bool
+	requiresLapsed    bool
+	release           bool
+	probeEnd          time.Time
+	probeFailed       bool
 	jitter            float64
 }
 

@@ -12,7 +12,7 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-func brokerConnect(configPath string, onConnect func(mqtt.Client), willTopic, willPayload string) (mqtt.Client, error) {
+func brokerConnect(ctx context.Context, configPath string, onConnect func(mqtt.Client), willTopic, willPayload string) (mqtt.Client, error) {
 	broker := config.Load(configPath).Broker()
 	if broker == "" {
 		return nil, errors.New("broker address is empty")
@@ -21,6 +21,7 @@ func brokerConnect(configPath string, onConnect func(mqtt.Client), willTopic, wi
 	var attempts atomic.Int64
 	var lostAt atomic.Int64
 	var connectedOnce atomic.Bool
+	var failure atomic.Value
 	lostSignal := make(chan struct{}, 1)
 	lostAt.Store(time.Now().UnixNano())
 	lostSince := func() time.Time {
@@ -35,6 +36,13 @@ func brokerConnect(configPath string, onConnect func(mqtt.Client), willTopic, wi
 		SetPingTimeout(brokerTimeout).
 		SetMaxReconnectInterval(brokerInterval).
 		SetAutoReconnect(true).
+		SetConnectRetry(true).
+		SetConnectRetryInterval(brokerConnectRetry).
+		SetConnectionNotificationHandler(func(_ mqtt.Client, notification mqtt.ConnectionNotification) {
+			if failed, ok := notification.(mqtt.ConnectionNotificationFailed); ok && failed.Reason != nil {
+				failure.Store(failed.Reason.Error())
+			}
+		}).
 		SetPassword(config.Load(configPath).BrokerToken()).
 		SetOnConnectHandler(func(client mqtt.Client) {
 			retries := attempts.Swap(0)
@@ -74,7 +82,16 @@ func brokerConnect(configPath string, onConnect func(mqtt.Client), willTopic, wi
 	}
 	client := mqtt.NewClient(opts)
 	token := client.Connect()
-	token.Wait()
+	for waits := 1; !token.WaitTimeout(brokerTimeout); waits++ {
+		if ctx.Err() != nil {
+			client.Disconnect(0)
+			return nil, fmt.Errorf("connect abandoned [%s] [%w]", brokerURL, ctx.Err())
+		}
+		if waits%brokerConnectWarnEvery == 0 {
+			reason, _ := failure.Load().(string)
+			scribe.Log(scribe.SourceEngineBroker, scribe.SubjectNone, scribe.ActionConnect).Warnf("sessions", lostSince(), "[broker] unreachable at [%s], retrying every [%s], last failure [%s]", brokerURL, brokerConnectRetry, reason)
+		}
+	}
 	if token.Error() != nil {
 		return nil, fmt.Errorf("connect failed [%s] [%w]", brokerURL, token.Error())
 	}
@@ -145,6 +162,9 @@ const (
 	brokerTimeout    = 3 * time.Second
 	brokerInterval   = 10 * time.Second
 	brokerExpiry     = brokerInterval * 3 / 2
+
+	brokerConnectRetry     = 2 * time.Second
+	brokerConnectWarnEvery = 5
 
 	sessionAttemptsMax = 9
 )

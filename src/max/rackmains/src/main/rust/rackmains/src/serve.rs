@@ -818,7 +818,7 @@ pub fn run(args: &ServeArgs, data_dir: &Path) -> Result<(), String> {
             known_hosts: PathBuf::from(&common.known_hosts),
             timeout: ssh_timeout,
             limit: Duration::from_secs(SSH_LIMIT_SECONDS),
-            awake_first: hosts[hosts.len() - 1].name.clone(),
+            awake_first: hosts[0].name.clone(),
             log_dir: data_dir.join(DIR_OUTAGE),
         })
     };
@@ -1033,7 +1033,7 @@ mod tests {
         fn at(data_dir: &Path, second: i64) -> Rig {
             let model = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../build/resources/model/battery");
             let (loaded, policy) = load_model(&model).unwrap();
-            let hosts = ["mad", "max", "may", "meg"]
+            let hosts = ["meg", "may", "max", "mad"]
                 .iter()
                 .map(|name| Host {
                     name: (*name).to_string(),
@@ -1334,7 +1334,7 @@ mod tests {
         rig.run("OL", 1);
         assert!(Liveness::read(&path).unwrap().last_read_boot_ms > first.last_read_boot_ms);
         assert_eq!(after.effective.guard_shed_battery_seconds, 120);
-        assert_eq!(after.effective.shed_order, vec!["mad", "max", "may", "meg"]);
+        assert_eq!(after.effective.shed_order, vec!["meg", "may", "max", "mad"]);
     }
 
     fn marker(rig: &Rig, id: &str, state: MarkerState) {

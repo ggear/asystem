@@ -22,6 +22,18 @@ func restartBase() restartInput {
 	}
 }
 
+func lapsed(change func(*restartInput)) func(*restartInput) {
+	return func(in *restartInput) {
+		in.health = "starting"
+		in.startedAt = in.now.Add(-10 * time.Minute)
+		in.unhealthySince = time.Time{}
+		in.requiresLapsed = true
+		in.probeFailed = true
+		in.probeEnd = in.now.Add(-10 * time.Second)
+		change(in)
+	}
+}
+
 func TestProbeUtilRestartDecide_Decide(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -43,7 +55,21 @@ func TestProbeUtilRestartDecide_Decide(t *testing.T) {
 		}, expectedState: metric.RestartStateSettling},
 		{name: "a_service_still_starting_is_not_judged", change: func(in *restartInput) { in.health = "starting" }, expectedState: metric.RestartStateOK},
 		{name: "unhealthy_for_less_than_one_interval_is_only_suspect", change: func(in *restartInput) { in.unhealthySince = in.now.Add(-time.Minute) }, expectedState: metric.RestartStateSuspect},
-		{name: "unhealthy_inside_its_settle_is_only_suspect", change: func(in *restartInput) { in.startedAt = in.now.Add(-5 * time.Minute) }, expectedState: metric.RestartStateSuspect},
+		{name: "unhealthy_inside_the_normal_grace_is_only_suspect", change: func(in *restartInput) { in.startedAt = in.now.Add(-5 * time.Minute) }, expectedState: metric.RestartStateSuspect},
+		{name: "unhealthy_past_the_normal_grace_is_judged_without_waiting_for_the_start_period", change: func(in *restartInput) {
+			in.healthcheck.startPeriod = 15 * time.Minute
+			in.startedAt = in.now.Add(-7 * time.Minute)
+		}, expectedState: metric.RestartStateRestarting, expectedAct: true},
+		{name: "a_release_is_not_judged_inside_its_start_period", change: func(in *restartInput) {
+			in.release = true
+			in.healthcheck.startPeriod = 15 * time.Minute
+			in.startedAt = in.now.Add(-10 * time.Minute)
+		}, expectedState: metric.RestartStateSuspect},
+		{name: "a_release_is_judged_once_its_start_period_has_passed", change: func(in *restartInput) {
+			in.release = true
+			in.healthcheck.startPeriod = 15 * time.Minute
+			in.startedAt = in.now.Add(-16 * time.Minute)
+		}, expectedState: metric.RestartStateRestarting, expectedAct: true},
 		{name: "a_settle_min_longer_than_the_health_check_holds_judgement", change: func(in *restartInput) {
 			in.startedAt = in.now.Add(-20 * time.Minute)
 			in.policy.settleMin = 30 * time.Minute
@@ -76,37 +102,17 @@ func TestProbeUtilRestartDecide_Decide(t *testing.T) {
 		{name: "a_restart_on_the_host_a_moment_ago_holds_the_next", change: func(in *restartInput) { in.hostLast = in.now.Add(-10 * time.Second) }, expectedState: metric.RestartStateWaiting},
 		{name: "a_restart_on_the_host_a_while_ago_does_not", change: func(in *restartInput) { in.hostLast = in.now.Add(-5 * time.Minute) }, expectedState: metric.RestartStateRestarting, expectedAct: true},
 		{name: "a_host_that_has_used_its_hourly_restarts_holds_the_next", change: func(in *restartInput) { in.hostHour = restartHostHourlyMax }, expectedState: metric.RestartStateWaiting},
-		{name: "the_fast_path_restarts_a_service_that_started_before_its_prerequisite", change: func(in *restartInput) {
-			in.fastPath = true
-			in.health = "starting"
-			in.startedAt = in.now.Add(-10 * time.Minute)
-			in.unhealthySince = time.Time{}
-		}, expectedState: metric.RestartStateRestarting, expectedAct: true},
-		{name: "the_fast_path_is_off_unless_enabled", change: func(in *restartInput) {
-			in.health = "starting"
-			in.startedAt = in.now.Add(-10 * time.Minute)
-			in.unhealthySince = time.Time{}
-		}, expectedState: metric.RestartStateOK},
-		{name: "the_fast_path_never_fires_for_a_service_that_started_after_its_prerequisite", change: func(in *restartInput) {
-			in.fastPath = true
-			in.health = "starting"
-			in.startedAt = in.now.Add(-2 * time.Minute)
-			in.unhealthySince = time.Time{}
-		}, expectedState: metric.RestartStateOK},
-		{name: "the_fast_path_needs_its_prerequisite_met", change: func(in *restartInput) {
-			in.fastPath = true
-			in.health = "starting"
-			in.startedAt = in.now.Add(-10 * time.Minute)
-			in.unhealthySince = time.Time{}
-			in.requiresMet = false
-		}, expectedState: metric.RestartStateOK},
-		{name: "the_fast_path_still_waits_for_its_prerequisite_to_be_stable", change: func(in *restartInput) {
-			in.fastPath = true
-			in.health = "starting"
-			in.startedAt = in.now.Add(-10 * time.Minute)
-			in.unhealthySince = time.Time{}
-			in.requiresHeldSince = in.now.Add(-20 * time.Second)
-		}, expectedState: metric.RestartStateWaiting},
+		{name: "a_lapsed_prerequisite_with_a_probe_still_failing_after_it_was_stable_restarts_the_service", change: lapsed(func(*restartInput) {}), expectedState: metric.RestartStateRestarting, expectedAct: true},
+		{name: "a_prerequisite_that_never_lapsed_leaves_a_starting_service_to_docker", change: lapsed(func(in *restartInput) { in.requiresLapsed = false }), expectedState: metric.RestartStateOK},
+		{name: "a_lapsed_prerequisite_needs_to_be_met", change: lapsed(func(in *restartInput) { in.requiresMet = false }), expectedState: metric.RestartStateOK},
+		{name: "a_probe_that_ended_before_the_prerequisite_was_stable_proves_nothing", change: lapsed(func(in *restartInput) { in.probeEnd = in.requiresHeldSince.Add(30 * time.Second) }), expectedState: metric.RestartStateOK},
+		{name: "a_passing_probe_proves_nothing", change: lapsed(func(in *restartInput) { in.probeFailed = false }), expectedState: metric.RestartStateOK},
+		{name: "a_lapsed_prerequisite_waits_out_the_normal_grace", change: lapsed(func(in *restartInput) { in.startedAt = in.now.Add(-3 * time.Minute) }), expectedState: metric.RestartStateOK},
+		{name: "a_lapsed_prerequisite_during_a_release_waits_out_the_start_period", change: lapsed(func(in *restartInput) {
+			in.release = true
+			in.healthcheck.startPeriod = 15 * time.Minute
+		}), expectedState: metric.RestartStateOK},
+		{name: "a_lapsed_prerequisite_waits_for_a_settle_min_longer_than_the_age", change: lapsed(func(in *restartInput) { in.policy.settleMin = 30 * time.Minute }), expectedState: metric.RestartStateOK},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
