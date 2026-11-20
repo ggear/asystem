@@ -465,7 +465,20 @@ while read -r PID; do
   COMMAND="$(tr '\0' ' ' <"/proc/${PID}/cmdline" 2>/dev/null)"
   COMMAND="${COMMAND% }"
   [[ -n "${COMMAND}" ]] || continue
-  log_info "Watcher [${PID}] to stop, it logs to a writable mount, command [${COMMAND}]"
+  HELD_LOG=""
+  for DESCRIPTOR in "/proc/${PID}"/fd/*; do
+    DESCRIPTOR_PATH="$(readlink "${DESCRIPTOR}" 2>/dev/null)"
+    case "${DESCRIPTOR_PATH}" in
+    /run/*) ;;
+    */supervisor/watch-*) HELD_LOG="${DESCRIPTOR_PATH}" ;;
+    *) ;;
+    esac
+  done
+  if [[ -z "${HELD_LOG}" ]]; then
+    log_info "Watcher [${PID}] left running, its log is on tmpfs, command [${COMMAND}]"
+    continue
+  fi
+  log_info "Watcher [${PID}] to stop, it logs to a writable mount [${HELD_LOG}], command [${COMMAND}]"
   if [[ "${DRY_RUN}" == "true" ]]; then
     log_info "+ kill [${PID}]"
     continue

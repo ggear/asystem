@@ -74,6 +74,20 @@ func TestProbeUtilRestartDecide_Decide(t *testing.T) {
 			in.startedAt = in.now.Add(-20 * time.Minute)
 			in.policy.settleMin = 30 * time.Minute
 		}, expectedState: metric.RestartStateSuspect},
+		{name: "a_normal_start_is_judged_again_one_health_window_after_its_restart", change: func(in *restartInput) {
+			in.healthcheck.startPeriod = 15 * time.Minute
+			in.attempts = []time.Time{in.now.Add(-7 * time.Minute)}
+		}, expectedState: metric.RestartStateRestarting, expectedAct: true},
+		{name: "a_normal_start_is_still_being_judged_inside_one_health_window_of_its_restart", change: func(in *restartInput) {
+			in.healthcheck.startPeriod = 15 * time.Minute
+			in.attempts = []time.Time{in.now.Add(-5 * time.Minute)}
+		}, expectedState: metric.RestartStateSettling},
+		{name: "a_release_is_still_being_judged_for_its_start_period_after_a_restart", change: func(in *restartInput) {
+			in.release = true
+			in.healthcheck.startPeriod = 15 * time.Minute
+			in.startedAt = in.now.Add(-20 * time.Minute)
+			in.attempts = []time.Time{in.now.Add(-7 * time.Minute)}
+		}, expectedState: metric.RestartStateSettling},
 		{name: "a_restart_made_inside_the_settle_is_being_judged", change: func(in *restartInput) { in.attempts = []time.Time{in.now.Add(-3 * time.Minute)} }, expectedState: metric.RestartStateSettling},
 		{name: "a_just_started_supervisor_waits_one_interval", change: func(in *restartInput) { in.supervisorStarted = in.now.Add(-time.Minute) }, expectedState: metric.RestartStateWaiting},
 		{name: "a_host_asleep_or_waking_holds_every_restart", change: func(in *restartInput) { in.hostHold = true }, expectedState: metric.RestartStateWaiting},
@@ -107,7 +121,15 @@ func TestProbeUtilRestartDecide_Decide(t *testing.T) {
 		{name: "a_lapsed_prerequisite_needs_to_be_met", change: lapsed(func(in *restartInput) { in.requiresMet = false }), expectedState: metric.RestartStateOK},
 		{name: "a_probe_that_ended_before_the_prerequisite_was_stable_proves_nothing", change: lapsed(func(in *restartInput) { in.probeEnd = in.requiresHeldSince.Add(30 * time.Second) }), expectedState: metric.RestartStateOK},
 		{name: "a_passing_probe_proves_nothing", change: lapsed(func(in *restartInput) { in.probeFailed = false }), expectedState: metric.RestartStateOK},
-		{name: "a_lapsed_prerequisite_waits_out_the_normal_grace", change: lapsed(func(in *restartInput) { in.startedAt = in.now.Add(-3 * time.Minute) }), expectedState: metric.RestartStateOK},
+		{name: "a_lapsed_prerequisite_with_no_settle_min_waits_out_the_normal_grace", change: lapsed(func(in *restartInput) { in.startedAt = in.now.Add(-3 * time.Minute) }), expectedState: metric.RestartStateOK},
+		{name: "a_lapsed_prerequisite_with_a_settle_min_does_not_wait_out_the_normal_grace", change: lapsed(func(in *restartInput) {
+			in.startedAt = in.now.Add(-3 * time.Minute)
+			in.policy.settleMin = 30 * time.Second
+		}), expectedState: metric.RestartStateRestarting, expectedAct: true},
+		{name: "a_lapsed_prerequisite_waits_for_its_settle_min", change: lapsed(func(in *restartInput) {
+			in.startedAt = in.now.Add(-3 * time.Minute)
+			in.policy.settleMin = 5 * time.Minute
+		}), expectedState: metric.RestartStateOK},
 		{name: "a_lapsed_prerequisite_during_a_release_waits_out_the_start_period", change: lapsed(func(in *restartInput) {
 			in.release = true
 			in.healthcheck.startPeriod = 15 * time.Minute

@@ -6,7 +6,7 @@ import (
 )
 
 func newHostLiveness() *hostLiveness {
-	return &hostLiveness{status: make(map[string]bool), offlineAt: make(map[string]int64), heardAt: make(map[string]time.Time), openedAt: time.Now()}
+	return &hostLiveness{status: make(map[string]bool), offlineAt: make(map[string]int64), heardAt: make(map[string]time.Time), retainedAt: make(map[string]time.Time), openedAt: time.Now()}
 }
 
 func (h *hostLiveness) assertOnline(hostName string) bool {
@@ -30,7 +30,7 @@ func (h *hostLiveness) store(hostName string, online bool) {
 	h.status[hostName] = online
 }
 
-func (h *hostLiveness) offlineStamp(hostName string) int64 {
+func (h *hostLiveness) offlineAtOf(hostName string) int64 {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
 	return h.offlineAt[hostName]
@@ -42,15 +42,27 @@ func (h *hostLiveness) hear(hostName string) {
 	h.heardAt[hostName] = time.Now()
 }
 
+func (h *hostLiveness) hearRetained(hostName string, published int64) {
+	if published <= 0 {
+		return
+	}
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+	if at := time.Unix(published, 0); at.After(h.retainedAt[hostName]) {
+		h.retainedAt[hostName] = at
+	}
+}
+
 func (h *hostLiveness) reset(opened time.Time) {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
 	clear(h.status)
 	clear(h.offlineAt)
+	clear(h.retainedAt)
 	h.openedAt = opened
 }
 
-func (h *hostLiveness) quietAmong(hostNames []string, now time.Time, after time.Duration) map[string]time.Duration {
+func (h *hostLiveness) quietAmong(hostNames []string, now time.Time, limits quietLimits) map[string]time.Duration {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
 	quiet := make(map[string]time.Duration)
@@ -59,11 +71,16 @@ func (h *hostLiveness) quietAmong(hostNames []string, now time.Time, after time.
 		if known && !online {
 			continue
 		}
-		last := h.heardAt[hostName]
-		if h.openedAt.After(last) {
-			last = h.openedAt
+		last, window := h.heardAt[hostName], limits.provenAfter
+		if !last.After(h.openedAt) {
+			last, window = h.openedAt, limits.unprovenAfter
+			freshest := h.retainedAt[hostName]
+			if limits.staleAfter > 0 && !freshest.IsZero() && now.Sub(h.openedAt) >= hostFloodSettle && h.openedAt.Sub(freshest) > limits.staleAfter {
+				quiet[hostName] = now.Sub(freshest)
+				continue
+			}
 		}
-		if silence := now.Sub(last); silence > after {
+		if silence := now.Sub(last); silence > window {
 			quiet[hostName] = silence
 		}
 	}
@@ -71,9 +88,18 @@ func (h *hostLiveness) quietAmong(hostNames []string, now time.Time, after time.
 }
 
 type hostLiveness struct {
-	mutex     sync.RWMutex
-	status    map[string]bool
-	offlineAt map[string]int64
-	heardAt   map[string]time.Time
-	openedAt  time.Time
+	mutex      sync.RWMutex
+	status     map[string]bool
+	offlineAt  map[string]int64
+	heardAt    map[string]time.Time
+	retainedAt map[string]time.Time
+	openedAt   time.Time
 }
+
+type quietLimits struct {
+	provenAfter   time.Duration
+	unprovenAfter time.Duration
+	staleAfter    time.Duration
+}
+
+const hostFloodSettle = time.Second

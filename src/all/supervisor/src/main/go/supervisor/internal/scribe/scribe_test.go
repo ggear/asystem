@@ -1516,7 +1516,7 @@ func enableBackupFixture(t *testing.T, quiet bool) (stdout, stderr *bytes.Buffer
 }
 
 func EnableFile(level slog.Level, cmd, version string, maxSizeMB, maxBackups, maxAgeDays int) error {
-	writer, path, err := fileWriter(cmd, version, maxSizeMB, maxBackups, maxAgeDays)
+	writer, path, err := fileWriter(logDir(), cmd, version, maxSizeMB, maxBackups, maxAgeDays)
 	if err != nil {
 		return err
 	}
@@ -1607,6 +1607,25 @@ func TestScribe_Mark(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			if got := Mark(testCase.ok); got != testCase.expected {
 				t.Errorf("mark: got [%s] want [%s]", got, testCase.expected)
+			}
+		})
+	}
+}
+
+func TestScribe_LogDirWatch(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	tests := []struct {
+		name        string
+		root        bool
+		expectedDir string
+	}{
+		{name: "root_logs_to_tmpfs_so_a_sleeping_host_has_no_writable_mount_held", root: true, expectedDir: "/run/supervisor"},
+		{name: "a_user_keeps_the_usual_directory", expectedDir: logDir()},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if actual := logDirWatch(test.root); actual != test.expectedDir {
+				t.Fatalf("log directory: got [%s] want [%s]", actual, test.expectedDir)
 			}
 		})
 	}

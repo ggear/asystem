@@ -99,13 +99,23 @@ func (l *restartLedger) booted(boot string) error {
 	if l.document.Boot == boot {
 		return nil
 	}
+	return l.persist(l.clearedDocument(boot))
+}
+
+func (l *restartLedger) woken() error {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	return l.persist(l.clearedDocument(l.document.Boot))
+}
+
+func (l *restartLedger) clearedDocument(boot string) restartDocument {
 	updated := restartDocument{Boot: boot, Services: make(map[string]restartRecord, len(l.document.Services))}
 	for name, record := range l.document.Services {
 		record.Streak = 0
 		record.Attempts = nil
 		updated.Services[name] = record
 	}
-	return l.persist(updated)
+	return updated
 }
 
 func (l *restartLedger) update(service string, container string, change func(*restartRecord)) error {

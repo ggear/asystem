@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
@@ -126,13 +127,7 @@ func TestEngineImplWatch_RunListeningStreamLoop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("setup broker container failed: %v", err)
 	}
-	host := os.Getenv("VERNEMQ_HOST")
-	port := os.Getenv("VERNEMQ_API_PORT")
-	configContent := fmt.Sprintf(`{"asystem":{"version":"10.100.6000","host":"ahost","broker":{"host":%q,"port":%q},"database":{"host":"db.local","port":"2000"}}}`, host, port)
-	configFile := filepath.Join(t.TempDir(), "config.json")
-	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
-		t.Fatalf("write config file failed: %v", err)
-	}
+	configFile := writeWatchConfig(t, os.Getenv("VERNEMQ_HOST"), os.Getenv("VERNEMQ_API_PORT"))
 	nonNilValue := metric.ValueData{
 		Timestamp: time.Now().Unix(),
 		Pulse:     &metric.ValueDataDetail{OK: true, Kind: metric.ValueString, ValueString: "svc-a"},
@@ -627,48 +622,107 @@ func TestEngineImplWatch_BrokerLost(t *testing.T) {
 			listener := &severableListener{Listener: inner}
 			t.Cleanup(listener.sever)
 			go test.serve(listener)
-			watchBrokerLost(t, inner, listener, test.lose, test.expectedMax)
+			configFile := writeWatchConfig(t, "127.0.0.1", strconv.Itoa(inner.Addr().(*net.TCPAddr).Port))
+			cache := metric.NewRecordCache()
+			guid := metric.NewServiceRecordGUID(metric.MetricServiceName, "alpha", "svc-a")
+			held := metric.ValueData{Timestamp: time.Now().Unix(), Pulse: &metric.ValueDataDetail{OK: true, Kind: metric.ValueString, ValueString: "svc-a"}}
+			cache.Store(guid, &metric.Record{Value: held})
+			attached := &countingRefreshListener{}
+			cache.SubscribeRefresh(attached)
+			ctx, cancel := context.WithCancel(context.Background())
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				RunListeningStreamLoop(ctx, configFile, cache, config.Periods{PulseMillis: 1000, HeartbeatSecs: 30, SilentMillis: 600_000})
+			}()
+			t.Cleanup(func() {
+				cancel()
+				<-done
+			})
+			for deadline := time.Now().Add(15 * time.Second); attached.count() == 0; time.Sleep(10 * time.Millisecond) {
+				if !time.Now().Before(deadline) {
+					t.Fatalf("Got no refresh from the stream loop, expected it to attach")
+				}
+			}
+			if record, ok := cache.Load(guid); !ok || record == nil || record.Value.Pulse == nil {
+				t.Fatalf("Got no held record before the broker was lost, expected the stored value")
+			}
+			test.lose(listener)
+			for deadline := time.Now().Add(test.expectedMax); time.Now().Before(deadline); time.Sleep(50 * time.Millisecond) {
+				if record, ok := cache.Load(guid); ok && (record == nil || record.Value.Pulse == nil) {
+					return
+				}
+			}
+			t.Fatalf("Got a record still shown after the broker was lost, expected every metric blanked")
 		})
 	}
 }
 
-func watchBrokerLost(t *testing.T, inner net.Listener, listener *severableListener, lose func(*severableListener), expectedMax time.Duration) {
+func TestEngineImplWatch_StaleRetained(t *testing.T) {
+	testutil.RequiresDocker(t)
+	_, mqttClient, err := testutil.SetupBrokerContainer(t)
+	if err != nil {
+		t.Fatalf("setup broker container failed: %v", err)
+	}
+	configFile := writeWatchConfig(t, os.Getenv("VERNEMQ_HOST"), os.Getenv("VERNEMQ_API_PORT"))
+	tests := []struct {
+		name          string
+		age           time.Duration
+		expectedShown bool
+	}{
+		{name: "a_retained_value_hours_old_is_blanked_without_waiting_for_the_window", age: 2 * time.Hour},
+		{name: "a_retained_value_just_published_stays_shown", age: time.Second, expectedShown: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cache := metric.NewRecordCache()
+			guid := metric.NewServiceRecordGUID(metric.MetricServiceName, "alpha", "svc-a")
+			cache.Store(guid, &metric.Record{Value: metric.ValueData{Timestamp: time.Now().Unix(), Pulse: &metric.ValueDataDetail{OK: true, Kind: metric.ValueString, ValueString: "svc-a"}}})
+			var binding metric.TopicBinding
+			for _, b := range cache.Topics() {
+				if b.GUID.Host == "alpha" && b.GUID.ServiceName == "svc-a" {
+					binding = b
+				}
+			}
+			if binding.Topic == "" {
+				t.Fatalf("Got no binding for svc-a, expected topic to be set after store")
+			}
+			payload, marshalErr := json.Marshal(metric.ValueData{Timestamp: time.Now().Add(-test.age).Unix(), Pulse: &metric.ValueDataDetail{OK: true, Kind: metric.ValueString, ValueString: "svc-a"}})
+			if marshalErr != nil {
+				t.Fatalf("marshal value failed: %v", marshalErr)
+			}
+			mqttClient.Publish(binding.Topic, 1, true, payload).Wait()
+			t.Cleanup(func() { mqttClient.Publish(binding.Topic, 1, true, []byte{}).Wait() })
+			ctx, cancel := context.WithCancel(context.Background())
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				RunListeningStreamLoop(ctx, configFile, cache, config.Periods{PulseMillis: 10_000, HeartbeatSecs: 300})
+			}()
+			t.Cleanup(func() {
+				cancel()
+				<-done
+			})
+			deadline := time.Now().Add(4 * time.Second)
+			blanked := false
+			for time.Now().Before(deadline) && !blanked {
+				time.Sleep(100 * time.Millisecond)
+				record, ok := cache.Load(binding.GUID)
+				blanked = ok && (record == nil || record.Value.Pulse == nil)
+			}
+			if blanked == test.expectedShown {
+				t.Fatalf("blanked: got %v want %v", blanked, !test.expectedShown)
+			}
+		})
+	}
+}
+
+func writeWatchConfig(t *testing.T, brokerHost, brokerPort string) string {
 	t.Helper()
-	address := inner.Addr().(*net.TCPAddr)
 	configFile := filepath.Join(t.TempDir(), "config.json")
-	content := fmt.Sprintf(`{"asystem":{"version":"10.100.6000","host":"ahost","broker":{"host":"127.0.0.1","port":"%d"},"database":{"host":"db.local","port":"2000"}}}`, address.Port)
+	content := fmt.Sprintf(`{"asystem":{"version":"10.100.6000","host":"ahost","broker":{"host":%q,"port":%q},"database":{"host":"db.local","port":"2000"}}}`, brokerHost, brokerPort)
 	if err := os.WriteFile(configFile, []byte(content), 0644); err != nil {
 		t.Fatalf("write config file failed: %v", err)
 	}
-	cache := metric.NewRecordCache()
-	guid := metric.NewServiceRecordGUID(metric.MetricServiceName, "alpha", "svc-a")
-	held := metric.ValueData{Timestamp: time.Now().Unix(), Pulse: &metric.ValueDataDetail{OK: true, Kind: metric.ValueString, ValueString: "svc-a"}}
-	cache.Store(guid, &metric.Record{Value: held})
-	attached := &countingRefreshListener{}
-	cache.SubscribeRefresh(attached)
-	ctx, cancel := context.WithCancel(context.Background())
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		RunListeningStreamLoop(ctx, configFile, cache, config.Periods{PulseMillis: 1000, HeartbeatSecs: 30, SilentMillis: 600_000})
-	}()
-	t.Cleanup(func() {
-		cancel()
-		<-done
-	})
-	for deadline := time.Now().Add(15 * time.Second); attached.count() == 0; time.Sleep(10 * time.Millisecond) {
-		if !time.Now().Before(deadline) {
-			t.Fatalf("Got no refresh from the stream loop, expected it to attach")
-		}
-	}
-	if record, ok := cache.Load(guid); !ok || record == nil || record.Value.Pulse == nil {
-		t.Fatalf("Got no held record before the broker was lost, expected the stored value")
-	}
-	lose(listener)
-	for deadline := time.Now().Add(expectedMax); time.Now().Before(deadline); time.Sleep(50 * time.Millisecond) {
-		if record, ok := cache.Load(guid); ok && (record == nil || record.Value.Pulse == nil) {
-			return
-		}
-	}
-	t.Fatalf("Got a record still shown after the broker was lost, expected every metric blanked")
+	return configFile
 }

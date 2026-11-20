@@ -118,11 +118,11 @@ the module already owns.
 
 - Acts only on a container that is running and `unhealthy`. A stopped container (a shallow shed, a backup) is out of
   scope by construction.
-- `settle = start_period + interval x retries`. A restart just made is judged for `settle` before another. A container
+- `settle = interval x retries`, plus the `start_period` for a release. A restart just made is judged for `settle` before another, so a restart that met a dependency still down is retried one health window later, not after the whole `start_period`. A container
   is not judged before its grace: `interval x retries`, or the `start_period` for a release (an image the ledger has not
   recorded as settled), never under `settle_min`. It is `StartedAt`, not `Created`, because `docker start` after a wake
   resets the first and not the second. Docker cannot report `unhealthy` before `start_period` and `retries` failures have
-  passed, so the engine does not wait for them a second time.
+  passed, so the engine does not wait for them a second time. The dependency-appeared-late path is the exception: its proof is a failing probe after the prerequisites held, so a module that sets `settle_min` waits only that long (the `start_period` for a release), and one that does not keeps the health window. A service's budget is also reset when a host finishes waking.
 - Eligible once it has reported `unhealthy` for one further `interval`, which filters a flapping check.
 - Between attempts: after `k` attempts since the last stable health, `wait = min(1 h, max(settle, 60 s) x 2^(k-1))`,
   jittered by a deterministic 10%. The first attempt has no wait. A module whose service legitimately takes longer than `settle` to turn healthy

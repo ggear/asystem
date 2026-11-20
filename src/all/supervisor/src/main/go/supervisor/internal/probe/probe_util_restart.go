@@ -101,6 +101,10 @@ func (e *restartEngine) evaluate(ctx context.Context, observations []restartObse
 	now := e.now()
 	_ = e.ledger.booted(e.bootID())
 	held := e.held()
+	if e.wasHeld && !held {
+		_ = e.ledger.woken()
+	}
+	e.wasHeld = held
 	slices.SortFunc(observations, func(left, right restartObservation) int { return strings.Compare(left.service, right.service) })
 	for _, observation := range observations {
 		policy, enabled, err := e.loader.load(ctx, observation.service)
@@ -347,6 +351,7 @@ type restartEngine struct {
 	checked      map[restartRequirement]bool
 	hostRestarts []time.Time
 	inFlight     bool
+	wasHeld      bool
 
 	evaluating  atomic.Bool
 	latestMutex sync.Mutex

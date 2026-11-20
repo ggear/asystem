@@ -123,6 +123,30 @@ func TestProbeUtilRestart_Evaluate(t *testing.T) {
 			expectedState: metric.RestartStateOK, expectedRuns: nil, expectedAttempt: 0,
 		},
 		{
+			name: "a_restart_made_before_a_sleep_does_not_count_against_the_budget_after_the_wake",
+			steps: func(r *restartRig) map[string]restartStatus {
+				r.evaluate(r.observation("plex", "unhealthy"))
+				r.advance(3 * time.Minute)
+				r.evaluate(r.observation("plex", "unhealthy"))
+				asleep := true
+				r.engine.held = func() bool { return asleep }
+				r.evaluate(r.observation("plex", "healthy"))
+				asleep = false
+				return r.evaluate(r.observation("plex", "healthy"))
+			},
+			expectedState: metric.RestartStateOK, expectedRuns: []string{"plex"}, expectedAttempt: 0,
+		},
+		{
+			name: "a_restart_made_with_no_sleep_in_between_stays_counted",
+			steps: func(r *restartRig) map[string]restartStatus {
+				r.evaluate(r.observation("plex", "unhealthy"))
+				r.advance(3 * time.Minute)
+				r.evaluate(r.observation("plex", "unhealthy"))
+				return r.evaluate(r.observation("plex", "healthy"))
+			},
+			expectedState: metric.RestartStateSettling, expectedRuns: []string{"plex"}, expectedAttempt: 1,
+		},
+		{
 			name:    "a_host_that_is_asleep_or_waking_restarts_nothing",
 			prepare: func(r *restartRig) { r.engine.held = func() bool { return true } },
 			steps: func(r *restartRig) map[string]restartStatus {

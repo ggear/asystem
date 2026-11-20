@@ -115,7 +115,7 @@ func EnableStdout(level slog.Level) {
 }
 
 func EnableStdoutAndFile(level slog.Level, cmd, version string, maxSizeMB, maxBackups, maxAgeDays int) error {
-	writer, path, err := fileWriter(cmd, version, maxSizeMB, maxBackups, maxAgeDays)
+	writer, path, err := fileWriter(logDir(), cmd, version, maxSizeMB, maxBackups, maxAgeDays)
 	if err != nil {
 		return err
 	}
@@ -172,7 +172,7 @@ func EnableBuffer(level slog.Level, capacity int) *LogBuffer {
 }
 
 func EnableBufferAndFile(level slog.Level, cmd, version string, capacity, maxSizeMB, maxBackups, maxAgeDays int) (*LogBuffer, error) {
-	writer, path, err := fileWriter(cmd, version, maxSizeMB, maxBackups, maxAgeDays)
+	writer, path, err := fileWriter(logDirWatch(os.Geteuid() == 0), cmd, version, maxSizeMB, maxBackups, maxAgeDays)
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +194,7 @@ func EnableBufferAndFile(level slog.Level, cmd, version string, capacity, maxSiz
 }
 
 func EnableBackupAndFile(level slog.Level, cmd, version string, quiet bool, maxSizeMB, maxBackups, maxAgeDays int) error {
-	writer, path, err := fileWriter(cmd, version, maxSizeMB, maxBackups, maxAgeDays)
+	writer, path, err := fileWriter(logDir(), cmd, version, maxSizeMB, maxBackups, maxAgeDays)
 	if err != nil {
 		return err
 	}
@@ -864,8 +864,14 @@ func logDir() string {
 	return logDirUser
 }
 
-func fileWriter(cmd, version string, maxSizeMB, maxBackups, maxAgeDays int) (io.WriteCloser, string, error) {
-	dir := logDir()
+func logDirWatch(root bool) string {
+	if root {
+		return logDirRun
+	}
+	return logDir()
+}
+
+func fileWriter(dir, cmd, version string, maxSizeMB, maxBackups, maxAgeDays int) (io.WriteCloser, string, error) {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, "", fmt.Errorf("create log directory failed [%s] [%w]", dir, err)
 	}
@@ -971,6 +977,7 @@ const (
 	logDirUser    = "/tmp/supervisor"
 	logDirUserMac = "Library/Logs/supervisor"
 	logDirRoot    = "/var/log/supervisor"
+	logDirRun     = "/run/supervisor"
 
 	logFileSuffix             = ".log"
 	logFileArchive            = ".gz"
