@@ -191,6 +191,8 @@
       name: Sonos Parents
     - entity: sensor.kitchen_move_battery
       name: Sonos Kitchen
+    - entity: sensor.rackmains_battery_charge_pct
+      name: Server Rack
 ################################################################################
 - type: custom:layout-break
 ################################################################################

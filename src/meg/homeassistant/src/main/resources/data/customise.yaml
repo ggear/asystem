@@ -769,6 +769,9 @@ sensor.parents_move_battery:
   friendly_name: 'Sonos Parents'
 sensor.kitchen_move_battery:
   friendly_name: 'Sonos Kitchen'
+sensor.rackmains_battery_charge_pct:
+  friendly_name: 'Server Rack'
+  unit_of_measurement: '%'
 sensor.all_standby:
   friendly_name: 'Standby Power'
 switch.rack_screen_plug:
