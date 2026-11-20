@@ -2,7 +2,7 @@
 // WARNING: This file is written by the build process, any manual edits will be lost!
 ////////////////////////////////////////////////////////////////////////////////
 
-// project rackmains_ups_battery sha256 c013f443650f82183c887a212658c278d260a032fb5826bf1a74b476e56868dc
+// project rackmains_ups_battery sha256 245d6fb719d7cd44ebf4dea3894a6be0e9268d368a6e5d5a56d160763b65ed3e
 
 use std::path::Path;
 
