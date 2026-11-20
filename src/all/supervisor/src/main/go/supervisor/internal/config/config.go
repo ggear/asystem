@@ -27,6 +27,7 @@ type Periods struct {
 	CacheMins     int
 	SnapshotMins  int
 	HeartbeatSecs int
+	SilentMillis  int
 }
 
 func Load(path string) *Config {
@@ -240,6 +241,13 @@ func (c *Config) Services(host string) []string {
 		}
 	}
 	return []string{}
+}
+
+func (p Periods) SilentWindow() time.Duration {
+	if p.SilentMillis > 0 {
+		return time.Duration(p.SilentMillis) * time.Millisecond
+	}
+	return time.Duration(silentPulses*p.PulseMillis) * time.Millisecond
 }
 
 func TimingScale() int {
@@ -468,6 +476,8 @@ const (
 	TimingScaleEnvVar = "SUPERVISOR_TIMING_SCALE"
 
 	FormFactorServer = "server"
+
+	silentPulses = 3
 )
 
 var (

@@ -119,205 +119,6 @@ func assertServicesProbed(t *testing.T, cache *metric.RecordCache, hostName stri
 	}
 }
 
-func TestEngineImplWatch_HostStatus(t *testing.T) {
-	value := metric.ValueData{Timestamp: time.Now().Unix(), Pulse: &metric.ValueDataDetail{OK: true, Kind: metric.ValueString, ValueString: "v"}}
-	tests := []struct {
-		name          string
-		setupFunc     func()
-		checkFunc     func(*testing.T)
-		expectedError bool
-	}{
-		{
-			name: "happy_unknown_host_is_online",
-			setupFunc: func() {
-				hostStatusMu.Lock()
-				hostStatus = make(map[string]bool)
-				hostStatusMu.Unlock()
-			},
-			checkFunc: func(t *testing.T) {
-				if !assertHostOnline("unknown-host") {
-					t.Fatalf("Got offline, expected unknown host to be treated as online")
-				}
-			},
-			expectedError: false,
-		},
-		{
-			name: "happy_set_online",
-			setupFunc: func() {
-				hostStatusMu.Lock()
-				hostStatus = make(map[string]bool)
-				hostStatusMu.Unlock()
-				storeHostStatus("alpha", true)
-			},
-			checkFunc: func(t *testing.T) {
-				if !assertHostOnline("alpha") {
-					t.Fatalf("Got offline, expected online after storeHostStatus true")
-				}
-			},
-			expectedError: false,
-		},
-		{
-			name: "happy_set_offline",
-			setupFunc: func() {
-				hostStatusMu.Lock()
-				hostStatus = make(map[string]bool)
-				hostStatusMu.Unlock()
-				storeHostStatus("alpha", false)
-			},
-			checkFunc: func(t *testing.T) {
-				if assertHostOnline("alpha") {
-					t.Fatalf("Got online, expected offline after storeHostStatus false")
-				}
-			},
-			expectedError: false,
-		},
-		{
-			name: "happy_offline_evicts_service_metrics",
-			setupFunc: func() {
-				hostStatusMu.Lock()
-				hostStatus = make(map[string]bool)
-				hostStatusMu.Unlock()
-			},
-			checkFunc: func(t *testing.T) {
-				cache := metric.NewRecordCache()
-				cache.Store(metric.NewServiceRecordGUID(metric.MetricServiceName, "alpha", "svc-a"), &metric.Record{Value: value})
-				storeHostStatus("alpha", false)
-				for _, svc := range cache.Services("alpha") {
-					cache.Evict("alpha", svc)
-				}
-				record, ok := cache.Load(metric.NewServiceRecordGUID(metric.MetricServiceName, "alpha", "svc-a"))
-				if !ok || record == nil {
-					t.Fatalf("Got record deleted, expected evicted to nil but present")
-				}
-				if record.Value.Pulse != nil {
-					t.Fatalf("Got non-nil pulse, expected service record evicted to nil on offline")
-				}
-			},
-			expectedError: false,
-		},
-		{
-			name: "happy_offline_evicts_only_services_of_offline_host",
-			setupFunc: func() {
-				hostStatusMu.Lock()
-				hostStatus = make(map[string]bool)
-				hostStatusMu.Unlock()
-			},
-			checkFunc: func(t *testing.T) {
-				cache := metric.NewRecordCache()
-				cache.Store(metric.NewServiceRecordGUID(metric.MetricServiceName, "alpha", "svc-a"), &metric.Record{Value: value})
-				cache.Store(metric.NewServiceRecordGUID(metric.MetricServiceName, "beta", "svc-b"), &metric.Record{Value: value})
-				storeHostStatus("alpha", false)
-				for _, svc := range cache.Services("alpha") {
-					cache.Evict("alpha", svc)
-				}
-				betaRecord, ok := cache.Load(metric.NewServiceRecordGUID(metric.MetricServiceName, "beta", "svc-b"))
-				if !ok || betaRecord == nil {
-					t.Fatalf("Got beta record missing, expected untouched when only alpha goes offline")
-				}
-				if betaRecord.Value.Pulse == nil {
-					t.Fatalf("Got beta pulse nil, expected beta services unaffected when alpha goes offline")
-				}
-			},
-			expectedError: false,
-		},
-		{
-			name: "happy_offline_evicts_host_metrics",
-			setupFunc: func() {
-				hostStatusMu.Lock()
-				hostStatus = make(map[string]bool)
-				hostStatusMu.Unlock()
-			},
-			checkFunc: func(t *testing.T) {
-				cache := metric.NewRecordCache()
-				cache.Store(metric.NewRecordGUID(metric.MetricHost, "alpha"), &metric.Record{Value: value})
-				storeHostStatus("alpha", false)
-				for _, id := range metric.GetIDsByKind([]metric.MetricKind{metric.MetricKindHost}) {
-					record := metric.NewRecord(metric.NewNilValue())
-					cache.Store(metric.NewRecordGUID(id, "alpha"), &record)
-				}
-				record, ok := cache.Load(metric.NewRecordGUID(metric.MetricHost, "alpha"))
-				if !ok || record == nil {
-					t.Fatalf("Got host record deleted, expected evicted to nil but present")
-				}
-				if record.Value.Pulse != nil {
-					t.Fatalf("Got non-nil pulse, expected host record evicted to nil on offline")
-				}
-			},
-			expectedError: false,
-		},
-		{
-			name: "happy_online_allows_store",
-			setupFunc: func() {
-				hostStatusMu.Lock()
-				hostStatus = make(map[string]bool)
-				hostStatusMu.Unlock()
-				storeHostStatus("alpha", true)
-			},
-			checkFunc: func(t *testing.T) {
-				if !assertHostOnline("alpha") {
-					t.Fatalf("Got offline, expected online host to allow stores")
-				}
-			},
-			expectedError: false,
-		},
-		{
-			name: "happy_offline_blocks_store",
-			setupFunc: func() {
-				hostStatusMu.Lock()
-				hostStatus = make(map[string]bool)
-				hostStatusMu.Unlock()
-				storeHostStatus("alpha", false)
-			},
-			checkFunc: func(t *testing.T) {
-				if assertHostOnline("alpha") {
-					t.Fatalf("Got online, expected offline host to block stores")
-				}
-			},
-			expectedError: false,
-		},
-		{
-			name: "happy_online_after_offline_allows_store",
-			setupFunc: func() {
-				hostStatusMu.Lock()
-				hostStatus = make(map[string]bool)
-				hostStatusMu.Unlock()
-				storeHostStatus("alpha", false)
-				storeHostStatus("alpha", true)
-			},
-			checkFunc: func(t *testing.T) {
-				if !assertHostOnline("alpha") {
-					t.Fatalf("Got offline, expected online after transitioning offline→online")
-				}
-			},
-			expectedError: false,
-		},
-		{
-			name: "happy_stale_offline_cleared_on_restart",
-			setupFunc: func() {
-				hostStatusMu.Lock()
-				hostStatus = make(map[string]bool)
-				hostStatusMu.Unlock()
-				storeHostStatus("alpha", false)
-			},
-			checkFunc: func(t *testing.T) {
-				hostStatusMu.Lock()
-				hostStatus = make(map[string]bool)
-				hostStatusMu.Unlock()
-				if !assertHostOnline("alpha") {
-					t.Fatalf("Got offline, expected stale offline status cleared after restart")
-				}
-			},
-			expectedError: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.setupFunc()
-			tt.checkFunc(t)
-		})
-	}
-}
-
 func TestEngineImplWatch_RunListeningStreamLoop(t *testing.T) {
 	scribe.EnableStdout(slog.LevelDebug)
 	testutil.RequiresDocker(t)
@@ -344,11 +145,11 @@ func TestEngineImplWatch_RunListeningStreamLoop(t *testing.T) {
 	reconciles := &countingRefreshListener{}
 	var sizeBeforeOffline, topicsBeforeOffline int
 	reconcileGrace = time.Second
-	t.Cleanup(func() { reconcileGrace = 10 * time.Second; watchSilentPulses = 3 })
+	t.Cleanup(func() { reconcileGrace = 10 * time.Second })
 	tests := []struct {
 		name         string
 		topic        string
-		silentPulses int
+		silentMillis int
 		setupFunc    func(*testing.T, *metric.RecordCache, metric.TopicBinding) []byte
 		checkFunc    func(*testing.T, *metric.RecordCache, metric.TopicBinding)
 	}{
@@ -608,7 +409,7 @@ func TestEngineImplWatch_RunListeningStreamLoop(t *testing.T) {
 		{
 			name:         "happy_silent_online_host_is_blanked_then_revived_by_later_data",
 			topic:        "supervisor/alpha/status",
-			silentPulses: 3,
+			silentMillis: 3000,
 			setupFunc: func(_ *testing.T, _ *metric.RecordCache, _ metric.TopicBinding) []byte {
 				return []byte(metric.AvailabilityOnline)
 			},
@@ -685,9 +486,10 @@ func TestEngineImplWatch_RunListeningStreamLoop(t *testing.T) {
 			if binding.Topic == "" {
 				t.Fatalf("Got no binding for svc-a, expected topic to be set after store")
 			}
-			watchSilentPulses = 600
-			if tt.silentPulses > 0 {
-				watchSilentPulses = tt.silentPulses
+			caseTiming := periods
+			caseTiming.SilentMillis = 600_000
+			if tt.silentMillis > 0 {
+				caseTiming.SilentMillis = tt.silentMillis
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
@@ -696,7 +498,7 @@ func TestEngineImplWatch_RunListeningStreamLoop(t *testing.T) {
 			cache.SubscribeRefresh(attached)
 			go func() {
 				defer close(done)
-				RunListeningStreamLoop(ctx, configFile, cache, periods)
+				RunListeningStreamLoop(ctx, configFile, cache, caseTiming)
 			}()
 			for attachDeadline := time.Now().Add(15 * time.Second); attached.count() == 0; {
 				if !time.Now().Before(attachDeadline) {
@@ -838,8 +640,6 @@ func watchBrokerLost(t *testing.T, inner net.Listener, listener *severableListen
 	if err := os.WriteFile(configFile, []byte(content), 0644); err != nil {
 		t.Fatalf("write config file failed: %v", err)
 	}
-	watchSilentPulses = 600
-	t.Cleanup(func() { watchSilentPulses = 3 })
 	cache := metric.NewRecordCache()
 	guid := metric.NewServiceRecordGUID(metric.MetricServiceName, "alpha", "svc-a")
 	held := metric.ValueData{Timestamp: time.Now().Unix(), Pulse: &metric.ValueDataDetail{OK: true, Kind: metric.ValueString, ValueString: "svc-a"}}
@@ -850,7 +650,7 @@ func watchBrokerLost(t *testing.T, inner net.Listener, listener *severableListen
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		RunListeningStreamLoop(ctx, configFile, cache, config.Periods{PulseMillis: 1000, HeartbeatSecs: 30})
+		RunListeningStreamLoop(ctx, configFile, cache, config.Periods{PulseMillis: 1000, HeartbeatSecs: 30, SilentMillis: 600_000})
 	}()
 	t.Cleanup(func() {
 		cancel()

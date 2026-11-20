@@ -74,10 +74,9 @@ func RunListeningProbesLoop(ctx context.Context, configPath string, cache *metri
 //   - offline: evict every service to nil, store nil for the host metrics and cancel any pending reconcile, which keeps
 //     the slots for repopulation and stops a reap firing against a host that has stopped answering.
 //
-// On the connection lost, blank every host as an offline status would, the reconnect refilling from retained.
-//
-// On the live tick, twice a second, mark offline and blank an online host that has published nothing live for three
-// pulses, retained deliveries not counting, so a host that slept while the broker was down is not shown on a retained online.
+// On the live tick, twice a second, and at once when paho reports the connection lost, mark offline and blank every
+// online host that has published nothing live inside the window, which is three pulses on the tick and none on a loss.
+// Retained deliveries never count, so a host that slept while the broker was down is not shown on a retained online.
 //
 // On the purge tick:
 //  1. Evict the records of a silent host to nil, then delete a service whose records have stayed nil.
@@ -114,9 +113,8 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		}
 	}
 	var rxCount atomic.Int64
-	var liveMu sync.Mutex
-	liveAt := make(map[string]time.Time)
-	openedAt := time.Now()
+	hosts := newHostLiveness()
+	lost := make(chan struct{}, 1)
 	var dropCount atomic.Int64
 	var subscribedMu sync.Mutex
 	subscribed := make(map[string]metric.RecordGUID)
@@ -165,14 +163,14 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		return len(evicted)
 	}
 	proveOnline := func(client mqtt.Client, hostName string, value metric.ValueData) bool {
-		if assertHostOnline(hostName) {
+		if hosts.assertOnline(hostName) {
 			return true
 		}
-		if value.Pulse == nil || value.Timestamp <= hostOfflineAt(hostName) {
+		if value.Pulse == nil || value.Timestamp <= hosts.offlineStamp(hostName) {
 			return false
 		}
 		reviveStart := time.Now()
-		storeHostStatus(hostName, true)
+		hosts.store(hostName, true)
 		scheduleReconcile(hostName, false)
 		topics := resubscribeHost(client, hostName)
 		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Infof("observed", reviveStart, "[online] resub [%2d], retry [%2d] s", topics, int64(reconcileDelay.Seconds()))
@@ -195,7 +193,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			dropCount.Add(1)
 			return
 		}
-		online := assertHostOnline(guid.Host)
+		online := hosts.assertOnline(guid.Host)
 		if len(msg.Payload()) == 0 {
 			if !online {
 				dropCount.Add(1)
@@ -218,9 +216,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		}
 		rxCount.Add(1)
 		if !msg.Retained() {
-			liveMu.Lock()
-			liveAt[guid.Host] = time.Now()
-			liveMu.Unlock()
+			hosts.hear(guid.Host)
 		}
 		if value.Pulse == nil {
 			removeService(guid)
@@ -377,12 +373,10 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		}
 		payload := strings.TrimSpace(string(msg.Payload()))
 		rxCount.Add(1)
-		hostStatusMu.RLock()
-		wasOnline, known := hostStatus[hostName]
-		hostStatusMu.RUnlock()
+		wasOnline, known := hosts.statusOf(hostName)
 		switch payload {
 		case metric.AvailabilityOnline:
-			storeHostStatus(hostName, true)
+			hosts.store(hostName, true)
 			if known && wasOnline {
 				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionCensus).Debugf("observed", statusStart, "[online], with heartbeat [no-op]")
 				return
@@ -402,7 +396,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Infof("observed", statusStart, "[online] transition by [%-7.7s]", trigger)
 			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Infof("observed", statusStart, "[%3d] topics, reconcile [%2d] sec", topics, int64(reconcileDelay.Seconds()))
 		case metric.AvailabilityOffline, "":
-			storeHostStatus(hostName, false)
+			hosts.store(hostName, false)
 			if known && !wasOnline {
 				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionCensus).Debugf("observed", statusStart, "[offline] with heartbeat [no-op]")
 				return
@@ -458,13 +452,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 	}
 	onConnect := func(client mqtt.Client) {
 		connectStart := time.Now()
-		liveMu.Lock()
-		openedAt = connectStart
-		liveMu.Unlock()
-		hostStatusMu.Lock()
-		clear(hostStatus)
-		clear(hostOffline)
-		hostStatusMu.Unlock()
+		hosts.reset(connectStart)
 		subscribedMu.Lock()
 		clear(subscribed)
 		subscribedMu.Unlock()
@@ -482,16 +470,28 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionSubscribe).Infof("retained", connectStart, "[%3d] hosts, holding [%4d] recs", len(cache.Hosts()), cache.Size())
 	}
 	clientStart := time.Now()
-	blankAll := func() {
-		blankStart := time.Now()
-		hosts := cache.Hosts()
-		for hostName := range hosts {
-			blankHost(hostName)
+	sweepQuiet := func(after time.Duration) {
+		names := make([]string, 0, len(cache.Hosts()))
+		for hostName := range cache.Hosts() {
+			names = append(names, hostName)
 		}
-		cache.Refresh()
-		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionDisconnect).Warnf("blanking", blankStart, "[broker] lost, [%2d] hosts", len(hosts))
+		quiet := hosts.quietAmong(names, time.Now(), after)
+		for hostName, silence := range quiet {
+			silentStart := time.Now()
+			hosts.store(hostName, false)
+			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionDisconnect).Warnf("silenced", silentStart, "[offline] evicted [%3d] services, no traffic for [%3d] s", blankHost(hostName), int64(silence.Seconds()))
+		}
+		if len(quiet) > 0 {
+			cache.Refresh()
+		}
 	}
-	client, err := brokerConnect(ctx, configPath, brokerSession{keepAlive: watchKeepAlive, pingTimeout: watchPingTimeout, onConnect: onConnect, onLost: blankAll})
+	onLost := func() {
+		select {
+		case lost <- struct{}{}:
+		default:
+		}
+	}
+	client, err := brokerConnect(ctx, configPath, brokerSession{keepAlive: watchKeepAlive, pingTimeout: watchPingTimeout, onConnect: onConnect, onLost: onLost})
 	if err != nil {
 		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStop).Errorf("faulting", clientStart, "[%-16.16s] loop halted, [%v]", loopListeningStream, err)
 		return
@@ -514,7 +514,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 	})
 	purgeInterval := time.Duration(max(periods.PulseMillis+1000, 2000)) * time.Millisecond
 	silent := 0
-	silentAfter := time.Duration(watchSilentPulses*periods.PulseMillis) * time.Millisecond
+	silentAfter := periods.SilentWindow()
 	liveTicker := time.NewTicker(watchLiveInterval)
 	defer liveTicker.Stop()
 	purgeTicker := time.NewTicker(purgeInterval)
@@ -523,31 +523,10 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		select {
 		case <-ctx.Done():
 			return
+		case <-lost:
+			sweepQuiet(0)
 		case <-liveTicker.C:
-			if !client.IsConnectionOpen() {
-				continue
-			}
-			now := time.Now()
-			quiet := make(map[string]time.Duration)
-			liveMu.Lock()
-			for hostName := range cache.Hosts() {
-				last := liveAt[hostName]
-				if openedAt.After(last) {
-					last = openedAt
-				}
-				if now.Sub(last) > silentAfter && assertHostOnline(hostName) {
-					quiet[hostName] = now.Sub(last)
-				}
-			}
-			liveMu.Unlock()
-			for hostName, silence := range quiet {
-				silentStart := time.Now()
-				storeHostStatus(hostName, false)
-				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionDisconnect).Warnf("silenced", silentStart, "[offline] evicted [%3d] services, no traffic for [%3d] s", blankHost(hostName), int64(silence.Seconds()))
-			}
-			if len(quiet) > 0 {
-				cache.Refresh()
-			}
+			sweepQuiet(silentAfter)
 		case <-purgeTicker.C:
 			purgeStart := time.Now()
 			evicted, deleted := cache.Purge(periods.HeartbeatSecs + 10*periods.PulseMillis/1000)
@@ -621,7 +600,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			subscribedMu.Unlock()
 			anyOnline := false
 			for hostName := range cache.Hosts() {
-				if anyOnline = assertHostOnline(hostName); anyOnline {
+				if anyOnline = hosts.assertOnline(hostName); anyOnline {
 					break
 				}
 			}
@@ -644,7 +623,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			online := 0
 			services := 0
 			for hostName := range cache.Hosts() {
-				if assertHostOnline(hostName) {
+				if hosts.assertOnline(hostName) {
 					online++
 				}
 				services += len(cache.Services(hostName))
@@ -719,34 +698,6 @@ func watchIdle(rx int64, attached int, open, anyOnline bool) bool {
 	return rx == 0 && attached > 0 && open && anyOnline
 }
 
-func assertHostOnline(hostName string) bool {
-	hostStatusMu.RLock()
-	online, known := hostStatus[hostName]
-	hostStatusMu.RUnlock()
-	return !known || online
-}
-
-func storeHostStatus(hostName string, online bool) {
-	hostStatusMu.Lock()
-	if !online {
-		hostOffline[hostName] = time.Now().Unix()
-	}
-	hostStatus[hostName] = online
-	hostStatusMu.Unlock()
-}
-
-func hostOfflineAt(hostName string) int64 {
-	hostStatusMu.RLock()
-	at := hostOffline[hostName]
-	hostStatusMu.RUnlock()
-	return at
-}
-
-func init() {
-	hostStatus = make(map[string]bool)
-	hostOffline = make(map[string]int64)
-}
-
 const (
 	topicStatus    = "supervisor/+/status"
 	topicDiscovery = "supervisor/+/data/service/+/name"
@@ -760,11 +711,4 @@ const (
 	watchPingTimeout  = 2 * time.Second
 )
 
-var (
-	hostStatusMu sync.RWMutex
-	hostStatus   map[string]bool
-	hostOffline  map[string]int64
-
-	reconcileGrace    = 10 * time.Second / time.Duration(config.TimingScale())
-	watchSilentPulses = 3
-)
+var reconcileGrace = 10 * time.Second / time.Duration(config.TimingScale())

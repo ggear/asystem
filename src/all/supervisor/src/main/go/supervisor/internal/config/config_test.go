@@ -1179,3 +1179,22 @@ func TestConfig_DocumentVersion(t *testing.T) {
 		})
 	}
 }
+
+func TestConfig_SilentWindow(t *testing.T) {
+	tests := []struct {
+		name           string
+		periods        Periods
+		expectedWindow time.Duration
+	}{
+		{name: "three_pulses_by_default", periods: Periods{PulseMillis: 6000}, expectedWindow: 18 * time.Second},
+		{name: "an_explicit_window_wins", periods: Periods{PulseMillis: 6000, SilentMillis: 2500}, expectedWindow: 2500 * time.Millisecond},
+		{name: "no_pulse_and_no_window_is_zero", periods: Periods{}, expectedWindow: 0},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if actual := test.periods.SilentWindow(); actual != test.expectedWindow {
+				t.Errorf("SilentWindow: got %v want %v", actual, test.expectedWindow)
+			}
+		})
+	}
+}
