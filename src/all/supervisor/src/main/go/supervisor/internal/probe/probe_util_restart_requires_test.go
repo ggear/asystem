@@ -61,8 +61,9 @@ func TestProbeUtilRestartRequires_Met(t *testing.T) {
 		{name: "no_cifs_entries_at_all_is_not_met", requirement: restartRequirement{kind: "mounts", target: "all-cifs"}, noFstab: true, expected: false},
 		{name: "a_tcp_connection_that_opens_is_met", requirement: restartRequirement{kind: "tcp", target: "broker:32404"}, expected: true},
 		{name: "a_tcp_connection_that_is_refused_is_not_met", requirement: restartRequirement{kind: "tcp", target: "broker:32404"}, dialError: errors.New("refused"), expected: false},
-		{name: "an_mqtt_round_trip_that_returns_its_message_is_met", requirement: restartRequirement{kind: "mqtt", target: "broker:32404"}, outputs: map[string]string{"bash": "ok\n"}, expected: true},
-		{name: "an_mqtt_round_trip_that_returns_nothing_is_not_met", requirement: restartRequirement{kind: "mqtt", target: "broker:32404"}, expected: false},
+		{name: "an_mqtt_round_trip_that_returns_its_message_is_met", requirement: restartRequirement{kind: "mqtt", target: "broker:32404:mqttv5"}, outputs: map[string]string{"bash": "ok\n"}, expected: true},
+		{name: "an_mqtt_round_trip_that_returns_nothing_is_not_met", requirement: restartRequirement{kind: "mqtt", target: "broker:32404:mqttv5"}, expected: false},
+		{name: "an_mqtt_target_without_a_protocol_is_not_met", requirement: restartRequirement{kind: "mqtt", target: "broker:32404"}, outputs: map[string]string{"bash": "ok\n"}, expected: false},
 		{name: "a_healthy_service_is_met", requirement: restartRequirement{kind: "healthy", target: "vernemq"}, outputs: map[string]string{"docker inspect --format {{.State.Health.Status}} vernemq": "healthy\n"}, expected: true},
 		{name: "a_starting_service_is_not_met", requirement: restartRequirement{kind: "healthy", target: "vernemq"}, outputs: map[string]string{"docker inspect --format {{.State.Health.Status}} vernemq": "starting\n"}, expected: false},
 		{name: "an_unknown_kind_is_not_met", requirement: restartRequirement{kind: "dns", target: "broker"}, expected: false},
@@ -80,6 +81,36 @@ func TestProbeUtilRestartRequires_Met(t *testing.T) {
 			}
 			if got := checker.met(context.Background(), test.requirement); got != test.expected {
 				t.Fatalf("met: got %v want %v, calls %v", got, test.expected, script.calls)
+			}
+		})
+	}
+}
+
+func TestProbeUtilRestartRequires_MQTTSpeaksTheNamedProtocol(t *testing.T) {
+	tests := []struct {
+		name     string
+		accepts  string
+		target   string
+		expected bool
+	}{
+		{name: "a_broker_accepting_the_named_protocol_is_met", accepts: "mqttv5", target: "broker:32404:mqttv5", expected: true},
+		{name: "a_broker_refusing_the_named_protocol_is_not_met", accepts: "mqttv311", target: "broker:32404:mqttv5", expected: false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			bin := t.TempDir()
+			broker := `#!/usr/bin/env bash
+[[ "$1" == "-V" && "$2" == "` + test.accepts + `" ]] || exit 1
+`
+			if err := os.WriteFile(filepath.Join(bin, "mosquitto_pub"), []byte(broker), 0o755); err != nil {
+				t.Fatalf("write failed with [%v]", err)
+			}
+			if err := os.WriteFile(filepath.Join(bin, "mosquitto_sub"), []byte(broker+"echo ok\n"), 0o755); err != nil {
+				t.Fatalf("write failed with [%v]", err)
+			}
+			t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+			if met := newRestartChecker().met(context.Background(), restartRequirement{kind: restartKindMQTT, target: test.target}); met != test.expected {
+				t.Errorf("met: got %v want %v", met, test.expected)
 			}
 		})
 	}

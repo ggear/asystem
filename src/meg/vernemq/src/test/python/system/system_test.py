@@ -21,7 +21,8 @@ CONTAINER = "vernemq"
 TOPIC = "{}/dev/test".format("".join(random.choice(string.ascii_lowercase) for i in range(10)))
 
 
-def test_pubsub():
+@pytest.mark.parametrize("protocol", [mqtt.MQTTv311, mqtt.MQTTv5], ids=["mqttv311", "mqttv5"])
+def test_pubsub(protocol):
     def test():
         messages = []
         connected = False
@@ -40,7 +41,12 @@ def test_pubsub():
             connected = False
             print(f"DISCONNECTED [{reason_code}]")
 
-        client = mqtt.Client(CallbackAPIVersion.VERSION2, client_id="".join(random.choice(string.ascii_lowercase) for i in range(10)), clean_session=True)
+        client = mqtt.Client(
+            CallbackAPIVersion.VERSION2,
+            client_id="".join(random.choice(string.ascii_lowercase) for i in range(10)),
+            clean_session=None if protocol == mqtt.MQTTv5 else True,
+            protocol=protocol,
+        )
         client.on_connect = on_connect
         client.on_message = on_message
         client.on_disconnect = on_disconnect
@@ -51,10 +57,10 @@ def test_pubsub():
         while len(messages) < COUNT and (time.time() - time_start) < TIMEOUT and client.loop(1) == 0:
             if connected and not sent_messages:
                 for i in range(COUNT):
-                    client.publish(f"{TOPIC}/{i}", f"Test {i}", 1, True)
+                    client.publish(f"{TOPIC}/{protocol}/{i}", f"Test {i}", 1, True)
                 sent_messages = True
             elif connected and not subscribed_messages:
-                client.subscribe(f"{TOPIC}/#", 1)
+                client.subscribe(f"{TOPIC}/{protocol}/#", 1)
                 subscribed_messages = True
         client.disconnect()
         print(f"MESSAGES [{len(messages)}]")

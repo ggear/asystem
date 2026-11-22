@@ -54,6 +54,16 @@ func TestProbeUtilRestartDecide_Decide(t *testing.T) {
 			in.attempts = []time.Time{in.now.Add(-3 * time.Minute)}
 		}, expectedState: metric.RestartStateSettling},
 		{name: "a_service_still_starting_is_not_judged", change: func(in *restartInput) { in.health = "starting" }, expectedState: metric.RestartStateOK},
+		{name: "a_service_docker_keeps_restarting_is_suspect_and_left_to_docker", change: func(in *restartInput) {
+			in.health = "starting"
+			in.startedAt = in.now.Add(-20 * time.Second)
+			in.rises = []time.Time{in.now.Add(-20 * time.Second), in.now.Add(-40 * time.Second)}
+		}, expectedState: metric.RestartStateSuspect},
+		{name: "one_docker_restart_inside_the_window_is_not_a_loop", change: func(in *restartInput) {
+			in.health = "starting"
+			in.startedAt = in.now.Add(-20 * time.Second)
+			in.rises = []time.Time{in.now.Add(-20 * time.Second), in.now.Add(-time.Hour)}
+		}, expectedState: metric.RestartStateOK},
 		{name: "unhealthy_for_less_than_one_interval_is_only_suspect", change: func(in *restartInput) { in.unhealthySince = in.now.Add(-time.Minute) }, expectedState: metric.RestartStateSuspect},
 		{name: "unhealthy_inside_the_normal_grace_is_only_suspect", change: func(in *restartInput) { in.startedAt = in.now.Add(-5 * time.Minute) }, expectedState: metric.RestartStateSuspect},
 		{name: "unhealthy_past_the_normal_grace_is_judged_without_waiting_for_the_start_period", change: func(in *restartInput) {

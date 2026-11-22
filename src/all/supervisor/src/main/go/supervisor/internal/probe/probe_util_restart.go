@@ -185,6 +185,7 @@ func (e *restartEngine) step(ctx context.Context, now time.Time, held bool, poli
 		requiresMet:       met,
 		requiresHeldSince: tracked.heldSince,
 		attempts:          history.attempts,
+		rises:             history.rises,
 		streak:            history.streak,
 		supervisorStarted: e.started,
 		hostHold:          held,

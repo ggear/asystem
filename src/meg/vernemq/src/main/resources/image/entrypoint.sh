@@ -23,8 +23,8 @@ open_listeners() {
   echo "vernemq gate round trip ok after [${SECONDS}s], settling [5s]"
   sleep 5
   until round_trip 1883 && (exec 3<>/dev/tcp/127.0.0.1/8080) 2>/dev/null; do
-    vmq-admin listener start address=0.0.0.0 port=1883 --max_connections=10000 >/dev/null 2>&1
-    vmq-admin listener start address=0.0.0.0 port=8080 --websocket --max_connections=10000 >/dev/null 2>&1
+    vmq-admin listener start address=0.0.0.0 port=1883 --max_connections=10000 --allowed_protocol_versions=3,4,5,131 >/dev/null 2>&1
+    vmq-admin listener start address=0.0.0.0 port=8080 --websocket --max_connections=10000 --allowed_protocol_versions=3,4,5,131 >/dev/null 2>&1
   done
   echo "vernemq gate public listeners open after [${SECONDS}s]"
 }

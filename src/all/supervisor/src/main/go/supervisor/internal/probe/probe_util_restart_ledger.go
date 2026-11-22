@@ -62,7 +62,11 @@ func (l *restartLedger) history(service string, container string) restartHistory
 	for _, attempt := range record.Attempts {
 		attempts = append(attempts, time.Unix(attempt, 0))
 	}
-	return restartHistory{attempts: attempts, streak: record.Streak, image: record.Image}
+	rises := make([]time.Time, 0, len(record.Rises))
+	for _, rise := range record.Rises {
+		rises = append(rises, time.Unix(rise, 0))
+	}
+	return restartHistory{attempts: attempts, rises: rises, streak: record.Streak, image: record.Image}
 }
 
 func (l *restartLedger) record(service string, container string, at time.Time) error {
@@ -176,6 +180,7 @@ type restartDocument struct {
 
 type restartHistory struct {
 	attempts []time.Time
+	rises    []time.Time
 	streak   int
 	image    string
 }

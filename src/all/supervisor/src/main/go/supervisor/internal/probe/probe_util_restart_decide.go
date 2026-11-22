@@ -59,6 +59,15 @@ func decideRestart(in restartInput) restartDecision {
 		if in.health == restartHealthUnhealthy {
 			return restartDecision{state: metric.RestartStateSuspect, reason: "unhealthy, inside its grace"}
 		}
+		looping := 0
+		for _, rise := range in.rises {
+			if in.now.Sub(rise) < window {
+				looping++
+			}
+		}
+		if looping >= restartLoopRises {
+			return restartDecision{state: metric.RestartStateSuspect, reason: fmt.Sprintf("crash looping, docker restarted it at least [%d] times inside [%s], left to docker", restartLoopRises, window)}
+		}
 		return restartDecision{state: metric.RestartStateOK, reason: "not judged, " + in.health}
 	}
 	if recent >= restartAttemptsMax {
@@ -113,6 +122,7 @@ type restartInput struct {
 	requiresMet       bool
 	requiresHeldSince time.Time
 	attempts          []time.Time
+	rises             []time.Time
 	streak            int
 	supervisorStarted time.Time
 	hostHold          bool
@@ -137,6 +147,7 @@ const (
 	restartHealthHealthy   = "healthy"
 	restartHealthUnhealthy = "unhealthy"
 	restartAttemptsMax     = 3
+	restartLoopRises       = 2
 	restartWindow          = 24 * time.Hour
 	restartBackoffCap      = time.Hour
 	restartBackoffFloor    = time.Minute

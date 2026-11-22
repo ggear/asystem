@@ -2,6 +2,7 @@ package probe
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 )
@@ -57,9 +58,13 @@ func parseRestartRequirement(value string) (restartRequirement, error) {
 		if target != restartMountsAllCIFS {
 			return restartRequirement{}, fmt.Errorf("policy requires mounts [%s] is not [%s]", target, restartMountsAllCIFS)
 		}
-	case restartKindTCP, restartKindMQTT:
+	case restartKindTCP:
 		if host, port, split := strings.Cut(target, ":"); !split || host == "" || port == "" {
 			return restartRequirement{}, fmt.Errorf("policy requires %s [%s] is not host:port", kind, target)
+		}
+	case restartKindMQTT:
+		if fields := strings.Split(target, ":"); len(fields) != 3 || fields[0] == "" || fields[1] == "" || !slices.Contains(restartMQTTProtocols, fields[2]) {
+			return restartRequirement{}, fmt.Errorf("policy requires %s [%s] is not host:port:protocol with protocol one of [%s]", kind, target, strings.Join(restartMQTTProtocols, ","))
 		}
 	case restartKindHealthy:
 	default:
@@ -89,3 +94,5 @@ const (
 	restartStableDefault = 60 * time.Second
 	restartMountsAllCIFS = "all-cifs"
 )
+
+var restartMQTTProtocols = []string{"mqttv31", "mqttv311", "mqttv5"}
