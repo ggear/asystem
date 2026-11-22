@@ -26,7 +26,9 @@ import (
 //  1. Every host eligible by its own config, whose poll loop is alive, holds a session whose last will empties its
 //     retained candidacy, and renews that candidacy every refresh; any other host withdraws it.
 //  2. Freshness is judged by when a renewal arrived on the receiver's own monotonic clock, never by the sender's
-//     timestamp, so no clock skew or clock step between hosts can make a live candidate read stale.
+//     timestamp, so no clock skew or clock step between hosts can make a live candidate read stale. A retained
+//     replay of this host's own lease is aged from its own last acknowledged write, as its peers age it, so a
+//     reattach cannot make a lease its peers already count stale look fresh to its holder alone.
 //  3. The leader is the host holding a fresh lease while it is itself a fresh candidate, eligible or not by the
 //     receiver's config, otherwise the lowest-named fresh eligible candidate, so an incumbent is never displaced
 //     by a host joining, restarting, or rolling out a config that no longer names it.
@@ -577,6 +579,9 @@ func (c *leaderCampaign) observe(client mqtt.Client, message mqtt.Message) {
 		c.resignedBy = ""
 		if payload != "" && json.Unmarshal([]byte(payload), &c.lease) == nil && c.lease.Host != "" {
 			c.leaseArrived = received
+			if message.Retained() && c.lease.Host == c.host {
+				c.leaseArrived = c.lastLease
+			}
 			c.vacated = false
 			c.leaseLive = time.Time{}
 			if !message.Retained() {

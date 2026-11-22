@@ -1052,6 +1052,36 @@ func TestProbeUtilLeader_RetainedLeaseIsNeverLive(t *testing.T) {
 	}
 }
 
+func TestProbeUtilLeader_RetainedLeaseAgesFromItsLastWrite(t *testing.T) {
+	tests := []struct {
+		name           string
+		leaseHost      string
+		lastWriteAgo   time.Duration
+		expectedLeader string
+		expectedError  bool
+	}{
+		{name: "own_lease_written_within_the_ttl_keeps_incumbency", leaseHost: "max", lastWriteAgo: time.Second, expectedLeader: "max", expectedError: false},
+		{name: "own_lease_written_past_the_ttl_reads_stale_as_peers_see_it", leaseHost: "max", lastWriteAgo: 5 * time.Second, expectedLeader: "mad", expectedError: false},
+		{name: "own_lease_never_written_by_this_process_is_stale", leaseHost: "max", lastWriteAgo: 0, expectedLeader: "mad", expectedError: false},
+		{name: "peer_lease_replayed_on_attach_counts_from_arrival", leaseHost: "meg", lastWriteAgo: 0, expectedLeader: "meg", expectedError: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			campaign := leaderStubCampaign([]string{"mad", "max", "meg"}, "max")
+			now := time.Now()
+			if tt.lastWriteAgo > 0 {
+				campaign.lastLease = now.Add(-tt.lastWriteAgo)
+			}
+			campaign.candidates["mad"], campaign.candidates["max"], campaign.candidates["meg"] = now, now, now
+			payload, _ := json.Marshal(leaderLease{Host: tt.leaseHost, Epoch: 1})
+			campaign.observe(campaign.client, leaderStubMessage{topic: campaign.election.leaseTopic(), payload: payload, retained: true})
+			if leader := leaderElected(campaign.election.eligible(), campaign.candidates, campaign.lease, campaign.leaseArrived, time.Now(), campaign.timing.ttl); leader != tt.expectedLeader {
+				t.Errorf("leader: got %q want %q", leader, tt.expectedLeader)
+			}
+		})
+	}
+}
+
 func leaderStubCampaign(eligible []string, host string) *leaderCampaign {
 	campaign := newLeaderCampaignState("", host, leaderElection{name: "test", root: "test/election", eligible: func() []string { return eligible }}, leaderTiming{
 		refresh: 200 * time.Millisecond, publishTimeout: 150 * time.Millisecond, ackWindow: 550 * time.Millisecond,
