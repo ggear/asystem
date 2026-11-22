@@ -71,8 +71,10 @@ export PYENV_ROOT="${HOME}/.pyenv"
 eval "$(pyenv init -)"
 
 export GOENV_ROOT="${HOME}/.goenv"
-export GOPATH="${HOME}/.go"
-export GOBIN="${HOME}/.go/bin"
+export GOENV_DISABLE_GOPATH=1
+export GOPATH="${HOME}/Code/asystem/.go"
+export GOBIN="${GOPATH}/bin"
+export GOMODCACHE="${GOPATH}/pkg/mod"
 eval "$(goenv init -)"
 
 export NVM_DIR="${HOME}/.nvm"
@@ -231,7 +233,7 @@ cat <<'EOF' >~/Library/LaunchAgents/me.graham.goenv.plist
   <array>
     <string>sh</string>
     <string>-c</string>
-    <string>launchctl setenv GOPATH /Users/graham/.go &amp;&amp; launchctl setenv GOBIN /Users/graham/.go/bin</string>
+    <string>launchctl setenv GOENV_DISABLE_GOPATH 1 &amp;&amp; launchctl setenv GOPATH /Users/graham/Code/asystem/.go &amp;&amp; launchctl setenv GOBIN /Users/graham/Code/asystem/.go/bin &amp;&amp; launchctl setenv GOMODCACHE /Users/graham/Code/asystem/.go/pkg/mod</string>
   </array>
   <key>RunAtLoad</key>
   <true/>

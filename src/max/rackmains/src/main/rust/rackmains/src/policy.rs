@@ -143,13 +143,12 @@ impl Loaded {
     pub fn state_names(&self) -> Vec<String> {
         self.model.signature()["parameters"]["state"]
             .as_array()
-            .map(|slots| {
+            .map_or_default(|slots| {
                 slots
                     .iter()
                     .filter_map(|slot| slot["name"].as_str().map(str::to_string))
                     .collect()
             })
-            .unwrap_or_default()
     }
 
     pub fn call(&self, request: Request) -> Result<Answer, String> {

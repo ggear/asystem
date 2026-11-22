@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
+	"maps"
 	"net"
 	"os"
 	"path/filepath"
@@ -16,6 +18,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 func TestEngineImplWatch_RunListeningProbesLoop(t *testing.T) {
@@ -793,4 +797,355 @@ func TestEngineImplWatch_LivenessMetricIsAlwaysSubscribed(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEngineImplWatch_DrillConverges(t *testing.T) {
+	tests := []struct {
+		name        string
+		outage      time.Duration
+		flushRetain bool
+		hostsFirst  bool
+		staggers    map[string]time.Duration
+		recoverIn   time.Duration
+	}{
+		{name: "retained_flushed_hosts_back_after_the_watch", outage: 6 * time.Second, flushRetain: true, staggers: map[string]time.Duration{"meg": 0, "max": 2 * time.Second, "jen": time.Second}, recoverIn: 3 * time.Second},
+		{name: "retained_flushed_hosts_back_before_the_watch", outage: 6 * time.Second, flushRetain: true, hostsFirst: true, staggers: map[string]time.Duration{"meg": 0, "max": 2 * time.Second, "jen": time.Second}, recoverIn: 3 * time.Second},
+		{name: "watch_link_lost_retained_kept", outage: 6 * time.Second, flushRetain: false, staggers: map[string]time.Duration{"meg": 0, "max": 0, "jen": 0}, recoverIn: 2 * time.Second},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, _, err := testutil.SetupBrokerContainer(t)
+			if err != nil {
+				t.Fatalf("broker setup failed with [%v]", err)
+			}
+			brokerAddr := net.JoinHostPort(os.Getenv("VERNEMQ_HOST"), os.Getenv("VERNEMQ_API_PORT"))
+			proxy := newGateProxy(t, brokerAddr)
+			periods := config.Periods{PulseMillis: 1000, HeartbeatSecs: 4}
+			hosts := []string{"meg", "max", "jen"}
+			fleet := map[string]*drillServe{}
+			for _, host := range hosts {
+				fleet[host] = newDrillServe(t, brokerAddr, host, periods)
+			}
+			fleet["jen"].service = "zigbee2mqtt"
+			fleet["meg"].set(drillShares, drillValue(true, 0))
+			fleet["max"].set(drillShares, drillValue(true, 0))
+			fleet["jen"].set(drillShares, drillValue(true, 0))
+			fleet["jen"].set(drillMemory, drillValue(true, 30))
+			for _, host := range hosts {
+				fleet[host].start()
+			}
+			cache := metric.NewRecordCache()
+			painted := map[string]*countingUpdates{}
+			for _, host := range hosts {
+				painted[host] = &countingUpdates{}
+				cache.SubscribeUpdates(metric.NewRecordGUID(metric.MetricHostFailedShares, host), painted[host])
+			}
+			memoryPainted := &countingUpdates{}
+			cache.SubscribeUpdates(metric.NewServiceSchemaRecordGUID(metric.MetricServiceUsedMemory, "jen", 0), memoryPainted)
+			ctx, cancel := context.WithCancel(context.Background())
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				RunListeningStreamLoop(ctx, writeWatchConfig(t, "127.0.0.1", strconv.Itoa(proxy.port())), cache, periods)
+			}()
+			t.Cleanup(func() {
+				cancel()
+				<-done
+			})
+			shown := func() map[string]string {
+				view := map[string]string{}
+				for _, host := range hosts {
+					view[host+"/shares"] = drillShown(cache.Load(metric.NewRecordGUID(metric.MetricHostFailedShares, host)))
+				}
+				view["jen/memory"] = drillShown(cache.LoadByID(metric.MetricServiceUsedMemory, "jen", 0))
+				return view
+			}
+			expected := func() map[string]string {
+				return map[string]string{"meg/shares": fleet["meg"].shown(drillShares), "max/shares": fleet["max"].shown(drillShares), "jen/shares": fleet["jen"].shown(drillShares), "jen/memory": fleet["jen"].shown(drillMemory)}
+			}
+			awaitConverged := func(stage string, within time.Duration) {
+				t.Helper()
+				deadline := time.Now().Add(within)
+				for {
+					got, want := shown(), expected()
+					if maps.Equal(got, want) {
+						t.Logf("stage [%s] converged %v", stage, got)
+						return
+					}
+					if time.Now().After(deadline) {
+						t.Fatalf("stage [%s] not converged after [%v]: got %v want %v", stage, within, got, want)
+					}
+					time.Sleep(100 * time.Millisecond)
+				}
+			}
+			awaitConverged("steady", 15*time.Second)
+			proxy.block()
+			for _, host := range hosts {
+				fleet[host].stop()
+			}
+			if test.flushRetain {
+				for _, host := range hosts {
+					fleet[host].flush()
+				}
+			}
+			fleet["meg"].set(drillShares, drillValue(false, 73))
+			fleet["max"].set(drillShares, drillValue(false, 27))
+			fleet["jen"].set(drillMemory, drillValue(false, 95))
+			time.Sleep(test.outage)
+			restored := time.Now()
+			if !test.hostsFirst {
+				proxy.unblock()
+			}
+			var wg sync.WaitGroup
+			for _, host := range hosts {
+				wg.Add(1)
+				go func(host string) {
+					defer wg.Done()
+					time.Sleep(test.staggers[host])
+					fleet[host].start()
+				}(host)
+			}
+			wg.Wait()
+			if test.hostsFirst {
+				proxy.unblock()
+			}
+			time.Sleep(time.Until(restored.Add(test.recoverIn)))
+			fleet["meg"].set(drillShares, drillValue(true, 0))
+			time.Sleep(time.Second)
+			fleet["max"].set(drillShares, drillValue(true, 0))
+			fleet["jen"].set(drillMemory, drillValue(true, 31))
+			awaitConverged("recovered", 4*time.Duration(periods.HeartbeatSecs)*time.Second)
+			for host, listener := range painted {
+				if listener.count() == 0 {
+					t.Errorf("painted [%s]: got no dirty mark, expected the box repainted", host)
+				}
+			}
+		})
+	}
+}
+
+const (
+	drillShares = "data/host/failed_shares"
+	drillMemory = "data/service/zigbee2mqtt/used_memory"
+)
+
+func drillValue(ok bool, value int8) metric.ValueData {
+	return metric.ValueData{Pulse: &metric.ValueDataDetail{Kind: metric.ValueInt, OK: ok, ValueInt: value}, Trend: &metric.ValueDataDetail{Kind: metric.ValueInt, OK: true, ValueInt: 0}}
+}
+
+func drillShown(record *metric.Record, found bool) string {
+	if !found || record == nil || record.Value.Pulse == nil {
+		return "blank"
+	}
+	return fmt.Sprintf("%v/%d", record.Value.Pulse.OK, record.Value.Pulse.ValueInt)
+}
+
+type countingUpdates struct {
+	mutex sync.Mutex
+	marks int
+}
+
+func (c *countingUpdates) MarkDirty() {
+	c.mutex.Lock()
+	c.marks++
+	c.mutex.Unlock()
+}
+
+func (c *countingUpdates) count() int {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c.marks
+}
+
+type drillServe struct {
+	t         *testing.T
+	broker    string
+	host      string
+	service   string
+	periods   config.Periods
+	mutex     sync.Mutex
+	values    map[string]metric.ValueData
+	published map[string]metric.ValueData
+	client    mqtt.Client
+	cancel    context.CancelFunc
+	done      chan struct{}
+}
+
+func newDrillServe(t *testing.T, broker, host string, periods config.Periods) *drillServe {
+	s := &drillServe{t: t, broker: broker, host: host, periods: periods, values: map[string]metric.ValueData{}}
+	t.Cleanup(s.stop)
+	return s
+}
+
+func (s *drillServe) set(leaf string, value metric.ValueData) {
+	s.mutex.Lock()
+	s.values[leaf] = value
+	s.mutex.Unlock()
+}
+
+func (s *drillServe) shown(leaf string) string {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	value := s.values[leaf]
+	return drillShown(&metric.Record{Value: value}, true)
+}
+
+func (s *drillServe) topic(leaf string) string {
+	return "supervisor/" + s.host + "/" + leaf
+}
+
+func (s *drillServe) start() {
+	opts := mqtt.NewClientOptions().AddBroker("tcp://"+s.broker).SetClientID(fmt.Sprintf("drill-%s-%d", s.host, time.Now().UnixNano())).SetCleanSession(true).SetWill(s.topic("status"), metric.AvailabilityOffline, 1, true)
+	client := mqtt.NewClient(opts)
+	if token := client.Connect(); !token.WaitTimeout(5*time.Second) || token.Error() != nil {
+		s.t.Errorf("serve [%s] connect failed [%v]", s.host, token.Error())
+		return
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	s.mutex.Lock()
+	s.client, s.cancel, s.done, s.published = client, cancel, make(chan struct{}), map[string]metric.ValueData{}
+	done := s.done
+	s.mutex.Unlock()
+	go func() {
+		defer close(done)
+		pulse := time.NewTicker(time.Duration(s.periods.PulseMillis) * time.Millisecond)
+		defer pulse.Stop()
+		beat := 0
+		heartbeatEvery := s.periods.HeartbeatSecs * 1000 / s.periods.PulseMillis
+		for {
+			s.publish(client, beat%heartbeatEvery == 0, beat)
+			beat++
+			select {
+			case <-ctx.Done():
+				return
+			case <-pulse.C:
+			}
+		}
+	}()
+}
+
+func (s *drillServe) publish(client mqtt.Client, heartbeat bool, beat int) {
+	send := func(topic string, value metric.ValueData) {
+		value.Timestamp = time.Now().Unix()
+		payload, _ := json.Marshal(value)
+		client.Publish(topic, 0, true, payload)
+	}
+	if heartbeat {
+		client.Publish(s.topic("status"), 1, true, metric.AvailabilityOnline)
+	}
+	send(s.topic("data/host/up_time"), metric.ValueData{Pulse: &metric.ValueDataDetail{Kind: metric.ValueFloat, OK: true, ValueFloat: float64(beat)}})
+	if s.service != "" {
+		name := metric.ValueData{Pulse: &metric.ValueDataDetail{Kind: metric.ValueString, OK: true, ValueString: s.service}}
+		if heartbeat {
+			send(s.topic("data/service/"+s.service+"/name"), name)
+		}
+	}
+	s.mutex.Lock()
+	var due []string
+	for leaf, value := range s.values {
+		if last, sent := s.published[leaf]; heartbeat || !sent || !last.Equal(&value) {
+			due = append(due, leaf)
+			s.published[leaf] = value
+		}
+	}
+	values := maps.Clone(s.values)
+	s.mutex.Unlock()
+	for _, leaf := range due {
+		send(s.topic(leaf), values[leaf])
+	}
+}
+
+func (s *drillServe) stop() {
+	s.mutex.Lock()
+	client, cancel, done := s.client, s.cancel, s.done
+	s.client, s.cancel = nil, nil
+	s.mutex.Unlock()
+	if cancel == nil {
+		return
+	}
+	cancel()
+	<-done
+	client.Disconnect(0)
+}
+
+func (s *drillServe) flush() {
+	client := mqtt.NewClient(mqtt.NewClientOptions().AddBroker("tcp://" + s.broker).SetClientID(fmt.Sprintf("drill-flush-%s-%d", s.host, time.Now().UnixNano())))
+	if token := client.Connect(); !token.WaitTimeout(5*time.Second) || token.Error() != nil {
+		s.t.Errorf("flush [%s] connect failed [%v]", s.host, token.Error())
+		return
+	}
+	defer client.Disconnect(250)
+	leaves := []string{"status", "data/host/up_time", drillShares}
+	if s.service != "" {
+		leaves = append(leaves, "data/service/"+s.service+"/name", drillMemory)
+	}
+	for _, leaf := range leaves {
+		client.Publish(s.topic(leaf), 1, true, []byte{}).WaitTimeout(2 * time.Second)
+	}
+}
+
+type gateProxy struct {
+	listener net.Listener
+	target   string
+	mutex    sync.Mutex
+	blocked  bool
+	conns    []net.Conn
+}
+
+func newGateProxy(t *testing.T, target string) *gateProxy {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("proxy listen failed [%v]", err)
+	}
+	p := &gateProxy{listener: listener, target: target}
+	t.Cleanup(func() {
+		_ = listener.Close()
+		p.block()
+	})
+	go func() {
+		for {
+			inbound, err := listener.Accept()
+			if err != nil {
+				return
+			}
+			p.mutex.Lock()
+			blocked := p.blocked
+			p.mutex.Unlock()
+			if blocked {
+				_ = inbound.Close()
+				continue
+			}
+			outbound, err := net.Dial("tcp", target)
+			if err != nil {
+				_ = inbound.Close()
+				continue
+			}
+			p.mutex.Lock()
+			p.conns = append(p.conns, inbound, outbound)
+			p.mutex.Unlock()
+			go func() { _, _ = io.Copy(outbound, inbound); _ = outbound.Close() }()
+			go func() { _, _ = io.Copy(inbound, outbound); _ = inbound.Close() }()
+		}
+	}()
+	return p
+}
+
+func (p *gateProxy) port() int {
+	return p.listener.Addr().(*net.TCPAddr).Port
+}
+
+func (p *gateProxy) block() {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	p.blocked = true
+	for _, conn := range p.conns {
+		_ = conn.Close()
+	}
+	p.conns = nil
+}
+
+func (p *gateProxy) unblock() {
+	p.mutex.Lock()
+	p.blocked = false
+	p.mutex.Unlock()
 }

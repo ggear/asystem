@@ -824,7 +824,7 @@ class ReplayRunnerTest(unittest.TestCase):
 
         env_fab = join(DIR_ROOT, "../../../.env_fab")
         script = (
-            f". {env_fab} && export CARGO_HOME=$HOME/.rust/versions/asystem RUSTUP_HOME=$HOME/.rust/versions/asystem PATH=$HOME/.rust/versions/asystem/bin:$PATH "
+            f". {env_fab} && export RUSTUP_HOME=$CARGO_HOME PATH=$CARGO_HOME/bin:$PATH "
             f"CARGO_TARGET_DIR={DIR_ROOT}/target/rust && (cd {DIR_ROOT}/src/main/rust/mlmodels && cargo build --quiet) && "
             f'(cd {DIR_ROOT}/src/main/go/mlmodels && "$GOROOT/bin/go" build -o {DIR_ROOT}/target/go/consumer .)'
         )

@@ -17,4 +17,4 @@ FROM image_base AS image_build
 FROM image_build AS image_runtime
 COPY target/package/main/resources/image/. /asystem/etc
 WORKDIR /asystem/etc
-ENTRYPOINT [ "start_vernemq" ]
+ENTRYPOINT [ "/asystem/etc/entrypoint.sh" ]

@@ -2,7 +2,7 @@
   "schema": 2,
   "version": "10.200.2141",
   "content_sha256": "245d6fb719d7cd44ebf4dea3894a6be0e9268d368a6e5d5a56d160763b65ed3e",
-  "inputs_sha256": "ecf7b44b21d263a4f1c105370fc29de68a396585e01536f736573375928c382e",
+  "inputs_sha256": "9bd31d7c4acac57b556835d60994e742b0a5a94e39b9e988b7f2b3acc79d4fd1",
   "target": {"kind": "embedded", "language": "rust"},
   "release": {
     "timestamp": "2026-11-20T05:26:23Z",

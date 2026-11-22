@@ -4,5 +4,5 @@ fastapi==0.115.14
 numpy==2.5.5
 pandas==3.1.1
 onnxruntime==1.32.0
-wasmtime==50.0.1
+wasmtime==51.0.0
 scikit-learn==1.9.1

@@ -1877,6 +1877,82 @@ func TestDisplay_FailedHostLabelRestoresOnRecovery(t *testing.T) {
 	}
 }
 
+func TestDisplay_FailedServiceNameFollowsSibling(t *testing.T) {
+	tests := []struct {
+		name           string
+		failed         bool
+		expectedAlerts bool
+		expectedError  bool
+	}{
+		{name: "happy_sibling_failing_turns_the_name_red", failed: true, expectedAlerts: true, expectedError: false},
+		{name: "happy_sibling_recovering_clears_the_name", failed: false, expectedAlerts: false, expectedError: false},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			layout := compactDisplayLayout(false)
+			terminalDims := dimensions{rows(layout, 1), columns(layout, false, 1) + resizes(layout, 1)*10}
+			cache := metric.NewRecordCache()
+			terminal := newTerminalVirtual(terminalDims.rows, terminalDims.cols, ThemeLight, false)
+			display, newErr := NewDisplay(
+				[]string{"labnode-one"}, config.Periods{}, "", true, false, FormatCompact,
+				terminalDims.cols, terminalDims.rows, 0, 0, 0,
+				func(useUnicode bool) (Terminal, error) { return terminal, nil }, cache, nil,
+			)
+			if newErr != nil {
+				t.Fatalf("NewDisplay: got %v want nil", newErr)
+			}
+			if _, compileErr := display.Compile(); compileErr != nil {
+				t.Fatalf("Compile: got %v want nil", compileErr)
+			}
+			if loadErr := display.Load(); loadErr != nil {
+				t.Fatalf("Load: got %v want nil", loadErr)
+			}
+			sibling := metric.MetricServiceUsedMemory
+			if !slices.Contains(display.serviceShown, sibling) {
+				t.Fatalf("serviceShown: got %v want it to hold [%v]", display.serviceShown, sibling)
+			}
+			store := func(id metric.ID, failed bool) {
+				record := metric.NewRecord(*metric.NewBoolValue(true, true))
+				switch id {
+				case metric.MetricServiceName:
+					record = metric.NewRecord(*metric.NewStringValue(true, "homeassistant", true, "homeassistant"))
+				case metric.MetricServiceUsedMemory:
+					record = metric.NewRecord(*metric.NewIntValue(true, 10, true, 10))
+				}
+				record.Value.Failed = failed
+				cache.Store(metric.NewServiceRecordGUID(id, "labnode-one", "test-svc-00"), &record)
+			}
+			for _, id := range metric.GetIDsByKind([]metric.MetricKind{metric.MetricKindService}) {
+				store(id, false)
+			}
+			store(sibling, !testCase.failed)
+			for index := range display.boxes {
+				display.boxes[index].drawLabels(display)
+			}
+			display.takeDirtyIndexes()
+			store(sibling, testCase.failed)
+			for _, index := range display.takeDirtyIndexes() {
+				display.boxes[index].drawValue(display)
+			}
+			for y := 0; y < terminalDims.rows; y++ {
+				line := make([]rune, 0, terminalDims.cols)
+				for x := 0; x < terminalDims.cols; x++ {
+					char, _, _ := terminal.cell(x, y)
+					line = append(line, char)
+				}
+				if index := strings.Index(string(line), "homeassistant"); index >= 0 {
+					_, found, _ := terminal.cell(index, y)
+					if got := found == colourAlert; got != testCase.expectedAlerts {
+						t.Errorf("name alerts: got %v want %v (colour %v)", got, testCase.expectedAlerts, found)
+					}
+					return
+				}
+			}
+			t.Fatalf("service [homeassistant]: got no match want the service row")
+		})
+	}
+}
+
 func TestDisplay_LogScrolling(t *testing.T) {
 	tests := []struct {
 		name           string

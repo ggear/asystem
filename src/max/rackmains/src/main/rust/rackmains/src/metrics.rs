@@ -88,7 +88,7 @@ impl Frame {
     pub fn cells(&self) -> Vec<String> {
         COLUMNS
             .iter()
-            .map(|column| self.values.get(column.name).map(cell).unwrap_or_default())
+            .map(|column| self.values.get(column.name).map_or_default(cell))
             .collect()
     }
 

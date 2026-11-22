@@ -13,7 +13,7 @@ use serde_json::{json, Map, Value};
 
 use crate::broker::{MqttPublisher, Publisher};
 use crate::cli::{init_serve_logging, ServeArgs};
-use crate::drill::{Marker, Plug, Sampler, Tasmota};
+use crate::drill::{Marker, Plug, Sampler, Tasmota, PLUG_COMMAND_TIMEOUT};
 use crate::guard::{Guard, Host, Output, State};
 use crate::hostswitch::{HostSwitch, COMMAND_FILTER};
 use crate::liveness::{
@@ -742,10 +742,22 @@ impl Poller {
             Ok(()) if self.publish_failing => {
                 self.publish_failing = false;
                 info!("{}", log_line("publish restored", "mqtt"));
+                self.refresh_plug_state();
             }
             Ok(()) => {}
         }
         Ok(())
+    }
+
+    fn refresh_plug_state(&self) {
+        let Some(plug) = &self.plug else {
+            return;
+        };
+        let plug = Arc::clone(plug);
+        thread::spawn(move || match plug.command("Power", PLUG_COMMAND_TIMEOUT) {
+            Ok(reply) => info!("{}", log_line("plug state republished", &reply.to_string())),
+            Err(err) => warn!("{}", log_line("plug state republish failed", &err)),
+        });
     }
 
     fn tick_liveness(&self) {
@@ -1048,6 +1060,22 @@ mod tests {
         }
 
         fn at(data_dir: &Path, second: i64) -> Rig {
+            Rig::at_with(data_dir, second, None)
+        }
+
+        fn with_plug(name: &str) -> (Rig, Arc<RigPlug>) {
+            let plug = Arc::new(RigPlug {
+                on: Arc::new(AtomicBool::new(true)),
+                sent: Mutex::new(Vec::new()),
+                rule: Mutex::new(String::new()),
+                refuse: Mutex::new(None),
+                panic_on: Mutex::new(None),
+            });
+            let rig = Rig::at_with(&scratch(name), 0, Some(plug.clone()));
+            (rig, plug)
+        }
+
+        fn at_with(data_dir: &Path, second: i64, plug: Option<Arc<dyn Plug>>) -> Rig {
             let model = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../build/resources/model/battery");
             let (loaded, policy) = load_model(&model).unwrap();
             let hosts = ["meg", "may", "max", "mad"]
@@ -1080,7 +1108,7 @@ mod tests {
                         down: Arc::clone(&down),
                     }),
                     runner: runner.clone(),
-                    plug: None,
+                    plug,
                     loaded,
                     policy,
                     hosts,
@@ -1222,6 +1250,33 @@ mod tests {
         rig.down.store(false, Ordering::SeqCst);
         rig.run("OB DISCHRG", 1);
         assert_eq!(rig.payloads().len(), 1);
+    }
+
+    #[test]
+    fn the_plug_is_asked_to_republish_its_state_once_the_broker_comes_back() {
+        let (mut rig, plug) = Rig::with_plug("plug-republish");
+        rig.down.store(true, Ordering::SeqCst);
+        rig.run("OL", 3);
+        let sent = |plug: &RigPlug| plug.sent.lock().unwrap().iter().filter(|sent| *sent == "Power").count();
+        assert_eq!(sent(&plug), 0);
+        rig.down.store(false, Ordering::SeqCst);
+        rig.run("OL", 6);
+        let deadline = Instant::now() + Duration::from_secs(3);
+        while sent(&plug) == 0 && Instant::now() < deadline {
+            thread::sleep(Duration::from_millis(20));
+        }
+        assert_eq!(sent(&plug), 1);
+        rig.run("OL", 12);
+        thread::sleep(Duration::from_millis(100));
+        assert_eq!(sent(&plug), 1);
+    }
+
+    #[test]
+    fn a_broker_that_never_went_down_never_prompts_the_plug() {
+        let (mut rig, plug) = Rig::with_plug("plug-quiet");
+        rig.run("OL", 12);
+        thread::sleep(Duration::from_millis(100));
+        assert!(plug.sent.lock().unwrap().is_empty());
     }
 
     #[test]

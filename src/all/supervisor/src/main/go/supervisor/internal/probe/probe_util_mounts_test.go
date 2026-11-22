@@ -327,7 +327,7 @@ func TestProbeUtilMounts_RetriesFasterWhileAShareIsFailed(t *testing.T) {
 		{
 			name:            "happy_failed_share_inside_the_retry_period_waits",
 			failed:          1,
-			taken:           10 * time.Second,
+			taken:           3 * time.Second,
 			expectedRefresh: false,
 		},
 	}

@@ -696,7 +696,11 @@ func (d *Display) subscribeUpdates() {
 		listener := &boxListener{i, gen, d}
 		d.cache.SubscribeUpdates(*guid, listener)
 		if metric.GetIDKind(guid.ID) == metric.MetricKindService {
-			for _, id := range runStateInputs {
+			inputs := runStateInputs
+			if guid.ID == metric.MetricServiceName {
+				inputs = slices.Compact(slices.Sorted(slices.Values(slices.Concat(runStateInputs, d.serviceShown))))
+			}
+			for _, id := range inputs {
 				if id == guid.ID {
 					continue
 				}

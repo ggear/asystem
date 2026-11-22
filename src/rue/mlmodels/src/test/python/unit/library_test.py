@@ -1215,7 +1215,7 @@ class ReleaseTest(unittest.TestCase):
         from mlmodels._embed import embed_consumer, loader_findings
         from mlmodels._errors import GateError
 
-        home = os.path.expanduser("~/.rust/versions/asystem")
+        home = os.environ["CARGO_HOME"]
         env = {"CARGO_HOME": home, "RUSTUP_HOME": home, "PATH": f"{home}/bin:{os.environ['PATH']}", "CARGO_TARGET_DIR": join(ROOT, "rue/mlmodels/target/rust-embed")}
         crate = join(self.consumer, "src/main/rust/consumer")
         os.makedirs(join(crate, "src"))
@@ -1279,7 +1279,7 @@ class ReleaseTest(unittest.TestCase):
         from mlmodels._embed import embed_consumer
         from mlmodels._errors import GateError
 
-        goroot = os.path.expanduser("~/.goenv/versions/1.27.0")
+        goroot = os.environ["GOROOT"]
         env = {"GOROOT": goroot, "GOPATH": join(ROOT, "../.go"), "PATH": f"{goroot}/bin:{os.environ['PATH']}", "GOFLAGS": "-mod=mod", "GOPROXY": "off"}
         crate = join(self.consumer, "src/main/go/consumer")
         os.makedirs(crate)

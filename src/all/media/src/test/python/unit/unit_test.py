@@ -6,8 +6,10 @@ import os
 import re
 import shutil
 import subprocess
+import threading
 import time
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from os.path import abspath, dirname, exists, join, realpath, splitext
 from pathlib import Path
 
@@ -19,6 +21,8 @@ from media.analyse import MEDIA_FILE_EXTENSIONS, MEDIA_FILE_SCRIPTS
 from media.analyse import get_file_actions_dict as actions
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
+
+ANALYSE_LOCK = threading.Lock()
 
 
 class StaticTest(unittest.TestCase):
@@ -216,6 +220,10 @@ class InternetTest(unittest.TestCase):
         self._test_analyse_assert(join(dir_test, "47/media"), files_action_expected=actions(reformat=3), scripts={"reformat"})
         self._test_analyse_assert(join(dir_test, "47/media"), files_action_expected=actions(check=2, merge=1, reformat=3), scripts={"reformat"})
 
+    def test_analyse_dolby_vision(self):
+        dir_test = self._test_prepare_dir("share_media_example", 1)
+        self._test_analyse_assert(join(dir_test, "58/media"), files_action_expected=actions(check=1, reformat=1, nothing=1), scripts={})
+
     def test_analyse_missing_profile(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
         self._test_analyse_assert(join(dir_test, "57/media"), files_action_expected=actions(check=2, nothing=1), scripts={})
@@ -253,10 +261,14 @@ class InternetTest(unittest.TestCase):
     def test_analyse_comprehensive(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
         self._test_analyse_assert(join(dir_test, "10"), asserts=False, clean=True)
-        for INDEX in sorted([_dir.name for _dir in Path(join(DIR_ROOT, "target/runtime-unit/share_media_example_1/share")).iterdir() if _dir.is_dir()]):
-            self._test_analyse_assert(join(dir_test, INDEX), asserts=False)
-            self._test_analyse_assert(join(dir_test, f"{INDEX}/media"), asserts=False, merge=True, transcode=True)
-            self._test_analyse_assert(join(dir_test, INDEX), asserts=False, files_expected_scripts={})
+
+        def analyse_share(index):
+            self._test_analyse_assert(join(dir_test, index), asserts=False)
+            self._test_analyse_assert(join(dir_test, f"{index}/media"), asserts=False, merge=True, transcode=True)
+            self._test_analyse_assert(join(dir_test, index), asserts=False, files_expected_scripts={})
+
+        with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
+            list(executor.map(analyse_share, sorted(_dir.name for _dir in Path(dir_test).iterdir() if _dir.is_dir())))
         self._test_analyse_assert(dir_test, asserts=False)
 
     def _test_analyse_assert(
@@ -283,9 +295,10 @@ class InternetTest(unittest.TestCase):
             return file_count
 
         sheet_guid = os.getenv("MEDIA_GOOGLE_SHEET_GUID")
-        if clean:
-            self.assertEqual(0, analyse._analyse("/share", sheet_guid, clean=True, verbose=True)[0])
-        files_actual, files_action_actual = analyse._analyse(dir_test, sheet_guid, verbose=True, merge=merge, transcode=transcode, defaults=defaults)
+        with ANALYSE_LOCK:
+            if clean:
+                self.assertEqual(0, analyse._analyse("/share", sheet_guid, clean=True, verbose=True)[0])
+            files_actual, files_action_actual = analyse._analyse(dir_test, sheet_guid, verbose=True, merge=merge, transcode=transcode, defaults=defaults)
         if asserts:
             self.assertEqual(_file_count() if files_expected is None else files_expected, files_actual)
             if files_expected is not None:

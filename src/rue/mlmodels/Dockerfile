@@ -22,9 +22,9 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get clean && rm -rf /var/lib/apt/lists/*
 RUN curl -fsSL "https://go.dev/dl/go${ASYSTEM_GO_VERSION}.linux-${TARGETARCH}.tar.gz" | tar -C /usr/local -xz && \
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal --default-toolchain "${ASYSTEM_RUST_VERSION}"
-RUN ONNXRUNTIME_ARCH="$([ "${TARGETARCH}" = "arm64" ] && echo aarch64 || echo x64)" && \
-    curl -fsSL "https://github.com/microsoft/onnxruntime/releases/download/v${ASYSTEM_ONNXRUNTIME_VERSION}/onnxruntime-linux-${ONNXRUNTIME_ARCH}-${ASYSTEM_ONNXRUNTIME_VERSION}.tgz" | tar -C /tmp -xz && \
-    mkdir -p /build/onnxruntime && cp -L /tmp/onnxruntime-linux-${ONNXRUNTIME_ARCH}-${ASYSTEM_ONNXRUNTIME_VERSION}/lib/libonnxruntime.so /build/onnxruntime/libonnxruntime.so
+RUN pip download --no-cache-dir --no-deps --only-binary=:all: -d /tmp/onnxruntime "onnxruntime==${ASYSTEM_ONNXRUNTIME_VERSION}" && \
+    python -m zipfile -e /tmp/onnxruntime/onnxruntime-${ASYSTEM_ONNXRUNTIME_VERSION}-*.whl /tmp/onnxruntime/wheel && \
+    mkdir -p /build/onnxruntime && cp -L /tmp/onnxruntime/wheel/onnxruntime/capi/libonnxruntime.so.${ASYSTEM_ONNXRUNTIME_VERSION} /build/onnxruntime/libonnxruntime.so
 COPY src/main/go/mlmodels /build/go
 COPY src/main/rust/mlmodels /build/rust
 RUN cd /build/go && go build -o /build/consumer-go . && \

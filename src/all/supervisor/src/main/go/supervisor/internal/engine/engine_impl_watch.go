@@ -101,7 +101,8 @@ func RunListeningProbesLoop(ctx context.Context, configPath string, cache *metri
 //     because nothing refreshing at all is evidence the redelivery was lost rather than that every service departed.
 //   - Reaping is keyed by service name, never by slot, so a service that moves slot between scheduling and running is safe.
 //   - A subscribe is refused either by its token failing or by a SUBACK return code above the maximum QoS, which paho
-//     reports through Result rather than through Error, so both are read and both roll their topics back out of the map.
+//     reports through Result rather than through Error, so both are read and both roll their topics back out of the map,
+//     but only the topics that subscribe itself added: a later resubscribe that re-added a topic keeps it.
 //   - The display is refreshed on connect and after a reconcile that reaped, never per host and never per heartbeat.
 //   - An unknown host counts as online, so a watch started before its first status message still renders.
 //   - A service name topic is a bound metric as well as the discovery wildcard, so an empty payload on it removes the
@@ -122,9 +123,10 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 	lost := make(chan struct{}, 1)
 	var dropCount atomic.Int64
 	var subscribedMu sync.Mutex
-	subscribed := make(map[string]metric.RecordGUID)
+	subscribed := make(map[string]watchSubscription)
 	var wildcardMu sync.Mutex
-	wildcards := make(map[string]struct{})
+	wildcards := make(map[string]uint64)
+	var subscribeBatch atomic.Uint64
 	var reconcileMu sync.Mutex
 	reconciles := make(map[string]hostReconcile)
 	connected := config.NowIncludingSuspend()
@@ -192,8 +194,9 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 	}
 	onData := func(client mqtt.Client, msg mqtt.Message) {
 		subscribedMu.Lock()
-		guid, known := subscribed[msg.Topic()]
+		subscription, known := subscribed[msg.Topic()]
 		subscribedMu.Unlock()
+		guid := subscription.guid
 		if !known {
 			dropCount.Add(1)
 			return
@@ -239,7 +242,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			if _, leaf, found := strings.Cut(name, "/"); found {
 				name = leaf
 			}
-			scribe.Log(scribe.SourceEngine, scribe.SubjectService(guid.ServiceName), scribe.ActionSubscribe).Debugf("recorded", streamStart, "[%s] Pls [%s>%s] Tnd [%s]", scribe.Fit(name, 12), shown(before.Pulse), shown(value.Pulse), shown(value.Trend))
+			scribe.Log(scribe.SourceEngine, scribe.SubjectService(guid.ServiceName), scribe.ActionSubscribe).Debugf("recorded", streamStart, "[%-11.11s] [%s] Pls [%s>%s] Tnd [%s]", guid.Host, scribe.Fit(name, 12), shown(before.Pulse), shown(value.Pulse), shown(value.Trend))
 		}
 		value.Timestamp = time.Now().Unix()
 		record := metric.NewRecord(value)
@@ -250,12 +253,13 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			return 0
 		}
 		filters := make(map[string]byte, len(bindings))
+		batch := subscribeBatch.Add(1)
 		subscribedMu.Lock()
 		for _, b := range bindings {
 			if _, exists := subscribed[b.Topic]; exists {
 				continue
 			}
-			subscribed[b.Topic] = b.GUID
+			subscribed[b.Topic] = watchSubscription{guid: b.GUID, batch: batch}
 			filters[b.Topic] = 0
 		}
 		subscribedMu.Unlock()
@@ -271,7 +275,9 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			}
 			subscribedMu.Lock()
 			for _, topic := range refused {
-				delete(subscribed, topic)
+				if subscribed[topic].batch == batch {
+					delete(subscribed, topic)
+				}
 			}
 			subscribedMu.Unlock()
 			scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionSubscribe).Errorf("rollback", subscribeStart, "[%3d] of [%3d] topics refused, %s", len(refused), len(filters), reason)
@@ -422,12 +428,13 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			return 0
 		}
 		var pending []string
+		batch := subscribeBatch.Add(1)
 		wildcardMu.Lock()
 		for topic := range wildcardHandlers {
 			if _, exists := wildcards[topic]; exists {
 				continue
 			}
-			wildcards[topic] = struct{}{}
+			wildcards[topic] = batch
 			pending = append(pending, topic)
 		}
 		wildcardMu.Unlock()
@@ -441,7 +448,9 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					return
 				}
 				wildcardMu.Lock()
-				delete(wildcards, topic)
+				if wildcards[topic] == batch {
+					delete(wildcards, topic)
+				}
 				wildcardMu.Unlock()
 				scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(topic), scribe.ActionSubscribe).Errorf("rollback", subscribeStart, "[refused] wildcard resubscribe, %s", reason)
 			}(topic, token)
@@ -705,6 +714,11 @@ type hostReconcile struct {
 	started  time.Time
 	deadline time.Time
 	retried  bool
+}
+
+type watchSubscription struct {
+	guid  metric.RecordGUID
+	batch uint64
 }
 
 func watchIdle(rx int64, attached int, open, anyOnline bool) bool {

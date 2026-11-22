@@ -126,7 +126,7 @@ impl Stats {
         } else {
             (self.utilisation_sum / self.utilisation_count).to_string()
         };
-        let text = |value: Option<i64>| value.map(|value| value.to_string()).unwrap_or_default();
+        let text = |value: Option<i64>| value.map_or_default(|value| value.to_string());
         vec![
             ("reason", reason.to_string()),
             ("seconds_on_battery", self.seconds_on_battery.as_secs().to_string()),
@@ -134,7 +134,7 @@ impl Stats {
             ("battery_min_at", min_at),
             (
                 "battery_last_volts",
-                self.last_volts.map(|volts| volts.to_string()).unwrap_or_default(),
+                self.last_volts.map_or_default(|volts| volts.to_string()),
             ),
             ("utilisation_peak_pct", self.peak_utilisation.to_string()),
             ("utilisation_mean_pct", mean),

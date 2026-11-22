@@ -58,11 +58,7 @@
     "src/rue/photos/src/build/python",
     "src/zzz/appdaemon/src/build/python",
     "src/zzz/appdaemon/src/main/python",
-    "src/zzz/backup/src/build/python",
-    "src/zzz/backup/src/main/python",
-    "src/zzz/monitor/src/build/python",
     "src/zzz/rhasspy/src/build/python",
-    "src/zzz/unpoller/src/build/python",
     "fabfile.py",
     "src/max/grafana/src/main/resources/image/probe.py"
   ],
@@ -388,32 +384,7 @@
       ]
     },
     {
-      "root": "src/zzz/backup/src",
-      "extraPaths": [
-        "src/zzz/backup/src/main/python",
-        "src/all/_/src/build/python",
-        "src/rue/mlmodels/src/main/python",
-        "."
-      ]
-    },
-    {
-      "root": "src/zzz/monitor/src",
-      "extraPaths": [
-        "src/all/_/src/build/python",
-        "src/rue/mlmodels/src/main/python",
-        "."
-      ]
-    },
-    {
       "root": "src/zzz/rhasspy/src",
-      "extraPaths": [
-        "src/all/_/src/build/python",
-        "src/rue/mlmodels/src/main/python",
-        "."
-      ]
-    },
-    {
-      "root": "src/zzz/unpoller/src",
       "extraPaths": [
         "src/all/_/src/build/python",
         "src/rue/mlmodels/src/main/python",

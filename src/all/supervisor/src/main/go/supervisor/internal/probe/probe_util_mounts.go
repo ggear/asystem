@@ -561,7 +561,7 @@ const (
 	mountBootRoot    = "/boot"
 	mountNoAuto      = "noauto"
 	mountDeadline    = 5 * time.Second
-	mountRetry       = time.Minute
+	mountRetry       = 10 * time.Second
 	mountReasonsMax  = 3
 )
 
