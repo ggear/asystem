@@ -54,7 +54,11 @@ events {
 http {
 
   #access_log off;
-  log_format custom escape=none '$remote_addr - $remote_user [$time_local] "$request" $status $body_bytes_sent "$http_referer" "$http_user_agent"\n$request_body\n';
+  map $request $request_redacted {
+    "~*^(?<redact_head>.*?[?&](?:apikey|api_key|access_token|token|password|secret)=)[^&\s]*(?<redact_tail>.*)$" "${redact_head}***${redact_tail}";
+    default $request;
+  }
+  log_format custom escape=none '$remote_addr - $remote_user [$time_local] "$request_redacted" $status $body_bytes_sent "$http_referer" "$http_user_agent"\n$request_body\n';
   access_log /dev/stdout custom;
 
   server_tokens off;
