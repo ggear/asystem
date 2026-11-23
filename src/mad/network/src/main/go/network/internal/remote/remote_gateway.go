@@ -111,11 +111,6 @@ func (g *Gateway) Clients(ctx context.Context) ([]GatewayClient, error) {
 	return body.Data, nil
 }
 
-func (g *Gateway) Close() error {
-	g.client.CloseIdleConnections()
-	return nil
-}
-
 func (g *Gateway) login(ctx context.Context) error {
 	payload, _ := json.Marshal(map[string]string{"username": g.user, "password": g.token})
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, g.base+"/api/auth/login", bytes.NewReader(payload))

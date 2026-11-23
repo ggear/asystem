@@ -1,1 +1,1 @@
-ps -ef | grep "[/]asystem/bin/network" >/dev/null
+pgrep -f "^/asystem/bin/network" >/dev/null

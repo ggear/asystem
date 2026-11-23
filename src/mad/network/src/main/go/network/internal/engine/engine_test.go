@@ -510,6 +510,30 @@ func TestEngine_HandleCommandInFlight(t *testing.T) {
 	}
 }
 
+func TestEngine_HandleCommandWaitsForARunningPoll(t *testing.T) {
+	release := make(chan struct{})
+	entered := make(chan struct{}, 2)
+	p := &fakePlugin{name: "snapshot", mode: plugin.ModeSnapshot, pollGate: release, pollEntered: entered, state: plugin.NewStateTracker(plugin.StateOff)}
+	e := newEngine(t, p)
+	e.refreshGap = 0
+	var wg sync.WaitGroup
+	wg.Go(func() { e.PollSamples(context.Background()) })
+	<-entered
+	wg.Go(func() { e.handleCommand(context.Background(), "snapshot", []byte("ON")) })
+	select {
+	case <-entered:
+		t.Fatalf("command poll: got a poll running alongside the loop poll want it to wait")
+	case <-time.After(100 * time.Millisecond):
+	}
+	close(release)
+	wg.Wait()
+	select {
+	case <-entered:
+	default:
+		t.Fatalf("command poll: got none want one after the loop poll finished")
+	}
+}
+
 var (
 	engineTestRelation = schema.Declare("enginetest/detail", "detail used by the engine tests", "15 min")
 	engineTestValue    = engineTestRelation.Int("v", "count", "counter used by the engine tests")
@@ -525,6 +549,7 @@ type fakePlugin struct {
 	aggregateErr error
 	panicAgg     bool
 	pollGate     chan struct{}
+	pollEntered  chan struct{}
 	state        *plugin.StateTracker
 	pollPeriod   time.Duration
 	pollReading  int
@@ -537,6 +562,9 @@ func (f *fakePlugin) Mode() plugin.Mode { return f.mode }
 func (f *fakePlugin) Poll(context.Context) (plugin.Sample, error) {
 	if f.pollCount != nil {
 		*f.pollCount++
+	}
+	if f.pollEntered != nil {
+		f.pollEntered <- struct{}{}
 	}
 	if f.pollGate != nil {
 		<-f.pollGate

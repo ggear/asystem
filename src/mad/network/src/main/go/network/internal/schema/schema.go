@@ -197,8 +197,6 @@ func (b *Builder) Entities(values ...string) *Builder {
 
 func (b *Builder) Relation() Relation { return b.relation }
 
-func (b *Builder) Path() string { return b.relation.Path }
-
 func (b *Builder) Plugin() string {
 	return b.relation.Path[:strings.Index(b.relation.Path, "/")]
 }
@@ -369,8 +367,6 @@ type Point struct {
 	measures      []Value
 	measuresSet   []bool
 }
-
-func (p Point) Relation() Relation { return p.builder.relation }
 
 func (p Point) Path() string {
 	if p.builder == nil {

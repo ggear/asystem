@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"strings"
@@ -27,9 +28,7 @@ var (
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		if _, writeErr := fmt.Fprintln(os.Stderr, err); writeErr != nil {
-			os.Exit(1)
-		}
+		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
@@ -55,7 +54,7 @@ var rootCmd = &cobra.Command{
 			return err
 		}
 		if !flagDaemon {
-			level, _ = scribe.ParseLevel("debug")
+			level = slog.LevelDebug
 		}
 		scribe.EnableStdout(level)
 		poll, aggregate, err := makePeriods(flagPollPeriod, flagAggregatePeriod)

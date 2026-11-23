@@ -1,6 +1,7 @@
 package remote
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"maps"
@@ -24,6 +25,8 @@ const (
 	brokerSubscribeAttempts = 5
 	brokerSubscribeBackoff  = 2 * time.Second
 	brokerConnectTimeout    = 6 * time.Second
+	brokerCollectConnect    = 5 * time.Second
+	brokerCollectWait       = 2 * time.Second
 )
 
 type Broker struct {
@@ -58,15 +61,15 @@ func NewBroker(address, token string, onCommand func(name string, payload []byte
 				scribe.LogWarn(scribe.Global, "publishing online status to broker [%s] failed [%v]", address, err)
 			}
 			broker.republish(client)
-			commandHandler := func(_ mqtt.Client, msg mqtt.Message) {
-				topic := msg.Topic()
+			commandHandler := func(_ mqtt.Client, message mqtt.Message) {
+				topic := message.Topic()
 				if !strings.HasPrefix(topic, brokerCommandPrefix+"/") {
 					return
 				}
-				onCommand(strings.TrimPrefix(topic, brokerCommandPrefix+"/"), msg.Payload())
+				onCommand(strings.TrimPrefix(topic, brokerCommandPrefix+"/"), message.Payload())
 			}
 			for attempt := 1; ; attempt++ {
-				err := SubscribeGranted(client.Subscribe(brokerCommandFilter, 1, commandHandler), brokerPublishTimeout)
+				err := subscribeGranted(client.Subscribe(brokerCommandFilter, 1, commandHandler), brokerPublishTimeout)
 				if err == nil {
 					break
 				}
@@ -91,34 +94,74 @@ func NewBroker(address, token string, onCommand func(name string, payload []byte
 	options.SetWill(brokerStatusTopic, BrokerStatusOffline, 1, true)
 	client := mqtt.NewClient(options)
 	broker.client = client
-	tk := client.Connect()
-	if !tk.WaitTimeout(brokerConnectTimeout) {
+	connectToken := client.Connect()
+	if !connectToken.WaitTimeout(brokerConnectTimeout) {
 		scribe.LogInfo(scribe.Global, "connecting to broker [%s]", address)
-	} else if tk.Error() != nil {
-		return nil, fmt.Errorf("connect failed [%s] [%w]", brokerURL, tk.Error())
+	} else if connectToken.Error() != nil {
+		return nil, fmt.Errorf("connect failed [%s] [%w]", brokerURL, connectToken.Error())
 	}
 	return broker, nil
+}
+
+func CollectMessages(ctx context.Context, address, token, client string, topics []string) (map[string][]byte, error) {
+	if address == "" {
+		return nil, errors.New("broker address is empty")
+	}
+	options := mqtt.NewClientOptions().
+		AddBroker("tcp://" + address).
+		SetClientID(fmt.Sprintf("network-%s-%d", client, time.Now().UnixNano())).
+		SetCleanSession(true).
+		SetConnectTimeout(brokerCollectConnect)
+	if token != "" {
+		options.SetUsername("network").SetPassword(token)
+	}
+	var messagesMu sync.Mutex
+	messages := map[string][]byte{}
+	collector := mqtt.NewClient(options)
+	connectToken := collector.Connect()
+	if !connectToken.WaitTimeout(brokerCollectConnect) || connectToken.Error() != nil {
+		return nil, fmt.Errorf("connect failed [%s] [%w]", address, connectToken.Error())
+	}
+	defer collector.Disconnect(250)
+	filters := make(map[string]byte, len(topics))
+	for _, topic := range topics {
+		filters[topic] = 0
+	}
+	handler := func(_ mqtt.Client, message mqtt.Message) {
+		messagesMu.Lock()
+		messages[message.Topic()] = append([]byte(nil), message.Payload()...)
+		messagesMu.Unlock()
+	}
+	if err := subscribeGranted(collector.SubscribeMultiple(filters, handler), brokerCollectConnect); err != nil {
+		return nil, fmt.Errorf("subscribe failed [%s] [%w]", strings.Join(topics, ", "), err)
+	}
+	select {
+	case <-ctx.Done():
+	case <-time.After(brokerCollectWait):
+	}
+	messagesMu.Lock()
+	defer messagesMu.Unlock()
+	return maps.Clone(messages), nil
 }
 
 func (b *Broker) PublishStatus() error {
 	return waitForBrokerToken(b.client.Publish(brokerStatusTopic, 1, true, BrokerStatusOnline))
 }
 
-func (b *Broker) Publish(topic string, payload []byte) {
+func (b *Broker) Publish(topic string, payload []byte) error {
 	b.mu.Lock()
 	b.retained[topic] = append([]byte(nil), payload...)
 	b.mu.Unlock()
-	b.client.Publish(topic, 0, true, payload).WaitTimeout(brokerPublishTimeout)
+	return waitForBrokerToken(b.client.Publish(topic, 0, true, payload))
 }
 
 func (b *Broker) Close() error {
-	tk := b.client.Publish(brokerStatusTopic, 1, true, BrokerStatusOffline)
-	err := waitForBrokerToken(tk)
+	err := waitForBrokerToken(b.client.Publish(brokerStatusTopic, 1, true, BrokerStatusOffline))
 	b.client.Disconnect(2500)
 	return err
 }
 
-func SubscribeGranted(token mqtt.Token, timeout time.Duration) error {
+func subscribeGranted(token mqtt.Token, timeout time.Duration) error {
 	if !token.WaitTimeout(timeout) {
 		return errors.New("broker subscribe timed out")
 	}

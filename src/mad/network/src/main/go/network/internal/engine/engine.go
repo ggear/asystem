@@ -25,6 +25,7 @@ type Engine struct {
 	sampleWindows      map[string]int
 	sampleBuffers      map[string][]plugin.Sample
 	pollStrides        map[string]int
+	pollLocks          map[string]*sync.Mutex
 	polls              int
 	refreshMu          sync.Mutex
 	refreshGap         time.Duration
@@ -56,6 +57,7 @@ func Create(e *Engine) error {
 	e.sampleWindows = map[string]int{}
 	e.sampleBuffers = map[string][]plugin.Sample{}
 	e.pollStrides = map[string]int{}
+	e.pollLocks = map[string]*sync.Mutex{}
 	e.refreshGap = refreshGap
 	e.refreshing = map[string]bool{}
 	e.refreshed = map[string]time.Time{}
@@ -78,6 +80,7 @@ func Create(e *Engine) error {
 		}
 		pluginNames[name] = struct{}{}
 		e.sampleBuffers[name] = nil
+		e.pollLocks[name] = &sync.Mutex{}
 		if p.Mode() == plugin.ModeSnapshot {
 			e.sampleWindows[name] = 1
 		} else if paced, ok := p.(plugin.Paced); ok && paced.PollPeriod() > e.PollPeriod {
@@ -245,6 +248,9 @@ func (e *Engine) AggregateChanges() []plugin.Aggregate {
 }
 
 func (e *Engine) safePoll(ctx context.Context, p plugin.Plugin) (m plugin.Sample) {
+	pollLock := e.pollLocks[p.Name()]
+	pollLock.Lock()
+	defer pollLock.Unlock()
 	defer func() {
 		if r := recover(); r != nil {
 			scribe.LogError(p.Name(), "panicked during poll [%v]", r)
@@ -299,7 +305,9 @@ func (e *Engine) publishBroker(m plugin.Aggregate) {
 		scribe.LogWarn(m.Plugin, "marshal for broker failed [%v]", err)
 		return
 	}
-	e.broker.Publish(remote.DataTopic(m.Plugin), payload)
+	if err := e.broker.Publish(remote.DataTopic(m.Plugin), payload); err != nil {
+		scribe.LogWarn(m.Plugin, "publishing to broker failed [%v]", err)
+	}
 }
 
 func (e *Engine) publishAggregate(ctx context.Context, m plugin.Aggregate) {

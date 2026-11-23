@@ -4,27 +4,21 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"maps"
 	"math"
 	"slices"
 	"strings"
-	"sync"
 	"time"
 
 	"network/internal/config"
 	"network/internal/remote"
 	"network/internal/schema"
 	"network/internal/scribe"
-
-	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 const (
 	zigbeeBaseTopic       = "zigbee"
 	zigbeePollPeriod      = 5 * time.Minute
 	zigbeeCatalogueAge    = 15 * time.Minute
-	zigbeeCollectWait     = 2 * time.Second
-	zigbeeConnectWait     = 5 * time.Second
 	zigbeeStaleAfter      = 30 * time.Minute
 	zigbeeWeakLQI         = 30
 	zigbeeFullLQI         = 100.0
@@ -122,47 +116,13 @@ func (p *zigbeePlugin) Aggregate(samples []Sample) (Aggregate, error) {
 func (p *zigbeePlugin) State() *StateTracker { return p.state }
 
 func probeZigbee(ctx context.Context, topics []string) (map[string][]byte, error) {
-	cfg := config.Load()
-	broker := cfg.Broker()
-	if broker == "" {
-		return nil, fmt.Errorf("broker address is empty")
+	loaded := config.Load()
+	messages, err := remote.CollectMessages(ctx, loaded.Broker(), loaded.BrokerToken(), "zigbee", topics)
+	if err != nil {
+		return nil, err
 	}
-	opts := mqtt.NewClientOptions().
-		AddBroker("tcp://" + broker).
-		SetClientID(fmt.Sprintf("network-zigbee-%d", time.Now().UnixNano())).
-		SetCleanSession(true).
-		SetConnectTimeout(zigbeeConnectWait)
-	if token := cfg.BrokerToken(); token != "" {
-		opts.SetUsername("network").SetPassword(token)
-	}
-	var mu sync.Mutex
-	messages := map[string][]byte{}
-	client := mqtt.NewClient(opts)
-	handler := func(_ mqtt.Client, msg mqtt.Message) {
-		mu.Lock()
-		messages[msg.Topic()] = append([]byte(nil), msg.Payload()...)
-		mu.Unlock()
-	}
-	token := client.Connect()
-	if !token.WaitTimeout(zigbeeConnectWait) || token.Error() != nil {
-		return nil, fmt.Errorf("connect failed [%s] [%w]", broker, token.Error())
-	}
-	defer client.Disconnect(250)
-	filters := make(map[string]byte, len(topics))
-	for _, topic := range topics {
-		filters[topic] = 0
-	}
-	if err := remote.SubscribeGranted(client.SubscribeMultiple(filters, handler), zigbeeConnectWait); err != nil {
-		return nil, fmt.Errorf("subscribe failed [%s] [%w]", strings.Join(topics, ", "), err)
-	}
-	select {
-	case <-ctx.Done():
-	case <-time.After(zigbeeCollectWait):
-	}
-	mu.Lock()
-	defer mu.Unlock()
 	scribe.LogDebug("zigbee", "probed topics [%d]", len(messages))
-	return maps.Clone(messages), nil
+	return messages, nil
 }
 
 func readZigbee(base string, messages map[string][]byte, catalogue []zigbeeBridgeDevice) (zigbeeSample, []zigbeeBridgeDevice) {
