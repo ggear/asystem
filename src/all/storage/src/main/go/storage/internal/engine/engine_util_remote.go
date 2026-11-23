@@ -3,6 +3,7 @@ package engine
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -85,6 +86,10 @@ func runRemote(host string, budget time.Duration, filters []string) ([]byte, err
 	go func() { done <- session.Run(command) }()
 	select {
 	case err := <-done:
+		var exitError *ssh.ExitError
+		if errors.As(err, &exitError) && stdout.Len() > 0 {
+			return stdout.Bytes(), nil
+		}
 		if err != nil {
 			return nil, fmt.Errorf("ssh command failed [%s] [%v] [%s]", host, err, strings.TrimSpace(stderr.String()))
 		}
