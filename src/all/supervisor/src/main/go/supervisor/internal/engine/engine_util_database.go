@@ -98,12 +98,12 @@ func (b *databaseBatch) render(timestamp string) int {
 }
 
 func newInfluxClient(configPath string) (*influxdb3.Client, string, error) {
-	cfg := config.Load(configPath)
-	database := cfg.Database()
+	loaded := config.Load(configPath)
+	database := loaded.Database()
 	if database == "" {
 		return nil, "", errors.New("database address is empty")
 	}
-	token := cfg.DatabaseToken()
+	token := loaded.DatabaseToken()
 	if token == "" {
 		return nil, "", errors.New("database token not configured")
 	}
@@ -111,7 +111,7 @@ func newInfluxClient(configPath string) (*influxdb3.Client, string, error) {
 	client, err := influxdb3.New(influxdb3.ClientConfig{
 		Host:       databaseURL,
 		Token:      token,
-		Database:   cfg.DatabaseName(),
+		Database:   loaded.DatabaseName(),
 		HTTPClient: &http.Client{Timeout: databaseTimeout},
 	})
 	if err != nil {

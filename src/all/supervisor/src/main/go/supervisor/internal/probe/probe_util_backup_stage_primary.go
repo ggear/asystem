@@ -168,12 +168,12 @@ func stopPrimaryStage(ctx context.Context, request stageRequest) error {
 }
 
 func dockerServiceState(ctx context.Context, service string) (running bool, health string) {
-	names, _, _ := stageExec(ctx, "docker", "ps", "--filter", "name=^/"+service+"$", "--filter", "status=running", "--format", "{{.Names}}")
+	names, _, _ := bounded(ctx, stageBoundedWait, "docker", "ps", "--filter", "name=^/"+service+"$", "--filter", "status=running", "--format", "{{.Names}}")
 	running = strings.TrimSpace(names) == service
 	if !running {
 		return false, ""
 	}
-	out, _, _ := stageExec(ctx, "docker", "inspect", "--format", "{{if .State.Health}}{{.State.Health.Status}}{{end}}", service)
+	out, _, _ := bounded(ctx, stageBoundedWait, "docker", "inspect", "--format", "{{if .State.Health}}{{.State.Health.Status}}{{end}}", service)
 	return true, strings.TrimSpace(out)
 }
 

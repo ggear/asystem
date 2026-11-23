@@ -49,11 +49,11 @@ func TestProbeUtilBackupStageDrill_BackupDrillDue(t *testing.T) {
 			backupKeepPolicy{weekly: 1}, []string{"2026-10-28_01-00-00"},
 		},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			actual := backupDrillDue(test.runs, test.policy, now)
-			if len(actual) != len(test.expected) || (len(actual) > 0 && actual[0] != test.expected[0]) {
-				t.Errorf("due: got %v want %v", actual, test.expected)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			actual := backupDrillDue(testCase.runs, testCase.policy, now)
+			if len(actual) != len(testCase.expected) || (len(actual) > 0 && actual[0] != testCase.expected[0]) {
+				t.Errorf("due: got %v want %v", actual, testCase.expected)
 			}
 		})
 	}
@@ -69,17 +69,17 @@ func TestProbeUtilBackupStageDrill_ReportReleaseDrills(t *testing.T) {
 		{"newest failed", map[string]string{"2026-11-01_01-00-00": metric.BackupStateSuccess, "2026-11-02_01-00-00": metric.BackupStateFailure}, 1},
 		{"none", map[string]string{}, 0},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Setenv(config.BackupHomeEnvVar, t.TempDir())
-			for run, verdict := range test.verdicts {
+			for run, verdict := range testCase.verdicts {
 				if err := writeAtomicDrill(backupDrillPath(filepath.Join(serviceHomeDir("mod"), run), "primary"), verdict); err != nil {
 					t.Fatal(err)
 				}
 			}
 			first, second := reportReleaseDrills("mod"), reportReleaseDrills("mod")
-			if first != test.expected || second != test.expected {
-				t.Errorf("release drills: got first [%d] second [%d] want [%d] both, a failure stands until a later pass", first, second, test.expected)
+			if first != testCase.expected || second != testCase.expected {
+				t.Errorf("release drills: got first [%d] second [%d] want [%d] both, a failure stands until a later pass", first, second, testCase.expected)
 			}
 		})
 	}
@@ -111,17 +111,17 @@ func TestProbeUtilBackupStageDrill_RetainedFailures(t *testing.T) {
 		{"a failure on a point naming no software proves nothing", map[string]string{"2026-11-01_01-00-00": ""}, map[string]string{"2026-11-01_01-00-00": metric.BackupStateFailure}, false, false},
 		{"skipped is never a failure", map[string]string{"2026-11-01_01-00-00": "s"}, map[string]string{"2026-11-01_01-00-00": metric.BackupStateSkipped}, false, false},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			target := t.TempDir()
-			for run, verdict := range test.verdicts {
-				plantBackupManifest(t, target, run, backupManifest{Kind: "full", Verdict: metric.BackupStateSuccess, SourceSoftware: test.software[run]})
+			for run, verdict := range testCase.verdicts {
+				plantBackupManifest(t, target, run, backupManifest{Kind: "full", Verdict: metric.BackupStateSuccess, SourceSoftware: testCase.software[run]})
 				if err := writeAtomicDrill(backupDrillPath(filepath.Join(target, run), "secondary"), verdict); err != nil {
 					t.Fatal(err)
 				}
 			}
-			if retained, failing := backupDrillRetained(target), backupDrillFailing(target); retained != test.expectedRetained || failing != test.expectedFailing {
-				t.Errorf("drills: got retained [%t] failing [%t] want retained [%t] failing [%t]", retained, failing, test.expectedRetained, test.expectedFailing)
+			if retained, failing := backupDrillRetained(target), backupDrillFailing(target); retained != testCase.expectedRetained || failing != testCase.expectedFailing {
+				t.Errorf("drills: got retained [%t] failing [%t] want retained [%t] failing [%t]", retained, failing, testCase.expectedRetained, testCase.expectedFailing)
 			}
 		})
 	}

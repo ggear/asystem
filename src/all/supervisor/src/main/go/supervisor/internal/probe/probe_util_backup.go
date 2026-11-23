@@ -115,8 +115,6 @@ func runBackupStart(ctx context.Context, request BackupRequest) error {
 	}
 	defer func() { _ = lock.Close() }()
 	if err := syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
-		_ = os.Remove(runLogPath(runPath))
-		_ = os.Remove(runPath)
 		return fmt.Errorf("another backup run holds [%s], refusing to start", locked)
 	}
 	defer func() { _ = syscall.Flock(int(lock.Fd()), syscall.LOCK_UN) }()

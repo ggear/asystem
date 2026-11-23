@@ -137,7 +137,7 @@ func TestProbeUtilBackupRender_EveryRowCarriesOneCellPerDeclaredColumn(t *testin
 
 func TestProbeUtilBackupRender_EtaAddsTheUnroundedRemainder(t *testing.T) {
 	now := time.Date(2026, 10, 3, 1, 3, 33, 0, time.Local)
-	cases := []struct {
+	tests := []struct {
 		name      string
 		remaining reading
 		expected  string
@@ -146,10 +146,10 @@ func TestProbeUtilBackupRender_EtaAddsTheUnroundedRemainder(t *testing.T) {
 		{name: "a_fractional_minute_is_kept", remaining: floatReading(12.5), expected: "01:16:03"},
 		{name: "no_estimate_is_unknown", remaining: unknownReading(), expected: backupUnknownEta},
 	}
-	for _, test := range cases {
-		t.Run(test.name, func(t *testing.T) {
-			if got := backupEta(now, test.remaining); got != test.expected {
-				t.Errorf("backupEta() = %q, want %q", got, test.expected)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if got := backupEta(now, testCase.remaining); got != testCase.expected {
+				t.Errorf("backupEta() = %q, want %q", got, testCase.expected)
 			}
 		})
 	}
@@ -158,7 +158,7 @@ func TestProbeUtilBackupRender_EtaAddsTheUnroundedRemainder(t *testing.T) {
 func TestProbeUtilBackupRender_BoundedStatesWhetherTheEstimateBeatsTheDeadline(t *testing.T) {
 	now := time.Date(2026, 9, 24, 10, 54, 19, 0, time.Local)
 	deadline := now.Add(2 * time.Hour)
-	cases := []struct {
+	tests := []struct {
 		name      string
 		remaining reading
 		deadline  time.Time
@@ -171,10 +171,10 @@ func TestProbeUtilBackupRender_BoundedStatesWhetherTheEstimateBeatsTheDeadline(t
 		{name: "no_estimate_states_nothing", remaining: unknownReading(), deadline: deadline},
 		{name: "no_deadline_states_nothing", remaining: floatReading(78)},
 	}
-	for _, test := range cases {
-		t.Run(test.name, func(t *testing.T) {
-			if got := backupBounded(now, test.remaining, test.deadline); got != test.expected {
-				t.Errorf("backupBounded() = %q, want %q", got, test.expected)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if got := backupBounded(now, testCase.remaining, testCase.deadline); got != testCase.expected {
+				t.Errorf("backupBounded() = %q, want %q", got, testCase.expected)
 			}
 		})
 	}
@@ -265,21 +265,6 @@ func TestProbeUtilBackupRender_TailDropsTheHeaderTheStreamedLogCarries(t *testin
 	if printed != "" || held != offset {
 		t.Errorf("tailLog() = (%q, %d), want a line still being written withheld until its newline arrives", printed, held)
 	}
-}
-
-func capturedStdout(t *testing.T, body func() int64) (string, int64) {
-	t.Helper()
-	reader, writer, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("pipe: %v", err)
-	}
-	original := os.Stdout
-	os.Stdout = writer
-	offset := body()
-	os.Stdout = original
-	_ = writer.Close()
-	printed, _ := io.ReadAll(reader)
-	return string(printed), offset
 }
 
 func TestProbeUtilBackupRender_AnUnmeasuredBackupDiskRendersNoSizeFreeOrUsed(t *testing.T) {
@@ -442,4 +427,19 @@ func TestProbeUtilBackupRender_MovedStatesTheSizeTheSecondsAndTheRate(t *testing
 			}
 		})
 	}
+}
+
+func capturedStdout(t *testing.T, body func() int64) (string, int64) {
+	t.Helper()
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	original := os.Stdout
+	os.Stdout = writer
+	offset := body()
+	os.Stdout = original
+	_ = writer.Close()
+	printed, _ := io.ReadAll(reader)
+	return string(printed), offset
 }

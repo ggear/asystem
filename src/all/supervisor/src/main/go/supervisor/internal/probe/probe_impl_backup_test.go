@@ -28,57 +28,6 @@ const (
 	testStaleWindow = backupStaleCadence + testRunCeiling
 )
 
-func writeBackupRun(t *testing.T, root, timestamp string, host *backupSummary, tertiary *backupSummary, services map[string]bool) {
-	t.Helper()
-	runPath := filepath.Join(root, timestamp)
-	if err := os.MkdirAll(runPath, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	write := func(path string, document backupSummary) {
-		data, _ := json.MarshalIndent(document, "", "  ")
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(path, data, 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if host != nil {
-		write(filepath.Join(runPath, "status.json"), *host)
-	}
-	if tertiary != nil {
-		write(stageStatusPath(runPath, "tertiary"), *tertiary)
-	}
-	for service, success := range services {
-		write(filepath.Join(runPath, "stage", "primary", "service", service, "status.json"),
-			backupSummary{RunID: timestamp, SuccessBool: success})
-	}
-}
-
-func writeBackupStage(t *testing.T, root, timestamp string, stage metric.BackupStage, document backupSummary) {
-	t.Helper()
-	path := stageStatusPath(filepath.Join(root, timestamp), stage)
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	data, _ := json.MarshalIndent(document, "", "  ")
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func writeBackupScrub(t *testing.T, root, timestamp, state string) {
-	t.Helper()
-	path := filepath.Join(root, timestamp, "stage", string(metric.BackupStageTertiary), "scrub.json")
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	data, _ := json.MarshalIndent(backupSummary{State: state}, "", "  ")
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func TestProbeImplBackup_RunSummaryNamesTheFirstStageThatBroke(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -105,27 +54,27 @@ func TestProbeImplBackup_RunSummaryNamesTheFirstStageThatBroke(t *testing.T) {
 			metric.BackupStagePrimary: metric.BackupStateSuccess, metric.BackupStageSecondary: metric.BackupStateSuccess,
 			metric.BackupStageTertiary: metric.BackupStateSuccess}, metric.BackupStateFailure, metric.BackupStateFailure, false, 0, 0},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			root := t.TempDir()
 			timestamp := time.Now().Format(backupTimestampFormat)
 			for _, stage := range backupStages {
-				state, ok := tt.stages[stage]
+				state, ok := testCase.stages[stage]
 				if !ok {
 					continue
 				}
 				writeBackupStage(t, root, timestamp, stage, backupSummary{State: state, SuccessBool: state == metric.BackupStateSuccess})
 			}
-			if tt.scrub != "" {
-				writeBackupScrub(t, root, timestamp, tt.scrub)
+			if testCase.scrub != "" {
+				writeBackupScrub(t, root, timestamp, testCase.scrub)
 			}
 			document := finishRun(root, timestamp, time.Now())
-			if document.State != tt.wantState || document.SuccessBool != tt.wantSuccess {
-				t.Errorf("got (%s,%v) want (%s,%v)", document.State, document.SuccessBool, tt.wantState, tt.wantSuccess)
+			if document.State != testCase.wantState || document.SuccessBool != testCase.wantSuccess {
+				t.Errorf("got (%s,%v) want (%s,%v)", document.State, document.SuccessBool, testCase.wantState, testCase.wantSuccess)
 			}
-			if document.StagesFailed != tt.wantFailed || document.StagesHalted != tt.wantHalted {
+			if document.StagesFailed != testCase.wantFailed || document.StagesHalted != testCase.wantHalted {
 				t.Errorf("stages: got (failed %d, halted %d) want (failed %d, halted %d)",
-					document.StagesFailed, document.StagesHalted, tt.wantFailed, tt.wantHalted)
+					document.StagesFailed, document.StagesHalted, testCase.wantFailed, testCase.wantHalted)
 			}
 		})
 	}
@@ -183,20 +132,20 @@ func TestProbeImplBackup_FailedBackups(t *testing.T) {
 			writeBackupStage(t, root, fresh, "secondary", backupSummary{State: "running"})
 		}, 100, false, false},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			root := t.TempDir()
-			tt.setup(root)
+			testCase.setup(root)
 			p := &backupProbe{root: root}
 			value, derived, err := p.failedBackupStages()
-			if (err != nil) != tt.expectedError {
-				t.Fatalf("err: got %v want error %v", err, tt.expectedError)
+			if (err != nil) != testCase.expectedError {
+				t.Fatalf("err: got %v want error %v", err, testCase.expectedError)
 			}
-			if value != tt.wantValue {
-				t.Errorf("value: got %d want %d", value, tt.wantValue)
+			if value != testCase.wantValue {
+				t.Errorf("value: got %d want %d", value, testCase.wantValue)
 			}
-			if derived.inert != tt.wantInert {
-				t.Errorf("inert: got %v want %v", derived.inert, tt.wantInert)
+			if derived.inert != testCase.wantInert {
+				t.Errorf("inert: got %v want %v", derived.inert, testCase.wantInert)
 			}
 		})
 	}
@@ -228,20 +177,20 @@ func TestProbeImplBackup_UsedBackupSpace(t *testing.T) {
 			writeBackupStage(t, root, fresh, "tertiary", backupSummary{State: "running", DiskUsagePerc: 0})
 		}, 0, true, false},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			root := t.TempDir()
-			tt.setup(root)
-			p := &backupProbe{root: root, serverHost: tt.serverHost}
+			testCase.setup(root)
+			p := &backupProbe{root: root, serverHost: testCase.serverHost}
 			value, derived, err := p.usedBackupSpace()
-			if (err != nil) != tt.expectedError {
-				t.Fatalf("err: got %v want error %v", err, tt.expectedError)
+			if (err != nil) != testCase.expectedError {
+				t.Fatalf("err: got %v want error %v", err, testCase.expectedError)
 			}
-			if value != tt.wantValue {
-				t.Errorf("value: got %d want %d", value, tt.wantValue)
+			if value != testCase.wantValue {
+				t.Errorf("value: got %d want %d", value, testCase.wantValue)
 			}
-			if derived.inert != tt.wantInert {
-				t.Errorf("inert: got %v want %v", derived.inert, tt.wantInert)
+			if derived.inert != testCase.wantInert {
+				t.Errorf("inert: got %v want %v", derived.inert, testCase.wantInert)
 			}
 		})
 	}
@@ -261,11 +210,11 @@ func TestProbeImplBackup_ServiceSuccess(t *testing.T) {
 		{"plex", false, true},
 		{"mariadb", false, false},
 	}
-	for _, tt := range tests {
-		t.Run(tt.service, func(t *testing.T) {
-			value, found, run := p.serviceSuccess(tt.service)
-			if value != tt.wantValue || found != tt.wantFound {
-				t.Errorf("got (%v,%v) want (%v,%v)", value, found, tt.wantValue, tt.wantFound)
+	for _, testCase := range tests {
+		t.Run(testCase.service, func(t *testing.T) {
+			value, found, run := p.serviceSuccess(testCase.service)
+			if value != testCase.wantValue || found != testCase.wantFound {
+				t.Errorf("got (%v,%v) want (%v,%v)", value, found, testCase.wantValue, testCase.wantFound)
 			}
 			if run != fresh {
 				t.Errorf("run: got %q want %q", run, fresh)
@@ -467,20 +416,20 @@ func TestProbeImplBackup_HaltedBackupStages(t *testing.T) {
 			writeBackupRun(t, root, fresh, &backupSummary{StagesRun: 3, StagesHalted: 3}, nil, nil)
 		}, 100, false, false},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			root := t.TempDir()
-			tt.setup(root)
+			testCase.setup(root)
 			probe := &backupProbe{root: root}
 			value, derived, err := probe.haltedBackupStages()
-			if (err != nil) != tt.expectedError {
-				t.Fatalf("err: got %v want error %v", err, tt.expectedError)
+			if (err != nil) != testCase.expectedError {
+				t.Fatalf("err: got %v want error %v", err, testCase.expectedError)
 			}
-			if value != tt.wantValue {
-				t.Errorf("value: got %d want %d", value, tt.wantValue)
+			if value != testCase.wantValue {
+				t.Errorf("value: got %d want %d", value, testCase.wantValue)
 			}
-			if derived.inert != tt.wantInert {
-				t.Errorf("inert: got %v want %v", derived.inert, tt.wantInert)
+			if derived.inert != testCase.wantInert {
+				t.Errorf("inert: got %v want %v", derived.inert, testCase.wantInert)
 			}
 		})
 	}
@@ -518,11 +467,11 @@ func TestProbeImplBackup_ReaperPausedFailsSafeToArmed(t *testing.T) {
 		{"an empty document is armed", "", "", false},
 		{"an unknown state is armed", "PAUSED", time.Now().Add(time.Hour).Format(time.RFC3339), false},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			reaper := backupReaperSummary{State: tt.state, ExpiresTS: tt.expiresTS}
-			if got := reaper.Paused(); got != tt.wantPaused {
-				t.Errorf("paused: got %v want %v", got, tt.wantPaused)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			reaper := backupReaperSummary{State: testCase.state, ExpiresTS: testCase.expiresTS}
+			if got := reaper.Paused(); got != testCase.wantPaused {
+				t.Errorf("paused: got %v want %v", got, testCase.wantPaused)
 			}
 		})
 	}
@@ -725,23 +674,23 @@ func TestProbeImplBackup_ClusterRunDecision(t *testing.T) {
 			expectedError:    false,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			decision := backupClusterRunDecision(tt.retained, expected, now, testRunCeiling)
-			if decision.action != tt.expectedAction {
-				t.Fatalf("action: got %v want %v", decision.action, tt.expectedAction)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			decision := backupClusterRunDecision(testCase.retained, expected, now, testRunCeiling)
+			if decision.action != testCase.expectedAction {
+				t.Fatalf("action: got %v want %v", decision.action, testCase.expectedAction)
 			}
 			if decision.action == backupClusterRunIdle {
 				return
 			}
-			if decision.state != tt.expectedState {
-				t.Errorf("state: got %s want %s", decision.state, tt.expectedState)
+			if decision.state != testCase.expectedState {
+				t.Errorf("state: got %s want %s", decision.state, testCase.expectedState)
 			}
-			if !decision.started.Equal(tt.expectedStarted) {
-				t.Errorf("started: got %v want %v", decision.started, tt.expectedStarted)
+			if !decision.started.Equal(testCase.expectedStarted) {
+				t.Errorf("started: got %v want %v", decision.started, testCase.expectedStarted)
 			}
-			if decision.reported != tt.expectedReported {
-				t.Errorf("reported: got %d want %d", decision.reported, tt.expectedReported)
+			if decision.reported != testCase.expectedReported {
+				t.Errorf("reported: got %d want %d", decision.reported, testCase.expectedReported)
 			}
 		})
 	}
@@ -886,8 +835,8 @@ func TestProbeImplBackup_LeadRedialsADeafWatch(t *testing.T) {
 		{name: "hearing_its_own_candidacy_is_watched", heardAgo: time.Second, expectedStale: 0, expectedError: false},
 		{name: "silent_past_the_ttl_counts_unwatched", heardAgo: 0, expectedStale: 1, expectedError: false},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			holder := leaderStubCampaign([]string{"mad"}, "mad")
 			holder.attached, holder.standing, holder.leading, holder.epoch = true, true, true, 7
 			holder.lastAck, holder.lastLease = time.Now().Add(time.Hour), time.Now().Add(time.Hour)
@@ -902,13 +851,13 @@ func TestProbeImplBackup_LeadRedialsADeafWatch(t *testing.T) {
 			})
 			now := time.Now()
 			watch := &brokerWatcher{brokerPayloads: brokerPayloads{payloads: map[string]string{}}, client: &stubClient{connected: true}, heartbeat: metric.TopicLeaderCandidate("mad"), ready: true, readyAt: now.Add(-time.Hour)}
-			if tt.heardAgo > 0 {
-				watch.heardAt = now.Add(-tt.heardAgo)
+			if testCase.heardAgo > 0 {
+				watch.heardAt = now.Add(-testCase.heardAgo)
 			}
 			probe := &backupProbe{serverHost: true, hostName: "mad", leadWatch: watch}
 			probe.lead()
-			if probe.leadStale != tt.expectedStale {
-				t.Errorf("stale: got %d want %d", probe.leadStale, tt.expectedStale)
+			if probe.leadStale != testCase.expectedStale {
+				t.Errorf("stale: got %d want %d", probe.leadStale, testCase.expectedStale)
 			}
 		})
 	}
@@ -1003,9 +952,9 @@ func TestProbeImplBackup_AnUnreadableMetricReasonFitsOneDetailColumn(t *testing.
 		{"no tertiary document", (&backupProbe{root: production, serverHost: true}).usedBackupSpace},
 		{"a scheduled run went silent", (&backupProbe{root: abandoned, serverHost: true}).usedBackupSpace},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, _, err := tt.read()
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			_, _, err := testCase.read()
 			if err == nil {
 				t.Fatalf("err: got nil want a reason the metric cannot be read")
 			}
@@ -1016,37 +965,6 @@ func TestProbeImplBackup_AnUnreadableMetricReasonFitsOneDetailColumn(t *testing.
 			}
 		})
 	}
-}
-
-func declaredPayloadKeys(t *testing.T, match string) []string {
-	t.Helper()
-	for _, payload := range metric.Payloads() {
-		if payload.Match != match {
-			continue
-		}
-		var keys []string
-		for _, member := range payload.Root.Members {
-			keys = append(keys, member.Key)
-		}
-		sort.Strings(keys)
-		return keys
-	}
-	t.Fatalf("declared payloads: got no entry matching %q, want one", match)
-	return nil
-}
-
-func marshalledKeys(t *testing.T, data []byte) []string {
-	t.Helper()
-	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(data, &fields); err != nil {
-		t.Fatalf("unmarshal: %v", err)
-	}
-	keys := make([]string, 0, len(fields))
-	for key := range fields {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	return keys
 }
 
 func TestProbeImplBackup_ClusterDocumentWritesWhatItDeclares(t *testing.T) {
@@ -1170,14 +1088,6 @@ func TestProbeImplBackup_DocumentedShapeMatchesTheDeclaration(t *testing.T) {
 	}
 }
 
-func globPattern(glob string) *regexp.Regexp {
-	parts := strings.Split(glob, "*")
-	for index, part := range parts {
-		parts[index] = regexp.QuoteMeta(part)
-	}
-	return regexp.MustCompile("^" + strings.Join(parts, ".*") + "$")
-}
-
 func TestProbeImplBackup_EveryBackupTopicResolvesToItsOwnPayload(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -1190,21 +1100,111 @@ func TestProbeImplBackup_EveryBackupTopicResolvesToItsOwnPayload(t *testing.T) {
 		{"service", metric.TopicBackupService("macmini-mad", "plex"), "*/backup/stage/*/service/*/status"},
 		{"scrub", metric.TopicBackupScrub("macmini-mad"), "*/backup/stage/tertiary/scrub/status"},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			resolved := ""
 			for _, payload := range metric.Payloads() {
 				if payload.Role != schema.RoleState || payload.Match == "" {
 					continue
 				}
-				if globPattern(payload.Match).MatchString(tt.topic) {
+				if globPattern(payload.Match).MatchString(testCase.topic) {
 					resolved = payload.Match
 					break
 				}
 			}
-			if resolved != tt.match {
-				t.Errorf("topic %s: got payload %q want %q", tt.topic, resolved, tt.match)
+			if resolved != testCase.match {
+				t.Errorf("topic %s: got payload %q want %q", testCase.topic, resolved, testCase.match)
 			}
 		})
 	}
+}
+
+func writeBackupRun(t *testing.T, root, timestamp string, host *backupSummary, tertiary *backupSummary, services map[string]bool) {
+	t.Helper()
+	runPath := filepath.Join(root, timestamp)
+	if err := os.MkdirAll(runPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	write := func(path string, document backupSummary) {
+		data, _ := json.MarshalIndent(document, "", "  ")
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, data, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if host != nil {
+		write(filepath.Join(runPath, "status.json"), *host)
+	}
+	if tertiary != nil {
+		write(stageStatusPath(runPath, "tertiary"), *tertiary)
+	}
+	for service, success := range services {
+		write(filepath.Join(runPath, "stage", "primary", "service", service, "status.json"),
+			backupSummary{RunID: timestamp, SuccessBool: success})
+	}
+}
+
+func writeBackupStage(t *testing.T, root, timestamp string, stage metric.BackupStage, document backupSummary) {
+	t.Helper()
+	path := stageStatusPath(filepath.Join(root, timestamp), stage)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := json.MarshalIndent(document, "", "  ")
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func writeBackupScrub(t *testing.T, root, timestamp, state string) {
+	t.Helper()
+	path := filepath.Join(root, timestamp, "stage", string(metric.BackupStageTertiary), "scrub.json")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := json.MarshalIndent(backupSummary{State: state}, "", "  ")
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func declaredPayloadKeys(t *testing.T, match string) []string {
+	t.Helper()
+	for _, payload := range metric.Payloads() {
+		if payload.Match != match {
+			continue
+		}
+		var keys []string
+		for _, member := range payload.Root.Members {
+			keys = append(keys, member.Key)
+		}
+		sort.Strings(keys)
+		return keys
+	}
+	t.Fatalf("declared payloads: got no entry matching %q, want one", match)
+	return nil
+}
+
+func marshalledKeys(t *testing.T, data []byte) []string {
+	t.Helper()
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	keys := make([]string, 0, len(fields))
+	for key := range fields {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func globPattern(glob string) *regexp.Regexp {
+	parts := strings.Split(glob, "*")
+	for index, part := range parts {
+		parts[index] = regexp.QuoteMeta(part)
+	}
+	return regexp.MustCompile("^" + strings.Join(parts, ".*") + "$")
 }

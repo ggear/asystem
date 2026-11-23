@@ -150,13 +150,13 @@ func TestMetricRule_Evaluate(t *testing.T) {
 			expectedOK: false, expectedDetails: []string{"no rule declared"},
 		},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			result := test.rule.Evaluate("pct", test.self, test.selfNumeric, resolve, gates)
-			if result.OK != test.expectedOK {
-				t.Errorf("ok: got %v want %v, detail %q", result.OK, test.expectedOK, result.Detail)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			result := testCase.rule.Evaluate("pct", testCase.self, testCase.selfNumeric, resolve, gates)
+			if result.OK != testCase.expectedOK {
+				t.Errorf("ok: got %v want %v, detail %q", result.OK, testCase.expectedOK, result.Detail)
 			}
-			for _, fragment := range test.expectedDetails {
+			for _, fragment := range testCase.expectedDetails {
 				if !strings.Contains(result.Detail, fragment) {
 					t.Errorf("detail: got %q want it to contain %q", result.Detail, fragment)
 				}
@@ -233,18 +233,18 @@ func TestMetricRule_UsedMemoryFollowsSwap(t *testing.T) {
 		{name: "trend fails on unhealthy swap despite low memory", rule: GetIDTrendRule(MetricHostUsedMemory), self: 40, swapHealthy: false, swapReadable: true, expectedOK: false},
 		{name: "trend fails on high memory despite healthy swap", rule: GetIDTrendRule(MetricHostUsedMemory), self: 91, swapHealthy: true, swapReadable: true, expectedOK: false},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			resolve := func(id ID) (float64, bool, bool) {
 				if id == MetricHostUsedSwapSpace {
-					return 0, test.swapReadable, test.swapHealthy
+					return 0, testCase.swapReadable, testCase.swapHealthy
 				}
 				return 0, false, false
 			}
 			gates := func(GateID) (bool, bool) { return false, false }
-			result := test.rule.Evaluate("pct", test.self, true, resolve, gates)
-			if result.OK != test.expectedOK {
-				t.Errorf("ok: got %v want %v", result.OK, test.expectedOK)
+			result := testCase.rule.Evaluate("pct", testCase.self, true, resolve, gates)
+			if result.OK != testCase.expectedOK {
+				t.Errorf("ok: got %v want %v", result.OK, testCase.expectedOK)
 			}
 		})
 	}
@@ -268,10 +268,10 @@ func TestMetricRule_UnitLabel(t *testing.T) {
 		{unit: "µΩ·m", expected: "uohm.m"},
 		{unit: "°é", expected: "dege"},
 	}
-	for _, test := range tests {
-		t.Run(test.unit, func(t *testing.T) {
-			if label := unitLabel(test.unit); label != test.expected {
-				t.Errorf("label: got %q want %q", label, test.expected)
+	for _, testCase := range tests {
+		t.Run(testCase.unit, func(t *testing.T) {
+			if label := unitLabel(testCase.unit); label != testCase.expected {
+				t.Errorf("label: got %q want %q", label, testCase.expected)
 			}
 		})
 	}

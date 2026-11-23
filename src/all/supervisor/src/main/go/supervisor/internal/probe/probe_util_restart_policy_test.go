@@ -39,14 +39,14 @@ func TestProbeUtilRestartPolicy_Parse(t *testing.T) {
 		{name: "a_bad_duration_is_refused", text: "requires_stable=soon", expectedError: true},
 		{name: "a_negative_duration_is_refused", text: "settle_min=-1s", expectedError: true},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			policy, err := parseRestartPolicy(test.text)
-			if (err != nil) != test.expectedError {
-				t.Fatalf("error: got [%v] want error [%v]", err, test.expectedError)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			policy, err := parseRestartPolicy(testCase.text)
+			if (err != nil) != testCase.expectedError {
+				t.Fatalf("error: got [%v] want error [%v]", err, testCase.expectedError)
 			}
-			if !test.expectedError && !reflect.DeepEqual(policy, test.expectedPolicy) {
-				t.Fatalf("policy: got %+v want %+v", policy, test.expectedPolicy)
+			if !testCase.expectedError && !reflect.DeepEqual(policy, testCase.expectedPolicy) {
+				t.Fatalf("policy: got %+v want %+v", policy, testCase.expectedPolicy)
 			}
 		})
 	}

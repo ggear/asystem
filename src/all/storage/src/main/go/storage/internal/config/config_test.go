@@ -128,7 +128,7 @@ func TestConfig_Load_UnresolvedHostFallsBackToHostname(t *testing.T) {
 }
 
 func TestConfig_Label_FallsBackToTheHostnameSuffix(t *testing.T) {
-	cases := []struct {
+	tests := []struct {
 		name          string
 		host          string
 		want          string
@@ -139,19 +139,19 @@ func TestConfig_Label_FallsBackToTheHostnameSuffix(t *testing.T) {
 		{name: "a hostname carrying no estate suffix", host: "localhost", want: "localhost"},
 	}
 	path := writeFixture(t, fixtureDocument)
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			t.Setenv("STORAGE_HOST", c.host)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Setenv("STORAGE_HOST", testCase.host)
 			t.Setenv("SERVICE_VERSION_ABSOLUTE", "")
-			if got := Load(path).Label(); got != c.want {
-				t.Errorf("Label: got %v want %v", got, c.want)
+			if got := Load(path).Label(); got != testCase.want {
+				t.Errorf("Label: got %v want %v", got, testCase.want)
 			}
 		})
 	}
 }
 
 func TestConfig_HostLabel(t *testing.T) {
-	cases := []struct {
+	tests := []struct {
 		name string
 		host string
 		want string
@@ -165,10 +165,10 @@ func TestConfig_HostLabel(t *testing.T) {
 	t.Setenv("STORAGE_HOST", "macmini-mad")
 	t.Setenv("SERVICE_VERSION_ABSOLUTE", "")
 	cfg := Load(path)
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			if got := cfg.HostLabel(c.host); got != c.want {
-				t.Errorf("HostLabel: got %v want %v", got, c.want)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if got := cfg.HostLabel(testCase.host); got != testCase.want {
+				t.Errorf("HostLabel: got %v want %v", got, testCase.want)
 			}
 		})
 	}

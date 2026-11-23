@@ -6,7 +6,7 @@ import (
 )
 
 func TestMetricAttribs_GetIDName(t *testing.T) {
-	testCases := []struct {
+	tests := []struct {
 		name          string
 		id            ID
 		expectedName  string
@@ -18,7 +18,7 @@ func TestMetricAttribs_GetIDName(t *testing.T) {
 		{name: "service metric", id: MetricServiceHealthStatus, expectedName: "service/health_status", expectedError: false},
 		{name: "out of range", id: MetricMax, expectedName: "", expectedError: false},
 	}
-	for _, testCase := range testCases {
+	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			if name := GetIDName(testCase.id); name != testCase.expectedName {
 				t.Errorf("name: got %v want %v", name, testCase.expectedName)

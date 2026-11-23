@@ -81,17 +81,17 @@ func TestWeewx_Diagnose(t *testing.T) {
 			expectedReason: "NO_DATA",
 		},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := diagnoseWeewx(test.samples)
-			if got.Status != test.expectedStatus {
-				t.Errorf("status: got %s want %s", got.Status, test.expectedStatus)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			got := diagnoseWeewx(testCase.samples)
+			if got.Status != testCase.expectedStatus {
+				t.Errorf("status: got %s want %s", got.Status, testCase.expectedStatus)
 			}
-			if got.Score != test.expectedScore {
-				t.Errorf("score: got %d want %d", got.Score, test.expectedScore)
+			if got.Score != testCase.expectedScore {
+				t.Errorf("score: got %d want %d", got.Score, testCase.expectedScore)
 			}
-			if !strings.HasPrefix(got.Reason, test.expectedReason) {
-				t.Errorf("reason: got %q want prefix %q", got.Reason, test.expectedReason)
+			if !strings.HasPrefix(got.Reason, testCase.expectedReason) {
+				t.Errorf("reason: got %q want prefix %q", got.Reason, testCase.expectedReason)
 			}
 		})
 	}
@@ -116,14 +116,14 @@ func TestWeewx_Read(t *testing.T) {
 		{name: "empty_signal", signal: "", status: `{"timestamp":1785117984,"pulse":{"ok":true}}`, wantQuality: 0, wantHasQuality: false, wantFresh: true},
 		{name: "non_numeric_signal", signal: "good", status: `{"timestamp":1785117984,"pulse":{"ok":true}}`, wantQuality: 0, wantHasQuality: false, wantFresh: true},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			quality, hasQuality, fresh := readWeewx([]byte(test.signal), []byte(test.status), now)
-			if hasQuality != test.wantHasQuality || quality != test.wantQuality {
-				t.Errorf("quality: got (%v,%v) want (%v,%v)", quality, hasQuality, test.wantQuality, test.wantHasQuality)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			quality, hasQuality, fresh := readWeewx([]byte(testCase.signal), []byte(testCase.status), now)
+			if hasQuality != testCase.wantHasQuality || quality != testCase.wantQuality {
+				t.Errorf("quality: got (%v,%v) want (%v,%v)", quality, hasQuality, testCase.wantQuality, testCase.wantHasQuality)
 			}
-			if fresh != test.wantFresh {
-				t.Errorf("fresh: got %v want %v", fresh, test.wantFresh)
+			if fresh != testCase.wantFresh {
+				t.Errorf("fresh: got %v want %v", fresh, testCase.wantFresh)
 			}
 		})
 	}

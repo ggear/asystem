@@ -31,11 +31,11 @@ func TestProbeImpl_RunProbes(t *testing.T) {
 			expectExecCalled: true,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			mock := &mockProbe{
 				metricsList: []metric.ID{metric.MetricHostUsedProcessor},
-				createErr:   tt.createErr,
+				createErr:   testCase.createErr,
 			}
 			for index := range probesByMetricID {
 				probesByMetricID[index] = nil
@@ -62,10 +62,10 @@ func TestProbeImpl_RunProbes(t *testing.T) {
 			if createCalls != 1 {
 				t.Fatalf("expected createCalls=1, got %d", createCalls)
 			}
-			if tt.expectExecCalled && runCalls == 0 {
+			if testCase.expectExecCalled && runCalls == 0 {
 				t.Fatalf("expected runCalls>0, got %d", runCalls)
 			}
-			if !tt.expectExecCalled && runCalls != 0 {
+			if !testCase.expectExecCalled && runCalls != 0 {
 				t.Fatalf("expected runCalls=0, got %d", runCalls)
 			}
 		})
@@ -151,8 +151,8 @@ func TestProbeImpl_RunOnPulse(t *testing.T) {
 			expectedError:    false,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			mock := &mockProbe{metricsList: []metric.ID{metric.MetricHostUsedProcessor}}
 			for index := range probesByMetricID {
 				probesByMetricID[index] = nil
@@ -163,24 +163,24 @@ func TestProbeImpl_RunOnPulse(t *testing.T) {
 			defer cancel()
 			cache := metric.NewRecordCache()
 			cache.Store(metric.NewRecordGUID(metric.MetricHostUsedProcessor, "localhost"), &metric.Record{})
-			if err := Create("", cache, tt.periods); err != nil {
+			if err := Create("", cache, testCase.periods); err != nil {
 				t.Fatalf("Create failed: %v", err)
 			}
 			callCount := 0
 			heartbeatFired := false
 			done := make(chan error, 1)
 			go func() {
-				done <- RunPoll(ctx, tt.onPulse(&callCount, &heartbeatFired))
+				done <- RunPoll(ctx, testCase.onPulse(&callCount, &heartbeatFired))
 			}()
 			time.Sleep(1100 * time.Millisecond)
 			cancel()
 			if err := <-done; !errors.Is(err, context.Canceled) {
 				t.Fatalf("Got error = %v, expected context.Canceled", err)
 			}
-			if callCount < tt.expectedMinCalls {
-				t.Fatalf("Got onPulse calls = %d, expected >= %d", callCount, tt.expectedMinCalls)
+			if callCount < testCase.expectedMinCalls {
+				t.Fatalf("Got onPulse calls = %d, expected >= %d", callCount, testCase.expectedMinCalls)
 			}
-			switch tt.name {
+			switch testCase.name {
 			case "happy_heartbeat_fires_on_factor":
 				if !heartbeatFired {
 					t.Fatalf("Got heartbeat not fired, expected heartbeat with HeartbeatSecs=1")
@@ -208,56 +208,6 @@ type mockProbe struct {
 	mask        [metric.MetricMax]bool
 	createCalls int
 	runCalls    int
-}
-
-func (m *mockProbe) subject() scribe.Subject { return scribe.SubjectHost("") }
-
-func (m *mockProbe) dormant() bool { return m.isDormant }
-
-func (m *mockProbe) metrics() []metric.ID {
-	return m.metricsList
-}
-
-func (m *mockProbe) gates() []metric.GateID {
-	return nil
-}
-
-func (m *mockProbe) create(_ string, cache *metric.RecordCache, mask [metric.MetricMax]bool, periods config.Periods) error {
-	m.mutex.Lock()
-	m.createCalls++
-	m.cache = cache
-	m.mask = mask
-	err := m.createErr
-	m.mutex.Unlock()
-	return err
-}
-
-func (m *mockProbe) poll(_ context.Context, _ bool) error {
-	m.mutex.Lock()
-	m.runCalls++
-	err := m.runErr
-	m.mutex.Unlock()
-	return err
-}
-
-func (m *mockProbe) records() *metric.RecordCache {
-	m.mutex.Lock()
-	cache := m.cache
-	m.mutex.Unlock()
-	return cache
-}
-
-func (m *mockProbe) hasMetric(id metric.ID) bool {
-	m.mutex.Lock()
-	ok := m.mask[id]
-	m.mutex.Unlock()
-	return ok
-}
-
-func (m *mockProbe) snapshot() (createCalls, executeCalls int) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-	return m.createCalls, m.runCalls
 }
 
 func TestProbeImpl_FailedSampleBlanks(t *testing.T) {
@@ -340,9 +290,9 @@ func TestProbeImpl_DormantProbeNeverPolls(t *testing.T) {
 		{"an active probe joins the poll set", false, 1, false},
 		{"a dormant probe is left out of it", true, 0, false},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mock := &mockProbe{metricsList: []metric.ID{metric.MetricHostUsedProcessor}, isDormant: tt.isDormant}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			mock := &mockProbe{metricsList: []metric.ID{metric.MetricHostUsedProcessor}, isDormant: testCase.isDormant}
 			for index := range probesByMetricID {
 				probesByMetricID[index] = nil
 			}
@@ -351,14 +301,14 @@ func TestProbeImpl_DormantProbeNeverPolls(t *testing.T) {
 			cache := metric.NewRecordCache()
 			cache.Store(metric.NewRecordGUID(metric.MetricHostUsedProcessor, "localhost"), &metric.Record{})
 			err := Create("", cache, config.Periods{PollMillis: 1000, PulseMillis: 1000})
-			if (err != nil) != tt.expectedError {
-				t.Fatalf("err: got %v want error %v", err, tt.expectedError)
+			if (err != nil) != testCase.expectedError {
+				t.Fatalf("err: got %v want error %v", err, testCase.expectedError)
 			}
-			if len(execProbes) != tt.wantProbes {
-				t.Errorf("probes: got %d want %d", len(execProbes), tt.wantProbes)
+			if len(execProbes) != testCase.wantProbes {
+				t.Errorf("probes: got %d want %d", len(execProbes), testCase.wantProbes)
 			}
-			if _, ok := execProbes[mock]; ok == tt.isDormant {
-				t.Errorf("polled: got %v want %v", ok, !tt.isDormant)
+			if _, ok := execProbes[mock]; ok == testCase.isDormant {
+				t.Errorf("polled: got %v want %v", ok, !testCase.isDormant)
 			}
 		})
 	}
@@ -366,7 +316,7 @@ func TestProbeImpl_DormantProbeNeverPolls(t *testing.T) {
 
 func TestProbeImpl_MetricStatusOf(t *testing.T) {
 	trended := func(value bool) *bool { return &value }
-	testCases := []struct {
+	tests := []struct {
 		name           string
 		failed         bool
 		pulseOK        bool
@@ -381,7 +331,7 @@ func TestProbeImpl_MetricStatusOf(t *testing.T) {
 		{name: "failed with pulse and trend ok", failed: true, pulseOK: true, trendOK: trended(true), expectedStatus: metricStatusUnknown, expectedError: false},
 		{name: "failed with pulse not ok", failed: true, pulseOK: false, trendOK: trended(false), expectedStatus: metricStatusUnknown, expectedError: false},
 	}
-	for _, testCase := range testCases {
+	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			if status := metricStatusOf(testCase.failed, testCase.pulseOK, testCase.trendOK); status != testCase.expectedStatus {
 				t.Errorf("status: got %v want %v", status, testCase.expectedStatus)
@@ -427,4 +377,54 @@ func TestProbeImpl_AFaultLogsOneLinePerListedItemAndNoneWraps(t *testing.T) {
 	if len(restored) != 1 || strings.Contains(restored[0].Detail, "sda=") {
 		t.Errorf("restored lines = %+v, want the one reason line without its items", restored)
 	}
+}
+
+func (m *mockProbe) subject() scribe.Subject { return scribe.SubjectHost("") }
+
+func (m *mockProbe) dormant() bool { return m.isDormant }
+
+func (m *mockProbe) metrics() []metric.ID {
+	return m.metricsList
+}
+
+func (m *mockProbe) gates() []metric.GateID {
+	return nil
+}
+
+func (m *mockProbe) create(_ string, cache *metric.RecordCache, mask [metric.MetricMax]bool, periods config.Periods) error {
+	m.mutex.Lock()
+	m.createCalls++
+	m.cache = cache
+	m.mask = mask
+	err := m.createErr
+	m.mutex.Unlock()
+	return err
+}
+
+func (m *mockProbe) poll(_ context.Context, _ bool) error {
+	m.mutex.Lock()
+	m.runCalls++
+	err := m.runErr
+	m.mutex.Unlock()
+	return err
+}
+
+func (m *mockProbe) records() *metric.RecordCache {
+	m.mutex.Lock()
+	cache := m.cache
+	m.mutex.Unlock()
+	return cache
+}
+
+func (m *mockProbe) hasMetric(id metric.ID) bool {
+	m.mutex.Lock()
+	ok := m.mask[id]
+	m.mutex.Unlock()
+	return ok
+}
+
+func (m *mockProbe) snapshot() (createCalls, executeCalls int) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	return m.createCalls, m.runCalls
 }

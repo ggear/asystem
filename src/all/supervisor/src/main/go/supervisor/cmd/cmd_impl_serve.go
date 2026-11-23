@@ -21,43 +21,43 @@ func init() {
 }
 
 func newServeCmd() *cobra.Command {
-	opts := &serveOptions{}
+	options := &serveOptions{}
 	cmd := &cobra.Command{
 		Use:   "serve",
 		Short: serveDescription,
 		Long:  serveDescription,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			configPath, _ := cmd.Flags().GetString("config")
-			err := executeServe(configPath, opts)
+			err := executeServe(configPath, options)
 			if err != nil {
 				return fmt.Errorf("serve failed [%w]", err)
 			}
 			return nil
 		},
 	}
-	cmd.Flags().StringVarP(&opts.pollPeriod, "poll-period", "P", config.DefaultPollPeriod, "period for adding fast moving metric samples into a pulse window, ignored by slow moving metrics, uses unit suffixes [s, m, h]")
-	cmd.Flags().StringVarP(&opts.pulseFactor, "pulse-factor", "F", config.DefaultPulseFactor, "factor applied to polling period to size pulse window, defining metric sample aggregation publish period for all metrics")
-	cmd.Flags().StringVarP(&opts.heartbeatFactor, "heartbeat-period", "B", "5m", "period by which metrics are published even if they have not changed, rounded up to nearest pulse boundary, uses unit suffixes [s, m, h]")
-	cmd.Flags().StringVarP(&opts.trendPeriod, "trend-period", "T", config.DefaultTrendPeriod, "period to size trend window, published with pulse factor * poll period, ignored by non-trend tracked metrics, uses unit suffixes [s, m, h]")
-	cmd.Flags().StringVarP(&opts.cachePeriod, "cache-period", "C", config.DefaultCachePeriod, "period to cache metric sample for, ignored by fast moving metrics, uses unit suffixes [s, m, h]")
-	cmd.Flags().StringVarP(&opts.snapshotPeriod, "snapshot-period", "S", "5m", "period for publishing a metric snapshot, uses unit suffixes [s, m, h]")
-	addLogFlags(cmd, &opts.logOptions, "info")
+	cmd.Flags().StringVarP(&options.pollPeriod, "poll-period", "P", config.DefaultPollPeriod, "period for adding fast moving metric samples into a pulse window, ignored by slow moving metrics, uses unit suffixes [s, m, h]")
+	cmd.Flags().StringVarP(&options.pulseFactor, "pulse-factor", "F", config.DefaultPulseFactor, "factor applied to polling period to size pulse window, defining metric sample aggregation publish period for all metrics")
+	cmd.Flags().StringVarP(&options.heartbeatFactor, "heartbeat-period", "B", "5m", "period by which metrics are published even if they have not changed, rounded up to nearest pulse boundary, uses unit suffixes [s, m, h]")
+	cmd.Flags().StringVarP(&options.trendPeriod, "trend-period", "T", config.DefaultTrendPeriod, "period to size trend window, published with pulse factor * poll period, ignored by non-trend tracked metrics, uses unit suffixes [s, m, h]")
+	cmd.Flags().StringVarP(&options.cachePeriod, "cache-period", "C", config.DefaultCachePeriod, "period to cache metric sample for, ignored by fast moving metrics, uses unit suffixes [s, m, h]")
+	cmd.Flags().StringVarP(&options.snapshotPeriod, "snapshot-period", "S", "5m", "period for publishing a metric snapshot, uses unit suffixes [s, m, h]")
+	addLogFlags(cmd, &options.logOptions, "info")
 	cmd.Flags().SortFlags = false
 	return cmd
 }
 
-func executeServe(configPath string, opts *serveOptions) error {
-	level, err := makeLevel(opts.logLevel)
+func executeServe(configPath string, options *serveOptions) error {
+	level, err := makeLevel(options.logLevel)
 	if err != nil {
 		return err
 	}
 	if err := scribe.EnableStdoutAndFile(level, "serve", config.ResolvedVersion(configPath), logFileSizeMB, logFileBackups, logFileAgeDays); err != nil {
 		return fmt.Errorf("enable file logging failed [%w]", err)
 	}
-	if err := setLogFilters(&opts.logOptions); err != nil {
+	if err := setLogFilters(&options.logOptions); err != nil {
 		return err
 	}
-	periods, err := makePeriods(opts.pollPeriod, opts.pulseFactor, opts.trendPeriod, opts.cachePeriod, opts.snapshotPeriod, opts.heartbeatFactor)
+	periods, err := makePeriods(options.pollPeriod, options.pulseFactor, options.trendPeriod, options.cachePeriod, options.snapshotPeriod, options.heartbeatFactor)
 	if err != nil {
 		return err
 	}

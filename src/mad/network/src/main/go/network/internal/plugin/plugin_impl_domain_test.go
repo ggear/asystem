@@ -97,17 +97,17 @@ func TestDomain_Diagnose(t *testing.T) {
 			expectedReason: "NO_RESOLUTION",
 		},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := diagnoseDomain(test.samples)
-			if got.Status != test.expectedStatus {
-				t.Errorf("status: got %s want %s", got.Status, test.expectedStatus)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			got := diagnoseDomain(testCase.samples)
+			if got.Status != testCase.expectedStatus {
+				t.Errorf("status: got %s want %s", got.Status, testCase.expectedStatus)
 			}
-			if got.Score != test.expectedScore {
-				t.Errorf("score: got %d want %d", got.Score, test.expectedScore)
+			if got.Score != testCase.expectedScore {
+				t.Errorf("score: got %d want %d", got.Score, testCase.expectedScore)
 			}
-			if !strings.HasPrefix(got.Reason, test.expectedReason) {
-				t.Errorf("reason: got %q want prefix %q", got.Reason, test.expectedReason)
+			if !strings.HasPrefix(got.Reason, testCase.expectedReason) {
+				t.Errorf("reason: got %q want prefix %q", got.Reason, testCase.expectedReason)
 			}
 		})
 	}

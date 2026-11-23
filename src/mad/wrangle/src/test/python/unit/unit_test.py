@@ -4364,17 +4364,17 @@ class WrangleTest(unittest.TestCase):
     ########################################################################################################################
 
     def test_state_cache_first_run(self):
-        t = self._setup_state_test("test-1")
+        stub = self._setup_state_test("test-1")
         update = self._df([("2020-01-01", 1.0), ("2020-02-01", 2.0)])
-        delta, current, previous = t.state_cache(update)
+        delta, current, previous = stub.state_cache(update)
         self.assertEqual(2, len(delta))
         self.assertEqual(2, len(current))
         self.assertEqual(0, len(previous))
 
     def test_state_cache_append_rows(self):
-        t = self._setup_state_test("test-2")
+        stub = self._setup_state_test("test-2")
         update = self._df([("2020-01-01", 1.0), ("2020-02-01", 2.0), ("2020-03-01", 3.0)])
-        delta, current, previous = t.state_cache(update)
+        delta, current, previous = stub.state_cache(update)
         self.assertEqual(1, len(delta))
         self.assertEqual("2020-03-01", str(delta.sort("Date")["Date"][0]))
         self.assertEqual(3.0, delta.sort("Date")["Value"][0])
@@ -4382,14 +4382,14 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(2, len(previous))
 
     def test_state_cache_changed_values(self):
-        t = self._setup_state_test("test-3")
+        stub = self._setup_state_test("test-3")
         update = self._df([("2020-01-01", 1.0), ("2020-02-01", 2.5)])
-        delta, _current, _previous = t.state_cache(update)
+        delta, _current, _previous = stub.state_cache(update)
         self.assertEqual(1, len(delta))
         self.assertEqual(2.5, delta["Value"][0])
 
     def test_state_cache_new_column(self):
-        t = self._setup_state_test("test-4")
+        stub = self._setup_state_test("test-4")
         update = pl.DataFrame(
             {
                 "Date": ["2020-01-01", "2020-02-01"],
@@ -4397,7 +4397,7 @@ class WrangleTest(unittest.TestCase):
                 "Extra": [10.0, 20.0],
             }
         ).with_columns(pl.col("Date").str.to_date())
-        delta, current, previous = t.state_cache(update)
+        delta, current, previous = stub.state_cache(update)
         self.assertIn("Extra", current.columns)
         self.assertIn("Extra", previous.columns)
         self.assertIsNone(previous.sort("Date")["Extra"][0])
@@ -4407,51 +4407,51 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(10.0, delta.sort("Date")["Extra"][0])
 
     def test_state_cache_empty_update(self):
-        t = self._setup_state_test("test-5")
+        stub = self._setup_state_test("test-5")
         update = pl.DataFrame(schema={"Date": pl.Date, "Value": pl.Float64})
-        delta, current, previous = t.state_cache(update)
+        delta, current, previous = stub.state_cache(update)
         self.assertEqual(0, len(delta))
         self.assertEqual(3, len(current))
         self.assertEqual(3, len(previous))
 
     def test_state_cache_idempotent(self):
-        t = self._setup_state_test("test-2")
+        stub = self._setup_state_test("test-2")
         update = self._df([("2020-01-01", 1.0), ("2020-02-01", 2.0)])
-        t.state_cache(update)
-        t.reset_counters()
-        delta, current, _ = t.state_cache(update)
+        stub.state_cache(update)
+        stub.reset_counters()
+        delta, current, _ = stub.state_cache(update)
         self.assertEqual(0, len(delta))
         self.assertEqual(2, len(current))
 
     def test_state_cache_with_aggregate(self):
-        t = self._setup_state_test("test-1")
+        stub = self._setup_state_test("test-1")
         update = self._df([("2020-01-01", 10.0), ("2020-02-01", 20.0), ("2020-03-01", 30.0)])
-        delta, current, _ = t.state_cache(update, lambda df: df.with_columns((pl.col("Value") * 2).alias("Double")))
+        delta, current, _ = stub.state_cache(update, lambda df: df.with_columns((pl.col("Value") * 2).alias("Double")))
         self.assertIn("Double", current.columns)
         self.assertEqual([20.0, 40.0, 60.0], current.sort("Date")["Double"].to_list())
         self.assertEqual(3, len(delta))
 
     def test_state_cache_no_new_rows(self):
-        t = self._setup_state_test("test-2")
+        stub = self._setup_state_test("test-2")
         update = self._df([("2020-01-01", 1.0), ("2020-02-01", 2.0)])
-        delta, current, previous = t.state_cache(update)
+        delta, current, previous = stub.state_cache(update)
         self.assertEqual(0, len(delta))
         self.assertEqual(2, len(current))
         self.assertEqual(2, len(previous))
 
     def test_state_cache_subset_rows(self):
-        t = self._setup_state_test("test-5")
+        stub = self._setup_state_test("test-5")
         update = self._df([("2020-01-01", 1.0)])
-        delta, current, _ = t.state_cache(update)
+        delta, current, _ = stub.state_cache(update)
         self.assertEqual(0, len(delta))
         self.assertEqual(3, len(current))
         dates = [str(d) for d in current.sort("Date")["Date"].to_list()]
         self.assertEqual(["2020-01-01", "2020-02-01", "2020-03-01"], dates)
 
     def test_state_cache_deleted_column(self):
-        t = self._setup_state_test("test-6")
+        stub = self._setup_state_test("test-6")
         update = self._df([("2020-01-01", 1.0), ("2020-02-01", 2.0)])
-        delta, current, previous = t.state_cache(update)
+        delta, current, previous = stub.state_cache(update)
         self.assertIn("Extra", current.columns)
         self.assertIsNone(current.sort("Date")["Extra"][0])
         self.assertEqual(10.0, previous.sort("Date")["Extra"][0])
@@ -4459,56 +4459,56 @@ class WrangleTest(unittest.TestCase):
         self.assertIsNone(delta.sort("Date")["Extra"][0])
 
     def test_state_cache_force_reload(self):
-        t = self._setup_state_test("test-2")
+        stub = self._setup_state_test("test-2")
         plugin.config.force_reprocessing = True
         update = self._df([("2020-01-01", 1.0), ("2020-02-01", 2.0), ("2020-03-01", 3.0)])
-        delta, current, previous = t.state_cache(update)
+        delta, current, previous = stub.state_cache(update)
         self.assertEqual(3, len(delta))
         self.assertEqual(3, len(current))
         self.assertEqual(0, len(previous))
 
     def test_state_cache_invalid_schema(self):
-        t = self._setup_state_test("test-1")
+        stub = self._setup_state_test("test-1")
         with self.assertRaises(pl.exceptions.SchemaError):
-            t.state_cache(pl.DataFrame({"NotDate": ["x"], "Value": [1.0]}))
+            stub.state_cache(pl.DataFrame({"NotDate": ["x"], "Value": [1.0]}))
         with self.assertRaises(pl.exceptions.SchemaError):
-            t.state_cache(pl.DataFrame({"Date": ["2020-01-01"], "Value": [1.0]}))
+            stub.state_cache(pl.DataFrame({"Date": ["2020-01-01"], "Value": [1.0]}))
         with self.assertRaises(pl.exceptions.SchemaError):
-            t.state_cache(pl.DataFrame())
+            stub.state_cache(pl.DataFrame())
 
     def test_state_cache_orphaned_previous(self):
-        t = self._setup_state_test("test-7")
+        stub = self._setup_state_test("test-7")
         update = self._df([("2020-01-01", 1.0), ("2020-02-01", 2.0)])
-        delta, current, previous = t.state_cache(update)
+        delta, current, previous = stub.state_cache(update)
         self.assertEqual(2, len(delta))
         self.assertEqual(2, len(current))
         self.assertEqual(0, len(previous))
 
     def test_state_cache_duplicate_dates_in_update(self):
-        t = self._setup_state_test("test-1")
+        stub = self._setup_state_test("test-1")
         update = pl.DataFrame(
             {
                 "Date": ["2020-01-01", "2020-01-01", "2020-02-01"],
                 "Value": [1.0, 9.9, 2.0],
             }
         ).with_columns(pl.col("Date").str.to_date())
-        delta, current, _ = t.state_cache(update)
+        delta, current, _ = stub.state_cache(update)
         self.assertEqual(2, len(current))
         self.assertEqual(9.9, current.sort("Date")["Value"][0])
         self.assertEqual(2, len(delta))
 
     def test_state_cache_no_overlap_with_current(self):
-        t = self._setup_state_test("test-2")
+        stub = self._setup_state_test("test-2")
         update = self._df([("2020-03-01", 3.0), ("2020-04-01", 4.0)])
-        delta, current, _ = t.state_cache(update)
+        delta, current, _ = stub.state_cache(update)
         self.assertEqual(2, len(delta))
         self.assertEqual(4, len(current))
         self.assertEqual(["2020-01-01", "2020-02-01", "2020-03-01", "2020-04-01"], [str(d) for d in current.sort("Date")["Date"].to_list()])
 
     def test_state_cache_mixed_delta(self):
-        t = self._setup_state_test("test-5")
+        stub = self._setup_state_test("test-5")
         update = self._df([("2020-01-01", 1.0), ("2020-02-01", 2.5), ("2020-04-01", 4.0)])
-        delta, current, _ = t.state_cache(update)
+        delta, current, _ = stub.state_cache(update)
         self.assertEqual(4, len(current))
         delta_dates = sorted([str(d) for d in delta["Date"].to_list()])
         self.assertEqual(["2020-02-01", "2020-04-01"], delta_dates)
@@ -4516,7 +4516,7 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(2.5, feb)
 
     def test_state_cache_multiple_columns_changed(self):
-        t = self._setup_state_test("test-6")
+        stub = self._setup_state_test("test-6")
         update = pl.DataFrame(
             {
                 "Date": ["2020-01-01", "2020-02-01"],
@@ -4524,28 +4524,28 @@ class WrangleTest(unittest.TestCase):
                 "Extra": [90.0, 90.0],
             }
         ).with_columns(pl.col("Date").str.to_date())
-        delta, _current, _ = t.state_cache(update)
+        delta, _current, _ = stub.state_cache(update)
         self.assertEqual(2, len(delta))
         self.assertEqual(9.0, delta.sort("Date")["Value"][0])
         self.assertEqual(90.0, delta.sort("Date")["Extra"][0])
 
     def test_state_cache_previous_tracks_last_run(self):
-        t = self._setup_state_test("test-1")
-        _, _, prev1 = t.state_cache(self._df([("2020-01-01", 1.0)]))
+        stub = self._setup_state_test("test-1")
+        _, _, prev1 = stub.state_cache(self._df([("2020-01-01", 1.0)]))
         self.assertEqual(0, len(prev1))
-        t.reset_counters()
-        _, _, prev2 = t.state_cache(self._df([("2020-01-01", 1.0), ("2020-02-01", 2.0)]))
+        stub.reset_counters()
+        _, _, prev2 = stub.state_cache(self._df([("2020-01-01", 1.0), ("2020-02-01", 2.0)]))
         self.assertEqual(1, len(prev2))
         self.assertEqual(1.0, prev2.sort("Date")["Value"][0])
-        t.reset_counters()
-        _, _, prev3 = t.state_cache(self._df([("2020-01-01", 9.0), ("2020-02-01", 2.0)]))
+        stub.reset_counters()
+        _, _, prev3 = stub.state_cache(self._df([("2020-01-01", 9.0), ("2020-02-01", 2.0)]))
         self.assertEqual(2, len(prev3))
         self.assertEqual(1.0, prev3.sort("Date")["Value"][0])
 
     def test_state_cache_new_column_second_run(self):
-        t = self._setup_state_test("test-1")
-        t.state_cache(self._df([("2020-01-01", 1.0), ("2020-02-01", 2.0)]))
-        t.reset_counters()
+        stub = self._setup_state_test("test-1")
+        stub.state_cache(self._df([("2020-01-01", 1.0), ("2020-02-01", 2.0)]))
+        stub.reset_counters()
         run2 = pl.DataFrame(
             {
                 "Date": ["2020-01-01", "2020-02-01"],
@@ -4553,7 +4553,7 @@ class WrangleTest(unittest.TestCase):
                 "Extra": [10.0, 20.0],
             }
         ).with_columns(pl.col("Date").str.to_date())
-        delta, current, previous = t.state_cache(run2)
+        delta, current, previous = stub.state_cache(run2)
         self.assertIn("Extra", current.columns)
         self.assertEqual([10.0, 20.0], current.sort("Date")["Extra"].to_list())
         self.assertIn("Extra", previous.columns)
@@ -4562,12 +4562,12 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(10.0, delta.sort("Date")["Extra"][0])
 
     def test_state_cache_counter_delta_columns(self):
-        t = self._setup_state_test("test-6")
-        t.state_cache(self._df([("2020-01-01", 9.0), ("2020-02-01", 9.0)]))
-        self.assertEqual(2, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_DELTA_COLUMNS))
+        stub = self._setup_state_test("test-6")
+        stub.state_cache(self._df([("2020-01-01", 9.0), ("2020-02-01", 9.0)]))
+        self.assertEqual(2, stub.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_DELTA_COLUMNS))
 
     def test_state_cache_aggregate_called_twice(self):
-        t = self._setup_state_test("test-2")
+        stub = self._setup_state_test("test-2")
         calls = 0
 
         def counting(df):
@@ -4575,18 +4575,18 @@ class WrangleTest(unittest.TestCase):
             calls += 1
             return df
 
-        t.state_cache(self._df([("2020-03-01", 3.0)]), counting)
+        stub.state_cache(self._df([("2020-03-01", 3.0)]), counting)
         self.assertEqual(2, calls)
 
     def test_state_cache_null_date_in_update(self):
-        t = self._setup_state_test("test-1")
+        stub = self._setup_state_test("test-1")
         update = pl.DataFrame(
             {
                 "Date": [None, "2020-01-01", "2020-02-01"],
                 "Value": [99.0, 1.0, 2.0],
             }
         ).with_columns(pl.col("Date").str.to_date(strict=False))
-        delta, current, _ = t.state_cache(update)
+        delta, current, _ = stub.state_cache(update)
         dates = [str(d) for d in current.sort("Date")["Date"].to_list()]
         self.assertNotIn("None", dates)
         self.assertEqual(["2020-01-01", "2020-02-01"], dates)
@@ -4597,7 +4597,7 @@ class WrangleTest(unittest.TestCase):
         self.assertIsNotNone(current.sort("Date")["Date"][0])
 
     def test_state_cache_previous_columns_reflects_union_schema(self):
-        t = self._setup_state_test("test-4")
+        stub = self._setup_state_test("test-4")
         update = pl.DataFrame(
             {
                 "Date": ["2020-01-01", "2020-02-01"],
@@ -4606,8 +4606,8 @@ class WrangleTest(unittest.TestCase):
                 "Third": [100.0, 200.0],
             }
         ).with_columns(pl.col("Date").str.to_date())
-        t.state_cache(update)
-        self.assertEqual(3, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_PREVIOUS_COLUMNS))
+        stub.state_cache(update)
+        self.assertEqual(3, stub.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_PREVIOUS_COLUMNS))
 
     def _price_df(self, date_price_pairs, ticker="AAPL"):
         return pl.DataFrame(
@@ -4622,7 +4622,7 @@ class WrangleTest(unittest.TestCase):
         change_col = f"{ticker} Price Close 1d-Change Percentage"
 
         def _agg(df):
-            str_cols = [c for c, t in zip(df.columns, df.dtypes, strict=False) if _is_string_col(c, t)]
+            str_cols = [column for column, dtype in zip(df.columns, df.dtypes, strict=False) if _is_string_col(column, dtype)]
             if str_cols:
                 df = df.with_columns([pl.col(c).cast(pl.Float64, strict=False) for c in str_cols])
             if price_col in df.columns:
@@ -4635,7 +4635,7 @@ class WrangleTest(unittest.TestCase):
         return _agg
 
     def test_state_cache_aggregate_derived_columns(self):
-        t = self._setup_state_test("agg-1")
+        stub = self._setup_state_test("agg-1")
         data = self._price_df(
             [
                 ("2020-01-01", 100.0),
@@ -4643,7 +4643,7 @@ class WrangleTest(unittest.TestCase):
                 ("2020-03-01", 300.0),
             ]
         )
-        delta, current, previous = t.state_cache(data, self._price_change_agg())
+        delta, current, previous = stub.state_cache(data, self._price_change_agg())
         self.assertEqual(3, len(delta))
         self.assertEqual(3, len(current))
         self.assertEqual(0, len(previous))
@@ -4655,7 +4655,7 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(50.0, changes[2])
 
     def test_state_cache_aggregate_idempotent(self):
-        t = self._setup_state_test("agg-2")
+        stub = self._setup_state_test("agg-2")
         data = self._price_df(
             [
                 ("2020-01-01", 100.0),
@@ -4663,17 +4663,17 @@ class WrangleTest(unittest.TestCase):
                 ("2020-03-01", 300.0),
             ]
         )
-        t.state_cache(data, self._price_change_agg())
-        t.reset_counters()
-        delta, current, _ = t.state_cache(data, self._price_change_agg())
+        stub.state_cache(data, self._price_change_agg())
+        stub.reset_counters()
+        delta, current, _ = stub.state_cache(data, self._price_change_agg())
         self.assertEqual(0, len(delta))
         self.assertEqual(3, len(current))
-        self.assertEqual(0, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_DELTA_ROWS))
-        self.assertEqual(3, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_CURRENT_ROWS))
+        self.assertEqual(0, stub.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_DELTA_ROWS))
+        self.assertEqual(3, stub.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_CURRENT_ROWS))
 
     def test_state_cache_aggregate_cross_boundary(self):
-        t = self._setup_state_test("agg-3")
-        t.state_cache(
+        stub = self._setup_state_test("agg-3")
+        stub.state_cache(
             self._price_df(
                 [
                     ("2020-01-01", 100.0),
@@ -4683,8 +4683,8 @@ class WrangleTest(unittest.TestCase):
             ),
             self._price_change_agg(),
         )
-        t.reset_counters()
-        delta, current, _ = t.state_cache(
+        stub.reset_counters()
+        delta, current, _ = stub.state_cache(
             self._price_df(
                 [
                     ("2020-01-01", 100.0),
@@ -4703,7 +4703,7 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(50.0, delta_sorted["AAPL Price Close 1d-Change Percentage"][1])
 
     def test_state_cache_aggregate_narrows_columns(self):
-        t = self._setup_state_test("agg-4")
+        stub = self._setup_state_test("agg-4")
         data = pl.DataFrame(
             {
                 "Date": ["2020-01-01", "2020-02-01"],
@@ -4712,7 +4712,7 @@ class WrangleTest(unittest.TestCase):
                 "AAPL Currency Base": ["AUD", "AUD"],
             }
         ).with_columns(pl.col("Date").str.to_date())
-        delta, current, _ = t.state_cache(data, self._price_change_agg())
+        delta, current, _ = stub.state_cache(data, self._price_change_agg())
         self.assertNotIn("AAPL Market Volume", current.columns)
         self.assertNotIn("AAPL Currency Base", current.columns)
         self.assertIn("AAPL Price Close", current.columns)
@@ -4720,7 +4720,7 @@ class WrangleTest(unittest.TestCase):
         self.assertNotIn("AAPL Market Volume", delta.columns)
 
     def test_state_cache_null_column_csv_roundtrip(self):
-        t = self._setup_state_test("agg-5")
+        stub = self._setup_state_test("agg-5")
 
         def agg_with_null_col(df):
             str_cols = [_c for _c, _t in zip(df.columns, df.dtypes, strict=False) if _is_string_col(_c, _t)]
@@ -4735,16 +4735,16 @@ class WrangleTest(unittest.TestCase):
             }
         ).with_columns(pl.col("Date").str.to_date())
 
-        _, current1, _ = t.state_cache(data, agg_with_null_col)
+        _, current1, _ = stub.state_cache(data, agg_with_null_col)
         self.assertEqual(pl.Float64, current1["AAPL Baseline Price Close"].dtype)
-        t.reset_counters()
-        delta2, current2, _ = t.state_cache(data, agg_with_null_col)
+        stub.reset_counters()
+        delta2, current2, _ = stub.state_cache(data, agg_with_null_col)
         self.assertEqual(0, len(delta2))
         self.assertEqual(pl.Float64, current2["AAPL Baseline Price Close"].dtype)
 
     def test_state_cache_csv_files_written(self):
-        t = self._setup_state_test("agg-6")
-        t.state_cache(
+        stub = self._setup_state_test("agg-6")
+        stub.state_cache(
             self._price_df(
                 [
                     ("2020-01-01", 100.0),
@@ -4753,12 +4753,12 @@ class WrangleTest(unittest.TestCase):
             ),
             self._price_change_agg(),
         )
-        self.assertTrue(isfile(join(t.local_cache, "__test_current.csv")))
-        self.assertTrue(isfile(join(t.local_cache, "__test_update.csv")))
-        self.assertTrue(isfile(join(t.local_cache, "__test_delta.csv")))
-        self.assertFalse(isfile(join(t.local_cache, "__test_previous.csv")))
-        t.reset_counters()
-        t.state_cache(
+        self.assertTrue(isfile(join(stub.local_cache, "__test_current.csv")))
+        self.assertTrue(isfile(join(stub.local_cache, "__test_update.csv")))
+        self.assertTrue(isfile(join(stub.local_cache, "__test_delta.csv")))
+        self.assertFalse(isfile(join(stub.local_cache, "__test_previous.csv")))
+        stub.reset_counters()
+        stub.state_cache(
             self._price_df(
                 [
                     ("2020-01-01", 100.0),
@@ -4769,15 +4769,15 @@ class WrangleTest(unittest.TestCase):
             ),
             self._price_change_agg(),
         )
-        self.assertTrue(isfile(join(t.local_cache, "__test_previous.csv")))
-        self.assertEqual(4, len(t.csv_read(join(t.local_cache, "__test_current.csv"))))
-        self.assertEqual(2, len(t.csv_read(join(t.local_cache, "__test_previous.csv"))))
-        self.assertEqual(4, len(t.csv_read(join(t.local_cache, "__test_update.csv"))))
-        self.assertEqual(2, len(t.csv_read(join(t.local_cache, "__test_delta.csv"))))
+        self.assertTrue(isfile(join(stub.local_cache, "__test_previous.csv")))
+        self.assertEqual(4, len(stub.csv_read(join(stub.local_cache, "__test_current.csv"))))
+        self.assertEqual(2, len(stub.csv_read(join(stub.local_cache, "__test_previous.csv"))))
+        self.assertEqual(4, len(stub.csv_read(join(stub.local_cache, "__test_update.csv"))))
+        self.assertEqual(2, len(stub.csv_read(join(stub.local_cache, "__test_delta.csv"))))
 
     def test_state_cache_row_and_column_counters(self):
-        t = self._setup_state_test("agg-7")
-        t.state_cache(
+        stub = self._setup_state_test("agg-7")
+        stub.state_cache(
             self._price_df(
                 [
                     ("2020-01-01", 100.0),
@@ -4787,13 +4787,13 @@ class WrangleTest(unittest.TestCase):
             ),
             self._price_change_agg(),
         )
-        self.assertEqual(3, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_CURRENT_ROWS))
-        self.assertEqual(3, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_UPDATE_ROWS))
-        self.assertEqual(3, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_DELTA_ROWS))
-        self.assertEqual(0, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_PREVIOUS_ROWS))
-        self.assertEqual(2, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_CURRENT_COLUMNS))
-        t.reset_counters()
-        t.state_cache(
+        self.assertEqual(3, stub.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_CURRENT_ROWS))
+        self.assertEqual(3, stub.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_UPDATE_ROWS))
+        self.assertEqual(3, stub.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_DELTA_ROWS))
+        self.assertEqual(0, stub.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_PREVIOUS_ROWS))
+        self.assertEqual(2, stub.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_CURRENT_COLUMNS))
+        stub.reset_counters()
+        stub.state_cache(
             self._price_df(
                 [
                     ("2020-01-01", 100.0),
@@ -4804,10 +4804,10 @@ class WrangleTest(unittest.TestCase):
             ),
             self._price_change_agg(),
         )
-        self.assertEqual(4, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_CURRENT_ROWS))
-        self.assertEqual(4, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_UPDATE_ROWS))
-        self.assertEqual(1, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_DELTA_ROWS))
-        self.assertEqual(3, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_PREVIOUS_ROWS))
+        self.assertEqual(4, stub.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_CURRENT_ROWS))
+        self.assertEqual(4, stub.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_UPDATE_ROWS))
+        self.assertEqual(1, stub.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_DELTA_ROWS))
+        self.assertEqual(3, stub.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_PREVIOUS_ROWS))
 
     def test_state_cache_aggregate_with_guard(self):
         def null_fill_agg(df):
@@ -4821,11 +4821,11 @@ class WrangleTest(unittest.TestCase):
             out_cols = [c for c in ["Date", "AAPL Price Close", "AAPL Derived"] if c in df.columns]
             return df.select(out_cols)
 
-        t = self._setup_state_test("agg-8")
-        _, current1, _ = t.state_cache(self._price_df([("2020-01-01", 1.0), ("2020-02-01", 2.0)]), null_fill_agg)
+        stub = self._setup_state_test("agg-8")
+        _, current1, _ = stub.state_cache(self._price_df([("2020-01-01", 1.0), ("2020-02-01", 2.0)]), null_fill_agg)
         self.assertEqual([10.0, 20.0], current1.sort("Date")["AAPL Derived"].to_list())
-        t.reset_counters()
-        delta, current2, _ = t.state_cache(
+        stub.reset_counters()
+        delta, current2, _ = stub.state_cache(
             self._price_df([("2020-01-01", 1.0), ("2020-02-01", 2.0), ("2020-03-01", 3.0)]),
             null_fill_agg,
         )
@@ -4853,11 +4853,11 @@ class WrangleTest(unittest.TestCase):
             out_cols = [c for c in ["Date", "AAPL Price Close", "AAPL Derived"] if c in df.columns]
             return df.select(out_cols)
 
-        t = self._setup_state_test("agg-9")
-        t.state_cache(self._price_df([("2020-01-01", 1.0), ("2020-02-01", 2.0)]), seed_agg)
-        t.reset_counters()
+        stub = self._setup_state_test("agg-9")
+        stub.state_cache(self._price_df([("2020-01-01", 1.0), ("2020-02-01", 2.0)]), seed_agg)
+        stub.reset_counters()
 
-        delta, current2, _ = t.state_cache(self._price_df([("2020-03-01", 3.0)]), null_fill_agg)
+        delta, current2, _ = stub.state_cache(self._price_df([("2020-03-01", 3.0)]), null_fill_agg)
         self.assertEqual(3, len(current2))
         sorted2 = current2.sort("Date")
         self.assertEqual(10.0, sorted2["AAPL Derived"][0])
@@ -4875,51 +4875,51 @@ class WrangleTest(unittest.TestCase):
         ).with_columns(pl.col("Date").str.to_date())
 
     def test_state_cache_multi_key_first_run(self):
-        t = self._setup_state_test("mk-1")
-        delta, current, previous = t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]), key_columns=["Date", "Account ID"])
+        stub = self._setup_state_test("mk-1")
+        delta, current, previous = stub.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]), key_columns=["Date", "Account ID"])
         self.assertEqual(2, len(delta))
         self.assertEqual(2, len(current))
         self.assertEqual(0, len(previous))
 
     def test_state_cache_multi_key_no_change(self):
-        t = self._setup_state_test("mk-2")
+        stub = self._setup_state_test("mk-2")
         data = self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)])
-        t.state_cache(data, key_columns=["Date", "Account ID"])
-        t.reset_counters()
-        delta, current, _ = t.state_cache(data, key_columns=["Date", "Account ID"])
+        stub.state_cache(data, key_columns=["Date", "Account ID"])
+        stub.reset_counters()
+        delta, current, _ = stub.state_cache(data, key_columns=["Date", "Account ID"])
         self.assertEqual(0, len(delta))
         self.assertEqual(2, len(current))
 
     def test_state_cache_multi_key_value_change(self):
-        t = self._setup_state_test("mk-3")
-        t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]), key_columns=["Date", "Account ID"])
-        t.reset_counters()
-        delta, current, _ = t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 150.0), ("2026-01-01", "acc-2", 200.0)]), key_columns=["Date", "Account ID"])
+        stub = self._setup_state_test("mk-3")
+        stub.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]), key_columns=["Date", "Account ID"])
+        stub.reset_counters()
+        delta, current, _ = stub.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 150.0), ("2026-01-01", "acc-2", 200.0)]), key_columns=["Date", "Account ID"])
         self.assertEqual(1, len(delta))
         self.assertEqual(150.0, delta.filter(pl.col("Account ID") == "acc-1")["Balance"][0])
         self.assertEqual(2, len(current))
 
     def test_state_cache_multi_key_new_account(self):
-        t = self._setup_state_test("mk-4")
-        t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0)]), key_columns=["Date", "Account ID"])
-        t.reset_counters()
-        delta, current, _ = t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]), key_columns=["Date", "Account ID"])
+        stub = self._setup_state_test("mk-4")
+        stub.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0)]), key_columns=["Date", "Account ID"])
+        stub.reset_counters()
+        delta, current, _ = stub.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]), key_columns=["Date", "Account ID"])
         self.assertEqual(1, len(delta))
         self.assertEqual("acc-2", delta["Account ID"][0])
         self.assertEqual(2, len(current))
 
     def test_state_cache_multi_key_new_date(self):
-        t = self._setup_state_test("mk-5")
-        t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]), key_columns=["Date", "Account ID"])
-        t.reset_counters()
-        delta, current, _ = t.state_cache(self._multi_key_dataframe([("2026-01-02", "acc-1", 110.0), ("2026-01-02", "acc-2", 210.0)]), key_columns=["Date", "Account ID"])
+        stub = self._setup_state_test("mk-5")
+        stub.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]), key_columns=["Date", "Account ID"])
+        stub.reset_counters()
+        delta, current, _ = stub.state_cache(self._multi_key_dataframe([("2026-01-02", "acc-1", 110.0), ("2026-01-02", "acc-2", 210.0)]), key_columns=["Date", "Account ID"])
         self.assertEqual(2, len(delta))
         self.assertEqual(4, len(current))
         self.assertTrue(all(str(d) == "2026-01-02" for d in delta["Date"].to_list()))
 
     def test_state_cache_multi_key_partial_update(self):
-        t = self._setup_state_test("mk-6")
-        t.state_cache(
+        stub = self._setup_state_test("mk-6")
+        stub.state_cache(
             self._multi_key_dataframe(
                 [
                     ("2026-01-01", "acc-1", 100.0),
@@ -4928,8 +4928,8 @@ class WrangleTest(unittest.TestCase):
             ),
             key_columns=["Date", "Account ID"],
         )
-        t.reset_counters()
-        delta, _current, _ = t.state_cache(
+        stub.reset_counters()
+        delta, _current, _ = stub.state_cache(
             self._multi_key_dataframe(
                 [
                     ("2026-01-01", "acc-1", 150.0),
@@ -4946,8 +4946,8 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual("2026-01-02", str(delta_sorted["Date"][1]))
 
     def test_state_cache_multi_key_duplicate_keys_in_update(self):
-        t = self._setup_state_test("mk-7")
-        delta, current, _ = t.state_cache(
+        stub = self._setup_state_test("mk-7")
+        delta, current, _ = stub.state_cache(
             self._multi_key_dataframe(
                 [
                     ("2026-01-01", "acc-1", 100.0),
@@ -4961,46 +4961,46 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(1, len(delta))
 
     def test_state_cache_multi_key_update_supersedes_current(self):
-        t = self._setup_state_test("mk-8")
-        t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0)]), key_columns=["Date", "Account ID"])
-        t.reset_counters()
-        delta, current, previous = t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 999.0)]), key_columns=["Date", "Account ID"])
+        stub = self._setup_state_test("mk-8")
+        stub.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0)]), key_columns=["Date", "Account ID"])
+        stub.reset_counters()
+        delta, current, previous = stub.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 999.0)]), key_columns=["Date", "Account ID"])
         self.assertEqual(1, len(delta))
         self.assertEqual(999.0, current["Balance"][0])
         self.assertEqual(100.0, previous["Balance"][0])
 
     def test_state_cache_multi_key_counters(self):
-        t = self._setup_state_test("mk-9")
-        t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0)]), key_columns=["Date", "Account ID"])
-        self.assertEqual(1, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_UPDATE_COLUMNS))
-        self.assertEqual(1, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_CURRENT_COLUMNS))
-        self.assertEqual(1, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_DELTA_COLUMNS))
+        stub = self._setup_state_test("mk-9")
+        stub.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0)]), key_columns=["Date", "Account ID"])
+        self.assertEqual(1, stub.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_UPDATE_COLUMNS))
+        self.assertEqual(1, stub.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_CURRENT_COLUMNS))
+        self.assertEqual(1, stub.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_DELTA_COLUMNS))
 
     def test_state_cache_multi_key_clean(self):
-        t = self._setup_state_test("mk-10")
-        t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]), key_columns=["Date", "Account ID"])
-        t.reset_counters()
+        stub = self._setup_state_test("mk-10")
+        stub.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]), key_columns=["Date", "Account ID"])
+        stub.reset_counters()
         plugin.config.force_reprocessing = True
-        delta, current, previous = t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]), key_columns=["Date", "Account ID"])
+        delta, current, previous = stub.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]), key_columns=["Date", "Account ID"])
         self.assertEqual(2, len(delta))
         self.assertEqual(2, len(current))
         self.assertEqual(0, len(previous))
 
     def test_state_cache_multi_key_with_aggregate(self):
-        t = self._setup_state_test("mk-12")
+        stub = self._setup_state_test("mk-12")
 
         def _agg(df):
             if "Balance" in df.columns:
                 df = df.with_columns((pl.col("Balance") * 2).alias("Balance Double"))
             return df
 
-        _delta, current, _ = t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 50.0), ("2026-01-01", "acc-2", 100.0)]), aggregate_func=_agg, key_columns=["Date", "Account ID"])
+        _delta, current, _ = stub.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 50.0), ("2026-01-01", "acc-2", 100.0)]), aggregate_func=_agg, key_columns=["Date", "Account ID"])
         self.assertIn("Balance Double", current.columns)
         doubles = current.sort(["Date", "Account ID"])["Balance Double"].to_list()
         self.assertEqual([100.0, 200.0], doubles)
 
     def test_state_cache_multi_key_null_date_dropped(self):
-        t = self._setup_state_test("mk-13")
+        stub = self._setup_state_test("mk-13")
         data = pl.DataFrame(
             {
                 "Date": [None, "2026-01-01"],
@@ -5008,13 +5008,13 @@ class WrangleTest(unittest.TestCase):
                 "Balance": [999.0, 100.0],
             }
         ).with_columns(pl.col("Date").str.to_date(strict=False))
-        _delta, current, _ = t.state_cache(data, key_columns=["Date", "Account ID"])
+        _delta, current, _ = stub.state_cache(data, key_columns=["Date", "Account ID"])
         self.assertEqual(1, len(current))
         self.assertEqual("acc-1", current["Account ID"][0])
 
     def test_state_cache_replace_partition(self):
-        t = self._setup_state_test("mk-14")
-        t.state_cache(
+        stub = self._setup_state_test("mk-14")
+        stub.state_cache(
             self._multi_key_dataframe(
                 [
                     ("2025-12-31", "acc-1", 10.0),
@@ -5025,8 +5025,8 @@ class WrangleTest(unittest.TestCase):
             ),
             key_columns=["Date", "Account ID"],
         )
-        t.reset_counters()
-        delta, current, previous = t.state_cache(
+        stub.reset_counters()
+        delta, current, previous = stub.state_cache(
             self._multi_key_dataframe(
                 [
                     ("2026-01-01", "acc-1", 150.0),
@@ -5041,14 +5041,14 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual([10.0, 150.0, 200.0, 400.0], current.sort("Date")["Balance"].to_list())
         self.assertEqual(["acc-1", "acc-4"], delta.sort("Date")["Account ID"].to_list())
         self.assertEqual(4, len(previous))
-        deleted = pl.read_csv(join(t.local_cache, "__test_deleted.csv"))
+        deleted = pl.read_csv(join(stub.local_cache, "__test_deleted.csv"))
         self.assertEqual(["acc-3"], deleted["Account ID"].to_list())
 
     def test_state_cache_replace_clears_values(self):
-        t = self._setup_state_test("mk-15")
-        t.state_cache(pl.DataFrame({"Date": ["2026-01-01"], "Account ID": ["acc-1"], "Category": ["Food"]}).with_columns(pl.col("Date").str.to_date()), key_columns=["Date", "Account ID"])
-        t.reset_counters()
-        delta, current, _ = t.state_cache(
+        stub = self._setup_state_test("mk-15")
+        stub.state_cache(pl.DataFrame({"Date": ["2026-01-01"], "Account ID": ["acc-1"], "Category": ["Food"]}).with_columns(pl.col("Date").str.to_date()), key_columns=["Date", "Account ID"])
+        stub.reset_counters()
+        delta, current, _ = stub.state_cache(
             pl.DataFrame({"Date": ["2026-01-01"], "Account ID": ["acc-1"], "Category": [None]}, schema_overrides={"Category": pl.Utf8}).with_columns(pl.col("Date").str.to_date()),
             key_columns=["Date", "Account ID"],
             replace=pl.col("Date").dt.year() == 2026,
@@ -5057,14 +5057,14 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(1, len(delta))
 
     def test_state_cache_removed_column_counter(self):
-        t = self._setup_state_test("test-6")
-        t.state_cache(self._df([("2020-01-01", 1.0), ("2020-02-01", 2.0)]))
-        self.assertEqual(1, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_UPDATE_COLUMNS))
-        self.assertEqual(2, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_PREVIOUS_COLUMNS))
-        self.assertEqual(2, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_CURRENT_COLUMNS))
+        stub = self._setup_state_test("test-6")
+        stub.state_cache(self._df([("2020-01-01", 1.0), ("2020-02-01", 2.0)]))
+        self.assertEqual(1, stub.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_UPDATE_COLUMNS))
+        self.assertEqual(2, stub.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_PREVIOUS_COLUMNS))
+        self.assertEqual(2, stub.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_CURRENT_COLUMNS))
 
     def test_state_cache_multiple_new_columns(self):
-        t = self._setup_state_test("test-2")
+        stub = self._setup_state_test("test-2")
         update = pl.DataFrame(
             {
                 "Date": ["2020-01-01", "2020-02-01"],
@@ -5073,7 +5073,7 @@ class WrangleTest(unittest.TestCase):
                 "ColB": [100.0, 200.0],
             }
         ).with_columns(pl.col("Date").str.to_date())
-        delta, current, previous = t.state_cache(update)
+        delta, current, previous = stub.state_cache(update)
         self.assertIn("ColA", current.columns)
         self.assertIn("ColB", current.columns)
         self.assertIsNone(previous.sort("Date")["ColA"][0])
@@ -5083,8 +5083,8 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(2, len(delta))
 
     def test_state_cache_multiple_removed_columns(self):
-        t = self._setup_state_test("test-8")
-        delta, current, previous = t.state_cache(self._df([("2020-01-01", 1.0), ("2020-02-01", 2.0)]))
+        stub = self._setup_state_test("test-8")
+        delta, current, previous = stub.state_cache(self._df([("2020-01-01", 1.0), ("2020-02-01", 2.0)]))
         self.assertIn("Extra1", current.columns)
         self.assertIn("Extra2", current.columns)
         self.assertIsNone(current.sort("Date")["Extra1"][0])
@@ -5092,13 +5092,13 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(10.0, previous.sort("Date")["Extra1"][0])
         self.assertEqual(100.0, previous.sort("Date")["Extra2"][0])
         self.assertEqual(2, len(delta))
-        self.assertEqual(1, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_UPDATE_COLUMNS))
-        self.assertEqual(3, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_PREVIOUS_COLUMNS))
+        self.assertEqual(1, stub.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_UPDATE_COLUMNS))
+        self.assertEqual(3, stub.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_PREVIOUS_COLUMNS))
 
     def test_state_cache_multi_key_new_column(self):
-        t = self._setup_state_test("mk-14")
-        t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]), key_columns=["Date", "Account ID"])
-        t.reset_counters()
+        stub = self._setup_state_test("mk-14")
+        stub.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]), key_columns=["Date", "Account ID"])
+        stub.reset_counters()
         update = pl.DataFrame(
             {
                 "Date": ["2026-01-01", "2026-01-01"],
@@ -5107,7 +5107,7 @@ class WrangleTest(unittest.TestCase):
                 "Notes": ["note-a", "note-b"],
             }
         ).with_columns(pl.col("Date").str.to_date())
-        delta, current, previous = t.state_cache(update, key_columns=["Date", "Account ID"])
+        delta, current, previous = stub.state_cache(update, key_columns=["Date", "Account ID"])
         self.assertIn("Notes", current.columns)
         self.assertIn("Notes", previous.columns)
         self.assertIsNone(previous.sort(["Date", "Account ID"])["Notes"][0])
@@ -5115,7 +5115,7 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(2, len(delta))
 
     def test_state_cache_multi_key_removed_column(self):
-        t = self._setup_state_test("mk-15")
+        stub = self._setup_state_test("mk-15")
         initial = pl.DataFrame(
             {
                 "Date": ["2026-01-01", "2026-01-01"],
@@ -5124,9 +5124,9 @@ class WrangleTest(unittest.TestCase):
                 "Notes": ["note-a", "note-b"],
             }
         ).with_columns(pl.col("Date").str.to_date())
-        t.state_cache(initial, key_columns=["Date", "Account ID"])
-        t.reset_counters()
-        delta, current, previous = t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]), key_columns=["Date", "Account ID"])
+        stub.state_cache(initial, key_columns=["Date", "Account ID"])
+        stub.reset_counters()
+        delta, current, previous = stub.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]), key_columns=["Date", "Account ID"])
         self.assertIn("Notes", current.columns)
         self.assertIsNone(current.sort(["Date", "Account ID"])["Notes"][0])
         self.assertEqual("note-a", previous.sort(["Date", "Account ID"])["Notes"][0])
@@ -5134,7 +5134,7 @@ class WrangleTest(unittest.TestCase):
         self.assertIsNone(delta.sort(["Date", "Account ID"])["Notes"][0])
 
     def test_state_cache_coalesce_preserves_current_when_update_null(self):
-        t = self._setup_state_test("sc-1")
+        stub = self._setup_state_test("sc-1")
         first = pl.DataFrame(
             {
                 "Date": ["2024-01-01", "2024-01-02"],
@@ -5142,8 +5142,8 @@ class WrangleTest(unittest.TestCase):
                 "Extra": [10.0, 20.0],
             }
         ).with_columns(pl.col("Date").str.to_date())
-        t.state_cache(first)
-        t.reset_counters()
+        stub.state_cache(first)
+        stub.reset_counters()
         update = pl.DataFrame(
             {
                 "Date": ["2024-01-02", "2024-01-03"],
@@ -5151,24 +5151,24 @@ class WrangleTest(unittest.TestCase):
                 "Extra": [None, 30.0],
             }
         ).with_columns(pl.col("Date").str.to_date())
-        _, current, _ = t.state_cache(update)
+        _, current, _ = stub.state_cache(update)
         by_date = {row[0].isoformat(): (row[1], row[2]) for row in current.select(["Date", "Value", "Extra"]).rows()}
         self.assertEqual((1.0, 10.0), by_date["2024-01-01"])
         self.assertEqual((2.0, 20.0), by_date["2024-01-02"])
         self.assertEqual((3.0, 30.0), by_date["2024-01-03"])
 
     def _setup_state_test(self, fixture):
-        t = PluginStub("Test", "SOME_NON_EXISTANT_GUID")
-        t.local_cache = abspath(join(DIR_ROOT, "target", "data", f"state-{fixture}"))
-        shutil.rmtree(t.local_cache, ignore_errors=True)
-        os.makedirs(t.local_cache)
-        src = join(DIR_ROOT, "src/test/resources/state", fixture, "data")
-        if isdir(src):
-            for fname in os.listdir(src):
-                shutil.copy(join(src, fname), join(t.local_cache, fname))
+        stub = PluginStub("Test", "SOME_NON_EXISTANT_GUID")
+        stub.local_cache = abspath(join(DIR_ROOT, "target", "data", f"state-{fixture}"))
+        shutil.rmtree(stub.local_cache, ignore_errors=True)
+        os.makedirs(stub.local_cache)
+        source = join(DIR_ROOT, "src/test/resources/state", fixture, "data")
+        if isdir(source):
+            for file_name in os.listdir(source):
+                shutil.copy(join(source, file_name), join(stub.local_cache, file_name))
         plugin.config.force_reprocessing = False
         plugin.config.disable_source_downloads = False
-        return t
+        return stub
 
     def _df(self, date_value_pairs):
         return pl.DataFrame(

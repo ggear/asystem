@@ -23,7 +23,7 @@ func init() {
 }
 
 func newBackupCmd() *cobra.Command {
-	opts := &backupOptions{}
+	options := &backupOptions{}
 	cmd := &cobra.Command{
 		Use:   backupCommandName + " [command]",
 		Short: backupDescription,
@@ -32,7 +32,7 @@ func newBackupCmd() *cobra.Command {
 	cmd.PersistentFlags().SortFlags = false
 	cmd.Flags().SortFlags = false
 	for _, verb := range backupVerbs {
-		cmd.AddCommand(newBackupVerbCmd(verb, opts))
+		cmd.AddCommand(newBackupVerbCmd(verb, options))
 	}
 	for _, verb := range backupModuleVerbs {
 		cmd.AddCommand(newBackupModuleCmd(verb))
@@ -65,7 +65,7 @@ func newBackupModuleCmd(verb backupModuleVerb) *cobra.Command {
 	return cmd
 }
 
-func newBackupVerbCmd(verb backupVerb, opts *backupOptions) *cobra.Command {
+func newBackupVerbCmd(verb backupVerb, options *backupOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:       verb.use,
 		Short:     verb.short,
@@ -75,32 +75,32 @@ func newBackupVerbCmd(verb backupVerb, opts *backupOptions) *cobra.Command {
 			configPath, _ := cmd.Flags().GetString("config")
 			request := engine.BackupRequest{
 				Command: verb.command, Trigger: metric.BackupTriggerManual, Config: configPath,
-				Timeout: opts.timeout, Scrub: opts.scrub,
+				Timeout: options.timeout, Scrub: options.scrub,
 			}
 			if len(args) > 0 {
 				request.Argument = args[0]
 			}
-			if opts.stage != "" {
-				stage, err := engine.BackupStageOf(opts.stage)
+			if options.stage != "" {
+				stage, err := engine.BackupStageOf(options.stage)
 				if err != nil {
 					return err
 				}
 				request.Stage = stage
 			}
-			return executeBackup(request, opts)
+			return executeBackup(request, options)
 		},
 	}
-	cmd.Flags().StringVarP(&opts.stage, "stage", "G", "", "execute one stage only [primary, secondary, tertiary]")
-	cmd.Flags().BoolVarP(&opts.scrub, "scrub", "S", false, "scrub the backup disk, whatever the monthly window says")
-	cmd.Flags().BoolVarP(&opts.quiet, "quiet", "Q", false, "drop the stdout copy of the log, keeping the run log and the log file")
-	cmd.Flags().DurationVarP(&opts.timeout, "timeout-period", "T", 0, "deadline for the whole run, defaulting to the configured timeout, uses unit suffixes [s, m, h]")
-	addLogFlags(cmd, &opts.logOptions, "info")
+	cmd.Flags().StringVarP(&options.stage, "stage", "G", "", "execute one stage only [primary, secondary, tertiary]")
+	cmd.Flags().BoolVarP(&options.scrub, "scrub", "S", false, "scrub the backup disk, whatever the monthly window says")
+	cmd.Flags().BoolVarP(&options.quiet, "quiet", "Q", false, "drop the stdout copy of the log, keeping the run log and the log file")
+	cmd.Flags().DurationVarP(&options.timeout, "timeout-period", "T", 0, "deadline for the whole run, defaulting to the configured timeout, uses unit suffixes [s, m, h]")
+	addLogFlags(cmd, &options.logOptions, "info")
 	cmd.Flags().SortFlags = false
 	return cmd
 }
 
-func executeBackup(request engine.BackupRequest, opts *backupOptions) error {
-	level, err := makeLevel(opts.logLevel)
+func executeBackup(request engine.BackupRequest, options *backupOptions) error {
+	level, err := makeLevel(options.logLevel)
 	if err != nil {
 		return err
 	}
@@ -111,7 +111,7 @@ func executeBackup(request engine.BackupRequest, opts *backupOptions) error {
 	switch {
 	case request.Stage != "":
 		if enableErr := scribe.EnableBackupAndFile(level, backupCommandName, config.ResolvedVersion(request.Config),
-			opts.quiet, logFileSizeMB, logFileBackups, logFileAgeDays); enableErr != nil {
+			options.quiet, logFileSizeMB, logFileBackups, logFileAgeDays); enableErr != nil {
 			return fmt.Errorf("backup logging could not be enabled [%w]", enableErr)
 		}
 	case request.Command == engine.BackupCommandStart:
@@ -122,7 +122,7 @@ func executeBackup(request engine.BackupRequest, opts *backupOptions) error {
 	default:
 		scribe.EnableStdout(level)
 	}
-	if err := setLogFilters(&opts.logOptions); err != nil {
+	if err := setLogFilters(&options.logOptions); err != nil {
 		return err
 	}
 	if err := engine.RunBackup(request); err != nil {

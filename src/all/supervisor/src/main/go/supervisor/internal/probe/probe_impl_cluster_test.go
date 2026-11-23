@@ -140,20 +140,20 @@ func TestProbeImplCluster_Health(t *testing.T) {
 			expectedError:      false,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			verdict := clusterHealth(tt.hosts, tt.retained, now, 15*time.Minute)
-			if verdict.hostsOK != tt.expectedHostsOK {
-				t.Errorf("hostsOK: got %d want %d", verdict.hostsOK, tt.expectedHostsOK)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			verdict := clusterHealth(testCase.hosts, testCase.retained, now, 15*time.Minute)
+			if verdict.hostsOK != testCase.expectedHostsOK {
+				t.Errorf("hostsOK: got %d want %d", verdict.hostsOK, testCase.expectedHostsOK)
 			}
-			if verdict.services != tt.expectedServices {
-				t.Errorf("services: got %d want %d", verdict.services, tt.expectedServices)
+			if verdict.services != testCase.expectedServices {
+				t.Errorf("services: got %d want %d", verdict.services, testCase.expectedServices)
 			}
-			if verdict.servicesOK != tt.expectedServicesOK {
-				t.Errorf("servicesOK: got %d want %d", verdict.servicesOK, tt.expectedServicesOK)
+			if verdict.servicesOK != testCase.expectedServicesOK {
+				t.Errorf("servicesOK: got %d want %d", verdict.servicesOK, testCase.expectedServicesOK)
 			}
-			if faults := strings.Join(verdict.faults, ","); faults != tt.expectedFaults {
-				t.Errorf("faults: got %s want %s", faults, tt.expectedFaults)
+			if faults := strings.Join(verdict.faults, ","); faults != testCase.expectedFaults {
+				t.Errorf("faults: got %s want %s", faults, testCase.expectedFaults)
 			}
 		})
 	}
@@ -185,16 +185,16 @@ func TestProbeImplCluster_Monitored(t *testing.T) {
 			expectedError:     false,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			hosts := make([]string, 0, len(tt.services))
-			for host := range tt.services {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			hosts := make([]string, 0, len(testCase.services))
+			for host := range testCase.services {
 				hosts = append(hosts, host)
 			}
 			slices.Sort(hosts)
-			monitored := clusterMonitored(hosts, func(host string) []string { return tt.services[host] })
-			if !slices.Equal(monitored, tt.expectedMonitored) {
-				t.Errorf("monitored: got %v want %v", monitored, tt.expectedMonitored)
+			monitored := clusterMonitored(hosts, func(host string) []string { return testCase.services[host] })
+			if !slices.Equal(monitored, testCase.expectedMonitored) {
+				t.Errorf("monitored: got %v want %v", monitored, testCase.expectedMonitored)
 			}
 		})
 	}
@@ -273,10 +273,10 @@ func TestProbeImplCluster_EveryDutyAnswersFromTheClusterElection(t *testing.T) {
 		{name: "cluster_duty", duty: metric.LeaderDutySentinel, expectedLeading: true, expectedEpoch: 9, expectedError: false},
 		{name: "undeclared_duty", duty: "undeclared", expectedLeading: false, expectedEpoch: 0, expectedError: false},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if leading, epoch := Leading(tt.duty); leading != tt.expectedLeading || epoch != tt.expectedEpoch {
-				t.Errorf("leading: got [%v] epoch [%d] want [%v] epoch [%d]", leading, epoch, tt.expectedLeading, tt.expectedEpoch)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if leading, epoch := Leading(testCase.duty); leading != testCase.expectedLeading || epoch != testCase.expectedEpoch {
+				t.Errorf("leading: got [%v] epoch [%d] want [%v] epoch [%d]", leading, epoch, testCase.expectedLeading, testCase.expectedEpoch)
 			}
 		})
 	}

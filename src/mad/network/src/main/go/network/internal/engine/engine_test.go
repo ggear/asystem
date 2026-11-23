@@ -24,11 +24,11 @@ func TestEngine_CreatePeriodValidation(t *testing.T) {
 		{name: "zero_aggregate", poll: time.Minute, aggregate: 0, expectedError: true},
 		{name: "not_multiple", poll: 2 * time.Minute, aggregate: 5 * time.Minute, expectedError: true},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			err := Create(&Engine{Plugins: []plugin.Plugin{&fakePlugin{name: "a"}}, PollPeriod: test.poll, AggregatePeriod: test.aggregate})
-			if (err != nil) != test.expectedError {
-				t.Fatalf("error mismatch: got %v want error=%v", err, test.expectedError)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			err := Create(&Engine{Plugins: []plugin.Plugin{&fakePlugin{name: "a"}}, PollPeriod: testCase.poll, AggregatePeriod: testCase.aggregate})
+			if (err != nil) != testCase.expectedError {
+				t.Fatalf("error mismatch: got %v want error=%v", err, testCase.expectedError)
 			}
 		})
 	}
@@ -48,10 +48,10 @@ func TestEngine_CreatePluginValidation(t *testing.T) {
 		{name: "duplicate_name", engine: &Engine{Plugins: []plugin.Plugin{&fakePlugin{name: "a"}, &fakePlugin{name: "a"}}, PollPeriod: time.Minute, AggregatePeriod: time.Minute}, wantErr: true},
 		{name: "valid", engine: &Engine{Plugins: []plugin.Plugin{&fakePlugin{name: "a"}}, PollPeriod: time.Minute, AggregatePeriod: time.Minute}, wantErr: false},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			if err := Create(test.engine); (err != nil) != test.wantErr {
-				t.Fatalf("error mismatch: got %v want error=%v", err, test.wantErr)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if err := Create(testCase.engine); (err != nil) != testCase.wantErr {
+				t.Fatalf("error mismatch: got %v want error=%v", err, testCase.wantErr)
 			}
 		})
 	}
@@ -69,12 +69,12 @@ func TestEngine_CreatePacedValidation(t *testing.T) {
 		{name: "paced_not_multiple_of_poll", period: 90 * time.Second, expectedError: true},
 		{name: "paced_not_dividing_aggregate", period: 4 * time.Minute, expectedError: true},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			p := &fakePlugin{name: "paced", mode: plugin.ModeWindowed, pollPeriod: test.period}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			p := &fakePlugin{name: "paced", mode: plugin.ModeWindowed, pollPeriod: testCase.period}
 			err := Create(&Engine{Plugins: []plugin.Plugin{p}, PollPeriod: time.Minute, AggregatePeriod: 15 * time.Minute})
-			if (err != nil) != test.expectedError {
-				t.Fatalf("error mismatch: got %v want error=%v", err, test.expectedError)
+			if (err != nil) != testCase.expectedError {
+				t.Fatalf("error mismatch: got %v want error=%v", err, testCase.expectedError)
 			}
 		})
 	}
@@ -186,21 +186,21 @@ func TestEngine_SampleWindow(t *testing.T) {
 		{name: "exact", window: 3, adds: 3, expectedLen: 3, expectedFirst: 0, expectedLast: 2},
 		{name: "overflow", window: 3, adds: 10, expectedLen: 3, expectedFirst: 7, expectedLast: 9},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			e := &Engine{sampleWindow: test.window, sampleBuffers: map[string][]plugin.Sample{}}
-			for i := 0; i < test.adds; i++ {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			e := &Engine{sampleWindow: testCase.window, sampleBuffers: map[string][]plugin.Sample{}}
+			for i := 0; i < testCase.adds; i++ {
 				e.addSample("p", plugin.Sample{Timestamp: time.Unix(int64(i), 0)})
 			}
 			samples := e.copySamples("p")
-			if len(samples) != test.expectedLen {
-				t.Fatalf("len mismatch: got %d want %d", len(samples), test.expectedLen)
+			if len(samples) != testCase.expectedLen {
+				t.Fatalf("len mismatch: got %d want %d", len(samples), testCase.expectedLen)
 			}
-			if got := int(samples[0].Timestamp.Unix()); got != test.expectedFirst {
-				t.Fatalf("first mismatch: got %d want %d", got, test.expectedFirst)
+			if got := int(samples[0].Timestamp.Unix()); got != testCase.expectedFirst {
+				t.Fatalf("first mismatch: got %d want %d", got, testCase.expectedFirst)
 			}
-			if got := int(samples[len(samples)-1].Timestamp.Unix()); got != test.expectedLast {
-				t.Fatalf("last mismatch: got %d want %d", got, test.expectedLast)
+			if got := int(samples[len(samples)-1].Timestamp.Unix()); got != testCase.expectedLast {
+				t.Fatalf("last mismatch: got %d want %d", got, testCase.expectedLast)
 			}
 		})
 	}
@@ -460,23 +460,23 @@ func TestEngine_HandleCommand(t *testing.T) {
 		{name: "unparseable_payload", plugin: "agg", payload: "garbage", initialState: plugin.StateOff, repeat: 1, expectedPolls: 0, expectedState: plugin.StateOff},
 		{name: "unknown_plugin", plugin: "missing", payload: "ON", initialState: plugin.StateOff, repeat: 1, expectedPolls: 0, expectedState: plugin.StateOff},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			polls := 0
-			p := &fakePlugin{name: "agg", pollCount: &polls, aggregate: test.aggregate, state: plugin.NewStateTracker(test.initialState)}
+			p := &fakePlugin{name: "agg", pollCount: &polls, aggregate: testCase.aggregate, state: plugin.NewStateTracker(testCase.initialState)}
 			e := newEngine(t, p)
-			e.refreshGap = test.gap
-			for range test.repeat {
-				e.handleCommand(context.Background(), test.plugin, []byte(test.payload))
+			e.refreshGap = testCase.gap
+			for range testCase.repeat {
+				e.handleCommand(context.Background(), testCase.plugin, []byte(testCase.payload))
 			}
-			if polls != test.expectedPolls {
-				t.Errorf("polls: got %d want %d", polls, test.expectedPolls)
+			if polls != testCase.expectedPolls {
+				t.Errorf("polls: got %d want %d", polls, testCase.expectedPolls)
 			}
-			if got := p.state.Get(); got != test.expectedState {
-				t.Errorf("state: got %s want %s", got, test.expectedState)
+			if got := p.state.Get(); got != testCase.expectedState {
+				t.Errorf("state: got %s want %s", got, testCase.expectedState)
 			}
-			if got := len(e.copySamples("agg")); got != test.expectedSampleLen {
-				t.Errorf("samples: got %d want %d", got, test.expectedSampleLen)
+			if got := len(e.copySamples("agg")); got != testCase.expectedSampleLen {
+				t.Errorf("samples: got %d want %d", got, testCase.expectedSampleLen)
 			}
 		})
 	}

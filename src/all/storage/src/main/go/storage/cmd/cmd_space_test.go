@@ -8,7 +8,7 @@ import (
 )
 
 func TestCmdSpace_ResolveSymbols(t *testing.T) {
-	cases := []struct {
+	tests := []struct {
 		name          string
 		symbols       string
 		environment   map[string]string
@@ -24,22 +24,22 @@ func TestCmdSpace_ResolveSymbols(t *testing.T) {
 		{name: "auto with NO_UTF8 set", symbols: "auto", environment: map[string]string{"TERM": "xterm-256color", "NO_UTF8": "1"}, want: false},
 		{name: "an unknown value", symbols: "utf7", expectedError: true},
 	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			setEnvironment(t, c.environment, "TERM", "NO_UTF8")
-			got, err := resolveSymbols(c.symbols)
-			if (err != nil) != c.expectedError {
-				t.Fatalf("error: got %v want error %v", err, c.expectedError)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			setEnvironment(t, testCase.environment, "TERM", "NO_UTF8")
+			got, err := resolveSymbols(testCase.symbols)
+			if (err != nil) != testCase.expectedError {
+				t.Fatalf("error: got %v want error %v", err, testCase.expectedError)
 			}
-			if err == nil && got != c.want {
-				t.Errorf("useUnicode: got %v want %v", got, c.want)
+			if err == nil && got != testCase.want {
+				t.Errorf("useUnicode: got %v want %v", got, testCase.want)
 			}
 		})
 	}
 }
 
 func TestCmdSpace_ResolveTheme(t *testing.T) {
-	cases := []struct {
+	tests := []struct {
 		name          string
 		theme         string
 		environment   map[string]string
@@ -52,15 +52,15 @@ func TestCmdSpace_ResolveTheme(t *testing.T) {
 		{name: "auto off a terminal", theme: "auto", environment: map[string]string{"TERM": "xterm-256color"}, want: false},
 		{name: "an unknown value", theme: "ansi", expectedError: true},
 	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			setEnvironment(t, c.environment, "TERM", "NO_COLOR", "MONO")
-			got, err := resolveTheme(c.theme)
-			if (err != nil) != c.expectedError {
-				t.Fatalf("error: got %v want error %v", err, c.expectedError)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			setEnvironment(t, testCase.environment, "TERM", "NO_COLOR", "MONO")
+			got, err := resolveTheme(testCase.theme)
+			if (err != nil) != testCase.expectedError {
+				t.Fatalf("error: got %v want error %v", err, testCase.expectedError)
 			}
-			if err == nil && got != c.want {
-				t.Errorf("useColour: got %v want %v", got, c.want)
+			if err == nil && got != testCase.want {
+				t.Errorf("useColour: got %v want %v", got, testCase.want)
 			}
 		})
 	}
@@ -122,7 +122,7 @@ func TestCmdSpace_EstateRows(t *testing.T) {
 	host := func(label string, mounts ...engine.MountDoc) engine.HostDoc {
 		return engine.HostDoc{Label: label, State: engine.HostStateMeasured, Mounts: mounts}
 	}
-	cases := []struct {
+	tests := []struct {
 		name          string
 		hosts         []engine.HostDoc
 		filters       []string
@@ -201,19 +201,19 @@ func TestCmdSpace_EstateRows(t *testing.T) {
 			},
 		},
 	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			filters := c.filters
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			filters := testCase.filters
 			if filters == nil {
 				filters = engine.DefaultFilters
 			}
-			got := estateRows(c.hosts, filters)
-			if len(got) != len(c.want) {
-				t.Fatalf("rows: got %d want %d, got %+v", len(got), len(c.want), got)
+			got := estateRows(testCase.hosts, filters)
+			if len(got) != len(testCase.want) {
+				t.Fatalf("rows: got %d want %d, got %+v", len(got), len(testCase.want), got)
 			}
 			for i, row := range got {
-				if row != c.want[i] {
-					t.Errorf("row %d: got %+v want %+v", i, row, c.want[i])
+				if row != testCase.want[i] {
+					t.Errorf("row %d: got %+v want %+v", i, row, testCase.want[i])
 				}
 			}
 		})
@@ -221,7 +221,7 @@ func TestCmdSpace_EstateRows(t *testing.T) {
 }
 
 func TestCmdSpace_ReportFaults(t *testing.T) {
-	cases := []struct {
+	tests := []struct {
 		name            string
 		hosts           []engine.HostDoc
 		wantFault       bool
@@ -264,18 +264,18 @@ func TestCmdSpace_ReportFaults(t *testing.T) {
 			wantUnreachable: true,
 		},
 	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			silenceStderr(t)
-			fault, unreachable := reportFaults(c.hosts, "10.200.1725")
-			if fault != c.wantFault {
-				t.Errorf("fault: got %v want %v", fault, c.wantFault)
+			fault, unreachable := reportFaults(testCase.hosts, "10.200.1725")
+			if fault != testCase.wantFault {
+				t.Errorf("fault: got %v want %v", fault, testCase.wantFault)
 			}
-			if unreachable != c.wantUnreachable {
-				t.Errorf("unreachable: got %v want %v", unreachable, c.wantUnreachable)
+			if unreachable != testCase.wantUnreachable {
+				t.Errorf("unreachable: got %v want %v", unreachable, testCase.wantUnreachable)
 			}
-			if got := anyMeasured(c.hosts); got != c.wantMeasured {
-				t.Errorf("anyMeasured: got %v want %v", got, c.wantMeasured)
+			if got := anyMeasured(testCase.hosts); got != testCase.wantMeasured {
+				t.Errorf("anyMeasured: got %v want %v", got, testCase.wantMeasured)
 			}
 		})
 	}

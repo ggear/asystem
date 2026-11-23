@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -367,50 +368,6 @@ func TestProbeUtilMounts_UnreadableMountTable(t *testing.T) {
 	}
 }
 
-func mountTableAt(root, mounts string) string {
-	var lines []string
-	for line := range strings.SplitSeq(mounts, "\n") {
-		fields := strings.Fields(line)
-		if len(fields) < 3 {
-			lines = append(lines, line)
-			continue
-		}
-		fields[1] = filepath.Join(root, fields[1])
-		lines = append(lines, strings.Join(fields, " "))
-	}
-	return strings.Join(lines, "\n")
-}
-
-func newMountFixture(t *testing.T, root string, sizes map[string][2]uint64, hung []string) *mountSet {
-	t.Helper()
-	hanging := map[string]bool{}
-	for _, mountpoint := range hung {
-		hanging[filepath.Join(root, mountpoint)] = true
-	}
-	set := &mountSet{
-		root:       root,
-		physicals:  map[string]string{},
-		identities: map[string]*driveIdentity{},
-		inflight:   map[string]bool{},
-		smart:      func(string, []string) (smartReport, error) { return smartReport{}, fmt.Errorf("no smart in fixtures") },
-	}
-	set.statfs = func(path string) (uint64, uint64, error) {
-		if hanging[path] {
-			return 0, 0, fmt.Errorf("mount hung")
-		}
-		mountpoint := strings.TrimPrefix(path, root)
-		if mountpoint == "" {
-			mountpoint = "/"
-		}
-		size, found := sizes[mountpoint]
-		if !found {
-			return 0, 0, fmt.Errorf("no fixture for [%s]", path)
-		}
-		return size[0], size[1], nil
-	}
-	return set
-}
-
 func TestProbeUtilMounts_BaseFallsBackOutsideTheContainer(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -465,6 +422,77 @@ func TestProbeUtilMounts_ContainerMountsAreDropped(t *testing.T) {
 	if strings.Join(kept, ",") != strings.Join(expected, ",") {
 		t.Errorf("mountpoints: got %v want %v", kept, expected)
 	}
+}
+
+func TestProbeUtilMounts_ReadFstab(t *testing.T) {
+	tests := []struct {
+		name            string
+		body            string
+		expectedEntries []fstabEntry
+	}{
+		{name: "comments_blanks_and_short_lines_are_dropped", body: "# a comment\n\n  # indented comment\nbroken-line-with-one-field\n"},
+		{name: "a_full_line_carries_every_field", body: "PARTLABEL=backup_02  /backup  btrfs  noauto,nofail  0 2\n",
+			expectedEntries: []fstabEntry{{spec: "PARTLABEL=backup_02", target: "/backup", fstype: "btrfs", options: []string{"noauto", "nofail"}}}},
+		{name: "a_short_line_carries_what_it_names", body: "//nas/media  /share/40\n//nas/tv  /share/41  cifs\n",
+			expectedEntries: []fstabEntry{{spec: "//nas/media", target: "/share/40"}, {spec: "//nas/tv", target: "/share/41", fstype: "cifs"}}},
+		{name: "an_escaped_space_in_the_target_is_unescaped", body: "UUID=abc  /share/My\\040Disk  ext4  defaults  0 2\n",
+			expectedEntries: []fstabEntry{{spec: "UUID=abc", target: "/share/My Disk", fstype: "ext4", options: []string{"defaults"}}}},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "fstab")
+			if err := os.WriteFile(path, []byte(testCase.body), 0o644); err != nil {
+				t.Fatalf("write fstab: %v", err)
+			}
+			if actual := readFstab(path); !reflect.DeepEqual(actual, testCase.expectedEntries) {
+				t.Errorf("entries: got %+v want %+v", actual, testCase.expectedEntries)
+			}
+		})
+	}
+}
+
+func mountTableAt(root, mounts string) string {
+	var lines []string
+	for line := range strings.SplitSeq(mounts, "\n") {
+		fields := strings.Fields(line)
+		if len(fields) < 3 {
+			lines = append(lines, line)
+			continue
+		}
+		fields[1] = filepath.Join(root, fields[1])
+		lines = append(lines, strings.Join(fields, " "))
+	}
+	return strings.Join(lines, "\n")
+}
+
+func newMountFixture(t *testing.T, root string, sizes map[string][2]uint64, hung []string) *mountSet {
+	t.Helper()
+	hanging := map[string]bool{}
+	for _, mountpoint := range hung {
+		hanging[filepath.Join(root, mountpoint)] = true
+	}
+	set := &mountSet{
+		root:       root,
+		physicals:  map[string]string{},
+		identities: map[string]*driveIdentity{},
+		inflight:   map[string]bool{},
+		smart:      func(string, []string) (smartReport, error) { return smartReport{}, fmt.Errorf("no smart in fixtures") },
+	}
+	set.statfs = func(path string) (uint64, uint64, error) {
+		if hanging[path] {
+			return 0, 0, fmt.Errorf("mount hung")
+		}
+		mountpoint := strings.TrimPrefix(path, root)
+		if mountpoint == "" {
+			mountpoint = "/"
+		}
+		size, found := sizes[mountpoint]
+		if !found {
+			return 0, 0, fmt.Errorf("no fixture for [%s]", path)
+		}
+		return size[0], size[1], nil
+	}
+	return set
 }
 
 func writeMountTree(t *testing.T, mounts, fstab string, extra map[string]string) string {

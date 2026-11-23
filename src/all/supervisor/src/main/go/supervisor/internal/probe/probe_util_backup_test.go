@@ -302,40 +302,53 @@ func TestProbeUtilBackup_TheShippedConfigBoundsAScheduledRunBeforeTheNextOne(t *
 }
 
 func TestProbeUtilBackup_ASecondRunIsRefusedWhileTheLockIsHeld(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv(config.BackupHomeEnvVar, home)
-	root := backupRunRoot()
-	if err := os.MkdirAll(root, 0o755); err != nil {
-		t.Fatalf("mkdir root: %v", err)
+	tests := []struct {
+		name         string
+		runID        string
+		expectedRuns []string
+	}{
+		{name: "a_fresh_run_mints_no_directory", runID: "2026-09-22_01-00-01", expectedRuns: []string{"2026-09-22_01-00-00"}},
+		{name: "a_colliding_run_leaves_the_live_run_log_alone", runID: "2026-09-22_01-00-00", expectedRuns: []string{"2026-09-22_01-00-00"}},
 	}
-	held, err := os.OpenFile(lockPath(root), os.O_CREATE|os.O_RDWR, 0o644)
-	if err != nil {
-		t.Fatalf("open lock: %v", err)
-	}
-	defer func() { _ = held.Close() }()
-	if err := syscall.Flock(int(held.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
-		t.Fatalf("hold lock: %v", err)
-	}
-	defer func() { _ = syscall.Flock(int(held.Fd()), syscall.LOCK_UN) }()
-
-	configPath := filepath.Join(home, "config.json")
-	if err := os.WriteFile(configPath, []byte(`{"asystem":{"host":"testhost"}}`), 0o644); err != nil {
-		t.Fatalf("write config: %v", err)
-	}
-	runPath := backupRunPath(root, "2026-09-22_01-00-00")
-	if err := os.MkdirAll(runPath, 0o755); err != nil {
-		t.Fatalf("mkdir run: %v", err)
-	}
-	if err := os.WriteFile(runLogPath(runPath), []byte("logging opened before the lock was taken\n"), 0o644); err != nil {
-		t.Fatalf("write run log: %v", err)
-	}
-	err = Backup(t.Context(), BackupRequest{Command: BackupCommandStart, Trigger: metric.BackupTriggerManual,
-		Config: configPath, RunID: "2026-09-22_01-00-00"})
-	if err == nil {
-		t.Errorf("Backup() error = nil, want a refusal while the lock is held")
-	}
-	if runs := backupRuns(root); len(runs) != 0 {
-		t.Errorf("backupRuns() = %v, want a refused run to mint no directory", runs)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			home := t.TempDir()
+			t.Setenv(config.BackupHomeEnvVar, home)
+			root := backupRunRoot()
+			if err := os.MkdirAll(root, 0o755); err != nil {
+				t.Fatalf("mkdir root: %v", err)
+			}
+			held, err := os.OpenFile(lockPath(root), os.O_CREATE|os.O_RDWR, 0o644)
+			if err != nil {
+				t.Fatalf("open lock: %v", err)
+			}
+			defer func() { _ = held.Close() }()
+			if err := syscall.Flock(int(held.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+				t.Fatalf("hold lock: %v", err)
+			}
+			defer func() { _ = syscall.Flock(int(held.Fd()), syscall.LOCK_UN) }()
+			configPath := filepath.Join(home, "config.json")
+			if err := os.WriteFile(configPath, []byte(`{"asystem":{"host":"testhost"}}`), 0o644); err != nil {
+				t.Fatalf("write config: %v", err)
+			}
+			livePath := backupRunPath(root, "2026-09-22_01-00-00")
+			if err := os.MkdirAll(livePath, 0o755); err != nil {
+				t.Fatalf("mkdir run: %v", err)
+			}
+			if err := os.WriteFile(runLogPath(livePath), []byte("the live run is logging\n"), 0o644); err != nil {
+				t.Fatalf("write run log: %v", err)
+			}
+			err = Backup(t.Context(), BackupRequest{Command: BackupCommandStart, Trigger: metric.BackupTriggerManual, Config: configPath, RunID: testCase.runID})
+			if err == nil {
+				t.Errorf("error: got nil want a refusal while the lock is held")
+			}
+			if _, statErr := os.Stat(runLogPath(livePath)); statErr != nil {
+				t.Errorf("live run log: got %v want it kept", statErr)
+			}
+			if runs := backupRuns(root); !slices.Equal(runs, testCase.expectedRuns) {
+				t.Errorf("runs: got %v want %v", runs, testCase.expectedRuns)
+			}
+		})
 	}
 }
 

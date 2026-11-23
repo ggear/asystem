@@ -108,8 +108,6 @@ func EnableStdout(level slog.Level) {
 	scribeLoggerMu.Lock()
 	defer scribeLoggerMu.Unlock()
 	closeLoggerWriter()
-	scribeLoggerLevel = level
-	scribeLoggerMode = "stdout"
 	scribeLoggerInstance = installed(&streamHandler{level: level, writer: os.Stdout, sink: sinkFile()})
 	slog.SetDefault(scribeLoggerInstance)
 }
@@ -123,8 +121,6 @@ func EnableStdoutAndFile(level slog.Level, cmd, version string, maxSizeMB, maxBa
 	scribeLoggerMu.Lock()
 	defer scribeLoggerMu.Unlock()
 	closeLoggerWriter()
-	scribeLoggerLevel = level
-	scribeLoggerMode = "stdout+file"
 	scribeLoggerInstance = installed(&streamHandler{level: level, writer: io.MultiWriter(writers...), sink: sinkFile()})
 	scribeLoggerWriter = writer
 	slog.SetDefault(scribeLoggerInstance)
@@ -136,7 +132,6 @@ func Disable() {
 	scribeLoggerMu.Lock()
 	defer scribeLoggerMu.Unlock()
 	closeLoggerWriter()
-	scribeLoggerMode = "disabled"
 	scribeLoggerInstance = installed(&streamHandler{level: slog.LevelError + 1, writer: io.Discard, sink: sinkFile()})
 	slog.SetDefault(scribeLoggerInstance)
 }
@@ -163,12 +158,10 @@ func EnableBuffer(level slog.Level, capacity int) *LogBuffer {
 	defer scribeLoggerMu.Unlock()
 	closeLoggerWriter()
 	capacity = max(capacity, 1)
-	scribeLoggerLevel = level
-	scribeLoggerMode = "buffer"
-	buf := &LogBuffer{lines: make([]LogLine, capacity)}
-	scribeLoggerInstance = installed(&bufferHandler{level: level, buffer: buf})
+	buffer := &LogBuffer{lines: make([]LogLine, capacity)}
+	scribeLoggerInstance = installed(&bufferHandler{level: level, buffer: buffer})
 	slog.SetDefault(scribeLoggerInstance)
-	return buf
+	return buffer
 }
 
 func EnableBufferAndFile(level slog.Level, cmd, version string, capacity, maxSizeMB, maxBackups, maxAgeDays int) (*LogBuffer, error) {
@@ -180,17 +173,15 @@ func EnableBufferAndFile(level slog.Level, cmd, version string, capacity, maxSiz
 	defer scribeLoggerMu.Unlock()
 	closeLoggerWriter()
 	capacity = max(capacity, 1)
-	scribeLoggerLevel = level
-	scribeLoggerMode = "buffer+file"
-	buf := &LogBuffer{lines: make([]LogLine, capacity)}
+	buffer := &LogBuffer{lines: make([]LogLine, capacity)}
 	scribeLoggerInstance = installed(&multiHandler{handlers: []slog.Handler{
-		&bufferHandler{level: level, buffer: buf},
+		&bufferHandler{level: level, buffer: buffer},
 		&streamHandler{level: level, writer: writer, sink: sinkFile()},
 	}})
 	scribeLoggerWriter = writer
 	slog.SetDefault(scribeLoggerInstance)
 	purgeLogFiles(path, maxBackups, maxAgeDays)
-	return buf, nil
+	return buffer, nil
 }
 
 func EnableBackupAndFile(level slog.Level, cmd, version string, quiet bool, maxSizeMB, maxBackups, maxAgeDays int) error {
@@ -201,8 +192,6 @@ func EnableBackupAndFile(level slog.Level, cmd, version string, quiet bool, maxS
 	scribeLoggerMu.Lock()
 	defer scribeLoggerMu.Unlock()
 	closeLoggerWriter()
-	scribeLoggerLevel = level
-	scribeLoggerMode = "backup+file"
 	handlers := []slog.Handler{
 		&streamHandler{level: level, writer: writer, sink: sinkFile()},
 	}
@@ -241,18 +230,6 @@ func (l Logger) Warnf(verb string, started time.Time, detail string, args ...any
 
 func (l Logger) Errorf(verb string, started time.Time, detail string, args ...any) {
 	l.log(slog.LevelError, verb, started, detail, args...)
-}
-
-func Level() slog.Level {
-	scribeLoggerMu.Lock()
-	defer scribeLoggerMu.Unlock()
-	return scribeLoggerLevel
-}
-
-func Mode() string {
-	scribeLoggerMu.Lock()
-	defer scribeLoggerMu.Unlock()
-	return scribeLoggerMode
 }
 
 func (b *LogBuffer) Push(line LogLine) {
@@ -1019,8 +996,6 @@ var (
 	spanBackupStage = 9
 
 	scribeLoggerMu       sync.Mutex
-	scribeLoggerLevel    slog.Level
-	scribeLoggerMode     string
 	scribeLoggerInstance *slog.Logger
 	scribeLoggerWriter   io.Closer
 	scribeAttachment     atomic.Pointer[attachment]

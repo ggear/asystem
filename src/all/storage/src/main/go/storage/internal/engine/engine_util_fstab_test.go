@@ -6,7 +6,7 @@ import (
 )
 
 func TestEngineUtilFstab_ParseFstab(t *testing.T) {
-	cases := []struct {
+	tests := []struct {
 		name          string
 		contents      string
 		want          []fstabEntry
@@ -43,11 +43,11 @@ func TestEngineUtilFstab_ParseFstab(t *testing.T) {
 			want:     nil,
 		},
 	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			got := parseFstab(c.contents)
-			if !reflect.DeepEqual(got, c.want) {
-				t.Errorf("got %+v want %+v", got, c.want)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			got := parseFstab(testCase.contents)
+			if !reflect.DeepEqual(got, testCase.want) {
+				t.Errorf("got %+v want %+v", got, testCase.want)
 			}
 		})
 	}

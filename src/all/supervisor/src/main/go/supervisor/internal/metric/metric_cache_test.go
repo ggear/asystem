@@ -39,16 +39,16 @@ func TestMetricCache_Hosts(t *testing.T) {
 			expected: map[string]int{},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			cache := NewRecordCache()
-			for _, guid := range tt.records {
+			for _, guid := range testCase.records {
 				cache.Store(guid, &Record{})
 			}
 			hosts := cache.Hosts()
 			t.Logf("Cache:\n%s", cache.String())
-			if !reflect.DeepEqual(hosts, tt.expected) {
-				t.Fatalf("Got hosts = %+v, expected %+v", hosts, tt.expected)
+			if !reflect.DeepEqual(hosts, testCase.expected) {
+				t.Fatalf("Got hosts = %+v, expected %+v", hosts, testCase.expected)
 			}
 		})
 	}
@@ -110,16 +110,16 @@ func TestMetricCache_ServicesForHost(t *testing.T) {
 			expected: nil,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			cache := NewRecordCache()
-			for _, guid := range tt.records {
+			for _, guid := range testCase.records {
 				cache.Store(guid, &Record{})
 			}
-			services := cache.Services(tt.host)
+			services := cache.Services(testCase.host)
 			t.Logf("Cache:\n%s", cache.String())
-			if !reflect.DeepEqual(services, tt.expected) {
-				t.Fatalf("Got services = %+v, expected %+v", services, tt.expected)
+			if !reflect.DeepEqual(services, testCase.expected) {
+				t.Fatalf("Got services = %+v, expected %+v", services, testCase.expected)
 			}
 		})
 	}
@@ -212,16 +212,16 @@ func TestMetricCache_ServicesBefore(t *testing.T) {
 			expected: nil,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			cache := NewRecordCache()
-			for _, record := range tt.records {
+			for _, record := range testCase.records {
 				cache.Store(record.guid, &Record{Value: ValueData{Timestamp: record.timestamp}})
 			}
-			services := cache.ServicesBefore(tt.host, tt.since)
+			services := cache.ServicesBefore(testCase.host, testCase.since)
 			t.Logf("Cache:\n%s", cache.String())
-			if !reflect.DeepEqual(services, tt.expected) {
-				t.Fatalf("Got services = %+v, expected %+v", services, tt.expected)
+			if !reflect.DeepEqual(services, testCase.expected) {
+				t.Fatalf("Got services = %+v, expected %+v", services, testCase.expected)
 			}
 		})
 	}
@@ -316,17 +316,17 @@ func TestMetricCache_Records(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			cache := NewRecordCache()
-			tt.setupFunc(cache)
+			testCase.setupFunc(cache)
 			var visited []RecordGUID
 			seen := make(map[RecordGUID]Record)
 			cache.Records(func(guid RecordGUID, record *Record) {
 				visited = append(visited, guid)
 				seen[guid] = *record
 			})
-			tt.checkFunc(t, visited, seen)
+			testCase.checkFunc(t, visited, seen)
 		})
 	}
 	t.Run("happy_nil_cache_no_panic", func(t *testing.T) {
@@ -528,11 +528,11 @@ func TestMetricCache_StoreLoad(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			cache := NewRecordCache()
-			tt.setupFunc(cache)
-			tt.checkFunc(t, cache)
+			testCase.setupFunc(cache)
+			testCase.checkFunc(t, cache)
 		})
 	}
 }
@@ -799,11 +799,11 @@ func TestMetricCache_Delete(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			cache := NewRecordCache()
-			tt.setupFunc(cache)
-			tt.checkFunc(t, cache)
+			testCase.setupFunc(cache)
+			testCase.checkFunc(t, cache)
 		})
 	}
 }
@@ -859,13 +859,13 @@ func TestMetricCache_SubscribeUpdates(t *testing.T) {
 			expectedDirty: 0,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			cache := NewRecordCache()
 			listener := &mockListener{}
-			tt.setupFunc(cache, listener)
-			if listener.dirtyCount != tt.expectedDirty {
-				t.Fatalf("Got dirty count = %d, expected %d", listener.dirtyCount, tt.expectedDirty)
+			testCase.setupFunc(cache, listener)
+			if listener.dirtyCount != testCase.expectedDirty {
+				t.Fatalf("Got dirty count = %d, expected %d", listener.dirtyCount, testCase.expectedDirty)
 			}
 		})
 	}
@@ -990,11 +990,11 @@ func TestMetricCache_Reindex(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			cache := NewRecordCache()
-			tt.setupFunc(cache)
-			tt.checkFunc(t, cache)
+			testCase.setupFunc(cache)
+			testCase.checkFunc(t, cache)
 		})
 	}
 }
@@ -1205,11 +1205,11 @@ func TestMetricCache_Evict(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			cache := NewRecordCache()
-			tt.setupFunc(cache)
-			tt.checkFunc(t, cache)
+			testCase.setupFunc(cache)
+			testCase.checkFunc(t, cache)
 		})
 	}
 }
@@ -1268,11 +1268,11 @@ func TestMetricCache_LoadByIndex(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			cache := NewRecordCache()
-			tt.setupFunc(cache)
-			tt.checkFunc(t, cache)
+			testCase.setupFunc(cache)
+			testCase.checkFunc(t, cache)
 		})
 	}
 }
@@ -1747,11 +1747,11 @@ func TestMetricCache_Purge(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			cache := NewRecordCache()
-			tt.setupFunc(cache)
-			tt.checkFunc(t, cache)
+			testCase.setupFunc(cache)
+			testCase.checkFunc(t, cache)
 		})
 	}
 }
@@ -1915,13 +1915,13 @@ func TestMetricCache_SchemaListeners(t *testing.T) {
 			expectedSchemaDirty: 0,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			cache := NewRecordCache()
 			listener := &mockListener{}
-			tt.setupFunc(cache, listener)
-			if listener.dirtyCount != tt.expectedSchemaDirty {
-				t.Fatalf("Got schema dirty count = %d, expected %d", listener.dirtyCount, tt.expectedSchemaDirty)
+			testCase.setupFunc(cache, listener)
+			if listener.dirtyCount != testCase.expectedSchemaDirty {
+				t.Fatalf("Got schema dirty count = %d, expected %d", listener.dirtyCount, testCase.expectedSchemaDirty)
 			}
 		})
 	}
@@ -2117,11 +2117,11 @@ func TestMetricCache_RegisterService(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			cache := NewRecordCache()
-			tt.setupFunc(cache)
-			tt.checkFunc(t, cache)
+			testCase.setupFunc(cache)
+			testCase.checkFunc(t, cache)
 		})
 	}
 }
@@ -2179,14 +2179,14 @@ func TestMetricCache_Topics(t *testing.T) {
 			expectedTopics: 0,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			cache := NewRecordCache()
-			tt.setupFunc(cache)
+			testCase.setupFunc(cache)
 			topics := cache.Topics()
 			t.Logf("Cache:\n%s", cache.String())
-			if len(topics) != tt.expectedTopics {
-				t.Fatalf("Got %d topics, expected %d", len(topics), tt.expectedTopics)
+			if len(topics) != testCase.expectedTopics {
+				t.Fatalf("Got %d topics, expected %d", len(topics), testCase.expectedTopics)
 			}
 		})
 	}
@@ -2226,18 +2226,18 @@ func TestMetricCache_ListenerIDs(t *testing.T) {
 			expected: map[string]int{},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			cache := NewRecordCache()
-			tt.setup(cache)
+			testCase.setup(cache)
 			result := cache.ListenerIDs()
-			for host, expectedCount := range tt.expected {
+			for host, expectedCount := range testCase.expected {
 				if len(result[host]) != expectedCount {
 					t.Fatalf("Got %d IDs for host %q, expected %d", len(result[host]), host, expectedCount)
 				}
 			}
-			if len(result) != len(tt.expected) {
-				t.Fatalf("Got %d hosts, expected %d", len(result), len(tt.expected))
+			if len(result) != len(testCase.expected) {
+				t.Fatalf("Got %d hosts, expected %d", len(result), len(testCase.expected))
 			}
 		})
 	}
@@ -2318,11 +2318,11 @@ func TestMetricCache_SubscribeDeletes(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			cache := NewRecordCache()
-			tt.setupFunc(cache)
-			tt.checkFunc(t, cache)
+			testCase.setupFunc(cache)
+			testCase.checkFunc(t, cache)
 		})
 	}
 }
@@ -2348,30 +2348,30 @@ func TestMetricCache_AttachSeedsNewlyListenedMetrics(t *testing.T) {
 			expectedAbsent: []string{"supervisor/alpha/data/service/plex/version"},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			cache := NewRecordCache()
 			cache.SubscribeUpdates(NewServiceSchemaRecordGUID(MetricServiceName, "alpha", 0), &mockListener{})
 			cache.RegisterService("alpha", "plex", false)
 			notifier := &mockAttachListener{}
 			cache.SubscribeAttach(notifier)
-			for _, id := range tt.attached {
+			for _, id := range testCase.attached {
 				cache.SubscribeUpdates(NewServiceSchemaRecordGUID(id, "alpha", 0), &mockListener{})
 			}
 			cache.Attach()
-			if notifier.attachCount != tt.expectedNotify {
-				t.Errorf("attachCount: got %v want %v", notifier.attachCount, tt.expectedNotify)
+			if notifier.attachCount != testCase.expectedNotify {
+				t.Errorf("attachCount: got %v want %v", notifier.attachCount, testCase.expectedNotify)
 			}
 			topics := make(map[string]struct{})
 			for _, binding := range cache.Topics() {
 				topics[binding.Topic] = struct{}{}
 			}
-			for _, topic := range tt.expectedTopics {
+			for _, topic := range testCase.expectedTopics {
 				if _, exists := topics[topic]; !exists {
 					t.Errorf("topic %q: got absent want present", topic)
 				}
 			}
-			for _, topic := range tt.expectedAbsent {
+			for _, topic := range testCase.expectedAbsent {
 				if _, exists := topics[topic]; exists {
 					t.Errorf("topic %q: got present want absent", topic)
 				}
@@ -2384,24 +2384,8 @@ type mockListener struct {
 	dirtyCount int
 }
 
-func (m *mockListener) MarkDirty() {
-	m.dirtyCount++
-}
-
 type mockDeletesListener struct {
 	markDeleteCount int
-}
-
-func (m *mockDeletesListener) MarkDelete(_ string) {
-	m.markDeleteCount++
-}
-
-func guidSliceToSet(guids []RecordGUID) map[guidKey]struct{} {
-	s := make(map[guidKey]struct{}, len(guids))
-	for _, g := range guids {
-		s[g.key()] = struct{}{}
-	}
-	return s
 }
 
 func TestMetricCache_Take(t *testing.T) {
@@ -2726,11 +2710,11 @@ func TestMetricCache_Take(t *testing.T) {
 			expectedError: false,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			cache := NewRecordCache()
-			tt.setupFunc(cache)
-			tt.checkFunc(t, cache)
+			testCase.setupFunc(cache)
+			testCase.checkFunc(t, cache)
 		})
 	}
 }
@@ -2756,10 +2740,6 @@ type mockAttachListener struct {
 	attachCount int
 }
 
-func (m *mockAttachListener) MarkAttach() {
-	m.attachCount++
-}
-
 func TestMetricCache_EvictHost(t *testing.T) {
 	value := ValueData{Pulse: &ValueDataDetail{OK: true, Kind: ValueString, ValueString: "v"}}
 	tests := []struct {
@@ -2773,8 +2753,8 @@ func TestMetricCache_EvictHost(t *testing.T) {
 		{name: "a_host_with_no_records_changes_nothing", host: "gamma", expectedSize: 4},
 		{name: "an_empty_host_changes_nothing", host: "", expectedSize: 4},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			cache := NewRecordCache()
 			cache.Store(NewRecordGUID(MetricHostUsedMemory, "alpha"), &Record{Value: value})
 			cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: value})
@@ -2782,22 +2762,22 @@ func TestMetricCache_EvictHost(t *testing.T) {
 			cache.Store(NewServiceRecordGUID(MetricServiceName, "beta", "svc-b"), &Record{Value: value})
 			listener := &mockListener{}
 			cache.SubscribeUpdates(NewRecordGUID(MetricHostUsedMemory, "alpha"), listener)
-			if got := cache.EvictHost(test.host); got != test.expectedEvicted {
-				t.Fatalf("Got EvictHost = %v, expected %v", got, test.expectedEvicted)
+			if got := cache.EvictHost(testCase.host); got != testCase.expectedEvicted {
+				t.Fatalf("Got EvictHost = %v, expected %v", got, testCase.expectedEvicted)
 			}
-			if got := cache.Size(); got != test.expectedSize {
-				t.Fatalf("Got size = %d, expected %d (no record created)", got, test.expectedSize)
+			if got := cache.Size(); got != testCase.expectedSize {
+				t.Fatalf("Got size = %d, expected %d (no record created)", got, testCase.expectedSize)
 			}
 			held, _ := cache.Load(NewRecordGUID(MetricHostUsedMemory, "alpha"))
-			if (held.Value.Pulse == nil) != test.expectedHostNil {
-				t.Fatalf("Got alpha host metric nil = %v, expected %v", held.Value.Pulse == nil, test.expectedHostNil)
+			if (held.Value.Pulse == nil) != testCase.expectedHostNil {
+				t.Fatalf("Got alpha host metric nil = %v, expected %v", held.Value.Pulse == nil, testCase.expectedHostNil)
 			}
 			service, _ := cache.Load(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"))
 			other, _ := cache.Load(NewRecordGUID(MetricHostUsedMemory, "beta"))
 			if service.Value.Pulse == nil || other.Value.Pulse == nil {
 				t.Fatalf("Got a service or another host evicted, expected only the named host metrics")
 			}
-			if test.expectedEvicted && listener.dirtyCount == 0 {
+			if testCase.expectedEvicted && listener.dirtyCount == 0 {
 				t.Fatalf("Got no listener notification, expected the display told")
 			}
 		})
@@ -2807,11 +2787,6 @@ func TestMetricCache_EvictHost(t *testing.T) {
 type recordingHold struct {
 	until time.Time
 	calls int
-}
-
-func (r *recordingHold) MarkHold(until time.Time) {
-	r.until = until
-	r.calls++
 }
 
 func TestMetricCache_Hold(t *testing.T) {
@@ -2826,15 +2801,15 @@ func TestMetricCache_Hold(t *testing.T) {
 		{name: "no_listener_is_a_no_op", cache: NewRecordCache()},
 		{name: "a_nil_cache_is_a_no_op", cache: nil},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			listener := &recordingHold{}
-			if test.subscribe {
-				test.cache.SubscribeHold(listener)
+			if testCase.subscribe {
+				testCase.cache.SubscribeHold(listener)
 			}
-			test.cache.Hold(until)
-			if listener.calls != test.expectedCalls || (test.expectedCalls > 0 && !listener.until.Equal(until)) {
-				t.Fatalf("hold: got calls %d until %v want calls %d until %v", listener.calls, listener.until, test.expectedCalls, until)
+			testCase.cache.Hold(until)
+			if listener.calls != testCase.expectedCalls || (testCase.expectedCalls > 0 && !listener.until.Equal(until)) {
+				t.Fatalf("hold: got calls %d until %v want calls %d until %v", listener.calls, listener.until, testCase.expectedCalls, until)
 			}
 		})
 	}
@@ -2853,8 +2828,8 @@ func TestMetricCache_Reset(t *testing.T) {
 		{name: "records_and_loop_listeners_dropped_display_listeners_kept", cache: NewRecordCache(), expectedListens: 1, expectedRefresh: 1, expectedHold: 1},
 		{name: "a_nil_cache_is_a_no_op", cache: nil},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			guid := NewServiceRecordGUID(MetricServiceUpTime, "macmini-may", "influxdb3")
 			attach := &mockAttachListener{}
 			wake := &recordingWake{}
@@ -2863,44 +2838,69 @@ func TestMetricCache_Reset(t *testing.T) {
 			hold := &recordingHold{}
 			record := NewRecord(value)
 			record.Topic = "supervisor/macmini-may/data/service/influxdb3/up_time"
-			test.cache.Store(guid, &record)
-			test.cache.SubscribeUpdates(guid, &mockListener{})
-			test.cache.SubscribeAttach(attach)
-			test.cache.SubscribeWake(wake)
-			test.cache.SubscribeDeletes(deletes)
-			test.cache.SubscribeRefresh(refresh)
-			test.cache.SubscribeHold(hold)
-			test.cache.Reset()
-			size := test.cache.Size()
+			testCase.cache.Store(guid, &record)
+			testCase.cache.SubscribeUpdates(guid, &mockListener{})
+			testCase.cache.SubscribeAttach(attach)
+			testCase.cache.SubscribeWake(wake)
+			testCase.cache.SubscribeDeletes(deletes)
+			testCase.cache.SubscribeRefresh(refresh)
+			testCase.cache.SubscribeHold(hold)
+			testCase.cache.Reset()
+			size := testCase.cache.Size()
 			listens := 0
-			for _, ids := range test.cache.ListenerIDs() {
+			for _, ids := range testCase.cache.ListenerIDs() {
 				listens += len(ids)
 			}
-			test.cache.SubscribeUpdates(NewServiceSchemaRecordGUID(MetricServiceName, guid.Host, 0), &mockListener{})
-			test.cache.RegisterService(guid.Host, guid.ServiceName, false)
-			test.cache.SubscribeUpdates(NewServiceSchemaRecordGUID(MetricServiceVersion, guid.Host, 0), &mockListener{})
-			test.cache.Attach()
-			test.cache.Wake(time.Minute)
-			test.cache.Refresh()
-			test.cache.Hold(time.Now())
+			testCase.cache.SubscribeUpdates(NewServiceSchemaRecordGUID(MetricServiceName, guid.Host, 0), &mockListener{})
+			testCase.cache.RegisterService(guid.Host, guid.ServiceName, false)
+			testCase.cache.SubscribeUpdates(NewServiceSchemaRecordGUID(MetricServiceVersion, guid.Host, 0), &mockListener{})
+			testCase.cache.Attach()
+			testCase.cache.Wake(time.Minute)
+			testCase.cache.Refresh()
+			testCase.cache.Hold(time.Now())
 			nilRecord := NewRecord(NewNilValue())
 			nilRecord.Topic = record.Topic
-			test.cache.Store(guid, &nilRecord)
-			test.cache.Delete(guid.Host, guid.ServiceName)
-			if size != test.expectedSize {
-				t.Fatalf("size: got %d want %d", size, test.expectedSize)
+			testCase.cache.Store(guid, &nilRecord)
+			testCase.cache.Delete(guid.Host, guid.ServiceName)
+			if size != testCase.expectedSize {
+				t.Fatalf("size: got %d want %d", size, testCase.expectedSize)
 			}
-			if listens != test.expectedListens {
-				t.Fatalf("listens: got %d want %d", listens, test.expectedListens)
+			if listens != testCase.expectedListens {
+				t.Fatalf("listens: got %d want %d", listens, testCase.expectedListens)
 			}
 			if attach.attachCount != 0 || wake.calls != 0 || deletes.markDeleteCount != 0 {
 				t.Fatalf("loop listeners: got attach %d wake %d deletes %d want 0", attach.attachCount, wake.calls, deletes.markDeleteCount)
 			}
-			if refresh.calls != test.expectedRefresh || hold.calls != test.expectedHold {
-				t.Fatalf("display listeners: got refresh %d hold %d want %d %d", refresh.calls, hold.calls, test.expectedRefresh, test.expectedHold)
+			if refresh.calls != testCase.expectedRefresh || hold.calls != testCase.expectedHold {
+				t.Fatalf("display listeners: got refresh %d hold %d want %d %d", refresh.calls, hold.calls, testCase.expectedRefresh, testCase.expectedHold)
 			}
 		})
 	}
+}
+
+func (m *mockListener) MarkDirty() {
+	m.dirtyCount++
+}
+
+func (m *mockDeletesListener) MarkDelete(_ string) {
+	m.markDeleteCount++
+}
+
+func guidSliceToSet(guids []RecordGUID) map[guidKey]struct{} {
+	s := make(map[guidKey]struct{}, len(guids))
+	for _, g := range guids {
+		s[g.key()] = struct{}{}
+	}
+	return s
+}
+
+func (m *mockAttachListener) MarkAttach() {
+	m.attachCount++
+}
+
+func (r *recordingHold) MarkHold(until time.Time) {
+	r.until = until
+	r.calls++
 }
 
 type recordingWake struct {

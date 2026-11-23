@@ -448,8 +448,8 @@ func TestProbeImplHost_FailedSharesTrend(t *testing.T) {
 		{name: "a_few_minutes_of_failure_inside_a_day_of_health_is_forgiven", failingTicks: 180, failingValue: 55, expectedTrend: true},
 		{name: "a_long_failure_still_shows", failingTicks: 40_000, failingValue: 55},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Cleanup(resetMounts)
 			seedHostMounts(t)
 			periods := config.Periods{PollMillis: 1000, PulseMillis: 1000, TrendHours: 24, HeartbeatSecs: 300}
@@ -460,8 +460,8 @@ func TestProbeImplHost_FailedSharesTrend(t *testing.T) {
 			if err := probe.create("", cache, mask, periods); err != nil {
 				t.Fatalf("create failed with [%v]", err)
 			}
-			for range test.failingTicks {
-				probe.failedSharesInt.PushAndTick(test.failingValue)
+			for range testCase.failingTicks {
+				probe.failedSharesInt.PushAndTick(testCase.failingValue)
 			}
 			for range 43_200 {
 				probe.failedSharesInt.PushAndTick(0)
@@ -473,8 +473,8 @@ func TestProbeImplHost_FailedSharesTrend(t *testing.T) {
 			if !found || record.Value.Trend == nil {
 				t.Fatalf("record: got found %v want a stored trend", found)
 			}
-			if record.Value.Trend.OK != test.expectedTrend {
-				t.Fatalf("trend: got ok %v value [%d] want ok %v", record.Value.Trend.OK, record.Value.Trend.ValueInt, test.expectedTrend)
+			if record.Value.Trend.OK != testCase.expectedTrend {
+				t.Fatalf("trend: got ok %v value [%d] want ok %v", record.Value.Trend.OK, record.Value.Trend.ValueInt, testCase.expectedTrend)
 			}
 		})
 	}
@@ -954,36 +954,6 @@ type networkInterfaceFixture struct {
 	bytes    uint64
 }
 
-func writeNetworkTree(t *testing.T, links map[string]networkInterfaceFixture) string {
-	t.Helper()
-	root := t.TempDir()
-	if len(links) == 0 {
-		return root
-	}
-	for name, link := range links {
-		dir := filepath.Join(root, networkClassPath, name)
-		if err := os.MkdirAll(filepath.Join(dir, networkStatisticsDir), 0o755); err != nil {
-			t.Fatalf("mkdir %s: %v", dir, err)
-		}
-		if link.physical {
-			if err := os.MkdirAll(filepath.Join(dir, networkDeviceDir), 0o755); err != nil {
-				t.Fatalf("mkdir %s: %v", dir, err)
-			}
-			writeNetworkFile(t, filepath.Join(dir, networkSpeedFile), strconv.Itoa(link.speed))
-		}
-		writeNetworkFile(t, filepath.Join(dir, networkStatisticsDir, networkReceivedFile), strconv.FormatUint(link.bytes, 10))
-		writeNetworkFile(t, filepath.Join(dir, networkStatisticsDir, networkTransmittedFile), "0")
-	}
-	return root
-}
-
-func writeNetworkFile(t *testing.T, path, content string) {
-	t.Helper()
-	if err := os.WriteFile(path, []byte(content+"\n"), 0o644); err != nil {
-		t.Fatalf("write %s: %v", path, err)
-	}
-}
-
 func TestProbeImplHost_RunningTime(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -1041,27 +1011,6 @@ func TestProbeImplHost_TemperatureDiscoversOnce(t *testing.T) {
 	}
 }
 
-func seedHostMounts(t *testing.T) {
-	t.Helper()
-	mounts := "/dev/nvme0n1p6 / btrfs rw 0 0\n" +
-		"/dev/nvme0n1p5 /home ext4 rw 0 0\n" +
-		"/dev/sdb1 /share/10 ext4 rw 0 0\n" +
-		"/dev/sdc1 /share/11 ext4 rw 0 0\n"
-	fstab := "PARTLABEL=share_08 /share/10 ext4 noatime 0 2\n" +
-		"PARTLABEL=share_09 /share/11 ext4 noatime 0 2\n"
-	sizes := map[string][2]uint64{
-		"/":         {1000, 48},
-		"/home":     {1000, 380},
-		"/share/10": {1000, 500},
-		"/share/11": {3000, 300},
-	}
-	set := newMountFixture(t, writeMountTree(t, mounts, fstab, nil), sizes, nil)
-	set.current = set.collect()
-	mountCacheMu.Lock()
-	mountCache[""] = set
-	mountCacheMu.Unlock()
-}
-
 func TestProbeImplHost_EveryMetricIsWiredAtConstruction(t *testing.T) {
 	probe := newHostProbe()
 	samples := map[string]func() (bool, error){
@@ -1115,4 +1064,55 @@ func TestProbeImplHost_WarnTemperatureRule(t *testing.T) {
 			}
 		})
 	}
+}
+
+func writeNetworkTree(t *testing.T, links map[string]networkInterfaceFixture) string {
+	t.Helper()
+	root := t.TempDir()
+	if len(links) == 0 {
+		return root
+	}
+	for name, link := range links {
+		dir := filepath.Join(root, networkClassPath, name)
+		if err := os.MkdirAll(filepath.Join(dir, networkStatisticsDir), 0o755); err != nil {
+			t.Fatalf("mkdir %s: %v", dir, err)
+		}
+		if link.physical {
+			if err := os.MkdirAll(filepath.Join(dir, networkDeviceDir), 0o755); err != nil {
+				t.Fatalf("mkdir %s: %v", dir, err)
+			}
+			writeNetworkFile(t, filepath.Join(dir, networkSpeedFile), strconv.Itoa(link.speed))
+		}
+		writeNetworkFile(t, filepath.Join(dir, networkStatisticsDir, networkReceivedFile), strconv.FormatUint(link.bytes, 10))
+		writeNetworkFile(t, filepath.Join(dir, networkStatisticsDir, networkTransmittedFile), "0")
+	}
+	return root
+}
+
+func writeNetworkFile(t *testing.T, path, content string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte(content+"\n"), 0o644); err != nil {
+		t.Fatalf("write %s: %v", path, err)
+	}
+}
+
+func seedHostMounts(t *testing.T) {
+	t.Helper()
+	mounts := "/dev/nvme0n1p6 / btrfs rw 0 0\n" +
+		"/dev/nvme0n1p5 /home ext4 rw 0 0\n" +
+		"/dev/sdb1 /share/10 ext4 rw 0 0\n" +
+		"/dev/sdc1 /share/11 ext4 rw 0 0\n"
+	fstab := "PARTLABEL=share_08 /share/10 ext4 noatime 0 2\n" +
+		"PARTLABEL=share_09 /share/11 ext4 noatime 0 2\n"
+	sizes := map[string][2]uint64{
+		"/":         {1000, 48},
+		"/home":     {1000, 380},
+		"/share/10": {1000, 500},
+		"/share/11": {3000, 300},
+	}
+	set := newMountFixture(t, writeMountTree(t, mounts, fstab, nil), sizes, nil)
+	set.current = set.collect()
+	mountCacheMu.Lock()
+	mountCache[""] = set
+	mountCacheMu.Unlock()
 }

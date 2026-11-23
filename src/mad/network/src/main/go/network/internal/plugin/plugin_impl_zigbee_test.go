@@ -226,17 +226,17 @@ func TestZigbee_Diagnose(t *testing.T) {
 			expectedReason: "HEALTHY",
 		},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := diagnoseZigbee(test.samples)
-			if got.Status != test.expectedStatus {
-				t.Errorf("status: got %s want %s (%s)", got.Status, test.expectedStatus, got.Reason)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			got := diagnoseZigbee(testCase.samples)
+			if got.Status != testCase.expectedStatus {
+				t.Errorf("status: got %s want %s (%s)", got.Status, testCase.expectedStatus, got.Reason)
 			}
-			if got.Score != test.expectedScore {
-				t.Errorf("score: got %d want %d", got.Score, test.expectedScore)
+			if got.Score != testCase.expectedScore {
+				t.Errorf("score: got %d want %d", got.Score, testCase.expectedScore)
 			}
-			if !strings.HasPrefix(got.Reason, test.expectedReason) {
-				t.Errorf("reason: got %q want prefix %q", got.Reason, test.expectedReason)
+			if !strings.HasPrefix(got.Reason, testCase.expectedReason) {
+				t.Errorf("reason: got %q want prefix %q", got.Reason, testCase.expectedReason)
 			}
 		})
 	}

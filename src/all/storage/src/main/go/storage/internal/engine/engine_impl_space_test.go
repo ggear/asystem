@@ -19,7 +19,7 @@ import (
 )
 
 func TestEngineImplSpace_FoldRoot(t *testing.T) {
-	cases := []struct {
+	tests := []struct {
 		name          string
 		members       []RootMember
 		wantSize      uint64
@@ -78,27 +78,27 @@ func TestEngineImplSpace_FoldRoot(t *testing.T) {
 			wantFolded: nil,
 		},
 	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			figures, folded := FoldRoot(c.members)
-			if figures.SizeBytes != c.wantSize {
-				t.Errorf("size: got %v want %v", figures.SizeBytes, c.wantSize)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			figures, folded := FoldRoot(testCase.members)
+			if figures.SizeBytes != testCase.wantSize {
+				t.Errorf("size: got %v want %v", figures.SizeBytes, testCase.wantSize)
 			}
-			if figures.UsedBytes != c.wantUsed {
-				t.Errorf("used: got %v want %v", figures.UsedBytes, c.wantUsed)
+			if figures.UsedBytes != testCase.wantUsed {
+				t.Errorf("used: got %v want %v", figures.UsedBytes, testCase.wantUsed)
 			}
 			if figures.FreeBytes != figures.SizeBytes-figures.UsedBytes {
 				t.Errorf("free does not equal size-used: got %v", figures.FreeBytes)
 			}
-			if !reflect.DeepEqual(folded, c.wantFolded) {
-				t.Errorf("folded: got %+v want %+v", folded, c.wantFolded)
+			if !reflect.DeepEqual(folded, testCase.wantFolded) {
+				t.Errorf("folded: got %+v want %+v", folded, testCase.wantFolded)
 			}
 		})
 	}
 }
 
 func TestEngineImplSpace_ClassifyMount(t *testing.T) {
-	cases := []struct {
+	tests := []struct {
 		name          string
 		mountpoint    string
 		filters       []string
@@ -120,21 +120,21 @@ func TestEngineImplSpace_ClassifyMount(t *testing.T) {
 		{name: "a trailing star spanning levels", mountpoint: "/share/10", filters: []string{"/share*"}, wantClass: ClassShare, wantMatched: true},
 		{name: "a share pattern still wins over the root amalgam", mountpoint: "/share/10", filters: DefaultFilters, wantClass: ClassShare, wantMatched: true},
 	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			class, matched := ClassifyMount(c.mountpoint, c.filters)
-			if matched != c.wantMatched {
-				t.Fatalf("matched: got %v want %v", matched, c.wantMatched)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			class, matched := ClassifyMount(testCase.mountpoint, testCase.filters)
+			if matched != testCase.wantMatched {
+				t.Fatalf("matched: got %v want %v", matched, testCase.wantMatched)
 			}
-			if matched && class != c.wantClass {
-				t.Errorf("class: got %v want %v", class, c.wantClass)
+			if matched && class != testCase.wantClass {
+				t.Errorf("class: got %v want %v", class, testCase.wantClass)
 			}
 		})
 	}
 }
 
 func TestEngineImplSpace_Selected(t *testing.T) {
-	cases := []struct {
+	tests := []struct {
 		name          string
 		mountpoint    string
 		fstype        string
@@ -158,21 +158,21 @@ func TestEngineImplSpace_Selected(t *testing.T) {
 		{name: "an undeclared mount outside the share namespace", mountpoint: "/Users/rue/Desktop/share/20", fstype: "smbfs", filters: []string{"/Users/rue/Desktop/share/*"}, wantClass: ClassShare, wantSelected: true},
 	}
 	cfg := fixtureConfig(t)
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			class, ok := selected(cfg, c.filters, c.mountpoint, c.fstype)
-			if ok != c.wantSelected {
-				t.Fatalf("selected: got %v want %v", ok, c.wantSelected)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			class, ok := selected(cfg, testCase.filters, testCase.mountpoint, testCase.fstype)
+			if ok != testCase.wantSelected {
+				t.Fatalf("selected: got %v want %v", ok, testCase.wantSelected)
 			}
-			if ok && class != c.wantClass {
-				t.Errorf("class: got %v want %v", class, c.wantClass)
+			if ok && class != testCase.wantClass {
+				t.Errorf("class: got %v want %v", class, testCase.wantClass)
 			}
 		})
 	}
 }
 
 func TestEngineImplSpace_ServedByLabel(t *testing.T) {
-	cases := []struct {
+	tests := []struct {
 		name       string
 		fstype     string
 		device     string
@@ -186,10 +186,10 @@ func TestEngineImplSpace_ServedByLabel(t *testing.T) {
 		{name: "a directly attached btrfs root carries no served-by host", fstype: "btrfs", device: "/dev/nvme0n1p6"},
 	}
 	cfg := fixtureConfig(t)
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			if got := servedByLabel(cfg, c.fstype, c.device); got != c.wantServed {
-				t.Errorf("servedByLabel: got %q want %q", got, c.wantServed)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if got := servedByLabel(cfg, testCase.fstype, testCase.device); got != testCase.wantServed {
+				t.Errorf("servedByLabel: got %q want %q", got, testCase.wantServed)
 			}
 		})
 	}
@@ -210,7 +210,7 @@ func TestEngineImplSpace_Assemble(t *testing.T) {
 		Folded: &Folded{Identity: "/dev/nvme0n1p6", Mounts: []string{"/", "/home", "/var"}}}
 	missing := MountDoc{Mount: "/share/11", Label: "share_09", Class: ClassShare, State: MountStateUnmounted,
 		Error: "declared and not mounted [/share/11]"}
-	cases := []struct {
+	tests := []struct {
 		name          string
 		filters       []string
 		readings      []reading
@@ -289,15 +289,15 @@ func TestEngineImplSpace_Assemble(t *testing.T) {
 		},
 	}
 	cfg := fixtureConfig(t)
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			got := assemble(cfg, c.filters, c.readings, c.backup)
-			if len(got) != len(c.want) {
-				t.Fatalf("rows: got %d want %d, got %+v", len(got), len(c.want), got)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			got := assemble(cfg, testCase.filters, testCase.readings, testCase.backup)
+			if len(got) != len(testCase.want) {
+				t.Fatalf("rows: got %d want %d, got %+v", len(got), len(testCase.want), got)
 			}
 			for i := range got {
-				if !reflect.DeepEqual(got[i], c.want[i]) {
-					t.Errorf("row %d: got %+v want %+v", i, got[i], c.want[i])
+				if !reflect.DeepEqual(got[i], testCase.want[i]) {
+					t.Errorf("row %d: got %+v want %+v", i, got[i], testCase.want[i])
 				}
 			}
 		})
@@ -324,7 +324,7 @@ func fixtureConfig(t *testing.T) *config.Config {
 }
 
 func TestEngineImplSpace_Amalgam(t *testing.T) {
-	cases := []struct {
+	tests := []struct {
 		name          string
 		host          string
 		table         string
@@ -380,13 +380,13 @@ func TestEngineImplSpace_Amalgam(t *testing.T) {
 			wantShare:  nil,
 		},
 	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			t.Setenv("STORAGE_HOST", c.host)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Setenv("STORAGE_HOST", testCase.host)
 			t.Setenv("SERVICE_VERSION_ABSOLUTE", "")
 			cfg := config.Load(filepath.Join("..", "..", "..", "..", "resources", "image", "config.json"))
 			var readings []reading
-			for line := range strings.SplitSeq(strings.TrimSpace(c.table), "\n") {
+			for line := range strings.SplitSeq(strings.TrimSpace(testCase.table), "\n") {
 				fields := strings.Fields(line)
 				if len(fields) != 5 {
 					t.Fatalf("malformed fixture line [%s]", line)
@@ -414,17 +414,17 @@ func TestEngineImplSpace_Amalgam(t *testing.T) {
 					share = doc.Space
 				}
 			}
-			if !reflect.DeepEqual(mounts, c.wantMounts) {
-				t.Fatalf("mounts: got %v want %v", mounts, c.wantMounts)
+			if !reflect.DeepEqual(mounts, testCase.wantMounts) {
+				t.Fatalf("mounts: got %v want %v", mounts, testCase.wantMounts)
 			}
-			if !reflect.DeepEqual(docs[0].Space, c.wantRoot) {
-				t.Errorf("root space: got %+v want %+v", docs[0].Space, c.wantRoot)
+			if !reflect.DeepEqual(docs[0].Space, testCase.wantRoot) {
+				t.Errorf("root space: got %+v want %+v", docs[0].Space, testCase.wantRoot)
 			}
-			if !reflect.DeepEqual(docs[0].Folded, c.wantFolded) {
-				t.Errorf("root folded: got %+v want %+v", docs[0].Folded, c.wantFolded)
+			if !reflect.DeepEqual(docs[0].Folded, testCase.wantFolded) {
+				t.Errorf("root folded: got %+v want %+v", docs[0].Folded, testCase.wantFolded)
 			}
-			if !reflect.DeepEqual(share, c.wantShare) {
-				t.Errorf("share subtotal: got %+v want %+v", share, c.wantShare)
+			if !reflect.DeepEqual(share, testCase.wantShare) {
+				t.Errorf("share subtotal: got %+v want %+v", share, testCase.wantShare)
 			}
 		})
 	}

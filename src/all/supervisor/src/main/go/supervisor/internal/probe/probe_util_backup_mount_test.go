@@ -69,7 +69,7 @@ func TestProbeUtilBackupMount_AnUnidentifiedPathIsAskedOfBtrfsOnlyOnce(t *testin
 	}
 }
 
-func TestProbeUtilBackupMount_FstabIsParsedOnceIntoSpecsAndMountpoints(t *testing.T) {
+func TestProbeUtilBackupMount_FstabNamesTheBackupTargetsAndShares(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, "fstab")
 	body := "# a comment\n\nPARTLABEL=backup_02  /backup  btrfs  noauto  0 2\n" +
@@ -79,14 +79,9 @@ func TestProbeUtilBackupMount_FstabIsParsedOnceIntoSpecsAndMountpoints(t *testin
 	if err := os.WriteFile(path, []byte(body), 0644); err != nil {
 		t.Fatalf("write fstab: %v", err)
 	}
-	original := backupFstabPath
-	t.Cleanup(func() { backupFstabPath = original })
-	backupFstabPath = path
-
-	entries := fstabEntries()
-	if len(entries) != 3 {
-		t.Fatalf("fstabEntries() = %d entries, want 3 with the comment, blank and short lines dropped", len(entries))
-	}
+	original := fstabPath
+	t.Cleanup(func() { fstabPath = original })
+	fstabPath = path
 	if got := backupTargets(); len(got) != 1 || got[0] != "/backup" {
 		t.Errorf("backupTargets() = %v, want [/backup]", got)
 	}
@@ -174,15 +169,6 @@ func TestProbeUtilBackupMount_MeasureUsageCannotAnswerWhenTheFilesystemIsWedged(
 	}
 }
 
-func stageStreamReturns(t *testing.T, output string, code int, abandoned bool) {
-	t.Helper()
-	original := stageStream
-	t.Cleanup(func() { stageStream = original })
-	stageStream = func(_ context.Context, _ io.Writer, _ string, _ ...string) (string, int, bool) {
-		return output, code, abandoned
-	}
-}
-
 func TestProbeUtilBackupMount_AliveProbesTheDeviceRatherThanAskingAboutIt(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -211,9 +197,9 @@ func TestProbeUtilBackupMount_AliveProbesTheDeviceRatherThanAskingAboutIt(t *tes
 			if err := os.WriteFile(fstab, []byte(body), 0o644); err != nil {
 				t.Fatalf("write fstab: %v", err)
 			}
-			original := backupFstabPath
-			t.Cleanup(func() { backupFstabPath = original })
-			backupFstabPath = fstab
+			original := fstabPath
+			t.Cleanup(func() { fstabPath = original })
+			fstabPath = fstab
 			originalExec := stageStream
 			t.Cleanup(func() { stageStream = originalExec })
 			stageStream = func(_ context.Context, _ io.Writer, name string, args ...string) (string, int, bool) {
@@ -298,9 +284,9 @@ func TestProbeUtilBackupMount_ABindOfAHostDirectoryIsNeverDetachedAsADisk(t *tes
 			if err := os.WriteFile(fstab, nil, 0o644); err != nil {
 				t.Fatalf("write fstab: %v", err)
 			}
-			originalFstab, originalStream := backupFstabPath, stageStream
-			t.Cleanup(func() { backupFstabPath, stageStream = originalFstab, originalStream })
-			backupFstabPath = fstab
+			originalFstab, originalStream := fstabPath, stageStream
+			t.Cleanup(func() { fstabPath, stageStream = originalFstab, originalStream })
+			fstabPath = fstab
 			stageStream = func(_ context.Context, _ io.Writer, name string, args ...string) (string, int, bool) {
 				key := name + " " + strings.Join(args, " ")
 				switch {
@@ -327,9 +313,9 @@ func TestProbeUtilBackupMount_AStopDuringMountDoesNotInterruptTheMount(t *testin
 	if err := os.WriteFile(fstab, []byte("/dev/null  /backup  btrfs  noauto  0 2\n"), 0o644); err != nil {
 		t.Fatalf("write fstab: %v", err)
 	}
-	originalFstab, originalStream := backupFstabPath, stageStream
-	t.Cleanup(func() { backupFstabPath, stageStream = originalFstab, originalStream })
-	backupFstabPath = fstab
+	originalFstab, originalStream := fstabPath, stageStream
+	t.Cleanup(func() { fstabPath, stageStream = originalFstab, originalStream })
+	fstabPath = fstab
 	var mountContextErr error
 	stageStream = func(ctx context.Context, _ io.Writer, name string, _ ...string) (string, int, bool) {
 		if name == "mount" {
@@ -378,5 +364,55 @@ func TestProbeUtilBackupMount_BtrfsSysfsUsage(t *testing.T) {
 				t.Errorf("usage: got total [%d] used [%d] want total [%d] used [%d]", total, used, testCase.expectedTotal, testCase.expectedUsed)
 			}
 		})
+	}
+}
+
+func TestProbeUtilBackupMount_EveryCallThatCanReachTheDiskIsBounded(t *testing.T) {
+	tests := []struct {
+		name string
+		call func(ctx context.Context)
+	}{
+		{name: "alive", call: func(ctx context.Context) { alive(ctx, config.DirBackup) }},
+		{name: "detachable", call: func(ctx context.Context) { detachable(ctx, config.DirBackup, t.TempDir()) }},
+		{name: "measure_usage", call: func(ctx context.Context) { measureUsage(ctx, scribe.SubjectNone, config.DirBackup) }},
+		{name: "docker_service_state", call: func(ctx context.Context) { dockerServiceState(ctx, "myservice") }},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			fstab := filepath.Join(t.TempDir(), "fstab")
+			if err := os.WriteFile(fstab, []byte("/dev/null  /backup  btrfs  noauto  0 2\n"), 0o644); err != nil {
+				t.Fatalf("write fstab: %v", err)
+			}
+			originalFstab, originalStream := fstabPath, stageStream
+			t.Cleanup(func() { fstabPath, stageStream = originalFstab, originalStream })
+			fstabPath = fstab
+			var calls, unbounded []string
+			stageStream = func(ctx context.Context, _ io.Writer, name string, _ ...string) (string, int, bool) {
+				calls = append(calls, name)
+				if _, bounded := ctx.Deadline(); !bounded {
+					unbounded = append(unbounded, name)
+				}
+				if name == "docker" {
+					return "myservice", 0, false
+				}
+				return "", 0, false
+			}
+			testCase.call(context.WithoutCancel(t.Context()))
+			if len(calls) == 0 {
+				t.Fatalf("calls: got none want at least one command run")
+			}
+			if len(unbounded) > 0 {
+				t.Errorf("unbounded: got %v want none of %v", unbounded, calls)
+			}
+		})
+	}
+}
+
+func stageStreamReturns(t *testing.T, output string, code int, abandoned bool) {
+	t.Helper()
+	original := stageStream
+	t.Cleanup(func() { stageStream = original })
+	stageStream = func(_ context.Context, _ io.Writer, _ string, _ ...string) (string, int, bool) {
+		return output, code, abandoned
 	}
 }

@@ -11,17 +11,6 @@ import (
 	"supervisor/internal/metric"
 )
 
-func loadConfigWithTimeout(t *testing.T, hours int) *config.Config {
-	t.Helper()
-	dir := t.TempDir()
-	path := filepath.Join(dir, "config.json")
-	body := fmt.Sprintf(`{"asystem":{"host":"testhost","backup":{"timeout_hours":%d}}}`, hours)
-	if err := os.WriteFile(path, []byte(body), 0644); err != nil {
-		t.Fatalf("write config: %v", err)
-	}
-	return config.Load(path)
-}
-
 func TestProbeUtilBackupStagePrimary_NewestBackupDirPicksTheLexicallyLatestEntry(t *testing.T) {
 	root := t.TempDir()
 	for _, name := range []string{"2025-01-01_00-00-00", "2026-09-22_01-00-00", "2024-12-31_00-00-00", "not-a-timestamp"} {
@@ -248,4 +237,15 @@ func TestProbeUtilBackupStagePrimary_ScriptTimeoutHoursFallsBackToTheConfiguredD
 			}
 		})
 	}
+}
+
+func loadConfigWithTimeout(t *testing.T, hours int) *config.Config {
+	t.Helper()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.json")
+	body := fmt.Sprintf(`{"asystem":{"host":"testhost","backup":{"timeout_hours":%d}}}`, hours)
+	if err := os.WriteFile(path, []byte(body), 0644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	return config.Load(path)
 }

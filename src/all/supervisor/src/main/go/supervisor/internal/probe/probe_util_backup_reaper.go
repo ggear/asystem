@@ -18,19 +18,19 @@ func runBackupAuto(request BackupRequest) error {
 		scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionPublish).Infof(verb, started, detail, args...)
 	}
 	if want == "" {
-		state, expires, found, err := backupReaperState(configPath)
+		reaper, found, err := backupReaperState(configPath)
 		if err != nil {
 			return err
 		}
 		switch {
 		case !found:
 			report("reported", "[undeclared] reaper, which the cluster reads as armed")
-		case state == metric.CommandOff && expires != "":
-			report("reported", "[%s] reaper is paused until then, the backup disk stays powered", expires)
-		case state == metric.CommandOn:
+		case reaper.Paused():
+			report("reported", "[%s] reaper is paused until then, the backup disk stays powered", reaper.ExpiresTS)
+		case strings.EqualFold(strings.TrimSpace(reaper.State), metric.CommandOn):
 			report("reported", "[armed] reaper, the backup disk is powered down again when nothing needs it")
 		default:
-			report("reported", "[%s/%s] reaper states no deadline, so the cluster reads it as armed", state, expires)
+			report("reported", "[%s/%s] reaper states no live deadline, so the cluster reads it as armed", reaper.State, reaper.ExpiresTS)
 		}
 		return nil
 	}
@@ -100,21 +100,18 @@ func powerBackupDisk(configPath, state string) error {
 	return client.publishCommand(topic, state)
 }
 
-func backupReaperState(configPath string) (state, expiresTS string, found bool, err error) {
-	watch, dialErr := brokerWatch(configPath, configHost(configPath), metric.TopicBackupReaper())
-	if dialErr != nil {
-		return "", "", false, dialErr
+func backupReaperState(configPath string) (backupReaperSummary, bool, error) {
+	watch, err := brokerWatch(configPath, configHost(configPath), metric.TopicBackupReaper())
+	if err != nil {
+		return backupReaperSummary{}, false, err
 	}
 	defer watch.close()
-	payloads, settleErr := reaperSettled(watch)
-	if settleErr != nil {
-		return "", "", false, settleErr
+	payloads, err := reaperSettled(watch)
+	if err != nil {
+		return backupReaperSummary{}, false, err
 	}
 	reaper, decoded := decodeSummary[backupReaperSummary]([]byte(payloads[metric.TopicBackupReaper()]))
-	if !decoded {
-		return "", "", false, nil
-	}
-	return reaper.State, reaper.ExpiresTS, true, nil
+	return reaper, decoded, nil
 }
 
 func reaperSettled(watch *brokerWatcher) (map[string]string, error) {

@@ -12,22 +12,6 @@ import (
 	"supervisor/internal/metric"
 )
 
-func fixturesDir(t *testing.T) string {
-	t.Helper()
-	dir, err := filepath.Abs(filepath.Join("..", "..", "..", "..", "..", "test", "resources", "backup", "documents"))
-	if err != nil {
-		t.Fatalf("resolve fixtures dir: %v", err)
-	}
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		t.Fatalf("fixtures dir: %v", err)
-	}
-	if len(entries) == 0 {
-		t.Fatalf("fixtures dir %s is empty, this test would assert nothing", dir)
-	}
-	return dir
-}
-
 func TestProbeUtilBackupSummary_RoundTripsCapturedFixtures(t *testing.T) {
 	dir := fixturesDir(t)
 	entries, err := os.ReadDir(dir)
@@ -98,53 +82,6 @@ func TestProbeUtilBackupSummary_RoundTripsCapturedFixtures(t *testing.T) {
 	if checked == 0 {
 		t.Fatalf("no fixture matched a document shape, this test asserted nothing")
 	}
-}
-
-func isZeroJSON(value any) bool {
-	switch typed := value.(type) {
-	case float64:
-		return typed == 0
-	case string:
-		return typed == ""
-	case bool:
-		return !typed
-	case nil:
-		return true
-	}
-	return false
-}
-
-func remarshal(t *testing.T, document any, out *map[string]any) {
-	t.Helper()
-	data, err := json.Marshal(document)
-	if err != nil {
-		t.Fatalf("marshal: %v", err)
-	}
-	if err := json.Unmarshal(data, out); err != nil {
-		t.Fatalf("unmarshal back to map: %v", err)
-	}
-}
-
-func jsonFields(document any) map[string]bool {
-	fields := map[string]bool{}
-	kind := reflect.TypeOf(document)
-	for field := range kind.Fields() {
-		tag := field.Tag.Get("json")
-		name, _, _ := strings.Cut(tag, ",")
-		if name != "" {
-			fields[name] = true
-		}
-	}
-	return fields
-}
-
-func equalJSON(a, b any) bool {
-	af, aok := a.(float64)
-	bf, bok := b.(float64)
-	if aok && bok {
-		return af == bf
-	}
-	return a == b
 }
 
 func TestProbeUtilBackupSummary_WriteAtomicLeavesNoTemporaryBehind(t *testing.T) {
@@ -397,12 +334,12 @@ func TestProbeUtilBackupSummary_ASkippedStageIsNeitherFailedNorHalted(t *testing
 		{"clean edge host", metric.BackupStateSuccess, 2, 0, metric.BackupStateSuccess, false},
 		{"failed secondary on edge host", metric.BackupStateFailure, 2, 1, metric.BackupStateFailure, false},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			root, run := t.TempDir(), "2026-09-22_01-00-00"
 			states := map[metric.BackupStage]string{
 				metric.BackupStagePrimary:   metric.BackupStateSuccess,
-				metric.BackupStageSecondary: tt.secondary,
+				metric.BackupStageSecondary: testCase.secondary,
 				metric.BackupStageTertiary:  metric.BackupStateSkipped,
 			}
 			for stage, state := range states {
@@ -415,13 +352,76 @@ func TestProbeUtilBackupSummary_ASkippedStageIsNeitherFailedNorHalted(t *testing
 				}
 			}
 			document := finishRun(root, run, time.Now())
-			if document.StagesRun != tt.expectedRun || document.StagesFailed != tt.expectedFail || document.StagesHalted != 0 {
+			if document.StagesRun != testCase.expectedRun || document.StagesFailed != testCase.expectedFail || document.StagesHalted != 0 {
 				t.Errorf("finishRun() = (run %d, failed %d, halted %d), want (run %d, failed %d, halted 0)",
-					document.StagesRun, document.StagesFailed, document.StagesHalted, tt.expectedRun, tt.expectedFail)
+					document.StagesRun, document.StagesFailed, document.StagesHalted, testCase.expectedRun, testCase.expectedFail)
 			}
-			if document.State != tt.expectedState {
-				t.Errorf("finishRun() state = %q, want %q", document.State, tt.expectedState)
+			if document.State != testCase.expectedState {
+				t.Errorf("finishRun() state = %q, want %q", document.State, testCase.expectedState)
 			}
 		})
 	}
+}
+
+func fixturesDir(t *testing.T) string {
+	t.Helper()
+	dir, err := filepath.Abs(filepath.Join("..", "..", "..", "..", "..", "test", "resources", "backup", "documents"))
+	if err != nil {
+		t.Fatalf("resolve fixtures dir: %v", err)
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("fixtures dir: %v", err)
+	}
+	if len(entries) == 0 {
+		t.Fatalf("fixtures dir %s is empty, this test would assert nothing", dir)
+	}
+	return dir
+}
+
+func isZeroJSON(value any) bool {
+	switch typed := value.(type) {
+	case float64:
+		return typed == 0
+	case string:
+		return typed == ""
+	case bool:
+		return !typed
+	case nil:
+		return true
+	}
+	return false
+}
+
+func remarshal(t *testing.T, document any, out *map[string]any) {
+	t.Helper()
+	data, err := json.Marshal(document)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if err := json.Unmarshal(data, out); err != nil {
+		t.Fatalf("unmarshal back to map: %v", err)
+	}
+}
+
+func jsonFields(document any) map[string]bool {
+	fields := map[string]bool{}
+	kind := reflect.TypeOf(document)
+	for field := range kind.Fields() {
+		tag := field.Tag.Get("json")
+		name, _, _ := strings.Cut(tag, ",")
+		if name != "" {
+			fields[name] = true
+		}
+	}
+	return fields
+}
+
+func equalJSON(a, b any) bool {
+	af, aok := a.(float64)
+	bf, bok := b.(float64)
+	if aok && bok {
+		return af == bf
+	}
+	return a == b
 }

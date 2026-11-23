@@ -29,15 +29,15 @@ func TestProbeUtilRestartLoad_Load(t *testing.T) {
 		{name: "a_failing_policy_hook_is_an_error", script: new("#"), policyExit: 3, expectedError: true},
 		{name: "an_invalid_policy_is_an_error", script: new("#"), policyText: "requires=dns:x\n", expectedError: true},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			install := t.TempDir()
-			if test.script != nil {
+			if testCase.script != nil {
 				directory := filepath.Join(install, "plex", "latest")
 				if err := os.MkdirAll(directory, 0o755); err != nil {
 					t.Fatalf("mkdir failed with [%v]", err)
 				}
-				if err := os.WriteFile(filepath.Join(directory, "restart.sh"), []byte(*test.script), 0o644); err != nil {
+				if err := os.WriteFile(filepath.Join(directory, "restart.sh"), []byte(*testCase.script), 0o644); err != nil {
 					t.Fatalf("write failed with [%v]", err)
 				}
 			}
@@ -45,16 +45,16 @@ func TestProbeUtilRestartLoad_Load(t *testing.T) {
 			loader.install = install
 			loader.run = func(_ context.Context, _ time.Duration, _ string, args ...string) (string, int, bool) {
 				if strings.HasSuffix(strings.Join(args, " "), "enabled") {
-					return "", test.enabledExit, test.enabledAbandon
+					return "", testCase.enabledExit, testCase.enabledAbandon
 				}
-				return test.policyText, test.policyExit, false
+				return testCase.policyText, testCase.policyExit, false
 			}
 			policy, enabled, err := loader.load(context.Background(), "plex")
-			if (err != nil) != test.expectedError || enabled != test.expectedEnabled {
-				t.Fatalf("load: got enabled [%v] error [%v] want enabled [%v] error [%v]", enabled, err, test.expectedEnabled, test.expectedError)
+			if (err != nil) != testCase.expectedError || enabled != testCase.expectedEnabled {
+				t.Fatalf("load: got enabled [%v] error [%v] want enabled [%v] error [%v]", enabled, err, testCase.expectedEnabled, testCase.expectedError)
 			}
-			if enabled && policy.stable != test.expectedStable {
-				t.Fatalf("stable: got %s want %s", policy.stable, test.expectedStable)
+			if enabled && policy.stable != testCase.expectedStable {
+				t.Fatalf("stable: got %s want %s", policy.stable, testCase.expectedStable)
 			}
 		})
 	}
@@ -107,17 +107,17 @@ func TestProbeUtilRestartLoad_Ready(t *testing.T) {
 		{name: "a_hook_that_returns_non_zero_is_not_ready", exit: 3, expectedReady: false},
 		{name: "an_abandoned_hook_is_not_ready", abandoned: true, expectedReady: false},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			loader := newRestartPolicyLoader()
 			loader.run = func(_ context.Context, _ time.Duration, _ string, args ...string) (string, int, bool) {
 				if args[len(args)-1] != "ready" {
 					t.Fatalf("hook: got [%v] want ready", args)
 				}
-				return "", test.exit, test.abandoned
+				return "", testCase.exit, testCase.abandoned
 			}
-			if got := loader.ready(context.Background(), "plex"); got != test.expectedReady {
-				t.Fatalf("ready: got %v want %v", got, test.expectedReady)
+			if got := loader.ready(context.Background(), "plex"); got != testCase.expectedReady {
+				t.Fatalf("ready: got %v want %v", got, testCase.expectedReady)
 			}
 		})
 	}

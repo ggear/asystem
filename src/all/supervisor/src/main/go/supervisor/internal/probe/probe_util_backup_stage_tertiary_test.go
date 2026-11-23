@@ -104,14 +104,14 @@ func TestProbeUtilBackupStageTertiary_RsyncSentReadsTheProgressCounter(t *testin
 		{name: "a_bare_percentage_with_no_count_is_not_progress", line: "  ...  50%"},
 		{name: "an_empty_line_is_not_progress", line: ""},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got, ok := rsyncSent(test.line)
-			if ok != test.expectedKnown {
-				t.Fatalf("rsyncSent(%q) ok = %v, want %v", test.line, ok, test.expectedKnown)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			got, ok := rsyncSent(testCase.line)
+			if ok != testCase.expectedKnown {
+				t.Fatalf("rsyncSent(%q) ok = %v, want %v", testCase.line, ok, testCase.expectedKnown)
 			}
-			if test.expectedKnown && got != test.expectedSent {
-				t.Errorf("rsyncSent(%q) = %d, want %d", test.line, got, test.expectedSent)
+			if testCase.expectedKnown && got != testCase.expectedSent {
+				t.Errorf("rsyncSent(%q) = %d, want %d", testCase.line, got, testCase.expectedSent)
 			}
 		})
 	}
@@ -210,8 +210,8 @@ func TestProbeUtilBackupStageTertiary_ExpectationSumsTheDryRunAndFailsClosed(t *
 		{name: "the_dry_run_of_each_share_is_summed", exit: 0, mirrorBytes: 2 * 4096, mirrorFiles: 6, expungeFile: 4},
 		{name: "a_dry_run_that_failed_reports_no_total_at_all", exit: 1},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			original := stageStream
 			t.Cleanup(func() { stageStream = original })
 			shares := []string{"/share/10", "/share/11"}
@@ -226,17 +226,17 @@ func TestProbeUtilBackupStageTertiary_ExpectationSumsTheDryRunAndFailsClosed(t *
 				if sink != nil {
 					_, _ = sink.Write([]byte("deleting gone/\ndeleting stale.txt\n"))
 				}
-				return "Number of regular files transferred: 3\nNumber of deleted files: 2\nTotal transferred file size: 4,096 bytes\n", test.exit, false
+				return "Number of regular files transferred: 3\nNumber of deleted files: 2\nTotal transferred file size: 4,096 bytes\n", testCase.exit, false
 			}
 			got := measureStage(context.Background(), shares)
-			if got.mirrorBytes != test.mirrorBytes || got.mirrorFiles != test.mirrorFiles || got.expungeFiles != test.expungeFile {
+			if got.mirrorBytes != testCase.mirrorBytes || got.mirrorFiles != testCase.mirrorFiles || got.expungeFiles != testCase.expungeFile {
 				t.Errorf("measureStage() = mirror %d bytes over %d files, expunge %d files, want %d %d %d",
-					got.mirrorBytes, got.mirrorFiles, got.expungeFiles, test.mirrorBytes, test.mirrorFiles, test.expungeFile)
+					got.mirrorBytes, got.mirrorFiles, got.expungeFiles, testCase.mirrorBytes, testCase.mirrorFiles, testCase.expungeFile)
 			}
-			if test.exit == 0 && dryRuns != 2 {
+			if testCase.exit == 0 && dryRuns != 2 {
 				t.Errorf("dry runs = %d, want one per share", dryRuns)
 			}
-			if test.exit != 0 && got.expungeSizes != nil {
+			if testCase.exit != 0 && got.expungeSizes != nil {
 				t.Errorf("measureStage() kept a deletion set after a failed dry run, want no figure at all rather than a partial one")
 			}
 		})
@@ -288,13 +288,13 @@ func TestProbeUtilBackupStageTertiary_RsyncDeletedReadsOnlyADeletionLine(t *test
 		{line: "        1,000  1%  10MB/s", known: false},
 		{line: "", known: false},
 	}
-	for _, test := range tests {
-		got, ok := rsyncDeleted(test.line)
-		if ok != test.known {
-			t.Fatalf("rsyncDeleted(%q) ok = %v, want %v", test.line, ok, test.known)
+	for _, testCase := range tests {
+		got, ok := rsyncDeleted(testCase.line)
+		if ok != testCase.known {
+			t.Fatalf("rsyncDeleted(%q) ok = %v, want %v", testCase.line, ok, testCase.known)
 		}
-		if test.known && got != test.path {
-			t.Errorf("rsyncDeleted(%q) = %q, want %q", test.line, got, test.path)
+		if testCase.known && got != testCase.path {
+			t.Errorf("rsyncDeleted(%q) = %q, want %q", testCase.line, got, testCase.path)
 		}
 	}
 }
@@ -327,7 +327,7 @@ func TestProbeUtilBackupStageTertiary_PruneStaleAgainstAMissingDirectory(t *test
 }
 
 func TestProbeUtilBackupStageTertiary_AttachedHoldsUntilTheStageClaimsADisk(t *testing.T) {
-	cases := []struct {
+	tests := []struct {
 		name     string
 		marker   string
 		written  bool
@@ -336,17 +336,17 @@ func TestProbeUtilBackupStageTertiary_AttachedHoldsUntilTheStageClaimsADisk(t *t
 		{name: "no_marker_yet_so_the_disk_is_still_enumerating", expected: true},
 		{name: "an_empty_marker_claims_nothing", written: true, expected: true},
 	}
-	for _, test := range cases {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			stagePath := t.TempDir()
-			if test.written {
-				if err := os.WriteFile(filepath.Join(stagePath, tertiaryDeviceMarker), []byte(test.marker), 0o644); err != nil {
+			if testCase.written {
+				if err := os.WriteFile(filepath.Join(stagePath, tertiaryDeviceMarker), []byte(testCase.marker), 0o644); err != nil {
 					t.Fatalf("write marker: %v", err)
 				}
 			}
 			got, reason := attached(context.Background(), stagePath)
-			if got != test.expected {
-				t.Errorf("attached: got %v want %v", got, test.expected)
+			if got != testCase.expected {
+				t.Errorf("attached: got %v want %v", got, testCase.expected)
 			}
 			if reason != "" {
 				t.Errorf("attached reason: got %q want it silent while the stage has claimed nothing", reason)
@@ -356,7 +356,7 @@ func TestProbeUtilBackupStageTertiary_AttachedHoldsUntilTheStageClaimsADisk(t *t
 }
 
 func TestProbeUtilBackupStageTertiary_MirrorCellsAgreeWithEachOther(t *testing.T) {
-	cases := []struct {
+	tests := []struct {
 		name            string
 		moved, expected int64
 		expectedCopied  int64
@@ -367,16 +367,16 @@ func TestProbeUtilBackupStageTertiary_MirrorCellsAgreeWithEachOther(t *testing.T
 		{name: "a_part_mirror_reports_both_cells_alike", moved: 600 * bytesPerGibibyte, expected: 1000 * bytesPerGibibyte,
 			expectedCopied: 600 * mebibytesPerGibibyte, expectedTotal: 1000 * mebibytesPerGibibyte, expectedPercent: 60},
 	}
-	for _, test := range cases {
-		t.Run(test.name, func(t *testing.T) {
-			copied := intReading(test.moved / bytesPerMebibyte)
-			total := progressTotal(test.moved, test.expected)
-			percent := progressPercent(test.moved, test.expected)
-			if copied.Rounded() != test.expectedCopied || total.Rounded() != test.expectedTotal {
-				t.Errorf("mirror cells: got copied %d total %d want %d %d", copied.Rounded(), total.Rounded(), test.expectedCopied, test.expectedTotal)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			copied := intReading(testCase.moved / bytesPerMebibyte)
+			total := progressTotal(testCase.moved, testCase.expected)
+			percent := progressPercent(testCase.moved, testCase.expected)
+			if copied.Rounded() != testCase.expectedCopied || total.Rounded() != testCase.expectedTotal {
+				t.Errorf("mirror cells: got copied %d total %d want %d %d", copied.Rounded(), total.Rounded(), testCase.expectedCopied, testCase.expectedTotal)
 			}
-			if percent.Rounded() != test.expectedPercent {
-				t.Errorf("progressPercent: got %d want %d", percent.Rounded(), test.expectedPercent)
+			if percent.Rounded() != testCase.expectedPercent {
+				t.Errorf("progressPercent: got %d want %d", percent.Rounded(), testCase.expectedPercent)
 			}
 			if percent.Rounded() == 100 && copied.Rounded() != total.Rounded() {
 				t.Errorf("mirror at 100 percent: copied %d disagrees with total %d", copied.Rounded(), total.Rounded())
@@ -390,9 +390,9 @@ func TestProbeUtilBackupStageTertiary_AHostDeclaringNoBackupDiskSkipsTheStage(t 
 	if err := os.WriteFile(fstab, []byte("UUID=abc  /share/10  ext4  defaults  0 2\n"), 0o644); err != nil {
 		t.Fatalf("write fstab: %v", err)
 	}
-	original := backupFstabPath
-	t.Cleanup(func() { backupFstabPath = original })
-	backupFstabPath = fstab
+	original := fstabPath
+	t.Cleanup(func() { fstabPath = original })
+	fstabPath = fstab
 	originalExec := stageStream
 	t.Cleanup(func() { stageStream = originalExec })
 	stageStream = func(_ context.Context, _ io.Writer, _ string, _ ...string) (string, int, bool) {

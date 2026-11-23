@@ -17,18 +17,18 @@ func TestMetricBuild_IDToAndFromTopic(t *testing.T) {
 			expectedError: false,
 		},
 	}
-	for _, tt := range tests {
+	for _, testCase := range tests {
 		seenTags := make(map[string]bool)
 		seenTopics := make(map[string]bool)
 		for _, id := range GetIDs() {
-			t.Run(fmt.Sprintf("%s_ID_%02d", tt.name, id), func(t *testing.T) {
+			t.Run(fmt.Sprintf("%s_ID_%02d", testCase.name, id), func(t *testing.T) {
 				serviceName := ServiceNameUnset
 				if strings.Contains(metricBuildersByID[id].template, "$SERVICE") {
 					serviceName = "a-service"
 				}
 				topic, tags, err := buildFromID(id, "labnode-one", serviceName, "data")
-				if (err != nil) != tt.expectedError {
-					t.Fatalf("Got err = %v, expected error? %t", err, tt.expectedError)
+				if (err != nil) != testCase.expectedError {
+					t.Fatalf("Got err = %v, expected error? %t", err, testCase.expectedError)
 				}
 				tagsStr := testutil.MapToString(tags)
 				if seenTags[tagsStr] && tagsStr != "" {
@@ -41,8 +41,8 @@ func TestMetricBuild_IDToAndFromTopic(t *testing.T) {
 				seenTopics[topic] = true
 				t.Logf("Metric ID [%02d] -> topic [%s], tags [%s]", id, topic, tagsStr)
 				builtID, builtTags, err := buildFromTopic(topic)
-				if (err != nil) != tt.expectedError {
-					t.Fatalf("Got err = %v, expected error? %t", err, tt.expectedError)
+				if (err != nil) != testCase.expectedError {
+					t.Fatalf("Got err = %v, expected error? %t", err, testCase.expectedError)
 				}
 				builtTagsStr := testutil.MapToString(builtTags)
 				t.Logf("Metric Topic [%s] -> ID [%02d], tags [%s]", topic, builtID, builtTagsStr)
@@ -197,27 +197,27 @@ func TestMetricBuild_TopicToAndFromID(t *testing.T) {
 			expectedFromTopicError: true,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			id, tags, err := buildFromTopic(tt.topic)
-			if (err != nil) != tt.expectedFromTopicError {
-				t.Fatalf("buildFromTopic(): error = %v, expected error? %t", err, tt.expectedFromTopicError)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			id, tags, err := buildFromTopic(testCase.topic)
+			if (err != nil) != testCase.expectedFromTopicError {
+				t.Fatalf("buildFromTopic(): error = %v, expected error? %t", err, testCase.expectedFromTopicError)
 			}
-			if tt.expectedFromTopicError {
+			if testCase.expectedFromTopicError {
 				return
 			}
-			if id != tt.expected {
-				t.Fatalf("ID mismatch: got %d, expected %d", id, tt.expected)
+			if id != testCase.expected {
+				t.Fatalf("ID mismatch: got %d, expected %d", id, testCase.expected)
 			}
-			builtTopic, builtTags, err := buildFromID(id, tt.hostName, tt.serviceName, tt.scope)
-			if (err != nil) != tt.expectedFromIDError {
-				t.Fatalf("buildFromID(): error = %v, expected error? %t", err, tt.expectedFromIDError)
+			builtTopic, builtTags, err := buildFromID(id, testCase.hostName, testCase.serviceName, testCase.scope)
+			if (err != nil) != testCase.expectedFromIDError {
+				t.Fatalf("buildFromID(): error = %v, expected error? %t", err, testCase.expectedFromIDError)
 			}
-			if tt.expectedFromIDError {
+			if testCase.expectedFromIDError {
 				return
 			}
-			if builtTopic != tt.topic {
-				t.Fatalf("Topic mismatch: got %s, expected %s", builtTopic, tt.topic)
+			if builtTopic != testCase.topic {
+				t.Fatalf("Topic mismatch: got %s, expected %s", builtTopic, testCase.topic)
 			}
 			if testutil.MapToString(builtTags) != testutil.MapToString(tags) {
 				t.Fatalf("Tags mismatch: got %s, expected %s", testutil.MapToString(builtTags), testutil.MapToString(tags))
@@ -253,13 +253,13 @@ func TestMetricBuild_HostAggregate(t *testing.T) {
 	for _, id := range GetIDPulseRule(MetricHost).Siblings() {
 		siblings[id] = true
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			if enrolled[test.metricID] != test.expectedEnrolled {
-				t.Errorf("dependencies: got %v want %v", enrolled[test.metricID], test.expectedEnrolled)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if enrolled[testCase.metricID] != testCase.expectedEnrolled {
+				t.Errorf("dependencies: got %v want %v", enrolled[testCase.metricID], testCase.expectedEnrolled)
 			}
-			if siblings[test.metricID] != test.expectedEnrolled {
-				t.Errorf("rule siblings: got %v want %v", siblings[test.metricID], test.expectedEnrolled)
+			if siblings[testCase.metricID] != testCase.expectedEnrolled {
+				t.Errorf("rule siblings: got %v want %v", siblings[testCase.metricID], testCase.expectedEnrolled)
 			}
 		})
 	}
@@ -285,18 +285,18 @@ func TestMetricBuild_ClusterTopic(t *testing.T) {
 			expectedError: false,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			id := MetricCluster
-			if tt.hostName != HostAll {
+			if testCase.hostName != HostAll {
 				id = MetricHost
 			}
-			topic, _, err := buildFromID(id, tt.hostName, ServiceNameUnset, ScopeData)
-			if (err != nil) != tt.expectedError {
-				t.Fatalf("err: got %v want error %t", err, tt.expectedError)
+			topic, _, err := buildFromID(id, testCase.hostName, ServiceNameUnset, ScopeData)
+			if (err != nil) != testCase.expectedError {
+				t.Fatalf("err: got %v want error %t", err, testCase.expectedError)
 			}
-			if topic != tt.expectedTopic {
-				t.Errorf("topic: got %s want %s", topic, tt.expectedTopic)
+			if topic != testCase.expectedTopic {
+				t.Errorf("topic: got %s want %s", topic, testCase.expectedTopic)
 			}
 			if GetIDKind(MetricCluster) != MetricKindCluster {
 				t.Errorf("kind: got %v want %v", GetIDKind(MetricCluster), MetricKindCluster)

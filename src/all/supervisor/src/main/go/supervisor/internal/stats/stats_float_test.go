@@ -350,16 +350,6 @@ func TestStatsFloat_TrendOff(t *testing.T) {
 	}
 }
 
-func expectApprox(t *testing.T, name string, got float64, want float64, tolerance float64) {
-	t.Helper()
-	if math.IsNaN(got) || math.IsInf(got, 0) {
-		t.Fatalf("%s: got invalid value %v", name, got)
-	}
-	if math.Abs(got-want) > tolerance {
-		t.Fatalf("%s: got %v, expected %v (tol %v)", name, got, want, tolerance)
-	}
-}
-
 func TestStatsFloat_MissedPushIsHole(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -399,5 +389,15 @@ func TestStatsFloat_MissedPushIsHole(t *testing.T) {
 			near("TrendMin", window.TrendMin(), testCase.expectedMin)
 			near("TrendMax", window.TrendMax(), testCase.expectedMax)
 		})
+	}
+}
+
+func expectApprox(t *testing.T, name string, got float64, want float64, tolerance float64) {
+	t.Helper()
+	if math.IsNaN(got) || math.IsInf(got, 0) {
+		t.Fatalf("%s: got invalid value %v", name, got)
+	}
+	if math.Abs(got-want) > tolerance {
+		t.Fatalf("%s: got %v, expected %v (tol %v)", name, got, want, tolerance)
 	}
 }

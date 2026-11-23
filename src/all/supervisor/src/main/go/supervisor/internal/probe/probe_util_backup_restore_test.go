@@ -30,8 +30,8 @@ func TestProbeUtilBackupRestore_Replace(t *testing.T) {
 		{"an unknown service state faults before applying", metric.BackupStateSuccess, true, `RESTORE_SERVICE_STATE=stoped; restore_applied() { echo yes > "$APPLIED"; }`, "", 1, false},
 		{"the default run skips a regressed one", metric.BackupStateRegressed, false, `restore_applied() { echo yes > "$APPLIED"; }`, "", 1, false},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			work := t.TempDir()
 			home := filepath.Join(work, "mod")
 			source := filepath.Join(home, "1.0")
@@ -45,20 +45,20 @@ func TestProbeUtilBackupRestore_Replace(t *testing.T) {
 			if err := os.WriteFile(filepath.Join(root, run, "mod_full.tar.gz"), tarGzipped(t, "x", "y"), 0o644); err != nil {
 				t.Fatal(err)
 			}
-			plantBackupManifest(t, root, run, backupManifest{Kind: "full", Verdict: test.verdict})
+			plantBackupManifest(t, root, run, backupManifest{Kind: "full", Verdict: testCase.verdict})
 			applied := filepath.Join(work, "applied")
 			script := filepath.Join(work, "restore.sh")
-			if err := os.WriteFile(script, []byte(fmt.Sprintf("APPLIED=%q\nrestore_service_state() { echo \"${RESTORE_SERVICE_STATE:-stopped}\"; }\n%s\n", applied, test.hooks)), 0o644); err != nil {
+			if err := os.WriteFile(script, []byte(fmt.Sprintf("APPLIED=%q\nrestore_service_state() { echo \"${RESTORE_SERVICE_STATE:-stopped}\"; }\n%s\n", applied, testCase.hooks)), 0o644); err != nil {
 				t.Fatal(err)
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 			defer cancel()
 			var stdout, stderr bytes.Buffer
-			request := BackupModuleRequest{Arguments: []string{"mod"}, Source: source, Script: script, From: test.from, Force: test.force, NoBackup: true, LockPeriod: time.Second}
+			request := BackupModuleRequest{Arguments: []string{"mod"}, Source: source, Script: script, From: testCase.from, Force: testCase.force, NoBackup: true, LockPeriod: time.Second}
 			code := BackupModuleRestore(ctx, request, &stdout, &stderr)
 			_, statErr := os.Stat(applied)
-			if code != test.expectedCode || (statErr == nil) != test.expectedApplied {
-				t.Errorf("restore: got code [%d] applied [%t] stdout [%s] stderr [%s] want code [%d] applied [%t]", code, statErr == nil, stdout.String(), stderr.String(), test.expectedCode, test.expectedApplied)
+			if code != testCase.expectedCode || (statErr == nil) != testCase.expectedApplied {
+				t.Errorf("restore: got code [%d] applied [%t] stdout [%s] stderr [%s] want code [%d] applied [%t]", code, statErr == nil, stdout.String(), stderr.String(), testCase.expectedCode, testCase.expectedApplied)
 			}
 		})
 	}
@@ -73,10 +73,10 @@ func TestProbeUtilBackupRestore_ReportedRestoreLine(t *testing.T) {
 		{"a known label takes the first column", "artefact  [x]", "   artefact  [x]"},
 		{"free text is indented under the labels", "something else", "             something else"},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			if actual := reportedRestoreLine(test.text); actual != test.expected {
-				t.Errorf("line: got [%q] want [%q]", actual, test.expected)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if actual := reportedRestoreLine(testCase.text); actual != testCase.expected {
+				t.Errorf("line: got [%q] want [%q]", actual, testCase.expected)
 			}
 		})
 	}
@@ -91,12 +91,12 @@ func TestProbeUtilBackupRestore_RecordStage(t *testing.T) {
 		{"an unknown stage is a usage error", "tertiary", 2},
 		{"a typo is a usage error", "primry", 2},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			var stdout, stderr bytes.Buffer
-			request := BackupModuleRequest{Arguments: []string{"mod"}, Source: t.TempDir(), Script: "restore.sh", Record: test.record}
-			if code := BackupModuleDrill(context.Background(), request, &stdout, &stderr); code != test.expectedCode {
-				t.Errorf("drill: got code [%d] want [%d]", code, test.expectedCode)
+			request := BackupModuleRequest{Arguments: []string{"mod"}, Source: t.TempDir(), Script: "restore.sh", Record: testCase.record}
+			if code := BackupModuleDrill(context.Background(), request, &stdout, &stderr); code != testCase.expectedCode {
+				t.Errorf("drill: got code [%d] want [%d]", code, testCase.expectedCode)
 			}
 		})
 	}
@@ -148,8 +148,8 @@ func TestProbeUtilBackupRestore_RestoreFilesRollback(t *testing.T) {
 		{"a good archive replaces the path and keeps the old copy aside", tarGzipped(t, "keep/db", "restored"), 0, "restored", true},
 		{"an unreadable archive puts the old copy back", []byte("not an archive"), 1, "old", false},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			home := filepath.Join(t.TempDir(), "mod")
 			source := filepath.Join(home, "1.0")
 			target := filepath.Join(source, "config")
@@ -160,7 +160,7 @@ func TestProbeUtilBackupRestore_RestoreFilesRollback(t *testing.T) {
 				t.Fatal(err)
 			}
 			archive := filepath.Join(t.TempDir(), "a.tar.gz")
-			if err := os.WriteFile(archive, test.archive, 0o644); err != nil {
+			if err := os.WriteFile(archive, testCase.archive, 0o644); err != nil {
 				t.Fatal(err)
 			}
 			var stdout, stderr bytes.Buffer
@@ -169,8 +169,8 @@ func TestProbeUtilBackupRestore_RestoreFilesRollback(t *testing.T) {
 			}, &stdout, &stderr)
 			live, _ := os.ReadFile(filepath.Join(target, "keep", "db"))
 			_, asideErr := os.Stat(filepath.Join(home, "replaced", "2026-11-01_01-00-00", "keep", "db"))
-			if code != test.expectedCode || string(live) != test.expectedLive || (asideErr == nil) != test.expectedAside {
-				t.Errorf("restore files: got code [%d] live [%s] aside [%t] stderr [%s] want code [%d] live [%s] aside [%t]", code, live, asideErr == nil, stderr.String(), test.expectedCode, test.expectedLive, test.expectedAside)
+			if code != testCase.expectedCode || string(live) != testCase.expectedLive || (asideErr == nil) != testCase.expectedAside {
+				t.Errorf("restore files: got code [%d] live [%s] aside [%t] stderr [%s] want code [%d] live [%s] aside [%t]", code, live, asideErr == nil, stderr.String(), testCase.expectedCode, testCase.expectedLive, testCase.expectedAside)
 			}
 		})
 	}

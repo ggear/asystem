@@ -260,14 +260,14 @@ func killWithGroup(command *exec.Cmd, grace time.Duration) {
 }
 
 func (b *lockedBuffer) Write(data []byte) (int, error) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
 	return b.buffer.Write(data)
 }
 
 func (b *lockedBuffer) String() string {
-	b.mu.Lock()
-	defer b.mu.Unlock()
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
 	return b.buffer.String()
 }
 
@@ -311,18 +311,18 @@ type stageResult struct {
 }
 
 type stageCounters struct {
-	mu                                                                                    sync.Mutex
+	mutex                                                                                 sync.Mutex
 	totalMB, fileCount, sizeMB, filesHeld, filesCreated, filesDeleted, sizeHeldMB, sentMB int
 }
 
 func (c *stageCounters) addTotal(mb int) {
-	c.mu.Lock()
+	c.mutex.Lock()
 	c.totalMB += mb
-	c.mu.Unlock()
+	c.mutex.Unlock()
 }
 
 func (c *stageCounters) addTransfer(files, sizeMB, filesCreated, filesDeleted, filesHeld, sizeHeldMB, sentMB int) {
-	c.mu.Lock()
+	c.mutex.Lock()
 	c.fileCount += files
 	c.sizeMB += sizeMB
 	c.filesCreated += filesCreated
@@ -330,11 +330,11 @@ func (c *stageCounters) addTransfer(files, sizeMB, filesCreated, filesDeleted, f
 	c.filesHeld += filesHeld
 	c.sizeHeldMB += sizeHeldMB
 	c.sentMB += sentMB
-	c.mu.Unlock()
+	c.mutex.Unlock()
 }
 
 type lockedBuffer struct {
-	mu     sync.Mutex
+	mutex  sync.Mutex
 	buffer bytes.Buffer
 }
 

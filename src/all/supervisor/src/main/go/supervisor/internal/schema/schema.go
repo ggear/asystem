@@ -152,7 +152,7 @@ type Field struct {
 	Flag bool
 }
 
-func AppendLineProtocol(buf *bytes.Buffer, measurement string, relation Relation, tags [][2]string, fields map[string]Field, timestamp string) bool {
+func AppendLineProtocol(buffer *bytes.Buffer, measurement string, relation Relation, tags [][2]string, fields map[string]Field, timestamp string) bool {
 	rendered := make([]string, 0, len(relation.Measures))
 	for _, measure := range relation.Measures {
 		if !measure.Persist {
@@ -179,20 +179,20 @@ func AppendLineProtocol(buf *bytes.Buffer, measurement string, relation Relation
 	if len(rendered) == 0 {
 		return false
 	}
-	buf.WriteString(measurement)
+	buffer.WriteString(measurement)
 	for _, tag := range append([][2]string{{TagModule, Module()}}, tags...) {
 		if tag[1] == "" {
 			continue
 		}
-		buf.WriteByte(',')
-		buf.WriteString(tag[0])
-		buf.WriteByte('=')
-		buf.WriteString(tag[1])
+		buffer.WriteByte(',')
+		buffer.WriteString(tag[0])
+		buffer.WriteByte('=')
+		buffer.WriteString(tag[1])
 	}
-	buf.WriteByte(' ')
-	buf.WriteString(strings.Join(rendered, ","))
-	buf.WriteByte(' ')
-	buf.WriteString(timestamp)
-	buf.WriteByte('\n')
+	buffer.WriteByte(' ')
+	buffer.WriteString(strings.Join(rendered, ","))
+	buffer.WriteByte(' ')
+	buffer.WriteString(timestamp)
+	buffer.WriteByte('\n')
 	return true
 }

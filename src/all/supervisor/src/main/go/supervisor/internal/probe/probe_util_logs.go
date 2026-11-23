@@ -251,20 +251,6 @@ func (s *logSet) evict(cutoff time.Time) {
 	}
 }
 
-func (s *logSet) close() {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	if s.file != nil {
-		_ = s.file.Close()
-		s.file = nil
-	}
-	s.opened = false
-	s.available = false
-	s.drained = false
-	s.records = nil
-	s.carry = nil
-}
-
 func parseLogRecord(line string, boot time.Time) (time.Time, string, bool) {
 	if line == "" || line[0] == ' ' || line[0] == '\t' {
 		return time.Time{}, "", false

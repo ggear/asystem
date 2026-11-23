@@ -55,11 +55,11 @@ func TestConfig_TimingScale(t *testing.T) {
 		{name: "negative_is_production_timing", value: "-3", expectedScale: 1},
 		{name: "unparsable_is_production_timing", value: "fast", expectedScale: 1},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Setenv(TimingScaleEnvVar, test.value)
-			if actual := TimingScale(); actual != test.expectedScale {
-				t.Errorf("TimingScale: got %d want %d", actual, test.expectedScale)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Setenv(TimingScaleEnvVar, testCase.value)
+			if actual := TimingScale(); actual != testCase.expectedScale {
+				t.Errorf("TimingScale: got %d want %d", actual, testCase.expectedScale)
 			}
 		})
 	}
@@ -546,25 +546,25 @@ func TestConfig_Database(t *testing.T) {
 		{
 			name:          "happy_production_like_1",
 			configPath:    testutil.FindTestFile(t, "config-happy-prodlike-1.json", "config"),
-			expected:      "influxdb3.local.janeandgraham.com:2000",
+			expected:      "influxdb.local.janeandgraham.com:2000",
 			expectedError: false,
 		},
 		{
 			name:          "happy_noschema_1",
 			configPath:    testutil.FindTestFile(t, "config-happy-noschema-1.json", "config"),
-			expected:      "influxdb3.local.janeandgraham.com:2000",
+			expected:      "influxdb.local.janeandgraham.com:2000",
 			expectedError: false,
 		},
 		{
 			name:          "happy_noservices_1",
 			configPath:    testutil.FindTestFile(t, "config-happy-noservices-1.json", "config"),
-			expected:      "influxdb3.local.janeandgraham.com:2000",
+			expected:      "influxdb.local.janeandgraham.com:2000",
 			expectedError: false,
 		},
 		{
 			name:          "happy_no_port_in_file_uses_host_only",
 			configPath:    testutil.FindTestFile(t, "config-sad-no-database-port-1.json", "config"),
-			expected:      "influxdb3.local.janeandgraham.com",
+			expected:      "influxdb.local.janeandgraham.com",
 			expectedError: false,
 		},
 		{
@@ -1128,15 +1128,15 @@ func TestConfig_HostsByFormFactor(t *testing.T) {
 			expectedError: false,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Cleanup(Reset)
 			path := filepath.Join(t.TempDir(), "config.json")
-			if err := os.WriteFile(path, []byte(`{"asystem":{"version":"10.100.6000","host":"macmini-mad","schema":`+tt.schema+`}}`), 0644); err != nil {
+			if err := os.WriteFile(path, []byte(`{"asystem":{"version":"10.100.6000","host":"macmini-mad","schema":`+testCase.schema+`}}`), 0644); err != nil {
 				t.Fatalf("write config file failed: %v", err)
 			}
-			if hosts := Load(path).HostsByFormFactor(tt.formFactor); !slices.Equal(hosts, tt.expectedHosts) {
-				t.Errorf("hosts: got %v want %v", hosts, tt.expectedHosts)
+			if hosts := Load(path).HostsByFormFactor(testCase.formFactor); !slices.Equal(hosts, testCase.expectedHosts) {
+				t.Errorf("hosts: got %v want %v", hosts, testCase.expectedHosts)
 			}
 		})
 	}
@@ -1190,10 +1190,10 @@ func TestConfig_SilentWindow(t *testing.T) {
 		{name: "an_explicit_window_wins", periods: Periods{PulseMillis: 6000, SilentMillis: 2500}, expectedWindow: 2500 * time.Millisecond},
 		{name: "no_pulse_and_no_window_is_zero", periods: Periods{}, expectedWindow: 0},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			if actual := test.periods.SilentWindow(); actual != test.expectedWindow {
-				t.Errorf("SilentWindow: got %v want %v", actual, test.expectedWindow)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if actual := testCase.periods.SilentWindow(); actual != testCase.expectedWindow {
+				t.Errorf("SilentWindow: got %v want %v", actual, testCase.expectedWindow)
 			}
 		})
 	}

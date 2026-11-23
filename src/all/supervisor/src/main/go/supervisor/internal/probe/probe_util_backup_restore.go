@@ -354,7 +354,7 @@ func (s *restoreSession) execute() int {
 		files = append(files, link.file)
 	}
 	binary, _ := os.Executable()
-	s.hooks.env = []string{
+	s.hooks.environment = []string{
 		"RESTORE_RUN_TIMESTAMP=" + s.run, "RESTORE_CHAIN_LIST=" + strings.Join(files, "\n"), "RESTORE_SUPERVISOR=" + binary,
 		"RESTORE_SOURCE_PATH=" + s.source, "RESTORE_FORCE=" + strconv.FormatBool(s.request.Force),
 		"RESTORE_KEEP_SCRATCH=" + strconv.FormatBool(s.request.KeepScratch),

@@ -111,10 +111,10 @@ func TestProbeUtilLeader_Elected(t *testing.T) {
 			expectedError:  false,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if leader := leaderElected(tt.eligible, tt.candidates, tt.lease, tt.leaseArrived, now, ttl); leader != tt.expectedLeader {
-				t.Errorf("leader: got %q want %q", leader, tt.expectedLeader)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if leader := leaderElected(testCase.eligible, testCase.candidates, testCase.lease, testCase.leaseArrived, now, ttl); leader != testCase.expectedLeader {
+				t.Errorf("leader: got %q want %q", leader, testCase.expectedLeader)
 			}
 		})
 	}
@@ -130,10 +130,10 @@ func TestProbeUtilLeader_FreshnessIgnoresTheSendersClock(t *testing.T) {
 		{name: "sender_an_hour_behind", timestampOffset: -time.Hour, expectedError: false},
 		{name: "sender_in_step", timestampOffset: 0, expectedError: false},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			campaign := leaderStubCampaign([]string{"alpha", "bravo"}, "alpha")
-			payload, _ := json.Marshal(leaderCandidacy{Host: "bravo", RenewedTS: time.Now().Add(tt.timestampOffset).Format(time.RFC3339Nano)})
+			payload, _ := json.Marshal(leaderCandidacy{Host: "bravo", RenewedTS: time.Now().Add(testCase.timestampOffset).Format(time.RFC3339Nano)})
 			campaign.observe(campaign.client, leaderStubMessage{topic: campaign.election.candidateTopic("bravo"), payload: payload})
 			if leader := leaderElected([]string{"bravo"}, campaign.candidates, leaderLease{}, time.Time{}, time.Now(), campaign.timing.ttl); leader != "bravo" {
 				t.Errorf("leader: got %q want bravo, a renewal that just arrived is fresh whatever it is stamped", leader)
@@ -152,8 +152,8 @@ func TestProbeUtilLeader_ClaimAcrossAReattachIsDiscarded(t *testing.T) {
 		{name: "claim_acknowledged_in_the_same_session_leads", reattach: false, expectedLeading: true, expectedError: false},
 		{name: "claim_acknowledged_after_a_reattach_is_discarded", reattach: true, expectedLeading: false, expectedError: false},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			campaign := leaderStubCampaign([]string{"alpha"}, "alpha")
 			now := time.Now()
 			campaign.attached, campaign.standing, campaign.lastAck, campaign.heardSelf = true, true, now, now
@@ -161,7 +161,7 @@ func TestProbeUtilLeader_ClaimAcrossAReattachIsDiscarded(t *testing.T) {
 			campaign.electedFrom = now.Add(-campaign.timing.settle - time.Second)
 			stub := campaign.client.(*leaderStubClient)
 			stub.onPublish = func(topic string) func() {
-				if topic != campaign.election.leaseTopic() || !tt.reattach {
+				if topic != campaign.election.leaseTopic() || !testCase.reattach {
 					return nil
 				}
 				return func() {
@@ -171,8 +171,8 @@ func TestProbeUtilLeader_ClaimAcrossAReattachIsDiscarded(t *testing.T) {
 				}
 			}
 			campaign.evaluate(now)
-			if leading, _ := campaign.holding(time.Now()); leading != tt.expectedLeading {
-				t.Errorf("leading: got %v want %v", leading, tt.expectedLeading)
+			if leading, _ := campaign.holding(time.Now()); leading != testCase.expectedLeading {
+				t.Errorf("leading: got %v want %v", leading, testCase.expectedLeading)
 			}
 		})
 	}
@@ -188,10 +188,10 @@ func TestProbeUtilLeader_UnfitHostWithdrawsAndYields(t *testing.T) {
 		{name: "config_no_longer_names_the_holder", eligible: []string{"bravo"}, alive: true, expectedError: false},
 		{name: "holder_poll_loop_stalled", eligible: []string{"alpha", "bravo"}, alive: false, expectedError: false},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			campaign := leaderStubCampaign(tt.eligible, "alpha")
-			campaign.election.alive = func() bool { return tt.alive }
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			campaign := leaderStubCampaign(testCase.eligible, "alpha")
+			campaign.election.alive = func() bool { return testCase.alive }
 			now := time.Now()
 			campaign.attached, campaign.standing, campaign.leading = true, true, true
 			campaign.lastAck, campaign.lastLease, campaign.epoch = now, now, 1
@@ -239,23 +239,23 @@ func TestProbeUtilLeader_VacantClusterMarksPresenceOffline(t *testing.T) {
 		{name: "another_host_holds_a_fresh_lease", otherLease: true, attachedFor: time.Minute, expectedOffline: false, expectedError: false},
 		{name: "still_settling_after_attach", otherLease: false, attachedFor: 100 * time.Millisecond, expectedOffline: false, expectedError: false},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			campaign := leaderStubCampaign([]string{"alpha", "bravo"}, "bravo")
 			campaign.election.presence = "test/presence"
 			now := time.Now()
-			campaign.attached, campaign.attachedAt = true, now.Add(-tt.attachedFor)
-			if tt.otherLease {
+			campaign.attached, campaign.attachedAt = true, now.Add(-testCase.attachedFor)
+			if testCase.otherLease {
 				campaign.candidates["alpha"] = now
 				campaign.lease, campaign.leaseArrived = leaderLease{Host: "alpha", Epoch: 1}, now
 			}
 			campaign.tick(now)
 			campaign.tick(now)
 			stub := campaign.client.(*leaderStubClient)
-			if offline := stub.published("test/presence", metric.AvailabilityOffline); offline != tt.expectedOffline {
-				t.Errorf("offline: got %v want %v, publishes %v", offline, tt.expectedOffline, stub.publishes())
+			if offline := stub.published("test/presence", metric.AvailabilityOffline); offline != testCase.expectedOffline {
+				t.Errorf("offline: got %v want %v, publishes %v", offline, testCase.expectedOffline, stub.publishes())
 			}
-			if tt.expectedOffline && stub.count("test/presence") != 1 {
+			if testCase.expectedOffline && stub.count("test/presence") != 1 {
 				t.Errorf("offline publishes: got %d want 1 per vacancy", stub.count("test/presence"))
 			}
 		})
@@ -284,25 +284,25 @@ func TestProbeUtilLeader_WithdrawalLogsAHostFactAtInfo(t *testing.T) {
 		{name: "ineligible_by_config_is_a_host_fact", eligible: []string{"bravo"}, alive: true, expectedLevel: slog.LevelInfo, expectedError: false},
 		{name: "stalled_poll_loop_is_a_fault", eligible: []string{"alpha"}, alive: false, expectedLevel: slog.LevelWarn, expectedError: false},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			buffer := scribe.EnableBuffer(slog.LevelDebug, 100)
 			t.Cleanup(func() { scribe.EnableStdout(slog.LevelDebug) })
-			campaign := leaderStubCampaign(tt.eligible, "alpha")
-			campaign.election.alive = func() bool { return tt.alive }
+			campaign := leaderStubCampaign(testCase.eligible, "alpha")
+			campaign.election.alive = func() bool { return testCase.alive }
 			campaign.attached, campaign.standing = true, true
 			campaign.tick(time.Now())
 			found := false
 			for _, line := range buffer.Tail(100) {
 				if strings.Contains(line.Detail, "candidacy withdrawn") {
 					found = true
-					if line.Level != tt.expectedLevel {
-						t.Errorf("level: got %v want %v for [%s]", line.Level, tt.expectedLevel, line.Detail)
+					if line.Level != testCase.expectedLevel {
+						t.Errorf("level: got %v want %v for [%s]", line.Level, testCase.expectedLevel, line.Detail)
 					}
 				}
 			}
 			if !found {
-				t.Errorf("withdrawal: got no log line want one at %v", tt.expectedLevel)
+				t.Errorf("withdrawal: got no log line want one at %v", testCase.expectedLevel)
 			}
 		})
 	}
@@ -322,27 +322,27 @@ func TestProbeUtilLeader_GracefulResignationShortensTheSettle(t *testing.T) {
 		{name: "lease_cleared_by_hand_keeps_the_full_settle", clearCandidacy: false, clearLease: true, retained: false, expectedAfterTick: false, expectedError: false},
 		{name: "retained_clears_on_attach_keep_the_full_settle", clearCandidacy: true, clearLease: true, retained: true, expectedAfterTick: false, expectedError: false},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			campaign := leaderStubCampaign([]string{"alpha", "bravo"}, "bravo")
 			start := time.Now()
 			campaign.attached, campaign.standing, campaign.lastAck, campaign.heardSelf = true, true, start.Add(time.Hour), start
 			campaign.candidates["alpha"], campaign.candidates["bravo"] = start, start
 			alphaLease, _ := json.Marshal(leaderLease{Host: "alpha", Epoch: 1})
 			campaign.observe(campaign.client, leaderStubMessage{topic: campaign.election.leaseTopic(), payload: alphaLease})
-			if tt.clearCandidacy {
-				campaign.observe(campaign.client, leaderStubMessage{topic: campaign.election.candidateTopic("alpha"), retained: tt.retained})
+			if testCase.clearCandidacy {
+				campaign.observe(campaign.client, leaderStubMessage{topic: campaign.election.candidateTopic("alpha"), retained: testCase.retained})
 			}
-			if tt.clearLease {
-				campaign.observe(campaign.client, leaderStubMessage{topic: campaign.election.leaseTopic(), retained: tt.retained})
+			if testCase.clearLease {
+				campaign.observe(campaign.client, leaderStubMessage{topic: campaign.election.leaseTopic(), retained: testCase.retained})
 			}
-			if !tt.clearCandidacy {
+			if !testCase.clearCandidacy {
 				delete(campaign.candidates, "alpha")
 			}
 			campaign.evaluate(start)
 			campaign.evaluate(start.Add(campaign.timing.refresh))
-			if leading, _ := campaign.holding(start.Add(campaign.timing.refresh)); leading != tt.expectedAfterTick {
-				t.Errorf("leading after one refresh: got %v want %v", leading, tt.expectedAfterTick)
+			if leading, _ := campaign.holding(start.Add(campaign.timing.refresh)); leading != testCase.expectedAfterTick {
+				t.Errorf("leading after one refresh: got %v want %v", leading, testCase.expectedAfterTick)
 			}
 			campaign.evaluate(start.Add(campaign.timing.refresh + time.Millisecond))
 			campaign.evaluate(start.Add(campaign.timing.settle))
@@ -688,8 +688,8 @@ func TestProbeUtilLeader_DeafSessionRedials(t *testing.T) {
 		{name: "unheard_within_the_ttl_of_attaching_waits", echo: false, attachedFor: time.Second, expectedRedial: false, expectedLeading: true, expectedError: false},
 		{name: "unacknowledged_renewals_are_left_to_the_ack_window", echo: false, unacked: true, attachedFor: time.Hour, expectedRedial: false, expectedLeading: false, expectedError: false},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Cleanup(config.Reset)
 			configFile := filepath.Join(t.TempDir(), "config.json")
 			if err := os.WriteFile(configFile, []byte(`{"asystem":{"version":"10.100.6000","host":"alpha","broker":{"host":"127.0.0.1","port":"1"}}}`), 0644); err != nil {
@@ -698,29 +698,29 @@ func TestProbeUtilLeader_DeafSessionRedials(t *testing.T) {
 			campaign := leaderStubCampaign([]string{"alpha", "bravo"}, "alpha")
 			campaign.configPath = configFile
 			stub := campaign.client.(*leaderStubClient)
-			stub.retained, stub.unacked = tt.echoRetained, tt.unacked
-			if !tt.echo {
+			stub.retained, stub.unacked = testCase.echoRetained, testCase.unacked
+			if !testCase.echo {
 				stub.handler = nil
 			}
 			now := time.Now()
 			campaign.attached, campaign.standing, campaign.leading, campaign.epoch = true, true, true, 1
-			campaign.attachedAt = now.Add(-tt.attachedFor)
+			campaign.attachedAt = now.Add(-testCase.attachedFor)
 			campaign.lastAck, campaign.lastLease = now, now
-			if tt.unacked {
+			if testCase.unacked {
 				campaign.lastAck, campaign.lastLease = now.Add(-campaign.timing.ackWindow-time.Second), now.Add(-campaign.timing.ackWindow-time.Second)
 			}
 			campaign.lease, campaign.leaseArrived = leaderLease{Host: "alpha", Epoch: 1}, now
 			campaign.candidates["alpha"] = now
 			campaign.tick(now)
 			t.Cleanup(func() { campaign.session().Disconnect(0) })
-			if redialled := campaign.session() != mqtt.Client(stub); redialled != tt.expectedRedial {
-				t.Errorf("redialled: got %v want %v", redialled, tt.expectedRedial)
+			if redialled := campaign.session() != mqtt.Client(stub); redialled != testCase.expectedRedial {
+				t.Errorf("redialled: got %v want %v", redialled, testCase.expectedRedial)
 			}
-			if tt.expectedRedial && (campaign.retired != mqtt.Client(stub) || !stub.IsConnectionOpen()) {
+			if testCase.expectedRedial && (campaign.retired != mqtt.Client(stub) || !stub.IsConnectionOpen()) {
 				t.Errorf("deaf session: got retired [%v] open [%v] want kept open as retired until the fresh session attaches, its will still covering the candidacy", campaign.retired == mqtt.Client(stub), stub.IsConnectionOpen())
 			}
-			if leading, _ := campaign.holding(time.Now()); leading != tt.expectedLeading {
-				t.Errorf("leading: got %v want %v", leading, tt.expectedLeading)
+			if leading, _ := campaign.holding(time.Now()); leading != testCase.expectedLeading {
+				t.Errorf("leading: got %v want %v", leading, testCase.expectedLeading)
 			}
 		})
 	}
@@ -759,27 +759,27 @@ func TestProbeUtilLeader_ElectedPeerWithoutALeaseIsFlagged(t *testing.T) {
 		{name: "nobody_standing_is_a_vacancy", host: "bravo", attachedFor: time.Hour, bravoOnly: true, expectedOrphaned: "", expectedError: false},
 		{name: "a_peer_newly_elected_after_a_long_vacancy_gets_its_settle", host: "bravo", attachedFor: time.Hour, newlyElected: true, expectedOrphaned: "", expectedError: false},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			campaign := leaderStubCampaign([]string{"alpha", "bravo"}, tt.host)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			campaign := leaderStubCampaign([]string{"alpha", "bravo"}, testCase.host)
 			now := time.Now()
-			campaign.attached, campaign.attachedAt = true, now.Add(-tt.attachedFor)
-			campaign.electedPeer, campaign.electedAt = "alpha", now.Add(-tt.attachedFor)
-			if tt.newlyElected {
+			campaign.attached, campaign.attachedAt = true, now.Add(-testCase.attachedFor)
+			campaign.electedPeer, campaign.electedAt = "alpha", now.Add(-testCase.attachedFor)
+			if testCase.newlyElected {
 				campaign.electedPeer = ""
 			}
-			if tt.leaseSeenAgo > 0 {
-				campaign.leaseSeen = now.Add(-tt.leaseSeenAgo)
+			if testCase.leaseSeenAgo > 0 {
+				campaign.leaseSeen = now.Add(-testCase.leaseSeenAgo)
 			}
-			if tt.leaseHeld {
+			if testCase.leaseHeld {
 				campaign.lease, campaign.leaseArrived, campaign.leaseSeen, campaign.leaseLive = leaderLease{Host: "alpha", Epoch: 1}, now, now, now
 			}
-			if !tt.bravoOnly {
+			if !testCase.bravoOnly {
 				campaign.candidates["alpha"] = now
 			}
 			campaign.census(now)
-			if campaign.orphanedBy != tt.expectedOrphaned {
-				t.Errorf("orphaned: got %q want %q", campaign.orphanedBy, tt.expectedOrphaned)
+			if campaign.orphanedBy != testCase.expectedOrphaned {
+				t.Errorf("orphaned: got %q want %q", campaign.orphanedBy, testCase.expectedOrphaned)
 			}
 		})
 	}
@@ -817,18 +817,18 @@ func TestProbeUtilLeader_RetainedReplayAloneNeverClaims(t *testing.T) {
 		{name: "a_live_echo_of_its_own_renewal_lets_it_claim", retainedOnly: false, expectedLeading: true, expectedError: false},
 		{name: "a_retained_replay_alone_does_not", retainedOnly: true, expectedLeading: false, expectedError: false},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			campaign := leaderStubCampaign([]string{"alpha"}, "alpha")
 			stub := campaign.client.(*leaderStubClient)
-			stub.retained = tt.retainedOnly
+			stub.retained = testCase.retainedOnly
 			now := time.Now()
 			campaign.attached, campaign.standing, campaign.attachedAt, campaign.lastAck = true, true, now.Add(-time.Second), now
 			campaign.candidates["alpha"] = now
 			campaign.electedFrom = now.Add(-campaign.timing.settle - time.Second)
 			campaign.tick(now)
-			if leading, _ := campaign.holding(time.Now()); leading != tt.expectedLeading {
-				t.Errorf("leading: got %v want %v", leading, tt.expectedLeading)
+			if leading, _ := campaign.holding(time.Now()); leading != testCase.expectedLeading {
+				t.Errorf("leading: got %v want %v", leading, testCase.expectedLeading)
 			}
 		})
 	}
@@ -844,7 +844,7 @@ func TestProbeUtilLeader_RestandingIsNotMistakenForDeafness(t *testing.T) {
 	start := time.Now()
 	campaign.attached, campaign.attachedAt, campaign.standing, campaign.lastAck, campaign.heardSelf = true, start.Add(-time.Hour), true, start, start
 	campaign.tick(start)
-	echo.wg.Wait()
+	echo.waiting.Wait()
 	if campaign.standing {
 		t.Fatalf("setup standing: got true want withdrawn while unfit")
 	}
@@ -854,7 +854,7 @@ func TestProbeUtilLeader_RestandingIsNotMistakenForDeafness(t *testing.T) {
 	alive = true
 	campaign.tick(time.Now())
 	t.Cleanup(func() { campaign.session().Disconnect(0) })
-	echo.wg.Wait()
+	echo.waiting.Wait()
 	if campaign.session() != mqtt.Client(echo) {
 		t.Errorf("session: got redialled want kept, the first renewal after standing again has had no time to echo")
 	}
@@ -1005,19 +1005,19 @@ func TestProbeUtilLeader_BriefAckFailuresDoNotHideDeafness(t *testing.T) {
 		{name: "a_brief_ack_failure_keeps_the_silence_running", ackGap: time.Second, expectedRedial: true, expectedError: false},
 		{name: "acks_lost_past_the_ttl_restart_the_silence", ackGap: time.Minute, expectedRedial: false, expectedError: false},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			campaign := leaderStubCampaign([]string{"alpha"}, "alpha")
 			campaign.configPath = leaderUnreachableConfig(t)
 			stub := campaign.client.(*leaderStubClient)
 			stub.handler = nil
 			now := time.Now()
 			campaign.attached, campaign.standing, campaign.attachedAt = true, true, now.Add(-time.Hour)
-			campaign.lastAck, campaign.renewFailing = now.Add(-tt.ackGap), true
+			campaign.lastAck, campaign.renewFailing = now.Add(-testCase.ackGap), true
 			campaign.tick(now)
 			t.Cleanup(func() { campaign.session().Disconnect(0) })
-			if redialled := campaign.session() != mqtt.Client(stub); redialled != tt.expectedRedial {
-				t.Errorf("redialled: got %v want %v", redialled, tt.expectedRedial)
+			if redialled := campaign.session() != mqtt.Client(stub); redialled != testCase.expectedRedial {
+				t.Errorf("redialled: got %v want %v", redialled, testCase.expectedRedial)
 			}
 		})
 	}
@@ -1065,30 +1065,21 @@ func TestProbeUtilLeader_RetainedLeaseAgesFromItsLastWrite(t *testing.T) {
 		{name: "own_lease_never_written_by_this_process_is_stale", leaseHost: "max", lastWriteAgo: 0, expectedLeader: "mad", expectedError: false},
 		{name: "peer_lease_replayed_on_attach_counts_from_arrival", leaseHost: "meg", lastWriteAgo: 0, expectedLeader: "meg", expectedError: false},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			campaign := leaderStubCampaign([]string{"mad", "max", "meg"}, "max")
 			now := time.Now()
-			if tt.lastWriteAgo > 0 {
-				campaign.lastLease = now.Add(-tt.lastWriteAgo)
+			if testCase.lastWriteAgo > 0 {
+				campaign.lastLease = now.Add(-testCase.lastWriteAgo)
 			}
 			campaign.candidates["mad"], campaign.candidates["max"], campaign.candidates["meg"] = now, now, now
-			payload, _ := json.Marshal(leaderLease{Host: tt.leaseHost, Epoch: 1})
+			payload, _ := json.Marshal(leaderLease{Host: testCase.leaseHost, Epoch: 1})
 			campaign.observe(campaign.client, leaderStubMessage{topic: campaign.election.leaseTopic(), payload: payload, retained: true})
-			if leader := leaderElected(campaign.election.eligible(), campaign.candidates, campaign.lease, campaign.leaseArrived, time.Now(), campaign.timing.ttl); leader != tt.expectedLeader {
-				t.Errorf("leader: got %q want %q", leader, tt.expectedLeader)
+			if leader := leaderElected(campaign.election.eligible(), campaign.candidates, campaign.lease, campaign.leaseArrived, time.Now(), campaign.timing.ttl); leader != testCase.expectedLeader {
+				t.Errorf("leader: got %q want %q", leader, testCase.expectedLeader)
 			}
 		})
 	}
-}
-
-func leaderStubCampaign(eligible []string, host string) *leaderCampaign {
-	campaign := newLeaderCampaignState("", host, leaderElection{name: "test", root: "test/election", eligible: func() []string { return eligible }}, leaderTiming{
-		refresh: 200 * time.Millisecond, publishTimeout: 150 * time.Millisecond, ackWindow: 550 * time.Millisecond,
-		keepAlive: 2 * time.Second, pingTimeout: time.Second, ttl: 4 * time.Second, settle: time.Second,
-	})
-	campaign.client = &leaderStubClient{open: true, handler: campaign.observe}
-	return campaign
 }
 
 type leaderStubPublish struct {
@@ -1106,100 +1097,16 @@ type leaderStubClient struct {
 	unacked   bool
 }
 
-func (s *leaderStubClient) IsConnected() bool      { return s.open }
-func (s *leaderStubClient) IsConnectionOpen() bool { return s.open }
-func (s *leaderStubClient) Connect() mqtt.Token    { return &leaderStubToken{} }
-func (s *leaderStubClient) Disconnect(uint)        { s.open = false }
-func (s *leaderStubClient) Publish(topic string, _ byte, _ bool, payload any) mqtt.Token {
-	body := ""
-	switch typed := payload.(type) {
-	case []byte:
-		body = string(typed)
-	case string:
-		body = typed
-	}
-	s.mutex.Lock()
-	s.sent = append(s.sent, leaderStubPublish{topic: topic, payload: body})
-	handler, retained, unacked := s.handler, s.retained, s.unacked
-	s.mutex.Unlock()
-	if handler != nil {
-		handler(s, leaderStubMessage{topic: topic, payload: []byte(body), retained: retained})
-	}
-	token := &leaderStubToken{failed: unacked}
-	if s.onPublish != nil {
-		token.hook = s.onPublish(topic)
-	}
-	return token
-}
-func (s *leaderStubClient) Subscribe(string, byte, mqtt.MessageHandler) mqtt.Token {
-	return &leaderStubToken{}
-}
-func (s *leaderStubClient) SubscribeMultiple(map[string]byte, mqtt.MessageHandler) mqtt.Token {
-	return &leaderStubToken{}
-}
-func (s *leaderStubClient) Unsubscribe(...string) mqtt.Token     { return &leaderStubToken{} }
-func (s *leaderStubClient) AddRoute(string, mqtt.MessageHandler) {}
-func (s *leaderStubClient) OptionsReader() mqtt.ClientOptionsReader {
-	return mqtt.ClientOptionsReader{}
-}
-
-func (s *leaderStubClient) publishes() []leaderStubPublish {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	return append([]leaderStubPublish(nil), s.sent...)
-}
-
-func (s *leaderStubClient) published(topic, payload string) bool {
-	for _, sent := range s.publishes() {
-		if sent.topic == topic && sent.payload == payload {
-			return true
-		}
-	}
-	return false
-}
-
-func (s *leaderStubClient) count(topic string) int {
-	count := 0
-	for _, sent := range s.publishes() {
-		if sent.topic == topic {
-			count++
-		}
-	}
-	return count
-}
-
 type leaderStubToken struct {
 	hook   func()
 	failed bool
 }
-
-func (t *leaderStubToken) Wait() bool { return t.WaitTimeout(0) }
-func (t *leaderStubToken) WaitTimeout(time.Duration) bool {
-	if t.hook != nil {
-		t.hook()
-	}
-	return !t.failed
-}
-func (t *leaderStubToken) Done() <-chan struct{} {
-	done := make(chan struct{})
-	close(done)
-	return done
-}
-func (t *leaderStubToken) Error() error { return nil }
 
 type leaderStubMessage struct {
 	topic    string
 	payload  []byte
 	retained bool
 }
-
-func (m leaderStubMessage) Duplicate() bool   { return false }
-func (m leaderStubMessage) Qos() byte         { return 1 }
-func (m leaderStubMessage) Retained() bool    { return m.retained }
-func (m leaderStubMessage) Topic() string     { return m.topic }
-func (m leaderStubMessage) MessageID() uint16 { return 0 }
-func (m leaderStubMessage) Payload() []byte   { return m.payload }
-func (m leaderStubMessage) Ack()              {}
 
 func TestProbeUtilLeader_HoldsOnlyWhileTheLeaseNamesIt(t *testing.T) {
 	tests := []struct {
@@ -1212,15 +1119,15 @@ func TestProbeUtilLeader_HoldsOnlyWhileTheLeaseNamesIt(t *testing.T) {
 		{name: "lease_overwritten_by_a_concurrent_claimant", leaseHost: "bravo", expectedLeading: false, expectedError: false},
 		{name: "no_lease_received_yet", leaseHost: "", expectedLeading: false, expectedError: false},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			campaign := leaderStubCampaign([]string{"alpha", "bravo"}, "alpha")
 			now := time.Now()
 			campaign.attached, campaign.standing, campaign.leading = true, true, true
 			campaign.lastAck, campaign.lastLease, campaign.epoch = now, now, 1
-			campaign.lease, campaign.leaseArrived = leaderLease{Host: tt.leaseHost, Epoch: 1}, now
-			if leading, _ := campaign.holding(now); leading != tt.expectedLeading {
-				t.Errorf("leading: got %v want %v", leading, tt.expectedLeading)
+			campaign.lease, campaign.leaseArrived = leaderLease{Host: testCase.leaseHost, Epoch: 1}, now
+			if leading, _ := campaign.holding(now); leading != testCase.expectedLeading {
+				t.Errorf("leading: got %v want %v", leading, testCase.expectedLeading)
 			}
 		})
 	}
@@ -1267,10 +1174,110 @@ func TestProbeUtilLeader_PresenceRequiresHoldingTheRole(t *testing.T) {
 	}
 }
 
+func leaderStubCampaign(eligible []string, host string) *leaderCampaign {
+	campaign := newLeaderCampaignState("", host, leaderElection{name: "test", root: "test/election", eligible: func() []string { return eligible }}, leaderTiming{
+		refresh: 200 * time.Millisecond, publishTimeout: 150 * time.Millisecond, ackWindow: 550 * time.Millisecond,
+		keepAlive: 2 * time.Second, pingTimeout: time.Second, ttl: 4 * time.Second, settle: time.Second,
+	})
+	campaign.client = &leaderStubClient{open: true, handler: campaign.observe}
+	return campaign
+}
+
+func (s *leaderStubClient) IsConnected() bool      { return s.open }
+func (s *leaderStubClient) IsConnectionOpen() bool { return s.open }
+func (s *leaderStubClient) Connect() mqtt.Token    { return &leaderStubToken{} }
+func (s *leaderStubClient) Disconnect(uint)        { s.open = false }
+
+func (s *leaderStubClient) Publish(topic string, _ byte, _ bool, payload any) mqtt.Token {
+	body := ""
+	switch typed := payload.(type) {
+	case []byte:
+		body = string(typed)
+	case string:
+		body = typed
+	}
+	s.mutex.Lock()
+	s.sent = append(s.sent, leaderStubPublish{topic: topic, payload: body})
+	handler, retained, unacked := s.handler, s.retained, s.unacked
+	s.mutex.Unlock()
+	if handler != nil {
+		handler(s, leaderStubMessage{topic: topic, payload: []byte(body), retained: retained})
+	}
+	token := &leaderStubToken{failed: unacked}
+	if s.onPublish != nil {
+		token.hook = s.onPublish(topic)
+	}
+	return token
+}
+
+func (s *leaderStubClient) Subscribe(string, byte, mqtt.MessageHandler) mqtt.Token {
+	return &leaderStubToken{}
+}
+
+func (s *leaderStubClient) SubscribeMultiple(map[string]byte, mqtt.MessageHandler) mqtt.Token {
+	return &leaderStubToken{}
+}
+
+func (s *leaderStubClient) Unsubscribe(...string) mqtt.Token     { return &leaderStubToken{} }
+func (s *leaderStubClient) AddRoute(string, mqtt.MessageHandler) {}
+
+func (s *leaderStubClient) OptionsReader() mqtt.ClientOptionsReader {
+	return mqtt.ClientOptionsReader{}
+}
+
+func (s *leaderStubClient) publishes() []leaderStubPublish {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	return append([]leaderStubPublish(nil), s.sent...)
+}
+
+func (s *leaderStubClient) published(topic, payload string) bool {
+	for _, sent := range s.publishes() {
+		if sent.topic == topic && sent.payload == payload {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *leaderStubClient) count(topic string) int {
+	count := 0
+	for _, sent := range s.publishes() {
+		if sent.topic == topic {
+			count++
+		}
+	}
+	return count
+}
+
+func (t *leaderStubToken) Wait() bool { return t.WaitTimeout(0) }
+
+func (t *leaderStubToken) WaitTimeout(time.Duration) bool {
+	if t.hook != nil {
+		t.hook()
+	}
+	return !t.failed
+}
+
+func (t *leaderStubToken) Done() <-chan struct{} {
+	done := make(chan struct{})
+	close(done)
+	return done
+}
+
+func (t *leaderStubToken) Error() error       { return nil }
+func (m leaderStubMessage) Duplicate() bool   { return false }
+func (m leaderStubMessage) Qos() byte         { return 1 }
+func (m leaderStubMessage) Retained() bool    { return m.retained }
+func (m leaderStubMessage) Topic() string     { return m.topic }
+func (m leaderStubMessage) MessageID() uint16 { return 0 }
+func (m leaderStubMessage) Payload() []byte   { return m.payload }
+func (m leaderStubMessage) Ack()              {}
+
 type leaderDelayedEchoClient struct {
 	*leaderStubClient
-	delay time.Duration
-	wg    sync.WaitGroup
+	delay   time.Duration
+	waiting sync.WaitGroup
 }
 
 func (d *leaderDelayedEchoClient) Publish(topic string, qos byte, retained bool, payload any) mqtt.Token {
@@ -1284,7 +1291,7 @@ func (d *leaderDelayedEchoClient) Publish(topic string, qos byte, retained bool,
 	d.leaderStubClient.mutex.Unlock()
 	body, _ := payload.([]byte)
 	if handler != nil {
-		d.wg.Go(func() {
+		d.waiting.Go(func() {
 			time.Sleep(d.delay)
 			handler(d, leaderStubMessage{topic: topic, payload: body})
 		})

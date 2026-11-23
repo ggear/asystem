@@ -30,17 +30,17 @@ func TestProbeUtilSwitch_Parse(t *testing.T) {
 		{name: "any_other_payload_is_refused", topic: "supervisor/macmini-may/command/service/sonarr", payload: "RESTART", expectedError: true},
 		{name: "an_empty_payload_is_refused", topic: "supervisor/macmini-may/command/service/sonarr", payload: "", expectedError: true},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			request, err := parseSwitchCommand("macmini-may", test.topic, []byte(test.payload))
-			if got := errors.Is(err, errSwitchOther); got != test.expectedOther {
-				t.Fatalf("other host: got %v want %v", got, test.expectedOther)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			request, err := parseSwitchCommand("macmini-may", testCase.topic, []byte(testCase.payload))
+			if got := errors.Is(err, errSwitchOther); got != testCase.expectedOther {
+				t.Fatalf("other host: got %v want %v", got, testCase.expectedOther)
 			}
-			if failed := err != nil && !test.expectedOther; failed != test.expectedError {
-				t.Fatalf("error: got [%v] want error [%v]", err, test.expectedError)
+			if failed := err != nil && !testCase.expectedOther; failed != testCase.expectedError {
+				t.Fatalf("error: got [%v] want error [%v]", err, testCase.expectedError)
 			}
-			if err == nil && request != test.expectedRequest {
-				t.Fatalf("request: got %+v want %+v", request, test.expectedRequest)
+			if err == nil && request != testCase.expectedRequest {
+				t.Fatalf("request: got %+v want %+v", request, testCase.expectedRequest)
 			}
 		})
 	}
@@ -52,35 +52,6 @@ type switchRig struct {
 	runs     []string
 	release  chan struct{}
 	exit     int
-}
-
-func newSwitchRig(t *testing.T, running bool, asleep bool) *switchRig {
-	t.Helper()
-	rig := &switchRig{release: make(chan struct{})}
-	rig.switcher = &switcher{
-		busy:    make(map[string]bool),
-		log:     newSwitchLog(t.TempDir()),
-		running: func(context.Context, string) bool { return running },
-		asleep:  func(string) bool { return asleep },
-		known:   func(service string) bool { return service != "ghost" },
-		limit: func(string, string) (time.Duration, error) {
-			return time.Minute, nil
-		},
-		run: func(_ context.Context, service string, verb string, _ time.Duration) (int, string) {
-			rig.mutex.Lock()
-			rig.runs = append(rig.runs, service+" "+verb)
-			rig.mutex.Unlock()
-			<-rig.release
-			return rig.exit, "Done [" + service + "]"
-		},
-	}
-	return rig
-}
-
-func (r *switchRig) performed() []string {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
-	return append([]string(nil), r.runs...)
 }
 
 func TestProbeUtilSwitch_Handle(t *testing.T) {
@@ -103,17 +74,17 @@ func TestProbeUtilSwitch_Handle(t *testing.T) {
 		{name: "an_unknown_service_is_refused", request: switchRequest{service: "ghost", on: true}, expectedDecision: "unknown service"},
 		{name: "unreadable_install_limits_fail_closed", request: switchRequest{service: "plex", on: true}, limitError: os.ErrNotExist, expectedDecision: "limits unreadable"},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			rig := newSwitchRig(t, test.running, test.asleep)
-			if test.limitError != nil {
-				rig.switcher.limit = func(string, string) (time.Duration, error) { return 0, test.limitError }
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			rig := newSwitchRig(t, testCase.running, testCase.asleep)
+			if testCase.limitError != nil {
+				rig.switcher.limit = func(string, string) (time.Duration, error) { return 0, testCase.limitError }
 			}
-			decision := rig.switcher.handle(context.Background(), test.request)
+			decision := rig.switcher.handle(context.Background(), testCase.request)
 			close(rig.release)
 			rig.switcher.workers.Wait()
-			if decision != test.expectedDecision || strings.Join(rig.performed(), ",") != strings.Join(test.expectedRuns, ",") {
-				t.Fatalf("got decision [%s] runs %v want decision [%s] runs %v", decision, rig.performed(), test.expectedDecision, test.expectedRuns)
+			if decision != testCase.expectedDecision || strings.Join(rig.performed(), ",") != strings.Join(testCase.expectedRuns, ",") {
+				t.Fatalf("got decision [%s] runs %v want decision [%s] runs %v", decision, rig.performed(), testCase.expectedDecision, testCase.expectedRuns)
 			}
 		})
 	}
@@ -172,4 +143,33 @@ func TestProbeUtilSwitch_ServiceAsleep(t *testing.T) {
 	if !serviceAsleep("plex") {
 		t.Fatalf("a service with the marker: got not asleep want asleep")
 	}
+}
+
+func newSwitchRig(t *testing.T, running bool, asleep bool) *switchRig {
+	t.Helper()
+	rig := &switchRig{release: make(chan struct{})}
+	rig.switcher = &switcher{
+		busy:    make(map[string]bool),
+		log:     newSwitchLog(t.TempDir()),
+		running: func(context.Context, string) bool { return running },
+		asleep:  func(string) bool { return asleep },
+		known:   func(service string) bool { return service != "ghost" },
+		limit: func(string, string) (time.Duration, error) {
+			return time.Minute, nil
+		},
+		run: func(_ context.Context, service string, verb string, _ time.Duration) (int, string) {
+			rig.mutex.Lock()
+			rig.runs = append(rig.runs, service+" "+verb)
+			rig.mutex.Unlock()
+			<-rig.release
+			return rig.exit, "Done [" + service + "]"
+		},
+	}
+	return rig
+}
+
+func (r *switchRig) performed() []string {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	return append([]string(nil), r.runs...)
 }

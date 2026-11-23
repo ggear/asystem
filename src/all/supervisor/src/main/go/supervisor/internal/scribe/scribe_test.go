@@ -73,7 +73,6 @@ func TestScribe_Stdout(t *testing.T) {
 				t.Fatalf("read captured stdout: %v", readErr)
 			}
 			_ = reader.Close()
-			t.Logf("Log in mode [%s] and level [%v]", Mode(), Level())
 			if carried := strings.Contains(string(captured), message); carried != testCase.expected {
 				t.Fatalf("stdout carried the message: got %v want %v in %q", carried, testCase.expected, string(captured))
 			}
@@ -127,7 +126,6 @@ func TestScribe_File(t *testing.T) {
 			if err := testCase.setup(cmdName); err != nil {
 				t.Fatalf("Got err = %v, expected nil", err)
 			}
-			t.Logf("Log in mode [%s] and level [%v]", Mode(), Level())
 			testCase.logFunc(message)
 			content, err := os.ReadFile(logPath)
 			if err != nil {
@@ -207,15 +205,15 @@ func TestScribe_Buffer(t *testing.T) {
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			buf := &LogBuffer{lines: make([]LogLine, 50)}
+			buffer := &LogBuffer{lines: make([]LogLine, 50)}
 			for i := range testCase.pushCount {
-				buf.Push(LogLine{
+				buffer.Push(LogLine{
 					Time:   time.Now(),
 					Level:  slog.LevelInfo,
 					Detail: fmt.Sprintf("message %d", i),
 				})
 			}
-			tail := buf.Tail(testCase.tailN)
+			tail := buffer.Tail(testCase.tailN)
 			if len(tail) != testCase.expectedCount {
 				t.Fatalf("Got tail length = %d, expected %d", len(tail), testCase.expectedCount)
 			}
@@ -227,8 +225,8 @@ func TestScribe_Buffer(t *testing.T) {
 				}
 			}
 			expectedVersion := uint64(testCase.pushCount)
-			if buf.Version() != expectedVersion {
-				t.Fatalf("Got version = %d, expected %d", buf.Version(), expectedVersion)
+			if buffer.Version() != expectedVersion {
+				t.Fatalf("Got version = %d, expected %d", buffer.Version(), expectedVersion)
 			}
 		})
 	}
@@ -245,39 +243,39 @@ func TestScribe_BufferHandler(t *testing.T) {
 		{
 			name:          "happy_debug_captured",
 			level:         slog.LevelDebug,
-			logFunc:       func(msg string) { slog.Debug(msg) },
+			logFunc:       func(message string) { slog.Debug(message) },
 			expected:      true,
 			expectedError: false,
 		},
 		{
 			name:          "happy_info_captured",
 			level:         slog.LevelDebug,
-			logFunc:       func(msg string) { slog.Info(msg) },
+			logFunc:       func(message string) { slog.Info(message) },
 			expected:      true,
 			expectedError: false,
 		},
 		{
 			name:          "happy_error_captured",
 			level:         slog.LevelDebug,
-			logFunc:       func(msg string) { slog.Error(msg) },
+			logFunc:       func(message string) { slog.Error(message) },
 			expected:      true,
 			expectedError: false,
 		},
 		{
 			name:          "happy_filtered_by_level",
 			level:         slog.LevelError,
-			logFunc:       func(msg string) { slog.Debug(msg) },
+			logFunc:       func(message string) { slog.Debug(message) },
 			expected:      false,
 			expectedError: false,
 		},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			buf := EnableBuffer(testCase.level, 50)
-			msg := "marker"
-			testCase.logFunc(msg)
-			tail := buf.Tail(1)
-			found := len(tail) > 0 && bytes.Contains([]byte(tail[0].Verb), []byte(msg))
+			buffer := EnableBuffer(testCase.level, 50)
+			message := "marker"
+			testCase.logFunc(message)
+			tail := buffer.Tail(1)
+			found := len(tail) > 0 && bytes.Contains([]byte(tail[0].Verb), []byte(message))
 			if found != testCase.expected {
 				t.Fatalf("Got message found = %v, expected %v", found, testCase.expected)
 			}
@@ -286,15 +284,15 @@ func TestScribe_BufferHandler(t *testing.T) {
 }
 
 func TestScribe_BufferMinimumCapacity(t *testing.T) {
-	buf := EnableBuffer(slog.LevelDebug, 0)
+	buffer := EnableBuffer(slog.LevelDebug, 0)
 	Log(SourceScribe, SubjectNone, ActionRemove).Infof("minimum", time.Now(), "[1] line")
-	if got := len(buf.Tail(1)); got != 1 {
+	if got := len(buffer.Tail(1)); got != 1 {
 		t.Fatalf("Tail() count: got %d want 1", got)
 	}
 }
 
 func TestScribe_HandlerWithAttrs(t *testing.T) {
-	buf := EnableBuffer(slog.LevelDebug, 1)
+	buffer := EnableBuffer(slog.LevelDebug, 1)
 	logger := slog.Default().With(
 		keySource, SourceScribe.String(),
 		keySubject, SubjectNone.String(),
@@ -303,7 +301,7 @@ func TestScribe_HandlerWithAttrs(t *testing.T) {
 		keyDetail, "[1] line",
 	)
 	logger.Info("derived")
-	line := buf.Tail(1)
+	line := buffer.Tail(1)
 	if len(line) != 1 || line[0].Source != SourceScribe.String() || line[0].Action != ActionRemove.String() {
 		t.Fatalf("derived logger attributes: got %+v", line)
 	}
@@ -628,54 +626,6 @@ type logCall struct {
 	level    string
 }
 
-func logCalls(t *testing.T, root string) []logCall {
-	t.Helper()
-	var calls []logCall
-	fileSet := token.NewFileSet()
-	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if entry.IsDir() {
-			if entry.Name() == "target" || entry.Name() == ".go" {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") || strings.Contains(path, "internal/scribe") {
-			return nil
-		}
-		parsed, parseErr := parser.ParseFile(fileSet, path, nil, 0)
-		if parseErr != nil {
-			return parseErr
-		}
-		ast.Inspect(parsed, func(node ast.Node) bool {
-			call, ok := node.(*ast.CallExpr)
-			if !ok {
-				return true
-			}
-			selector, ok := call.Fun.(*ast.SelectorExpr)
-			if !ok {
-				return true
-			}
-			pkg, ok := selector.X.(*ast.Ident)
-			if !ok || pkg.Name != "slog" {
-				return true
-			}
-			if !slices.Contains([]string{"Debug", "Info", "Warn", "Error"}, selector.Sel.Name) {
-				return true
-			}
-			calls = append(calls, logCall{position: fileSet.Position(call.Pos()).String(), level: selector.Sel.Name})
-			return true
-		})
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("walk %s: %v", root, err)
-	}
-	return calls
-}
-
 func TestScribe_DetailLeadsWithValue(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -724,66 +674,6 @@ type detailCall struct {
 	position string
 	verb     string
 	text     string
-}
-
-func detailCalls(t *testing.T, root string) []detailCall {
-	t.Helper()
-	var details []detailCall
-	fileSet := token.NewFileSet()
-	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if entry.IsDir() {
-			if entry.Name() == "target" || entry.Name() == ".go" {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
-			return nil
-		}
-		parsed, parseErr := parser.ParseFile(fileSet, path, nil, 0)
-		if parseErr != nil {
-			return parseErr
-		}
-		ast.Inspect(parsed, func(node ast.Node) bool {
-			call, ok := node.(*ast.CallExpr)
-			if !ok || len(call.Args) < 3 {
-				return true
-			}
-			selector, ok := call.Fun.(*ast.SelectorExpr)
-			if !ok || !slices.Contains([]string{"Debugf", "Infof", "Warnf", "Errorf"}, selector.Sel.Name) {
-				return true
-			}
-			if pkg, ok := selector.X.(*ast.Ident); ok && pkg.Name == "fmt" {
-				return true
-			}
-			verbLiteral, ok := call.Args[0].(*ast.BasicLit)
-			if !ok {
-				return true
-			}
-			literal, ok := call.Args[2].(*ast.BasicLit)
-			if !ok || literal.Kind != token.STRING {
-				return true
-			}
-			text, unquoteErr := strconv.Unquote(literal.Value)
-			if unquoteErr != nil {
-				return true
-			}
-			verb, _ := strconv.Unquote(verbLiteral.Value)
-			details = append(details, detailCall{position: fileSet.Position(literal.Pos()).String(), verb: verb, text: text})
-			return true
-		})
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("walk %s: %v", root, err)
-	}
-	if len(details) == 0 {
-		t.Fatalf("walk %s: got 0 detail literals, want the logging call sites", root)
-	}
-	return details
 }
 
 func TestScribe_SetFilters(t *testing.T) {
@@ -952,78 +842,6 @@ type verbLiteral struct {
 	verb     string
 }
 
-func verbLiterals(t *testing.T, root string) []verbLiteral {
-	t.Helper()
-	var found []verbLiteral
-	walkGoFiles(t, root, func(position string, node ast.Node) {
-		call, isCall := node.(*ast.CallExpr)
-		if !isCall || len(call.Args) == 0 {
-			return
-		}
-		index := -1
-		switch function := call.Fun.(type) {
-		case *ast.SelectorExpr:
-			pkg, isPkg := function.X.(*ast.Ident)
-			if slices.Contains([]string{"Debugf", "Infof", "Warnf", "Errorf"}, function.Sel.Name) && !(isPkg && pkg.Name == "fmt") {
-				index = 0
-			}
-		case *ast.Ident:
-			if function.Name == "derivedf" && len(call.Args) > 1 {
-				index = 1
-			}
-			if function.Name == "derivePulse" && len(call.Args) > 1 {
-				index = 1
-			}
-		}
-		if index < 0 {
-			return
-		}
-		literal, isLiteral := call.Args[index].(*ast.BasicLit)
-		if !isLiteral || literal.Kind != token.STRING {
-			return
-		}
-		word := strings.Trim(literal.Value, `"`)
-		if index == 1 {
-			word, _, _ = strings.Cut(word, " ")
-		}
-		found = append(found, verbLiteral{position: position, verb: word})
-	})
-	return found
-}
-
-func walkGoFiles(t *testing.T, root string, visit func(position string, node ast.Node)) {
-	t.Helper()
-	fileSet := token.NewFileSet()
-	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if entry.IsDir() {
-			if entry.Name() == "target" || entry.Name() == ".go" {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
-			return nil
-		}
-		parsed, parseErr := parser.ParseFile(fileSet, path, nil, 0)
-		if parseErr != nil {
-			return parseErr
-		}
-		ast.Inspect(parsed, func(node ast.Node) bool {
-			if node != nil {
-				visit(fileSet.Position(node.Pos()).String(), node)
-			}
-			return true
-		})
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("walk %s: %v", root, err)
-	}
-}
-
 func TestScribe_LogFilePID(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -1092,12 +910,12 @@ func TestScribe_PurgeLogFiles(t *testing.T) {
 			expectedKept: []string{fmt.Sprintf("watch-pid-%d.log", os.Getppid()), fmt.Sprintf("watch-pid-%d-2026-08-26T02-26-08.340.log.gz", os.Getppid()), "notes.txt"},
 		},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			dir := t.TempDir()
 			keep := filepath.Join(dir, fmt.Sprintf("watch-pid-%d.log", os.Getpid()))
-			test.files[filepath.Base(keep)] = 0
-			for name, age := range test.files {
+			testCase.files[filepath.Base(keep)] = 0
+			for name, age := range testCase.files {
 				path := filepath.Join(dir, name)
 				if err := os.WriteFile(path, []byte("x"), 0o600); err != nil {
 					t.Fatalf("write %s: %v", name, err)
@@ -1106,12 +924,12 @@ func TestScribe_PurgeLogFiles(t *testing.T) {
 					t.Fatalf("chtimes %s: %v", name, err)
 				}
 			}
-			purgeLogFiles(keep, test.maxBackups, test.maxAgeDays)
+			purgeLogFiles(keep, testCase.maxBackups, testCase.maxAgeDays)
 			expected := map[string]bool{filepath.Base(keep): true}
-			for _, name := range test.expectedKept {
+			for _, name := range testCase.expectedKept {
 				expected[name] = true
 			}
-			for name := range test.files {
+			for name := range testCase.files {
 				_, err := os.Stat(filepath.Join(dir, name))
 				if expected[name] && err != nil {
 					t.Errorf("kept: %s got removed", name)
@@ -1286,11 +1104,11 @@ func TestScribe_BufferFrom(t *testing.T) {
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			buf := &LogBuffer{lines: make([]LogLine, testCase.capacity)}
+			buffer := &LogBuffer{lines: make([]LogLine, testCase.capacity)}
 			for i := range testCase.pushCount {
-				buf.Push(LogLine{Time: time.Now(), Level: slog.LevelInfo, Detail: fmt.Sprintf("message %d", i)})
+				buffer.Push(LogLine{Time: time.Now(), Level: slog.LevelInfo, Detail: fmt.Sprintf("message %d", i)})
 			}
-			lines, anchor := buf.From(testCase.sequence, testCase.window)
+			lines, anchor := buffer.From(testCase.sequence, testCase.window)
 			if len(lines) != testCase.expectedCount {
 				t.Fatalf("From() count: got %d want %d", len(lines), testCase.expectedCount)
 			}
@@ -1300,21 +1118,21 @@ func TestScribe_BufferFrom(t *testing.T) {
 			if len(lines) > 0 && lines[0].Detail != testCase.expectedFirst {
 				t.Errorf("From() first: got %q want %q", lines[0].Detail, testCase.expectedFirst)
 			}
-			if buf.Oldest() != testCase.expectedOldest {
-				t.Errorf("Oldest(): got %d want %d", buf.Oldest(), testCase.expectedOldest)
+			if buffer.Oldest() != testCase.expectedOldest {
+				t.Errorf("Oldest(): got %d want %d", buffer.Oldest(), testCase.expectedOldest)
 			}
 			if dropped := anchor > testCase.sequence; dropped != testCase.expectedDropped {
 				t.Errorf("dropped: got %v want %v", dropped, testCase.expectedDropped)
 			}
-			if buf.Version() != uint64(testCase.pushCount) {
-				t.Errorf("Version(): got %d want %d", buf.Version(), testCase.pushCount)
+			if buffer.Version() != uint64(testCase.pushCount) {
+				t.Errorf("Version(): got %d want %d", buffer.Version(), testCase.pushCount)
 			}
 		})
 	}
 }
 
 func TestScribe_SubjectTerms(t *testing.T) {
-	cases := []struct {
+	tests := []struct {
 		term     string
 		subject  string
 		expected bool
@@ -1333,17 +1151,17 @@ func TestScribe_SubjectTerms(t *testing.T) {
 		{"warn", "host/used_memory", false},
 		{"used hme", "host/used_share_space", false},
 	}
-	for _, c := range cases {
-		t.Run(c.term+"/"+c.subject, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.term+"/"+testCase.subject, func(t *testing.T) {
 			ResetFilters()
-			if err := SetFilters("", c.term, ""); err != nil {
+			if err := SetFilters("", testCase.term, ""); err != nil {
 				t.Fatalf("SetFilters: %v", err)
 			}
 			filterMu.Lock()
 			terms := activeFilter.subject
 			filterMu.Unlock()
-			if got := subjected("engine", c.subject, terms); got != c.expected {
-				t.Errorf("subjected: got %v want %v", got, c.expected)
+			if got := subjected("engine", testCase.subject, terms); got != testCase.expected {
+				t.Errorf("subjected: got %v want %v", got, testCase.expected)
 			}
 		})
 	}
@@ -1484,60 +1302,6 @@ func TestScribe_QuietDropsStdoutAndStderr(t *testing.T) {
 	}
 }
 
-func enableBackupFixture(t *testing.T, quiet bool) (stdout, stderr *bytes.Buffer) {
-	t.Helper()
-	t.Cleanup(func() { Disable() })
-	t.Setenv("HOME", t.TempDir())
-	if err := EnableBackupAndFile(slog.LevelInfo, "backup", "1.0.0", quiet, 1, 1, 1); err != nil {
-		t.Fatalf("EnableBackupAndFile() error = %v", err)
-	}
-	stdout, stderr = &bytes.Buffer{}, &bytes.Buffer{}
-	scribeLoggerMu.Lock()
-	defer scribeLoggerMu.Unlock()
-	attaching, attached := scribeLoggerInstance.Handler().(*attachHandler)
-	if !attached {
-		t.Fatalf("installed handler = %T, want an attachHandler wrapping the backup sinks", scribeLoggerInstance.Handler())
-	}
-	multi, ok := attaching.handler.(*multiHandler)
-	if !ok {
-		t.Fatalf("wrapped handler = %T, want a multiHandler carrying the backup sinks", attaching.handler)
-	}
-	retargeted := 0
-	for _, handler := range multi.handlers {
-		if backup, isBackup := handler.(*backupHandler); isBackup {
-			backup.stdout, backup.stderr = stdout, stderr
-			retargeted++
-		}
-	}
-	if expected := map[bool]int{false: 1, true: 0}[quiet]; retargeted != expected {
-		t.Fatalf("retargeted %d stdout sinks, want %d", retargeted, expected)
-	}
-	return stdout, stderr
-}
-
-func EnableFile(level slog.Level, cmd, version string, maxSizeMB, maxBackups, maxAgeDays int) error {
-	writer, path, err := fileWriter(logDir(), cmd, version, maxSizeMB, maxBackups, maxAgeDays)
-	if err != nil {
-		return err
-	}
-	scribeLoggerMu.Lock()
-	defer scribeLoggerMu.Unlock()
-	closeLoggerWriter()
-	scribeLoggerLevel = level
-	scribeLoggerMode = "file"
-	scribeLoggerInstance = installed(&streamHandler{level: level, writer: writer, sink: sinkFile()})
-	scribeLoggerWriter = writer
-	slog.SetDefault(scribeLoggerInstance)
-	purgeLogFiles(path, maxBackups, maxAgeDays)
-	return nil
-}
-
-func ResetFilters() {
-	filterMu.Lock()
-	activeFilter = logFilter{}
-	filterMu.Unlock()
-}
-
 func TestScribe_Chunked(t *testing.T) {
 	long := strings.Repeat("word ", 40)
 	tests := []struct {
@@ -1622,11 +1386,243 @@ func TestScribe_LogDirWatch(t *testing.T) {
 		{name: "root_logs_to_tmpfs_so_a_sleeping_host_has_no_writable_mount_held", root: true, expectedDir: "/run/supervisor"},
 		{name: "a_user_keeps_the_usual_directory", expectedDir: logDir()},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			if actual := logDirWatch(test.root); actual != test.expectedDir {
-				t.Fatalf("log directory: got [%s] want [%s]", actual, test.expectedDir)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if actual := logDirWatch(testCase.root); actual != testCase.expectedDir {
+				t.Fatalf("log directory: got [%s] want [%s]", actual, testCase.expectedDir)
 			}
 		})
 	}
+}
+
+func logCalls(t *testing.T, root string) []logCall {
+	t.Helper()
+	var calls []logCall
+	fileSet := token.NewFileSet()
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			if entry.Name() == "target" || entry.Name() == ".go" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") || strings.Contains(path, "internal/scribe") {
+			return nil
+		}
+		parsed, parseErr := parser.ParseFile(fileSet, path, nil, 0)
+		if parseErr != nil {
+			return parseErr
+		}
+		ast.Inspect(parsed, func(node ast.Node) bool {
+			call, ok := node.(*ast.CallExpr)
+			if !ok {
+				return true
+			}
+			selector, ok := call.Fun.(*ast.SelectorExpr)
+			if !ok {
+				return true
+			}
+			pkg, ok := selector.X.(*ast.Ident)
+			if !ok || pkg.Name != "slog" {
+				return true
+			}
+			if !slices.Contains([]string{"Debug", "Info", "Warn", "Error"}, selector.Sel.Name) {
+				return true
+			}
+			calls = append(calls, logCall{position: fileSet.Position(call.Pos()).String(), level: selector.Sel.Name})
+			return true
+		})
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk %s: %v", root, err)
+	}
+	return calls
+}
+
+func detailCalls(t *testing.T, root string) []detailCall {
+	t.Helper()
+	var details []detailCall
+	fileSet := token.NewFileSet()
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			if entry.Name() == "target" || entry.Name() == ".go" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		parsed, parseErr := parser.ParseFile(fileSet, path, nil, 0)
+		if parseErr != nil {
+			return parseErr
+		}
+		ast.Inspect(parsed, func(node ast.Node) bool {
+			call, ok := node.(*ast.CallExpr)
+			if !ok || len(call.Args) < 3 {
+				return true
+			}
+			selector, ok := call.Fun.(*ast.SelectorExpr)
+			if !ok || !slices.Contains([]string{"Debugf", "Infof", "Warnf", "Errorf"}, selector.Sel.Name) {
+				return true
+			}
+			if pkg, ok := selector.X.(*ast.Ident); ok && pkg.Name == "fmt" {
+				return true
+			}
+			verbLiteral, ok := call.Args[0].(*ast.BasicLit)
+			if !ok {
+				return true
+			}
+			literal, ok := call.Args[2].(*ast.BasicLit)
+			if !ok || literal.Kind != token.STRING {
+				return true
+			}
+			text, unquoteErr := strconv.Unquote(literal.Value)
+			if unquoteErr != nil {
+				return true
+			}
+			verb, _ := strconv.Unquote(verbLiteral.Value)
+			details = append(details, detailCall{position: fileSet.Position(literal.Pos()).String(), verb: verb, text: text})
+			return true
+		})
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk %s: %v", root, err)
+	}
+	if len(details) == 0 {
+		t.Fatalf("walk %s: got 0 detail literals, want the logging call sites", root)
+	}
+	return details
+}
+
+func verbLiterals(t *testing.T, root string) []verbLiteral {
+	t.Helper()
+	var found []verbLiteral
+	walkGoFiles(t, root, func(position string, node ast.Node) {
+		call, isCall := node.(*ast.CallExpr)
+		if !isCall || len(call.Args) == 0 {
+			return
+		}
+		index := -1
+		switch function := call.Fun.(type) {
+		case *ast.SelectorExpr:
+			pkg, isPkg := function.X.(*ast.Ident)
+			if slices.Contains([]string{"Debugf", "Infof", "Warnf", "Errorf"}, function.Sel.Name) && !(isPkg && pkg.Name == "fmt") {
+				index = 0
+			}
+		case *ast.Ident:
+			if function.Name == "derivedf" && len(call.Args) > 1 {
+				index = 1
+			}
+			if function.Name == "derivePulse" && len(call.Args) > 1 {
+				index = 1
+			}
+		}
+		if index < 0 {
+			return
+		}
+		literal, isLiteral := call.Args[index].(*ast.BasicLit)
+		if !isLiteral || literal.Kind != token.STRING {
+			return
+		}
+		word := strings.Trim(literal.Value, `"`)
+		if index == 1 {
+			word, _, _ = strings.Cut(word, " ")
+		}
+		found = append(found, verbLiteral{position: position, verb: word})
+	})
+	return found
+}
+
+func walkGoFiles(t *testing.T, root string, visit func(position string, node ast.Node)) {
+	t.Helper()
+	fileSet := token.NewFileSet()
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			if entry.Name() == "target" || entry.Name() == ".go" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		parsed, parseErr := parser.ParseFile(fileSet, path, nil, 0)
+		if parseErr != nil {
+			return parseErr
+		}
+		ast.Inspect(parsed, func(node ast.Node) bool {
+			if node != nil {
+				visit(fileSet.Position(node.Pos()).String(), node)
+			}
+			return true
+		})
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk %s: %v", root, err)
+	}
+}
+
+func enableBackupFixture(t *testing.T, quiet bool) (stdout, stderr *bytes.Buffer) {
+	t.Helper()
+	t.Cleanup(func() { Disable() })
+	t.Setenv("HOME", t.TempDir())
+	if err := EnableBackupAndFile(slog.LevelInfo, "backup", "1.0.0", quiet, 1, 1, 1); err != nil {
+		t.Fatalf("EnableBackupAndFile() error = %v", err)
+	}
+	stdout, stderr = &bytes.Buffer{}, &bytes.Buffer{}
+	scribeLoggerMu.Lock()
+	defer scribeLoggerMu.Unlock()
+	attaching, attached := scribeLoggerInstance.Handler().(*attachHandler)
+	if !attached {
+		t.Fatalf("installed handler = %T, want an attachHandler wrapping the backup sinks", scribeLoggerInstance.Handler())
+	}
+	multi, ok := attaching.handler.(*multiHandler)
+	if !ok {
+		t.Fatalf("wrapped handler = %T, want a multiHandler carrying the backup sinks", attaching.handler)
+	}
+	retargeted := 0
+	for _, handler := range multi.handlers {
+		if backup, isBackup := handler.(*backupHandler); isBackup {
+			backup.stdout, backup.stderr = stdout, stderr
+			retargeted++
+		}
+	}
+	if expected := map[bool]int{false: 1, true: 0}[quiet]; retargeted != expected {
+		t.Fatalf("retargeted %d stdout sinks, want %d", retargeted, expected)
+	}
+	return stdout, stderr
+}
+
+func EnableFile(level slog.Level, cmd, version string, maxSizeMB, maxBackups, maxAgeDays int) error {
+	writer, path, err := fileWriter(logDir(), cmd, version, maxSizeMB, maxBackups, maxAgeDays)
+	if err != nil {
+		return err
+	}
+	scribeLoggerMu.Lock()
+	defer scribeLoggerMu.Unlock()
+	closeLoggerWriter()
+	scribeLoggerInstance = installed(&streamHandler{level: level, writer: writer, sink: sinkFile()})
+	scribeLoggerWriter = writer
+	slog.SetDefault(scribeLoggerInstance)
+	purgeLogFiles(path, maxBackups, maxAgeDays)
+	return nil
+}
+
+func ResetFilters() {
+	filterMu.Lock()
+	activeFilter = logFilter{}
+	filterMu.Unlock()
 }

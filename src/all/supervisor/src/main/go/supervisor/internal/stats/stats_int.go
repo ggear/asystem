@@ -457,10 +457,6 @@ func (w *trendWindow) p95() int8 {
 	return w.percentile(0.95)
 }
 
-func (w *trendWindow) median() int8 {
-	return w.percentile(0.5)
-}
-
 func (w *trendWindow) percentile(percentile float64) int8 {
 	var merged [maxValidValue + 1]int64
 	return percentileFromBuckets(&merged, w.mergeBuckets(&merged), percentile)

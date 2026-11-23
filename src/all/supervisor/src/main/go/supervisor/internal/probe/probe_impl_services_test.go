@@ -276,34 +276,34 @@ func TestProbeImplServices_Services(t *testing.T) {
 			expectedError:        true,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Cleanup(config.Reset)
 			t.Cleanup(resetInstallTrees)
 			t.Setenv("SUPERVISOR_MOUNT", writeInstallTree(t, "c1", "c2", "c3", "dup", "ghost"))
 			config.Reset()
 			resetInstallTrees()
 			probe := newServicesProbe()
-			if tt.newDockerClient != nil {
-				probe.newDockerClient = tt.newDockerClient
+			if testCase.newDockerClient != nil {
+				probe.newDockerClient = testCase.newDockerClient
 			}
-			if tt.listContainers != nil {
-				probe.listContainers = tt.listContainers
+			if testCase.listContainers != nil {
+				probe.listContainers = testCase.listContainers
 			}
-			if tt.statsOneShot != nil {
-				probe.statsOneShot = tt.statsOneShot
+			if testCase.statsOneShot != nil {
+				probe.statsOneShot = testCase.statsOneShot
 			}
-			if tt.inspectContainer != nil {
-				probe.inspectContainer = tt.inspectContainer
+			if testCase.inspectContainer != nil {
+				probe.inspectContainer = testCase.inspectContainer
 			}
-			if tt.setupFunc != nil {
-				tt.setupFunc(probe)
+			if testCase.setupFunc != nil {
+				testCase.setupFunc(probe)
 			}
 			var err error
 			var services map[string]service
 			for range 2 {
 				services, err = probe.services(context.Background(), probe.installs().snapshot())
-				if tt.expectedError {
+				if testCase.expectedError {
 					if err == nil {
 						t.Fatalf("expected error but got nil")
 					}
@@ -311,12 +311,12 @@ func TestProbeImplServices_Services(t *testing.T) {
 				} else if err != nil {
 					t.Fatalf("unexpected error: %v", err)
 				}
-				if len(services) != tt.expectedServiceCount {
-					t.Fatalf("expected %d probe, got %d", tt.expectedServiceCount, len(services))
+				if len(services) != testCase.expectedServiceCount {
+					t.Fatalf("expected %d probe, got %d", testCase.expectedServiceCount, len(services))
 				}
 			}
-			if tt.validateFunc != nil {
-				tt.validateFunc(t, services)
+			if testCase.validateFunc != nil {
+				testCase.validateFunc(t, services)
 			} else {
 				for _, service := range services {
 					isUp, _, err := service.isUp()
@@ -425,21 +425,21 @@ func TestProbeImplServices_UpTime(t *testing.T) {
 		{name: "happy_host_unreadable", startedAgo: time.Hour, hostErr: errors.New("sysinfo"), expectedValue: 3600},
 		{name: "sad_no_start_time", startedAgo: 0, hostSeconds: 3600, expectedError: true},
 	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			probe := newServicesProbe()
-			probe.hostUptime = func() (uint64, error) { return tc.hostSeconds, tc.hostErr }
+			probe.hostUptime = func() (uint64, error) { return testCase.hostSeconds, testCase.hostErr }
 			started := ""
-			if tc.startedAgo > 0 {
-				started = time.Now().Add(-tc.startedAgo).Format(time.RFC3339Nano)
+			if testCase.startedAgo > 0 {
+				started = time.Now().Add(-testCase.startedAgo).Format(time.RFC3339Nano)
 			}
 			info := container.InspectResponse{ContainerJSONBase: &container.ContainerJSONBase{State: &container.State{StartedAt: started}}}
 			value, _, err := probe.upTime("svc", info)
-			if (err != nil) != tc.expectedError {
-				t.Fatalf("error: got %v want error [%t]", err, tc.expectedError)
+			if (err != nil) != testCase.expectedError {
+				t.Fatalf("error: got %v want error [%t]", err, testCase.expectedError)
 			}
-			if !tc.expectedError && (value < tc.expectedValue || value > tc.expectedValue+5) {
-				t.Fatalf("value: got %v want %v", value, tc.expectedValue)
+			if !testCase.expectedError && (value < testCase.expectedValue || value > testCase.expectedValue+5) {
+				t.Fatalf("value: got %v want %v", value, testCase.expectedValue)
 			}
 		})
 	}
@@ -579,14 +579,14 @@ func TestProbeImplServices_Run(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			cache := metric.NewRecordCache()
 			p := newServicesProbe()
 			p.cache = cache
 			p.newDockerClient = func() (*client.Client, error) { return &client.Client{}, nil }
-			tt.setupFunc(p, cache)
-			tt.checkFunc(t, p, cache)
+			testCase.setupFunc(p, cache)
+			testCase.checkFunc(t, p, cache)
 		})
 	}
 }
@@ -861,18 +861,18 @@ func TestProbeImplServices_Version(t *testing.T) {
 			expectedError: false,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Cleanup(config.Reset)
 			t.Cleanup(resetInstallTrees)
-			if tt.mountSubDir != "" {
-				t.Setenv("SUPERVISOR_MOUNT", testutil.FindDir(t, "src", "test", "resources", "mount", tt.mountSubDir))
+			if testCase.mountSubDir != "" {
+				t.Setenv("SUPERVISOR_MOUNT", testutil.FindDir(t, "src", "test", "resources", "mount", testCase.mountSubDir))
 			}
 			config.Reset()
 			resetInstallTrees()
 			p := newServicesProbe()
-			got, _, err := p.version(p.installs().snapshot(), tt.containerInfo)
-			if tt.expectedError {
+			got, _, err := p.version(p.installs().snapshot(), testCase.containerInfo)
+			if testCase.expectedError {
 				if err == nil {
 					t.Fatalf("Got no error, expected error")
 				}
@@ -881,8 +881,8 @@ func TestProbeImplServices_Version(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Got error = %v, expected nil", err)
 			}
-			if got != tt.expected {
-				t.Fatalf("Got version = %q, expected %q", got, tt.expected)
+			if got != testCase.expected {
+				t.Fatalf("Got version = %q, expected %q", got, testCase.expected)
 			}
 		})
 	}
@@ -992,18 +992,18 @@ func TestProbeImplServices_Sleep(t *testing.T) {
 			expectedError: false,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Cleanup(config.Reset)
 			t.Cleanup(resetInstallTrees)
 			mount := t.TempDir()
 			t.Setenv("SUPERVISOR_MOUNT", mount)
-			tt.setup(t, mount)
+			testCase.setup(t, mount)
 			config.Reset()
 			resetInstallTrees()
 			p := newServicesProbe()
-			got, err := p.sleep(p.installs().snapshot(), tt.containerInfo)
-			if tt.expectedError {
+			got, err := p.sleep(p.installs().snapshot(), testCase.containerInfo)
+			if testCase.expectedError {
 				if err == nil {
 					t.Fatalf("Got no error, expected error")
 				}
@@ -1012,8 +1012,169 @@ func TestProbeImplServices_Sleep(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Got error = %v, expected nil", err)
 			}
-			if got != tt.expected {
-				t.Fatalf("Got sleep = %v, expected %v", got, tt.expected)
+			if got != testCase.expected {
+				t.Fatalf("Got sleep = %v, expected %v", got, testCase.expected)
+			}
+		})
+	}
+}
+
+func TestProbeImplServices_RestartObservationOf(t *testing.T) {
+	started := "2026-11-19T01:00:00.123456789Z"
+	tests := []struct {
+		name             string
+		health           string
+		startedAt        string
+		healthcheck      *container.HealthConfig
+		expectedObserved bool
+		expectedHealth   string
+		expectedCheck    restartHealthcheck
+	}{
+		{name: "a_container_with_a_health_check_is_observed", health: "unhealthy", startedAt: started, healthcheck: &container.HealthConfig{Interval: 2 * time.Minute, StartPeriod: time.Minute, Retries: 3}, expectedObserved: true, expectedHealth: "unhealthy", expectedCheck: restartHealthcheck{interval: 2 * time.Minute, startPeriod: time.Minute, retries: 3}},
+		{name: "unset_timings_take_dockers_defaults", health: "starting", startedAt: started, healthcheck: &container.HealthConfig{}, expectedObserved: true, expectedHealth: "starting", expectedCheck: restartHealthcheck{interval: restartDockerDefaultInterval, retries: restartDockerDefaultRetries}},
+		{name: "a_container_with_no_health_check_is_not_observed", startedAt: started, healthcheck: nil, expectedObserved: false},
+		{name: "a_container_with_no_health_state_is_not_observed", startedAt: started, healthcheck: &container.HealthConfig{Interval: time.Minute}, expectedObserved: false},
+		{name: "an_unreadable_start_time_is_not_observed", health: "healthy", startedAt: "yesterday", healthcheck: &container.HealthConfig{Interval: time.Minute}, expectedObserved: false},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			observation, observed := restartObservationOf("plex", restartInspect(testCase.health, testCase.startedAt, testCase.healthcheck))
+			if observed != testCase.expectedObserved {
+				t.Fatalf("observed: got %v want %v", observed, testCase.expectedObserved)
+			}
+			if observed && observation.image != "plex:1" {
+				t.Fatalf("image: got [%s] want [plex:1]", observation.image)
+			}
+			if observed && (observation.health != testCase.expectedHealth || observation.healthcheck != testCase.expectedCheck || observation.container != "abc" || observation.service != "plex" || observation.startedAt.IsZero()) {
+				t.Fatalf("observation: got %+v want health [%s] check %+v", observation, testCase.expectedHealth, testCase.expectedCheck)
+			}
+		})
+	}
+	if _, observed := restartObservationOf("plex", container.InspectResponse{}); observed {
+		t.Fatalf("an inspect with no base section: got observed want not")
+	}
+}
+
+func TestProbeImplServices_RestartAttempts(t *testing.T) {
+	tests := []struct {
+		name             string
+		latest           map[string]restartStatus
+		expectedAttempts int8
+	}{
+		{name: "a_service_that_is_not_enrolled_reads_zero", latest: map[string]restartStatus{}, expectedAttempts: 0},
+		{name: "an_enrolled_service_reads_its_attempts", latest: map[string]restartStatus{"plex": {state: restartStateWaiting, reason: "x", attempts: 2}}, expectedAttempts: 2},
+		{name: "a_spent_budget_reads_three", latest: map[string]restartStatus{"plex": {state: restartStateExhausted, attempts: restartAttemptsMax}}, expectedAttempts: restartAttemptsMax},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			probe := newServicesProbe()
+			probe.restart = &restartEngine{latest: testCase.latest}
+			attempts, _, err := probe.restartAttempts("plex")
+			if err != nil || attempts != testCase.expectedAttempts {
+				t.Fatalf("attempts: got %d error [%v] want %d", attempts, err, testCase.expectedAttempts)
+			}
+		})
+	}
+}
+
+func TestProbeImplServices_RestartCount(t *testing.T) {
+	tests := []struct {
+		name          string
+		firstSeen     int
+		dockerCount   int
+		supervised    int
+		age           time.Duration
+		expectedCount float64
+	}{
+		{name: "a_total_already_there_at_first_sight_is_not_counted", firstSeen: 4, dockerCount: 4, expectedCount: 0},
+		{name: "docker_alone", dockerCount: 2, expectedCount: 2},
+		{name: "supervisor_alone", supervised: 3, expectedCount: 3},
+		{name: "the_two_add_up", dockerCount: 2, supervised: 1, expectedCount: 3},
+		{name: "only_the_rise_since_first_sight_counts", firstSeen: 4, dockerCount: 6, expectedCount: 2},
+		{name: "a_rise_ages_out_on_the_engine_clock", dockerCount: 2, age: 25 * time.Hour, expectedCount: 0},
+		{name: "a_supervisor_attempt_ages_out_on_the_engine_clock", supervised: 1, age: 25 * time.Hour, expectedCount: 0},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			probe := newServicesProbe()
+			clock := time.Date(2026, 11, 19, 12, 0, 0, 0, time.UTC)
+			probe.restart = &restartEngine{ledger: newRestartLedger(t.TempDir() + "/ledger.json"), now: func() time.Time { return clock }}
+			for range testCase.supervised {
+				if err := probe.restart.ledger.record("plex", "abc", clock); err != nil {
+					t.Fatalf("record failed with [%v]", err)
+				}
+			}
+			inspect := restartInspect("healthy", "2026-11-19T01:00:00Z", &container.HealthConfig{})
+			inspect.RestartCount = testCase.firstSeen
+			if _, _, err := probe.restartCount("plex", inspect); err != nil {
+				t.Fatalf("first restart count failed with [%v]", err)
+			}
+			inspect.RestartCount = testCase.dockerCount
+			got, _, err := probe.restartCount("plex", inspect)
+			if err == nil && testCase.age > 0 {
+				clock = clock.Add(testCase.age)
+				got, _, err = probe.restartCount("plex", inspect)
+			}
+			if err != nil || got != testCase.expectedCount {
+				t.Fatalf("restart count: got %f error [%v] want %f", got, err, testCase.expectedCount)
+			}
+		})
+	}
+}
+
+func TestProbeImplServices_RestartObservationProbe(t *testing.T) {
+	ended := time.Date(2026, 11, 19, 1, 2, 3, 0, time.UTC)
+	tests := []struct {
+		name           string
+		log            []*container.HealthcheckResult
+		failingStreak  int
+		expectedFailed bool
+		expectedEnd    time.Time
+	}{
+		{name: "no_probe_yet_reads_as_not_failed"},
+		{name: "the_last_probe_failing_is_failed", log: []*container.HealthcheckResult{{ExitCode: 0, End: ended.Add(-time.Minute)}, {ExitCode: 1, End: ended}}, expectedFailed: true, expectedEnd: ended},
+		{name: "the_failing_streak_is_carried_while_docker_still_says_healthy", failingStreak: 2},
+		{name: "the_last_probe_passing_is_not_failed", log: []*container.HealthcheckResult{{ExitCode: 1, End: ended.Add(-time.Minute)}, {ExitCode: 0, End: ended}}, expectedEnd: ended},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			inspect := restartInspect("starting", "2026-11-19T01:00:00Z", &container.HealthConfig{Interval: time.Minute})
+			inspect.State.Health.Log = testCase.log
+			inspect.State.Health.FailingStreak = testCase.failingStreak
+			observation, _ := restartObservationOf("plex", inspect)
+			if observation.probeFailed != testCase.expectedFailed || !observation.probeEnd.Equal(testCase.expectedEnd) || observation.failingStreak != testCase.failingStreak {
+				t.Fatalf("probe: got failed %v end %v want failed %v end %v", observation.probeFailed, observation.probeEnd, testCase.expectedFailed, testCase.expectedEnd)
+			}
+		})
+	}
+}
+
+func TestProbeImplServices_Host(t *testing.T) {
+	tests := []struct {
+		name          string
+		expectedValue bool
+		expectedOK    bool
+		expectedError bool
+	}{
+		{
+			name:          "happy",
+			expectedValue: true,
+			expectedOK:    true,
+			expectedError: false,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			probe := newServicesProbe()
+			value, _, err := probe.host()
+			if testCase.expectedError && err == nil {
+				t.Fatalf("expected error but got nil")
+			}
+			if !testCase.expectedError && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if testCase.expectedOK && value != testCase.expectedValue {
+				t.Fatalf("expected %v, got %v", testCase.expectedValue, value)
 			}
 		})
 	}
@@ -1115,33 +1276,13 @@ func assertConfiguredStatus(t *testing.T, services map[string]service, name stri
 	}
 }
 
-func TestProbeImplServices_Host(t *testing.T) {
-	tests := []struct {
-		name          string
-		expectedValue bool
-		expectedOK    bool
-		expectedError bool
-	}{
-		{
-			name:          "happy",
-			expectedValue: true,
-			expectedOK:    true,
-			expectedError: false,
-		},
+func restartInspect(health string, startedAt string, healthcheck *container.HealthConfig) container.InspectResponse {
+	response := container.InspectResponse{
+		ContainerJSONBase: &container.ContainerJSONBase{ID: "abc", State: &container.State{StartedAt: startedAt}},
+		Config:            &container.Config{Image: "plex:1", Healthcheck: healthcheck},
 	}
-	for _, testCase := range tests {
-		t.Run(testCase.name, func(t *testing.T) {
-			probe := newServicesProbe()
-			value, _, err := probe.host()
-			if testCase.expectedError && err == nil {
-				t.Fatalf("expected error but got nil")
-			}
-			if !testCase.expectedError && err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if testCase.expectedOK && value != testCase.expectedValue {
-				t.Fatalf("expected %v, got %v", testCase.expectedValue, value)
-			}
-		})
+	if health != "" {
+		response.State.Health = &container.Health{Status: health}
 	}
+	return response
 }

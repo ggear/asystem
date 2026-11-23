@@ -58,7 +58,7 @@ func BackupModuleRun(ctx context.Context, request BackupModuleRequest, stdout, s
 	}
 	defer func() { _ = os.RemoveAll(state) }()
 	binary, _ := os.Executable()
-	hooks := moduleHooks{script: request.Script, env: []string{
+	hooks := moduleHooks{script: request.Script, environment: []string{
 		"BACKUP_RUN_TIMESTAMP=" + stamp, "BACKUP_STATE_DIR=" + state, "BACKUP_SUPERVISOR=" + binary,
 		"BACKUP_FORCE_FULL=" + strconv.FormatBool(request.ForceFull), "BACKUP_SKIP_HOURS=" + strconv.Itoa(int(request.SkipPeriod.Hours())),
 		"BACKUP_TIMEOUT_HOURS=" + strconv.Itoa(int(request.TimeoutPeriod.Hours())),
@@ -272,13 +272,13 @@ func startBackupService(ctx context.Context, module string, stderr io.Writer) bo
 }
 
 type moduleHooks struct {
-	script string
-	env    []string
+	script      string
+	environment []string
 }
 
 func (h moduleHooks) command(ctx context.Context, name string, arguments ...string) *exec.Cmd {
 	command := exec.CommandContext(ctx, "bash", append([]string{"-c", `set -o pipefail; . "$1" || exit 1; shift; "$@"`, "backup", h.script, name}, arguments...)...)
-	command.Env = append(os.Environ(), h.env...)
+	command.Env = append(os.Environ(), h.environment...)
 	killWithGroup(command, moduleHookGrace)
 	return command
 }

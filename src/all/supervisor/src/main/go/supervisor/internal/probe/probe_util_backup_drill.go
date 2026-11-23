@@ -120,7 +120,7 @@ func (s *restoreSession) manifest() (backupManifest, bool) {
 
 func (s *restoreSession) compatible(manifest backupManifest) bool {
 	if s.software == "" {
-		sibling := moduleHooks{script: filepath.Join(filepath.Dir(s.request.Script), scriptLeaf), env: []string{"BACKUP_SOURCE_PATH=" + s.source}}
+		sibling := moduleHooks{script: filepath.Join(filepath.Dir(s.request.Script), scriptLeaf), environment: []string{"BACKUP_SOURCE_PATH=" + s.source}}
 		s.software = versionedModule(s.ctx, sibling, s.stderr, filepath.Base(s.source))
 	}
 	return backupCompatible(manifest, s.software)

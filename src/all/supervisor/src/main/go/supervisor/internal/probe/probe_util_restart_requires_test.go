@@ -21,23 +21,6 @@ type restartScript struct {
 	calls   []restartCall
 }
 
-func (s *restartScript) run(_ context.Context, _ time.Duration, name string, args ...string) (string, int, bool) {
-	s.calls = append(s.calls, restartCall{name: name, args: args})
-	key := name + " " + strings.Join(args, " ")
-	output := ""
-	for prefix, text := range s.outputs {
-		if strings.HasPrefix(key, prefix) {
-			output = text
-		}
-	}
-	for prefix, code := range s.exits {
-		if strings.HasPrefix(key, prefix) {
-			return output, code, false
-		}
-	}
-	return output, 0, false
-}
-
 func TestProbeUtilRestartRequires_Met(t *testing.T) {
 	fstab := filepath.Join(t.TempDir(), "fstab")
 	if err := os.WriteFile(fstab, []byte("# a note\nUUID=1 /boot ext4 defaults 0 2\n//mad/share-10 /share/10 cifs defaults 0 0\n//may/share-30 /share/30 cifs defaults 0 0\n"), 0o644); err != nil {
@@ -68,19 +51,19 @@ func TestProbeUtilRestartRequires_Met(t *testing.T) {
 		{name: "a_starting_service_is_not_met", requirement: restartRequirement{kind: "healthy", target: "vernemq"}, outputs: map[string]string{"docker inspect --format {{.State.Health.Status}} vernemq": "starting\n"}, expected: false},
 		{name: "an_unknown_kind_is_not_met", requirement: restartRequirement{kind: "dns", target: "broker"}, expected: false},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			script := &restartScript{exits: test.exits, outputs: test.outputs}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			script := &restartScript{exits: testCase.exits, outputs: testCase.outputs}
 			checker := restartChecker{
 				run:   script.run,
-				dial:  func(string, time.Duration) error { return test.dialError },
+				dial:  func(string, time.Duration) error { return testCase.dialError },
 				fstab: fstab,
 			}
-			if test.noFstab {
+			if testCase.noFstab {
 				checker.fstab = filepath.Join(t.TempDir(), "missing")
 			}
-			if got := checker.met(context.Background(), test.requirement); got != test.expected {
-				t.Fatalf("met: got %v want %v, calls %v", got, test.expected, script.calls)
+			if got := checker.met(context.Background(), testCase.requirement); got != testCase.expected {
+				t.Fatalf("met: got %v want %v, calls %v", got, testCase.expected, script.calls)
 			}
 		})
 	}
@@ -96,11 +79,11 @@ func TestProbeUtilRestartRequires_MQTTSpeaksTheNamedProtocol(t *testing.T) {
 		{name: "a_broker_accepting_the_named_protocol_is_met", accepts: "mqttv5", target: "broker:32404:mqttv5", expected: true},
 		{name: "a_broker_refusing_the_named_protocol_is_not_met", accepts: "mqttv311", target: "broker:32404:mqttv5", expected: false},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			bin := t.TempDir()
 			broker := `#!/usr/bin/env bash
-[[ "$1" == "-V" && "$2" == "` + test.accepts + `" ]] || exit 1
+[[ "$1" == "-V" && "$2" == "` + testCase.accepts + `" ]] || exit 1
 `
 			if err := os.WriteFile(filepath.Join(bin, "mosquitto_pub"), []byte(broker), 0o755); err != nil {
 				t.Fatalf("write failed with [%v]", err)
@@ -109,9 +92,26 @@ func TestProbeUtilRestartRequires_MQTTSpeaksTheNamedProtocol(t *testing.T) {
 				t.Fatalf("write failed with [%v]", err)
 			}
 			t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
-			if met := newRestartChecker().met(context.Background(), restartRequirement{kind: restartKindMQTT, target: test.target}); met != test.expected {
-				t.Errorf("met: got %v want %v", met, test.expected)
+			if met := newRestartChecker().met(context.Background(), restartRequirement{kind: restartKindMQTT, target: testCase.target}); met != testCase.expected {
+				t.Errorf("met: got %v want %v", met, testCase.expected)
 			}
 		})
 	}
+}
+
+func (s *restartScript) run(_ context.Context, _ time.Duration, name string, args ...string) (string, int, bool) {
+	s.calls = append(s.calls, restartCall{name: name, args: args})
+	key := name + " " + strings.Join(args, " ")
+	output := ""
+	for prefix, text := range s.outputs {
+		if strings.HasPrefix(key, prefix) {
+			output = text
+		}
+	}
+	for prefix, code := range s.exits {
+		if strings.HasPrefix(key, prefix) {
+			return output, code, false
+		}
+	}
+	return output, 0, false
 }

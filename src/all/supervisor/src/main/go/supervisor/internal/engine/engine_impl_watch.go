@@ -28,7 +28,7 @@ import (
 //
 // Notes:
 //   - The cache is shared with the display.
-//   - Stale probe state is dropped by syncStatsFields, and prevCPUStats by active container ID.
+//   - Stale probe state is dropped by syncStatsFields, and previousCPUStats by active container ID.
 //   - A missing service is evicted to nil then deleted, which re-indexes the service slots.
 //   - No Purge is needed here, because local probes track staleness themselves.
 func RunListeningProbesLoop(ctx context.Context, configPath string, cache *metric.RecordCache, periods config.Periods) {
@@ -192,9 +192,9 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		}
 		return "-"
 	}
-	onData := func(client mqtt.Client, msg mqtt.Message) {
+	onData := func(client mqtt.Client, message mqtt.Message) {
 		subscribedMu.Lock()
-		subscription, known := subscribed[msg.Topic()]
+		subscription, known := subscribed[message.Topic()]
 		subscribedMu.Unlock()
 		guid := subscription.guid
 		if !known {
@@ -202,7 +202,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			return
 		}
 		online := liveness.assertOnline(guid.Host)
-		if len(msg.Payload()) == 0 {
+		if len(message.Payload()) == 0 {
 			if !online {
 				dropCount.Add(1)
 				return
@@ -213,9 +213,9 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		}
 		var value metric.ValueData
 		streamStart := time.Now()
-		if err := json.Unmarshal(msg.Payload(), &value); err != nil {
+		if err := json.Unmarshal(message.Payload(), &value); err != nil {
 			dropCount.Add(1)
-			scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(msg.Topic()), scribe.ActionSubscribe).Errorf("received", streamStart, "[unmarshal] data payload broke, [%v]", err)
+			scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(message.Topic()), scribe.ActionSubscribe).Errorf("received", streamStart, "[unmarshal] data payload broke, [%v]", err)
 			return
 		}
 		if !online && !proveOnline(client, guid.Host, value) {
@@ -223,7 +223,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			return
 		}
 		rxCount.Add(1)
-		if msg.Retained() {
+		if message.Retained() {
 			liveness.hearRetained(guid.Host, value.Timestamp, time.Now())
 		} else {
 			liveness.hear(guid.Host)
@@ -330,12 +330,12 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		}
 		return subscribeTopics(client, bindings)
 	}
-	onDiscovery := func(client mqtt.Client, msg mqtt.Message) {
+	onDiscovery := func(client mqtt.Client, message mqtt.Message) {
 		discoveryStart := time.Now()
-		topic := scribe.SubjectTopic(msg.Topic())
+		topic := scribe.SubjectTopic(message.Topic())
 		var value metric.ValueData
-		if len(msg.Payload()) > 0 {
-			if err := json.Unmarshal(msg.Payload(), &value); err != nil {
+		if len(message.Payload()) > 0 {
+			if err := json.Unmarshal(message.Payload(), &value); err != nil {
 				dropCount.Add(1)
 				scribe.Log(scribe.SourceEngine, topic, scribe.ActionDiscover).Errorf("rejected", discoveryStart, "[unmarshal] discovery gone with [%v]", err)
 				return
@@ -352,7 +352,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			scribe.Log(scribe.SourceEngine, topic, scribe.ActionDiscover).Errorf("rejected", discoveryStart, "[empty] discovery has no service")
 			return
 		}
-		tokens := strings.Split(msg.Topic(), "/")
+		tokens := strings.Split(message.Topic(), "/")
 		if len(tokens) < 6 || tokens[1] == "" {
 			dropCount.Add(1)
 			scribe.Log(scribe.SourceEngine, topic, scribe.ActionDiscover).Errorf("rejected", discoveryStart, "[malformed] topic of [%2d] levels", len(tokens))
@@ -373,19 +373,19 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		record := metric.NewRecord(value)
 		cache.Store(metric.NewServiceRecordGUID(metric.MetricServiceName, hostName, serviceName), &record)
 	}
-	onStatus := func(client mqtt.Client, msg mqtt.Message) {
+	onStatus := func(client mqtt.Client, message mqtt.Message) {
 		statusStart := time.Now()
-		tokens := strings.Split(msg.Topic(), "/")
+		tokens := strings.Split(message.Topic(), "/")
 		if len(tokens) < 3 || tokens[1] == "" {
 			dropCount.Add(1)
-			scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(msg.Topic()), scribe.ActionSubscribe).Errorf("rejected", statusStart, "[malformed] topic of [%2d] levels", len(tokens))
+			scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(message.Topic()), scribe.ActionSubscribe).Errorf("rejected", statusStart, "[malformed] topic of [%2d] levels", len(tokens))
 			return
 		}
 		hostName := tokens[1]
 		if hostName == metric.HostAll {
 			return
 		}
-		payload := strings.TrimSpace(string(msg.Payload()))
+		payload := strings.TrimSpace(string(message.Payload()))
 		rxCount.Add(1)
 		wasOnline, known := liveness.statusOf(hostName)
 		switch payload {

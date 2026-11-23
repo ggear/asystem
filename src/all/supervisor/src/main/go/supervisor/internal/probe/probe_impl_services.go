@@ -46,8 +46,8 @@ type servicesProbe struct {
 
 	configuredServiceNames []string
 	installMissingLogged   string
-	prevCPUStats           map[string]container.CPUStats
-	prevIOStats            map[string]serviceIOSample
+	previousCPUStats       map[string]container.CPUStats
+	previousIOStats        map[string]serviceIOSample
 
 	dockerClient     *client.Client
 	newDockerClient  func() (*client.Client, error)
@@ -76,8 +76,8 @@ func newServicesProbe() *servicesProbe {
 		maxMemoryFloat:       make(map[string]*stats.FloatStats),
 		restartCountFloat:    make(map[string]*stats.FloatStats),
 		restartAttemptsInt:   make(map[string]*stats.IntStats),
-		prevCPUStats:         make(map[string]container.CPUStats),
-		prevIOStats:          make(map[string]serviceIOSample),
+		previousCPUStats:     make(map[string]container.CPUStats),
+		previousIOStats:      make(map[string]serviceIOSample),
 		newDockerClient: func() (*client.Client, error) {
 			return client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 		},
@@ -407,14 +407,14 @@ func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot)
 	for _, c := range containers {
 		activeIDs[c.ID] = struct{}{}
 	}
-	for prevID := range p.prevCPUStats {
-		if _, exists := activeIDs[prevID]; !exists {
-			delete(p.prevCPUStats, prevID)
+	for previousID := range p.previousCPUStats {
+		if _, exists := activeIDs[previousID]; !exists {
+			delete(p.previousCPUStats, previousID)
 		}
 	}
-	for prevID := range p.prevIOStats {
-		if _, exists := activeIDs[prevID]; !exists {
-			delete(p.prevIOStats, prevID)
+	for previousID := range p.previousIOStats {
+		if _, exists := activeIDs[previousID]; !exists {
+			delete(p.previousIOStats, previousID)
 		}
 	}
 	for _, serviceContainer := range containers {
@@ -446,12 +446,12 @@ func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot)
 			service.usedDiskOpsErr = err
 			service.usedNetworkErr = err
 		} else {
-			prev, hasPrev := p.prevCPUStats[serviceContainer.ID]
-			p.prevCPUStats[serviceContainer.ID] = fetchedStats.CPUStats
-			if !hasPrev {
+			previous, hadPrevious := p.previousCPUStats[serviceContainer.ID]
+			p.previousCPUStats[serviceContainer.ID] = fetchedStats.CPUStats
+			if !hadPrevious {
 				service.usedProcessorErr = errProbeWarmingUp
 			} else {
-				fetchedStats.PreCPUStats = prev
+				fetchedStats.PreCPUStats = previous
 				usedProcessor, processorDerived, processorErr := p.processorUsed(name, fetchedStats)
 				if processorErr != nil {
 					service.usedProcessorErr = processorErr
@@ -846,8 +846,8 @@ func (p *servicesProbe) ioRates(name, id string, response container.StatsRespons
 	if taken.IsZero() {
 		taken = config.NowIncludingSuspend()
 	}
-	previous, hadSample := p.prevIOStats[id]
-	p.prevIOStats[id] = serviceIOSample{taken: taken, blockBytes: blockMoved, networkBytes: networkMoved}
+	previous, hadSample := p.previousIOStats[id]
+	p.previousIOStats[id] = serviceIOSample{taken: taken, blockBytes: blockMoved, networkBytes: networkMoved}
 	if !hadSample {
 		rates.err = errProbeWarmingUp
 		return rates

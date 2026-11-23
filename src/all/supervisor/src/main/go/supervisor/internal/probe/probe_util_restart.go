@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"supervisor/internal/config"
-	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
 )
 
@@ -63,7 +62,7 @@ func installLimit(service string, names ...string) (time.Duration, error) {
 func runInstall(ctx context.Context, service string, verb string, limit time.Duration) (int, string) {
 	out, code, abandoned := bounded(ctx, limit, "bash", installScript(service), verb)
 	if abandoned {
-		return 1, out + "abandoned after the limit"
+		return 1, out + "\nabandoned after the limit"
 	}
 	return code, out
 }
@@ -109,7 +108,7 @@ func (e *restartEngine) evaluate(ctx context.Context, observations []restartObse
 	for _, observation := range observations {
 		policy, enabled, err := e.loader.load(ctx, observation.service)
 		if err != nil {
-			statuses[observation.service] = restartStatus{state: metric.RestartStateWaiting, reason: "policy unreadable [" + err.Error() + "]"}
+			statuses[observation.service] = restartStatus{state: restartStateWaiting, reason: "policy unreadable [" + err.Error() + "]"}
 			e.report(observation, statuses[observation.service])
 			continue
 		}
@@ -215,12 +214,12 @@ func (e *restartEngine) step(ctx context.Context, now time.Time, held bool, poli
 	}
 	limit, err := e.limit(observation.service)
 	if err != nil {
-		status.state = metric.RestartStateWaiting
+		status.state = restartStateWaiting
 		status.reason = "install.sh limits unreadable [" + err.Error() + "]"
 		return status
 	}
 	if err := e.ledger.record(observation.service, observation.container, now); err != nil {
-		status.state = metric.RestartStateWaiting
+		status.state = restartStateWaiting
 		status.reason = "ledger could not be written, no restart made [" + err.Error() + "]"
 		return status
 	}
@@ -279,9 +278,9 @@ func (e *restartEngine) report(observation restartObservation, status restartSta
 	e.emit(service, line)
 	logger := scribe.Log(scribe.SourceProbeRestart, scribe.SubjectService(service), scribe.ActionCompute)
 	switch status.state {
-	case metric.RestartStateExhausted:
+	case restartStateExhausted:
 		logger.Warnf("deciding", e.now(), "[%s] state, because [%s]", scribe.Fit(status.state, restartWidthState), scribe.Fit(status.reason, restartWidthReason))
-	case metric.RestartStateRestarting:
+	case restartStateRestarting:
 		logger.Infof("deciding", e.now(), "[%s] state, because [%s]", scribe.Fit(status.state, restartWidthState), scribe.Fit(status.reason, restartWidthReason))
 	default:
 		logger.Debugf("deciding", e.now(), "[%s] state, because [%s]", scribe.Fit(status.state, restartWidthState), scribe.Fit(status.reason, restartWidthReason))
@@ -362,6 +361,13 @@ type restartEngine struct {
 }
 
 const (
+	restartStateOK         = "ok"
+	restartStateSuspect    = "suspect"
+	restartStateWaiting    = "waiting"
+	restartStateRestarting = "restarting"
+	restartStateSettling   = "settling"
+	restartStateExhausted  = "exhausted"
+
 	restartExitSkipped  = 10
 	restartRunMargin    = 30 * time.Second
 	restartInstallLeaf  = "install.sh"

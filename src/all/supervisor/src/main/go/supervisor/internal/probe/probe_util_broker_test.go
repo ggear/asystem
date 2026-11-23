@@ -16,11 +16,6 @@ type stubToken struct {
 	done    chan struct{}
 }
 
-func (t *stubToken) Wait() bool                     { return t.granted }
-func (t *stubToken) WaitTimeout(time.Duration) bool { return t.granted }
-func (t *stubToken) Done() <-chan struct{}          { return t.done }
-func (t *stubToken) Error() error                   { return nil }
-
 type stubClient struct {
 	connected  bool
 	granted    bool
@@ -29,50 +24,10 @@ type stubClient struct {
 	handlers   map[string]mqtt.MessageHandler
 }
 
-func (c *stubClient) IsConnected() bool      { return c.connected }
-func (c *stubClient) IsConnectionOpen() bool { return c.connected }
-func (c *stubClient) Connect() mqtt.Token    { return &stubToken{granted: true, done: closedChannel()} }
-func (c *stubClient) Disconnect(uint)        {}
-func (c *stubClient) Publish(string, byte, bool, any) mqtt.Token {
-	return &stubToken{granted: true, done: closedChannel()}
-}
-func (c *stubClient) Subscribe(filter string, _ byte, handler mqtt.MessageHandler) mqtt.Token {
-	c.subscribes.Add(1)
-	c.mutex.Lock()
-	if c.handlers == nil {
-		c.handlers = map[string]mqtt.MessageHandler{}
-	}
-	c.handlers[filter] = handler
-	c.mutex.Unlock()
-	return &stubToken{granted: c.granted, done: closedChannel()}
-}
-func (c *stubClient) SubscribeMultiple(map[string]byte, mqtt.MessageHandler) mqtt.Token {
-	return &stubToken{done: closedChannel()}
-}
-func (c *stubClient) Unsubscribe(...string) mqtt.Token {
-	return &stubToken{granted: true, done: closedChannel()}
-}
-func (c *stubClient) AddRoute(string, mqtt.MessageHandler)    {}
-func (c *stubClient) OptionsReader() mqtt.ClientOptionsReader { return mqtt.ClientOptionsReader{} }
-
-func closedChannel() chan struct{} {
-	done := make(chan struct{})
-	close(done)
-	return done
-}
-
 type stubMessage struct {
 	topic   string
 	payload string
 }
-
-func (m stubMessage) Duplicate() bool   { return false }
-func (m stubMessage) Qos() byte         { return 1 }
-func (m stubMessage) Retained() bool    { return true }
-func (m stubMessage) Topic() string     { return m.topic }
-func (m stubMessage) MessageID() uint16 { return 0 }
-func (m stubMessage) Payload() []byte   { return []byte(m.payload) }
-func (m stubMessage) Ack()              {}
 
 func TestProbeUtilBroker_PayloadsKeepLatestPerTopic(t *testing.T) {
 	store := &brokerPayloads{payloads: map[string]string{}}
@@ -106,23 +61,23 @@ func TestProbeUtilBroker_WatcherReportsFreshOnlyWhenConnectedAndReady(t *testing
 		{"disconnected is unknown", false, false, false, false, false},
 		{"disconnected while still marked ready is unknown", false, true, false, false, false},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			client := &stubClient{connected: tt.connected}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			client := &stubClient{connected: testCase.connected}
 			watch := &brokerWatcher{
 				brokerPayloads: brokerPayloads{payloads: map[string]string{"a/b": "1"}},
 				client:         client,
 				filters:        []string{"a/b"},
-				ready:          tt.ready,
+				ready:          testCase.ready,
 			}
 			retained, fresh := watch.readRetained()
-			if fresh != tt.wantFresh {
-				t.Errorf("fresh: got %v want %v", fresh, tt.wantFresh)
+			if fresh != testCase.wantFresh {
+				t.Errorf("fresh: got %v want %v", fresh, testCase.wantFresh)
 			}
 			if retained["a/b"] != "1" {
 				t.Errorf("payload: got %q want %q", retained["a/b"], "1")
 			}
-			if tt.wantResubcrib {
+			if testCase.wantResubcrib {
 				deadline := time.Now().Add(2 * time.Second)
 				for client.subscribes.Load() == 0 && time.Now().Before(deadline) {
 					time.Sleep(5 * time.Millisecond)
@@ -152,15 +107,15 @@ func TestProbeUtilBroker_WatcherIsDeafWithoutItsHeartbeat(t *testing.T) {
 		{name: "heard_only_before_the_current_attach", heartbeat: "a/heartbeat", ready: true, readyAgo: time.Hour, heardAgo: 2 * time.Hour, expectedDeaf: true, expectedError: false},
 		{name: "attached_within_the_window", heartbeat: "a/heartbeat", ready: true, readyAgo: time.Second, expectedDeaf: false, expectedError: false},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			now := time.Now()
-			watch := &brokerWatcher{brokerPayloads: brokerPayloads{payloads: map[string]string{}}, client: &stubClient{connected: true}, heartbeat: tt.heartbeat, ready: tt.ready, readyAt: now.Add(-tt.readyAgo)}
-			if tt.heardAgo > 0 {
-				watch.heardAt = now.Add(-tt.heardAgo)
+			watch := &brokerWatcher{brokerPayloads: brokerPayloads{payloads: map[string]string{}}, client: &stubClient{connected: true}, heartbeat: testCase.heartbeat, ready: testCase.ready, readyAt: now.Add(-testCase.readyAgo)}
+			if testCase.heardAgo > 0 {
+				watch.heardAt = now.Add(-testCase.heardAgo)
 			}
-			if _, deaf := watch.deaf(time.Minute); deaf != tt.expectedDeaf {
-				t.Errorf("deaf: got %v want %v", deaf, tt.expectedDeaf)
+			if _, deaf := watch.deaf(time.Minute); deaf != testCase.expectedDeaf {
+				t.Errorf("deaf: got %v want %v", deaf, testCase.expectedDeaf)
 			}
 		})
 	}
@@ -233,11 +188,6 @@ type failingToken struct {
 	err          error
 }
 
-func (t failingToken) Wait() bool                     { return t.acknowledged }
-func (t failingToken) WaitTimeout(time.Duration) bool { return t.acknowledged }
-func (t failingToken) Done() <-chan struct{}          { return nil }
-func (t failingToken) Error() error                   { return t.err }
-
 func TestProbeUtilBroker_SubscribeRefused(t *testing.T) {
 	filters := map[string]byte{"b/topic": 1, "a/topic": 1}
 	tests := []struct {
@@ -258,6 +208,59 @@ func TestProbeUtilBroker_SubscribeRefused(t *testing.T) {
 		})
 	}
 }
+
+func (t *stubToken) Wait() bool                     { return t.granted }
+func (t *stubToken) WaitTimeout(time.Duration) bool { return t.granted }
+func (t *stubToken) Done() <-chan struct{}          { return t.done }
+func (t *stubToken) Error() error                   { return nil }
+func (c *stubClient) IsConnected() bool             { return c.connected }
+func (c *stubClient) IsConnectionOpen() bool        { return c.connected }
+func (c *stubClient) Connect() mqtt.Token           { return &stubToken{granted: true, done: closedChannel()} }
+func (c *stubClient) Disconnect(uint)               {}
+
+func (c *stubClient) Publish(string, byte, bool, any) mqtt.Token {
+	return &stubToken{granted: true, done: closedChannel()}
+}
+
+func (c *stubClient) Subscribe(filter string, _ byte, handler mqtt.MessageHandler) mqtt.Token {
+	c.subscribes.Add(1)
+	c.mutex.Lock()
+	if c.handlers == nil {
+		c.handlers = map[string]mqtt.MessageHandler{}
+	}
+	c.handlers[filter] = handler
+	c.mutex.Unlock()
+	return &stubToken{granted: c.granted, done: closedChannel()}
+}
+
+func (c *stubClient) SubscribeMultiple(map[string]byte, mqtt.MessageHandler) mqtt.Token {
+	return &stubToken{done: closedChannel()}
+}
+
+func (c *stubClient) Unsubscribe(...string) mqtt.Token {
+	return &stubToken{granted: true, done: closedChannel()}
+}
+
+func (c *stubClient) AddRoute(string, mqtt.MessageHandler)    {}
+func (c *stubClient) OptionsReader() mqtt.ClientOptionsReader { return mqtt.ClientOptionsReader{} }
+
+func closedChannel() chan struct{} {
+	done := make(chan struct{})
+	close(done)
+	return done
+}
+
+func (m stubMessage) Duplicate() bool                 { return false }
+func (m stubMessage) Qos() byte                       { return 1 }
+func (m stubMessage) Retained() bool                  { return true }
+func (m stubMessage) Topic() string                   { return m.topic }
+func (m stubMessage) MessageID() uint16               { return 0 }
+func (m stubMessage) Payload() []byte                 { return []byte(m.payload) }
+func (m stubMessage) Ack()                            {}
+func (t failingToken) Wait() bool                     { return t.acknowledged }
+func (t failingToken) WaitTimeout(time.Duration) bool { return t.acknowledged }
+func (t failingToken) Done() <-chan struct{}          { return nil }
+func (t failingToken) Error() error                   { return t.err }
 
 func brokerWatcherWith(client mqtt.Client, payloads map[string]string) *brokerWatcher {
 	return &brokerWatcher{brokerPayloads: brokerPayloads{payloads: payloads}, client: client}

@@ -23,12 +23,12 @@ type terminalVirtualCell struct {
 	written bool
 }
 
-func newTerminalVirtual(rows, cols int, theme Theme, useUnicode bool) *terminalVirtual {
+func newTerminalVirtual(rows, columns int, theme Theme, useUnicode bool) *terminalVirtual {
 	terminal := &terminalVirtual{
-		width:   cols,
+		width:   columns,
 		height:  rows,
 		palette: theme.palette(useUnicode),
-		cells:   make([]terminalVirtualCell, rows*cols),
+		cells:   make([]terminalVirtualCell, rows*columns),
 		eventQ:  make(chan tcell.Event, 16),
 	}
 	terminal.clear()
@@ -50,11 +50,11 @@ func (v *terminalVirtual) clear() {
 	}
 }
 
-func (v *terminalVirtual) draw(x int, y int, str string, colour colour) {
+func (v *terminalVirtual) draw(x int, y int, value string, colour colour) {
 	if v.width == 0 || v.height == 0 {
 		return
 	}
-	for _, token := range tokens(str) {
+	for _, token := range tokens(value) {
 		if token == "\n" {
 			y++
 			x = 0
@@ -112,26 +112,26 @@ func (v *terminalVirtual) cell(x, y int) (rune, colour, bool) {
 }
 
 func (v *terminalVirtual) dimensions() dimensions {
-	maxCol := -1
+	maxColumn := -1
 	maxRow := -1
 	for row := 0; row < v.height; row++ {
 		rowIndex := row * v.width
-		for col := 0; col < v.width; col++ {
-			cell := v.cells[rowIndex+col]
+		for column := 0; column < v.width; column++ {
+			cell := v.cells[rowIndex+column]
 			if cell.written {
 				if row > maxRow {
 					maxRow = row
 				}
-				if col > maxCol {
-					maxCol = col
+				if column > maxColumn {
+					maxColumn = column
 				}
 			}
 		}
 	}
-	if maxRow < 0 || maxCol < 0 {
-		return dimensions{rows: 0, cols: 0}
+	if maxRow < 0 || maxColumn < 0 {
+		return dimensions{rows: 0, columns: 0}
 	}
-	return dimensions{rows: maxRow + 1, cols: maxCol + 1}
+	return dimensions{rows: maxRow + 1, columns: maxColumn + 1}
 }
 
 func (v *terminalVirtual) string(inColour bool) string {

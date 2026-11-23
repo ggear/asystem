@@ -3,8 +3,6 @@ package probe
 import (
 	"fmt"
 	"time"
-
-	"supervisor/internal/metric"
 )
 
 func restartBackoff(settle time.Duration, streak int, jitter float64) time.Duration {
@@ -42,22 +40,22 @@ func decideRestart(in restartInput) restartDecision {
 	}
 	if in.health == restartHealthHealthy {
 		if !in.stableSince.IsZero() && in.now.Sub(in.stableSince) >= 2*interval {
-			return restartDecision{state: metric.RestartStateOK, reason: "healthy and stable", reset: true}
+			return restartDecision{state: restartStateOK, reason: "healthy and stable", reset: true}
 		}
 		if recent > 0 {
-			return restartDecision{state: metric.RestartStateSettling, reason: "healthy after a restart, confirming it holds"}
+			return restartDecision{state: restartStateSettling, reason: "healthy after a restart, confirming it holds"}
 		}
-		return restartDecision{state: metric.RestartStateOK, reason: "healthy"}
+		return restartDecision{state: restartStateOK, reason: "healthy"}
 	}
 	if !last.IsZero() && in.now.Sub(last) < settle {
-		return restartDecision{state: metric.RestartStateSettling, reason: "judging the service after its restart"}
+		return restartDecision{state: restartStateSettling, reason: "judging the service after its restart"}
 	}
 	age := in.now.Sub(in.startedAt)
 	unhealthy := in.health == restartHealthUnhealthy && !in.unhealthySince.IsZero() && in.now.Sub(in.unhealthySince) >= interval && age >= grace
 	late := in.requiresLapsed && in.requiresMet && !in.requiresHeldSince.IsZero() && in.probeFailed && in.probeEnd.After(in.requiresHeldSince.Add(in.policy.stable)) && age >= lateGrace
 	if !unhealthy && !late {
 		if in.health == restartHealthUnhealthy {
-			return restartDecision{state: metric.RestartStateSuspect, reason: "unhealthy, inside its grace"}
+			return restartDecision{state: restartStateSuspect, reason: "unhealthy, inside its grace"}
 		}
 		looping := 0
 		for _, rise := range in.rises {
@@ -66,17 +64,17 @@ func decideRestart(in restartInput) restartDecision {
 			}
 		}
 		if looping >= restartLoopRises {
-			return restartDecision{state: metric.RestartStateSuspect, reason: fmt.Sprintf("crash looping, docker restarted it at least [%d] times inside [%s], left to docker", restartLoopRises, window)}
+			return restartDecision{state: restartStateSuspect, reason: fmt.Sprintf("crash looping, docker restarted it at least [%d] times inside [%s], left to docker", restartLoopRises, window)}
 		}
-		return restartDecision{state: metric.RestartStateOK, reason: "not judged, " + in.health}
+		return restartDecision{state: restartStateOK, reason: "not judged, " + in.health}
 	}
 	if recent >= restartAttemptsMax {
-		return restartDecision{state: metric.RestartStateExhausted, reason: fmt.Sprintf("budget spent, [%d] restarts in [%s]", recent, restartWindow)}
+		return restartDecision{state: restartStateExhausted, reason: fmt.Sprintf("budget spent, [%d] restarts in [%s]", recent, restartWindow)}
 	}
 	waiting := func(reason string) restartDecision {
-		return restartDecision{state: metric.RestartStateWaiting, reason: reason}
+		return restartDecision{state: restartStateWaiting, reason: reason}
 	}
-	if grace := in.supervisorStarted.Add(interval); in.now.Before(grace) {
+	if warmed := in.supervisorStarted.Add(interval); in.now.Before(warmed) {
 		return waiting("supervisor started recently")
 	}
 	if in.hostHold {
@@ -102,7 +100,7 @@ func decideRestart(in restartInput) restartDecision {
 	if in.hostHour >= restartHostHourlyMax {
 		return waiting("this host has used its restarts for the hour")
 	}
-	return restartDecision{state: metric.RestartStateRestarting, reason: "unhealthy with every prerequisite held", act: true}
+	return restartDecision{state: restartStateRestarting, reason: "unhealthy with every prerequisite held", act: true}
 }
 
 type restartHealthcheck struct {

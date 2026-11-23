@@ -131,30 +131,30 @@ func TestEngineImplServer_RunAllProbesPublishLoop(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Cleanup(config.Reset)
 			database := ""
-			if tt.databaseHost != "" {
-				database = fmt.Sprintf(`,"database":{"host":%q,"port":"1","token":"test-token"}`, tt.databaseHost)
+			if testCase.databaseHost != "" {
+				database = fmt.Sprintf(`,"database":{"host":%q,"port":"1","token":"test-token"}`, testCase.databaseHost)
 			}
 			configContent := fmt.Sprintf(`{"asystem":{"version":"10.100.6000","host":%q,"broker":{"host":%q,"port":%q}%s}}`,
-				tt.hostName, brokerHost, brokerPort, database)
+				testCase.hostName, brokerHost, brokerPort, database)
 			configFile := filepath.Join(t.TempDir(), "config.json")
 			if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
 				t.Fatalf("write config file failed: %v", err)
 			}
 			recorder := &topicRecorder{first: make(map[string]time.Duration), seen: make(map[string][][]byte)}
-			token := mqttClient.Subscribe("supervisor/"+tt.hostName+"/#", 1, recorder.record)
+			token := mqttClient.Subscribe("supervisor/"+testCase.hostName+"/#", 1, recorder.record)
 			token.Wait()
 			if token.Error() != nil {
 				t.Fatalf("subscribe failed: %v", token.Error())
 			}
-			t.Cleanup(func() { mqttClient.Unsubscribe("supervisor/" + tt.hostName + "/#").Wait() })
-			if tt.name == "sad_malformed_read_back_is_rejected_rather_than_dropped_in_silence" {
-				mqttClient.Publish("supervisor/"+tt.hostName+"/data/service/zzbroken/name", 1, true, []byte("{not json")).Wait()
+			t.Cleanup(func() { mqttClient.Unsubscribe("supervisor/" + testCase.hostName + "/#").Wait() })
+			if testCase.name == "sad_malformed_read_back_is_rejected_rather_than_dropped_in_silence" {
+				mqttClient.Publish("supervisor/"+testCase.hostName+"/data/service/zzbroken/name", 1, true, []byte("{not json")).Wait()
 			}
-			if tt.name == "happy_orphan_read_back_is_tombstoned_in_both_forms" {
+			if testCase.name == "happy_orphan_read_back_is_tombstoned_in_both_forms" {
 				orphan := metric.ValueData{
 					Timestamp: time.Now().Unix(),
 					Pulse:     &metric.ValueDataDetail{OK: true, Kind: metric.ValueString, ValueString: "zztest"},
@@ -163,9 +163,9 @@ func TestEngineImplServer_RunAllProbesPublishLoop(t *testing.T) {
 				if marshalErr != nil {
 					t.Fatalf("marshal orphan failed: %v", marshalErr)
 				}
-				mqttClient.Publish("supervisor/"+tt.hostName+"/data/service/zztest/name", 1, true, payload).Wait()
+				mqttClient.Publish("supervisor/"+testCase.hostName+"/data/service/zztest/name", 1, true, payload).Wait()
 			}
-			ctx, cancel := context.WithTimeout(context.Background(), tt.runFor)
+			ctx, cancel := context.WithTimeout(context.Background(), testCase.runFor)
 			defer cancel()
 			cache := metric.NewRecordCache()
 			recorder.mutex.Lock()
@@ -178,7 +178,7 @@ func TestEngineImplServer_RunAllProbesPublishLoop(t *testing.T) {
 			}()
 			<-done
 			time.Sleep(time.Second)
-			tt.checkFunc(t, tt.hostName, recorder)
+			testCase.checkFunc(t, testCase.hostName, recorder)
 		})
 	}
 }
@@ -188,9 +188,9 @@ func subscribeRetained(t *testing.T, client mqtt.Client, topics ...string) map[s
 	retained := make(map[string][]byte)
 	var mutex sync.Mutex
 	for _, topic := range topics {
-		token := client.Subscribe(topic, 1, func(_ mqtt.Client, msg mqtt.Message) {
+		token := client.Subscribe(topic, 1, func(_ mqtt.Client, message mqtt.Message) {
 			mutex.Lock()
-			retained[msg.Topic()] = msg.Payload()
+			retained[message.Topic()] = message.Payload()
 			mutex.Unlock()
 		})
 		token.Wait()
@@ -211,11 +211,11 @@ type topicRecorder struct {
 	seen    map[string][][]byte
 }
 
-func (r *topicRecorder) record(_ mqtt.Client, msg mqtt.Message) {
+func (r *topicRecorder) record(_ mqtt.Client, message mqtt.Message) {
 	r.mutex.Lock()
-	if _, exists := r.first[msg.Topic()]; !exists {
-		r.first[msg.Topic()] = time.Since(r.started)
+	if _, exists := r.first[message.Topic()]; !exists {
+		r.first[message.Topic()] = time.Since(r.started)
 	}
-	r.seen[msg.Topic()] = append(r.seen[msg.Topic()], msg.Payload())
+	r.seen[message.Topic()] = append(r.seen[message.Topic()], message.Payload())
 	r.mutex.Unlock()
 }

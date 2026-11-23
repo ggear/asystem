@@ -407,6 +407,78 @@ func TestProbeUtilLogs_ErrorsWithinFollowsIncrementally(t *testing.T) {
 	}
 }
 
+func TestProbeUtilLogs_Suppression(t *testing.T) {
+	tests := []struct {
+		name          string
+		message       string
+		expected      string
+		expectedError bool
+	}{
+		{
+			name:          "happy_standalone_numbers_generalise",
+			message:       "EXT4-fs warning: Error reading block 12345",
+			expected:      "regexp.MustCompile(`^EXT4-fs warning: Error reading block \\d+`)",
+			expectedError: false,
+		},
+		{
+			name:          "happy_device_names_are_kept_whole",
+			message:       "nvme0n1: I/O error, dev nvme0n1, sector 998",
+			expected:      "regexp.MustCompile(`^nvme0n1: I/O error, dev nvme0n1, sector \\d+`)",
+			expectedError: false,
+		},
+		{
+			name:          "happy_delimited_numbers_generalise_but_identifiers_do_not",
+			message:       "usb 1-1: device descriptor read/64, error -110",
+			expected:      "regexp.MustCompile(`^usb \\d+-\\d+: device descriptor read/\\d+, error -\\d+`)",
+			expectedError: false,
+		},
+		{
+			name:          "happy_clipped_message_drops_its_ellipsis",
+			message:       "mce: [Hardware Error]: Machine check events logged...",
+			expected:      "regexp.MustCompile(`^mce: \\[Hardware Error\\]: Machine check events logged`)",
+			expectedError: false,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if got := logSuppression(testCase.message); got != testCase.expected {
+				t.Fatalf("logSuppression(%q):\n got %s\nwant %s", testCase.message, got, testCase.expected)
+			}
+		})
+	}
+}
+
+func TestProbeUtilLogs_BootTime(t *testing.T) {
+	tests := []struct {
+		name            string
+		uptime          string
+		written         bool
+		expectedAgoSecs float64
+	}{
+		{"uptime seconds are subtracted from now", "100.5 200.0\n", true, 100.5},
+		{"a missing file reads as booted now", "", false, 0},
+		{"an empty file reads as booted now", "", true, 0},
+		{"a non numeric field reads as booted now", "soon 1\n", true, 0},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			root := t.TempDir()
+			if testCase.written {
+				if err := os.MkdirAll(filepath.Join(root, "proc"), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(filepath.Join(root, logUptimePath), []byte(testCase.uptime), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			ago := time.Since(bootTime(root)).Seconds()
+			if ago < testCase.expectedAgoSecs-1 || ago > testCase.expectedAgoSecs+1 {
+				t.Errorf("boot: got [%.1f] s ago want [%.1f]", ago, testCase.expectedAgoSecs)
+			}
+		})
+	}
+}
+
 func writeLogTree(t *testing.T, records []string, uptimeSeconds float64) string {
 	t.Helper()
 	root := t.TempDir()
@@ -449,47 +521,6 @@ func joinLogRecords(records []string) string {
 	return joined
 }
 
-func TestProbeUtilLogs_Suppression(t *testing.T) {
-	tests := []struct {
-		name          string
-		message       string
-		expected      string
-		expectedError bool
-	}{
-		{
-			name:          "happy_standalone_numbers_generalise",
-			message:       "EXT4-fs warning: Error reading block 12345",
-			expected:      "regexp.MustCompile(`^EXT4-fs warning: Error reading block \\d+`)",
-			expectedError: false,
-		},
-		{
-			name:          "happy_device_names_are_kept_whole",
-			message:       "nvme0n1: I/O error, dev nvme0n1, sector 998",
-			expected:      "regexp.MustCompile(`^nvme0n1: I/O error, dev nvme0n1, sector \\d+`)",
-			expectedError: false,
-		},
-		{
-			name:          "happy_delimited_numbers_generalise_but_identifiers_do_not",
-			message:       "usb 1-1: device descriptor read/64, error -110",
-			expected:      "regexp.MustCompile(`^usb \\d+-\\d+: device descriptor read/\\d+, error -\\d+`)",
-			expectedError: false,
-		},
-		{
-			name:          "happy_clipped_message_drops_its_ellipsis",
-			message:       "mce: [Hardware Error]: Machine check events logged...",
-			expected:      "regexp.MustCompile(`^mce: \\[Hardware Error\\]: Machine check events logged`)",
-			expectedError: false,
-		},
-	}
-	for _, testCase := range tests {
-		t.Run(testCase.name, func(t *testing.T) {
-			if got := logSuppression(testCase.message); got != testCase.expected {
-				t.Fatalf("logSuppression(%q):\n got %s\nwant %s", testCase.message, got, testCase.expected)
-			}
-		})
-	}
-}
-
 func resetLogs() {
 	logCacheMu.Lock()
 	defer logCacheMu.Unlock()
@@ -499,33 +530,16 @@ func resetLogs() {
 	clear(logCache)
 }
 
-func TestProbeUtilLogs_BootTime(t *testing.T) {
-	tests := []struct {
-		name            string
-		uptime          string
-		written         bool
-		expectedAgoSecs float64
-	}{
-		{"uptime seconds are subtracted from now", "100.5 200.0\n", true, 100.5},
-		{"a missing file reads as booted now", "", false, 0},
-		{"an empty file reads as booted now", "", true, 0},
-		{"a non numeric field reads as booted now", "soon 1\n", true, 0},
+func (s *logSet) close() {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	if s.file != nil {
+		_ = s.file.Close()
+		s.file = nil
 	}
-	for _, testCase := range tests {
-		t.Run(testCase.name, func(t *testing.T) {
-			root := t.TempDir()
-			if testCase.written {
-				if err := os.MkdirAll(filepath.Join(root, "proc"), 0o755); err != nil {
-					t.Fatal(err)
-				}
-				if err := os.WriteFile(filepath.Join(root, logUptimePath), []byte(testCase.uptime), 0o644); err != nil {
-					t.Fatal(err)
-				}
-			}
-			ago := time.Since(bootTime(root)).Seconds()
-			if ago < testCase.expectedAgoSecs-1 || ago > testCase.expectedAgoSecs+1 {
-				t.Errorf("boot: got [%.1f] s ago want [%.1f]", ago, testCase.expectedAgoSecs)
-			}
-		})
-	}
+	s.opened = false
+	s.available = false
+	s.drained = false
+	s.records = nil
+	s.carry = nil
 }

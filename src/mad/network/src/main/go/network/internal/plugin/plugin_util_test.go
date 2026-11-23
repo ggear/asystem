@@ -225,41 +225,41 @@ func TestPluginUtilDevice_Read(t *testing.T) {
 			second: remote.GatewayDevice{Name: "other", State: 1, LastSeen: now.Unix()},
 		},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			gap := test.gap
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			gap := testCase.gap
 			switch gap {
 			case 0:
 				gap = 5 * time.Minute
 			case -1:
 				gap = 0
 			}
-			first := test.first
-			first.LastSeen = test.second.LastSeen - int64(gap/time.Second)
+			first := testCase.first
+			first.LastSeen = testCase.second.LastSeen - int64(gap/time.Second)
 			deltas := newDeltaTracker()
 			readDevices([]remote.GatewayDevice{first}, []string{"gw"}, deltas, now.Add(-gap))
-			readings := readDevices([]remote.GatewayDevice{test.second}, []string{"gw"}, deltas, now)
+			readings := readDevices([]remote.GatewayDevice{testCase.second}, []string{"gw"}, deltas, now)
 			if len(readings) != 1 || readings[0].name != "gw" {
 				t.Fatalf("readings: got %+v want one reading for gw", readings)
 			}
 			got := readings[0]
-			if got.up != test.expectedUp {
-				t.Fatalf("up: got %v want %v", got.up, test.expectedUp)
+			if got.up != testCase.expectedUp {
+				t.Fatalf("up: got %v want %v", got.up, testCase.expectedUp)
 			}
-			if got.hasTraffic != test.expectedTraffic {
-				t.Errorf("has traffic: got %v want %v", got.hasTraffic, test.expectedTraffic)
+			if got.hasTraffic != testCase.expectedTraffic {
+				t.Errorf("has traffic: got %v want %v", got.hasTraffic, testCase.expectedTraffic)
 			}
-			if math.Abs(got.throughput-test.expectedThroughput) > 1e-6 {
-				t.Errorf("throughput_mbps: got %v want %v", got.throughput, test.expectedThroughput)
+			if math.Abs(got.throughput-testCase.expectedThroughput) > 1e-6 {
+				t.Errorf("throughput_mbps: got %v want %v", got.throughput, testCase.expectedThroughput)
 			}
-			if math.Abs(got.network-test.expectedNetwork) > 1e-6 {
-				t.Errorf("network_pct: got %v want %v", got.network, test.expectedNetwork)
+			if math.Abs(got.network-testCase.expectedNetwork) > 1e-6 {
+				t.Errorf("network_pct: got %v want %v", got.network, testCase.expectedNetwork)
 			}
-			if math.Abs(got.experience-test.expectedExperience) > 1e-6 {
-				t.Errorf("experience_pct: got %v want %v", got.experience, test.expectedExperience)
+			if math.Abs(got.experience-testCase.expectedExperience) > 1e-6 {
+				t.Errorf("experience_pct: got %v want %v", got.experience, testCase.expectedExperience)
 			}
-			if got.restarted != test.expectedRestarted {
-				t.Errorf("restarted: got %v want %v", got.restarted, test.expectedRestarted)
+			if got.restarted != testCase.expectedRestarted {
+				t.Errorf("restarted: got %v want %v", got.restarted, testCase.expectedRestarted)
 			}
 		})
 	}
@@ -401,17 +401,17 @@ func TestPluginUtilDevice_Diagnose(t *testing.T) {
 			expectedReason: "GATEWAY_UNREACHABLE",
 		},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := diagnoseDevices(test.readings, ethernetDevice)
-			if got.Status != test.expectedStatus {
-				t.Errorf("status: got %s want %s", got.Status, test.expectedStatus)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			got := diagnoseDevices(testCase.readings, ethernetDevice)
+			if got.Status != testCase.expectedStatus {
+				t.Errorf("status: got %s want %s", got.Status, testCase.expectedStatus)
 			}
-			if got.Score != test.expectedScore {
-				t.Errorf("score: got %d want %d", got.Score, test.expectedScore)
+			if got.Score != testCase.expectedScore {
+				t.Errorf("score: got %d want %d", got.Score, testCase.expectedScore)
 			}
-			if !strings.HasPrefix(got.Reason, test.expectedReason) {
-				t.Errorf("reason: got %q want prefix %q", got.Reason, test.expectedReason)
+			if !strings.HasPrefix(got.Reason, testCase.expectedReason) {
+				t.Errorf("reason: got %q want prefix %q", got.Reason, testCase.expectedReason)
 			}
 		})
 	}

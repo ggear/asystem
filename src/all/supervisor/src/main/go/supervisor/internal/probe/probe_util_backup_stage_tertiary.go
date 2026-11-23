@@ -24,7 +24,7 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 	stagePath := stageDir(request.RunPath, metric.BackupStageTertiary)
 	if len(backupTargets()) == 0 {
 		scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStageTertiary), scribe.ActionStart).Infof("excluded", time.Now(),
-			"[%s] is declared by no entry in [%s], so this host mirrors nothing and the stage is skipped", config.DirBackup, backupFstabPath)
+			"[%s] is declared by no entry in [%s], so this host mirrors nothing and the stage is skipped", config.DirBackup, fstabPath)
 		return stageResult{skipped: true}, nil
 	}
 	if err := powerBackupDisk(request.ConfigPath, metric.CommandOn); err != nil {
@@ -423,13 +423,13 @@ type stageExpectation struct {
 }
 
 type lineReader struct {
-	mu   sync.Mutex
-	tail []byte
+	mutex sync.Mutex
+	tail  []byte
 }
 
 func (r *lineReader) push(data []byte, consume func(line string)) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 	r.tail = append(r.tail, data...)
 	for {
 		cut := bytes.IndexAny(r.tail, "\r\n")
@@ -450,8 +450,8 @@ type expungeListing struct {
 }
 
 func (l *expungeListing) taken() []string {
-	l.lines.mu.Lock()
-	defer l.lines.mu.Unlock()
+	l.lines.mutex.Lock()
+	defer l.lines.mutex.Unlock()
 	return l.paths
 }
 

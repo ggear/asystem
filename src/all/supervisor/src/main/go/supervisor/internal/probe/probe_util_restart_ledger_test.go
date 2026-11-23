@@ -21,12 +21,6 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func newTestLedger(t *testing.T) (*restartLedger, string) {
-	t.Helper()
-	path := filepath.Join(t.TempDir(), "restart", "ledger.json")
-	return newRestartLedger(path), path
-}
-
 func TestProbeUtilRestartLedger_Observed(t *testing.T) {
 	start := time.Unix(1_700_000_000, 0)
 	type seen struct {
@@ -52,26 +46,26 @@ func TestProbeUtilRestartLedger_Observed(t *testing.T) {
 		{name: "supervisor_attempts_inside_the_window_are_counted", attempted: []time.Duration{time.Minute, 2 * time.Minute}, sightings: []seen{{"a", 0, 10 * time.Minute}}, expectedSupervised: 2},
 		{name: "supervisor_attempts_age_out_after_the_window", attempted: []time.Duration{time.Minute}, sightings: []seen{{"a", 0, 25 * time.Hour}}, expectedSupervised: 0},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			ledger, path := newTestLedger(t)
-			for _, after := range test.attempted {
+			for _, after := range testCase.attempted {
 				if err := ledger.record("plex", "a", start.Add(after)); err != nil {
 					t.Fatalf("record failed with [%v]", err)
 				}
 			}
 			var docker, supervised int
 			var err error
-			for index, sighting := range test.sightings {
-				if test.reload && index == len(test.sightings)-1 {
+			for index, sighting := range testCase.sightings {
+				if testCase.reload && index == len(testCase.sightings)-1 {
 					ledger = newRestartLedger(path)
 				}
 				if docker, supervised, err = ledger.observed("plex", sighting.container, sighting.docker, start.Add(sighting.after)); err != nil {
 					t.Fatalf("observed failed with [%v]", err)
 				}
 			}
-			if docker != test.expectedDocker || supervised != test.expectedSupervised {
-				t.Fatalf("observed: got docker %d supervised %d want docker %d supervised %d", docker, supervised, test.expectedDocker, test.expectedSupervised)
+			if docker != testCase.expectedDocker || supervised != testCase.expectedSupervised {
+				t.Fatalf("observed: got docker %d supervised %d want docker %d supervised %d", docker, supervised, testCase.expectedDocker, testCase.expectedSupervised)
 			}
 		})
 	}
@@ -111,10 +105,10 @@ func TestProbeUtilRestartLedger_History(t *testing.T) {
 			return l.booted("boot-1")
 		}, expectedAttempt: []time.Time{first}, expectedStreak: 1},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			ledger, path := newTestLedger(t)
-			if err := test.act(ledger); err != nil {
+			if err := testCase.act(ledger); err != nil {
 				t.Fatalf("act failed with [%v]", err)
 			}
 			for _, view := range []*restartLedger{ledger, newRestartLedger(path)} {
@@ -122,9 +116,9 @@ func TestProbeUtilRestartLedger_History(t *testing.T) {
 				if len(history.attempts) == 0 {
 					history.attempts = []time.Time{}
 				}
-				if !reflect.DeepEqual(history.attempts, test.expectedAttempt) || history.streak != test.expectedStreak {
+				if !reflect.DeepEqual(history.attempts, testCase.expectedAttempt) || history.streak != testCase.expectedStreak {
 					t.Fatalf("history: got attempts %v streak %d want attempts %v streak %d",
-						history.attempts, history.streak, test.expectedAttempt, test.expectedStreak)
+						history.attempts, history.streak, testCase.expectedAttempt, testCase.expectedStreak)
 				}
 			}
 		})
@@ -154,21 +148,21 @@ func TestProbeUtilRestartLedger_Persist(t *testing.T) {
 		{name: "a_null_file_reads_as_empty", content: new("null")},
 		{name: "a_file_with_no_services_reads_as_empty", content: new(`{"boot":"x"}`)},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "ledger.json")
-			if test.content == nil {
+			if testCase.content == nil {
 				first := newRestartLedger(path)
 				for range 2 {
 					if err := first.record("plex", "a", time.Unix(1, 0)); err != nil {
 						t.Fatalf("record failed with [%v]", err)
 					}
 				}
-			} else if err := os.WriteFile(path, []byte(*test.content), 0o644); err != nil {
+			} else if err := os.WriteFile(path, []byte(*testCase.content), 0o644); err != nil {
 				t.Fatalf("write failed with [%v]", err)
 			}
-			if got := len(newRestartLedger(path).history("plex", "a").attempts); got != test.expectedAttempts {
-				t.Fatalf("attempts: got %d want %d", got, test.expectedAttempts)
+			if got := len(newRestartLedger(path).history("plex", "a").attempts); got != testCase.expectedAttempts {
+				t.Fatalf("attempts: got %d want %d", got, testCase.expectedAttempts)
 			}
 		})
 	}
@@ -210,16 +204,22 @@ func TestProbeUtilRestartLedger_Imaged(t *testing.T) {
 			_ = l.booted("boot-2")
 		}, expectedImage: "plex:1"},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			ledger, _ := newTestLedger(t)
-			test.steps(ledger)
-			if got := ledger.history("plex", "a").image; got != test.expectedImage {
-				t.Fatalf("image: got [%s] want [%s]", got, test.expectedImage)
+			testCase.steps(ledger)
+			if got := ledger.history("plex", "a").image; got != testCase.expectedImage {
+				t.Fatalf("image: got [%s] want [%s]", got, testCase.expectedImage)
 			}
-			if got := ledger.history("plex", "b"); got.image != test.expectedImage || len(got.attempts) != 0 {
-				t.Fatalf("recreated container: got image [%s] attempts %v want image [%s] and no attempts", got.image, got.attempts, test.expectedImage)
+			if got := ledger.history("plex", "b"); got.image != testCase.expectedImage || len(got.attempts) != 0 {
+				t.Fatalf("recreated container: got image [%s] attempts %v want image [%s] and no attempts", got.image, got.attempts, testCase.expectedImage)
 			}
 		})
 	}
+}
+
+func newTestLedger(t *testing.T) (*restartLedger, string) {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "restart", "ledger.json")
+	return newRestartLedger(path), path
 }

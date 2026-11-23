@@ -108,24 +108,24 @@ func TestMetricSchema_LevelsOf(t *testing.T) {
 		{name: "a_gate_leaves_its_bound", rule: All(Gated(GateServiceAggregate), Bounded(Self, AtMost, limit)), red: true, expected: &schema.Levels{Better: schema.BetterLower, Red: &limit, Inclusive: true}},
 		{name: "an_unjudged_bool_exports_nothing", rule: Rule{}, red: true, flag: true},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := levelsOf(test.rule, test.red, test.flag)
-			if (got == nil) != (test.expected == nil) {
-				t.Fatalf("levels: got %+v want %+v", got, test.expected)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			got := levelsOf(testCase.rule, testCase.red, testCase.flag)
+			if (got == nil) != (testCase.expected == nil) {
+				t.Fatalf("levels: got %+v want %+v", got, testCase.expected)
 			}
 			if got == nil {
 				return
 			}
-			if got.Better != test.expected.Better || got.Inclusive != test.expected.Inclusive ||
-				(got.Red == nil) != (test.expected.Red == nil) || (got.Amber == nil) != (test.expected.Amber == nil) {
-				t.Errorf("levels: got %+v want %+v", got, test.expected)
+			if got.Better != testCase.expected.Better || got.Inclusive != testCase.expected.Inclusive ||
+				(got.Red == nil) != (testCase.expected.Red == nil) || (got.Amber == nil) != (testCase.expected.Amber == nil) {
+				t.Errorf("levels: got %+v want %+v", got, testCase.expected)
 			}
-			if bound := got.Red; bound != nil && *bound != *test.expected.Red {
-				t.Errorf("red: got %v want %v", *bound, *test.expected.Red)
+			if bound := got.Red; bound != nil && *bound != *testCase.expected.Red {
+				t.Errorf("red: got %v want %v", *bound, *testCase.expected.Red)
 			}
-			if bound := got.Amber; bound != nil && *bound != *test.expected.Amber {
-				t.Errorf("amber: got %v want %v", *bound, *test.expected.Amber)
+			if bound := got.Amber; bound != nil && *bound != *testCase.expected.Amber {
+				t.Errorf("amber: got %v want %v", *bound, *testCase.expected.Amber)
 			}
 		})
 	}
@@ -142,21 +142,21 @@ func TestMetricSchema_UsedMemoryLevelsIgnoreSwap(t *testing.T) {
 		{name: "pulse_exports_only_its_own_red_bound", rule: GetIDPulseRule(MetricHostUsedMemory), red: true, expected: schema.Levels{Better: schema.BetterLower, Red: &pulseLimit, Inclusive: true}},
 		{name: "trend_exports_only_its_own_amber_bound", rule: GetIDTrendRule(MetricHostUsedMemory), expected: schema.Levels{Better: schema.BetterLower, Amber: &trendLimit, Inclusive: true}},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := levelsOf(test.rule, test.red, false)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			got := levelsOf(testCase.rule, testCase.red, false)
 			if got == nil {
-				t.Fatalf("levels: got nil want %+v", test.expected)
+				t.Fatalf("levels: got nil want %+v", testCase.expected)
 			}
-			if got.Better != test.expected.Better || got.Inclusive != test.expected.Inclusive ||
-				(got.Red == nil) != (test.expected.Red == nil) || (got.Amber == nil) != (test.expected.Amber == nil) {
-				t.Fatalf("levels: got %+v want %+v", got, test.expected)
+			if got.Better != testCase.expected.Better || got.Inclusive != testCase.expected.Inclusive ||
+				(got.Red == nil) != (testCase.expected.Red == nil) || (got.Amber == nil) != (testCase.expected.Amber == nil) {
+				t.Fatalf("levels: got %+v want %+v", got, testCase.expected)
 			}
-			if bound := got.Red; bound != nil && *bound != *test.expected.Red {
-				t.Errorf("red: got %v want %v", *bound, *test.expected.Red)
+			if bound := got.Red; bound != nil && *bound != *testCase.expected.Red {
+				t.Errorf("red: got %v want %v", *bound, *testCase.expected.Red)
 			}
-			if bound := got.Amber; bound != nil && *bound != *test.expected.Amber {
-				t.Errorf("amber: got %v want %v", *bound, *test.expected.Amber)
+			if bound := got.Amber; bound != nil && *bound != *testCase.expected.Amber {
+				t.Errorf("amber: got %v want %v", *bound, *testCase.expected.Amber)
 			}
 		})
 	}
@@ -175,48 +175,16 @@ func TestMetricSchema_Cadence(t *testing.T) {
 		{name: "ten_seconds_not_truncated", pollPeriod: "5s", pulseFactor: 2, expected: "10s"},
 		{name: "invalid_falls_back", pollPeriod: "banana", pulseFactor: 2, expected: "banana"},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			if got := Cadence(test.pollPeriod, test.pulseFactor); got != test.expected {
-				t.Errorf("cadence: got %s want %s", got, test.expected)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if got := Cadence(testCase.pollPeriod, testCase.pulseFactor); got != testCase.expected {
+				t.Errorf("cadence: got %s want %s", got, testCase.expected)
 			}
 		})
 	}
 }
 
 const DefaultPollPeriodForTest = "3s"
-
-func measureKeys(relation schema.Relation) map[string]bool {
-	keys := map[string]bool{}
-	for _, measure := range relation.Measures {
-		keys[measure.Key] = true
-	}
-	return keys
-}
-
-func persistedKeys(relation schema.Relation) map[string]bool {
-	keys := map[string]bool{}
-	for _, measure := range relation.Measures {
-		if measure.Persist {
-			keys[measure.Key] = true
-		}
-	}
-	return keys
-}
-
-func relationPathFor(id ID) string {
-	if strings.Contains(metricBuildersByID[id].template, "$SERVICE") {
-		return "supervisor/service"
-	}
-	return "supervisor/host"
-}
-
-func serviceNameFor(id ID) string {
-	if relationPathFor(id) == "supervisor/service" {
-		return "plex"
-	}
-	return ServiceNameUnset
-}
 
 func TestMetricSchema_Topics(t *testing.T) {
 	topics := Topics()
@@ -253,4 +221,36 @@ func TestMetricSchema_Topics(t *testing.T) {
 			t.Errorf("template: got none want one declared for %s", template)
 		}
 	}
+}
+
+func measureKeys(relation schema.Relation) map[string]bool {
+	keys := map[string]bool{}
+	for _, measure := range relation.Measures {
+		keys[measure.Key] = true
+	}
+	return keys
+}
+
+func persistedKeys(relation schema.Relation) map[string]bool {
+	keys := map[string]bool{}
+	for _, measure := range relation.Measures {
+		if measure.Persist {
+			keys[measure.Key] = true
+		}
+	}
+	return keys
+}
+
+func relationPathFor(id ID) string {
+	if strings.Contains(metricBuildersByID[id].template, "$SERVICE") {
+		return "supervisor/service"
+	}
+	return "supervisor/host"
+}
+
+func serviceNameFor(id ID) string {
+	if relationPathFor(id) == "supervisor/service" {
+		return "plex"
+	}
+	return ServiceNameUnset
 }

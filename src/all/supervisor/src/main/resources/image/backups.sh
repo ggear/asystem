@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 
-# A cluster-wide dispatcher over ssh, deliberately outside backup.sh, which does not change for this.
+# A cluster-wide dispatcher over ssh, deliberately outside abackup, which does not change for this.
 #
-# The per-run timeout is computed here, not read from backup.sh's default: hours from now until local
-# midnight, so a suite-wide run is guaranteed to stop itself before the 01:00 scheduled run reaches
-# backup_active's already-running check. The reaper is untouched on purpose - backup.sh's own heartbeat
-# already keeps the retained tertiary status fresh, which is what the reaper watches to defer reaping,
-# whoever triggered the run.
+# The per-run timeout is computed here, not read from abackup's default: whole hours from now until the
+# 01:00 scheduled run, so a suite-wide run stops itself before that run finds the run lock held. The
+# reaper is untouched on purpose: each run's own liveness tick keeps its retained stage status fresh,
+# which is what the reaper watches to defer reaping, whoever triggered the run.
 #
 # Set BACKUPS_SOURCE_ONLY=1 to source this file for its functions alone, which is how the unit tests
 # reach them.

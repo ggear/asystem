@@ -61,13 +61,13 @@ func TestEngineImplWatch_RunListeningProbesLoop(t *testing.T) {
 		},
 	}
 	scribe.EnableStdout(slog.LevelDebug)
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			testutil.RequiresDocker(t)
 			t.Cleanup(config.Reset)
-			if tt.createServiceCount > 0 {
+			if testCase.createServiceCount > 0 {
 				var createServiceNames []string
-				for i := 0; i < tt.createServiceCount; i++ {
+				for i := 0; i < testCase.createServiceCount; i++ {
 					createServiceNames = append(createServiceNames, fmt.Sprintf("loader-%d", i+1))
 				}
 				_, err := testutil.SetupSleepContainer(t, "", false, createServiceNames...)
@@ -76,11 +76,11 @@ func TestEngineImplWatch_RunListeningProbesLoop(t *testing.T) {
 				}
 			}
 			cache := metric.NewRecordCache()
-			for _, id := range tt.metricIds {
-				cache.SubscribeUpdates(metric.NewRecordGUID(id, tt.hostName), &mockUpdatesListener{})
+			for _, id := range testCase.metricIds {
+				cache.SubscribeUpdates(metric.NewRecordGUID(id, testCase.hostName), &mockUpdatesListener{})
 			}
-			for _, id := range tt.serviceMetricIDs {
-				cache.SubscribeUpdates(metric.NewServiceSchemaRecordGUID(id, tt.hostName, 0), &mockUpdatesListener{})
+			for _, id := range testCase.serviceMetricIDs {
+				cache.SubscribeUpdates(metric.NewServiceSchemaRecordGUID(id, testCase.hostName, 0), &mockUpdatesListener{})
 			}
 			periods := config.Periods{
 				PollMillis:   500,
@@ -92,10 +92,10 @@ func TestEngineImplWatch_RunListeningProbesLoop(t *testing.T) {
 			timeout := time.Duration(4*periods.PollMillis) * time.Millisecond
 			ctx, cancel := context.WithTimeout(context.Background(), timeout)
 			defer cancel()
-			RunListeningProbesLoop(ctx, tt.configPath, cache, periods)
+			RunListeningProbesLoop(ctx, testCase.configPath, cache, periods)
 			t.Logf("Cache:\n%s", cache.String())
-			assertServicesProbed(t, cache, tt.hostName, tt.createServiceCount, tt.expectedServiceNames)
-			expectedRecordCount := len(tt.metricIds) + len(tt.serviceMetricIDs)*len(cache.Services(tt.hostName))
+			assertServicesProbed(t, cache, testCase.hostName, testCase.createServiceCount, testCase.expectedServiceNames)
+			expectedRecordCount := len(testCase.metricIds) + len(testCase.serviceMetricIDs)*len(cache.Services(testCase.hostName))
 			if cache.Size() != expectedRecordCount {
 				t.Fatalf("records: got %d want %d", cache.Size(), expectedRecordCount)
 			}
@@ -104,25 +104,6 @@ func TestEngineImplWatch_RunListeningProbesLoop(t *testing.T) {
 }
 
 type mockUpdatesListener struct{}
-
-func (m *mockUpdatesListener) MarkDirty() {}
-
-func assertServicesProbed(t *testing.T, cache *metric.RecordCache, hostName string, createdCount int, configured []string) {
-	t.Helper()
-	probed := make(map[string]bool)
-	for _, name := range cache.Services(hostName) {
-		probed[name] = true
-	}
-	expected := append([]string{}, configured...)
-	for i := range createdCount {
-		expected = append(expected, fmt.Sprintf("sleep-loader-%d", i+1))
-	}
-	for _, name := range expected {
-		if !probed[name] {
-			t.Fatalf("services: got %v want service %s", cache.Services(hostName), name)
-		}
-	}
-}
 
 func TestEngineImplWatch_RunListeningStreamLoop(t *testing.T) {
 	scribe.EnableStdout(slog.LevelDebug)
@@ -464,8 +445,8 @@ func TestEngineImplWatch_RunListeningStreamLoop(t *testing.T) {
 		},
 	}
 	periods := config.Periods{PulseMillis: 1000, HeartbeatSecs: 30}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			cache := metric.NewRecordCache()
 			cache.Store(
 				metric.NewServiceRecordGUID(metric.MetricServiceName, "alpha", "svc-a"),
@@ -487,8 +468,8 @@ func TestEngineImplWatch_RunListeningStreamLoop(t *testing.T) {
 			}
 			caseTiming := periods
 			caseTiming.SilentMillis = 600_000
-			if tt.silentMillis > 0 {
-				caseTiming.SilentMillis = tt.silentMillis
+			if testCase.silentMillis > 0 {
+				caseTiming.SilentMillis = testCase.silentMillis
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
@@ -506,13 +487,13 @@ func TestEngineImplWatch_RunListeningStreamLoop(t *testing.T) {
 				time.Sleep(10 * time.Millisecond)
 			}
 			time.Sleep(500 * time.Millisecond)
-			payload := tt.setupFunc(t, cache, binding)
-			topic := tt.topic
+			payload := testCase.setupFunc(t, cache, binding)
+			topic := testCase.topic
 			if topic == "" {
 				topic = binding.Topic
 			}
 			mqttClient.Publish(topic, 0, false, payload)
-			tt.checkFunc(t, cache, binding)
+			testCase.checkFunc(t, cache, binding)
 			cancel()
 			<-done
 		})
@@ -522,18 +503,6 @@ func TestEngineImplWatch_RunListeningStreamLoop(t *testing.T) {
 type countingRefreshListener struct {
 	mutex     sync.Mutex
 	refreshes int
-}
-
-func (l *countingRefreshListener) MarkRefresh() {
-	l.mutex.Lock()
-	l.refreshes++
-	l.mutex.Unlock()
-}
-
-func (l *countingRefreshListener) count() int {
-	l.mutex.Lock()
-	defer l.mutex.Unlock()
-	return l.refreshes
 }
 
 func TestEngineImplWatch_Idle(t *testing.T) {
@@ -551,10 +520,10 @@ func TestEngineImplWatch_Idle(t *testing.T) {
 		{name: "a_connection_not_open_is_not_idle", attached: 5, anyOnline: true},
 		{name: "every_host_offline_is_not_idle", attached: 5, open: true},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			if got := watchIdle(test.rx, test.attached, test.open, test.anyOnline); got != test.expectedIdle {
-				t.Fatalf("idle: got %v want %v", got, test.expectedIdle)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if got := watchIdle(testCase.rx, testCase.attached, testCase.open, testCase.anyOnline); got != testCase.expectedIdle {
+				t.Fatalf("idle: got %v want %v", got, testCase.expectedIdle)
 			}
 		})
 	}
@@ -562,49 +531,8 @@ func TestEngineImplWatch_Idle(t *testing.T) {
 
 type severableListener struct {
 	net.Listener
-	mu          sync.Mutex
+	mutex       sync.Mutex
 	connections []net.Conn
-}
-
-func (l *severableListener) Accept() (net.Conn, error) {
-	connection, err := l.Listener.Accept()
-	if err == nil {
-		l.mu.Lock()
-		l.connections = append(l.connections, connection)
-		l.mu.Unlock()
-	}
-	return connection, err
-}
-
-func (l *severableListener) sever() {
-	_ = l.Listener.Close()
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	for _, connection := range l.connections {
-		_ = connection.Close()
-	}
-}
-
-func serveMuteBroker(listener net.Listener) {
-	for {
-		connection, err := listener.Accept()
-		if err != nil {
-			return
-		}
-		go func() {
-			defer func() { _ = connection.Close() }()
-			buffer := make([]byte, 4096)
-			if _, err := connection.Read(buffer); err != nil {
-				return
-			}
-			_, _ = connection.Write([]byte{0x20, 0x02, 0x00, 0x00})
-			for {
-				if _, err := connection.Read(buffer); err != nil {
-					return
-				}
-			}
-		}()
-	}
 }
 
 func TestEngineImplWatch_BrokerLost(t *testing.T) {
@@ -617,15 +545,15 @@ func TestEngineImplWatch_BrokerLost(t *testing.T) {
 		{name: "a_closed_connection_blanks_at_once", serve: serveFakeBroker, lose: (*severableListener).sever, expectedMax: 5 * time.Second},
 		{name: "a_broker_gone_silent_blanks_within_the_watch_keepalive", serve: serveMuteBroker, lose: func(*severableListener) {}, expectedMax: 9 * time.Second},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			inner, err := net.Listen("tcp", "127.0.0.1:0")
 			if err != nil {
 				t.Fatalf("listen failed with [%v]", err)
 			}
 			listener := &severableListener{Listener: inner}
 			t.Cleanup(listener.sever)
-			go test.serve(listener)
+			go testCase.serve(listener)
 			configFile := writeWatchConfig(t, "127.0.0.1", strconv.Itoa(inner.Addr().(*net.TCPAddr).Port))
 			cache := metric.NewRecordCache()
 			guid := metric.NewServiceRecordGUID(metric.MetricServiceName, "alpha", "svc-a")
@@ -651,8 +579,8 @@ func TestEngineImplWatch_BrokerLost(t *testing.T) {
 			if record, ok := cache.Load(guid); !ok || record == nil || record.Value.Pulse == nil {
 				t.Fatalf("Got no held record before the broker was lost, expected the stored value")
 			}
-			test.lose(listener)
-			for deadline := time.Now().Add(test.expectedMax); time.Now().Before(deadline); time.Sleep(50 * time.Millisecond) {
+			testCase.lose(listener)
+			for deadline := time.Now().Add(testCase.expectedMax); time.Now().Before(deadline); time.Sleep(50 * time.Millisecond) {
 				if record, ok := cache.Load(guid); ok && (record == nil || record.Value.Pulse == nil) {
 					return
 				}
@@ -677,8 +605,8 @@ func TestEngineImplWatch_StaleRetained(t *testing.T) {
 		{name: "a_retained_value_hours_old_is_blanked_without_waiting_for_the_window", age: 2 * time.Hour},
 		{name: "a_retained_value_just_published_stays_shown", age: time.Second, expectedShown: true},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			cache := metric.NewRecordCache()
 			guid := metric.NewServiceRecordGUID(metric.MetricServiceName, "alpha", "svc-a")
 			cache.Store(guid, &metric.Record{Value: metric.ValueData{Timestamp: time.Now().Unix(), Pulse: &metric.ValueDataDetail{OK: true, Kind: metric.ValueString, ValueString: "svc-a"}}})
@@ -691,7 +619,7 @@ func TestEngineImplWatch_StaleRetained(t *testing.T) {
 			if binding.Topic == "" {
 				t.Fatalf("Got no binding for svc-a, expected topic to be set after store")
 			}
-			payload, marshalErr := json.Marshal(metric.ValueData{Timestamp: time.Now().Add(-test.age).Unix(), Pulse: &metric.ValueDataDetail{OK: true, Kind: metric.ValueString, ValueString: "svc-a"}})
+			payload, marshalErr := json.Marshal(metric.ValueData{Timestamp: time.Now().Add(-testCase.age).Unix(), Pulse: &metric.ValueDataDetail{OK: true, Kind: metric.ValueString, ValueString: "svc-a"}})
 			if marshalErr != nil {
 				t.Fatalf("marshal value failed: %v", marshalErr)
 			}
@@ -726,8 +654,8 @@ func TestEngineImplWatch_StaleRetained(t *testing.T) {
 			}
 			time.Sleep(time.Until(held()))
 			atPaint, _ := cache.Load(binding.GUID)
-			if shownAtPaint := atPaint != nil && atPaint.Value.Pulse != nil; shownAtPaint != test.expectedShown {
-				t.Fatalf("shown when painting resumed: got %v want %v", shownAtPaint, test.expectedShown)
+			if shownAtPaint := atPaint != nil && atPaint.Value.Pulse != nil; shownAtPaint != testCase.expectedShown {
+				t.Fatalf("shown when painting resumed: got %v want %v", shownAtPaint, testCase.expectedShown)
 			}
 			deadline := time.Now().Add(4 * time.Second)
 			blanked := false
@@ -736,30 +664,16 @@ func TestEngineImplWatch_StaleRetained(t *testing.T) {
 				record, ok := cache.Load(binding.GUID)
 				blanked = ok && (record == nil || record.Value.Pulse == nil)
 			}
-			if blanked == test.expectedShown {
-				t.Fatalf("blanked: got %v want %v", blanked, !test.expectedShown)
+			if blanked == testCase.expectedShown {
+				t.Fatalf("blanked: got %v want %v", blanked, !testCase.expectedShown)
 			}
 		})
 	}
 }
 
-func writeWatchConfig(t *testing.T, brokerHost, brokerPort string) string {
-	t.Helper()
-	configFile := filepath.Join(t.TempDir(), "config.json")
-	content := fmt.Sprintf(`{"asystem":{"version":"10.100.6000","host":"ahost","broker":{"host":%q,"port":%q},"database":{"host":"db.local","port":"2000"}}}`, brokerHost, brokerPort)
-	if err := os.WriteFile(configFile, []byte(content), 0644); err != nil {
-		t.Fatalf("write config file failed: %v", err)
-	}
-	return configFile
-}
-
 type holdRecorder func(until time.Time)
 
-func (r holdRecorder) MarkHold(until time.Time) { r(until) }
-
 type unusedUpdates struct{}
-
-func (unusedUpdates) MarkDirty() {}
 
 func TestEngineImplWatch_LivenessMetricIsAlwaysSubscribed(t *testing.T) {
 	tests := []struct {
@@ -770,10 +684,10 @@ func TestEngineImplWatch_LivenessMetricIsAlwaysSubscribed(t *testing.T) {
 		{name: "a_layout_without_up_time_still_subscribes_it", shown: metric.MetricHostUsedMemory, expectedTopic: true},
 		{name: "a_layout_with_up_time_subscribes_it_once", shown: metric.MetricHostUpTime, expectedTopic: true},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			cache := metric.NewRecordCache()
-			cache.SubscribeUpdates(metric.NewRecordGUID(test.shown, "alpha"), unusedUpdates{})
+			cache.SubscribeUpdates(metric.NewRecordGUID(testCase.shown, "alpha"), unusedUpdates{})
 			ctx, cancel := context.WithCancel(context.Background())
 			done := make(chan struct{})
 			go func() {
@@ -792,8 +706,8 @@ func TestEngineImplWatch_LivenessMetricIsAlwaysSubscribed(t *testing.T) {
 					}
 				}
 			}
-			if (upTimes == 1) != test.expectedTopic {
-				t.Fatalf("up_time topics for alpha: got %d want one [%v]", upTimes, test.expectedTopic)
+			if (upTimes == 1) != testCase.expectedTopic {
+				t.Fatalf("up_time topics for alpha: got %d want one [%v]", upTimes, testCase.expectedTopic)
 			}
 		})
 	}
@@ -812,8 +726,8 @@ func TestEngineImplWatch_DrillConverges(t *testing.T) {
 		{name: "retained_flushed_hosts_back_before_the_watch", outage: 6 * time.Second, flushRetain: true, hostsFirst: true, staggers: map[string]time.Duration{"meg": 0, "max": 2 * time.Second, "jen": time.Second}, recoverIn: 3 * time.Second},
 		{name: "watch_link_lost_retained_kept", outage: 6 * time.Second, flushRetain: false, staggers: map[string]time.Duration{"meg": 0, "max": 0, "jen": 0}, recoverIn: 2 * time.Second},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			_, _, err := testutil.SetupBrokerContainer(t)
 			if err != nil {
 				t.Fatalf("broker setup failed with [%v]", err)
@@ -883,7 +797,7 @@ func TestEngineImplWatch_DrillConverges(t *testing.T) {
 			for _, host := range hosts {
 				fleet[host].stop()
 			}
-			if test.flushRetain {
+			if testCase.flushRetain {
 				for _, host := range hosts {
 					fleet[host].flush()
 				}
@@ -891,25 +805,25 @@ func TestEngineImplWatch_DrillConverges(t *testing.T) {
 			fleet["meg"].set(drillShares, drillValue(false, 73))
 			fleet["max"].set(drillShares, drillValue(false, 27))
 			fleet["jen"].set(drillMemory, drillValue(false, 95))
-			time.Sleep(test.outage)
+			time.Sleep(testCase.outage)
 			restored := time.Now()
-			if !test.hostsFirst {
+			if !testCase.hostsFirst {
 				proxy.unblock()
 			}
-			var wg sync.WaitGroup
+			var waiting sync.WaitGroup
 			for _, host := range hosts {
-				wg.Add(1)
+				waiting.Add(1)
 				go func(host string) {
-					defer wg.Done()
-					time.Sleep(test.staggers[host])
+					defer waiting.Done()
+					time.Sleep(testCase.staggers[host])
 					fleet[host].start()
 				}(host)
 			}
-			wg.Wait()
-			if test.hostsFirst {
+			waiting.Wait()
+			if testCase.hostsFirst {
 				proxy.unblock()
 			}
-			time.Sleep(time.Until(restored.Add(test.recoverIn)))
+			time.Sleep(time.Until(restored.Add(testCase.recoverIn)))
 			fleet["meg"].set(drillShares, drillValue(true, 0))
 			time.Sleep(time.Second)
 			fleet["max"].set(drillShares, drillValue(true, 0))
@@ -923,6 +837,92 @@ func TestEngineImplWatch_DrillConverges(t *testing.T) {
 		})
 	}
 }
+
+func (m *mockUpdatesListener) MarkDirty() {}
+
+func assertServicesProbed(t *testing.T, cache *metric.RecordCache, hostName string, createdCount int, configured []string) {
+	t.Helper()
+	probed := make(map[string]bool)
+	for _, name := range cache.Services(hostName) {
+		probed[name] = true
+	}
+	expected := append([]string{}, configured...)
+	for i := range createdCount {
+		expected = append(expected, fmt.Sprintf("sleep-loader-%d", i+1))
+	}
+	for _, name := range expected {
+		if !probed[name] {
+			t.Fatalf("services: got %v want service %s", cache.Services(hostName), name)
+		}
+	}
+}
+
+func (l *countingRefreshListener) MarkRefresh() {
+	l.mutex.Lock()
+	l.refreshes++
+	l.mutex.Unlock()
+}
+
+func (l *countingRefreshListener) count() int {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	return l.refreshes
+}
+
+func (l *severableListener) Accept() (net.Conn, error) {
+	connection, err := l.Listener.Accept()
+	if err == nil {
+		l.mutex.Lock()
+		l.connections = append(l.connections, connection)
+		l.mutex.Unlock()
+	}
+	return connection, err
+}
+
+func (l *severableListener) sever() {
+	_ = l.Listener.Close()
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	for _, connection := range l.connections {
+		_ = connection.Close()
+	}
+}
+
+func serveMuteBroker(listener net.Listener) {
+	for {
+		connection, err := listener.Accept()
+		if err != nil {
+			return
+		}
+		go func() {
+			defer func() { _ = connection.Close() }()
+			buffer := make([]byte, 4096)
+			if _, err := connection.Read(buffer); err != nil {
+				return
+			}
+			_, _ = connection.Write([]byte{0x20, 0x02, 0x00, 0x00})
+			for {
+				if _, err := connection.Read(buffer); err != nil {
+					return
+				}
+			}
+		}()
+	}
+}
+
+func writeWatchConfig(t *testing.T, brokerHost, brokerPort string) string {
+	t.Helper()
+	configFile := filepath.Join(t.TempDir(), "config.json")
+	content := fmt.Sprintf(`{"asystem":{"version":"10.100.6000","host":"ahost","broker":{"host":%q,"port":%q},"database":{"host":"db.local","port":"2000"}}}`, brokerHost, brokerPort)
+	if err := os.WriteFile(configFile, []byte(content), 0644); err != nil {
+		t.Fatalf("write config file failed: %v", err)
+	}
+	return configFile
+}
+
+func (r holdRecorder) MarkHold(until time.Time) { r(until) }
+
+func (unusedUpdates) MarkDirty() {}
 
 const (
 	drillShares = "data/host/failed_shares"
@@ -995,8 +995,8 @@ func (s *drillServe) topic(leaf string) string {
 }
 
 func (s *drillServe) start() {
-	opts := mqtt.NewClientOptions().AddBroker("tcp://"+s.broker).SetClientID(fmt.Sprintf("drill-%s-%d", s.host, time.Now().UnixNano())).SetCleanSession(true).SetWill(s.topic("status"), metric.AvailabilityOffline, 1, true)
-	client := mqtt.NewClient(opts)
+	options := mqtt.NewClientOptions().AddBroker("tcp://"+s.broker).SetClientID(fmt.Sprintf("drill-%s-%d", s.host, time.Now().UnixNano())).SetCleanSession(true).SetWill(s.topic("status"), metric.AvailabilityOffline, 1, true)
+	client := mqtt.NewClient(options)
 	if token := client.Connect(); !token.WaitTimeout(5*time.Second) || token.Error() != nil {
 		s.t.Errorf("serve [%s] connect failed [%v]", s.host, token.Error())
 		return

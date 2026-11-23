@@ -41,23 +41,23 @@ func (f Format) String() string {
 }
 
 type dimensions struct {
-	rows int
-	cols int
+	rows    int
+	columns int
 }
 
 func (d dimensions) String() string {
-	return fmt.Sprintf("[%d,%d]", d.rows, d.cols)
+	return fmt.Sprintf("[%d,%d]", d.rows, d.columns)
 }
 
 type Display struct {
-	hosts        []string
-	periods      config.Periods
-	configPath   string
-	useUnicode   bool
-	format       Format
-	formatInit   Format
-	dimsInit     dimensions
-	dimsTerminal dimensions
+	hosts              []string
+	periods            config.Periods
+	configPath         string
+	useUnicode         bool
+	format             Format
+	formatInit         Format
+	dimensionsInitial  dimensions
+	dimensionsTerminal dimensions
 
 	maxServices     int
 	singleHostIndex int
@@ -119,29 +119,29 @@ func NewDisplay(
 		singleHostIndex = 0
 	}
 	display := &Display{
-		hosts:           hosts,
-		periods:         periods,
-		configPath:      configPath,
-		useUnicode:      useUnicode,
-		format:          format,
-		formatInit:      format,
-		dimsInit:        dimensions{rows: height, cols: width},
-		dimsTerminal:    dimensions{rows: maxHeight, cols: maxWidth},
-		singleHostIndex: singleHostIndex,
-		tickPeriod:      defaultTickPeriod,
-		tickStall:       defaultTickStall,
-		refreshPeriod:   refreshPeriod,
-		signalRefresh:   make(chan struct{}, 1),
-		listen:          engine.RunListeningProbesLoop,
-		factory:         factory,
-		cache:           cache,
-		logBuffer:       logBuffer,
+		hosts:              hosts,
+		periods:            periods,
+		configPath:         configPath,
+		useUnicode:         useUnicode,
+		format:             format,
+		formatInit:         format,
+		dimensionsInitial:  dimensions{rows: height, columns: width},
+		dimensionsTerminal: dimensions{rows: maxHeight, columns: maxWidth},
+		singleHostIndex:    singleHostIndex,
+		tickPeriod:         defaultTickPeriod,
+		tickStall:          defaultTickStall,
+		refreshPeriod:      refreshPeriod,
+		signalRefresh:      make(chan struct{}, 1),
+		listen:             engine.RunListeningProbesLoop,
+		factory:            factory,
+		cache:              cache,
+		logBuffer:          logBuffer,
 	}
 	if isRemote || len(hosts) > 1 {
 		display.listen = engine.RunListeningStreamLoop
 		display.signalReload = make(chan struct{}, 1)
 	}
-	scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDiscover).Infof("geometry", initStart, "[%-7.7s] rows [%3d], cols [%3d]", format, height, width)
+	scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDiscover).Infof("geometry", initStart, "[%-7.7s] rows [%3d], columns [%3d]", format, height, width)
 	return display, nil
 }
 
@@ -171,12 +171,12 @@ func (d *Display) Compile() (Format, error) {
 			return nil, fmt.Errorf("compile display failed, "+
 				"invalid minimum rows [%d] for format [%s]", displayRowMin, format)
 		}
-		if d.dimsInit.rows < displayRowMin {
+		if d.dimensionsInitial.rows < displayRowMin {
 			return nil, fmt.Errorf("compile display failed, "+
 				"minimum [%d] rows required for [%d] hosts, only [%d] available for format [%s]",
-				displayRowMin, hostCount, d.dimsInit.rows, format)
+				displayRowMin, hostCount, d.dimensionsInitial.rows, format)
 		}
-		addLayoutRowsCount := (d.dimsInit.rows - displayRowMin) / ((hostCount + 1) / 2)
+		addLayoutRowsCount := (d.dimensionsInitial.rows - displayRowMin) / ((hostCount + 1) / 2)
 		penultimateRow := layout[len(layout)-2]
 		for range addLayoutRowsCount {
 			newRow := make([]box, len(penultimateRow))
@@ -186,27 +186,27 @@ func (d *Display) Compile() (Format, error) {
 			lastRow := layout[len(layout)-1]
 			layout = append(layout[:len(layout)-1], newRow, lastRow)
 		}
-		displayColMin := 0
+		displayColumnMin := 0
 		displayResizeCount := 0
-		displayBoxSkip := func(i int, b box) bool { return (hostCount == 1 || (i+1)%2 == 0) && b.kind == boxDivdr }
+		displayBoxSkip := func(i int, b box) bool { return (hostCount == 1 || (i+1)%2 == 0) && b.kind == boxDivider }
 		for hostIndex := range compileHosts {
-			hostColMin := 0
+			hostColumnMin := 0
 			hostResizeCount := 0
 			for layoutRowIndex, layoutRow := range layout {
-				rowCols := 0
+				rowColumns := 0
 				rowResizeCount := 0
 				for _, layoutBox := range layoutRow {
 					if !displayBoxSkip(hostIndex, layoutBox) {
-						rowCols += layoutBox.length(d.useUnicode)
+						rowColumns += layoutBox.length(d.useUnicode)
 						rowResizeCount += layoutBox.resizes()
 					}
 				}
-				if hostColMin == 0 {
-					hostColMin = rowCols
-				} else if rowCols != hostColMin {
+				if hostColumnMin == 0 {
+					hostColumnMin = rowColumns
+				} else if rowColumns != hostColumnMin {
 					return nil, fmt.Errorf("compile display failed, "+
 						"pre-resize row column width must be [%d], but got [%d] in zero-indexed row [%d] of layout [%v]",
-						hostColMin, rowCols, layoutRowIndex, format)
+						hostColumnMin, rowColumns, layoutRowIndex, format)
 				}
 				if rowResizeCount < 1 {
 					return nil, fmt.Errorf("compile display failed, "+
@@ -221,7 +221,7 @@ func (d *Display) Compile() (Format, error) {
 				}
 			}
 			if hostIndex < 2 {
-				displayColMin += hostColMin
+				displayColumnMin += hostColumnMin
 				displayResizeCount += hostResizeCount
 			}
 		}
@@ -229,9 +229,9 @@ func (d *Display) Compile() (Format, error) {
 			return nil, fmt.Errorf("compile display failed, "+
 				"no box resize functions set layout [%v]", format)
 		}
-		displayResizeIncrement := (d.dimsInit.cols - displayColMin) / displayResizeCount
-		displayResizeRemainder := (d.dimsInit.cols - displayColMin) % displayResizeCount
-		boxesColsCount := 0
+		displayResizeIncrement := (d.dimensionsInitial.columns - displayColumnMin) / displayResizeCount
+		displayResizeRemainder := (d.dimensionsInitial.columns - displayColumnMin) % displayResizeCount
+		boxesColumnsCount := 0
 		boxes := make([]box, 0, hostCount*50)
 		hostServiceIndex := make([]int, len(compileHosts))
 		for i := range hostServiceIndex {
@@ -239,20 +239,20 @@ func (d *Display) Compile() (Format, error) {
 		}
 		for hostRowIndex := 0; hostRowIndex < (hostCount+1)/2; hostRowIndex++ {
 			for layoutRowIndex, layoutRow := range layout {
-				rowColsCount := 0
+				rowColumnsCount := 0
 				if len(layoutRow) < 1 ||
-					layoutRow[0].kind == boxDivdr {
+					layoutRow[0].kind == boxDivider {
 					return nil, fmt.Errorf("compile display failed, "+
 						"row starts with [cline] in zero-indexed row [%d] of layout [%v]", layoutRowIndex, format)
 				}
 				if len(layoutRow) < 2 ||
-					layoutRow[len(layoutRow)-1].kind != boxDivdr {
+					layoutRow[len(layoutRow)-1].kind != boxDivider {
 					return nil, fmt.Errorf("compile display failed, "+
 						"row is not terminated by at least one [cline] in zero-indexed row [%d] of layout [%v]",
 						layoutRowIndex, format)
 				}
-				for hostColIndex := range 2 {
-					hostIndex := hostRowIndex*2 + hostColIndex
+				for hostColumnIndex := range 2 {
+					hostIndex := hostRowIndex*2 + hostColumnIndex
 					if hostIndex >= hostCount {
 						continue
 					}
@@ -264,20 +264,20 @@ func (d *Display) Compile() (Format, error) {
 						b := layoutBox.clone()
 						if b.kind == boxDatum && (b.metricID < metric.ID(0) || b.metricID >= metric.MetricMax) {
 							return nil, fmt.Errorf("compile display failed, "+
-								"invalid metricID ID [%v] in zero-indexed row [%d] of layout [%v]", layoutRow, b.metricID, format)
+								"invalid metric ID [%d] in zero-indexed row [%d] of layout [%v]", b.metricID, layoutRowIndex, format)
 						}
-						if b.kind == boxDatum && b.valLen < 1 {
+						if b.kind == boxDatum && b.valueLength < 1 {
 							return nil, fmt.Errorf("compile display failed, "+
-								"invalid value columns [%d] in zero-indexed row [%d] of layout [%v]", b.valLen, b.metricID, format)
+								"invalid value length [%d] for metric [%s] in zero-indexed row [%d] of layout [%v]", b.valueLength, b.metricID, layoutRowIndex, format)
 						}
 						if b.kind == boxTitle {
 							b.set(
 								d.useUnicode,
-								b.lblLhs, boxLhs, runewidth.StringWidth(b.lblLhs.pick(d.useUnicode)),
-								text{hostName, hostName}, boxLhs, runewidth.StringWidth(b.lblMid.pick(d.useUnicode)),
-								b.lblRhs, boxLhs, runewidth.StringWidth(b.lblRhs.pick(d.useUnicode)),
+								b.labelLeft, boxLeft, runewidth.StringWidth(b.labelLeft.pick(d.useUnicode)),
+								text{hostName, hostName}, boxLeft, runewidth.StringWidth(b.labelMiddle.pick(d.useUnicode)),
+								b.labelRight, boxLeft, runewidth.StringWidth(b.labelRight.pick(d.useUnicode)),
 							)
-						} else if b.kind == boxCtrls {
+						} else if b.kind == boxControls {
 							var ctrlText text
 							if d.singleHostIndex >= 0 {
 								ctrlText = text{
@@ -285,7 +285,7 @@ func (d *Display) Compile() (Format, error) {
 									unicode: fmt.Sprintf("%sESC", textDown.unicode),
 								}
 							} else {
-								actualHostIndex := hostRowIndex*2 + hostColIndex
+								actualHostIndex := hostRowIndex*2 + hostColumnIndex
 								ctrlText = text{
 									ascii:   fmt.Sprintf("%s%d/%d", textUp.ascii, actualHostIndex+1, len(d.hosts)),
 									unicode: fmt.Sprintf("%s%d/%d", textUp.unicode, actualHostIndex+1, len(d.hosts)),
@@ -293,38 +293,38 @@ func (d *Display) Compile() (Format, error) {
 							}
 							b.set(
 								d.useUnicode,
-								b.lblLhs, boxLhs, runewidth.StringWidth(b.lblLhs.pick(d.useUnicode)),
-								ctrlText, boxLhs, runewidth.StringWidth(b.lblMid.pick(d.useUnicode)),
-								b.lblRhs, boxLhs, runewidth.StringWidth(b.lblRhs.pick(d.useUnicode)),
+								b.labelLeft, boxLeft, runewidth.StringWidth(b.labelLeft.pick(d.useUnicode)),
+								ctrlText, boxLeft, runewidth.StringWidth(b.labelMiddle.pick(d.useUnicode)),
+								b.labelRight, boxLeft, runewidth.StringWidth(b.labelRight.pick(d.useUnicode)),
 							)
 						}
 						if b.metricID == metric.MetricServiceName {
 							hostServiceIndex[hostIndex]++
 						}
-						if b.kind == boxDatum && b.valLen > 0 {
+						if b.kind == boxDatum && b.valueLength > 0 {
 							recordGUID := metric.NewServiceSchemaRecordGUID(b.metricID, hostName, hostServiceIndex[hostIndex])
 							b.recordGUID = &recordGUID
 						}
-						b.position = &dimensions{layoutRowIndex + hostRowIndex*(len(layout)), rowColsCount}
+						b.position = &dimensions{layoutRowIndex + hostRowIndex*(len(layout)), rowColumnsCount}
 						b.resize(d.useUnicode, displayResizeIncrement, displayResizeRemainder, hostCount)
-						rowColsCount += b.length(d.useUnicode)
+						rowColumnsCount += b.length(d.useUnicode)
 						boxes = append(boxes, *b)
 					}
 				}
 				if hostCount == 1 || hostRowIndex*2+1 < hostCount {
-					if boxesColsCount == 0 {
-						boxesColsCount = rowColsCount
-					} else if rowColsCount != boxesColsCount {
+					if boxesColumnsCount == 0 {
+						boxesColumnsCount = rowColumnsCount
+					} else if rowColumnsCount != boxesColumnsCount {
 						return nil, fmt.Errorf("compile display failed, "+
 							"post-resize, row column width must be [%d], but got [%d] in layout zero-indexed row [%d] and [%v]",
-							boxesColsCount, rowColsCount, layoutRowIndex, format)
+							boxesColumnsCount, rowColumnsCount, layoutRowIndex, format)
 					}
 				}
 			}
 		}
 		if len(boxes) > 0 {
 			rowWidth := 0
-			expectedCol := 0
+			expectedColumn := 0
 			expectedRow := -1
 			positioningErr := fmt.Errorf("compile display failed, invalid box positioning in layout [%v]", format)
 			for _, b := range boxes {
@@ -339,14 +339,14 @@ func (d *Display) Compile() (Format, error) {
 				}
 				if b.position.rows != expectedRow {
 					expectedRow = b.position.rows
-					expectedCol = 0
+					expectedColumn = 0
 					rowWidth = 0
 				}
-				if b.position.cols != expectedCol {
+				if b.position.columns != expectedColumn {
 					return nil, positioningErr
 				}
 				length := b.length(d.useUnicode)
-				expectedCol += length
+				expectedColumn += length
 				rowWidth += length
 			}
 		}
@@ -387,14 +387,14 @@ func (d *Display) Compile() (Format, error) {
 			}
 			d.maxServices = serviceSlots
 			if serviceSlots > 0 {
-				lastIdx := serviceSlots - 1
+				lastIndex := serviceSlots - 1
 				for i := range d.boxes {
-					if d.boxes[i].recordGUID != nil && d.boxes[i].recordGUID.ServiceIndex == lastIdx {
+					if d.boxes[i].recordGUID != nil && d.boxes[i].recordGUID.ServiceIndex == lastIndex {
 						d.boxes[i].isLast = true
 					}
 				}
 			}
-			scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDiscover).Infof("geometry", compileStart, "[%-7.7s] rows [%3d], cols [%3d]", attemptedFormat, d.dimsInit.rows, d.dimsInit.cols)
+			scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDiscover).Infof("geometry", compileStart, "[%-7.7s] rows [%3d], columns [%3d]", attemptedFormat, d.dimensionsInitial.rows, d.dimensionsInitial.columns)
 			return attemptedFormat, nil
 		}
 		if d.format == FormatCompact {
@@ -475,19 +475,19 @@ func (d *Display) Logging() {
 	if d.logBuffer == nil || d.terminal == nil {
 		return
 	}
-	maxLines := d.dimsInit.rows
+	maxLines := d.dimensionsInitial.rows
 	if maxLines < 1 {
 		return
 	}
 	clip := func(text string) string {
-		if runewidth.StringWidth(text) <= d.dimsInit.cols {
+		if runewidth.StringWidth(text) <= d.dimensionsInitial.columns {
 			return text
 		}
 		tail := ""
-		if d.dimsInit.cols >= 2 {
+		if d.dimensionsInitial.columns >= 2 {
 			tail = "~"
 		}
-		return runewidth.Truncate(text, d.dimsInit.cols, tail)
+		return runewidth.Truncate(text, d.dimensionsInitial.columns, tail)
 	}
 	capacity := maxLines - 2
 	rows, consumed, anchor := d.logPaged(capacity)
@@ -495,7 +495,7 @@ func (d *Display) Logging() {
 	d.logAnchor = anchor
 	d.logNext = anchor + uint64(consumed)
 	d.drawLogOverlayBar()
-	d.terminal.draw(0, 1, clip(scribe.OverlayHeader(d.dimsInit.cols)), colourChat)
+	d.terminal.draw(0, 1, clip(scribe.OverlayHeader(d.dimensionsInitial.columns)), colourChat)
 	for row, line := range rows {
 		row += 2
 		c := colourChat
@@ -543,21 +543,21 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 			switch ev := event.(type) {
 			case *tcell.EventResize:
 				resizeStart := time.Now()
-				cols, rows := ev.Size()
-				if d.dimsTerminal.cols > 0 && cols > d.dimsTerminal.cols {
-					cols = d.dimsTerminal.cols
+				columns, rows := ev.Size()
+				if d.dimensionsTerminal.columns > 0 && columns > d.dimensionsTerminal.columns {
+					columns = d.dimensionsTerminal.columns
 				}
-				if d.dimsTerminal.rows > 0 && rows > d.dimsTerminal.rows {
-					rows = d.dimsTerminal.rows
+				if d.dimensionsTerminal.rows > 0 && rows > d.dimensionsTerminal.rows {
+					rows = d.dimensionsTerminal.rows
 				}
-				dims := dimensions{rows: rows, cols: cols}
-				if dims == d.dimsInit {
+				dims := dimensions{rows: rows, columns: columns}
+				if dims == d.dimensionsInitial {
 					continue
 				}
-				d.dimsInit = dims
+				d.dimensionsInitial = dims
 				d.logResize()
 				d.rebuild("resize")
-				scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Infof("geometry", resizeStart, "[%3d] cols by [%3d] rows on show", cols, rows)
+				scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Infof("geometry", resizeStart, "[%3d] columns by [%3d] rows on show", columns, rows)
 			case *tcell.EventKey:
 				if ev.Key() == tcell.KeyCtrlC {
 					cancel()
@@ -787,7 +787,7 @@ func (d *Display) logPaged(capacity int) ([]logOverlayRow, int, uint64) {
 	var rows []logOverlayRow
 	consumed := 0
 	for _, line := range lines {
-		texts := scribe.OverlayLines(line, d.dimsInit.cols)
+		texts := scribe.OverlayLines(line, d.dimensionsInitial.columns)
 		if consumed == 0 && d.logOffset > 0 {
 			texts = texts[min(d.logOffset, len(texts)):]
 		}
@@ -820,12 +820,12 @@ func (d *Display) drawLogOverlayBar() {
 	arrowWidth := runewidth.StringWidth(arrow)
 	escWidth := runewidth.StringWidth(esc)
 	suffixWidth := runewidth.StringWidth(suffix)
-	padLen := max(d.dimsInit.cols-statusWidth-arrowWidth-escWidth-suffixWidth, 0)
-	d.terminal.draw(0, 0, strings.Repeat(textRule.pick(d.useUnicode), padLen), colourChat)
-	d.terminal.draw(padLen, 0, status, colour)
-	d.terminal.draw(padLen+statusWidth, 0, arrow, colourChat)
-	d.terminal.draw(padLen+statusWidth+arrowWidth, 0, esc, colourChat)
-	d.terminal.draw(padLen+statusWidth+arrowWidth+escWidth, 0, suffix, colourChat)
+	padLength := max(d.dimensionsInitial.columns-statusWidth-arrowWidth-escWidth-suffixWidth, 0)
+	d.terminal.draw(0, 0, strings.Repeat(textRule.pick(d.useUnicode), padLength), colourChat)
+	d.terminal.draw(padLength, 0, status, colour)
+	d.terminal.draw(padLength+statusWidth, 0, arrow, colourChat)
+	d.terminal.draw(padLength+statusWidth+arrowWidth, 0, esc, colourChat)
+	d.terminal.draw(padLength+statusWidth+arrowWidth+escWidth, 0, suffix, colourChat)
 }
 
 func (d *Display) logOverlayStatus() (string, colour) {
@@ -841,7 +841,7 @@ func (d *Display) logOverlayStatus() (string, colour) {
 		long = fmt.Sprintf(" MISSED %d%s", d.logDropped, long)
 		short = fmt.Sprintf(" MISSED %d%s", d.logDropped, short)
 	}
-	if runewidth.StringWidth(long)+logOverlayBarKeys <= d.dimsInit.cols {
+	if runewidth.StringWidth(long)+logOverlayBarKeys <= d.dimensionsInitial.columns {
 		return long, colour
 	}
 	return short, colour
@@ -931,7 +931,7 @@ func (d *Display) logPageUp() {
 		return
 	}
 	d.logFollow = false
-	capacity := max(d.dimsInit.rows-2, 1)
+	capacity := max(d.dimensionsInitial.rows-2, 1)
 	if d.logOffset > 0 {
 		d.logOffset = max(d.logOffset-capacity, 0)
 		return
@@ -947,7 +947,7 @@ func (d *Display) logPageDown() {
 	if d.logBuffer == nil {
 		return
 	}
-	capacity := max(d.dimsInit.rows-2, 1)
+	capacity := max(d.dimensionsInitial.rows-2, 1)
 	if height := d.logLineHeight(d.logAnchor); d.logOffset+capacity < height {
 		d.logOffset += capacity
 		return
@@ -977,7 +977,7 @@ func (d *Display) logPageStart(end, oldest uint64) uint64 {
 	if end <= oldest {
 		return oldest
 	}
-	capacity := max(d.dimsInit.rows-2, 1)
+	capacity := max(d.dimensionsInitial.rows-2, 1)
 	span := min(uint64(capacity), end-oldest)
 	lines, start := d.logBuffer.From(end-span, int(span))
 	used, kept := 0, 0
@@ -1014,7 +1014,7 @@ func (d *Display) logPagination() (int, int) {
 }
 
 func (d *Display) logContinuationPages(oldest, newest uint64) (int, int) {
-	capacity := max(d.dimsInit.rows-2, 1)
+	capacity := max(d.dimensionsInitial.rows-2, 1)
 	lines, start := d.logBuffer.From(oldest, int(newest-oldest))
 	before, total := 0, 0
 	for index, line := range lines {
@@ -1039,7 +1039,7 @@ func (d *Display) logLineHeight(sequence uint64) int {
 }
 
 func (d *Display) logLastOffset(sequence uint64) int {
-	capacity := max(d.dimsInit.rows-2, 1)
+	capacity := max(d.dimensionsInitial.rows-2, 1)
 	height := d.logLineHeight(sequence)
 	if height <= capacity {
 		return 0
@@ -1051,7 +1051,7 @@ func (d *Display) logHeight(sequence uint64, line scribe.LogLine) int {
 	if height, found := d.logHeights[sequence]; found {
 		return height
 	}
-	height := len(scribe.OverlayLines(line, d.dimsInit.cols))
+	height := len(scribe.OverlayLines(line, d.dimensionsInitial.columns))
 	if d.logHeights == nil {
 		d.logHeights = make(map[uint64]int)
 	}

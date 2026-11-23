@@ -9,7 +9,7 @@ import (
 type Terminal interface {
 	close()
 	clear()
-	draw(row int, col int, str string, colour colour)
+	draw(x int, y int, value string, colour colour)
 	show()
 	sync()
 	events() chan tcell.Event

@@ -23,20 +23,20 @@ func TestCmd_MakePeriods(t *testing.T) {
 		{name: "aggregate_zero", poll: "5m", aggregate: "0s", expectedError: true},
 		{name: "not_whole_multiple", poll: "5m", aggregate: "12m", expectedError: true},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			poll, aggregate, err := makePeriods(test.poll, test.aggregate)
-			if (err != nil) != test.expectedError {
-				t.Fatalf("error mismatch: got %v want error=%v", err, test.expectedError)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			poll, aggregate, err := makePeriods(testCase.poll, testCase.aggregate)
+			if (err != nil) != testCase.expectedError {
+				t.Fatalf("error mismatch: got %v want error=%v", err, testCase.expectedError)
 			}
-			if test.expectedError {
+			if testCase.expectedError {
 				return
 			}
-			if poll != test.expectedPoll {
-				t.Errorf("poll: got %s want %s", poll, test.expectedPoll)
+			if poll != testCase.expectedPoll {
+				t.Errorf("poll: got %s want %s", poll, testCase.expectedPoll)
 			}
-			if aggregate != test.expectedAgg {
-				t.Errorf("aggregate: got %s want %s", aggregate, test.expectedAgg)
+			if aggregate != testCase.expectedAgg {
+				t.Errorf("aggregate: got %s want %s", aggregate, testCase.expectedAgg)
 			}
 		})
 	}

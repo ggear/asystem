@@ -542,7 +542,8 @@ func (c *leaderCampaign) vacate(now time.Time) {
 	}
 	c.mutex.Lock()
 	vacant := c.attached && !c.vacated && !c.leading && now.Sub(c.attachedAt) >= c.timing.settle &&
-		leaderElected(nil, c.candidates, c.lease, c.leaseArrived, now, c.timing.ttl) == "" && !c.leaseHeld(now)
+		leaderElected(nil, c.candidates, c.lease, c.leaseArrived, now, c.timing.ttl) == "" &&
+		!(c.lease.Host != "" && !c.leaseArrived.IsZero() && now.Sub(c.leaseArrived) <= c.timing.ttl)
 	c.mutex.Unlock()
 	if !vacant {
 		return
@@ -554,10 +555,6 @@ func (c *leaderCampaign) vacate(now time.Time) {
 	c.vacated = true
 	c.mutex.Unlock()
 	scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionPublish).Infof("observed", now, "[%s] presence [%-7s], nobody has held election [%s] since this host attached", c.election.presence, metric.AvailabilityOffline, c.election.name)
-}
-
-func (c *leaderCampaign) leaseHeld(now time.Time) bool {
-	return c.lease.Host != "" && !c.leaseArrived.IsZero() && now.Sub(c.leaseArrived) <= c.timing.ttl
 }
 
 func (c *leaderCampaign) observe(client mqtt.Client, message mqtt.Message) {

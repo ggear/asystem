@@ -46,46 +46,6 @@ func TestProbeUtilBackupStageScrub_TheReportingCadencesHoldTheirRelations(t *tes
 	}
 }
 
-func fixtureStages(t *testing.T, relPath string) string {
-	t.Helper()
-	path, err := filepath.Abs(filepath.Join("..", "..", "..", "..", "..", "test", "resources", "backup", relPath))
-	if err != nil {
-		t.Fatalf("resolve fixture path: %v", err)
-	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("fixture not found at %s: %v", path, err)
-	}
-	lines := strings.Split(strings.TrimRight(string(data), "\n"), "\n")
-	if len(lines) > 0 && strings.HasPrefix(lines[0], "$ ") {
-		lines = lines[1:]
-	}
-	if len(lines) > 0 && strings.HasPrefix(lines[len(lines)-1], "[exit ") {
-		lines = lines[:len(lines)-1]
-	}
-	return strings.Join(lines, "\n")
-}
-
-func shortenBackupProgressHeartbeat(t *testing.T) {
-	original := backupProgressHeartbeat
-	backupProgressHeartbeat = 10 * time.Millisecond
-	t.Cleanup(func() { backupProgressHeartbeat = original })
-}
-
-func fakeExec(t *testing.T, table map[string]string) {
-	t.Helper()
-	original := stageStream
-	t.Cleanup(func() { stageStream = original })
-	stageStream = func(_ context.Context, _ io.Writer, name string, args ...string) (string, int, bool) {
-		key := name + " " + strings.Join(args, " ")
-		if output, ok := table[key]; ok {
-			return output, 0, false
-		}
-		t.Fatalf("fakeExec: no exact match for command [%s]", key)
-		return "", 0, false
-	}
-}
-
 func TestProbeUtilBackupStageScrub_ReadNowAgainstCapturedRunningStatus(t *testing.T) {
 	fakeExec(t, map[string]string{
 		"btrfs scrub status -R /backup": fixtureStages(t, "btrfs/scrub-status-raw-running.txt"),
@@ -349,7 +309,7 @@ func TestProbeUtilBackupStageScrub_DeadlineLeavesAMarginInsideTheRun(t *testing.
 }
 
 func TestProbeUtilBackupStageScrub_TotalAgreesWithTheScrubbedCellAndThePercentage(t *testing.T) {
-	cases := []struct {
+	tests := []struct {
 		name          string
 		scrubbedMB    int
 		reached       float64
@@ -360,21 +320,21 @@ func TestProbeUtilBackupStageScrub_TotalAgreesWithTheScrubbedCellAndThePercentag
 		{name: "an_early_pass_keeps_the_unrounded_percentage_rather_than_shrinking_the_disk", scrubbedMB: 8644, reached: 0.87, expectedTotal: 993563},
 		{name: "nothing_scrubbed_yet_is_unknown", scrubbedMB: 0, reached: 0, expectedTotal: 0},
 	}
-	for _, test := range cases {
-		t.Run(test.name, func(t *testing.T) {
-			reading := scrubReading{scrubbedMB: test.scrubbedMB}
-			total := scrubTotal(reading, test.reached)
-			if test.reached <= 0 {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			reading := scrubReading{scrubbedMB: testCase.scrubbedMB}
+			total := scrubTotal(reading, testCase.reached)
+			if testCase.reached <= 0 {
 				if total.Known() {
 					t.Errorf("scrubTotal: got %v want unknown", total.Rounded())
 				}
 				return
 			}
-			if !total.Known() || total.Rounded() != test.expectedTotal {
-				t.Errorf("scrubTotal: got %d want %d", total.Rounded(), test.expectedTotal)
+			if !total.Known() || total.Rounded() != testCase.expectedTotal {
+				t.Errorf("scrubTotal: got %d want %d", total.Rounded(), testCase.expectedTotal)
 			}
 			scrubbed := intReading(int64(reading.scrubbedMB))
-			if scrubPercent(test.reached).Rounded() == 100 && total.Rounded() != scrubbed.Rounded() {
+			if scrubPercent(testCase.reached).Rounded() == 100 && total.Rounded() != scrubbed.Rounded() {
 				t.Errorf("scrubTotal at 100 percent: got %d want the scrubbed cell %d", total.Rounded(), scrubbed.Rounded())
 			}
 		})
@@ -574,71 +534,6 @@ func TestProbeUtilBackupStageScrub_AStopThatUnmountsTheDiskLeavesTheFilesystemBe
 	}
 }
 
-func stopScrubUnderneath(t *testing.T, cancelled bool) {
-	originalStream, originalAvailable := stageStream, commandAvailable
-	t.Cleanup(func() { stageStream, commandAvailable = originalStream, originalAvailable })
-	commandAvailable = func(string) bool { return true }
-	shortenBackupProgressHeartbeat(t)
-	var unmounted atomic.Bool
-	var touched []string
-	var touchedMu sync.Mutex
-	root := "UUID:             ff55f331-1d06-4a57-a65f-89e457b3a3d0\n\tno stats available"
-	stageStream = func(_ context.Context, _ io.Writer, name string, args ...string) (string, int, bool) {
-		key := name + " " + strings.Join(args, " ")
-		if strings.HasPrefix(key, "btrfs device stats") {
-			touchedMu.Lock()
-			touched = append(touched, key)
-			touchedMu.Unlock()
-		}
-		switch key {
-		case "btrfs scrub status /backup":
-			if unmounted.Load() {
-				return root, 0, false
-			}
-			return fixtureStages(t, "btrfs/scrub-status-running.txt"), 0, false
-		case "btrfs scrub status -R /backup":
-			if unmounted.Load() {
-				return root, 0, false
-			}
-			return fixtureStages(t, "btrfs/scrub-status-raw-running.txt"), 0, false
-		case "btrfs device stats /backup":
-			return fixtureStages(t, "btrfs/device-stats-mounted-backup.txt"), 0, false
-		}
-		return "", 0, false
-	}
-	request := stageRequest{Stage: metric.BackupStageTertiary, RunID: "2026-10-01_12-48-04",
-		RunPath: t.TempDir(), Expires: time.Now().Add(time.Hour), Scrub: true, Trigger: metric.BackupTriggerManual,
-		ConfigPath: filepath.Join(t.TempDir(), "config.json")}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	stagePath := stageDir(request.RunPath, request.Stage)
-	if err := os.MkdirAll(stagePath, 0o755); err != nil {
-		t.Fatalf("mkdir stage: %v", err)
-	}
-	go func() {
-		time.Sleep(backupProgressHeartbeat + time.Second)
-		_ = os.WriteFile(filepath.Join(stagePath, stageStoppedMarker), nil, 0o644)
-		unmounted.Store(true)
-		if cancelled {
-			cancel()
-		}
-	}()
-
-	if runScrub(ctx, request) {
-		t.Errorf("runScrub() = true, want false for a stopped pass")
-	}
-	document := readScrubSummary(scrubStatusPath(request.RunPath))
-	wantScrubbedMB := 1050725752832 / 1048576
-	if document == nil || document.State != metric.BackupStateStopped || document.ScrubbedMB != wantScrubbedMB {
-		t.Errorf("scrub document = %+v, want stopped with scrubbed_mb [%d] from its own last reading, not the filesystem beneath", document, wantScrubbedMB)
-	}
-	touchedMu.Lock()
-	defer touchedMu.Unlock()
-	if len(touched) != 0 {
-		t.Errorf("issued %q, want no device stats read or reset once the scrubbed filesystem is gone", touched)
-	}
-}
-
 func TestProbeUtilBackupStageScrub_CorruptFilesMapEachSubvolumeBackOntoTheLiveMirror(t *testing.T) {
 	subvolumes := map[int64]string{
 		256: "share/10",
@@ -772,11 +667,11 @@ func TestProbeUtilBackupStageScrub_CorruptionDeletesTheLiveMirrorCopyAndNeverASn
 	if err := os.WriteFile(fstab, []byte("/dev/null  /backup  btrfs  noauto  0 2\n"), 0o644); err != nil {
 		t.Fatalf("write fstab: %v", err)
 	}
-	originalFstab, originalStream, originalAvailable := backupFstabPath, stageStream, commandAvailable
+	originalFstab, originalStream, originalAvailable := fstabPath, stageStream, commandAvailable
 	t.Cleanup(func() {
-		backupFstabPath, stageStream, commandAvailable = originalFstab, originalStream, originalAvailable
+		fstabPath, stageStream, commandAvailable = originalFstab, originalStream, originalAvailable
 	})
-	backupFstabPath = fstab
+	fstabPath = fstab
 	commandAvailable = func(string) bool { return true }
 	shortenBackupProgressHeartbeat(t)
 	clean := fixtureStages(t, "btrfs/scrub-status-raw-running.txt")
@@ -836,5 +731,110 @@ func TestProbeUtilBackupStageScrub_CorruptionDeletesTheLiveMirrorCopyAndNeverASn
 	if err != nil || !strings.Contains(string(listing), "deleted     1 /backup/share/10/media/a.mkv") ||
 		!strings.Contains(string(listing), "snapshot    1 /backup/share/10/media/gone.mkv") {
 		t.Errorf("scrub log = %q, want each corrupt file with its outcome and full path", listing)
+	}
+}
+
+func fixtureStages(t *testing.T, relPath string) string {
+	t.Helper()
+	path, err := filepath.Abs(filepath.Join("..", "..", "..", "..", "..", "test", "resources", "backup", relPath))
+	if err != nil {
+		t.Fatalf("resolve fixture path: %v", err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("fixture not found at %s: %v", path, err)
+	}
+	lines := strings.Split(strings.TrimRight(string(data), "\n"), "\n")
+	if len(lines) > 0 && strings.HasPrefix(lines[0], "$ ") {
+		lines = lines[1:]
+	}
+	if len(lines) > 0 && strings.HasPrefix(lines[len(lines)-1], "[exit ") {
+		lines = lines[:len(lines)-1]
+	}
+	return strings.Join(lines, "\n")
+}
+
+func shortenBackupProgressHeartbeat(t *testing.T) {
+	original := backupProgressHeartbeat
+	backupProgressHeartbeat = 10 * time.Millisecond
+	t.Cleanup(func() { backupProgressHeartbeat = original })
+}
+
+func fakeExec(t *testing.T, table map[string]string) {
+	t.Helper()
+	original := stageStream
+	t.Cleanup(func() { stageStream = original })
+	stageStream = func(_ context.Context, _ io.Writer, name string, args ...string) (string, int, bool) {
+		key := name + " " + strings.Join(args, " ")
+		if output, ok := table[key]; ok {
+			return output, 0, false
+		}
+		t.Fatalf("fakeExec: no exact match for command [%s]", key)
+		return "", 0, false
+	}
+}
+
+func stopScrubUnderneath(t *testing.T, cancelled bool) {
+	originalStream, originalAvailable := stageStream, commandAvailable
+	t.Cleanup(func() { stageStream, commandAvailable = originalStream, originalAvailable })
+	commandAvailable = func(string) bool { return true }
+	shortenBackupProgressHeartbeat(t)
+	var unmounted atomic.Bool
+	var touched []string
+	var touchedMu sync.Mutex
+	root := "UUID:             ff55f331-1d06-4a57-a65f-89e457b3a3d0\n\tno stats available"
+	stageStream = func(_ context.Context, _ io.Writer, name string, args ...string) (string, int, bool) {
+		key := name + " " + strings.Join(args, " ")
+		if strings.HasPrefix(key, "btrfs device stats") {
+			touchedMu.Lock()
+			touched = append(touched, key)
+			touchedMu.Unlock()
+		}
+		switch key {
+		case "btrfs scrub status /backup":
+			if unmounted.Load() {
+				return root, 0, false
+			}
+			return fixtureStages(t, "btrfs/scrub-status-running.txt"), 0, false
+		case "btrfs scrub status -R /backup":
+			if unmounted.Load() {
+				return root, 0, false
+			}
+			return fixtureStages(t, "btrfs/scrub-status-raw-running.txt"), 0, false
+		case "btrfs device stats /backup":
+			return fixtureStages(t, "btrfs/device-stats-mounted-backup.txt"), 0, false
+		}
+		return "", 0, false
+	}
+	request := stageRequest{Stage: metric.BackupStageTertiary, RunID: "2026-10-01_12-48-04",
+		RunPath: t.TempDir(), Expires: time.Now().Add(time.Hour), Scrub: true, Trigger: metric.BackupTriggerManual,
+		ConfigPath: filepath.Join(t.TempDir(), "config.json")}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	stagePath := stageDir(request.RunPath, request.Stage)
+	if err := os.MkdirAll(stagePath, 0o755); err != nil {
+		t.Fatalf("mkdir stage: %v", err)
+	}
+	go func() {
+		time.Sleep(backupProgressHeartbeat + time.Second)
+		_ = os.WriteFile(filepath.Join(stagePath, stageStoppedMarker), nil, 0o644)
+		unmounted.Store(true)
+		if cancelled {
+			cancel()
+		}
+	}()
+
+	if runScrub(ctx, request) {
+		t.Errorf("runScrub() = true, want false for a stopped pass")
+	}
+	document := readScrubSummary(scrubStatusPath(request.RunPath))
+	wantScrubbedMB := 1050725752832 / 1048576
+	if document == nil || document.State != metric.BackupStateStopped || document.ScrubbedMB != wantScrubbedMB {
+		t.Errorf("scrub document = %+v, want stopped with scrubbed_mb [%d] from its own last reading, not the filesystem beneath", document, wantScrubbedMB)
+	}
+	touchedMu.Lock()
+	defer touchedMu.Unlock()
+	if len(touched) != 0 {
+		t.Errorf("issued %q, want no device stats read or reset once the scrubbed filesystem is gone", touched)
 	}
 }

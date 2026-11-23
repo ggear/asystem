@@ -94,18 +94,18 @@ type logOptions struct {
 	logAction  string
 }
 
-func addLogFlags(cmd *cobra.Command, opts *logOptions, level string) {
+func addLogFlags(cmd *cobra.Command, options *logOptions, level string) {
 	if configured := os.Getenv(logLevelEnv); configured != "" {
 		level = configured
 	}
-	cmd.PersistentFlags().StringVarP(&opts.logLevel, "log-level", "L", level, "log level [debug, info, warn, error]")
-	cmd.PersistentFlags().StringVarP(&opts.logSource, "log-source", "O", "", "log filter source comma-separated prefixes (see below)")
-	cmd.PersistentFlags().StringVarP(&opts.logSubject, "log-subject", "U", "", "log filter subject comma-separated prefixes (see below)")
-	cmd.PersistentFlags().StringVarP(&opts.logAction, "log-action", "A", "", "log filter action comma-separated prefixes (see below)")
+	cmd.PersistentFlags().StringVarP(&options.logLevel, "log-level", "L", level, "log level [debug, info, warn, error]")
+	cmd.PersistentFlags().StringVarP(&options.logSource, "log-source", "O", "", "log filter source comma-separated prefixes (see below)")
+	cmd.PersistentFlags().StringVarP(&options.logSubject, "log-subject", "U", "", "log filter subject comma-separated prefixes (see below)")
+	cmd.PersistentFlags().StringVarP(&options.logAction, "log-action", "A", "", "log filter action comma-separated prefixes (see below)")
 }
 
-func setLogFilters(opts *logOptions) error {
-	return scribe.SetFilters(opts.logSource, opts.logSubject, opts.logAction)
+func setLogFilters(options *logOptions) error {
+	return scribe.SetFilters(options.logSource, options.logSubject, options.logAction)
 }
 
 func makeLevel(logLevel string) (slog.Level, error) {

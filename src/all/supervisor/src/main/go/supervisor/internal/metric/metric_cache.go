@@ -554,7 +554,7 @@ func (c *RecordCache) ServicesBefore(hostName string, since int64) []string {
 	return services
 }
 
-func (c *RecordCache) Records(fn func(RecordGUID, *Record)) {
+func (c *RecordCache) Records(visit func(RecordGUID, *Record)) {
 	if c == nil {
 		return
 	}
@@ -571,7 +571,7 @@ func (c *RecordCache) Records(fn func(RecordGUID, *Record)) {
 	}
 	c.mutex.RUnlock()
 	for i, guid := range guids {
-		fn(guid, &records[i])
+		visit(guid, &records[i])
 	}
 }
 

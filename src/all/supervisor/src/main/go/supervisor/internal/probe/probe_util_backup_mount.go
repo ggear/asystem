@@ -16,30 +16,10 @@ import (
 	"supervisor/internal/scribe"
 )
 
-func fstabEntries() [][2]string {
-	data, err := os.ReadFile(backupFstabPath)
-	if err != nil {
-		return nil
-	}
-	var entries [][2]string
-	for line := range strings.SplitSeq(string(data), "\n") {
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
-			continue
-		}
-		fields := strings.Fields(trimmed)
-		if len(fields) < 2 {
-			continue
-		}
-		entries = append(entries, [2]string{fields[0], fields[1]})
-	}
-	return entries
-}
-
 func declaredSpec(target string) string {
-	for _, entry := range fstabEntries() {
-		if entry[1] == target {
-			return entry[0]
+	for _, entry := range readFstab(fstabPath) {
+		if entry.target == target {
+			return entry.spec
 		}
 	}
 	return ""
@@ -131,8 +111,8 @@ func alive(ctx context.Context, target string) bool {
 	if !mountpointCheck(ctx, target) {
 		return true
 	}
-	out, code, _ := stageExec(ctx, "findmnt", "-M", target, "-n", "-o", "OPTIONS")
-	if code != 0 {
+	out, code, abandoned := bounded(ctx, stageBoundedWait, "findmnt", "-M", target, "-n", "-o", "OPTIONS")
+	if abandoned || code != 0 {
 		return true
 	}
 	options := "," + strings.TrimSpace(out) + ","
@@ -145,7 +125,7 @@ func inspected(ctx context.Context, target string) (bool, string) {
 	spec := declaredSpec(target)
 	switch {
 	case spec == "":
-		return false, "is declared by no entry in [" + backupFstabPath + "]"
+		return false, "is declared by no entry in [" + fstabPath + "]"
 	case !wanted && !sourced:
 		return false, "declares [" + spec + "] which has not enumerated, its disk powered down or unplugged"
 	case !wanted:
@@ -238,7 +218,7 @@ func detachable(ctx context.Context, target, homeRoot string) bool {
 }
 
 func mountpointCheck(ctx context.Context, target string) bool {
-	_, code, abandoned := stageExec(ctx, "mountpoint", "-q", target)
+	_, code, abandoned := bounded(ctx, stageBoundedWait, "mountpoint", "-q", target)
 	return !abandoned && code == 0
 }
 
@@ -274,9 +254,9 @@ func shareMountPattern(mountpoint string) bool {
 
 func backupTargets() []string {
 	var targets []string
-	for _, entry := range fstabEntries() {
-		if entry[1] == config.DirBackup || strings.HasPrefix(entry[1], config.DirBackup+"/") {
-			targets = append(targets, entry[1])
+	for _, entry := range readFstab(fstabPath) {
+		if entry.target == config.DirBackup || strings.HasPrefix(entry.target, config.DirBackup+"/") {
+			targets = append(targets, entry.target)
 		}
 	}
 	return targets
@@ -284,9 +264,9 @@ func backupTargets() []string {
 
 func backupShares() []string {
 	var mounts []string
-	for _, entry := range fstabEntries() {
-		if shareMountPattern(entry[1]) {
-			mounts = append(mounts, entry[1])
+	for _, entry := range readFstab(fstabPath) {
+		if shareMountPattern(entry.target) {
+			mounts = append(mounts, entry.target)
 		}
 	}
 	return mounts
@@ -364,8 +344,8 @@ func btrfsSysfsUsage(uuid string) (total, used int64) {
 		if err != nil {
 			continue
 		}
-		if n, parseErr := strconv.ParseInt(strings.TrimSpace(string(data)), 10, 64); parseErr == nil {
-			total += n * 512
+		if sectors, parseErr := strconv.ParseInt(strings.TrimSpace(string(data)), 10, 64); parseErr == nil {
+			total += sectors * 512
 		}
 	}
 	for _, allocation := range []string{"data", "metadata", "system"} {
@@ -373,8 +353,8 @@ func btrfsSysfsUsage(uuid string) (total, used int64) {
 		if err != nil {
 			continue
 		}
-		if n, parseErr := strconv.ParseInt(strings.TrimSpace(string(data)), 10, 64); parseErr == nil {
-			used += n
+		if bytesUsed, parseErr := strconv.ParseInt(strings.TrimSpace(string(data)), 10, 64); parseErr == nil {
+			used += bytesUsed
 		}
 	}
 	return
@@ -386,7 +366,7 @@ var (
 
 	btrfsUnidentified sync.Map
 
-	backupFstabPath  = "/etc/fstab"
+	fstabPath        = "/etc/fstab"
 	backupSysfsBtrfs = "/sys/fs/btrfs"
 )
 

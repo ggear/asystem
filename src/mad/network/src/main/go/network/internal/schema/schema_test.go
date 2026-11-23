@@ -96,12 +96,12 @@ func TestSchema_AppendLineProtocol(t *testing.T) {
 			expected: "",
 		},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			AppendLineProtocol(&buf, test.points, 1000)
-			if buf.String() != test.expected {
-				t.Fatalf("line protocol mismatch:\n got %q\nwant %q", buf.String(), test.expected)
+			AppendLineProtocol(&buf, testCase.points, 1000)
+			if buf.String() != testCase.expected {
+				t.Fatalf("line protocol mismatch:\n got %q\nwant %q", buf.String(), testCase.expected)
 			}
 		})
 	}

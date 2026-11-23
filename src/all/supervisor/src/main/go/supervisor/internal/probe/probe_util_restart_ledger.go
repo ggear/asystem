@@ -146,18 +146,10 @@ func (l *restartLedger) replaced(service string, record restartRecord) restartDo
 }
 
 func (l *restartLedger) persist(updated restartDocument) error {
-	data, err := json.Marshal(updated)
-	if err != nil {
-		return err
-	}
 	if err := os.MkdirAll(filepath.Dir(l.path), 0o755); err != nil {
 		return err
 	}
-	temporary := l.path + ".tmp"
-	if err := os.WriteFile(temporary, data, 0o644); err != nil {
-		return err
-	}
-	if err := os.Rename(temporary, l.path); err != nil {
+	if err := writeAtomic(l.path, updated); err != nil {
 		return err
 	}
 	l.document = updated

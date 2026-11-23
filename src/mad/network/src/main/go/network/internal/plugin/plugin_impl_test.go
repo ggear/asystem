@@ -17,21 +17,21 @@ func TestPluginImpl_Filter(t *testing.T) {
 		{name: "dedup_and_trim", names: []string{" internet ", "internet"}, expectedNames: []string{"internet"}, expectedError: false},
 		{name: "unknown_errors", names: []string{"gamma"}, expectedNames: nil, expectedError: true},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got, err := Filter(test.names)
-			if (err != nil) != test.expectedError {
-				t.Fatalf("error mismatch: got %v want error=%v", err, test.expectedError)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			got, err := Filter(testCase.names)
+			if (err != nil) != testCase.expectedError {
+				t.Fatalf("error mismatch: got %v want error=%v", err, testCase.expectedError)
 			}
-			if test.expectedError {
+			if testCase.expectedError {
 				return
 			}
-			if len(got) != len(test.expectedNames) {
-				t.Fatalf("count mismatch: got %d want %d", len(got), len(test.expectedNames))
+			if len(got) != len(testCase.expectedNames) {
+				t.Fatalf("count mismatch: got %d want %d", len(got), len(testCase.expectedNames))
 			}
 			for i, p := range got {
-				if p.Name() != test.expectedNames[i] {
-					t.Fatalf("name mismatch at %d: got %s want %s", i, p.Name(), test.expectedNames[i])
+				if p.Name() != testCase.expectedNames[i] {
+					t.Fatalf("name mismatch at %d: got %s want %s", i, p.Name(), testCase.expectedNames[i])
 				}
 			}
 		})
@@ -70,14 +70,14 @@ func TestPluginImpl_MarshalJSON(t *testing.T) {
 			expectedError: false,
 		},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got, err := test.message.MarshalJSON()
-			if (err != nil) != test.expectedError {
-				t.Fatalf("error mismatch: got %v want error=%v", err, test.expectedError)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			got, err := testCase.message.MarshalJSON()
+			if (err != nil) != testCase.expectedError {
+				t.Fatalf("error mismatch: got %v want error=%v", err, testCase.expectedError)
 			}
-			if string(got) != test.expected {
-				t.Fatalf("json mismatch:\n got %s\nwant %s", got, test.expected)
+			if string(got) != testCase.expected {
+				t.Fatalf("json mismatch:\n got %s\nwant %s", got, testCase.expected)
 			}
 		})
 	}
@@ -96,14 +96,14 @@ func TestPluginImpl_ParseState(t *testing.T) {
 		{name: "unknown", payload: "check", expectedState: StateOff, expectedOK: false},
 		{name: "empty", payload: "", expectedState: StateOff, expectedOK: false},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			state, ok := ParseState(test.payload)
-			if ok != test.expectedOK {
-				t.Fatalf("ok: got %v want %v", ok, test.expectedOK)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			state, ok := ParseState(testCase.payload)
+			if ok != testCase.expectedOK {
+				t.Fatalf("ok: got %v want %v", ok, testCase.expectedOK)
 			}
-			if state != test.expectedState {
-				t.Errorf("state: got %s want %s", state, test.expectedState)
+			if state != testCase.expectedState {
+				t.Errorf("state: got %s want %s", state, testCase.expectedState)
 			}
 		})
 	}

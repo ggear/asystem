@@ -24,7 +24,7 @@ func init() {
 }
 
 func newWatchCmd() *cobra.Command {
-	opts := &watchOptions{}
+	options := &watchOptions{}
 	cmd := &cobra.Command{
 		Use:     "watch",
 		Aliases: []string{"atop", "atops"},
@@ -32,27 +32,27 @@ func newWatchCmd() *cobra.Command {
 		Long:    watchDescription,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			configPath, _ := cmd.Flags().GetString("config")
-			err := executeWatch(configPath, opts)
+			err := executeWatch(configPath, options)
 			if err != nil {
 				return fmt.Errorf("watch failed [%w]", err)
 			}
 			return nil
 		},
 	}
-	cmd.Flags().StringVarP(&opts.mode, "mode", "m", "local", "watch host selection and retrieval method: local, remote or remote[:HOST[,HOST...]]")
-	cmd.Flags().StringVarP(&opts.format, "format", "f", "auto", "output format based on grid cell width: auto, compact or relaxed")
-	cmd.Flags().StringVarP(&opts.symbols, "symbols", "s", "auto", "define output character set: auto, ascii or unicode")
-	cmd.Flags().StringVarP(&opts.theme, "theme", "t", "auto", "colour theme: auto, dark or light")
-	cmd.Flags().StringVarP(&opts.pollPeriod, "poll-period", "P", "1s", "period for adding fast moving metric samples into a pulse window, ignored by slow moving metrics, uses unit suffixes [s, m, h]")
-	cmd.Flags().StringVarP(&opts.pulseFactor, "pulse-factor", "F", "5", "factor applied to polling period to size pulse window, defining metric sample aggregation publish period for all metrics")
-	cmd.Flags().StringVarP(&opts.heartbeatFactor, "heartbeat-period", "B", "5m", "period by which metrics are published even if they have not changed, rounded up to nearest pulse boundary, uses unit suffixes [s, m, h]")
-	cmd.Flags().StringVarP(&opts.trendPeriod, "trend-period", "T", config.DefaultTrendPeriod, "period to size trend window, published with pulse factor * poll period, ignored by non-trend tracked metrics, uses unit suffixes [s, m, h]")
-	cmd.Flags().StringVarP(&opts.cachePeriod, "cache-period", "C", config.DefaultCachePeriod, "period to cache metric sample for, ignored by fast moving metrics, uses unit suffixes [s, m, h]")
-	cmd.Flags().StringVarP(&opts.snapshotPeriod, "snapshot-period", "S", "5m", "period for publishing a metric snapshot, uses unit suffixes [s, m, h]")
-	cmd.Flags().StringVarP(&opts.refreshPeriod, "refresh-period", "R", "15m", "period for performing a full screen refresh, uses unit suffixes [s, m, h]")
-	cmd.Flags().IntVarP(&opts.consoleWidth, "console-width", "W", -1, "override the console width with the specified value")
-	cmd.Flags().IntVarP(&opts.consoleHeight, "console-height", "H", -1, "override the console height with the specified value")
-	addLogFlags(cmd, &opts.logOptions, "debug")
+	cmd.Flags().StringVarP(&options.mode, "mode", "m", "local", "watch host selection and retrieval method: local, remote or remote[:HOST[,HOST...]]")
+	cmd.Flags().StringVarP(&options.format, "format", "f", "auto", "output format based on grid cell width: auto, compact or relaxed")
+	cmd.Flags().StringVarP(&options.symbols, "symbols", "s", "auto", "define output character set: auto, ascii or unicode")
+	cmd.Flags().StringVarP(&options.theme, "theme", "t", "auto", "colour theme: auto, dark or light")
+	cmd.Flags().StringVarP(&options.pollPeriod, "poll-period", "P", "1s", "period for adding fast moving metric samples into a pulse window, ignored by slow moving metrics, uses unit suffixes [s, m, h]")
+	cmd.Flags().StringVarP(&options.pulseFactor, "pulse-factor", "F", "5", "factor applied to polling period to size pulse window, defining metric sample aggregation publish period for all metrics")
+	cmd.Flags().StringVarP(&options.heartbeatFactor, "heartbeat-period", "B", "5m", "period by which metrics are published even if they have not changed, rounded up to nearest pulse boundary, uses unit suffixes [s, m, h]")
+	cmd.Flags().StringVarP(&options.trendPeriod, "trend-period", "T", config.DefaultTrendPeriod, "period to size trend window, published with pulse factor * poll period, ignored by non-trend tracked metrics, uses unit suffixes [s, m, h]")
+	cmd.Flags().StringVarP(&options.cachePeriod, "cache-period", "C", config.DefaultCachePeriod, "period to cache metric sample for, ignored by fast moving metrics, uses unit suffixes [s, m, h]")
+	cmd.Flags().StringVarP(&options.snapshotPeriod, "snapshot-period", "S", "5m", "period for publishing a metric snapshot, uses unit suffixes [s, m, h]")
+	cmd.Flags().StringVarP(&options.refreshPeriod, "refresh-period", "R", "15m", "period for performing a full screen refresh, uses unit suffixes [s, m, h]")
+	cmd.Flags().IntVarP(&options.consoleWidth, "console-width", "W", -1, "override the console width with the specified value")
+	cmd.Flags().IntVarP(&options.consoleHeight, "console-height", "H", -1, "override the console height with the specified value")
+	addLogFlags(cmd, &options.logOptions, "debug")
 	cmd.Flags().SortFlags = false
 	cobra.AddTemplateFunc("join", strings.Join)
 	cobra.AddTemplateFunc("trimLeadingWhitespaces", func(value string) string {
@@ -62,19 +62,19 @@ func newWatchCmd() *cobra.Command {
 	return cmd
 }
 
-func executeWatch(configPath string, opts *watchOptions) error {
+func executeWatch(configPath string, options *watchOptions) error {
 	watchStart := time.Now()
 	width, height, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
 		return err
 	}
-	if opts.consoleWidth > 0 && opts.consoleWidth < width {
-		width = opts.consoleWidth
+	if options.consoleWidth > 0 && options.consoleWidth < width {
+		width = options.consoleWidth
 	}
-	if opts.consoleHeight > 0 && opts.consoleHeight < height {
-		height = opts.consoleHeight
+	if options.consoleHeight > 0 && options.consoleHeight < height {
+		height = options.consoleHeight
 	}
-	level, err := makeLevel(opts.logLevel)
+	level, err := makeLevel(options.logLevel)
 	if err != nil {
 		return err
 	}
@@ -82,10 +82,10 @@ func executeWatch(configPath string, opts *watchOptions) error {
 	if err != nil {
 		return fmt.Errorf("enable file logging failed [%w]", err)
 	}
-	if err := setLogFilters(&opts.logOptions); err != nil {
+	if err := setLogFilters(&options.logOptions); err != nil {
 		return err
 	}
-	mode := opts.mode
+	mode := options.mode
 	var isRemote bool
 	var hosts []string
 	switch {
@@ -117,7 +117,7 @@ func executeWatch(configPath string, opts *watchOptions) error {
 		return fmt.Errorf("maximum of 9 hosts supported [%d] requested", len(hosts))
 	}
 	format := display.FormatAuto
-	switch strings.ToLower(opts.format) {
+	switch strings.ToLower(options.format) {
 	case "auto":
 		format = display.FormatAuto
 	case "compact":
@@ -125,10 +125,10 @@ func executeWatch(configPath string, opts *watchOptions) error {
 	case "relaxed":
 		format = display.FormatRelaxed
 	default:
-		return fmt.Errorf("invalid watch format [%s]", opts.format)
+		return fmt.Errorf("invalid watch format [%s]", options.format)
 	}
 	var useUnicode bool
-	switch strings.ToLower(opts.symbols) {
+	switch strings.ToLower(options.symbols) {
 	case "auto":
 		useUnicode = !(os.Getenv("TERM") == "linux" || os.Getenv("TERM") == "dumb" || os.Getenv("NO_UTF8") != "")
 	case "ascii":
@@ -136,10 +136,10 @@ func executeWatch(configPath string, opts *watchOptions) error {
 	case "unicode":
 		useUnicode = true
 	default:
-		return fmt.Errorf("invalid watch symbols [%s]", opts.symbols)
+		return fmt.Errorf("invalid watch symbols [%s]", options.symbols)
 	}
 	var theme display.Theme
-	switch strings.ToLower(opts.theme) {
+	switch strings.ToLower(options.theme) {
 	case "auto":
 		switch {
 		case strings.EqualFold(os.Getenv("TERM_PROGRAM"), "Apple_Terminal"):
@@ -154,18 +154,18 @@ func executeWatch(configPath string, opts *watchOptions) error {
 	case "light":
 		theme = display.ThemeLight
 	default:
-		return fmt.Errorf("invalid watch theme [%s]", opts.theme)
+		return fmt.Errorf("invalid watch theme [%s]", options.theme)
 	}
-	periods, err := makePeriods(opts.pollPeriod, opts.pulseFactor, opts.trendPeriod, opts.cachePeriod, opts.snapshotPeriod, opts.heartbeatFactor)
+	periods, err := makePeriods(options.pollPeriod, options.pulseFactor, options.trendPeriod, options.cachePeriod, options.snapshotPeriod, options.heartbeatFactor)
 	if err != nil {
 		return err
 	}
-	refreshPeriod, err := time.ParseDuration(opts.refreshPeriod)
+	refreshPeriod, err := time.ParseDuration(options.refreshPeriod)
 	if err != nil {
-		return fmt.Errorf("invalid refresh period [%s] [%w]", opts.refreshPeriod, err)
+		return fmt.Errorf("invalid refresh period [%s] [%w]", options.refreshPeriod, err)
 	}
 	if refreshPeriod <= 0 {
-		return fmt.Errorf("invalid refresh period [%s] must be above zero", opts.refreshPeriod)
+		return fmt.Errorf("invalid refresh period [%s] must be above zero", options.refreshPeriod)
 	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 	defer cancel()
@@ -178,8 +178,8 @@ func executeWatch(configPath string, opts *watchOptions) error {
 		format,
 		width,
 		height,
-		opts.consoleWidth,
-		opts.consoleHeight,
+		options.consoleWidth,
+		options.consoleHeight,
 		refreshPeriod,
 		display.NewTerminalFactory(theme),
 		metric.NewRecordCache(),

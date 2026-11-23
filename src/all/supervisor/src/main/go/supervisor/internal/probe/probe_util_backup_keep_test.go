@@ -113,16 +113,16 @@ func TestProbeUtilBackupKeep_KeepSet(t *testing.T) {
 			[]string{"2026-10-12_01-00-00", "2026-10-19_01-00-00"},
 		},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			var actual []string
-			for name := range backupKeepSet(test.runs, test.policy, now) {
+			for name := range backupKeepSet(testCase.runs, testCase.policy, now) {
 				actual = append(actual, name)
 			}
 			slices.Sort(actual)
-			slices.Sort(test.expected)
-			if !slices.Equal(actual, test.expected) {
-				t.Errorf("kept: got %v want %v", actual, test.expected)
+			slices.Sort(testCase.expected)
+			if !slices.Equal(actual, testCase.expected) {
+				t.Errorf("kept: got %v want %v", actual, testCase.expected)
 			}
 		})
 	}
@@ -141,15 +141,15 @@ func TestProbeUtilBackupKeep_PruneBackupRuns(t *testing.T) {
 		{"exactly half is pruned", daily[:4], backupKeepPolicy{daily: 2}, append([]string{"notes"}, daily[2:4]...)},
 		{"more than half prunes only the oldest half", daily[:4], backupKeepPolicy{daily: 1}, append([]string{"notes"}, daily[2:4]...)},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			dir := t.TempDir()
-			for _, name := range append([]string{"notes"}, test.runs...) {
+			for _, name := range append([]string{"notes"}, testCase.runs...) {
 				if err := os.MkdirAll(filepath.Join(dir, name), 0o755); err != nil {
 					t.Fatal(err)
 				}
 			}
-			pruneBackupRuns(t.Context(), scribe.SubjectNone, dir, test.policy)
+			pruneBackupRuns(t.Context(), scribe.SubjectNone, dir, testCase.policy)
 			entries, readErr := os.ReadDir(dir)
 			if readErr != nil {
 				t.Fatal(readErr)
@@ -158,9 +158,9 @@ func TestProbeUtilBackupKeep_PruneBackupRuns(t *testing.T) {
 			for _, entry := range entries {
 				actual = append(actual, entry.Name())
 			}
-			slices.Sort(test.expected)
-			if !slices.Equal(actual, test.expected) {
-				t.Errorf("prune: got %v want %v", actual, test.expected)
+			slices.Sort(testCase.expected)
+			if !slices.Equal(actual, testCase.expected) {
+				t.Errorf("prune: got %v want %v", actual, testCase.expected)
 			}
 		})
 	}
@@ -176,21 +176,21 @@ func TestProbeUtilBackupKeep_ReadBackupKeepRuns(t *testing.T) {
 		{"a delta artefact is not", []string{"m_delta.tar.gz"}, false},
 		{"a snapshot holds no artefacts so it stands alone as a full", []string{"data.txt"}, true},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			root := t.TempDir()
 			run := filepath.Join(root, "2026-10-19_01-00-00")
 			if err := os.MkdirAll(run, 0o755); err != nil {
 				t.Fatal(err)
 			}
-			for _, artefact := range test.artefacts {
+			for _, artefact := range testCase.artefacts {
 				if err := os.WriteFile(filepath.Join(run, artefact), nil, 0o644); err != nil {
 					t.Fatal(err)
 				}
 			}
 			runs := readBackupKeepRuns(root)
-			if len(runs) != 1 || runs[0].full != test.expected {
-				t.Errorf("full: got %v want %v", runs, test.expected)
+			if len(runs) != 1 || runs[0].full != testCase.expected {
+				t.Errorf("full: got %v want %v", runs, testCase.expected)
 			}
 		})
 	}
@@ -208,21 +208,21 @@ func TestProbeUtilBackupKeep_ReadBackupKeepRunsDrills(t *testing.T) {
 		{"a failure is judged but not drilled", metric.BackupStateFailure, false, true},
 		{"no verdict is neither", "", false, false},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			root := t.TempDir()
 			run := filepath.Join(root, "2026-10-19_01-00-00")
 			if err := os.MkdirAll(run, 0o755); err != nil {
 				t.Fatal(err)
 			}
-			if test.verdict != "" {
-				if err := writeAtomicDrill(backupDrillPath(run, "secondary"), test.verdict); err != nil {
+			if testCase.verdict != "" {
+				if err := writeAtomicDrill(backupDrillPath(run, "secondary"), testCase.verdict); err != nil {
 					t.Fatal(err)
 				}
 			}
 			runs := readBackupKeepRuns(root)
-			if len(runs) != 1 || runs[0].drilled != test.expectedDrilled || runs[0].judged != test.expectedJudged {
-				t.Errorf("drills: got %+v want drilled [%t] judged [%t]", runs, test.expectedDrilled, test.expectedJudged)
+			if len(runs) != 1 || runs[0].drilled != testCase.expectedDrilled || runs[0].judged != testCase.expectedJudged {
+				t.Errorf("drills: got %+v want drilled [%t] judged [%t]", runs, testCase.expectedDrilled, testCase.expectedJudged)
 			}
 		})
 	}

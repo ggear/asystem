@@ -28,186 +28,186 @@ const (
 	boxDatum boxKind = iota
 	boxTitle
 	boxLabel
-	boxCtrls
-	boxBordr
-	boxDivdr
+	boxControls
+	boxBorder
+	boxDivider
 )
 
 type boxAlign int
 
 const (
-	boxRhs boxAlign = iota
-	boxLhs
-	boxMid
+	boxRight boxAlign = iota
+	boxLeft
+	boxMiddle
 )
 
-type boxValKind int
+type boxValueKind int
 
 const (
-	valText boxValKind = iota
-	valTime
-	valHist
-	valBool
+	valueText boxValueKind = iota
+	valueTime
+	valueHistogram
+	valueBool
 )
 
 type box struct {
-	kind       boxKind
-	lblLhs     text
-	lblMid     text
-	lblRhs     text
-	valLen     int
-	valOpt     bool
-	valAln     boxAlign
-	valSfx     string
-	valKind    boxValKind
-	position   *dimensions
-	isLast     bool
-	metricID   metric.ID
-	recordGUID *metric.RecordGUID
-	compiled   *compiled
-	resizeCnt  int
-	resizeInc  func(b *box, inc, hostCount int)
-	resizeRem  func(b *box, rem, hostCount int)
+	kind            boxKind
+	labelLeft       text
+	labelMiddle     text
+	labelRight      text
+	valueLength     int
+	valueOptional   bool
+	valueAlign      boxAlign
+	valueSuffix     string
+	valueKind       boxValueKind
+	position        *dimensions
+	isLast          bool
+	metricID        metric.ID
+	recordGUID      *metric.RecordGUID
+	compiled        *compiled
+	resizeCount     int
+	resizeIncrement func(b *box, increment, hostCount int)
+	resizeRemainder func(b *box, remainder, hostCount int)
 }
 
 type compiled struct {
-	length    int
-	lblLhsLen int
-	lblMidLen int
-	lblRhsLen int
-	valSfxLen int
-	valOffset int
+	length            int
+	labelLeftLength   int
+	labelMiddleLength int
+	labelRightLength  int
+	valueSuffixLength int
+	valueOffset       int
 }
 
 func compactDisplayLayout(useUnicode bool) [][]box {
-	resizeIncValService := func(b *box, inc, hostCount int) { b.valLen += inc }
-	resizeIncLblService := func(b *box, inc, hostCount int) {
-		b.lblRhs = b.lblRhs.resize(inc, func(value string, length int) string {
+	resizeIncrementValueService := func(b *box, increment, hostCount int) { b.valueLength += increment }
+	resizeIncrementLabelService := func(b *box, increment, hostCount int) {
+		b.labelRight = b.labelRight.resize(increment, func(value string, length int) string {
 			return value + repeat(value, 0, 1, length-runewidth.StringWidth(value))
 		})
 	}
-	resizeIncSpacer := func(b *box, inc, hostCount int) {
-		b.lblLhs = b.lblLhs.resize(inc, func(value string, length int) string {
+	resizeIncrementSpacer := func(b *box, increment, hostCount int) {
+		b.labelLeft = b.labelLeft.resize(increment, func(value string, length int) string {
 			return value + repeat(value, 0, 1, length-runewidth.StringWidth(value))
 		})
 	}
-	resizeIncBorder := func(b *box, inc, hostCount int) {
-		b.lblRhs = b.lblRhs.resize(inc, func(value string, length int) string { return extend(value, 1, length) })
+	resizeIncrementBorder := func(b *box, increment, hostCount int) {
+		b.labelRight = b.labelRight.resize(increment, func(value string, length int) string { return extend(value, 1, length) })
 	}
-	resizeRemSpacer := func(b *box, rem, hostCount int) {
+	resizeRemainderSpacer := func(b *box, remainder, hostCount int) {
 		resizeStart := time.Now()
 		if hostCount == 1 {
-			b.lblRhs = b.lblRhs.resize(rem, func(value string, length int) string { return extend(value, 1, length) })
+			b.labelRight = b.labelRight.resize(remainder, func(value string, length int) string { return extend(value, 1, length) })
 		} else {
-			switch rem {
+			switch remainder {
 			case 1, 2, 3, 6:
 			case 4, 5:
-				b.lblRhs = b.lblRhs.resize(2, func(value string, length int) string { return extend(value, 1, length) })
+				b.labelRight = b.labelRight.resize(2, func(value string, length int) string { return extend(value, 1, length) })
 			default:
-				logRemainder(resizeStart, rem, hostCount)
+				logRemainder(resizeStart, remainder, hostCount)
 			}
 		}
 	}
-	resizeRemBorder := func(b *box, rem, hostCount int) {
+	resizeRemainderBorder := func(b *box, remainder, hostCount int) {
 		resizeStart := time.Now()
 		if hostCount == 1 {
-			switch rem {
+			switch remainder {
 			case 1, 3:
 			case 2:
-				b.lblMid = b.lblMid.resize(1, func(value string, length int) string { return " " })
+				b.labelMiddle = b.labelMiddle.resize(1, func(value string, length int) string { return " " })
 			default:
-				logRemainder(resizeStart, rem, hostCount)
+				logRemainder(resizeStart, remainder, hostCount)
 			}
 		} else {
-			switch rem {
+			switch remainder {
 			case 1, 2, 3, 6:
 			case 4, 5:
-				b.lblMid = b.lblMid.resize(1, func(value string, length int) string { return " " })
+				b.labelMiddle = b.labelMiddle.resize(1, func(value string, length int) string { return " " })
 			default:
-				logRemainder(resizeStart, rem, hostCount)
+				logRemainder(resizeStart, remainder, hostCount)
 			}
 		}
 	}
-	resizeRemColumn := func(b *box, rem, hostCount int) {
+	resizeRemainderColumn := func(b *box, remainder, hostCount int) {
 		resizeStart := time.Now()
 		if hostCount == 1 {
-			switch rem {
+			switch remainder {
 			case 1:
-				b.lblRhs = b.lblRhs.resize(1, func(value string, length int) string { return extend(value, 0, length) })
+				b.labelRight = b.labelRight.resize(1, func(value string, length int) string { return extend(value, 0, length) })
 			case 2, 3:
 			default:
-				logRemainder(resizeStart, rem, hostCount)
+				logRemainder(resizeStart, remainder, hostCount)
 			}
 		}
 	}
-	resizeRemDivider := func(b *box, rem, hostCount int) {
+	resizeRemainderDivider := func(b *box, remainder, hostCount int) {
 		resizeStart := time.Now()
 		if hostCount > 1 {
-			switch rem {
+			switch remainder {
 			case 1, 2, 3:
-				b.lblLhs = b.lblLhs.resize(1, func(value string, length int) string { return repeat(" ", 1, 0, rem) })
+				b.labelLeft = b.labelLeft.resize(1, func(value string, length int) string { return repeat(" ", 1, 0, remainder) })
 			case 4, 6:
 			case 5:
-				b.lblLhs = b.lblLhs.resize(1, func(value string, length int) string { return repeat(" ", 1, 0, 1) })
+				b.labelLeft = b.labelLeft.resize(1, func(value string, length int) string { return repeat(" ", 1, 0, 1) })
 			default:
-				logRemainder(resizeStart, rem, hostCount)
+				logRemainder(resizeStart, remainder, hostCount)
 			}
 		}
 	}
-	t_0_0 := box{lblLhs: text{
+	t_0_0 := box{labelLeft: text{
 		ascii:   "+= ",
 		unicode: "╭─┐",
-	}, lblMid: text{
+	}, labelMiddle: text{
 		ascii:   "           ",
 		unicode: "           ",
-	}, lblRhs: text{
+	}, labelRight: text{
 		ascii:   " =================================",
 		unicode: "┌─────────────────────────────────",
-	}, resizeCnt: 3, kind: boxTitle, resizeInc: resizeIncBorder, resizeRem: resizeRemSpacer}
-	t_0_1 := box{lblLhs: text{
+	}, resizeCount: 3, kind: boxTitle, resizeIncrement: resizeIncrementBorder, resizeRemainder: resizeRemainderSpacer}
+	t_0_1 := box{labelLeft: text{
 		ascii:   "= ",
 		unicode: "─┐",
-	}, lblMid: text{
+	}, labelMiddle: text{
 		ascii:   "    ",
 		unicode: "    ",
-	}, lblRhs: text{
+	}, labelRight: text{
 		ascii:   " =+",
 		unicode: "┌─╮",
-	}, kind: boxCtrls}
-	b_X_Y := box{lblLhs: text{ascii: "|", unicode: "│"}, lblMid: text{ascii: "", unicode: ""}, lblRhs: text{ascii: "", unicode: ""}, kind: boxBordr, resizeRem: resizeRemBorder}
-	b_X_Z := box{lblRhs: text{ascii: "|", unicode: "│"}, lblMid: text{ascii: "", unicode: ""}, lblLhs: text{ascii: "", unicode: ""}, kind: boxBordr, resizeRem: resizeRemBorder}
-	d_1_0 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostUsedProcessor) + " "}, valLen: 3, valSfx: "%", metricID: metric.MetricHostUsedProcessor}
-	d_1_1 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostFailedLogs) + " "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: " "}, metricID: metric.MetricHostFailedLogs, resizeInc: resizeIncSpacer}
-	d_1_2 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostWarnTemperature) + " "}, valLen: 3, valSfx: "%", metricID: metric.MetricHostWarnTemperature}
-	d_1_3 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostUsedHomeSpace) + " "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: " "}, metricID: metric.MetricHostUsedHomeSpace, resizeInc: resizeIncSpacer}
-	d_2_0 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostUsedMemory) + " "}, valLen: 3, valSfx: "%", metricID: metric.MetricHostUsedMemory}
-	d_2_1 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostFailedShares) + " "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: " "}, metricID: metric.MetricHostFailedShares, resizeInc: resizeIncSpacer}
-	d_2_2 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostSpinFanSpeed) + " "}, valLen: 3, valSfx: "%", metricID: metric.MetricHostSpinFanSpeed}
-	d_2_3 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostUsedShareSpace) + " "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: " "}, metricID: metric.MetricHostUsedShareSpace, resizeInc: resizeIncSpacer}
-	d_3_0 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostAllocatedMemory) + " "}, valLen: 3, valSfx: "%", metricID: metric.MetricHostAllocatedMemory}
-	d_3_1 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostFailedBackupStages) + " "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: " "}, metricID: metric.MetricHostFailedBackupStages, resizeInc: resizeIncSpacer}
-	d_3_2 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostUsedDriveLife) + " "}, valLen: 3, valSfx: "%", metricID: metric.MetricHostUsedDriveLife}
-	d_3_3 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostUsedBackupSpace) + " "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: " "}, metricID: metric.MetricHostUsedBackupSpace, resizeInc: resizeIncSpacer}
-	s_X_0 := box{lblRhs: text{
+	}, kind: boxControls}
+	b_X_Y := box{labelLeft: text{ascii: "|", unicode: "│"}, labelMiddle: text{ascii: "", unicode: ""}, labelRight: text{ascii: "", unicode: ""}, kind: boxBorder, resizeRemainder: resizeRemainderBorder}
+	b_X_Z := box{labelRight: text{ascii: "|", unicode: "│"}, labelMiddle: text{ascii: "", unicode: ""}, labelLeft: text{ascii: "", unicode: ""}, kind: boxBorder, resizeRemainder: resizeRemainderBorder}
+	d_1_0 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricHostUsedProcessor) + " "}, valueLength: 3, valueSuffix: "%", metricID: metric.MetricHostUsedProcessor}
+	d_1_1 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricHostFailedLogs) + " "}, valueLength: 3, valueSuffix: "%", labelLeft: text{ascii: " "}, metricID: metric.MetricHostFailedLogs, resizeIncrement: resizeIncrementSpacer}
+	d_1_2 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricHostWarnTemperature) + " "}, valueLength: 3, valueSuffix: "%", metricID: metric.MetricHostWarnTemperature}
+	d_1_3 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricHostUsedHomeSpace) + " "}, valueLength: 3, valueSuffix: "%", labelLeft: text{ascii: " "}, metricID: metric.MetricHostUsedHomeSpace, resizeIncrement: resizeIncrementSpacer}
+	d_2_0 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricHostUsedMemory) + " "}, valueLength: 3, valueSuffix: "%", metricID: metric.MetricHostUsedMemory}
+	d_2_1 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricHostFailedShares) + " "}, valueLength: 3, valueSuffix: "%", labelLeft: text{ascii: " "}, metricID: metric.MetricHostFailedShares, resizeIncrement: resizeIncrementSpacer}
+	d_2_2 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricHostSpinFanSpeed) + " "}, valueLength: 3, valueSuffix: "%", metricID: metric.MetricHostSpinFanSpeed}
+	d_2_3 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricHostUsedShareSpace) + " "}, valueLength: 3, valueSuffix: "%", labelLeft: text{ascii: " "}, metricID: metric.MetricHostUsedShareSpace, resizeIncrement: resizeIncrementSpacer}
+	d_3_0 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricHostAllocatedMemory) + " "}, valueLength: 3, valueSuffix: "%", metricID: metric.MetricHostAllocatedMemory}
+	d_3_1 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricHostFailedBackupStages) + " "}, valueLength: 3, valueSuffix: "%", labelLeft: text{ascii: " "}, metricID: metric.MetricHostFailedBackupStages, resizeIncrement: resizeIncrementSpacer}
+	d_3_2 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricHostUsedDriveLife) + " "}, valueLength: 3, valueSuffix: "%", metricID: metric.MetricHostUsedDriveLife}
+	d_3_3 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricHostUsedBackupSpace) + " "}, valueLength: 3, valueSuffix: "%", labelLeft: text{ascii: " "}, metricID: metric.MetricHostUsedBackupSpace, resizeIncrement: resizeIncrementSpacer}
+	s_X_0 := box{labelRight: text{
 		ascii:   "+-------------------------------------------------------+",
 		unicode: "├───────────────────────────────────────────────────────┤",
-	}, kind: boxBordr, resizeCnt: 3, resizeInc: resizeIncBorder, resizeRem: resizeRemSpacer}
-	s_Y_Y := box{lblRhs: text{ascii: " "}, kind: boxBordr, resizeInc: resizeIncBorder, resizeRem: resizeRemColumn}
-	l_5_0 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricServiceName)}, lblRhs: text{ascii: "   "}, kind: boxLabel, resizeInc: resizeIncLblService}
-	l_5_1 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricServiceUsedProcessor)}, lblLhs: text{ascii: " "}, lblRhs: text{ascii: " "}, kind: boxLabel}
-	l_5_2 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricServiceUsedMemory)}, lblLhs: text{ascii: " "}, kind: boxLabel}
-	l_5_3 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricServiceBackupStatus)}, lblLhs: text{ascii: " "}, kind: boxLabel}
-	l_5_4 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricService)}, lblLhs: text{ascii: " "}, kind: boxLabel}
-	d_X_0 := box{lblRhs: text{ascii: " "}, valLen: 9, valAln: boxLhs, valOpt: true, metricID: metric.MetricServiceName, resizeInc: resizeIncValService}
-	d_X_1 := box{valSfx: "%", lblRhs: text{ascii: " "}, valLen: 3, valOpt: true, metricID: metric.MetricServiceUsedProcessor}
-	d_X_2 := box{valSfx: "%", lblRhs: text{ascii: " "}, valLen: 3, valOpt: true, metricID: metric.MetricServiceUsedMemory}
-	d_X_3 := box{lblLhs: text{ascii: " "}, valLen: 1, lblRhs: text{ascii: "  "}, valOpt: true, valKind: valBool, metricID: metric.MetricServiceBackupStatus}
-	d_X_4 := box{lblLhs: text{ascii: " "}, valLen: 1, lblRhs: text{ascii: " "}, valOpt: true, valKind: valBool, metricID: metric.MetricService}
-	s_X_Y := box{lblRhs: text{
+	}, kind: boxBorder, resizeCount: 3, resizeIncrement: resizeIncrementBorder, resizeRemainder: resizeRemainderSpacer}
+	s_Y_Y := box{labelRight: text{ascii: " "}, kind: boxBorder, resizeIncrement: resizeIncrementBorder, resizeRemainder: resizeRemainderColumn}
+	l_5_0 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricServiceName)}, labelRight: text{ascii: "   "}, kind: boxLabel, resizeIncrement: resizeIncrementLabelService}
+	l_5_1 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricServiceUsedProcessor)}, labelLeft: text{ascii: " "}, labelRight: text{ascii: " "}, kind: boxLabel}
+	l_5_2 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricServiceUsedMemory)}, labelLeft: text{ascii: " "}, kind: boxLabel}
+	l_5_3 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricServiceBackupStatus)}, labelLeft: text{ascii: " "}, kind: boxLabel}
+	l_5_4 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricService)}, labelLeft: text{ascii: " "}, kind: boxLabel}
+	d_X_0 := box{labelRight: text{ascii: " "}, valueLength: 9, valueAlign: boxLeft, valueOptional: true, metricID: metric.MetricServiceName, resizeIncrement: resizeIncrementValueService}
+	d_X_1 := box{valueSuffix: "%", labelRight: text{ascii: " "}, valueLength: 3, valueOptional: true, metricID: metric.MetricServiceUsedProcessor}
+	d_X_2 := box{valueSuffix: "%", labelRight: text{ascii: " "}, valueLength: 3, valueOptional: true, metricID: metric.MetricServiceUsedMemory}
+	d_X_3 := box{labelLeft: text{ascii: " "}, valueLength: 1, labelRight: text{ascii: "  "}, valueOptional: true, valueKind: valueBool, metricID: metric.MetricServiceBackupStatus}
+	d_X_4 := box{labelLeft: text{ascii: " "}, valueLength: 1, labelRight: text{ascii: " "}, valueOptional: true, valueKind: valueBool, metricID: metric.MetricService}
+	s_X_Y := box{labelRight: text{
 		ascii:   "                                                         ",
 		unicode: "╰───────────────────────────────────────────────────────╯",
-	}, kind: boxBordr, resizeCnt: 3, resizeInc: resizeIncBorder, resizeRem: resizeRemSpacer}
-	v_X_X := box{lblLhs: text{ascii: ""}, kind: boxDivdr, resizeRem: resizeRemDivider}
+	}, kind: boxBorder, resizeCount: 3, resizeIncrement: resizeIncrementBorder, resizeRemainder: resizeRemainderSpacer}
+	v_X_X := box{labelLeft: text{ascii: ""}, kind: boxDivider, resizeRemainder: resizeRemainderDivider}
 	return compile(useUnicode, [][]box{
 		{t_0_0, t_0_1, v_X_X},
 		{b_X_Y, d_1_0, d_1_1, s_Y_Y, d_1_2, d_1_3, b_X_Z, v_X_X},
@@ -224,141 +224,141 @@ func compactDisplayLayout(useUnicode bool) [][]box {
 }
 
 func relaxedDisplayLayout(useUnicode bool) [][]box {
-	resizeIncHistVal := func(b *box, inc, hostCount int) { b.valLen += inc }
-	resizeIncHistLbl := func(b *box, inc, hostCount int) {
-		b.lblMid = b.lblMid.resize(inc, func(value string, length int) string { return pad(value, boxMid, length) })
+	resizeIncrementHistogramValue := func(b *box, increment, hostCount int) { b.valueLength += increment }
+	resizeIncrementHistogramLabel := func(b *box, increment, hostCount int) {
+		b.labelMiddle = b.labelMiddle.resize(increment, func(value string, length int) string { return pad(value, boxMiddle, length) })
 	}
-	resizeIncBorder := func(b *box, inc, hostCount int) {
-		b.lblRhs = b.lblRhs.resize(inc, func(value string, length int) string { return extend(value, 1, length) })
+	resizeIncrementBorder := func(b *box, increment, hostCount int) {
+		b.labelRight = b.labelRight.resize(increment, func(value string, length int) string { return extend(value, 1, length) })
 	}
-	resizeRemSpacer := func(b *box, rem, hostCount int) {
+	resizeRemainderSpacer := func(b *box, remainder, hostCount int) {
 		resizeStart := time.Now()
 		if hostCount == 1 {
-			b.lblRhs = b.lblRhs.resize(rem, func(value string, length int) string { return extend(value, 1, length) })
+			b.labelRight = b.labelRight.resize(remainder, func(value string, length int) string { return extend(value, 1, length) })
 		} else {
-			switch rem {
+			switch remainder {
 			case 1:
 			case 2, 3, 4, 5, 6, 7:
-				b.lblRhs = b.lblRhs.resize(rem/2, func(value string, length int) string { return extend(value, 1, length) })
+				b.labelRight = b.labelRight.resize(remainder/2, func(value string, length int) string { return extend(value, 1, length) })
 			default:
-				logRemainder(resizeStart, rem, hostCount)
+				logRemainder(resizeStart, remainder, hostCount)
 			}
 		}
 	}
-	resizeRemBorder := func(b *box, rem, hostCount int) {
+	resizeRemainderBorder := func(b *box, remainder, hostCount int) {
 		resizeStart := time.Now()
 		if hostCount == 1 {
-			switch rem {
+			switch remainder {
 			case 1:
 			case 2, 3:
-				b.lblMid = b.lblMid.resize(1, func(value string, length int) string { return extend(value, 0, length) })
+				b.labelMiddle = b.labelMiddle.resize(1, func(value string, length int) string { return extend(value, 0, length) })
 			default:
-				logRemainder(resizeStart, rem, hostCount)
+				logRemainder(resizeStart, remainder, hostCount)
 			}
 		} else {
-			switch rem {
+			switch remainder {
 			case 1, 2, 3:
 			case 4, 5, 6, 7:
-				b.lblMid = b.lblMid.resize(1, func(value string, length int) string { return extend(value, 0, length) })
+				b.labelMiddle = b.labelMiddle.resize(1, func(value string, length int) string { return extend(value, 0, length) })
 			default:
-				logRemainder(resizeStart, rem, hostCount)
+				logRemainder(resizeStart, remainder, hostCount)
 			}
 		}
 	}
-	resizeRemColumn := func(b *box, rem, hostCount int) {
+	resizeRemainderColumn := func(b *box, remainder, hostCount int) {
 		resizeStart := time.Now()
 		if hostCount == 1 {
-			switch rem {
+			switch remainder {
 			case 1, 3:
-				b.lblRhs = b.lblRhs.resize(1, func(value string, length int) string { return extend(value, 0, length) })
+				b.labelRight = b.labelRight.resize(1, func(value string, length int) string { return extend(value, 0, length) })
 			case 2:
 			default:
-				logRemainder(resizeStart, rem, hostCount)
+				logRemainder(resizeStart, remainder, hostCount)
 			}
 		} else {
-			switch rem {
+			switch remainder {
 			case 1, 4, 5:
 			case 2, 3, 6, 7:
-				b.lblRhs = b.lblRhs.resize(1, func(value string, length int) string { return extend(value, 0, length) })
+				b.labelRight = b.labelRight.resize(1, func(value string, length int) string { return extend(value, 0, length) })
 			default:
-				logRemainder(resizeStart, rem, hostCount)
+				logRemainder(resizeStart, remainder, hostCount)
 			}
 		}
 	}
-	resizeRemDivider := func(b *box, rem, hostCount int) {
+	resizeRemainderDivider := func(b *box, remainder, hostCount int) {
 		resizeStart := time.Now()
 		if hostCount > 1 {
-			switch rem {
+			switch remainder {
 			case 1, 3, 5, 7:
-				b.lblLhs = b.lblLhs.resize(1, func(value string, length int) string { return " " })
+				b.labelLeft = b.labelLeft.resize(1, func(value string, length int) string { return " " })
 			case 2, 4, 6:
 			default:
-				logRemainder(resizeStart, rem, hostCount)
+				logRemainder(resizeStart, remainder, hostCount)
 			}
 		}
 	}
-	t_0_0 := box{lblLhs: text{
+	t_0_0 := box{labelLeft: text{
 		ascii:   "+= ",
 		unicode: "╭─┐",
-	}, lblMid: text{
+	}, labelMiddle: text{
 		ascii:   "           ",
 		unicode: "           ",
-	}, lblRhs: text{
+	}, labelRight: text{
 		ascii:   " ================================================================",
 		unicode: "┌────────────────────────────────────────────────────────────────",
-	}, resizeCnt: 4, kind: boxTitle, resizeInc: resizeIncBorder, resizeRem: resizeRemSpacer}
-	t_0_1 := box{lblLhs: text{
+	}, resizeCount: 4, kind: boxTitle, resizeIncrement: resizeIncrementBorder, resizeRemainder: resizeRemainderSpacer}
+	t_0_1 := box{labelLeft: text{
 		ascii:   "= ",
 		unicode: "─┐",
-	}, lblMid: text{
+	}, labelMiddle: text{
 		ascii:   "    ",
 		unicode: "    ",
-	}, lblRhs: text{
+	}, labelRight: text{
 		ascii:   " =+",
 		unicode: "┌─╮",
-	}, kind: boxCtrls}
-	b_X_Y := box{lblLhs: text{ascii: "|", unicode: "│"}, lblMid: text{ascii: " ", unicode: " "}, lblRhs: text{ascii: "", unicode: ""}, kind: boxBordr, resizeRem: resizeRemBorder}
-	b_X_Z := box{lblRhs: text{ascii: "|", unicode: "│"}, lblMid: text{ascii: " ", unicode: " "}, lblLhs: text{ascii: "", unicode: ""}, kind: boxBordr, resizeRem: resizeRemBorder}
-	d_1_0 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostUsedProcessor) + " "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostUsedProcessor, resizeInc: resizeIncHistVal}
-	d_1_1 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostFailedLogs) + " "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostFailedLogs, resizeInc: resizeIncHistVal}
-	d_1_2 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostWarnTemperature) + " "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostWarnTemperature, resizeInc: resizeIncHistVal}
-	d_1_3 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostUsedHomeSpace) + " "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostUsedHomeSpace, resizeInc: resizeIncHistVal}
-	d_2_0 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostUsedMemory) + " "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostUsedMemory, resizeInc: resizeIncHistVal}
-	d_2_1 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostFailedShares) + " "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostFailedShares, resizeInc: resizeIncHistVal}
-	d_2_2 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostSpinFanSpeed) + " "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostSpinFanSpeed, resizeInc: resizeIncHistVal}
-	d_2_3 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostUsedShareSpace) + " "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostUsedShareSpace, resizeInc: resizeIncHistVal}
-	d_3_0 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostAllocatedMemory) + " "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostAllocatedMemory, resizeInc: resizeIncHistVal}
-	d_3_1 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostFailedBackupStages) + " "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostFailedBackupStages, resizeInc: resizeIncHistVal}
-	d_3_2 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostUsedDriveLife) + " "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostUsedDriveLife, resizeInc: resizeIncHistVal}
-	d_3_3 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricHostUsedBackupSpace) + " "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostUsedBackupSpace, resizeInc: resizeIncHistVal}
-	s_X_0 := box{lblRhs: text{
+	}, kind: boxControls}
+	b_X_Y := box{labelLeft: text{ascii: "|", unicode: "│"}, labelMiddle: text{ascii: " ", unicode: " "}, labelRight: text{ascii: "", unicode: ""}, kind: boxBorder, resizeRemainder: resizeRemainderBorder}
+	b_X_Z := box{labelRight: text{ascii: "|", unicode: "│"}, labelMiddle: text{ascii: " ", unicode: " "}, labelLeft: text{ascii: "", unicode: ""}, kind: boxBorder, resizeRemainder: resizeRemainderBorder}
+	d_1_0 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricHostUsedProcessor) + " "}, valueLength: 8, valueSuffix: "%", valueKind: valueHistogram, metricID: metric.MetricHostUsedProcessor, resizeIncrement: resizeIncrementHistogramValue}
+	d_1_1 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricHostFailedLogs) + " "}, valueLength: 8, valueSuffix: "%", valueKind: valueHistogram, labelLeft: text{ascii: "    "}, metricID: metric.MetricHostFailedLogs, resizeIncrement: resizeIncrementHistogramValue}
+	d_1_2 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricHostWarnTemperature) + " "}, valueLength: 8, valueSuffix: "%", valueKind: valueHistogram, metricID: metric.MetricHostWarnTemperature, resizeIncrement: resizeIncrementHistogramValue}
+	d_1_3 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricHostUsedHomeSpace) + " "}, valueLength: 8, valueSuffix: "%", valueKind: valueHistogram, labelLeft: text{ascii: "    "}, metricID: metric.MetricHostUsedHomeSpace, resizeIncrement: resizeIncrementHistogramValue}
+	d_2_0 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricHostUsedMemory) + " "}, valueLength: 8, valueSuffix: "%", valueKind: valueHistogram, metricID: metric.MetricHostUsedMemory, resizeIncrement: resizeIncrementHistogramValue}
+	d_2_1 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricHostFailedShares) + " "}, valueLength: 8, valueSuffix: "%", valueKind: valueHistogram, labelLeft: text{ascii: "    "}, metricID: metric.MetricHostFailedShares, resizeIncrement: resizeIncrementHistogramValue}
+	d_2_2 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricHostSpinFanSpeed) + " "}, valueLength: 8, valueSuffix: "%", valueKind: valueHistogram, metricID: metric.MetricHostSpinFanSpeed, resizeIncrement: resizeIncrementHistogramValue}
+	d_2_3 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricHostUsedShareSpace) + " "}, valueLength: 8, valueSuffix: "%", valueKind: valueHistogram, labelLeft: text{ascii: "    "}, metricID: metric.MetricHostUsedShareSpace, resizeIncrement: resizeIncrementHistogramValue}
+	d_3_0 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricHostAllocatedMemory) + " "}, valueLength: 8, valueSuffix: "%", valueKind: valueHistogram, metricID: metric.MetricHostAllocatedMemory, resizeIncrement: resizeIncrementHistogramValue}
+	d_3_1 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricHostFailedBackupStages) + " "}, valueLength: 8, valueSuffix: "%", valueKind: valueHistogram, labelLeft: text{ascii: "    "}, metricID: metric.MetricHostFailedBackupStages, resizeIncrement: resizeIncrementHistogramValue}
+	d_3_2 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricHostUsedDriveLife) + " "}, valueLength: 8, valueSuffix: "%", valueKind: valueHistogram, metricID: metric.MetricHostUsedDriveLife, resizeIncrement: resizeIncrementHistogramValue}
+	d_3_3 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricHostUsedBackupSpace) + " "}, valueLength: 8, valueSuffix: "%", valueKind: valueHistogram, labelLeft: text{ascii: "    "}, metricID: metric.MetricHostUsedBackupSpace, resizeIncrement: resizeIncrementHistogramValue}
+	s_X_0 := box{labelRight: text{
 		ascii:   "+--------------------------------------------------------------------------------------+",
 		unicode: "├──────────────────────────────────────────────────────────────────────────────────────┤",
-	}, kind: boxBordr, resizeCnt: 4, resizeInc: resizeIncBorder, resizeRem: resizeRemSpacer}
-	s_Y_Y := box{lblRhs: text{ascii: "    "}, kind: boxBordr, resizeRem: resizeRemColumn}
-	l_5_0 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricServiceName)}, lblRhs: text{ascii: "        "}, kind: boxLabel}
-	l_5_1 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricServiceVersion)}, lblLhs: text{ascii: "  "}, lblRhs: text{ascii: "  "}, kind: boxLabel}
-	l_5_2 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricServiceUsedProcessor)}, lblLhs: text{ascii: "       "}, lblRhs: text{ascii: "    "}, kind: boxLabel, resizeCnt: 2, resizeInc: resizeIncHistLbl}
-	l_5_3 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricServiceUsedMemory)}, lblLhs: text{ascii: "    "}, lblRhs: text{ascii: "    "}, kind: boxLabel, resizeCnt: 2, resizeInc: resizeIncHistLbl}
-	l_5_4 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricServiceBackupStatus)}, lblLhs: text{ascii: "   "}, kind: boxLabel}
-	l_5_5 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricServiceHealthStatus)}, lblLhs: text{ascii: "  "}, kind: boxLabel}
-	l_5_6 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricServiceConfiguredStatus)}, lblLhs: text{ascii: "  "}, kind: boxLabel}
-	l_5_7 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricServiceRestartCount)}, lblLhs: text{ascii: "  "}, kind: boxLabel}
-	l_5_8 := box{lblMid: text{ascii: metric.GetIDLabel(metric.MetricServiceUpTime)}, lblLhs: text{ascii: "  "}, kind: boxLabel}
-	d_X_0 := box{valLen: 14, lblRhs: text{ascii: " "}, valAln: boxLhs, valOpt: true, valKind: valText, metricID: metric.MetricServiceName}
-	d_X_1 := box{valLen: 11, lblRhs: text{ascii: " "}, valOpt: true, valKind: valText, metricID: metric.MetricServiceVersion}
-	d_X_2 := box{lblLhs: text{ascii: "  "}, valSfx: "%", valLen: 10, valOpt: true, valKind: valHist, metricID: metric.MetricServiceUsedProcessor, resizeCnt: 2, resizeInc: resizeIncHistVal}
-	d_X_3 := box{lblLhs: text{ascii: ""}, valSfx: "%", valLen: 10, valOpt: true, valKind: valHist, metricID: metric.MetricServiceUsedMemory, resizeCnt: 2, resizeInc: resizeIncHistVal}
-	d_X_4 := box{lblLhs: text{ascii: "    "}, lblRhs: text{ascii: " "}, valLen: 1, valOpt: true, valKind: valBool, metricID: metric.MetricServiceBackupStatus}
-	d_X_5 := box{lblLhs: text{ascii: "   "}, lblRhs: text{ascii: " "}, valLen: 1, valOpt: true, valKind: valBool, metricID: metric.MetricServiceHealthStatus}
-	d_X_6 := box{lblLhs: text{ascii: "   "}, lblRhs: text{ascii: " "}, valLen: 1, valOpt: true, valKind: valBool, metricID: metric.MetricServiceConfiguredStatus}
-	d_X_7 := box{lblLhs: text{ascii: "   "}, lblRhs: text{ascii: " "}, valLen: 1, valOpt: true, metricID: metric.MetricServiceRestartCount}
-	d_X_8 := box{lblLhs: text{ascii: "    "}, lblRhs: text{ascii: ""}, valLen: 4, valOpt: true, valKind: valTime, metricID: metric.MetricServiceUpTime}
-	s_X_Y := box{lblRhs: text{
+	}, kind: boxBorder, resizeCount: 4, resizeIncrement: resizeIncrementBorder, resizeRemainder: resizeRemainderSpacer}
+	s_Y_Y := box{labelRight: text{ascii: "    "}, kind: boxBorder, resizeRemainder: resizeRemainderColumn}
+	l_5_0 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricServiceName)}, labelRight: text{ascii: "        "}, kind: boxLabel}
+	l_5_1 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricServiceVersion)}, labelLeft: text{ascii: "  "}, labelRight: text{ascii: "  "}, kind: boxLabel}
+	l_5_2 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricServiceUsedProcessor)}, labelLeft: text{ascii: "       "}, labelRight: text{ascii: "    "}, kind: boxLabel, resizeCount: 2, resizeIncrement: resizeIncrementHistogramLabel}
+	l_5_3 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricServiceUsedMemory)}, labelLeft: text{ascii: "    "}, labelRight: text{ascii: "    "}, kind: boxLabel, resizeCount: 2, resizeIncrement: resizeIncrementHistogramLabel}
+	l_5_4 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricServiceBackupStatus)}, labelLeft: text{ascii: "   "}, kind: boxLabel}
+	l_5_5 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricServiceHealthStatus)}, labelLeft: text{ascii: "  "}, kind: boxLabel}
+	l_5_6 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricServiceConfiguredStatus)}, labelLeft: text{ascii: "  "}, kind: boxLabel}
+	l_5_7 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricServiceRestartCount)}, labelLeft: text{ascii: "  "}, kind: boxLabel}
+	l_5_8 := box{labelMiddle: text{ascii: metric.GetIDLabel(metric.MetricServiceUpTime)}, labelLeft: text{ascii: "  "}, kind: boxLabel}
+	d_X_0 := box{valueLength: 14, labelRight: text{ascii: " "}, valueAlign: boxLeft, valueOptional: true, valueKind: valueText, metricID: metric.MetricServiceName}
+	d_X_1 := box{valueLength: 11, labelRight: text{ascii: " "}, valueOptional: true, valueKind: valueText, metricID: metric.MetricServiceVersion}
+	d_X_2 := box{labelLeft: text{ascii: "  "}, valueSuffix: "%", valueLength: 10, valueOptional: true, valueKind: valueHistogram, metricID: metric.MetricServiceUsedProcessor, resizeCount: 2, resizeIncrement: resizeIncrementHistogramValue}
+	d_X_3 := box{labelLeft: text{ascii: ""}, valueSuffix: "%", valueLength: 10, valueOptional: true, valueKind: valueHistogram, metricID: metric.MetricServiceUsedMemory, resizeCount: 2, resizeIncrement: resizeIncrementHistogramValue}
+	d_X_4 := box{labelLeft: text{ascii: "    "}, labelRight: text{ascii: " "}, valueLength: 1, valueOptional: true, valueKind: valueBool, metricID: metric.MetricServiceBackupStatus}
+	d_X_5 := box{labelLeft: text{ascii: "   "}, labelRight: text{ascii: " "}, valueLength: 1, valueOptional: true, valueKind: valueBool, metricID: metric.MetricServiceHealthStatus}
+	d_X_6 := box{labelLeft: text{ascii: "   "}, labelRight: text{ascii: " "}, valueLength: 1, valueOptional: true, valueKind: valueBool, metricID: metric.MetricServiceConfiguredStatus}
+	d_X_7 := box{labelLeft: text{ascii: "   "}, labelRight: text{ascii: " "}, valueLength: 1, valueOptional: true, metricID: metric.MetricServiceRestartCount}
+	d_X_8 := box{labelLeft: text{ascii: "    "}, labelRight: text{ascii: ""}, valueLength: 4, valueOptional: true, valueKind: valueTime, metricID: metric.MetricServiceUpTime}
+	s_X_Y := box{labelRight: text{
 		ascii:   "                                                                                        ",
 		unicode: "╰──────────────────────────────────────────────────────────────────────────────────────╯",
-	}, kind: boxBordr, resizeCnt: 4, resizeInc: resizeIncBorder, resizeRem: resizeRemSpacer}
-	v_X_X := box{lblLhs: text{ascii: ""}, kind: boxDivdr, resizeRem: resizeRemDivider}
+	}, kind: boxBorder, resizeCount: 4, resizeIncrement: resizeIncrementBorder, resizeRemainder: resizeRemainderSpacer}
+	v_X_X := box{labelLeft: text{ascii: ""}, kind: boxDivider, resizeRemainder: resizeRemainderDivider}
 	return compile(useUnicode, [][]box{
 		{t_0_0, t_0_1, v_X_X},
 		{b_X_Y, d_1_0, d_1_1, s_Y_Y, d_1_2, d_1_3, b_X_Z, v_X_X},
@@ -383,8 +383,8 @@ type text struct {
 	unicode string
 }
 
-func logRemainder(started time.Time, rem, hostCount int) {
-	scribe.Log(scribe.SourceDisplayLayout, scribe.SubjectNone, scribe.ActionDiscover).Errorf("unusable", started, "[%2d] remainder across [%2d] hosts", rem, hostCount)
+func logRemainder(started time.Time, remainder, hostCount int) {
+	scribe.Log(scribe.SourceDisplayLayout, scribe.SubjectNone, scribe.ActionDiscover).Errorf("unusable", started, "[%2d] remainder across [%2d] hosts", remainder, hostCount)
 }
 
 func (t text) pick(useUnicode bool) string {
@@ -412,52 +412,14 @@ func (t text) resize(increment int, resizeFunc func(value string, length int) st
 	return text{ascii: ascii, unicode: unicode}
 }
 
-func rows(layout [][]box, hostCount int) int {
-	if hostCount == 0 || len(layout) == 0 {
-		return 0
-	}
-	return len(layout) * ((hostCount + 1) / 2)
-}
-
-func columns(layout [][]box, useUnicode bool, hostCount int) int {
-	if hostCount == 0 || len(layout) == 0 {
-		return 0
-	}
-	count := 0
-	for _, b := range layout[0] {
-		if b.kind != boxDivdr {
-			count += b.length(useUnicode)
-		}
-		if hostCount > 1 {
-			count += b.length(useUnicode)
-		}
-	}
-	return count
-}
-
-func resizes(layout [][]box, hostCount int) int {
-	if hostCount == 0 || len(layout) == 0 {
-		return 0
-	}
-	count := 0
-	for _, b := range layout[0] {
-		if b.kind != boxDivdr {
-			count += b.resizes()
-		}
-		if hostCount > 1 {
-			count += b.resizes()
-		}
-	}
-	return count
-}
-
 func compile(useUnicode bool, layout [][]box) [][]box {
 	result := make([][]box, 0, len(layout))
 	for row := range layout {
 		var rowLabels strings.Builder
-		for col := range layout[row] {
-			layout[row][col].compile(false, true)
-			rowLabels.WriteString(layout[row][col].trim(useUnicode))
+		for column := range layout[row] {
+			layout[row][column].compile(false, true)
+			labelled := &layout[row][column]
+			rowLabels.WriteString(strings.TrimSpace(labelled.labelLeft.pick(useUnicode) + labelled.labelMiddle.pick(useUnicode) + labelled.labelRight.pick(useUnicode)))
 		}
 		if rowLabels.Len() > 0 {
 			result = append(result, layout[row])
@@ -473,29 +435,29 @@ func (b *box) compile(useUnicode, force bool) {
 	if b.compiled == nil {
 		b.compiled = &compiled{}
 	}
-	b.compiled.lblLhsLen = runewidth.StringWidth(b.lblLhs.pick(useUnicode))
-	b.compiled.lblMidLen = runewidth.StringWidth(b.lblMid.pick(useUnicode))
-	b.compiled.lblRhsLen = runewidth.StringWidth(b.lblRhs.pick(useUnicode))
-	b.compiled.valSfxLen = runewidth.StringWidth(b.valSfx)
-	b.compiled.valOffset = b.compiled.lblLhsLen + b.compiled.lblMidLen
-	b.compiled.length = b.compiled.valOffset + b.valLen + b.compiled.lblRhsLen + b.compiled.valSfxLen
+	b.compiled.labelLeftLength = runewidth.StringWidth(b.labelLeft.pick(useUnicode))
+	b.compiled.labelMiddleLength = runewidth.StringWidth(b.labelMiddle.pick(useUnicode))
+	b.compiled.labelRightLength = runewidth.StringWidth(b.labelRight.pick(useUnicode))
+	b.compiled.valueSuffixLength = runewidth.StringWidth(b.valueSuffix)
+	b.compiled.valueOffset = b.compiled.labelLeftLength + b.compiled.labelMiddleLength
+	b.compiled.length = b.compiled.valueOffset + b.valueLength + b.compiled.labelRightLength + b.compiled.valueSuffixLength
 }
 
 func (b *box) resizes() int {
-	if b.resizeCnt == 0 && b.resizeInc != nil {
+	if b.resizeCount == 0 && b.resizeIncrement != nil {
 		return 1
 	}
-	return b.resizeCnt
+	return b.resizeCount
 }
 
 func (b *box) resize(useUnicode bool, increment, remainder, hostCount int) {
 	resized := false
-	if b.resizeInc != nil && increment > 0 {
-		b.resizeInc(b, increment*b.resizes(), hostCount)
+	if b.resizeIncrement != nil && increment > 0 {
+		b.resizeIncrement(b, increment*b.resizes(), hostCount)
 		resized = true
 	}
-	if b.resizeRem != nil && remainder > 0 {
-		b.resizeRem(b, remainder, hostCount)
+	if b.resizeRemainder != nil && remainder > 0 {
+		b.resizeRemainder(b, remainder, hostCount)
 		resized = true
 	}
 	if resized {
@@ -505,16 +467,16 @@ func (b *box) resize(useUnicode bool, increment, remainder, hostCount int) {
 
 func (b *box) set(
 	useUnicode bool,
-	lblLhs text, lblLhsAln boxAlign, lblLhsLen int,
-	lblMid text, lblMidAln boxAlign, lblMidLen int,
-	lblRhs text, lblRhsAln boxAlign, lblRhsLen int,
+	labelLeft text, labelLeftAlign boxAlign, labelLeftLength int,
+	labelMiddle text, labelMiddleAlign boxAlign, labelMiddleLength int,
+	labelRight text, labelRightAlign boxAlign, labelRightLength int,
 ) {
-	lhs := pad(lblLhs.pick(useUnicode), lblLhsAln, lblLhsLen)
-	mid := pad(lblMid.pick(useUnicode), lblMidAln, lblMidLen)
-	rhs := pad(lblRhs.pick(useUnicode), lblRhsAln, lblRhsLen)
-	b.lblLhs = text{lhs, lhs}
-	b.lblMid = text{mid, mid}
-	b.lblRhs = text{rhs, rhs}
+	lhs := pad(labelLeft.pick(useUnicode), labelLeftAlign, labelLeftLength)
+	mid := pad(labelMiddle.pick(useUnicode), labelMiddleAlign, labelMiddleLength)
+	rhs := pad(labelRight.pick(useUnicode), labelRightAlign, labelRightLength)
+	b.labelLeft = text{lhs, lhs}
+	b.labelMiddle = text{mid, mid}
+	b.labelRight = text{rhs, rhs}
 	b.compile(useUnicode, true)
 }
 
@@ -523,57 +485,52 @@ func (b *box) length(useUnicode bool) int {
 	return b.compiled.length
 }
 
-func (b *box) trim(useUnicode bool) string {
-	result := b.lblLhs.pick(useUnicode) + b.lblMid.pick(useUnicode) + b.lblRhs.pick(useUnicode)
-	return strings.TrimSpace(result)
-}
-
 func (b *box) draw(display *Display, force bool) {
 	if display.terminal == nil {
 		return
 	}
 	b.compile(display.useUnicode, false)
-	row, col := b.position.rows, b.position.cols
+	row, column := b.position.rows, b.position.columns
 	draw := func(label string, c colour) {
-		if label != "" && force == b.valOpt {
-			display.terminal.draw(col, row, label, c)
+		if label != "" && force == b.valueOptional {
+			display.terminal.draw(column, row, label, c)
 		}
-		col += runewidth.StringWidth(label)
+		column += runewidth.StringWidth(label)
 	}
 	advance := func(label string) {
-		col += runewidth.StringWidth(label)
+		column += runewidth.StringWidth(label)
 	}
 	borderColour := colourChat
-	if b.kind == boxBordr || b.kind == boxTitle || b.kind == boxCtrls {
+	if b.kind == boxBorder || b.kind == boxTitle || b.kind == boxControls {
 		borderColour = colourGrowl
 	}
-	draw(b.lblLhs.pick(display.useUnicode), borderColour)
-	if b.kind == boxCtrls && force == b.valOpt {
-		mid := b.lblMid.pick(display.useUnicode)
+	draw(b.labelLeft.pick(display.useUnicode), borderColour)
+	if b.kind == boxControls && force == b.valueOptional {
+		mid := b.labelMiddle.pick(display.useUnicode)
 		parts := tokens(mid)
 		if len(parts) > 1 {
 			arrow := parts[0]
 			rest := strings.Join(parts[1:], "")
-			display.terminal.draw(col, row, arrow, colourGrowl)
-			arrowLen := runewidth.StringWidth(arrow)
+			display.terminal.draw(column, row, arrow, colourGrowl)
+			arrowLength := runewidth.StringWidth(arrow)
 			beforeSlash, slashAndAfter, hasSlash := strings.Cut(rest, "/")
 			if hasSlash && beforeSlash != "" {
-				display.terminal.draw(col+arrowLen, row, beforeSlash, colourGrowl)
-				display.terminal.draw(col+arrowLen+runewidth.StringWidth(beforeSlash), row, "/"+slashAndAfter, colourChat)
+				display.terminal.draw(column+arrowLength, row, beforeSlash, colourGrowl)
+				display.terminal.draw(column+arrowLength+runewidth.StringWidth(beforeSlash), row, "/"+slashAndAfter, colourChat)
 			} else {
-				display.terminal.draw(col+arrowLen, row, rest, colourGrowl)
+				display.terminal.draw(column+arrowLength, row, rest, colourGrowl)
 			}
 		}
-		col += runewidth.StringWidth(mid)
+		column += runewidth.StringWidth(mid)
 	} else if b.kind == boxTitle {
-		draw(b.lblMid.pick(display.useUnicode), colourMurmur)
-	} else if b.kind == boxBordr {
-		draw(b.lblMid.pick(display.useUnicode), colourGrowl)
+		draw(b.labelMiddle.pick(display.useUnicode), colourMurmur)
+	} else if b.kind == boxBorder {
+		draw(b.labelMiddle.pick(display.useUnicode), colourGrowl)
 	} else {
-		draw(b.lblMid.pick(display.useUnicode), colourChat)
+		draw(b.labelMiddle.pick(display.useUnicode), colourChat)
 	}
-	advance(strings.Repeat(" ", b.valLen+b.compiled.valSfxLen))
-	draw(b.lblRhs.pick(display.useUnicode), borderColour)
+	advance(strings.Repeat(" ", b.valueLength+b.compiled.valueSuffixLength))
+	draw(b.labelRight.pick(display.useUnicode), borderColour)
 }
 
 func (b *box) drawLabels(display *Display) {
@@ -602,30 +559,30 @@ func (b *box) drawValue(display *Display) {
 	}
 	if !ok || record == nil || record.Value.Pulse == nil || record.Value.Pulse.IsZero() || failed && !named && !overflow {
 		display.terminal.draw(
-			b.position.cols+b.compiled.valOffset,
+			b.position.columns+b.compiled.valueOffset,
 			b.position.rows,
-			strings.Repeat(" ", b.valLen+b.compiled.valSfxLen),
+			strings.Repeat(" ", b.valueLength+b.compiled.valueSuffixLength),
 			colourChat,
 		)
-		if label := b.lblMid.pick(display.useUnicode); failed && label != "" {
-			display.terminal.draw(b.position.cols+b.compiled.lblLhsLen, b.position.rows, label, colourAlert)
+		if label := b.labelMiddle.pick(display.useUnicode); failed && label != "" {
+			display.terminal.draw(b.position.columns+b.compiled.labelLeftLength, b.position.rows, label, colourAlert)
 		}
 		return
 	}
-	if label := b.lblMid.pick(display.useUnicode); !b.valOpt && label != "" {
-		display.terminal.draw(b.position.cols+b.compiled.lblLhsLen, b.position.rows, label, colourChat)
+	if label := b.labelMiddle.pick(display.useUnicode); !b.valueOptional && label != "" {
+		display.terminal.draw(b.position.columns+b.compiled.labelLeftLength, b.position.rows, label, colourChat)
 	}
 	if overflow {
 		b.draw(display, true)
 		display.terminal.draw(
-			b.position.cols+b.compiled.valOffset+b.compiled.valSfxLen,
+			b.position.columns+b.compiled.valueOffset+b.compiled.valueSuffixLength,
 			b.position.rows,
-			pad("~", b.valAln, b.valLen)+strings.Repeat(" ", b.compiled.valSfxLen),
+			pad("~", b.valueAlign, b.valueLength)+strings.Repeat(" ", b.compiled.valueSuffixLength),
 			colourChat,
 		)
 		return
 	}
-	location := dimensions{b.position.rows, b.position.cols + b.compiled.valOffset}
+	location := dimensions{b.position.rows, b.position.columns + b.compiled.valueOffset}
 	b.draw(display, true)
 	c := colourWarn
 	if !record.Value.Pulse.OK {
@@ -638,25 +595,25 @@ func (b *box) drawValue(display *Display) {
 		c = colourChat
 	}
 	valueString := ""
-	switch b.valKind {
-	case valBool:
+	switch b.valueKind {
+	case valueBool:
 		symbol := textCross.pick(display.useUnicode)
 		if record.Value.Pulse.OK {
 			symbol = textTick.pick(display.useUnicode)
 		}
-		valueString = pad(symbol, b.valAln, b.valLen)
-	case valTime:
+		valueString = pad(symbol, b.valueAlign, b.valueLength)
+	case valueTime:
 		secondsRaw := record.Value.Pulse.Value()
 		secondsValue, err := strconv.ParseFloat(secondsRaw, 64)
 		if err != nil {
-			valueString = pad(secondsRaw, b.valAln, b.valLen) + b.valSfx
+			valueString = pad(secondsRaw, b.valueAlign, b.valueLength) + b.valueSuffix
 			break
 		}
-		valueString = pad(duration(secondsValue), b.valAln, b.valLen) + b.valSfx
-	case valHist:
+		valueString = pad(duration(secondsValue), b.valueAlign, b.valueLength) + b.valueSuffix
+	case valueHistogram:
 		value := record.Value.Pulse.Value()
-		fallback := pad(value, b.valAln, b.valLen) + b.valSfx
-		if b.valLen < 6 {
+		fallback := pad(value, b.valueAlign, b.valueLength) + b.valueSuffix
+		if b.valueLength < 6 {
 			valueString = fallback
 			break
 		}
@@ -671,12 +628,12 @@ func (b *box) drawValue(display *Display) {
 		if percent > 100 {
 			percent = 100
 		}
-		barWidth := b.valLen - 4
+		barWidth := b.valueLength - 4
 		barChar := textBar.pick(display.useUnicode)
 		barSuffix := " "
 		unfilledChar := barChar
 		if !display.useUnicode {
-			barWidth = b.valLen - 6
+			barWidth = b.valueLength - 6
 			barSuffix = "| "
 			unfilledChar = " "
 		}
@@ -686,21 +643,21 @@ func (b *box) drawValue(display *Display) {
 		}
 		filled = min(max(filled, 0), barWidth)
 		percentInt := min(max(int(math.Round(percent)), 0), 100)
-		col := location.cols
+		column := location.columns
 		if !display.useUnicode {
-			display.terminal.draw(col, location.rows, "|", c)
-			col++
+			display.terminal.draw(column, location.rows, "|", c)
+			column++
 		}
 		if filled > 0 {
-			display.terminal.draw(col, location.rows, strings.Repeat(barChar, filled), c)
+			display.terminal.draw(column, location.rows, strings.Repeat(barChar, filled), c)
 		}
 		if filled < barWidth {
-			display.terminal.draw(col+filled, location.rows, strings.Repeat(unfilledChar, barWidth-filled), colourWhisper)
+			display.terminal.draw(column+filled, location.rows, strings.Repeat(unfilledChar, barWidth-filled), colourWhisper)
 		}
-		display.terminal.draw(col+barWidth, location.rows, barSuffix+pad(strconv.Itoa(percentInt), boxRhs, 3)+b.valSfx, c)
+		display.terminal.draw(column+barWidth, location.rows, barSuffix+pad(strconv.Itoa(percentInt), boxRight, 3)+b.valueSuffix, c)
 		return
 	default:
-		valueString = pad(record.Value.Pulse.Value(), b.valAln, b.valLen) + b.valSfx
+		valueString = pad(record.Value.Pulse.Value(), b.valueAlign, b.valueLength) + b.valueSuffix
 	}
 	isServiceLabel := b.recordGUID.ID == metric.MetricServiceName || b.recordGUID.ID == metric.MetricServiceVersion
 	metricKind := metric.GetIDKind(b.recordGUID.ID)
@@ -723,7 +680,7 @@ func (b *box) drawValue(display *Display) {
 		}
 	}
 	display.terminal.draw(
-		location.cols,
+		location.columns,
 		location.rows,
 		valueString,
 		c,
@@ -826,10 +783,10 @@ func pad(base string, align boxAlign, length int) string {
 		return base
 	}
 	spaces := strings.Repeat(" ", padding)
-	if align == boxRhs {
+	if align == boxRight {
 		return spaces + base
 	}
-	if align == boxMid {
+	if align == boxMiddle {
 		leftPad := padding / 2
 		rightPad := padding - leftPad
 		return strings.Repeat(" ", leftPad) + base + strings.Repeat(" ", rightPad)

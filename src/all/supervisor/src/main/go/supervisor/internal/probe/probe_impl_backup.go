@@ -137,7 +137,7 @@ func (p *backupProbe) failedBackupStages() (int8, derivation, error) {
 			snapshot.dir, elapsedMinutes(snapshot.age())), nil
 	}
 	if snapshot == nil || snapshot.host == nil || snapshot.age() > p.staleWindow() {
-		if !p.everRolled() {
+		if rolled, _ := filepath.Glob(statusPath(backupRunPath(p.root, "*"))); len(rolled) == 0 {
 			return 0, derivation{}, fmt.Errorf("no run has rolled up under [%s] yet [%w]", p.root, errEnvironment)
 		}
 		return 100, derivedf(scribe.ActionCompute, "computed [100] pct failed, no run directory under [%s] holds a status document inside the [%s] min window",
@@ -147,11 +147,6 @@ func (p *backupProbe) failedBackupStages() (int8, derivation, error) {
 	value := percentValue(float64(snapshot.host.StagesFailed) / float64(run) * 100.0)
 	return value, derivedf(scribe.ActionCompute, "computed [%d] pct failed, run [%s] aged [%s] min reported [%d] of [%d] stages failed",
 		value, snapshot.dir, elapsedMinutes(snapshot.age()), snapshot.host.StagesFailed, run), nil
-}
-
-func (p *backupProbe) everRolled() bool {
-	rolled, _ := filepath.Glob(statusPath(backupRunPath(p.root, "*")))
-	return len(rolled) > 0
 }
 
 func (p *backupProbe) haltedBackupStages() (int8, derivation, error) {

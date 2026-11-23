@@ -23,16 +23,16 @@ import (
 
 func TestDisplay_Happy(t *testing.T) {
 	type dimsSpec struct {
-		layout    func(bool) [][]box
-		rowsDelta int
-		colsScale int
-		colsDelta int
+		layout       func(bool) [][]box
+		rowsDelta    int
+		columnsScale int
+		columnsDelta int
 	}
 	terminalDims := func(spec dimsSpec, useUnicode bool, hostCount int) dimensions {
 		layout := spec.layout(useUnicode)
 		return dimensions{
-			rows(layout, hostCount) + spec.rowsDelta,
-			columns(layout, useUnicode, hostCount) + resizes(layout, hostCount)*spec.colsScale + spec.colsDelta,
+			layoutRows(layout, hostCount) + spec.rowsDelta,
+			layoutColumns(layout, useUnicode, hostCount) + layoutResizes(layout, hostCount)*spec.columnsScale + spec.columnsDelta,
 		}
 	}
 	tests := []struct {
@@ -59,7 +59,7 @@ func TestDisplay_Happy(t *testing.T) {
 		// See: displayCompactASCIISoloHost_58x10_1_3
 		{
 			name:              "happy_compact_host1_rows+0_colsx0+1_ascii",
-			dimsSpec:          dimsSpec{layout: compactDisplayLayout, colsDelta: 1},
+			dimsSpec:          dimsSpec{layout: compactDisplayLayout, columnsDelta: 1},
 			hostCount:         1,
 			formats:           []Format{FormatCompact, FormatAuto},
 			useUnicode:        false,
@@ -70,7 +70,7 @@ func TestDisplay_Happy(t *testing.T) {
 		// See: displayCompactASCIISoloHost_59x10_2_3
 		{
 			name:              "happy_compact_host1_rows+0_colsx0+2_ascii",
-			dimsSpec:          dimsSpec{layout: compactDisplayLayout, colsDelta: 2},
+			dimsSpec:          dimsSpec{layout: compactDisplayLayout, columnsDelta: 2},
 			hostCount:         1,
 			formats:           []Format{FormatCompact, FormatAuto},
 			useUnicode:        false,
@@ -81,7 +81,7 @@ func TestDisplay_Happy(t *testing.T) {
 		// See: displayCompactASCIISoloHost_60x10_3_3
 		{
 			name:              "happy_compact_host1_rows+0_colsx0+3_ascii",
-			dimsSpec:          dimsSpec{layout: compactDisplayLayout, colsDelta: 3},
+			dimsSpec:          dimsSpec{layout: compactDisplayLayout, columnsDelta: 3},
 			hostCount:         1,
 			formats:           []Format{FormatCompact, FormatAuto},
 			useUnicode:        false,
@@ -92,7 +92,7 @@ func TestDisplay_Happy(t *testing.T) {
 		// See: displayCompactASCIISoloHost_87x10
 		{
 			name:              "happy_compact_host1_rows+0_colsx10+0_ascii",
-			dimsSpec:          dimsSpec{layout: compactDisplayLayout, colsScale: 10},
+			dimsSpec:          dimsSpec{layout: compactDisplayLayout, columnsScale: 10},
 			hostCount:         1,
 			formats:           []Format{FormatCompact, FormatAuto},
 			useUnicode:        false,
@@ -103,7 +103,7 @@ func TestDisplay_Happy(t *testing.T) {
 		// See: displayCompactASCIIMultiHost_114x30_0_6
 		{
 			name:              "happy_compact_host6_rows+0_colsx0+1_ascii",
-			dimsSpec:          dimsSpec{layout: compactDisplayLayout, colsDelta: 0},
+			dimsSpec:          dimsSpec{layout: compactDisplayLayout, columnsDelta: 0},
 			hostCount:         6,
 			formats:           []Format{FormatCompact, FormatAuto},
 			useUnicode:        false,
@@ -114,7 +114,7 @@ func TestDisplay_Happy(t *testing.T) {
 		// See: displayCompactASCIIMultiHost_115x30_1_6
 		{
 			name:              "happy_compact_host6_rows+0_colsx0+1_ascii",
-			dimsSpec:          dimsSpec{layout: compactDisplayLayout, colsDelta: 1},
+			dimsSpec:          dimsSpec{layout: compactDisplayLayout, columnsDelta: 1},
 			hostCount:         6,
 			formats:           []Format{FormatCompact, FormatAuto},
 			useUnicode:        false,
@@ -125,7 +125,7 @@ func TestDisplay_Happy(t *testing.T) {
 		// See: displayCompactASCIIMultiHost_116x30_2_6
 		{
 			name:              "happy_compact_host6_rows+0_colsx0+2_ascii",
-			dimsSpec:          dimsSpec{layout: compactDisplayLayout, colsDelta: 2},
+			dimsSpec:          dimsSpec{layout: compactDisplayLayout, columnsDelta: 2},
 			hostCount:         6,
 			formats:           []Format{FormatCompact, FormatAuto},
 			useUnicode:        false,
@@ -136,7 +136,7 @@ func TestDisplay_Happy(t *testing.T) {
 		// See: displayCompactASCIIMultiHost_117x30_3_6
 		{
 			name:              "happy_compact_host6_rows+0_colsx0+3_ascii",
-			dimsSpec:          dimsSpec{layout: compactDisplayLayout, colsDelta: 3},
+			dimsSpec:          dimsSpec{layout: compactDisplayLayout, columnsDelta: 3},
 			hostCount:         6,
 			formats:           []Format{FormatCompact, FormatAuto},
 			useUnicode:        false,
@@ -147,7 +147,7 @@ func TestDisplay_Happy(t *testing.T) {
 		// See: displayCompactASCIIMultiHost_118x30_4_6
 		{
 			name:              "happy_compact_host6_rows+0_colsx0+4_ascii",
-			dimsSpec:          dimsSpec{layout: compactDisplayLayout, colsDelta: 4},
+			dimsSpec:          dimsSpec{layout: compactDisplayLayout, columnsDelta: 4},
 			hostCount:         6,
 			formats:           []Format{FormatCompact, FormatAuto},
 			useUnicode:        false,
@@ -158,7 +158,7 @@ func TestDisplay_Happy(t *testing.T) {
 		// See: displayCompactASCIIMultiHost_119x30_5_6
 		{
 			name:              "happy_compact_host6_rows+0_colsx0+5_ascii",
-			dimsSpec:          dimsSpec{layout: compactDisplayLayout, colsDelta: 5},
+			dimsSpec:          dimsSpec{layout: compactDisplayLayout, columnsDelta: 5},
 			hostCount:         6,
 			formats:           []Format{FormatCompact, FormatAuto},
 			useUnicode:        false,
@@ -169,7 +169,7 @@ func TestDisplay_Happy(t *testing.T) {
 		// See: displayCompactASCIIMultiHost_120x30_6_6_Scales120x33
 		{
 			name:              "happy_compact_host6_rows+0_colsx0+6_ascii",
-			dimsSpec:          dimsSpec{layout: compactDisplayLayout, colsDelta: 6},
+			dimsSpec:          dimsSpec{layout: compactDisplayLayout, columnsDelta: 6},
 			hostCount:         6,
 			formats:           []Format{FormatCompact, FormatAuto},
 			useUnicode:        false,
@@ -179,7 +179,7 @@ func TestDisplay_Happy(t *testing.T) {
 		},
 		{
 			name:              "happy_compact_host6_rows+3_colsx0+6_ascii",
-			dimsSpec:          dimsSpec{layout: compactDisplayLayout, rowsDelta: 3, colsDelta: 6},
+			dimsSpec:          dimsSpec{layout: compactDisplayLayout, rowsDelta: 3, columnsDelta: 6},
 			hostCount:         6,
 			formats:           []Format{FormatCompact, FormatAuto},
 			useUnicode:        false,
@@ -189,7 +189,7 @@ func TestDisplay_Happy(t *testing.T) {
 		// See: displayCompactASCIIMultiHost_128x30_Scales128x33
 		{
 			name:              "happy_compact_host6_rows+0_colsx0+14_ascii",
-			dimsSpec:          dimsSpec{layout: compactDisplayLayout, colsDelta: 14},
+			dimsSpec:          dimsSpec{layout: compactDisplayLayout, columnsDelta: 14},
 			hostCount:         6,
 			formats:           []Format{FormatCompact, FormatAuto},
 			useUnicode:        false,
@@ -199,7 +199,7 @@ func TestDisplay_Happy(t *testing.T) {
 		},
 		{
 			name:              "happy_compact_host6_rows+3_colsx0+14_ascii",
-			dimsSpec:          dimsSpec{layout: compactDisplayLayout, rowsDelta: 3, colsDelta: 14},
+			dimsSpec:          dimsSpec{layout: compactDisplayLayout, rowsDelta: 3, columnsDelta: 14},
 			hostCount:         6,
 			formats:           []Format{FormatCompact, FormatAuto},
 			useUnicode:        false,
@@ -209,7 +209,7 @@ func TestDisplay_Happy(t *testing.T) {
 		// See: displayCompactASCIIMultiHost_175x30
 		{
 			name:              "happy_compact_host6_rows+0_colsx0+61_ascii",
-			dimsSpec:          dimsSpec{layout: compactDisplayLayout, colsDelta: 61},
+			dimsSpec:          dimsSpec{layout: compactDisplayLayout, columnsDelta: 61},
 			hostCount:         6,
 			formats:           []Format{FormatCompact, FormatAuto},
 			useUnicode:        false,
@@ -219,7 +219,7 @@ func TestDisplay_Happy(t *testing.T) {
 		},
 		{
 			name:              "happy_compact_host3_rows+0_colsx0+61_ascii",
-			dimsSpec:          dimsSpec{layout: compactDisplayLayout, colsDelta: 61},
+			dimsSpec:          dimsSpec{layout: compactDisplayLayout, columnsDelta: 61},
 			hostCount:         3,
 			formats:           []Format{FormatCompact, FormatAuto},
 			useUnicode:        false,
@@ -228,7 +228,7 @@ func TestDisplay_Happy(t *testing.T) {
 		},
 		{
 			name:              "happy_compact_host7_rows+0_colsx0+61_ascii",
-			dimsSpec:          dimsSpec{layout: compactDisplayLayout, colsDelta: 61},
+			dimsSpec:          dimsSpec{layout: compactDisplayLayout, columnsDelta: 61},
 			hostCount:         7,
 			formats:           []Format{FormatCompact, FormatAuto},
 			useUnicode:        false,
@@ -258,7 +258,7 @@ func TestDisplay_Happy(t *testing.T) {
 		},
 		{
 			name:              "happy_relaxed_host1_rows+18_colsx8+0_ascii",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, rowsDelta: 18, colsScale: 8},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, rowsDelta: 18, columnsScale: 8},
 			hostCount:         1,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        false,
@@ -267,7 +267,7 @@ func TestDisplay_Happy(t *testing.T) {
 		},
 		{
 			name:              "happy_relaxed_host1_rows+18_colsx8+0_unicode",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, rowsDelta: 18, colsScale: 8},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, rowsDelta: 18, columnsScale: 8},
 			hostCount:         1,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        true,
@@ -276,7 +276,7 @@ func TestDisplay_Happy(t *testing.T) {
 		},
 		{
 			name:              "happy_relaxed_host1_rows+18_colsx10+0_ascii",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, rowsDelta: 18, colsScale: 10},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, rowsDelta: 18, columnsScale: 10},
 			hostCount:         1,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        false,
@@ -285,7 +285,7 @@ func TestDisplay_Happy(t *testing.T) {
 		},
 		{
 			name:              "happy_relaxed_host1_rows+18_colsx10+0_unicode",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, rowsDelta: 18, colsScale: 10},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, rowsDelta: 18, columnsScale: 10},
 			hostCount:         1,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        true,
@@ -295,7 +295,7 @@ func TestDisplay_Happy(t *testing.T) {
 		// See: displayRelaxedUnicodeSoloHost_89x16_1_4
 		{
 			name:              "happy_relaxed_host1_rows+0_colsx0+1_unicode",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, colsDelta: 1},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, columnsDelta: 1},
 			hostCount:         1,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        true,
@@ -305,7 +305,7 @@ func TestDisplay_Happy(t *testing.T) {
 		},
 		{
 			name:              "happy_relaxed_host1_rows+0_colsx0+1_ascii",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, colsDelta: 1},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, columnsDelta: 1},
 			hostCount:         1,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        false,
@@ -315,7 +315,7 @@ func TestDisplay_Happy(t *testing.T) {
 		// See: displayRelaxedUnicodeSoloHost_90x16_2_4
 		{
 			name:              "happy_relaxed_host1_rows+0_colsx0+2_unicode",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, colsDelta: 2},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, columnsDelta: 2},
 			hostCount:         1,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        true,
@@ -325,7 +325,7 @@ func TestDisplay_Happy(t *testing.T) {
 		},
 		{
 			name:              "happy_relaxed_host1_rows+0_colsx0+2_ascii",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, colsDelta: 2},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, columnsDelta: 2},
 			hostCount:         1,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        false,
@@ -335,7 +335,7 @@ func TestDisplay_Happy(t *testing.T) {
 		// See: displayRelaxedUnicodeSoloHost_91x16_3_4_Scales287x55
 		{
 			name:              "happy_relaxed_host1_rows+0_colsx0+3_unicode",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, colsDelta: 3},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, columnsDelta: 3},
 			hostCount:         1,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        true,
@@ -345,7 +345,7 @@ func TestDisplay_Happy(t *testing.T) {
 		},
 		{
 			name:              "happy_relaxed_host1_rows+0_colsx0+3_ascii",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, colsDelta: 3},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, columnsDelta: 3},
 			hostCount:         1,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        false,
@@ -354,7 +354,7 @@ func TestDisplay_Happy(t *testing.T) {
 		},
 		{
 			name:              "happy_relaxed_host1_rows+39_colsx49+3_unicode",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, rowsDelta: 39, colsDelta: 3, colsScale: 49},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, rowsDelta: 39, columnsDelta: 3, columnsScale: 49},
 			hostCount:         1,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        true,
@@ -363,7 +363,7 @@ func TestDisplay_Happy(t *testing.T) {
 		},
 		{
 			name:              "happy_relaxed_host1_rows+39_colsx49+3_ascii",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, rowsDelta: 39, colsDelta: 3, colsScale: 49},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, rowsDelta: 39, columnsDelta: 3, columnsScale: 49},
 			hostCount:         1,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        false,
@@ -373,7 +373,7 @@ func TestDisplay_Happy(t *testing.T) {
 		// See: displayRelaxedUnicodeSoloHost_92x16_4_4
 		{
 			name:              "happy_relaxed_host1_rows+0_colsx0+4_unicode",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, colsDelta: 4},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, columnsDelta: 4},
 			hostCount:         1,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        true,
@@ -383,7 +383,7 @@ func TestDisplay_Happy(t *testing.T) {
 		},
 		{
 			name:              "happy_relaxed_host1_rows+0_colsx0+4_ascii",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, colsDelta: 4},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, columnsDelta: 4},
 			hostCount:         1,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        false,
@@ -433,7 +433,7 @@ func TestDisplay_Happy(t *testing.T) {
 		// See: displayRelaxedUnicodeMultiHost_177x48_1_8
 		{
 			name:              "happy_relaxed_host6_rows+0_colsx0+1_unicode",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, colsDelta: 1},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, columnsDelta: 1},
 			hostCount:         6,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        true,
@@ -443,7 +443,7 @@ func TestDisplay_Happy(t *testing.T) {
 		},
 		{
 			name:              "happy_relaxed_host6_rows+0_colsx0+1_ascii",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, colsDelta: 1},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, columnsDelta: 1},
 			hostCount:         6,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        false,
@@ -453,7 +453,7 @@ func TestDisplay_Happy(t *testing.T) {
 		// See: displayRelaxedUnicodeMultiHost_178x48_2_8
 		{
 			name:              "happy_relaxed_host6_rows+0_colsx0+2_unicode",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, colsDelta: 2},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, columnsDelta: 2},
 			hostCount:         6,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        true,
@@ -463,7 +463,7 @@ func TestDisplay_Happy(t *testing.T) {
 		},
 		{
 			name:              "happy_relaxed_host6_rows+0_colsx0+2_ascii",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, colsDelta: 2},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, columnsDelta: 2},
 			hostCount:         6,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        false,
@@ -473,7 +473,7 @@ func TestDisplay_Happy(t *testing.T) {
 		// See: displayRelaxedUnicodeMultiHost_179x48_3_8
 		{
 			name:              "happy_relaxed_host6_rows+0_colsx0+3_unicode",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, colsDelta: 3},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, columnsDelta: 3},
 			hostCount:         6,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        true,
@@ -483,7 +483,7 @@ func TestDisplay_Happy(t *testing.T) {
 		},
 		{
 			name:              "happy_relaxed_host6_rows+0_colsx0+3_ascii",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, colsDelta: 3},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, columnsDelta: 3},
 			hostCount:         6,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        false,
@@ -493,7 +493,7 @@ func TestDisplay_Happy(t *testing.T) {
 		// See: displayRelaxedUnicodeMultiHost_180x48_4_8
 		{
 			name:              "happy_relaxed_host6_rows+0_colsx0+4_unicode",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, colsDelta: 4},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, columnsDelta: 4},
 			hostCount:         6,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        true,
@@ -503,7 +503,7 @@ func TestDisplay_Happy(t *testing.T) {
 		},
 		{
 			name:              "happy_relaxed_host6_rows+0_colsx0+4_ascii",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, colsDelta: 4},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, columnsDelta: 4},
 			hostCount:         6,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        false,
@@ -513,7 +513,7 @@ func TestDisplay_Happy(t *testing.T) {
 		// See: displayRelaxedUnicodeMultiHost_181x48_5_8
 		{
 			name:              "happy_relaxed_host6_rows+0_colsx0+5_unicode",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, colsDelta: 5},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, columnsDelta: 5},
 			hostCount:         6,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        true,
@@ -523,7 +523,7 @@ func TestDisplay_Happy(t *testing.T) {
 		},
 		{
 			name:              "happy_relaxed_host6_rows+0_colsx0+5_ascii",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, colsDelta: 5},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, columnsDelta: 5},
 			hostCount:         6,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        false,
@@ -533,7 +533,7 @@ func TestDisplay_Happy(t *testing.T) {
 		// See: displayRelaxedUnicodeMultiHost_182x48_6_8
 		{
 			name:              "happy_relaxed_host6_rows+0_colsx0+6_unicode",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, colsDelta: 6},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, columnsDelta: 6},
 			hostCount:         6,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        true,
@@ -543,7 +543,7 @@ func TestDisplay_Happy(t *testing.T) {
 		},
 		{
 			name:              "happy_relaxed_host6_rows+0_colsx0+6_ascii",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, colsDelta: 6},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, columnsDelta: 6},
 			hostCount:         6,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        false,
@@ -553,7 +553,7 @@ func TestDisplay_Happy(t *testing.T) {
 		// See: displayRelaxedUnicodeMultiHost_183x48_7_8_Scales287x55
 		{
 			name:              "happy_relaxed_host6_rows+0_colsx0+7_unicode",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, colsDelta: 7},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, columnsDelta: 7},
 			hostCount:         6,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        true,
@@ -563,7 +563,7 @@ func TestDisplay_Happy(t *testing.T) {
 		},
 		{
 			name:              "happy_relaxed_host6_rows+0_colsx0+7_ascii",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, colsDelta: 7},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, columnsDelta: 7},
 			hostCount:         6,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        false,
@@ -572,7 +572,7 @@ func TestDisplay_Happy(t *testing.T) {
 		},
 		{
 			name:              "happy_relaxed_host6_rows+24_colsx13+7_unicode",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, rowsDelta: 24, colsDelta: 7, colsScale: 13},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, rowsDelta: 24, columnsDelta: 7, columnsScale: 13},
 			hostCount:         6,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        true,
@@ -581,7 +581,7 @@ func TestDisplay_Happy(t *testing.T) {
 		},
 		{
 			name:              "happy_relaxed_host6_rows+27_colsx13+10_ascii",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, rowsDelta: 27, colsDelta: 7, colsScale: 13},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, rowsDelta: 27, columnsDelta: 7, columnsScale: 13},
 			hostCount:         6,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        false,
@@ -591,7 +591,7 @@ func TestDisplay_Happy(t *testing.T) {
 		// See: displayRelaxedUnicodeMultiHost_184x48_8_8
 		{
 			name:              "happy_relaxed_host6_rows+0_colsx0+8_unicode",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, colsDelta: 8},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, columnsDelta: 8},
 			hostCount:         6,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        true,
@@ -601,7 +601,7 @@ func TestDisplay_Happy(t *testing.T) {
 		},
 		{
 			name:              "happy_relaxed_host6_rows+0_colsx0+8_ascii",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, colsDelta: 8},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, columnsDelta: 8},
 			hostCount:         6,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        false,
@@ -610,7 +610,7 @@ func TestDisplay_Happy(t *testing.T) {
 		},
 		{
 			name:              "happy_relaxed_host3_rows+0_colsx0+8_unicode",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, colsDelta: 8},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, columnsDelta: 8},
 			hostCount:         3,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        true,
@@ -619,7 +619,7 @@ func TestDisplay_Happy(t *testing.T) {
 		},
 		{
 			name:              "happy_relaxed_host7_rows+0_colsx0+8_unicode",
-			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, colsDelta: 8},
+			dimsSpec:          dimsSpec{layout: relaxedDisplayLayout, columnsDelta: 8},
 			hostCount:         7,
 			formats:           []Format{FormatRelaxed, FormatAuto},
 			useUnicode:        true,
@@ -637,7 +637,7 @@ func TestDisplay_Happy(t *testing.T) {
 			caseTerminalDims := terminalDims(testCase.dimsSpec, testCase.useUnicode, testCase.hostCount)
 			for _, attemptedFormat := range testCase.formats {
 				cache := metric.NewRecordCache()
-				terminal := newTerminalVirtual(caseTerminalDims.rows, caseTerminalDims.cols, ThemeLight, testCase.useUnicode)
+				terminal := newTerminalVirtual(caseTerminalDims.rows, caseTerminalDims.columns, ThemeLight, testCase.useUnicode)
 				display, newErr := NewDisplay(
 					caseHosts,
 					config.Periods{},
@@ -645,7 +645,7 @@ func TestDisplay_Happy(t *testing.T) {
 					true,
 					testCase.useUnicode,
 					attemptedFormat,
-					caseTerminalDims.cols,
+					caseTerminalDims.columns,
 					caseTerminalDims.rows,
 					0,
 					0,
@@ -730,12 +730,12 @@ func TestDisplay_Happy(t *testing.T) {
 				<-drawn
 				dims := terminal.dimensions()
 				if attemptedFormat == testCase.formats[0] {
-					fmt.Printf("Terminal [%dx%d] attempting [%s] -> Display [%dx%d] rendered [%s]:\n", caseTerminalDims.cols, caseTerminalDims.rows, attemptedFormat, dims.cols, dims.rows, renderedFormat)
+					fmt.Printf("Terminal [%dx%d] attempting [%s] -> Display [%dx%d] rendered [%s]:\n", caseTerminalDims.columns, caseTerminalDims.rows, attemptedFormat, dims.columns, dims.rows, renderedFormat)
 					fmt.Print(terminal.string(true))
 				}
 				expectedDims := dimensions{
 					testCase.expectedDimsDelta.rows + caseTerminalDims.rows,
-					testCase.expectedDimsDelta.cols + caseTerminalDims.cols,
+					testCase.expectedDimsDelta.columns + caseTerminalDims.columns,
 				}
 				if dims != expectedDims {
 					t.Fatalf("Got dims = %q, expected %q", dims, expectedDims)
@@ -772,70 +772,70 @@ func TestDisplay_Sad(t *testing.T) {
 			hosts:      hosts[:1],
 			format:     FormatAuto,
 			useUnicode: false,
-			dims:       dimensions{rows(compactDisplayLayout(false), 1) - 1, columns(compactDisplayLayout(false), false, 1) - 1},
+			dims:       dimensions{layoutRows(compactDisplayLayout(false), 1) - 1, layoutColumns(compactDisplayLayout(false), false, 1) - 1},
 		},
 		{
 			name:       "sad_host1_rows-1_cols_ok_ascii",
 			hosts:      hosts[:1],
 			format:     FormatAuto,
 			useUnicode: false,
-			dims:       dimensions{rows(compactDisplayLayout(false), 1) - 1, columns(compactDisplayLayout(false), false, 1)},
+			dims:       dimensions{layoutRows(compactDisplayLayout(false), 1) - 1, layoutColumns(compactDisplayLayout(false), false, 1)},
 		},
 		{
 			name:       "sad_host1_rows0_ascii",
 			hosts:      hosts[:1],
 			format:     FormatAuto,
 			useUnicode: false,
-			dims:       dimensions{0, columns(compactDisplayLayout(false), false, 1)},
+			dims:       dimensions{0, layoutColumns(compactDisplayLayout(false), false, 1)},
 		},
 		{
 			name:       "sad_host1_rows-1_cols-1_unicode",
 			hosts:      hosts[:1],
 			format:     FormatAuto,
 			useUnicode: true,
-			dims:       dimensions{rows(compactDisplayLayout(true), 1) - 1, columns(compactDisplayLayout(true), true, 1) - 1},
+			dims:       dimensions{layoutRows(compactDisplayLayout(true), 1) - 1, layoutColumns(compactDisplayLayout(true), true, 1) - 1},
 		},
 		{
 			name:       "sad_host1_rows-1_cols_ok_unicode",
 			hosts:      hosts[:1],
 			format:     FormatAuto,
 			useUnicode: true,
-			dims:       dimensions{rows(compactDisplayLayout(true), 1) - 1, columns(compactDisplayLayout(true), true, 1)},
+			dims:       dimensions{layoutRows(compactDisplayLayout(true), 1) - 1, layoutColumns(compactDisplayLayout(true), true, 1)},
 		},
 		{
 			name:       "sad_host1_rows0_unicode",
 			hosts:      hosts[:1],
 			format:     FormatAuto,
 			useUnicode: true,
-			dims:       dimensions{0, columns(compactDisplayLayout(true), true, 1)},
+			dims:       dimensions{0, layoutColumns(compactDisplayLayout(true), true, 1)},
 		},
 		{
 			name:       "sad_host3_rows-1_cols-1_ascii",
 			hosts:      hosts[:3],
 			format:     FormatAuto,
 			useUnicode: false,
-			dims:       dimensions{rows(compactDisplayLayout(false), 3) - 1, columns(compactDisplayLayout(false), false, 3) - 1},
+			dims:       dimensions{layoutRows(compactDisplayLayout(false), 3) - 1, layoutColumns(compactDisplayLayout(false), false, 3) - 1},
 		},
 		{
 			name:       "sad_host3_rows-1_cols-1_unicode",
 			hosts:      hosts[:3],
 			format:     FormatAuto,
 			useUnicode: true,
-			dims:       dimensions{rows(compactDisplayLayout(true), 3) - 1, columns(compactDisplayLayout(true), true, 3) - 1},
+			dims:       dimensions{layoutRows(compactDisplayLayout(true), 3) - 1, layoutColumns(compactDisplayLayout(true), true, 3) - 1},
 		},
 		{
 			name:       "sad_host6_rows-1_cols-1_ascii",
 			hosts:      hosts[:6],
 			format:     FormatAuto,
 			useUnicode: false,
-			dims:       dimensions{rows(compactDisplayLayout(false), 6) - 1, columns(compactDisplayLayout(false), false, 6) - 1},
+			dims:       dimensions{layoutRows(compactDisplayLayout(false), 6) - 1, layoutColumns(compactDisplayLayout(false), false, 6) - 1},
 		},
 		{
 			name:       "sad_host6_rows-1_cols-1_unicode",
 			hosts:      hosts[:6],
 			format:     FormatAuto,
 			useUnicode: true,
-			dims:       dimensions{rows(compactDisplayLayout(true), 6) - 1, columns(compactDisplayLayout(true), true, 6) - 1},
+			dims:       dimensions{layoutRows(compactDisplayLayout(true), 6) - 1, layoutColumns(compactDisplayLayout(true), true, 6) - 1},
 		},
 		{
 			name:       "sad_host0_ascii",
@@ -856,14 +856,14 @@ func TestDisplay_Sad(t *testing.T) {
 			hosts:      hosts[:1],
 			format:     Format(-1),
 			useUnicode: false,
-			dims:       dimensions{rows(compactDisplayLayout(false), 1), columns(compactDisplayLayout(false), false, 1)},
+			dims:       dimensions{layoutRows(compactDisplayLayout(false), 1), layoutColumns(compactDisplayLayout(false), false, 1)},
 		},
 		{
 			name:       "sad_invalid_format_unicode",
 			hosts:      hosts[:1],
 			format:     Format(999),
 			useUnicode: true,
-			dims:       dimensions{rows(compactDisplayLayout(true), 1), columns(compactDisplayLayout(true), true, 1)},
+			dims:       dimensions{layoutRows(compactDisplayLayout(true), 1), layoutColumns(compactDisplayLayout(true), true, 1)},
 		},
 	}
 	for _, testCase := range tests {
@@ -875,13 +875,13 @@ func TestDisplay_Sad(t *testing.T) {
 				true,
 				testCase.useUnicode,
 				testCase.format,
-				testCase.dims.cols,
+				testCase.dims.columns,
 				testCase.dims.rows,
 				0,
 				0,
 				0,
 				func(useUnicode bool) (Terminal, error) {
-					return newTerminalVirtual(testCase.dims.rows, testCase.dims.cols, ThemeDark, useUnicode), nil
+					return newTerminalVirtual(testCase.dims.rows, testCase.dims.columns, ThemeDark, useUnicode), nil
 				},
 				metric.NewRecordCache(),
 				nil,
@@ -1348,7 +1348,7 @@ func TestDisplay_TextResizeHelpers(t *testing.T) {
 			name: "happy_pad_mid_ascii_unicode",
 			resize: func(value text) text {
 				return value.resize(2, func(base string, length int) string {
-					return pad(base, boxMid, length)
+					return pad(base, boxMiddle, length)
 				})
 			},
 			base:     text{ascii: "cpu", unicode: "cpu"},
@@ -1396,70 +1396,70 @@ func TestDisplay_Pad(t *testing.T) {
 		{
 			name:     "happy_left_align",
 			base:     "abc",
-			align:    boxLhs,
+			align:    boxLeft,
 			length:   5,
 			expected: "abc  ",
 		},
 		{
 			name:     "happy_right_align",
 			base:     "abc",
-			align:    boxRhs,
+			align:    boxRight,
 			length:   5,
 			expected: "  abc",
 		},
 		{
 			name:     "happy_no_padding",
 			base:     "abc",
-			align:    boxLhs,
+			align:    boxLeft,
 			length:   3,
 			expected: "abc",
 		},
 		{
 			name:     "happy_mid_align_hostname",
 			base:     "node-one",
-			align:    boxMid,
+			align:    boxMiddle,
 			length:   11,
 			expected: " node-one  ",
 		},
 		{
 			name:     "happy_mid_align_even_padding",
 			base:     "abc",
-			align:    boxMid,
+			align:    boxMiddle,
 			length:   7,
 			expected: "  abc  ",
 		},
 		{
 			name:     "happy_mid_align_odd_padding",
 			base:     "abc",
-			align:    boxMid,
+			align:    boxMiddle,
 			length:   6,
 			expected: " abc  ",
 		},
 		{
 			name:     "happy_truncate",
 			base:     "abcdefg",
-			align:    boxLhs,
+			align:    boxLeft,
 			length:   6,
 			expected: "abcde~",
 		},
 		{
 			name:     "happy_truncate_short_length",
 			base:     "abcdefg",
-			align:    boxLhs,
+			align:    boxLeft,
 			length:   2,
 			expected: "a~",
 		},
 		{
 			name:     "happy_empty_base",
 			base:     "",
-			align:    boxLhs,
+			align:    boxLeft,
 			length:   4,
 			expected: "    ",
 		},
 		{
 			name:     "happy_zero_length",
 			base:     "abc",
-			align:    boxLhs,
+			align:    boxLeft,
 			length:   0,
 			expected: "",
 		},
@@ -1522,10 +1522,10 @@ func TestDisplay_Refresh(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			layout := compactDisplayLayout(false)
-			caseRows := rows(layout, 1)
-			caseCols := columns(layout, false, 1)
+			caseRows := layoutRows(layout, 1)
+			caseColumns := layoutColumns(layout, false, 1)
 			cache := metric.NewRecordCache()
-			terminal := newTerminalVirtual(caseRows, caseCols, ThemeLight, false)
+			terminal := newTerminalVirtual(caseRows, caseColumns, ThemeLight, false)
 			display, err := NewDisplay(
 				hosts[:1],
 				config.Periods{},
@@ -1533,7 +1533,7 @@ func TestDisplay_Refresh(t *testing.T) {
 				true,
 				false,
 				FormatCompact,
-				caseCols,
+				caseColumns,
 				caseRows,
 				0,
 				0,
@@ -1587,29 +1587,6 @@ func TestDisplay_Refresh(t *testing.T) {
 			}
 		})
 	}
-}
-
-func diffDisplay(this, that string) string {
-	dmp := diffmatchpatch.New()
-	expLines := strings.Split(strings.TrimRight(this, "\n"), "\n")
-	gotLines := strings.Split(strings.TrimRight(that, "\n"), "\n")
-	var b strings.Builder
-	for i := range max(len(expLines), len(gotLines)) {
-		e, g := "", ""
-		if i < len(expLines) {
-			e = expLines[i]
-		}
-		if i < len(gotLines) {
-			g = gotLines[i]
-		}
-		if e == g {
-			continue
-		}
-		diffs := dmp.DiffMain(e, g, false)
-		dmp.DiffCleanupSemantic(diffs)
-		b.WriteString(dmp.DiffPrettyText(diffs) + "\n")
-	}
-	return b.String()
 }
 
 var hosts = func() []string {
@@ -1667,9 +1644,9 @@ func TestDisplay_Failed(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			layout := compactDisplayLayout(false)
-			terminalDims := dimensions{rows(layout, 1), columns(layout, false, 1) + resizes(layout, 1)*10}
+			terminalDims := dimensions{layoutRows(layout, 1), layoutColumns(layout, false, 1) + layoutResizes(layout, 1)*10}
 			cache := metric.NewRecordCache()
-			terminal := newTerminalVirtual(terminalDims.rows, terminalDims.cols, ThemeLight, false)
+			terminal := newTerminalVirtual(terminalDims.rows, terminalDims.columns, ThemeLight, false)
 			display, newErr := NewDisplay(
 				[]string{"labnode-one"},
 				config.Periods{},
@@ -1677,7 +1654,7 @@ func TestDisplay_Failed(t *testing.T) {
 				true,
 				false,
 				FormatCompact,
-				terminalDims.cols,
+				terminalDims.columns,
 				terminalDims.rows,
 				0,
 				0,
@@ -1745,11 +1722,11 @@ func TestDisplay_Failed(t *testing.T) {
 			}()
 			display.Close()
 			<-drawn
-			fmt.Printf("Terminal [%dx%d]:\n%s", terminalDims.cols, terminalDims.rows, terminal.string(true))
+			fmt.Printf("Terminal [%dx%d]:\n%s", terminalDims.columns, terminalDims.rows, terminal.string(true))
 			find := func(needle string) (int, int) {
 				for y := 0; y < terminalDims.rows; y++ {
-					line := make([]rune, 0, terminalDims.cols)
-					for x := 0; x < terminalDims.cols; x++ {
+					line := make([]rune, 0, terminalDims.columns)
+					for x := 0; x < terminalDims.columns; x++ {
 						char, _, _ := terminal.cell(x, y)
 						line = append(line, char)
 					}
@@ -1775,7 +1752,7 @@ func TestDisplay_Failed(t *testing.T) {
 			}
 			overflows := 0
 			for y := 0; y < terminalDims.rows; y++ {
-				for x := 0; x < terminalDims.cols; x++ {
+				for x := 0; x < terminalDims.columns; x++ {
 					if char, _, _ := terminal.cell(x, y); char == '~' {
 						overflows++
 					}
@@ -1817,12 +1794,12 @@ func TestDisplay_FailedHostLabelRestoresOnRecovery(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			layout := compactDisplayLayout(false)
-			terminalDims := dimensions{rows(layout, 1), columns(layout, false, 1) + resizes(layout, 1)*10}
+			terminalDims := dimensions{layoutRows(layout, 1), layoutColumns(layout, false, 1) + layoutResizes(layout, 1)*10}
 			cache := metric.NewRecordCache()
-			terminal := newTerminalVirtual(terminalDims.rows, terminalDims.cols, ThemeLight, false)
+			terminal := newTerminalVirtual(terminalDims.rows, terminalDims.columns, ThemeLight, false)
 			display, newErr := NewDisplay(
 				[]string{"labnode-one"}, config.Periods{}, "", true, false, FormatCompact,
-				terminalDims.cols, terminalDims.rows, 0, 0, 0,
+				terminalDims.columns, terminalDims.rows, 0, 0, 0,
 				func(useUnicode bool) (Terminal, error) { return terminal, nil }, cache, nil,
 			)
 			if newErr != nil {
@@ -1848,8 +1825,8 @@ func TestDisplay_FailedHostLabelRestoresOnRecovery(t *testing.T) {
 			}
 			labelColour := func() colour {
 				for y := 0; y < terminalDims.rows; y++ {
-					line := make([]rune, 0, terminalDims.cols)
-					for x := 0; x < terminalDims.cols; x++ {
+					line := make([]rune, 0, terminalDims.columns)
+					for x := 0; x < terminalDims.columns; x++ {
 						char, _, _ := terminal.cell(x, y)
 						line = append(line, char)
 					}
@@ -1892,12 +1869,12 @@ func TestDisplay_FailedServiceNameFollowsSibling(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			layout := compactDisplayLayout(false)
-			terminalDims := dimensions{rows(layout, 1), columns(layout, false, 1) + resizes(layout, 1)*10}
+			terminalDims := dimensions{layoutRows(layout, 1), layoutColumns(layout, false, 1) + layoutResizes(layout, 1)*10}
 			cache := metric.NewRecordCache()
-			terminal := newTerminalVirtual(terminalDims.rows, terminalDims.cols, ThemeLight, false)
+			terminal := newTerminalVirtual(terminalDims.rows, terminalDims.columns, ThemeLight, false)
 			display, newErr := NewDisplay(
 				[]string{"labnode-one"}, config.Periods{}, "", true, false, FormatCompact,
-				terminalDims.cols, terminalDims.rows, 0, 0, 0,
+				terminalDims.columns, terminalDims.rows, 0, 0, 0,
 				func(useUnicode bool) (Terminal, error) { return terminal, nil }, cache, nil,
 			)
 			if newErr != nil {
@@ -1937,8 +1914,8 @@ func TestDisplay_FailedServiceNameFollowsSibling(t *testing.T) {
 				display.boxes[index].drawValue(display)
 			}
 			for y := 0; y < terminalDims.rows; y++ {
-				line := make([]rune, 0, terminalDims.cols)
-				for x := 0; x < terminalDims.cols; x++ {
+				line := make([]rune, 0, terminalDims.columns)
+				for x := 0; x < terminalDims.columns; x++ {
 					char, _, _ := terminal.cell(x, y)
 					line = append(line, char)
 				}
@@ -1988,15 +1965,15 @@ func TestDisplay_LogScrolling(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			layout := compactDisplayLayout(false)
-			caseRows := rows(layout, 1)
-			caseCols := columns(layout, false, 1)
+			caseRows := layoutRows(layout, 1)
+			caseColumns := layoutColumns(layout, false, 1)
 			capacity := caseRows - 2
 			buffer := scribe.EnableBuffer(slog.LevelDebug, scribe.BufferLines(caseRows))
 			t.Cleanup(scribe.Disable)
-			terminal := newTerminalVirtual(caseRows, caseCols, ThemeLight, false)
+			terminal := newTerminalVirtual(caseRows, caseColumns, ThemeLight, false)
 			display, err := NewDisplay(
 				hosts[:1], config.Periods{}, "", true, false, FormatCompact,
-				caseCols, caseRows, 0, 0, 0,
+				caseColumns, caseRows, 0, 0, 0,
 				func(useUnicode bool) (Terminal, error) { return terminal, nil },
 				metric.NewRecordCache(), buffer,
 			)
@@ -2088,14 +2065,14 @@ func TestDisplay_LogCoverage(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			layout := compactDisplayLayout(false)
-			caseRows := rows(layout, 1)
-			caseCols := columns(layout, false, 1)
+			caseRows := layoutRows(layout, 1)
+			caseColumns := layoutColumns(layout, false, 1)
 			buffer := scribe.EnableBuffer(slog.LevelDebug, scribe.BufferLines(60))
 			t.Cleanup(scribe.Disable)
-			terminal := newTerminalVirtual(caseRows, caseCols, ThemeLight, false)
+			terminal := newTerminalVirtual(caseRows, caseColumns, ThemeLight, false)
 			display, err := NewDisplay(
 				hosts[:1], config.Periods{}, "", true, false, FormatCompact,
-				caseCols, caseRows, 0, 0, 0,
+				caseColumns, caseRows, 0, 0, 0,
 				func(useUnicode bool) (Terminal, error) { return terminal, nil },
 				metric.NewRecordCache(), buffer,
 			)
@@ -2109,7 +2086,7 @@ func TestDisplay_LogCoverage(t *testing.T) {
 				t.Fatalf("Load Display err = %v, expected nil", err)
 			}
 			display.logOverlay = true
-			display.dimsInit = dimensions{rows: testCase.overlayRows, cols: 200}
+			display.dimensionsInitial = dimensions{rows: testCase.overlayRows, columns: 200}
 			lengths := []int{4, 180, 7, 320, 12, 95, 240, 3, 61, 410, 28, 150, 500, 9}
 			for index := range 400 {
 				scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Infof("received", time.Now(), "%s", strings.Repeat("z", lengths[index%len(lengths)]))
@@ -2197,14 +2174,14 @@ func TestDisplay_LogArriving(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			layout := compactDisplayLayout(false)
-			caseRows := rows(layout, 1)
-			caseCols := columns(layout, false, 1)
+			caseRows := layoutRows(layout, 1)
+			caseColumns := layoutColumns(layout, false, 1)
 			buffer := scribe.EnableBuffer(slog.LevelDebug, scribe.BufferLines(60))
 			t.Cleanup(scribe.Disable)
-			terminal := newTerminalVirtual(caseRows, caseCols, ThemeLight, false)
+			terminal := newTerminalVirtual(caseRows, caseColumns, ThemeLight, false)
 			display, err := NewDisplay(
 				hosts[:1], config.Periods{}, "", true, false, FormatCompact,
-				caseCols, caseRows, 0, 0, 0,
+				caseColumns, caseRows, 0, 0, 0,
 				func(useUnicode bool) (Terminal, error) { return terminal, nil },
 				metric.NewRecordCache(), buffer,
 			)
@@ -2218,7 +2195,7 @@ func TestDisplay_LogArriving(t *testing.T) {
 				t.Fatalf("Load Display err = %v, expected nil", err)
 			}
 			display.logOverlay = true
-			display.dimsInit = dimensions{rows: 22, cols: 200}
+			display.dimensionsInitial = dimensions{rows: 22, columns: 200}
 			lengths := []int{4, 180, 7, 320, 12, 95, 240, 3, 61, 410, 28, 150}
 			emit := func(count int) {
 				for index := range count {
@@ -2282,14 +2259,14 @@ func TestDisplay_LogParked(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			const overlayRows = 40
 			layout := compactDisplayLayout(false)
-			caseRows := rows(layout, 1)
-			caseCols := columns(layout, false, 1)
+			caseRows := layoutRows(layout, 1)
+			caseColumns := layoutColumns(layout, false, 1)
 			buffer := scribe.EnableBuffer(slog.LevelDebug, scribe.BufferLines(overlayRows))
 			t.Cleanup(scribe.Disable)
-			terminal := newTerminalVirtual(caseRows, caseCols, ThemeLight, false)
+			terminal := newTerminalVirtual(caseRows, caseColumns, ThemeLight, false)
 			display, err := NewDisplay(
 				hosts[:1], config.Periods{}, "", true, false, FormatCompact,
-				caseCols, caseRows, 0, 0, 0,
+				caseColumns, caseRows, 0, 0, 0,
 				func(useUnicode bool) (Terminal, error) { return terminal, nil },
 				metric.NewRecordCache(), buffer,
 			)
@@ -2303,7 +2280,7 @@ func TestDisplay_LogParked(t *testing.T) {
 				t.Fatalf("Load Display err = %v, expected nil", err)
 			}
 			display.logOverlay = true
-			display.dimsInit = dimensions{rows: overlayRows, cols: 200}
+			display.dimensionsInitial = dimensions{rows: overlayRows, columns: 200}
 			emit := func(count int) {
 				for range count {
 					scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Infof("received", time.Now(), "%s", strings.Repeat("z", 60))
@@ -2365,14 +2342,14 @@ func TestDisplay_LogWrapping(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			layout := compactDisplayLayout(false)
-			caseRows := rows(layout, 1)
-			caseCols := columns(layout, false, 1)
+			caseRows := layoutRows(layout, 1)
+			caseColumns := layoutColumns(layout, false, 1)
 			buffer := scribe.EnableBuffer(slog.LevelDebug, scribe.BufferLines(testCase.screens))
 			t.Cleanup(scribe.Disable)
-			terminal := newTerminalVirtual(caseRows, caseCols, ThemeLight, false)
+			terminal := newTerminalVirtual(caseRows, caseColumns, ThemeLight, false)
 			display, err := NewDisplay(
 				hosts[:1], config.Periods{}, "", true, false, FormatCompact,
-				caseCols, caseRows, 0, 0, 0,
+				caseColumns, caseRows, 0, 0, 0,
 				func(useUnicode bool) (Terminal, error) { return terminal, nil },
 				metric.NewRecordCache(), buffer,
 			)
@@ -2386,7 +2363,7 @@ func TestDisplay_LogWrapping(t *testing.T) {
 				t.Fatalf("Load Display err = %v, expected nil", err)
 			}
 			display.logOverlay = true
-			display.dimsInit = dimensions{rows: 22, cols: 200}
+			display.dimensionsInitial = dimensions{rows: 22, columns: 200}
 			lengths := []int{4, 180, 7, 320, 12, 95, 240, 3, 61, 410, 28, 150}
 			emit := func(count int) {
 				for index := range count {
@@ -2478,15 +2455,15 @@ func TestDisplay_LogPagination(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			layout := compactDisplayLayout(false)
-			caseRows := rows(layout, 1)
-			caseCols := columns(layout, false, 1)
+			caseRows := layoutRows(layout, 1)
+			caseColumns := layoutColumns(layout, false, 1)
 			capacity := caseRows - 2
 			buffer := scribe.EnableBuffer(slog.LevelDebug, scribe.BufferLines(caseRows))
 			t.Cleanup(scribe.Disable)
-			terminal := newTerminalVirtual(caseRows, caseCols, ThemeLight, false)
+			terminal := newTerminalVirtual(caseRows, caseColumns, ThemeLight, false)
 			display, err := NewDisplay(
 				hosts[:1], config.Periods{}, "", true, false, FormatCompact,
-				caseCols, caseRows, 0, 0, 0,
+				caseColumns, caseRows, 0, 0, 0,
 				func(useUnicode bool) (Terminal, error) { return terminal, nil },
 				metric.NewRecordCache(), buffer,
 			)
@@ -2565,14 +2542,14 @@ func TestDisplay_LogFollowing(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			layout := compactDisplayLayout(false)
-			caseRows := rows(layout, 1)
-			caseCols := columns(layout, false, 1)
+			caseRows := layoutRows(layout, 1)
+			caseColumns := layoutColumns(layout, false, 1)
 			buffer := scribe.EnableBuffer(slog.LevelDebug, scribe.BufferLines(caseRows))
 			t.Cleanup(scribe.Disable)
-			terminal := newTerminalVirtual(caseRows, caseCols, ThemeLight, false)
+			terminal := newTerminalVirtual(caseRows, caseColumns, ThemeLight, false)
 			display, err := NewDisplay(
 				hosts[:1], config.Periods{}, "", true, false, FormatCompact,
-				caseCols, caseRows, 0, 0, 0,
+				caseColumns, caseRows, 0, 0, 0,
 				func(useUnicode bool) (Terminal, error) { return terminal, nil },
 				metric.NewRecordCache(), buffer,
 			)
@@ -2641,15 +2618,15 @@ func TestDisplay_LogPaging(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			layout := compactDisplayLayout(false)
-			caseRows := rows(layout, 1)
-			caseCols := columns(layout, false, 1)
+			caseRows := layoutRows(layout, 1)
+			caseColumns := layoutColumns(layout, false, 1)
 			capacity := caseRows - 2
 			buffer := scribe.EnableBuffer(slog.LevelDebug, scribe.BufferLines(caseRows))
 			t.Cleanup(scribe.Disable)
-			terminal := newTerminalVirtual(caseRows, caseCols, ThemeLight, false)
+			terminal := newTerminalVirtual(caseRows, caseColumns, ThemeLight, false)
 			display, err := NewDisplay(
 				hosts[:1], config.Periods{}, "", true, false, FormatCompact,
-				caseCols, caseRows, 0, 0, 0,
+				caseColumns, caseRows, 0, 0, 0,
 				func(useUnicode bool) (Terminal, error) { return terminal, nil },
 				metric.NewRecordCache(), buffer,
 			)
@@ -2706,9 +2683,9 @@ func TestDisplay_LogEntryTallerThanPage(t *testing.T) {
 		"oversize", time.Now(), "[%s]", strings.Repeat("wrapped detail ", 300),
 	)
 	display := &Display{
-		dimsInit:   dimensions{rows: 8, cols: 160},
-		logOverlay: true,
-		logBuffer:  buffer,
+		dimensionsInitial: dimensions{rows: 8, columns: 160},
+		logOverlay:        true,
+		logBuffer:         buffer,
 	}
 	display.logRewind()
 	page, pages := display.logPagination()
@@ -2721,8 +2698,8 @@ func TestDisplay_LogEntryTallerThanPage(t *testing.T) {
 		if page != expected {
 			t.Fatalf("page up: got %d want %d", page, expected)
 		}
-		rows, _, _ := display.logPaged(display.dimsInit.rows - 2)
-		if len(rows) == 0 || len(rows) > display.dimsInit.rows-2 {
+		rows, _, _ := display.logPaged(display.dimensionsInitial.rows - 2)
+		if len(rows) == 0 || len(rows) > display.dimensionsInitial.rows-2 {
 			t.Fatalf("page up rows: got %d", len(rows))
 		}
 	}
@@ -2746,14 +2723,14 @@ func TestDisplay_LogResizePreservesPause(t *testing.T) {
 		scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Infof("resize", time.Now(), "[1] line")
 	}
 	display := &Display{
-		dimsInit:   dimensions{rows: 10, cols: 120},
-		logOverlay: true,
-		logBuffer:  buffer,
+		dimensionsInitial: dimensions{rows: 10, columns: 120},
+		logOverlay:        true,
+		logBuffer:         buffer,
 	}
 	display.logRewind()
 	display.logPageUp()
 	anchor := display.logAnchor
-	display.dimsInit.cols = 80
+	display.dimensionsInitial.columns = 80
 	display.logResize()
 	if display.logFollow {
 		t.Fatal("resize resumed live follow while paused")
@@ -2771,24 +2748,6 @@ func TestDisplay_LogResizePreservesPause(t *testing.T) {
 	}
 }
 
-func divider(base string, length int) string {
-	if length <= 0 || base == "" {
-		return ""
-	}
-	centerCount := 1
-	if length%2 == 0 {
-		centerCount = 2
-	}
-	spaceCount := (length - 1) / 2
-	tokens := tokens(base)
-	if len(tokens) == 0 {
-		return ""
-	}
-	center := strings.Repeat(tokens[0], centerCount)
-	spaces := strings.Repeat(" ", spaceCount)
-	return spaces + center + spaces
-}
-
 func TestDisplay_Reload(t *testing.T) {
 	tests := []struct {
 		name            string
@@ -2802,11 +2761,11 @@ func TestDisplay_Reload(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			layout := compactDisplayLayout(false)
-			caseRows := rows(layout, 1)
-			caseCols := columns(layout, false, 1)
+			caseRows := layoutRows(layout, 1)
+			caseColumns := layoutColumns(layout, false, 1)
 			cache := metric.NewRecordCache()
-			terminal := newTerminalVirtual(caseRows, caseCols, ThemeLight, false)
-			display, err := NewDisplay(hosts[:1], config.Periods{}, "", testCase.isRemote, false, FormatCompact, caseCols, caseRows, 0, 0, 0,
+			terminal := newTerminalVirtual(caseRows, caseColumns, ThemeLight, false)
+			display, err := NewDisplay(hosts[:1], config.Periods{}, "", testCase.isRemote, false, FormatCompact, caseColumns, caseRows, 0, 0, 0,
 				func(useUnicode bool) (Terminal, error) { return terminal, nil }, cache, nil)
 			if err != nil {
 				t.Fatalf("New Display err = %v, expected nil", err)
@@ -2857,4 +2816,84 @@ func TestDisplay_Reload(t *testing.T) {
 			}
 		})
 	}
+}
+
+func diffDisplay(this, that string) string {
+	dmp := diffmatchpatch.New()
+	expLines := strings.Split(strings.TrimRight(this, "\n"), "\n")
+	gotLines := strings.Split(strings.TrimRight(that, "\n"), "\n")
+	var b strings.Builder
+	for i := range max(len(expLines), len(gotLines)) {
+		e, g := "", ""
+		if i < len(expLines) {
+			e = expLines[i]
+		}
+		if i < len(gotLines) {
+			g = gotLines[i]
+		}
+		if e == g {
+			continue
+		}
+		diffs := dmp.DiffMain(e, g, false)
+		dmp.DiffCleanupSemantic(diffs)
+		b.WriteString(dmp.DiffPrettyText(diffs) + "\n")
+	}
+	return b.String()
+}
+
+func divider(base string, length int) string {
+	if length <= 0 || base == "" {
+		return ""
+	}
+	centerCount := 1
+	if length%2 == 0 {
+		centerCount = 2
+	}
+	spaceCount := (length - 1) / 2
+	tokens := tokens(base)
+	if len(tokens) == 0 {
+		return ""
+	}
+	center := strings.Repeat(tokens[0], centerCount)
+	spaces := strings.Repeat(" ", spaceCount)
+	return spaces + center + spaces
+}
+
+func layoutRows(layout [][]box, hostCount int) int {
+	if hostCount == 0 || len(layout) == 0 {
+		return 0
+	}
+	return len(layout) * ((hostCount + 1) / 2)
+}
+
+func layoutColumns(layout [][]box, useUnicode bool, hostCount int) int {
+	if hostCount == 0 || len(layout) == 0 {
+		return 0
+	}
+	count := 0
+	for _, b := range layout[0] {
+		if b.kind != boxDivider {
+			count += b.length(useUnicode)
+		}
+		if hostCount > 1 {
+			count += b.length(useUnicode)
+		}
+	}
+	return count
+}
+
+func layoutResizes(layout [][]box, hostCount int) int {
+	if hostCount == 0 || len(layout) == 0 {
+		return 0
+	}
+	count := 0
+	for _, b := range layout[0] {
+		if b.kind != boxDivider {
+			count += b.resizes()
+		}
+		if hostCount > 1 {
+			count += b.resizes()
+		}
+	}
+	return count
 }

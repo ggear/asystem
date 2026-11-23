@@ -1,10 +1,8 @@
 package probe
 
 import (
-	"bufio"
 	"context"
 	"net"
-	"os"
 	"strings"
 	"time"
 )
@@ -19,7 +17,7 @@ func newRestartChecker() restartChecker {
 			}
 			return connection.Close()
 		},
-		fstab: restartFstabPath,
+		fstab: fstabPath,
 	}
 }
 
@@ -29,15 +27,10 @@ func (c restartChecker) met(ctx context.Context, requirement restartRequirement)
 		return c.mounted(ctx, requirement.target)
 	case restartKindMounts:
 		var targets []string
-		if file, err := os.Open(c.fstab); err == nil {
-			scanner := bufio.NewScanner(file)
-			for scanner.Scan() {
-				fields := strings.Fields(scanner.Text())
-				if len(fields) >= 3 && !strings.HasPrefix(fields[0], "#") && fields[2] == "cifs" {
-					targets = append(targets, fields[1])
-				}
+		for _, entry := range readFstab(c.fstab) {
+			if entry.fstype == "cifs" {
+				targets = append(targets, entry.target)
 			}
-			_ = file.Close()
 		}
 		for _, target := range targets {
 			if !c.mounted(ctx, target) {
@@ -88,5 +81,4 @@ const (
 	restartCheckWait = 10 * time.Second
 	restartListWait  = 5 * time.Second
 	restartDialWait  = 3 * time.Second
-	restartFstabPath = "/etc/fstab"
 )

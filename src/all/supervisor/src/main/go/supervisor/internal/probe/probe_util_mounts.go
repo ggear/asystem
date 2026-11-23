@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -357,37 +358,38 @@ func (s *mountSet) hosted(mountpoint string) (string, bool) {
 }
 
 func (s *mountSet) parseFstab() []string {
-	data, err := os.ReadFile(filepath.Join(s.root, mountFstabPath))
-	if err != nil {
-		return nil
-	}
 	var expected []string
-	for line := range strings.SplitSeq(string(data), "\n") {
-		if trimmed := strings.TrimSpace(line); trimmed == "" || strings.HasPrefix(trimmed, "#") {
+	for _, entry := range readFstab(filepath.Join(s.root, mountFstabPath)) {
+		if entry.options == nil || !strings.HasPrefix(entry.target, config.DirShare+"/") || slices.Contains(entry.options, mountNoAuto) {
 			continue
 		}
-		fields := strings.Fields(line)
-		if len(fields) < 4 {
-			continue
-		}
-		mountpoint := mountUnescape(fields[1])
-		if !strings.HasPrefix(mountpoint, config.DirShare+"/") {
-			continue
-		}
-		noauto := false
-		for option := range strings.SplitSeq(fields[3], ",") {
-			if strings.TrimSpace(option) == mountNoAuto {
-				noauto = true
-				break
-			}
-		}
-		if noauto {
-			continue
-		}
-		expected = append(expected, mountpoint)
+		expected = append(expected, entry.target)
 	}
 	sort.Strings(expected)
 	return expected
+}
+
+func readFstab(path string) []fstabEntry {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+	var entries []fstabEntry
+	for line := range strings.SplitSeq(string(data), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) < 2 || strings.HasPrefix(fields[0], "#") {
+			continue
+		}
+		entry := fstabEntry{spec: fields[0], target: mountUnescape(fields[1])}
+		if len(fields) > 2 {
+			entry.fstype = fields[2]
+		}
+		if len(fields) > 3 {
+			entry.options = strings.Split(fields[3], ",")
+		}
+		entries = append(entries, entry)
+	}
+	return entries
 }
 
 func (s *mountSet) measure(mountpoint string, share bool) (uint64, uint64, error) {
@@ -551,6 +553,13 @@ func mountUnescape(field string) string {
 		return field
 	}
 	return unquoted
+}
+
+type fstabEntry struct {
+	spec    string
+	target  string
+	fstype  string
+	options []string
 }
 
 const (

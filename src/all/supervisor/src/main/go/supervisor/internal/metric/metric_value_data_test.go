@@ -118,43 +118,43 @@ func TestMetricValueData_UnmarshalJSON(t *testing.T) {
 			expectedError: true,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			var s ValueData
 			var err error
-			if tt.json == "" {
+			if testCase.json == "" {
 				s = ValueData{}
 			} else {
-				err = json.Unmarshal([]byte(tt.json), &s)
+				err = json.Unmarshal([]byte(testCase.json), &s)
 			}
-			if (err != nil) != tt.expectedError {
-				t.Fatalf("Got err = %v, expected error? %t", err, tt.expectedError)
+			if (err != nil) != testCase.expectedError {
+				t.Fatalf("Got err = %v, expected error? %t", err, testCase.expectedError)
 			}
 			if err != nil {
 				return
 			}
-			if s.Timestamp != tt.expectedTime {
-				t.Fatalf("Got timestamp = %d, expected %d", s.Timestamp, tt.expectedTime)
+			if s.Timestamp != testCase.expectedTime {
+				t.Fatalf("Got timestamp = %d, expected %d", s.Timestamp, testCase.expectedTime)
 			}
-			if (s.Pulse == nil) && tt.expectedPulse {
-				t.Fatalf("Got pulse nil = %t, expected %t", s.Pulse == nil, tt.expectedPulse)
+			if (s.Pulse == nil) && testCase.expectedPulse {
+				t.Fatalf("Got pulse nil = %t, expected %t", s.Pulse == nil, testCase.expectedPulse)
 			}
-			if (s.Trend == nil) && tt.expectedTrend {
-				t.Fatalf("Got trend nil = %t, expected %t", s.Trend == nil, tt.expectedTrend)
+			if (s.Trend == nil) && testCase.expectedTrend {
+				t.Fatalf("Got trend nil = %t, expected %t", s.Trend == nil, testCase.expectedTrend)
 			}
 			if s.Pulse != nil {
-				if s.Pulse.OK != tt.pulseOK {
-					t.Fatalf("Got pulse ok = %t, expected %t", s.Pulse.OK, tt.pulseOK)
+				if s.Pulse.OK != testCase.pulseOK {
+					t.Fatalf("Got pulse ok = %t, expected %t", s.Pulse.OK, testCase.pulseOK)
 				}
-				if s.Pulse.Kind != tt.pulseKind {
+				if s.Pulse.Kind != testCase.pulseKind {
 					t.Fatal("pulse kind mismatch")
 				}
 			}
 			if s.Trend != nil {
-				if s.Trend.OK != tt.trendOK {
-					t.Fatalf("Got trend ok = %t, expected %t", s.Trend.OK, tt.trendOK)
+				if s.Trend.OK != testCase.trendOK {
+					t.Fatalf("Got trend ok = %t, expected %t", s.Trend.OK, testCase.trendOK)
 				}
-				if s.Trend.Kind != tt.trendKind {
+				if s.Trend.Kind != testCase.trendKind {
 					t.Fatal("trend kind mismatch")
 				}
 			}
@@ -273,17 +273,17 @@ func TestMetricValueData_MarshalJSON(t *testing.T) {
 			expectedError: false,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			raw, err := json.Marshal(tt.value)
-			if (err != nil) != tt.expectedError {
-				t.Fatalf("Got err = %v, expected error? %t", err, tt.expectedError)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			raw, err := json.Marshal(testCase.value)
+			if (err != nil) != testCase.expectedError {
+				t.Fatalf("Got err = %v, expected error? %t", err, testCase.expectedError)
 			}
 			if err != nil {
 				return
 			}
-			if string(raw) != tt.expected {
-				t.Fatalf("Got json = %s, expected %s", raw, tt.expected)
+			if string(raw) != testCase.expected {
+				t.Fatalf("Got json = %s, expected %s", raw, testCase.expected)
 			}
 		})
 	}
@@ -435,27 +435,27 @@ func TestMetricValueData_DetailUnmarshalJSON(t *testing.T) {
 			expectedError: true,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			var detail ValueDataDetail
-			err := json.Unmarshal([]byte(tt.json), &detail)
-			if (err != nil) != tt.expectedError {
-				t.Fatalf("Got err = %v, expected error? %t", err, tt.expectedError)
+			err := json.Unmarshal([]byte(testCase.json), &detail)
+			if (err != nil) != testCase.expectedError {
+				t.Fatalf("Got err = %v, expected error? %t", err, testCase.expectedError)
 			}
 			if err != nil {
 				return
 			}
-			if detail.OK != tt.expected.OK {
-				t.Fatalf("Got ok = %t, expected %t", detail.OK, tt.expected.OK)
+			if detail.OK != testCase.expected.OK {
+				t.Fatalf("Got ok = %t, expected %t", detail.OK, testCase.expected.OK)
 			}
-			if detail.Kind != tt.expected.Kind {
-				t.Fatalf("Got kind = %v, expected %v", detail.Kind, tt.expected.Kind)
+			if detail.Kind != testCase.expected.Kind {
+				t.Fatalf("Got kind = %v, expected %v", detail.Kind, testCase.expected.Kind)
 			}
-			if detail.ValueFloat != tt.expected.ValueFloat {
-				t.Fatalf("Got number = %v, expected %v", detail.ValueFloat, tt.expected.ValueFloat)
+			if detail.ValueFloat != testCase.expected.ValueFloat {
+				t.Fatalf("Got number = %v, expected %v", detail.ValueFloat, testCase.expected.ValueFloat)
 			}
-			if detail.ValueString != tt.expected.ValueString {
-				t.Fatalf("Got string = %q, expected %q", detail.ValueString, tt.expected.ValueString)
+			if detail.ValueString != testCase.expected.ValueString {
+				t.Fatalf("Got string = %q, expected %q", detail.ValueString, testCase.expected.ValueString)
 			}
 		})
 	}
@@ -523,17 +523,17 @@ func TestMetricValueData_DetailMarshalJSON(t *testing.T) {
 			expectedError: false,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			raw, err := json.Marshal(tt.value)
-			if (err != nil) != tt.expectedError {
-				t.Fatalf("Got err = %v, expected error? %t", err, tt.expectedError)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			raw, err := json.Marshal(testCase.value)
+			if (err != nil) != testCase.expectedError {
+				t.Fatalf("Got err = %v, expected error? %t", err, testCase.expectedError)
 			}
 			if err != nil {
 				return
 			}
-			if string(raw) != tt.expected {
-				t.Fatalf("Got json = %s, expected %s", raw, tt.expected)
+			if string(raw) != testCase.expected {
+				t.Fatalf("Got json = %s, expected %s", raw, testCase.expected)
 			}
 		})
 	}

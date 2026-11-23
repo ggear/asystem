@@ -26,14 +26,14 @@ func TestEngineUtilHosts_Status(t *testing.T) {
 			h.reset(time.Now())
 		}, expectedOnline: true},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			hosts := newHostLiveness()
-			test.steps(hosts)
+			testCase.steps(hosts)
 			online, known := hosts.statusOf("alpha")
-			if hosts.assertOnline("alpha") != test.expectedOnline || known != test.expectedKnown || (hosts.offlineAtOf("alpha") > 0) != test.expectedStamped {
+			if hosts.assertOnline("alpha") != testCase.expectedOnline || known != testCase.expectedKnown || (hosts.offlineAtOf("alpha") > 0) != testCase.expectedStamped {
 				t.Fatalf("status: got online %v known %v online-asserted %v stamp [%d] want online %v known %v stamped %v",
-					online, known, hosts.assertOnline("alpha"), hosts.offlineAtOf("alpha"), test.expectedOnline, test.expectedKnown, test.expectedStamped)
+					online, known, hosts.assertOnline("alpha"), hosts.offlineAtOf("alpha"), testCase.expectedOnline, testCase.expectedKnown, testCase.expectedStamped)
 			}
 		})
 	}
@@ -123,22 +123,22 @@ func TestEngineUtilHosts_Quiet(t *testing.T) {
 			h.hearRetained("alpha", now.Add(-time.Hour).Unix(), now.Add(-time.Second))
 		}, provenAfter: time.Minute, unprovenAfter: time.Minute},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			hosts := newHostLiveness()
-			test.steps(hosts)
-			unprovenAfter := test.unprovenAfter
+			testCase.steps(hosts)
+			unprovenAfter := testCase.unprovenAfter
 			if unprovenAfter == 0 {
-				unprovenAfter = test.provenAfter
+				unprovenAfter = testCase.provenAfter
 			}
-			quiet := hosts.quietAmong([]string{"alpha", "beta"}, now, quietLimits{provenAfter: test.provenAfter, unprovenAfter: unprovenAfter, staleAfter: test.staleAfter})
+			quiet := hosts.quietAmong([]string{"alpha", "beta"}, now, quietLimits{provenAfter: testCase.provenAfter, unprovenAfter: unprovenAfter, staleAfter: testCase.staleAfter})
 			got := make([]string, 0, len(quiet))
 			for hostName := range quiet {
 				got = append(got, hostName)
 			}
 			slices.Sort(got)
-			if !slices.Equal(got, append([]string{}, test.expectedQuiet...)) && !(len(got) == 0 && len(test.expectedQuiet) == 0) {
-				t.Fatalf("quiet: got %v want %v", got, test.expectedQuiet)
+			if !slices.Equal(got, append([]string{}, testCase.expectedQuiet...)) && !(len(got) == 0 && len(testCase.expectedQuiet) == 0) {
+				t.Fatalf("quiet: got %v want %v", got, testCase.expectedQuiet)
 			}
 		})
 	}

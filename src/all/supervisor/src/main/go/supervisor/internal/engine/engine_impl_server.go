@@ -69,15 +69,15 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 	var hasConnected atomic.Bool
 	var forceRepublish atomic.Bool
 	onConnect := func(client mqtt.Client) {
-		names := client.Subscribe(serviceNameTopic, 1, func(_ mqtt.Client, msg mqtt.Message) {
+		names := client.Subscribe(serviceNameTopic, 1, func(_ mqtt.Client, message mqtt.Message) {
 			readbackStart := time.Now()
-			topic := scribe.SubjectTopic(msg.Topic())
-			if len(msg.Payload()) == 0 {
+			topic := scribe.SubjectTopic(message.Topic())
+			if len(message.Payload()) == 0 {
 				scribe.Log(scribe.SourceEngine, topic, scribe.ActionRegister).Infof("excluded", readbackStart, "[empty] readback, tombstoned before")
 				return
 			}
 			var value metric.ValueData
-			if err := json.Unmarshal(msg.Payload(), &value); err != nil {
+			if err := json.Unmarshal(message.Payload(), &value); err != nil {
 				scribe.Log(scribe.SourceEngine, topic, scribe.ActionRegister).Errorf("rejected", readbackStart, "[unmarshal] readback failed with [%v]", err)
 				return
 			}
@@ -97,32 +97,32 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			}
 			scribe.Log(scribe.SourceEngine, scribe.SubjectService(serviceName), scribe.ActionRegister).Infof("register", readbackStart, "[%-11.11s] host, rediscovered [%3d] topics", hostName, len(bindings))
 		})
-		onCommand := func(_ mqtt.Client, msg mqtt.Message) {
+		onCommand := func(_ mqtt.Client, message mqtt.Message) {
 			commandStart := time.Now()
-			tokens := strings.Split(msg.Topic(), "/")
-			if msg.Topic() != metric.TopicAllCommand && (len(tokens) < 5 || tokens[1] == "" || tokens[3] == "" || tokens[4] == "") {
-				scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(msg.Topic()), scribe.ActionSubscribe).Errorf("rejected", commandStart, "[malformed] topic of [%2d] levels", len(tokens))
+			tokens := strings.Split(message.Topic(), "/")
+			if message.Topic() != metric.TopicAllCommand && (len(tokens) < 5 || tokens[1] == "" || tokens[3] == "" || tokens[4] == "") {
+				scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(message.Topic()), scribe.ActionSubscribe).Errorf("rejected", commandStart, "[malformed] topic of [%2d] levels", len(tokens))
 				return
 			}
 			var subject scribe.Subject
 			switch tokens[3] {
 			case metric.EntityCluster:
 				if leading, _ := probe.Leading(metric.LeaderDutySentinel); !leading {
-					scribe.Log(scribe.SourceEngine, scribe.SubjectMetric(metric.MetricCluster), scribe.ActionSubscribe).Debugf("deferred", commandStart, "[%s] command left to the holder of duty [%s]", string(msg.Payload()), metric.LeaderDutySentinel)
+					scribe.Log(scribe.SourceEngine, scribe.SubjectMetric(metric.MetricCluster), scribe.ActionSubscribe).Debugf("deferred", commandStart, "[%s] command left to the holder of duty [%s]", string(message.Payload()), metric.LeaderDutySentinel)
 					return
 				}
 				subject = scribe.SubjectMetric(metric.MetricCluster)
 			case metric.EntityService:
 				subject = scribe.SubjectService(tokens[4])
-				probe.Switch(ctx, hostName, msg.Topic(), msg.Payload())
+				probe.Switch(ctx, hostName, message.Topic(), message.Payload())
 			case metric.EntityHost:
 				subject = scribe.SubjectHost(tokens[1])
 			default:
-				scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(msg.Topic()), scribe.ActionSubscribe).Errorf("rejected", commandStart, "[%s] scope, only [%s], [%s] and [%s] are commanded", tokens[3], metric.EntityCluster, metric.EntityHost, metric.EntityService)
+				scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(message.Topic()), scribe.ActionSubscribe).Errorf("rejected", commandStart, "[%s] scope, only [%s], [%s] and [%s] are commanded", tokens[3], metric.EntityCluster, metric.EntityHost, metric.EntityService)
 				return
 			}
 			// TODO: Implement command handling
-			scribe.Log(scribe.SourceEngine, subject, scribe.ActionSubscribe).Debugf("observed", commandStart, "[%s] host, [%s] scope, command [%s]", tokens[1], tokens[3], string(msg.Payload()))
+			scribe.Log(scribe.SourceEngine, subject, scribe.ActionSubscribe).Debugf("observed", commandStart, "[%s] host, [%s] scope, command [%s]", tokens[1], tokens[3], string(message.Payload()))
 		}
 		commands := client.Subscribe(commandTopic, 1, onCommand)
 		cluster := client.Subscribe(metric.TopicAllCommand, 1, onCommand)
@@ -135,9 +135,9 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		if hasConnected.Swap(true) {
 			reconnectStart := time.Now()
 			statusReadback := make(chan string, 1)
-			client.Subscribe(statusTopic, 1, func(_ mqtt.Client, msg mqtt.Message) {
+			client.Subscribe(statusTopic, 1, func(_ mqtt.Client, message mqtt.Message) {
 				select {
-				case statusReadback <- strings.TrimSpace(string(msg.Payload())):
+				case statusReadback <- strings.TrimSpace(string(message.Payload())):
 				default:
 				}
 			}).Wait()
@@ -168,25 +168,25 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionStop).Infof("shutdown", shutdownStart, "[%s] status, retained [%3d] records", metric.AvailabilityOffline, cache.Size())
 	}()
 	cache.SubscribeDeletes(&serveDeletesListener{client: client})
-	var db atomic.Pointer[databaseClient]
+	var database atomic.Pointer[databaseClient]
 	defer func() {
-		if connected := db.Swap(nil); connected != nil {
+		if connected := database.Swap(nil); connected != nil {
 			connected.close()
 		}
 	}()
 	if config.Load(configPath).Database() != "" {
 		databaseStart := time.Now()
 		go func() {
-			connected, dbErr := databaseConnect(ctx, configPath)
-			if dbErr != nil {
-				scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionConnect).Errorf("faulting", databaseStart, "[%s] loop with [%v]", loopAllProbesPublish, dbErr)
+			connected, connectErr := databaseConnect(ctx, configPath)
+			if connectErr != nil {
+				scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionConnect).Errorf("faulting", databaseStart, "[%s] loop with [%v]", loopAllProbesPublish, connectErr)
 				return
 			}
 			if ctx.Err() != nil {
 				connected.close()
 				return
 			}
-			db.Store(connected)
+			database.Store(connected)
 		}()
 	}
 	batch := newDatabaseBatch()
@@ -291,7 +291,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			}
 		}
 		lineBytes := batch.render(strconv.FormatInt(time.Now().UnixNano(), 10))
-		if connected := db.Load(); lineBytes > 0 && connected != nil {
+		if connected := database.Load(); lineBytes > 0 && connected != nil {
 			connected.write(ctx, batch.protocol.Bytes())
 		}
 		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionCensus).Infof("gathered", pulseStart, "[%3d] metrics, sent [%5d] bytes, kept [%5d] bytes, [%-9s]",

@@ -8,7 +8,7 @@ import (
 )
 
 func TestEngineUtilBackup_NewestBackupReading(t *testing.T) {
-	cases := []struct {
+	tests := []struct {
 		name          string
 		runs          map[string]*tertiaryStatus
 		want          *backupReading
@@ -43,10 +43,10 @@ func TestEngineUtilBackup_NewestBackupReading(t *testing.T) {
 			want: nil,
 		},
 	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			root := t.TempDir()
-			for run, status := range c.runs {
+			for run, status := range testCase.runs {
 				dir := filepath.Join(root, run, "stage", "tertiary")
 				if err := os.MkdirAll(dir, 0o755); err != nil {
 					t.Fatal(err)
@@ -63,7 +63,7 @@ func TestEngineUtilBackup_NewestBackupReading(t *testing.T) {
 				}
 			}
 			got := newestBackupReading(root)
-			assertBackupReading(t, got, c.want)
+			assertBackupReading(t, got, testCase.want)
 		})
 	}
 }

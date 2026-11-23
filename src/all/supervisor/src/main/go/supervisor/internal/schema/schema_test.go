@@ -59,41 +59,41 @@ func TestSchema_AppendLineProtocol(t *testing.T) {
 			expectedWrote: false,
 		},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			var buf bytes.Buffer
-			wrote := AppendLineProtocol(&buf, "supervisor", relation, test.tags, test.fields, "1000")
-			if wrote != test.expectedWrote {
-				t.Errorf("wrote: got %v want %v", wrote, test.expectedWrote)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			var buffer bytes.Buffer
+			wrote := AppendLineProtocol(&buffer, "supervisor", relation, testCase.tags, testCase.fields, "1000")
+			if wrote != testCase.expectedWrote {
+				t.Errorf("wrote: got %v want %v", wrote, testCase.expectedWrote)
 			}
-			if buf.String() != test.expected {
-				t.Fatalf("line protocol mismatch:\n got %q\nwant %q", buf.String(), test.expected)
+			if buffer.String() != testCase.expected {
+				t.Fatalf("line protocol mismatch:\n got %q\nwant %q", buffer.String(), testCase.expected)
 			}
 		})
 	}
 }
 
 func TestSchema_Reflect(t *testing.T) {
-	var buf bytes.Buffer
+	var buffer bytes.Buffer
 	relation := Relation{Path: "supervisor/host", Measures: []Measure{{Key: "status", Kind: KindBool, Persist: true}}}
-	if err := Reflect(&buf, "supervisor", Database{relation}, nil); err != nil {
+	if err := Reflect(&buffer, "supervisor", Database{relation}, nil); err != nil {
 		t.Fatalf("reflect: unexpected error %v", err)
 	}
-	if !bytes.Contains(buf.Bytes(), []byte(`"path": "supervisor/host"`)) {
-		t.Errorf("database: got %s want the declared relation", buf.String())
+	if !bytes.Contains(buffer.Bytes(), []byte(`"path": "supervisor/host"`)) {
+		t.Errorf("database: got %s want the declared relation", buffer.String())
 	}
-	if bytes.Contains(buf.Bytes(), []byte(`"broker"`)) {
+	if bytes.Contains(buffer.Bytes(), []byte(`"broker"`)) {
 		t.Errorf("broker: got a section want it omitted when no broker schema is supplied")
 	}
-	buf.Reset()
+	buffer.Reset()
 	broker := Broker{
 		Payload: []Payload{{Role: RoleState, Root: Member{Key: "value", Kind: KindInt}}},
 		Topic:   []Topic{{Template: "supervisor/$HOST/data/host", Role: RoleState}},
 	}
-	if err := Reflect(&buf, "supervisor", Database{relation}, broker); err != nil {
+	if err := Reflect(&buffer, "supervisor", Database{relation}, broker); err != nil {
 		t.Fatalf("reflect: unexpected error %v", err)
 	}
-	if !bytes.Contains(buf.Bytes(), []byte(`"template": "supervisor/$HOST/data/host"`)) {
-		t.Errorf("broker: got %s want the declared topic template", buf.String())
+	if !bytes.Contains(buffer.Bytes(), []byte(`"template": "supervisor/$HOST/data/host"`)) {
+		t.Errorf("broker: got %s want the declared topic template", buffer.String())
 	}
 }

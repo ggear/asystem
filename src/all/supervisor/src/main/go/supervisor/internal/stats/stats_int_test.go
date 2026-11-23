@@ -1261,9 +1261,9 @@ func TestStatsInt_Concurrency(t *testing.T) {
 			window := NewIntStats(24, 5, 1)
 			done := make(chan bool)
 			for index := range 10 {
-				go func(val int8) {
+				go func(value int8) {
 					for range 100 {
-						window.Push(val)
+						window.Push(value)
 					}
 					done <- true
 				}(int8(index * 10))
@@ -1371,62 +1371,6 @@ func TestStatsInt_TrendOff(t *testing.T) {
 	}
 }
 
-func makeRepeated(value int8, count int) []int8 {
-	result := make([]int8, count)
-	for index := range result {
-		result[index] = value
-	}
-	return result
-}
-
-func makeSequence(start, end int8) []int8 {
-	result := make([]int8, end-start+1)
-	for index := range result {
-		result[index] = start + int8(index)
-	}
-	return result
-}
-
-func expectedStats(values []int8, percentile float64) (int8, int8, int8, int8) {
-	var counts [maxValidValue + 1]int
-	var sum int64
-	for _, value := range values {
-		counts[int(value)]++
-		sum += int64(value)
-	}
-	return expectedStatsFromCounts(counts, len(values), sum, percentile)
-}
-
-func expectedStatsFromCounts(counts [maxValidValue + 1]int, count int, sum int64, percentile float64) (int8, int8, int8, int8) {
-	if count == 0 {
-		return 0, 0, 0, 0
-	}
-	minimumValue := int8(uninitialisedMin)
-	maximumValue := int8(uninitialisedMax)
-	for index := 0; index <= maxValidValue; index++ {
-		if counts[index] > 0 {
-			if minimumValue == uninitialisedMin || int8(index) < minimumValue {
-				minimumValue = int8(index)
-			}
-			if maximumValue == uninitialisedMax || int8(index) > maximumValue {
-				maximumValue = int8(index)
-			}
-		}
-	}
-	target := int(math.Ceil(float64(count) * percentile))
-	cumulative := 0
-	pct := int8(0)
-	for index := 0; index <= maxValidValue; index++ {
-		cumulative += counts[index]
-		if cumulative >= target {
-			pct = int8(index)
-			break
-		}
-	}
-	mean := int8((sum + int64(count/2)) / int64(count))
-	return mean, minimumValue, maximumValue, pct
-}
-
 func TestStatsInt_MissedPushIsHole(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -1488,13 +1432,69 @@ func TestStatsInt_ConvertToInt(t *testing.T) {
 		{name: "not a number reads zero", value: math.NaN(), expected: 0},
 		{name: "infinity reads zero", value: math.Inf(1), expected: 0},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			if got := ConvertToInt(test.value); got != test.expected {
-				t.Errorf("ConvertToInt(%v): got %d want %d", test.value, got, test.expected)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if got := ConvertToInt(testCase.value); got != testCase.expected {
+				t.Errorf("ConvertToInt(%v): got %d want %d", testCase.value, got, testCase.expected)
 			}
 		})
 	}
+}
+
+func makeRepeated(value int8, count int) []int8 {
+	result := make([]int8, count)
+	for index := range result {
+		result[index] = value
+	}
+	return result
+}
+
+func makeSequence(start, end int8) []int8 {
+	result := make([]int8, end-start+1)
+	for index := range result {
+		result[index] = start + int8(index)
+	}
+	return result
+}
+
+func expectedStats(values []int8, percentile float64) (int8, int8, int8, int8) {
+	var counts [maxValidValue + 1]int
+	var sum int64
+	for _, value := range values {
+		counts[int(value)]++
+		sum += int64(value)
+	}
+	return expectedStatsFromCounts(counts, len(values), sum, percentile)
+}
+
+func expectedStatsFromCounts(counts [maxValidValue + 1]int, count int, sum int64, percentile float64) (int8, int8, int8, int8) {
+	if count == 0 {
+		return 0, 0, 0, 0
+	}
+	minimumValue := int8(uninitialisedMin)
+	maximumValue := int8(uninitialisedMax)
+	for index := 0; index <= maxValidValue; index++ {
+		if counts[index] > 0 {
+			if minimumValue == uninitialisedMin || int8(index) < minimumValue {
+				minimumValue = int8(index)
+			}
+			if maximumValue == uninitialisedMax || int8(index) > maximumValue {
+				maximumValue = int8(index)
+			}
+		}
+	}
+	target := int(math.Ceil(float64(count) * percentile))
+	cumulative := 0
+	pct := int8(0)
+	for index := 0; index <= maxValidValue; index++ {
+		cumulative += counts[index]
+		if cumulative >= target {
+			pct = int8(index)
+			break
+		}
+	}
+	mean := int8((sum + int64(count/2)) / int64(count))
+	return mean, minimumValue, maximumValue, pct
 }
 
 func (v *IntStats) TrendMedian() int8 {
@@ -1502,4 +1502,8 @@ func (v *IntStats) TrendMedian() int8 {
 		return 0
 	}
 	return v.read(v.trend.median)
+}
+
+func (w *trendWindow) median() int8 {
+	return w.percentile(0.5)
 }
