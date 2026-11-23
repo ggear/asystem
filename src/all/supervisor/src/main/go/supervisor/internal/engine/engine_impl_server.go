@@ -29,7 +29,7 @@ type serviceKey struct {
 //  1. Subscribe to this host's own retained service names, and register each one, which is how a service survives a crash.
 //     Every arm of that handler reports, because a silent return made an absent line mean four different things at once.
 //  2. Subscribe to the command topic.
-//  3. On a reconnect, read the retained status back, and re-assert it online, forcing a full republish when it had lapsed.
+//  3. On a reconnect, force a full republish on the next pulse before anything else, then re-assert the status online.
 //
 // On each pulse:
 //  1. Publish the online status and every record on a heartbeat, or only the records that changed otherwise.
@@ -41,6 +41,9 @@ type serviceKey struct {
 //  1. Publish the offline status, which is what the last will would otherwise have published, and nothing else.
 //
 // Notes:
+//   - A reconnect always republishes everything, whatever the broker kept, so the first thing a watch hears from a host
+//     that went dark is the whole host. Deciding it from a readback of the status let a pulse of changed records out ahead
+//     of the republish, painting one stray metric seconds before the rest.
 //   - The retained set is deliberately left behind on the way out, because it is the only breadcrumb the next process
 //     has. Tombstoning it here reached no watch, since the offline status is acknowledged first and every watch drops
 //     what an offline host publishes, and it deleted the very names the readback above reads. See supervisor/CLAUDE.md.
@@ -69,6 +72,10 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 	var hasConnected atomic.Bool
 	var forceRepublish atomic.Bool
 	onConnect := func(client mqtt.Client) {
+		reconnected := hasConnected.Swap(true)
+		if reconnected {
+			forceRepublish.Store(true)
+		}
 		names := client.Subscribe(serviceNameTopic, 1, func(_ mqtt.Client, message mqtt.Message) {
 			readbackStart := time.Now()
 			topic := scribe.SubjectTopic(message.Topic())
@@ -132,26 +139,10 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 				scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(topic), scribe.ActionSubscribe).Errorf("rollback", subscribeStart, "[%s] topic, %s, rediscovery and commands lost", topic, reason)
 			}
 		}
-		if hasConnected.Swap(true) {
+		if reconnected {
 			reconnectStart := time.Now()
-			statusReadback := make(chan string, 1)
-			client.Subscribe(statusTopic, 1, func(_ mqtt.Client, message mqtt.Message) {
-				select {
-				case statusReadback <- strings.TrimSpace(string(message.Payload())):
-				default:
-				}
-			}).Wait()
-			var seen string
-			select {
-			case seen = <-statusReadback:
-			case <-time.After(2 * time.Second):
-			}
-			client.Unsubscribe(statusTopic)
-			if seen != metric.AvailabilityOnline {
-				forceRepublish.Store(true)
-			}
 			client.Publish(statusTopic, 1, true, metric.AvailabilityOnline).WaitTimeout(brokerTimeout)
-			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Infof("observed", reconnectStart, "[online] re-asserted, read [%s], republish [%s]", seen, scribe.Mark(forceRepublish.Load()))
+			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Infof("observed", reconnectStart, "[online] re-asserted, full republish on the next pulse")
 		}
 	}
 	clientStart := time.Now()

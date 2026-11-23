@@ -39,6 +39,35 @@ func TestEngineUtilHosts_Status(t *testing.T) {
 	}
 }
 
+func TestEngineUtilHosts_Refill(t *testing.T) {
+	tests := []struct {
+		name            string
+		steps           func(*hostLiveness)
+		expectedRefills []bool
+	}{
+		{name: "a_host_never_blanked_holds_nothing", steps: func(*hostLiveness) {}, expectedRefills: []bool{false, false}},
+		{name: "a_blanked_host_holds_once_on_its_first_data", steps: func(h *hostLiveness) { h.blank("alpha") }, expectedRefills: []bool{true, false}},
+		{name: "a_blank_survives_the_watch_reconnecting", steps: func(h *hostLiveness) {
+			h.blank("alpha")
+			h.reset(time.Now())
+		}, expectedRefills: []bool{true, false}},
+		{name: "another_host_blanked_holds_nothing_here", steps: func(h *hostLiveness) { h.blank("bravo") }, expectedRefills: []bool{false}},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			hosts := newHostLiveness()
+			testCase.steps(hosts)
+			actual := make([]bool, len(testCase.expectedRefills))
+			for index := range actual {
+				actual[index] = hosts.refill("alpha")
+			}
+			if !slices.Equal(actual, testCase.expectedRefills) {
+				t.Errorf("refills: got %v want %v", actual, testCase.expectedRefills)
+			}
+		})
+	}
+}
+
 func TestEngineUtilHosts_Quiet(t *testing.T) {
 	now := time.Now()
 	tests := []struct {

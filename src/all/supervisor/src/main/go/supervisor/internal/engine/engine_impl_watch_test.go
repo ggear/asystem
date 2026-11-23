@@ -123,6 +123,7 @@ func TestEngineImplWatch_RunListeningStreamLoop(t *testing.T) {
 	}
 	refreshes := &countingRefreshListener{}
 	reconciles := &countingRefreshListener{}
+	silences := &countingRefreshListener{}
 	var sizeBeforeOffline, topicsBeforeOffline int
 	reconcileGrace = time.Second
 	t.Cleanup(func() { reconcileGrace = 10 * time.Second })
@@ -418,6 +419,25 @@ func TestEngineImplWatch_RunListeningStreamLoop(t *testing.T) {
 				mqttClient.Publish(b.Topic, 0, false, payload)
 				if !await(true, 3*time.Second) {
 					t.Fatalf("Got no record after the silent host published again, expected it revived")
+				}
+			},
+		},
+		{
+			name:         "happy_silent_host_with_nothing_to_evict_is_blanked_without_a_refresh",
+			topic:        "supervisor/alpha/status",
+			silentMillis: 3000,
+			setupFunc: func(_ *testing.T, cache *metric.RecordCache, _ metric.TopicBinding) []byte {
+				hostRecord := metric.NewRecord(metric.NewNilValue())
+				cache.Store(metric.NewServiceSchemaRecordGUID(metric.MetricHostUpTime, "alpha", 0), &hostRecord)
+				cache.Evict("alpha", "svc-a")
+				cache.Delete("alpha", "svc-a")
+				cache.SubscribeRefresh(silences)
+				return []byte(metric.AvailabilityOnline)
+			},
+			checkFunc: func(t *testing.T, _ *metric.RecordCache, _ metric.TopicBinding) {
+				time.Sleep(8 * time.Second)
+				if got := silences.count(); got != 0 {
+					t.Fatalf("refreshes: got %d want 0 for a silent host with no service to evict", got)
 				}
 			},
 		},

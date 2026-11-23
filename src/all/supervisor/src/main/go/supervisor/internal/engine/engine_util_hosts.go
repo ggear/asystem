@@ -6,7 +6,7 @@ import (
 )
 
 func newHostLiveness() *hostLiveness {
-	return &hostLiveness{status: make(map[string]bool), offlineAt: make(map[string]int64), heardAt: make(map[string]time.Time), retainedAt: make(map[string]time.Time), openedAt: time.Now()}
+	return &hostLiveness{status: make(map[string]bool), offlineAt: make(map[string]int64), heardAt: make(map[string]time.Time), retainedAt: make(map[string]time.Time), blanked: make(map[string]bool), openedAt: time.Now()}
 }
 
 func (h *hostLiveness) assertOnline(hostName string) bool {
@@ -34,6 +34,22 @@ func (h *hostLiveness) offlineAtOf(hostName string) int64 {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
 	return h.offlineAt[hostName]
+}
+
+func (h *hostLiveness) blank(hostName string) {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+	h.blanked[hostName] = true
+}
+
+func (h *hostLiveness) refill(hostName string) bool {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+	if !h.blanked[hostName] {
+		return false
+	}
+	delete(h.blanked, hostName)
+	return true
 }
 
 func (h *hostLiveness) hear(hostName string) {
@@ -96,6 +112,7 @@ type hostLiveness struct {
 	offlineAt  map[string]int64
 	heardAt    map[string]time.Time
 	retainedAt map[string]time.Time
+	blanked    map[string]bool
 	openedAt   time.Time
 	floodAt    time.Time
 }

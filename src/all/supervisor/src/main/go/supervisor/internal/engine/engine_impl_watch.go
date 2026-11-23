@@ -67,7 +67,8 @@ func RunListeningProbesLoop(ctx context.Context, configPath string, cache *metri
 //  2. Remove the service on an empty or nil pulse payload, being the tombstone a live host publishes when a service departs.
 //  3. Revive an offline host when the payload was published after the offline, resubscribing it as a transition would.
 //  4. Ignore anything else from an offline host, being data that was already in flight when the host stopped answering.
-//  5. Stamp and store everything else.
+//  5. Hold painting for a moment on the first data from a host that was blanked, so its refill lands as one frame.
+//  6. Stamp and store everything else.
 //
 // On host status, gated on the prior status so each fires once per transition rather than once per heartbeat:
 //   - online, first since the connect: schedule a reconcile against the connect, because the retained flood is already in flight.
@@ -103,7 +104,8 @@ func RunListeningProbesLoop(ctx context.Context, configPath string, cache *metri
 //   - A subscribe is refused either by its token failing or by a SUBACK return code above the maximum QoS, which paho
 //     reports through Result rather than through Error, so both are read and both roll their topics back out of the map,
 //     but only the topics that subscribe itself added: a later resubscribe that re-added a topic keeps it.
-//   - The display is refreshed on connect and after a reconcile that reaped, never per host and never per heartbeat.
+//   - The display is refreshed on connect, after a reconcile that reaped and after a silence that evicted services, never
+//     per host, per heartbeat or for a silent host with nothing to evict, whose blanking moves nothing on screen.
 //   - An unknown host counts as online, so a watch started before its first status message still renders.
 //   - A service name topic is a bound metric as well as the discovery wildcard, so an empty payload on it removes the
 //     service through the data path above, discovery itself never removing anything, and only while the host is online.
@@ -157,6 +159,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 	var resubscribeHost func(client mqtt.Client, hostName string) int
 	var resubscribeAll func(client mqtt.Client) (int, int)
 	blankHost := func(hostName string) int {
+		liveness.blank(hostName)
 		evicted := cache.Services(hostName)
 		for _, svc := range evicted {
 			cache.Evict(hostName, svc)
@@ -231,6 +234,9 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		if value.Pulse == nil {
 			removeService(guid)
 			return
+		}
+		if liveness.refill(guid.Host) {
+			cache.Hold(time.Now().Add(watchPaintHold))
 		}
 		previous, _ := cache.Load(guid)
 		before := metric.NewNilValue()
@@ -490,10 +496,12 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 	clientStart := time.Now()
 	sweepQuiet := func(limits quietLimits) {
 		quiet := liveness.quietAmong(slices.Collect(maps.Keys(cache.Hosts())), time.Now(), limits)
+		evictedTotal := 0
 		for hostName, silence := range quiet {
 			silentStart := time.Now()
 			liveness.store(hostName, false)
 			evicted := blankHost(hostName)
+			evictedTotal += evicted
 			logger := scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionDisconnect)
 			report := logger.Warnf
 			if evicted == 0 {
@@ -501,7 +509,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			}
 			report("silenced", silentStart, "[offline] evicted [%3d] services, no traffic for [%3d] s", evicted, int64(silence.Seconds()))
 		}
-		if len(quiet) > 0 {
+		if evictedTotal > 0 {
 			cache.Refresh()
 		}
 	}
