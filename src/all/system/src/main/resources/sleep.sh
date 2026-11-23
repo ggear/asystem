@@ -373,8 +373,9 @@ for UNIT in "${SERVICES[@]}"; do
 done
 note_all socket "${SOCKETS[@]}"
 note_all service "${SERVICES[@]}"
-[[ ${#SOCKETS[@]} -eq 0 ]] || try 120 systemctl stop "${SOCKETS[@]}"
-[[ ${#SERVICES[@]} -eq 0 ]] || try 300 systemctl stop "${SERVICES[@]}"
+if [[ ${#SOCKETS[@]} -gt 0 || ${#SERVICES[@]} -gt 0 ]] && ! attempt 300 systemctl stop "${SOCKETS[@]}" "${SERVICES[@]}"; then
+  log_debug "Stop returned non zero, a D-Bus activation can cancel a stop job, the verify pass decides"
+fi
 if has service && systemctl is-active --quiet auditd.service && [[ " ${KEEP_NAMES[*]:-} " != *" auditd "* ]]; then
   note auditd
   log_debug "Service [auditd.service] to stop, it refuses systemctl stop so service is used"
