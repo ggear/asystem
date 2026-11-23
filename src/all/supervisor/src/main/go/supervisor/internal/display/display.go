@@ -53,7 +53,6 @@ type Display struct {
 	hosts        []string
 	periods      config.Periods
 	configPath   string
-	isRemote     bool
 	useUnicode   bool
 	format       Format
 	formatInit   Format
@@ -71,6 +70,8 @@ type Display struct {
 	holdUntil       atomic.Pointer[time.Time]
 	deferredRefresh bool
 	signalRefresh   chan struct{}
+	signalReload    chan struct{}
+	listen          func(context.Context, string, *metric.RecordCache, config.Periods)
 
 	boxes    []box
 	dirty    dirtyBoxes
@@ -121,7 +122,6 @@ func NewDisplay(
 		hosts:           hosts,
 		periods:         periods,
 		configPath:      configPath,
-		isRemote:        isRemote,
 		useUnicode:      useUnicode,
 		format:          format,
 		formatInit:      format,
@@ -132,9 +132,14 @@ func NewDisplay(
 		tickStall:       defaultTickStall,
 		refreshPeriod:   refreshPeriod,
 		signalRefresh:   make(chan struct{}, 1),
+		listen:          engine.RunListeningProbesLoop,
 		factory:         factory,
 		cache:           cache,
 		logBuffer:       logBuffer,
+	}
+	if isRemote || len(hosts) > 1 {
+		display.listen = engine.RunListeningStreamLoop
+		display.signalReload = make(chan struct{}, 1)
 	}
 	scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDiscover).Infof("geometry", initStart, "[%-7.7s] rows [%3d], cols [%3d]", format, height, width)
 	return display, nil
@@ -440,10 +445,29 @@ func (d *Display) MarkRefresh() {
 }
 
 func (d *Display) Run(ctx context.Context) {
-	if d.isRemote || len(d.hosts) > 1 {
-		engine.RunListeningStreamLoop(ctx, d.configPath, d.cache, d.periods)
-	} else {
-		engine.RunListeningProbesLoop(ctx, d.configPath, d.cache, d.periods)
+	for {
+		listenCtx, listenCancel := context.WithCancel(ctx)
+		listened := make(chan struct{})
+		go func() {
+			defer close(listened)
+			d.listen(listenCtx, d.configPath, d.cache, d.periods)
+		}()
+		select {
+		case <-ctx.Done():
+			listenCancel()
+			<-listened
+			return
+		case <-listened:
+			listenCancel()
+			return
+		case <-d.signalReload:
+			reloadStart := time.Now()
+			listenCancel()
+			<-listened
+			d.cache.Reset()
+			d.cache.Refresh()
+			scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionConnect).Infof("reloaded", reloadStart, "[manual] cache cleared, listening again")
+		}
 	}
 }
 
@@ -542,6 +566,10 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				if ev.Key() == tcell.KeyCtrlR {
 					if d.logOverlay {
 						d.logRewind()
+					}
+					select {
+					case d.signalReload <- struct{}{}:
+					default:
 					}
 					d.refresh("manual")
 				}

@@ -10,7 +10,7 @@ rm -f /usr/local/bin/atop
 cat >/usr/local/bin/atop <<EOF
 #!/bin/bash
 
-${SERVICE_INSTALL}/supervisor watch -m local -F 1 "\$@"
+exec ${SERVICE_INSTALL}/supervisor watch -m local -F 1 "\$@"
 
 EOF
 chmod +x /usr/local/bin/atop
@@ -18,7 +18,7 @@ rm -f /usr/local/bin/atops
 cat >/usr/local/bin/atops <<EOF
 #!/bin/bash
 
-${SERVICE_INSTALL}/supervisor watch -m remote "\$@"
+exec ${SERVICE_INSTALL}/supervisor watch -m remote "\$@"
 
 EOF
 chmod +x /usr/local/bin/atops
@@ -30,7 +30,7 @@ if [[ "${SERVICE_FORM_FACTOR:-}" == "edge" || "${SERVICE_FORM_FACTOR:-}" == "ser
 set -a
 [ -f "${SERVICE_INSTALL}/.env" ] && . "${SERVICE_INSTALL}/.env"
 set +a
-${SERVICE_INSTALL}/supervisor backup "\$@"
+exec ${SERVICE_INSTALL}/supervisor backup "\$@"
 
 EOF
   chmod +x /usr/local/bin/abackup
@@ -40,7 +40,7 @@ rm -f /usr/local/bin/abackups
 cat >/usr/local/bin/abackups <<EOF
 #!/bin/bash
 
-${SERVICE_INSTALL}/image/backups.sh "\$@"
+exec ${SERVICE_INSTALL}/image/backups.sh "\$@"
 
 EOF
 chmod +x /usr/local/bin/abackups

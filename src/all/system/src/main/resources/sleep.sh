@@ -582,7 +582,6 @@ elif attempt 30 mount -o remount,ro /; then
   log_info "Root remounted read only"
 else
   fail "root left writable"
-  if has fuser; then fuser -vm / 2>&1 | log_out || true; fi
 fi
 
 ################################################################################
@@ -624,6 +623,27 @@ if [[ ${#UNEXPECTED[@]} -gt 0 ]]; then
       lsof +f -- "${TARGET}" 2>/dev/null | awk 'NR == 1 || $4 ~ /[0-9]+[uw]/' | head -20 | log_out
     done
   fi
+  for TARGET in "${UNEXPECTED[@]}"; do
+    DEVICE="$(findmnt --noheadings --output MAJ:MIN --mountpoint "${TARGET}" | head -1 | xargs)"
+    for PROC in /proc/[0-9]*; do
+      PID="${PROC#/proc/}"
+      [[ "${PID}" != "$$" ]] || continue
+      for DESCRIPTOR in "${PROC}"/fd/*; do
+        DESCRIPTOR_PATH="$(readlink "${DESCRIPTOR}" 2>/dev/null)"
+        [[ "${DESCRIPTOR_PATH}" == *" (deleted)" ]] || continue
+        [[ "$(stat -L --format '%Hd:%Ld' "${DESCRIPTOR}" 2>/dev/null)" == "${DEVICE}" ]] || continue
+        log_error "Deleted file held open on [${TARGET}], pid [${PID}], command [$(short "$(tr '\0' ' ' <"${PROC}/cmdline" 2>/dev/null)")], file [${DESCRIPTOR_PATH% (deleted)}]"
+      done
+      MAPPED_SEEN=""
+      while read -r _ _ _ MAPPED_DEVICE _ MAPPED_PATH; do
+        [[ "${MAPPED_PATH}" == *" (deleted)" ]] || continue
+        [[ "$((16#${MAPPED_DEVICE%:*})):$((16#${MAPPED_DEVICE#*:}))" == "${DEVICE}" ]] || continue
+        [[ "${MAPPED_SEEN}" != *"|${MAPPED_PATH}|"* ]] || continue
+        MAPPED_SEEN+="|${MAPPED_PATH}|"
+        log_error "Deleted file mapped on [${TARGET}], pid [${PID}], command [$(short "$(tr '\0' ' ' <"${PROC}/cmdline" 2>/dev/null)")], file [${MAPPED_PATH% (deleted)}]"
+      done 2>/dev/null <"${PROC}/maps"
+    done
+  done
 fi
 if [[ ${#UNCLEAN[@]} -gt 0 ]]; then
   fail "containers not stopped cleanly [${UNCLEAN[*]}]"

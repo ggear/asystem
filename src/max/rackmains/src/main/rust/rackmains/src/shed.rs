@@ -195,7 +195,10 @@ impl Runner for Ssh {
                 let label = format!("ssh call {}", host.name);
                 info!("{}", log_line(&label, command.remote()));
                 info!("{}", log_line(&format!("{label} status"), &status.to_string()));
-                info!("{}", log_line(&format!("{label} took"), &format!("{took:?}")));
+                info!(
+                    "{}",
+                    log_line(&format!("{label} took ms"), &took.as_millis().to_string())
+                );
                 let record = || -> std::io::Result<()> {
                     let name = format!(
                         "{CALL_LOG_PREFIX}{}_{}_{}{CALL_LOG_SUFFIX}",

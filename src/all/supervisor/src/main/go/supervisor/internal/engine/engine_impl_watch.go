@@ -242,7 +242,8 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			if _, leaf, found := strings.Cut(name, "/"); found {
 				name = leaf
 			}
-			scribe.Log(scribe.SourceEngine, scribe.SubjectService(guid.ServiceName), scribe.ActionSubscribe).Debugf("recorded", streamStart, "[%-11.11s] [%s] Pls [%s>%s] Tnd [%s]", guid.Host, scribe.Fit(name, 12), shown(before.Pulse), shown(value.Pulse), shown(value.Trend))
+			host := guid.Host[strings.LastIndexByte(guid.Host, '-')+1:]
+			scribe.Log(scribe.SourceEngine, scribe.SubjectService(guid.ServiceName), scribe.ActionSubscribe).Debugf("recorded", streamStart, "[%s] P[%s>%s] T[%s]", scribe.Fit(host+"@"+name, 18), shown(before.Pulse), shown(value.Pulse), shown(value.Trend))
 		}
 		value.Timestamp = time.Now().Unix()
 		record := metric.NewRecord(value)

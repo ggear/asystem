@@ -405,6 +405,17 @@ class InstallPostShellTest(unittest.TestCase):
         self.assertFalse(exists(join(self.bin, "abackup")))
         self.assertTrue(exists(join(self.bin, "atops")))
 
+    def test_every_wrapper_becomes_its_program_so_no_shell_holds_the_wrapper_open_across_a_reinstall(self):
+        os.makedirs(join(self.install, "image"))
+        for program in (join(self.install, "supervisor"), join(self.install, "image", "backups.sh")):
+            with open(program, "w") as handle:
+                handle.write("#!/bin/bash\necho $$\n")
+        self.invoke("server")
+        for wrapper in ("atop", "atops", "abackup", "abackups"):
+            running = subprocess.Popen([join(self.bin, wrapper)], stdout=subprocess.PIPE, text=True, env={"PATH": os.environ["PATH"]})
+            printed, _ = running.communicate()
+            self.assertEqual(printed.strip(), str(running.pid), f"[{wrapper}] must exec its program, not run it as a child")
+
     def test_the_wrapper_exports_what_it_sources_and_forwards_its_arguments(self):
         self.invoke("edge")
         done = subprocess.run([join(self.bin, "abackup"), "start", "--scrub"], capture_output=True, text=True, env={"PATH": os.environ["PATH"]})

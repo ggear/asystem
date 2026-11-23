@@ -10,6 +10,7 @@ x-common: &common
     - DOCKER_VERNEMQ_ALLOW_ANONYMOUS=on
     - DOCKER_VERNEMQ_PLUGINS__VMQ_PASSWD=off
     - DOCKER_VERNEMQ_LEVELDB__MAXIMUM_MEMORY=1GB
+    - DOCKER_VERNEMQ_MAX_ONLINE_MESSAGES=10000
   logging:
     driver: "json-file"
     options:

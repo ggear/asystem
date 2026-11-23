@@ -2,6 +2,7 @@ use std::collections::{BTreeSet, HashSet, VecDeque};
 use std::fmt;
 use std::time::Duration;
 
+use crate::log_seconds;
 use crate::metrics::{
     Frame, GUARD_ASLEEP_HOSTS, GUARD_BATTERY_SECONDS, GUARD_FAILED_HOSTS, GUARD_LAST_ACTION, GUARD_LIVE,
     GUARD_MAINS_SECONDS, GUARD_STATE,
@@ -154,7 +155,7 @@ impl Guard {
     }
 
     pub fn hosts_shed(&self) -> usize {
-        usize::from(self.shed_started) * self.hosts.len()
+        self.asleep.len()
     }
 
     pub fn step(&mut self, flags: Option<Flags>, dt: Duration) -> Output {
@@ -343,9 +344,8 @@ impl Guard {
             lines: vec![
                 ("guard decision", decision.to_string()),
                 ("guard decision reason", reason.to_string()),
-                ("guard decision battery seconds", battery),
-                ("guard decision mains seconds", mains),
-                ("guard decision live", live),
+                ("guard decision battery seconds", log_seconds(self.battery.as_secs())),
+                ("guard decision mains seconds", log_seconds(self.mains.as_secs())),
             ],
         });
     }
@@ -677,6 +677,17 @@ mod tests {
         assert_eq!(guard.failed_hosts(), vec!["meg".to_string()]);
         guard.complete("meg", Command::Awake, 0);
         assert!(guard.failed_hosts().is_empty());
+    }
+
+    #[test]
+    fn hosts_shed_counts_only_the_hosts_whose_asleep_succeeded() {
+        let mut guard = guard();
+        run(&mut guard, Some(battery()), 120);
+        assert_eq!(guard.hosts_shed(), 0);
+        guard.complete("meg", Command::Asleep, 1);
+        assert_eq!(guard.hosts_shed(), 0);
+        guard.complete("may", Command::Asleep, 0);
+        assert_eq!(guard.hosts_shed(), 1);
     }
 
     #[test]

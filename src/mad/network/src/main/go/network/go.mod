@@ -19,12 +19,12 @@ require (
 	github.com/klauspost/compress v1.20.5 // indirect
 	github.com/klauspost/cpuid/v2 v2.4.2 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
-	github.com/pierrec/lz4/v4 v4.1.33 // indirect
+	github.com/pierrec/lz4/v4 v4.1.34 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/spf13/pflag v1.1.0 // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/zeebo/xxh3 v1.1.0 // indirect
-	golang.org/x/exp v0.0.0-20261120182113-8801fbdfac81 // indirect
+	golang.org/x/exp v0.0.0-20261121134650-e1094eeca1b5 // indirect
 	golang.org/x/mod v0.43.0 // indirect
 	golang.org/x/sync v0.25.0 // indirect
 	golang.org/x/sys v0.50.0 // indirect

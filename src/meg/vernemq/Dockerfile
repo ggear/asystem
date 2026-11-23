@@ -1,12 +1,11 @@
 # NOTES: https://github.com/vernemq/vernemq/releases
-FROM vernemq/vernemq:2.1.2-alpine AS image_upstream
+FROM vernemq/vernemq:2.2.1-alpine AS image_upstream
 USER root
 RUN apk update && \
-    apk add --upgrade --no-cache bash=5.2.37-r0 && \
-    apk add --upgrade --no-cache coreutils=9.7-r1 && \
-    apk add --upgrade --no-cache less=679-r0 && \
-    apk add --upgrade --no-cache vim=9.1.1566-r0 && \
-    apk add --upgrade --no-cache mosquitto-clients=2.0.21-r0 && \
+    apk add --upgrade --no-cache bash=5.3.9-r1 && \
+    apk add --upgrade --no-cache coreutils=9.11-r1 && \
+    apk add --upgrade --no-cache less=702-r0 && \
+    apk add --upgrade --no-cache mosquitto-clients=2.1.2-r1 && \
     (apk cache clean || true) && rm -rf /var/cache/apk/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
 

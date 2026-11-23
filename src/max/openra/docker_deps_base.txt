@@ -5,5 +5,4 @@ bash
 coreutils
 less
 curl
-vim
 jq

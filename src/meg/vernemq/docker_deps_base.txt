@@ -4,5 +4,4 @@
 bash
 coreutils
 less
-vim
 mosquitto-clients

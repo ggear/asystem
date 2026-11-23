@@ -107,13 +107,13 @@ pub fn event_lines(event: &str, detail: &str, prefix: &str) -> Vec<String> {
         EVENT_COMMAND => pairs(detail)
             .into_iter()
             .filter(|(key, value)| (key != "reason" || !value.is_empty()) && (key != "took_ms" || value != "0"))
-            .map(|(key, value)| {
-                let label = if key == "command" {
-                    "guard command".to_string()
-                } else {
-                    format!("guard command {}", words(&key))
-                };
-                line(&label, &value)
+            .flat_map(|(key, value)| match key.as_str() {
+                "command" => vec![line("guard command", &value)],
+                "reason" => command_result(&value)
+                    .into_iter()
+                    .map(|(label, value)| line(&format!("guard command {label}"), &value))
+                    .collect(),
+                _ => vec![line(&format!("guard command {}", words(&key)), &value)],
             })
             .collect(),
         EVENT_START => pairs(detail)
@@ -163,32 +163,34 @@ pub fn row_lines(table: &Table, row: &[String], progress: &mut Progress, prefix:
     let clock = |name: &str, limit: &str| {
         let value = table.cell(row, name);
         if value.is_empty() {
-            "unknown".to_string()
-        } else {
-            let limit = table.cell(row, limit);
-            match (value.parse::<i64>(), limit.parse::<i64>()) {
-                (Ok(seconds), Ok(bound)) if seconds >= bound => {
-                    format!("{}, limit {} reached", log_seconds(seconds), log_seconds(bound))
-                }
-                _ => format!("{} of {}", log_seconds(value), log_seconds(limit)),
-            }
+            return Some("unknown".to_string());
+        }
+        let limit = table.cell(row, limit);
+        match (value.parse::<i64>(), limit.parse::<i64>()) {
+            (Ok(0), _) => None,
+            (Ok(seconds), Ok(bound)) if seconds >= bound => Some(format!(
+                "{} of {}, limit reached",
+                log_seconds(seconds),
+                log_seconds(bound)
+            )),
+            _ => Some(format!("{} of {}", log_seconds(value), log_seconds(limit))),
         }
     };
     [
-        ("ups state", describe(table.cell(row, STATUS))),
-        ("output load pct", shown(UTILISATION, "%")),
-        ("battery volts", shown(BATTERY_VOLTS, "V")),
-        ("battery charge pct", shown(BATTERY_CHARGE_PCT, "%")),
-        ("plug watts", shown(PLUG_WATTS, "W")),
-        ("guard state", shown(GUARD_STATE, "")),
+        ("ups state", Some(describe(table.cell(row, STATUS)))),
+        ("output load pct", Some(shown(UTILISATION, "%"))),
+        ("battery volts", Some(shown(BATTERY_VOLTS, "V"))),
+        ("battery charge pct", Some(shown(BATTERY_CHARGE_PCT, "%"))),
+        ("plug watts", Some(shown(PLUG_WATTS, "W"))),
+        ("guard state", Some(shown(GUARD_STATE, ""))),
         (
             "guard battery seconds",
             clock(GUARD_BATTERY_SECONDS, GUARD_SHED_BATTERY),
         ),
         ("guard mains seconds", clock(GUARD_MAINS_SECONDS, GUARD_RESTORE_MAINS)),
     ]
-    .iter()
-    .map(|(label, value)| line(&format!("progress {label}"), value))
+    .into_iter()
+    .filter_map(|(label, value)| value.map(|value| line(&format!("progress {label}"), &value)))
     .collect()
 }
 
@@ -247,6 +249,43 @@ pub fn tail(dir: &Path, file: Option<&Path>, follow: bool, out: &mut dyn Write) 
         }
         thread::sleep(TAIL_POLL);
     }
+}
+
+fn command_result(reason: &str) -> Vec<(&'static str, String)> {
+    let mut tokens = reason.split(' ');
+    let fields: Option<Vec<(&str, &str)>> = match tokens.next() {
+        Some("asleep" | "awake") => tokens.map(|token| token.split_once('=')).collect(),
+        _ => None,
+    };
+    let Some(fields) = fields.filter(|fields| !fields.is_empty()) else {
+        return vec![("reason", reason.to_string())];
+    };
+    let value = |name: &str| {
+        fields
+            .iter()
+            .find(|(key, _)| *key == name)
+            .map_or("", |(_, value)| *value)
+    };
+    let mut lines = vec![("result", value("reason").to_string())];
+    if !matches!(value("mode"), "" | "none") {
+        lines.push(("mode", value("mode").to_string()));
+    }
+    let issues: Vec<String> = [
+        ("failed", "failed", "failed"),
+        ("warnings", "warning", "warnings"),
+        ("timeouts", "timeout", "timeouts"),
+    ]
+    .iter()
+    .filter_map(|(key, one, many)| match value(key).parse::<u64>() {
+        Ok(0) | Err(_) => None,
+        Ok(1) => Some(format!("1 {one}")),
+        Ok(count) => Some(format!("{count} {many}")),
+    })
+    .collect();
+    if !issues.is_empty() {
+        lines.push(("issues", issues.join(", ")));
+    }
+    lines
 }
 
 fn words(key: &str) -> String {
@@ -515,7 +554,7 @@ mod tests {
             .iter()
             .map(|row| row_lines(&table, row, &mut progress, "").len())
             .collect();
-        assert_eq!(counts, vec![8, 0, 8, 8, 8]);
+        assert_eq!(counts, vec![7, 0, 8, 8, 8]);
         let mut progress = Progress::default();
         let heartbeat: Vec<String> = table
             .rows
@@ -525,13 +564,53 @@ mod tests {
         assert!(heartbeat
             .iter()
             .any(|line| line.contains("progress guard battery seconds") && line.ends_with("[ 12s of 120s]")));
-        assert!(heartbeat.iter().any(
-            |line| line.contains("progress guard battery seconds") && line.ends_with("[130s, limit 120s reached]")
-        ));
-        assert!(!heartbeat.iter().any(|line| line.contains("130s of 120s")));
+        assert!(heartbeat
+            .iter()
+            .any(|line| line.contains("progress guard battery seconds")
+                && line.ends_with("[130s of 120s, limit reached]")));
+        assert!(!heartbeat.iter().any(|line| line.ends_with("[  0s of 120s]")));
         assert!(heartbeat
             .iter()
             .any(|line| line.contains("progress battery charge pct") && line.ends_with("[58%]")));
+    }
+
+    #[test]
+    fn a_command_result_is_read_as_its_outcome_mode_and_only_the_issues_it_had() {
+        for (reason, expected) in [
+            (
+                "asleep status=0 reason=ok mode=deep failed=0 warnings=1 timeouts=0",
+                vec![("result", "ok"), ("mode", "deep"), ("issues", "1 warning")],
+            ),
+            (
+                "awake status=6 reason=unhealthy mode=none failed=2 warnings=0 timeouts=3",
+                vec![("result", "unhealthy"), ("issues", "2 failed, 3 timeouts")],
+            ),
+            (
+                "asleep status=0 reason=ok mode=shallow failed=0 warnings=0 timeouts=0",
+                vec![("result", "ok"), ("mode", "shallow")],
+            ),
+            ("unreachable", vec![("reason", "unreachable")]),
+            ("call limit reached", vec![("reason", "call limit reached")]),
+            ("asleep", vec![("reason", "asleep")]),
+        ] {
+            let expected: Vec<(&str, String)> = expected
+                .into_iter()
+                .map(|(label, value)| (label, value.to_string()))
+                .collect();
+            assert_eq!(command_result(reason), expected, "{reason}");
+        }
+        let lines = event_lines(
+            EVENT_COMMAND,
+            "host [meg] command [asleep] status [0] reason [asleep status=0 reason=ok mode=deep failed=0 warnings=1 timeouts=0] took_ms [9]",
+            "drill ",
+        );
+        assert!(lines
+            .iter()
+            .any(|line| line.contains("drill guard command result .") && line.ends_with("[ok]")));
+        assert!(lines
+            .iter()
+            .any(|line| line.contains("drill guard command issues .") && line.ends_with("[1 warning]")));
+        assert!(!lines.iter().any(|line| line.contains("status=")));
     }
 
     #[test]

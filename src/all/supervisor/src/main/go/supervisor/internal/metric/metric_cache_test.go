@@ -2839,3 +2839,82 @@ func TestMetricCache_Hold(t *testing.T) {
 		})
 	}
 }
+
+func TestMetricCache_Reset(t *testing.T) {
+	value := ValueData{Pulse: &ValueDataDetail{OK: true, Kind: ValueString, ValueString: "v"}}
+	tests := []struct {
+		name            string
+		cache           *RecordCache
+		expectedSize    int
+		expectedListens int
+		expectedRefresh int
+		expectedHold    int
+	}{
+		{name: "records_and_loop_listeners_dropped_display_listeners_kept", cache: NewRecordCache(), expectedListens: 1, expectedRefresh: 1, expectedHold: 1},
+		{name: "a_nil_cache_is_a_no_op", cache: nil},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			guid := NewServiceRecordGUID(MetricServiceUpTime, "macmini-may", "influxdb3")
+			attach := &mockAttachListener{}
+			wake := &recordingWake{}
+			deletes := &mockDeletesListener{}
+			refresh := &recordingRefresh{}
+			hold := &recordingHold{}
+			record := NewRecord(value)
+			record.Topic = "supervisor/macmini-may/data/service/influxdb3/up_time"
+			test.cache.Store(guid, &record)
+			test.cache.SubscribeUpdates(guid, &mockListener{})
+			test.cache.SubscribeAttach(attach)
+			test.cache.SubscribeWake(wake)
+			test.cache.SubscribeDeletes(deletes)
+			test.cache.SubscribeRefresh(refresh)
+			test.cache.SubscribeHold(hold)
+			test.cache.Reset()
+			size := test.cache.Size()
+			listens := 0
+			for _, ids := range test.cache.ListenerIDs() {
+				listens += len(ids)
+			}
+			test.cache.SubscribeUpdates(NewServiceSchemaRecordGUID(MetricServiceName, guid.Host, 0), &mockListener{})
+			test.cache.RegisterService(guid.Host, guid.ServiceName, false)
+			test.cache.SubscribeUpdates(NewServiceSchemaRecordGUID(MetricServiceVersion, guid.Host, 0), &mockListener{})
+			test.cache.Attach()
+			test.cache.Wake(time.Minute)
+			test.cache.Refresh()
+			test.cache.Hold(time.Now())
+			nilRecord := NewRecord(NewNilValue())
+			nilRecord.Topic = record.Topic
+			test.cache.Store(guid, &nilRecord)
+			test.cache.Delete(guid.Host, guid.ServiceName)
+			if size != test.expectedSize {
+				t.Fatalf("size: got %d want %d", size, test.expectedSize)
+			}
+			if listens != test.expectedListens {
+				t.Fatalf("listens: got %d want %d", listens, test.expectedListens)
+			}
+			if attach.attachCount != 0 || wake.calls != 0 || deletes.markDeleteCount != 0 {
+				t.Fatalf("loop listeners: got attach %d wake %d deletes %d want 0", attach.attachCount, wake.calls, deletes.markDeleteCount)
+			}
+			if refresh.calls != test.expectedRefresh || hold.calls != test.expectedHold {
+				t.Fatalf("display listeners: got refresh %d hold %d want %d %d", refresh.calls, hold.calls, test.expectedRefresh, test.expectedHold)
+			}
+		})
+	}
+}
+
+type recordingWake struct {
+	calls int
+}
+
+func (r *recordingWake) MarkWake(_ time.Duration) {
+	r.calls++
+}
+
+type recordingRefresh struct {
+	calls int
+}
+
+func (r *recordingRefresh) MarkRefresh() {
+	r.calls++
+}

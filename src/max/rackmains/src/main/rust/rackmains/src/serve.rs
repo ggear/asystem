@@ -239,7 +239,7 @@ impl Poller {
         host_states.extend(self.host_switch.tick(idle, &self.runner, &self.hosts));
         for (topic, payload) in host_states {
             if let Err(err) = self.publisher.publish(&topic, &payload) {
-                warn!("{}", log_line("host state publish failed", &err.to_string()));
+                debug!("{}", log_line("host state publish deferred", &err.to_string()));
             }
         }
         // 2. Read UPS
@@ -696,10 +696,13 @@ impl Poller {
                     "battery remaining",
                     self.last
                         .number(metrics::BATTERY_RUNTIME_REMAINING_SECONDS)
-                        .map_or_else(|| "unknown".to_string(), |seconds| log_seconds(seconds as i64)),
+                        .map_or_else(String::new, |seconds| log_seconds(seconds as i64)),
                 ),
                 ("guard state", shown(metrics::GUARD_STATE, "")),
-            ] {
+            ]
+            .into_iter()
+            .filter(|(_, value)| !value.is_empty())
+            {
                 info!("{}", log_line(&format!("progress {label}"), &value));
             }
         }
@@ -969,7 +972,7 @@ static STOP_SIGNAL: AtomicI32 = AtomicI32::new(0);
 
 const REPORT_PERIOD: Duration = Duration::from_secs(60);
 
-const REPORT_PERIOD_BATTERY: Duration = Duration::from_secs(1);
+const REPORT_PERIOD_BATTERY: Duration = Duration::from_secs(10);
 
 const SSH_TIMEOUT_SECONDS: u64 = 10;
 

@@ -673,6 +673,22 @@ func (c *RecordCache) Refresh() {
 	}
 }
 
+func (c *RecordCache) Reset() {
+	if c == nil {
+		return
+	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c.guids = make([]RecordGUID, 0)
+	c.records = make(map[guidKey]*Record)
+	c.serviceIndex = make(map[indexKey]guidKey)
+	c.dirty = make(map[guidKey]RecordGUID)
+	c.hostLastSeen = make(map[string]int64)
+	c.deletesListener = nil
+	c.wakeListener = nil
+	c.attachListener = nil
+}
+
 func (c *RecordCache) Wake(frozen time.Duration) {
 	if c == nil {
 		return

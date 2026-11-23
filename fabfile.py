@@ -608,15 +608,15 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
                     )
                     docker_build_mounts.append("--mount type=bind,source={},target={},readonly".format(*docker_build_mount))
             if any("src/main/python" in item for item in docker_build_copies):
-                docker_build_copies.append("RUN set -eux; \\\\\\\\")
+                docker_build_copies.append("RUN set -eux; \\\\")
                 docker_build_copies.append(
-                    "    [ -f /asystem/bin/python/.py_deps.txt ] && pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir -r /asystem/bin/python/.py_deps.txt; \\\\\\\\"
+                    "    [ -f /asystem/bin/python/.py_deps.txt ] && pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir -r /asystem/bin/python/.py_deps.txt; \\\\"
                 )
                 docker_build_copies.append("    pip3 cache purge")
             docker_build_variables = []
             for env_global_key, env_global_value in GLOBAL_ENV.items():
                 if env_global_key.endswith(("_VERSION", "_LABEL")):
-                    docker_build_variables.append(f"-e ASYSTEM_{env_global_key}={env_global_value}")
+                    docker_build_variables.append(f"-e ASYSTEM_{env_global_key}={env_global_value.removeprefix('"').removesuffix('"')}")
             with open(docker_deps_script_path, "w+") as docker_deps_script_file:
                 docker_deps_script_file.write(
                     """
@@ -624,26 +624,30 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
 #######################################################################################
 # WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
+# shellcheck disable=SC2329
 function echo_package_install_commands {{
-  [[ "$(which apt-get)" != "" ]] &&
-    PKG="DEBIAN_FRONTEND=noninteractive apt-get" &&
-    PKG_UPDATE="apt-get update" &&
-    PKG_BOOTSTRAP="DEBIAN_FRONTEND=noninteractive apt-get -y install bsdmainutils" &&
-    PKG_VERSION="apt show" &&
-    PKG_VERSION_GREP="Version" &&
-    PKG_VERSION_AWK='{{print $2}}' &&
-    PKG_INSTALL="DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install" &&
+  if command -v apt-get >/dev/null 2>&1; then
+    PKG_UPDATE="apt-get update"
+    PKG_BOOTSTRAP="DEBIAN_FRONTEND=noninteractive apt-get -y install bsdmainutils"
+    PKG_INSTALL="DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install"
     PKG_CLEAN="DEBIAN_FRONTEND=noninteractive apt-get clean && rm -rf /var/lib/apt/lists/*"
-  [[ "$(which apk)" != "" ]] &&
-    PKG="apk" &&
-    PKG_UPDATE="apk update" &&
-    PKG_BOOTSTRAP="apk add --no-cache util-linux" &&
-    PKG_VERSION="apk version" &&
-    PKG_VERSION_GREP="=" &&
-    PKG_VERSION_AWK='{{print $3}}' &&
-    PKG_INSTALL="apk add --upgrade --no-cache" &&
+    package_version() {{
+      local installed
+      installed="$(dpkg-query -W -f='${{db:Status-Abbrev}}|${{Version}}' "$1" 2>/dev/null)" && [[ "$installed" == ii* ]] && echo "${{installed#*|}}"
+    }}
+  elif command -v apk >/dev/null 2>&1; then
+    PKG_UPDATE="apk update"
+    PKG_BOOTSTRAP="apk add --no-cache util-linux"
+    PKG_INSTALL="apk add --upgrade --no-cache"
     PKG_CLEAN="(apk cache clean || true) && rm -rf /var/cache/apk/*"
-  [[ $PKG == "" ]] && echo "Cannot identify package manager, bailing out!" && exit 1
+    package_version() {{
+      local installed
+      installed="$(apk info -e -v "$1" 2>/dev/null)" && [[ "$installed" == "$1"-* ]] && echo "${{installed#"$1"-}}"
+    }}
+  else
+    echo "Cannot identify package manager, bailing out" >&2
+    exit 1
+  fi
   ASYSTEM_PACKAGES_BASE=(
     {}
   )
@@ -656,74 +660,72 @@ function echo_package_install_commands {{
   # find /etc/apt/ -type f \\( -name '*.list' -o -name '*.sources' \\) -exec sed -i -e 's|http://deb.debian.org/debian-security|https://snapshot.debian.org/archive/debian-security/20251109T121306Z|g' {{}} +
   # find /etc/apt/ -type f \\( -name '*.list' -o -name '*.sources' \\) -exec sed -i -e 's|http://deb.debian.org/debian|https://snapshot.debian.org/archive/debian/20251110T023338Z/|g' {{}} +
 
-  $PKG_UPDATE
-  $PKG_BOOTSTRAP
-  for ASYSTEM_PACKAGE in "${{ASYSTEM_PACKAGES_BASE[@]}}"; do $PKG_INSTALL "$ASYSTEM_PACKAGE" 2>/dev/null; done
-  for ASYSTEM_PACKAGE in "${{ASYSTEM_PACKAGES_BUILD[@]}}"; do $PKG_INSTALL "$ASYSTEM_PACKAGE" 2>/dev/null; done
+  eval "$PKG_UPDATE"
+  eval "$PKG_BOOTSTRAP"
+  for ASYSTEM_PACKAGE in "${{ASYSTEM_PACKAGES_BASE[@]}}" "${{ASYSTEM_PACKAGES_BUILD[@]}}"; do eval "$PKG_INSTALL $(printf '%q' "$ASYSTEM_PACKAGE")"; done
   set +x
-  sleep 1
-  cat <<EOF >"/tmp/base_image_install.sh"
-ASYSTEM_PACKAGES_BASE=(
-    {}
-)
-ASYSTEM_PACKAGES_BUILD=(
-    {}
-)
-echo "#######################################################################################"
-echo "# Dockerfile [image_upstream] command:"
-echo "#######################################################################################" && echo ""
-echo "USER root"
-echo -n "RUN "
-[[ "$PKG_UPDATE" != "" ]] && echo -n "$PKG_UPDATE"
-echo " && \\\\\\\\"
-for ASYSTEM_PACKAGE in "\\${{ASYSTEM_PACKAGES_BASE[@]}}"; do echo "    $PKG_INSTALL" "\\$ASYSTEM_PACKAGE="\\$($PKG_VERSION \\$ASYSTEM_PACKAGE 2>/dev/null | grep "$PKG_VERSION_GREP" | awk '$PKG_VERSION_AWK')" && \\\\\\\\"; done
-echo "    $PKG_CLEAN && \\\\\\\\"
-echo "    mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt"
-echo 'ENV PATH=\\${{PATH}}:/asystem/bin'
-echo ""
-echo "#######################################################################################"
-echo "# Dockerfile [image_base] command:"
-echo "#######################################################################################" && echo ""
-echo "USER root"
-echo -n "RUN "
-[[ "$PKG_UPDATE" != "" ]] && echo -n "$PKG_UPDATE"
-echo " && \\\\\\\\"
-for ASYSTEM_PACKAGE in "\\${{ASYSTEM_PACKAGES_BUILD[@]}}"; do echo "    $PKG_INSTALL" "\\$ASYSTEM_PACKAGE="\\$($PKG_VERSION \\$ASYSTEM_PACKAGE 2>/dev/null | grep "$PKG_VERSION_GREP" | awk '$PKG_VERSION_AWK')" && \\\\\\\\"; done
-echo "    $PKG_CLEAN"
-echo ""
+  declare -A ASYSTEM_VERSIONS=()
+  ASYSTEM_FAILED=()
+  for ASYSTEM_PACKAGE in "${{ASYSTEM_PACKAGES_BASE[@]}}" "${{ASYSTEM_PACKAGES_BUILD[@]}}"; do
+    [[ -n "${{ASYSTEM_VERSIONS[$ASYSTEM_PACKAGE]:-}}" ]] && continue
+    ASYSTEM_VERSION="$(package_version "$ASYSTEM_PACKAGE")"
+    if [[ -n "$ASYSTEM_VERSION" ]]; then
+      ASYSTEM_VERSIONS[$ASYSTEM_PACKAGE]="$ASYSTEM_VERSION"
+    elif [[ " ${{ASYSTEM_FAILED[*]}} " != *" $ASYSTEM_PACKAGE "* ]]; then
+      ASYSTEM_FAILED+=("$ASYSTEM_PACKAGE")
+    fi
+  done
+  echo ""
+  if [[ ${{#ASYSTEM_FAILED[@]}} -gt 0 ]]; then
+    echo "#######################################################################################" >&2
+    echo "# ERROR packages not installed, so no version to pin [${{ASYSTEM_FAILED[*]}}]" >&2
+    echo "#######################################################################################" >&2
+    exit 1
+  fi
+  echo "#######################################################################################"
+  echo "# Dockerfile [image_upstream] command:"
+  echo "#######################################################################################" && echo ""
+  echo "USER root"
+  echo "RUN $PKG_UPDATE && \\\\"
+  for ASYSTEM_PACKAGE in "${{ASYSTEM_PACKAGES_BASE[@]}}"; do echo "    $PKG_INSTALL $ASYSTEM_PACKAGE=${{ASYSTEM_VERSIONS[$ASYSTEM_PACKAGE]}} && \\\\"; done
+  echo "    $PKG_CLEAN && \\\\"
+  echo "    mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt"
+  echo "ENV PATH=\\${{PATH}}:/asystem/bin"
+  echo ""
+  echo "#######################################################################################"
+  echo "# Dockerfile [image_base] command:"
+  echo "#######################################################################################" && echo ""
+  echo "USER root"
+  echo "RUN $PKG_UPDATE && \\\\"
+  for ASYSTEM_PACKAGE in "${{ASYSTEM_PACKAGES_BUILD[@]}}"; do echo "    $PKG_INSTALL $ASYSTEM_PACKAGE=${{ASYSTEM_VERSIONS[$ASYSTEM_PACKAGE]}} && \\\\"; done
+  echo "    $PKG_CLEAN"
+  echo ""
 {}
-EOF
-  cat <<EOF >"/tmp/base_image_run.sh"
-echo ""
-echo "#######################################################################################"
-echo "# Docker minimal image run command:"
-echo "#######################################################################################" && echo ""
-echo "docker run -it --rm --user root --entrypoint sh \\\\\\\\"
+  echo ""
+  echo "#######################################################################################"
+  echo "# Docker minimal image run command:"
+  echo "#######################################################################################" && echo ""
+  echo "docker run -it --rm --user root --entrypoint sh \\\\"
 {}
-echo "    '{}'" && echo ""
-echo "#######################################################################################"
-EOF
-    chmod +x /tmp/base_image_*.sh
-    echo ""
-    /tmp/base_image_install.sh
-    /tmp/base_image_run.sh
+  echo "    '{}'" && echo ""
+  echo "#######################################################################################"
 }}
-DOCKER_CLI_HINTS=false
+export DOCKER_CLI_HINTS=false
 CONTAINER_NAME="asystem_deps_bootstrap_$(basename "$(cd "$(dirname "${{BASH_SOURCE[0]}}")" && pwd)")_$$"
 trap 'docker rm -vf "$CONTAINER_NAME" >/dev/null 2>&1' EXIT
-docker run --name "$CONTAINER_NAME" --user root --platform linux/{} --entrypoint sh {} -dt '{}'
-docker exec -t "$CONTAINER_NAME" sh -c '[ "$(which apk)" != "" ] && apk add --no-cache bash; [ "$(which apt-get)" != "" ] && apt-get update && apt-get -y install bash'
-declare -f echo_package_install_commands | sed '1,2d;$d' | docker exec -i "$CONTAINER_NAME" bash -
+docker run --name "$CONTAINER_NAME" --user root --platform linux/{} --entrypoint sh {} -dt '{}' || exit 1
+docker exec -t "$CONTAINER_NAME" sh -c 'if command -v apk >/dev/null 2>&1; then apk add --no-cache bash; elif command -v apt-get >/dev/null 2>&1; then apt-get update && apt-get -y install bash; fi' || exit 1
+ASYSTEM_STATUS=0
+declare -f echo_package_install_commands | sed '1,2d;$d' | docker exec -i "$CONTAINER_NAME" bash - || ASYSTEM_STATUS=1
 echo "Base image shell:"
 echo "#######################################################################################" && echo ""
 docker exec -it {} "$CONTAINER_NAME" bash
+exit "$ASYSTEM_STATUS"
                                               """.format(
                         docker_build_packages["base"],
                         docker_build_packages["build"],
-                        docker_build_packages["base"],
-                        docker_build_packages["build"],
-                        "\n".join([f'echo "{_cp}"' for _cp in docker_build_copies]),
-                        ' \\\\\\\\"\n'.join([f'echo "    {_var}' for _var in docker_build_variables]),
+                        "\n".join([f'  echo "{_cp}"' for _cp in docker_build_copies]),
+                        "\n".join([f'  echo "    {_var} \\\\"' for _var in docker_build_variables]),
                         docker_image,
                         _get_host_arch(module, filter_host),
                         " ".join(docker_build_mounts),
@@ -734,12 +736,32 @@ docker exec -it {} "$CONTAINER_NAME" bash
             os.chmod(docker_deps_script_path, 0o777)
             print(f"Wrote [{docker_deps_script_path}]")
     if is_pull:
+        pinned_stacks = set(GLOBAL_ENV["PINNED_DEPENDENCIES"].split(","))
+        version_messages["pinned"] = []
+
+        def pinned(path):
+            return re.split(r"[:/]", path)[-1] in pinned_stacks
+
+        def report(path, current, upstream, upstream_line):
+            if current == upstream:
+                version_messages["up to date"].append(version_formats[0].format(path, current))
+            elif not pinned(path):
+                version_messages["to update"].append(version_formats[1].format(path, current, upstream))
+            else:
+                updates = []
+                if upstream_line != current:
+                    updates.append(f"minor [{upstream_line}]")
+                if upstream != upstream_line:
+                    updates.append(f"major [{upstream}]")
+                version_messages["pinned"].append(f"Module [{path}] is pinned at version [{current}] with available {' and '.join(updates)}")
+
         for module in module_generate_stdout:
             for line in module_generate_stdout[module].splitlines():
                 for version_regex, version_type, version_format in zip(version_regexs, version_types, version_formats, strict=True):
                     match = re.match(version_regex, line)
                     if match is not None:
-                        version_messages[version_type].append(version_format.format(*match.groupdict().values()))
+                        message_type = "pinned" if version_type == "to update" and pinned(match.group("module_path")) else version_type
+                        version_messages[message_type].append(version_format.format(*match.groupdict().values()))
         for module in _get_modules(context, filter_module=filter_module, filter_changes=filter_changes):
             docker_config_path, docker_config_regexs = get_docker_image_config(module)
             docker_image_metadatas = get_docker_image_metadatas(docker_config_path, docker_config_regexs, docker_version_env) if docker_config_path else []
@@ -753,58 +775,55 @@ docker exec -it {} "$CONTAINER_NAME" bash
                     docker_image_tags = str(docker_image_tags_stdout).splitlines() if docker_image_tags_stdout else []
                     if len(docker_image_tags) == 0:
                         version_messages["errors"].append(version_formats[2].format(module, f"Could not determine versions from Github repository command [{docker_image_tags_command}]"))
-                    docker_image_metadata["version_upstream"] = docker_image_metadata["version_current"]
-                    if docker_image_metadata["version_upstream"] != "latest":
+                        continue
+                    version_current = str(docker_image_metadata["version_current"])
+                    version_upstream = version_upstream_line = version_current
+                    if version_current != "latest":
                         version_regex = str(docker_image_metadata["version_regex"])
+                        version_current_tokens = version_current.split("-", 1)
+                        version_suffix = "-" + version_current_tokens[1] if len(version_current_tokens) == 2 else ""
+                        version_current_match = re.match(version_regex, version_current)
+                        if version_current_match is None:
+                            version_messages["errors"].append(version_formats[2].format(module, f"Could not match current version [{version_current}] with regex [{version_regex}]"))
+                            continue
+                        version_parsed_current = version_parsed_upstream = version_parsed_upstream_line = packaging.version.parse(version_current_match.groups()[0])
                         for docker_image_version in docker_image_tags:
-                            if not any(_ignored.lower() in docker_image_version.lower() for _ignored in docker_image_version_ignores):
-                                docker_image_version_match = re.match(version_regex, docker_image_version)
-                                version_upstream_match = re.match(version_regex, str(docker_image_metadata["version_upstream"]))
-                                if (
-                                    docker_image_version_match is not None
-                                    and version_upstream_match is not None
-                                    and packaging.version.parse(docker_image_version_match.groups()[0]) >= packaging.version.parse(version_upstream_match.groups()[0])
-                                ):
-                                    docker_image_metadata["version_upstream"] = docker_image_version
-                    if "version_upstream" in docker_image_metadata:
-                        version_type = 0 if docker_image_metadata["version_current"] == docker_image_metadata["version_upstream"] else 1
-                        version_messages[version_types[version_type]].append(
-                            version_formats[version_type].format(
-                                module + ":" + str(docker_image_metadata["repository"]), docker_image_metadata["version_current"], docker_image_metadata["version_upstream"]
-                            )
-                        )
-                    else:
-                        version_messages["errors"].append(
-                            version_formats[2].format(
-                                module + ":" + str(docker_image_metadata["repository"]),
-                                "Could not get upstream version with current [{}], regex [{}] and upstream versions:\n{}".format(
-                                    docker_image_metadata["version_current"], docker_image_metadata["version_regex"], "\n".join(docker_image_tags)
-                                ),
-                            )
-                        )
+                            docker_image_version_core = docker_image_version.removesuffix(version_suffix) if version_suffix else docker_image_version
+                            docker_image_version_match = re.match(version_regex, docker_image_version)
+                            if docker_image_version_match is None or any(_ignored.lower() in docker_image_version_core.lower() for _ignored in docker_image_version_ignores):
+                                continue
+                            version_parsed = packaging.version.parse(docker_image_version_match.groups()[0])
+                            if version_parsed >= version_parsed_upstream:
+                                version_upstream, version_parsed_upstream = docker_image_version, version_parsed
+                            if version_parsed.release[:-1] == version_parsed_current.release[:-1] and version_parsed >= version_parsed_upstream_line:
+                                version_upstream_line, version_parsed_upstream_line = docker_image_version, version_parsed
+                    report(module + ":" + str(docker_image_metadata["repository"]), version_current, version_upstream, version_upstream_line)
                 elif not docker_image_metadata["skipped"]:
                     version_messages["errors"].append(
                         version_formats[2].format(module + ":" + str(docker_image_metadata.get("repository", "unknown")), f"Could not determine versions from parsed metadata {docker_image_metadata}")
                     )
         for lang, version in {
-            "python": r"pyenv install --list | grep -E '^[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+$' | tail -1 | tr -d ' '",
-            "go": r"goenv install --list | grep -E '^[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+$' | tail -1 | tr -d ' '",
+            "python": r"pyenv install --list | grep -E '^[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+$' | tr -d ' '",
+            "go": r"goenv install --list | grep -E '^[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+$' | tr -d ' '",
             "rust": r"""curl -s https://static.rust-lang.org/dist/channel-rust-stable.toml | awk -F'"' '/^\[pkg\.rust\]$/{f=1} f&&/version/{split($2,v," "); print v[1]; exit}'""",
         }.items():
             lang_version_installed = GLOBAL_ENV[f"{lang.upper()}_VERSION"]
-            lang_version_upstream = _run_local(context, version, hide="out").stdout.strip()
-            if lang_version_upstream != lang_version_installed:
-                version_messages["to update"].append(version_formats[1].format(f"*/{lang}", lang_version_installed, lang_version_upstream))
-            else:
-                version_messages["up to date"].append(version_formats[0].format(f"*/{lang}", lang_version_installed))
+            lang_versions_upstream = _run_local(context, version, hide="out").stdout.split()
+            if len(lang_versions_upstream) == 0:
+                version_messages["errors"].append(version_formats[2].format(f"*/{lang}", f"Could not determine versions from command [{version}]"))
+                continue
+            lang_release_installed = packaging.version.parse(lang_version_installed).release
+            report(
+                f"*/{lang}",
+                lang_version_installed,
+                max(lang_versions_upstream, key=packaging.version.parse),
+                max(
+                    (_version for _version in lang_versions_upstream if packaging.version.parse(_version).release[:-1] == lang_release_installed[:-1]),
+                    key=packaging.version.parse,
+                    default=lang_version_installed,
+                ),
+            )
         version_types.insert(1, "pinned")
-        version_messages["pinned"] = []
-        for message in version_messages["to update"]:
-            for stack in GLOBAL_ENV["PINNED_DEPENDENCIES"].split(","):
-                if f"{stack}]" in message:
-                    version_messages["pinned"].append(message)
-        for message in version_messages["pinned"]:
-            version_messages["to update"].remove(message)
         for version_type in version_types:
             _print_header("asystem", f"pull versions {version_type}", host=filter_host)
             for message in sorted(version_messages[version_type]):
@@ -1155,8 +1174,10 @@ def _release(context):
                         context,
                         f"{ssh_pass}ssh -q root@{host}.local "
                         f'\'cd $(dirname {install}) && keep="$(basename "$(readlink latest)")" && '
+                        'running="$(find /proc/[0-9]*/exe /proc/[0-9]*/fd -maxdepth 1 -type l -printf "%l\\n" 2>/dev/null || true)" && '
                         'find . -maxdepth 1 -mindepth 1 -type d -name "[0-9]*.[0-9]*.[0-9]*" ! -name "$keep" | sed "s|^\\./||" | '
-                        'sort -t. -k1,1n -k2,2n -k3,3n | sed "\\$d" | xargs rm -rf\'',
+                        'sort -t. -k1,1n -k2,2n -k3,3n | sed "\\$d" | '
+                        'while read -r old; do printf "%s\\n" "$running" | grep -qF "$PWD/$old/" || rm -rf "$old"; done\'',
                         hide="err",
                         warn=True,
                     )

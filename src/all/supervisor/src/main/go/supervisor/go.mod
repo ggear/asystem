@@ -18,7 +18,7 @@ require (
 	github.com/spf13/pflag v1.1.0
 	github.com/testcontainers/testcontainers-go v0.45.0
 	go.yaml.in/yaml/v3 v3.0.6
-	golang.org/x/exp v0.0.0-20261120182113-8801fbdfac81
+	golang.org/x/exp v0.0.0-20261121134650-e1094eeca1b5
 	golang.org/x/term v0.48.0
 	golang.org/x/text v0.44.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
@@ -68,7 +68,7 @@ require (
 	github.com/morikuni/aec v1.1.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
-	github.com/pierrec/lz4/v4 v4.1.33 // indirect
+	github.com/pierrec/lz4/v4 v4.1.34 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/power-devops/perfstat v0.0.0-20260916203055-22a1a467d9f0 // indirect
 	github.com/sirupsen/logrus v1.10.2 // indirect

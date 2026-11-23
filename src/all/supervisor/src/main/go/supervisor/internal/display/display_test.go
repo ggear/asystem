@@ -11,10 +11,12 @@ import (
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/divan/num2words"
+	"github.com/gdamore/tcell/v3"
 	"github.com/mattn/go-runewidth"
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
@@ -2785,4 +2787,74 @@ func divider(base string, length int) string {
 	center := strings.Repeat(tokens[0], centerCount)
 	spaces := strings.Repeat(" ", spaceCount)
 	return spaces + center + spaces
+}
+
+func TestDisplay_Reload(t *testing.T) {
+	tests := []struct {
+		name            string
+		isRemote        bool
+		expectedListens int32
+		expectedKept    bool
+	}{
+		{name: "remote_ctrl_r_drops_the_cache_and_listens_again", isRemote: true, expectedListens: 2, expectedKept: false},
+		{name: "local_ctrl_r_only_repaints", isRemote: false, expectedListens: 1, expectedKept: true},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			layout := compactDisplayLayout(false)
+			caseRows := rows(layout, 1)
+			caseCols := columns(layout, false, 1)
+			cache := metric.NewRecordCache()
+			terminal := newTerminalVirtual(caseRows, caseCols, ThemeLight, false)
+			display, err := NewDisplay(hosts[:1], config.Periods{}, "", testCase.isRemote, false, FormatCompact, caseCols, caseRows, 0, 0, 0,
+				func(useUnicode bool) (Terminal, error) { return terminal, nil }, cache, nil)
+			if err != nil {
+				t.Fatalf("New Display err = %v, expected nil", err)
+			}
+			if _, err = display.Compile(); err != nil {
+				t.Fatalf("Compile Display err = %v, expected nil", err)
+			}
+			if err = display.Load(); err != nil {
+				t.Fatalf("Load Display err = %v, expected nil", err)
+			}
+			var listens atomic.Int32
+			display.listen = func(ctx context.Context, _ string, cache *metric.RecordCache, _ config.Periods) {
+				listens.Add(1)
+				record := metric.NewRecord(*metric.NewIntValue(true, 42, true, 42))
+				cache.Store(metric.NewServiceRecordGUID(metric.MetricServiceUpTime, hosts[0], "influxdb3"), &record)
+				<-ctx.Done()
+			}
+			ctx, cancel := context.WithCancel(context.Background())
+			ran := make(chan struct{})
+			drawn := make(chan struct{})
+			go func() {
+				display.Run(ctx)
+				close(ran)
+			}()
+			go func() {
+				display.Draw(ctx, cancel)
+				close(drawn)
+			}()
+			time.Sleep(200 * time.Millisecond)
+			versionGUID := metric.NewServiceRecordGUID(metric.MetricServiceVersion, hosts[0], "influxdb3")
+			version := metric.NewRecord(*metric.NewIntValue(true, 1, true, 1))
+			cache.Store(versionGUID, &version)
+			terminal.eventQ <- tcell.NewEventKey(tcell.KeyCtrlR, "", tcell.ModCtrl)
+			for deadline := time.Now().Add(2 * time.Second); listens.Load() < testCase.expectedListens && time.Now().Before(deadline); {
+				time.Sleep(10 * time.Millisecond)
+			}
+			time.Sleep(200 * time.Millisecond)
+			kept, _ := cache.Load(versionGUID)
+			cancel()
+			<-ran
+			<-drawn
+			display.Close()
+			if got := listens.Load(); got != testCase.expectedListens {
+				t.Fatalf("listens: got %d want %d", got, testCase.expectedListens)
+			}
+			if got := kept != nil && kept.Value.Pulse != nil; got != testCase.expectedKept {
+				t.Fatalf("kept: got %v want %v", got, testCase.expectedKept)
+			}
+		})
+	}
 }
