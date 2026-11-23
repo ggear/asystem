@@ -25,9 +25,10 @@ func init() {
 func newBackupCmd() *cobra.Command {
 	options := &backupOptions{}
 	cmd := &cobra.Command{
-		Use:   backupCommandName + " [command]",
-		Short: backupDescription,
-		Long:  backupDescription,
+		Use:     backupCommandName + " [command]",
+		Aliases: []string{"abackup"},
+		Short:   backupDescription,
+		Long:    backupDescription,
 	}
 	cmd.PersistentFlags().SortFlags = false
 	cmd.Flags().SortFlags = false

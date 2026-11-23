@@ -70,7 +70,7 @@ func runRemote(host string, budget time.Duration, filters []string) ([]byte, err
 	var stdout, stderr bytes.Buffer
 	session.Stdout = &stdout
 	session.Stderr = &stderr
-	command := fmt.Sprintf("%s space -m %s -f %s --json", remoteInstallPath, ModeLocal, shellQuote(strings.Join(filters, ",")))
+	command := fmt.Sprintf("%s space -m %s -f %s --json", config.InstallBinaryPath, ModeLocal, shellQuote(strings.Join(filters, ",")))
 	done := make(chan error, 1)
 	go func() { done <- session.Run(command) }()
 	select {
@@ -139,7 +139,6 @@ func shellQuote(value string) string {
 }
 
 const (
-	remoteInstallPath = "/var/lib/asystem/install/storage/latest/storage"
 	remoteDialTimeout = 5 * time.Second
 	remoteRunMargin   = 6 * time.Second
 	remoteSSHPort     = "22"

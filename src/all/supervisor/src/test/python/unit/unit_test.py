@@ -231,6 +231,21 @@ class BackupsShellTest(unittest.TestCase):
         self.assertIn("[abackups stop]", interrupted)
         self.assertNotIn("backups.sh", helped + interrupted, "the script path is not a command anyone can run")
 
+    def test_the_completion_offers_the_commands_then_scrub_only_after_start(self):
+        printed = self.invoke("completion")
+        self.assertEqual(printed.returncode, 0, f"stderr: {printed.stderr}")
+        for words, expected in (
+            (["abackups", ""], "start stop tail list clean help completion"),
+            (["abackups", "st"], "start stop"),
+            (["abackups", "start", ""], "--scrub"),
+            (["abackups", "list", ""], ""),
+        ):
+            with self.subTest(words=words):
+                probe = f'COMP_WORDS=({" ".join(repr(word) for word in words)})\nCOMP_CWORD={len(words) - 1}\n_abackups\necho "${{COMPREPLY[*]}}"'
+                offered = subprocess.run(["bash", "-c", printed.stdout + probe], capture_output=True, text=True)
+                self.assertEqual(offered.returncode, 0, f"stderr: {offered.stderr}")
+                self.assertEqual(offered.stdout.strip(), expected)
+
     def test_every_log_line_shares_the_supervisor_column_layout(self):
         self.hosts()
         header = "TIME           LEVEL SOURCE           SUBJECT                   ACTION     DURATION DETAIL"

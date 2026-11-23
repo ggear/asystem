@@ -85,6 +85,9 @@ npx() { unset -f nvm node npm npx; [ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && \. "
 
 [[ $- == *i* ]] && [ -r /opt/homebrew/etc/bash_completion ] && . /opt/homebrew/etc/bash_completion
 [[ $- == *i* ]] && command -v amedia >/dev/null && eval "$(amedia completion 2>/dev/null)"
+[[ $- == *i* ]] && command -v abackups >/dev/null && eval "$(abackups completion 2>/dev/null)"
+[[ $- == *i* ]] && [ -x /var/lib/asystem/install/supervisor/latest/supervisor ] && eval "$(/var/lib/asystem/install/supervisor/latest/supervisor completion 2>/dev/null)"
+[[ $- == *i* ]] && [ -x /var/lib/asystem/install/storage/latest/storage ] && eval "$(/var/lib/asystem/install/storage/latest/storage completion 2>/dev/null)"
 
 EOF
 

@@ -465,6 +465,7 @@ const (
 	DefaultCachePeriod = "1h"
 	DefaultVersion     = "00.000.0000-SNAPSHOT"
 	DefaultConfigPath  = DirInstall + "/supervisor/" + DirInstallLatestLink + "/image/config.json"
+	InstallBinaryPath  = DirInstall + "/supervisor/" + DirInstallLatestLink + "/supervisor"
 
 	DirInstall           = "/var/lib/asystem/install"
 	DirInstallLatestLink = "latest"

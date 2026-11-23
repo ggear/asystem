@@ -187,6 +187,7 @@ type configData struct {
 
 const (
 	DefaultConfigPath = "/var/lib/asystem/install/storage/latest/image/config.json"
+	InstallBinaryPath = "/var/lib/asystem/install/storage/latest/storage"
 
 	defaultVersion = "00.000.0000-SNAPSHOT"
 )

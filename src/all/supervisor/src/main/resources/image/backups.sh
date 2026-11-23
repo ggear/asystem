@@ -57,14 +57,15 @@ backups_help() {
   {
     echo "Usage: ${BACKUPS_NAME} [command] [options]"
     echo
-    echo "  start    start runs on all hosts, then follow them until interrupted"
-    echo "  stop     stop every active run on every host"
-    echo "  tail     follow every host's newest run until interrupted"
-    echo "  list     list every host's run history"
-    echo "  clean    remove every host's run history and any unfinished scrub"
-    echo "  help     this text, default command when given none"
+    echo "  start       start runs on all hosts, then follow them until interrupted"
+    echo "  stop        stop every active run on every host"
+    echo "  tail        follow every host's newest run until interrupted"
+    echo "  list        list every host's run history"
+    echo "  clean       remove every host's run history and any unfinished scrub"
+    echo "  help        this text, default command when given none"
+    echo "  completion  print the bash completion, eval it in a profile"
     echo
-    echo "  --scrub  scrub each host's backup disk"
+    echo "  --scrub     scrub each host's backup disk"
   } >&"${out}"
 }
 
@@ -243,6 +244,24 @@ esac
 case "${BACKUPS_COMMAND}" in
 help)
   backups_help help
+  exit 0
+  ;;
+completion)
+  cat <<EOF
+_${BACKUPS_NAME}() {
+  local current="\${COMP_WORDS[COMP_CWORD]}" candidate words=""
+  if [ "\${COMP_CWORD}" -eq 1 ]; then
+    words="start stop tail list clean help completion"
+  elif [ "\${COMP_WORDS[1]}" = "start" ]; then
+    words="--scrub"
+  fi
+  COMPREPLY=()
+  while IFS= read -r candidate; do
+    COMPREPLY+=("\${candidate}")
+  done < <(compgen -W "\${words}" -- "\${current}")
+}
+complete -F _${BACKUPS_NAME} ${BACKUPS_NAME}
+EOF
   exit 0
   ;;
 start | stop | tail | list | clean)
