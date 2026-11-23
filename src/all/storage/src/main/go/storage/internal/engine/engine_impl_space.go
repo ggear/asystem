@@ -13,7 +13,7 @@ import (
 	"github.com/shirou/gopsutil/v4/disk"
 )
 
-func Collect(cfg *config.Config, filters []string, requested string) ([]HostDoc, string, error) {
+func Collect(loaded *config.Config, filters []string, requested string) ([]HostDoc, string, error) {
 	mode := requested
 	if mode == ModeAuto {
 		mode = ModeRemote
@@ -28,18 +28,22 @@ func Collect(cfg *config.Config, filters []string, requested string) ([]HostDoc,
 	}
 	switch mode {
 	case ModeLocal:
+		mounts, err := collectLocal(loaded, filters)
+		if err != nil {
+			return nil, mode, err
+		}
 		return []HostDoc{{
-			Index:   cfg.Index(),
-			Label:   cfg.Label(),
-			Name:    cfg.Name(),
-			Version: cfg.Version(),
+			Index:   loaded.Index(),
+			Label:   loaded.Label(),
+			Name:    loaded.Name(),
+			Version: loaded.Version(),
 			State:   HostStateMeasured,
-			Mounts:  collectLocal(cfg, filters),
+			Mounts:  mounts,
 		}}, mode, nil
 	case ModeRemote:
-		hosts := collectRemote(cfg, filters)
+		hosts := collectRemote(loaded, filters)
 		if len(hosts) == 0 {
-			return nil, mode, fmt.Errorf("no hosts declared [%s]", cfg.Name())
+			return nil, mode, fmt.Errorf("no hosts declared [%s]", loaded.Name())
 		}
 		return hosts, mode, nil
 	default:
@@ -47,15 +51,20 @@ func Collect(cfg *config.Config, filters []string, requested string) ([]HostDoc,
 	}
 }
 
-func collectLocal(cfg *config.Config, filters []string) []MountDoc {
+func Claims(filters []string, mountpoint, class string) bool {
+	claimed, matched := classifyMount(mountpoint, filters)
+	return matched && claimed == class
+}
+
+func collectLocal(loaded *config.Config, filters []string) ([]MountDoc, error) {
 	partitions, err := disk.Partitions(false)
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("list partitions failed [%w]", err)
 	}
 	var readings []reading
 	for _, partition := range partitions {
 		mount := canonicalMount(partition.Mountpoint)
-		class, ok := selected(cfg, filters, mount, partition.Fstype)
+		class, ok := selected(loaded, filters, mount, partition.Fstype)
 		if !ok {
 			continue
 		}
@@ -74,65 +83,65 @@ func collectLocal(cfg *config.Config, filters []string) []MountDoc {
 			avail:    usage.Free,
 		})
 	}
-	return assemble(cfg, filters, readings, backupMounts(cfg, filters))
+	return assemble(loaded, filters, readings, backupMounts(loaded, filters)), nil
 }
 
-func selected(cfg *config.Config, filters []string, mountpoint, fstype string) (class string, ok bool) {
+func selected(loaded *config.Config, filters []string, mountpoint, fstype string) (class string, ok bool) {
 	if pseudoFsTypes[fstype] {
 		return "", false
 	}
-	class, matched := ClassifyMount(mountpoint, filters)
+	class, matched := classifyMount(mountpoint, filters)
 	if !matched || class == ClassBackup {
 		return "", false
 	}
 	if class == ClassRoot {
 		return class, !excludedRoot(mountpoint) && !networkFsTypes[fstype]
 	}
-	return class, !cfg.ServedElsewhere(mountpoint)
+	return class, !loaded.ServedElsewhere(mountpoint)
 }
 
-func assemble(cfg *config.Config, filters []string, readings []reading, backup []MountDoc) []MountDoc {
-	var roots []RootMember
+func assemble(loaded *config.Config, filters []string, readings []reading, backup []MountDoc) []MountDoc {
+	var roots []rootMember
 	var rootFaults, shares []MountDoc
-	for _, r := range readings {
-		if r.err != nil {
-			doc := MountDoc{
-				Mount: r.mount,
-				Label: cfg.MountLabel(r.mount),
-				Class: r.class,
+	for _, measured := range readings {
+		if measured.err != nil {
+			fault := MountDoc{
+				Mount: measured.mount,
+				Label: loaded.MountLabel(measured.mount),
+				Class: measured.class,
 				State: MountStateTimedout,
-				Error: fmt.Sprintf("statfs failed [%s] after [%s] [%v]", r.mount, statfsTimeout, r.err),
+				Error: fmt.Sprintf("statfs failed [%s] after [%s] [%v]", measured.mount, statfsTimeout, measured.err),
 			}
-			if r.class == ClassRoot {
-				rootFaults = append(rootFaults, doc)
+			if measured.class == ClassRoot {
+				rootFaults = append(rootFaults, fault)
 			} else {
-				shares = append(shares, doc)
+				shares = append(shares, fault)
 			}
 			continue
 		}
-		if r.class == ClassRoot {
-			roots = append(roots, RootMember{Mount: r.mount, Identity: r.identity, TotalBytes: r.total, AvailBytes: r.avail})
+		if measured.class == ClassRoot {
+			roots = append(roots, rootMember{Mount: measured.mount, Identity: measured.identity, TotalBytes: measured.total, AvailBytes: measured.avail})
 			continue
 		}
-		used := r.total - min(r.avail, r.total)
+		used := measured.total - min(measured.avail, measured.total)
 		shares = append(shares, MountDoc{
-			Mount:    r.mount,
-			Label:    cfg.MountLabel(r.mount),
-			Class:    r.class,
+			Mount:    measured.mount,
+			Label:    loaded.MountLabel(measured.mount),
+			Class:    measured.class,
 			State:    MountStateMeasured,
-			ServedBy: servedByLabel(cfg, r.fstype, r.device),
-			Space:    &SpaceFigures{SizeBytes: r.total, UsedBytes: used, FreeBytes: r.total - used},
+			ServedBy: servedByLabel(loaded, measured.fstype, measured.device),
+			Space:    &SpaceFigures{SizeBytes: measured.total, UsedBytes: used, FreeBytes: measured.total - used},
 		})
 	}
 	mounted := map[string]bool{}
 	for _, share := range shares {
 		mounted[share.Mount] = true
 	}
-	for _, share := range cfg.Shares() {
-		if mounted[share.Mount] || share.ServedBy != cfg.Name() {
+	for _, share := range loaded.Shares() {
+		if mounted[share.Mount] || share.ServedBy != loaded.Name() {
 			continue
 		}
-		if class, matched := ClassifyMount(share.Mount, filters); !matched || class != ClassShare {
+		if class, matched := classifyMount(share.Mount, filters); !matched || class != ClassShare {
 			continue
 		}
 		shares = append(shares, MountDoc{
@@ -167,8 +176,8 @@ func assemble(cfg *config.Config, filters []string, readings []reading, backup [
 	}
 	var docs []MountDoc
 	if len(roots) > 0 {
-		figures, folded := FoldRoot(roots)
-		docs = append(docs, MountDoc{Mount: "/", Class: ClassRoot, State: MountStateMeasured, Space: &figures, Folded: folded})
+		figures, folded := foldRoot(roots)
+		docs = append(docs, MountDoc{Mount: rootPattern, Class: ClassRoot, State: MountStateMeasured, Space: &figures, Folded: folded})
 	}
 	docs = append(docs, rootFaults...)
 	docs = append(docs, shares...)
@@ -176,7 +185,7 @@ func assemble(cfg *config.Config, filters []string, readings []reading, backup [
 	return append(docs, backup...)
 }
 
-func servedByLabel(cfg *config.Config, fstype, device string) string {
+func servedByLabel(loaded *config.Config, fstype, device string) string {
 	if !networkFsTypes[fstype] {
 		return ""
 	}
@@ -184,7 +193,7 @@ func servedByLabel(cfg *config.Config, fstype, device string) string {
 	if host == "" {
 		return ""
 	}
-	return cfg.HostLabel(host)
+	return loaded.HostLabel(host)
 }
 
 func sourceHost(device string) string {
@@ -201,12 +210,12 @@ func sourceHost(device string) string {
 	return device
 }
 
-func ClassifyMount(mountpoint string, filters []string) (class string, matched bool) {
+func classifyMount(mountpoint string, filters []string) (class string, matched bool) {
 	for _, pattern := range filters {
 		if pattern == rootPattern || !matchGlob(pattern, mountpoint) {
 			continue
 		}
-		if strings.HasSuffix(pattern, "/backup") {
+		if mountpoint == backupMount || strings.HasPrefix(mountpoint, backupMount+"/") {
 			return ClassBackup, true
 		}
 		return ClassShare, true
@@ -217,51 +226,39 @@ func ClassifyMount(mountpoint string, filters []string) (class string, matched b
 	return "", false
 }
 
-func Claims(filters []string, mountpoint, class string) bool {
-	claimed, matched := ClassifyMount(mountpoint, filters)
-	return matched && claimed == class
-}
-
-func FoldRoot(members []RootMember) (SpaceFigures, *Folded) {
+func foldRoot(members []rootMember) (SpaceFigures, *Folded) {
 	if len(members) == 0 {
 		return SpaceFigures{}, nil
 	}
-	type group struct {
+	type fold struct {
 		identity string
 		mounts   []string
 		total    uint64
 		avail    uint64
-		seeded   bool
 	}
 	order := make([]string, 0, len(members))
-	groups := map[string]*group{}
-	for _, m := range members {
-		key := m.Identity
+	folds := map[string]*fold{}
+	for _, member := range members {
+		key := member.Identity
 		if key == "" {
-			key = "mount:" + m.Mount
+			key = "mount:" + member.Mount
 		}
-		g, ok := groups[key]
+		existing, ok := folds[key]
 		if !ok {
-			g = &group{identity: m.Identity}
-			groups[key] = g
+			existing = &fold{identity: member.Identity, total: member.TotalBytes, avail: member.AvailBytes}
+			folds[key] = existing
 			order = append(order, key)
 		}
-		g.mounts = append(g.mounts, m.Mount)
-		if !g.seeded {
-			g.total = m.TotalBytes
-			g.avail = m.AvailBytes
-			g.seeded = true
-		}
+		existing.mounts = append(existing.mounts, member.Mount)
 	}
 	var sizeSum, usedSum uint64
-	var biggest *group
+	var biggest *fold
 	for _, key := range order {
-		g := groups[key]
-		used := g.total - min(g.avail, g.total)
-		sizeSum += g.total
-		usedSum += used
-		if len(g.mounts) > 1 && (biggest == nil || len(g.mounts) > len(biggest.mounts)) {
-			biggest = g
+		current := folds[key]
+		sizeSum += current.total
+		usedSum += current.total - min(current.avail, current.total)
+		if len(current.mounts) > 1 && (biggest == nil || len(current.mounts) > len(biggest.mounts)) {
+			biggest = current
 		}
 	}
 	figures := SpaceFigures{SizeBytes: sizeSum, UsedBytes: usedSum, FreeBytes: sizeSum - usedSum}
@@ -275,11 +272,11 @@ func FoldRoot(members []RootMember) (SpaceFigures, *Folded) {
 
 func matchGlob(pattern, candidate string) bool {
 	escaped := strings.ReplaceAll(regexp.QuoteMeta(pattern), `\*`, ".*")
-	re, err := regexp.Compile("^" + escaped + "(/.*)?$")
+	expression, err := regexp.Compile("^" + escaped + "(/.*)?$")
 	if err != nil {
 		return false
 	}
-	return re.MatchString(candidate)
+	return expression.MatchString(candidate)
 }
 
 func excludedRoot(mountpoint string) bool {
@@ -295,11 +292,11 @@ func boundedUsage(mountpoint string) (*disk.UsageStat, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), statfsTimeout)
 	defer cancel()
 	result := make(chan *disk.UsageStat, 1)
-	errs := make(chan error, 1)
+	failure := make(chan error, 1)
 	go func() {
 		usage, err := disk.Usage(mountpoint)
 		if err != nil {
-			errs <- err
+			failure <- err
 			return
 		}
 		result <- usage
@@ -307,7 +304,7 @@ func boundedUsage(mountpoint string) (*disk.UsageStat, error) {
 	select {
 	case usage := <-result:
 		return usage, nil
-	case err := <-errs:
+	case err := <-failure:
 		return nil, err
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -420,7 +417,7 @@ type reading struct {
 	err      error
 }
 
-type RootMember struct {
+type rootMember struct {
 	Mount      string
 	Identity   string
 	TotalBytes uint64
@@ -445,12 +442,13 @@ const (
 
 	shareNamespace = "/share/"
 	shareMount     = "/share"
+	backupMount    = "/backup"
 	rootPattern    = "/"
 
 	statfsTimeout = 2 * time.Second
 )
 
-var DefaultFilters = []string{"/", "/share*", "/backup"}
+var DefaultFilters = []string{rootPattern, "/share*", backupMount}
 
 var excludedRootPrefixes = []string{"/boot", "/efi", "/System/Volumes", "/Volumes"}
 

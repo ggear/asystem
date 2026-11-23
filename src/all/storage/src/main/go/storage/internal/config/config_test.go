@@ -40,42 +40,42 @@ func TestConfig_Load(t *testing.T) {
 	path := writeFixture(t, fixtureDocument)
 	t.Setenv("STORAGE_HOST", "")
 	t.Setenv("SERVICE_VERSION_ABSOLUTE", "")
-	cfg := Load(path)
+	loaded := Load(path)
 
-	if got := cfg.Version(); got != "10.200.1725" {
+	if got := loaded.Version(); got != "10.200.1725" {
 		t.Errorf("Version: got %v want 10.200.1725", got)
 	}
-	if got := cfg.Name(); got != "macmini-mad" {
+	if got := loaded.Name(); got != "macmini-mad" {
 		t.Errorf("Name: got %v want macmini-mad", got)
 	}
-	if got := cfg.Label(); got != "mad" {
+	if got := loaded.Label(); got != "mad" {
 		t.Errorf("Label: got %v want mad", got)
 	}
-	if got := cfg.Index(); got == nil || *got != 1 {
+	if got := loaded.Index(); got == nil || *got != 1 {
 		t.Errorf("Index: got %v want 1", got)
 	}
-	if got := cfg.MountLabel("/share/10"); got != "share_08" {
+	if got := loaded.MountLabel("/share/10"); got != "share_08" {
 		t.Errorf("MountLabel(/share/10): got %v want share_08", got)
 	}
-	if got := cfg.MountLabel("/"); got != "" {
+	if got := loaded.MountLabel("/"); got != "" {
 		t.Errorf("MountLabel(/): got %v want empty (UUID spec)", got)
 	}
-	if got := cfg.Backup(); got == nil || got.Mount != "/backup" {
+	if got := loaded.Backup(); got == nil || got.Mount != "/backup" {
 		t.Errorf("Backup: got %+v", got)
 	}
-	if got := len(cfg.Hosts()); got != 2 {
+	if got := len(loaded.Hosts()); got != 2 {
 		t.Errorf("Hosts: got %d want 2", got)
 	}
-	if cfg.ServedElsewhere("/share/10") {
+	if loaded.ServedElsewhere("/share/10") {
 		t.Errorf("ServedElsewhere(/share/10): got true want false, this host serves it")
 	}
-	if !cfg.ServedElsewhere("/share/20") {
+	if !loaded.ServedElsewhere("/share/20") {
 		t.Errorf("ServedElsewhere(/share/20): got false want true, another host serves it")
 	}
-	if cfg.ServedElsewhere("/share/99") {
+	if loaded.ServedElsewhere("/share/99") {
 		t.Errorf("ServedElsewhere(/share/99): got true want false, it is undeclared")
 	}
-	estate := cfg.EstateShares()
+	estate := loaded.EstateShares()
 	if len(estate) != 2 {
 		t.Fatalf("EstateShares: got %d want 2, got %+v", len(estate), estate)
 	}
@@ -88,14 +88,14 @@ func TestConfig_Load_UnknownAndMissingFields(t *testing.T) {
 	path := writeFixture(t, `{"asystem": {"version": "10.200.1725", "host": "macmini-mad", "unexpected_field": true, "schema": [{"host": "macmini-mad", "label": "mad"}]}}`)
 	t.Setenv("STORAGE_HOST", "")
 	t.Setenv("SERVICE_VERSION_ABSOLUTE", "")
-	cfg := Load(path)
-	if got := cfg.Label(); got != "mad" {
+	loaded := Load(path)
+	if got := loaded.Label(); got != "mad" {
 		t.Errorf("Label: got %v want mad", got)
 	}
-	if got := cfg.Backup(); got != nil {
+	if got := loaded.Backup(); got != nil {
 		t.Errorf("Backup: got %+v want nil", got)
 	}
-	if got := cfg.Shares(); got != nil {
+	if got := loaded.Shares(); got != nil {
 		t.Errorf("Shares: got %+v want nil", got)
 	}
 }
@@ -104,11 +104,11 @@ func TestConfig_Load_EnvOverridesFile(t *testing.T) {
 	path := writeFixture(t, fixtureDocument)
 	t.Setenv("STORAGE_HOST", "macmini-max")
 	t.Setenv("SERVICE_VERSION_ABSOLUTE", "10.200.9999")
-	cfg := Load(path)
-	if got := cfg.Version(); got != "10.200.9999" {
+	loaded := Load(path)
+	if got := loaded.Version(); got != "10.200.9999" {
 		t.Errorf("Version: got %v want env override 10.200.9999", got)
 	}
-	if got := cfg.Label(); got != "max" {
+	if got := loaded.Label(); got != "max" {
 		t.Errorf("Label: got %v want max (env-selected host)", got)
 	}
 }
@@ -117,13 +117,13 @@ func TestConfig_Load_UnresolvedHostFallsBackToHostname(t *testing.T) {
 	path := writeFixture(t, `{"asystem": {"version": "10.200.1725", "host": "$STORAGE_HOST", "schema": []}}`)
 	t.Setenv("STORAGE_HOST", "")
 	t.Setenv("SERVICE_VERSION_ABSOLUTE", "")
-	cfg := Load(path)
-	wantHostname, err := os.Hostname()
+	loaded := Load(path)
+	expectedHostname, err := os.Hostname()
 	if err != nil {
 		t.Fatalf("os.Hostname failed [%v]", err)
 	}
-	if got := cfg.Name(); got != wantHostname {
-		t.Errorf("Name: got %v want os.Hostname() %v", got, wantHostname)
+	if got := loaded.Name(); got != expectedHostname {
+		t.Errorf("Name: got %v want os.Hostname() %v", got, expectedHostname)
 	}
 }
 
@@ -131,20 +131,20 @@ func TestConfig_Label_FallsBackToTheHostnameSuffix(t *testing.T) {
 	tests := []struct {
 		name          string
 		host          string
-		want          string
+		expected      string
 		expectedError bool
 	}{
-		{name: "a host the schema declares", host: "macmini-mad", want: "mad"},
-		{name: "a host the schema does not declare", host: "macbook-rue", want: "rue"},
-		{name: "a hostname carrying no estate suffix", host: "localhost", want: "localhost"},
+		{name: "a host the schema declares", host: "macmini-mad", expected: "mad"},
+		{name: "a host the schema does not declare", host: "macbook-rue", expected: "rue"},
+		{name: "a hostname carrying no estate suffix", host: "localhost", expected: "localhost"},
 	}
 	path := writeFixture(t, fixtureDocument)
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Setenv("STORAGE_HOST", testCase.host)
 			t.Setenv("SERVICE_VERSION_ABSOLUTE", "")
-			if got := Load(path).Label(); got != testCase.want {
-				t.Errorf("Label: got %v want %v", got, testCase.want)
+			if got := Load(path).Label(); got != testCase.expected {
+				t.Errorf("Label: got %v want %v", got, testCase.expected)
 			}
 		})
 	}
@@ -152,23 +152,23 @@ func TestConfig_Label_FallsBackToTheHostnameSuffix(t *testing.T) {
 
 func TestConfig_HostLabel(t *testing.T) {
 	tests := []struct {
-		name string
-		host string
-		want string
+		name     string
+		host     string
+		expected string
 	}{
-		{name: "a different host the schema declares", host: "macmini-max", want: "max"},
-		{name: "the host running this binary", host: "macmini-mad", want: "mad"},
-		{name: "a host the schema does not declare", host: "raspbpi-jen", want: "jen"},
-		{name: "a hostname carrying no estate suffix", host: "localhost", want: "localhost"},
+		{name: "a different host the schema declares", host: "macmini-max", expected: "max"},
+		{name: "the host running this binary", host: "macmini-mad", expected: "mad"},
+		{name: "a host the schema does not declare", host: "raspbpi-jen", expected: "jen"},
+		{name: "a hostname carrying no estate suffix", host: "localhost", expected: "localhost"},
 	}
 	path := writeFixture(t, fixtureDocument)
 	t.Setenv("STORAGE_HOST", "macmini-mad")
 	t.Setenv("SERVICE_VERSION_ABSOLUTE", "")
-	cfg := Load(path)
+	loaded := Load(path)
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			if got := cfg.HostLabel(testCase.host); got != testCase.want {
-				t.Errorf("HostLabel: got %v want %v", got, testCase.want)
+			if got := loaded.HostLabel(testCase.host); got != testCase.expected {
+				t.Errorf("HostLabel: got %v want %v", got, testCase.expected)
 			}
 		})
 	}

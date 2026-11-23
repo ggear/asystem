@@ -11,8 +11,6 @@ import (
 	"strings"
 )
 
-const liveFstabPath = "/etc/fstab"
-
 func Mount(_ *config.Config) []MountResult {
 	contents, err := os.ReadFile(liveFstabPath)
 	if err != nil {
@@ -20,14 +18,14 @@ func Mount(_ *config.Config) []MountResult {
 	}
 	var results []MountResult
 	for _, entry := range parseFstab(string(contents)) {
-		if !strings.HasPrefix(entry.Mountpoint, "/share/") {
+		if !strings.HasPrefix(entry.Mountpoint, shareNamespace) {
 			continue
 		}
 		if mountActive(entry.Mountpoint) {
 			results = append(results, MountResult{Message: fmt.Sprintf("Share [%s] mounted already", entry.Mountpoint)})
 			continue
 		}
-		if entry.isCifs() {
+		if entry.FSType == "cifs" {
 			_ = boundedRun("ls", entry.Mountpoint)
 		} else {
 			_ = boundedRun("mount", entry.Mountpoint)
@@ -50,3 +48,5 @@ func mountActive(mountpoint string) bool {
 	}
 	return boundedRun("ls", mountpoint) == nil
 }
+
+const liveFstabPath = "/etc/fstab"

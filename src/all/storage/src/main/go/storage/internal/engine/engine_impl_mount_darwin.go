@@ -9,29 +9,28 @@ import (
 	"strings"
 )
 
-func Mount(cfg *config.Config) []MountResult {
+func Mount(loaded *config.Config) []MountResult {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return []MountResult{{Message: fmt.Sprintf("home directory unavailable [%v]", err), Failed: true}}
 	}
 	var results []MountResult
-	for _, share := range cfg.EstateShares() {
-		index := strings.TrimPrefix(share.Mount, "/share/")
-		dir := fmt.Sprintf("%s/Desktop/share/%s", home, index)
-		samba := fmt.Sprintf("//GUEST:@%s/%s", share.ServedBy, share.Smb)
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			results = append(results, MountResult{Message: fmt.Sprintf("mkdir failed [%s] [%v]", dir, err), Failed: true})
+	for _, share := range loaded.EstateShares() {
+		directory := home + "/Desktop" + shareMount + "/" + strings.TrimPrefix(share.Mount, shareNamespace)
+		if boundedRun("test", "-d", directory+"/tmp") == nil {
+			results = append(results, MountResult{Message: fmt.Sprintf("Share [%s] mounted already", directory)})
 			continue
 		}
-		if _, err := os.Stat(dir + "/tmp"); err == nil {
-			results = append(results, MountResult{Message: fmt.Sprintf("Share [%s] mounted already", dir)})
+		_ = boundedRun("diskutil", "unmount", "force", directory)
+		if err := os.MkdirAll(directory, 0o755); err != nil {
+			results = append(results, MountResult{Message: fmt.Sprintf("mkdir failed [%s] [%v]", directory, err), Failed: true})
 			continue
 		}
-		_ = boundedRun("diskutil", "unmount", "force", dir)
-		if boundedRun("mount_smbfs", "-o", "soft,nodatacache", samba, dir) == nil {
-			results = append(results, MountResult{Message: fmt.Sprintf("Share [%s] mounting ... done", dir)})
+		samba := fmt.Sprintf("//GUEST:@%s/%s", share.ServedBy, share.SMB)
+		if boundedRun("mount_smbfs", "-o", "soft,nodatacache", samba, directory) == nil {
+			results = append(results, MountResult{Message: fmt.Sprintf("Share [%s] mounting ... done", directory)})
 		} else {
-			results = append(results, MountResult{Message: fmt.Sprintf("Share [%s] mounting ... failed", dir), Failed: true})
+			results = append(results, MountResult{Message: fmt.Sprintf("Share [%s] mounting ... failed", directory), Failed: true})
 		}
 	}
 	return results

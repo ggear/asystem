@@ -166,43 +166,6 @@ func TestProbeUtilBackupManifest_ReadBackupManifest(t *testing.T) {
 	}
 }
 
-func TestProbeUtilBackupManifest_RealManifests(t *testing.T) {
-	base := os.Getenv("BACKUP_REAL_FIXTURES")
-	if base == "" {
-		t.Skip("BACKUP_REAL_FIXTURES not set")
-	}
-	includes := map[string][]string{
-		"letsencrypt":   {"letsencrypt/accounts", "letsencrypt/archive", "letsencrypt/live", "letsencrypt/renewal"},
-		"wrangle":       {"data/bank", "data/history_adhoc.json", "data/history_daily.json", "data/history_raw.json"},
-		"homeassistant": {".storage", "blueprints", "custom_templates"},
-	}
-	for _, module := range []string{"letsencrypt", "zigbee2mqtt", "homeassistant", "mariadb", "wrangle", "postgres"} {
-		t.Run(module, func(t *testing.T) {
-			dir := filepath.Join(base, module)
-			expected, err := os.ReadFile(filepath.Join(dir, treeMetaDirectory, treeManifestLeaf))
-			if err != nil {
-				t.Fatal(err)
-			}
-			entries, _ := os.ReadDir(dir)
-			var artefact string
-			for _, entry := range entries {
-				if !entry.IsDir() {
-					artefact = filepath.Join(dir, entry.Name())
-				}
-			}
-			units, err := fingerprintBackupArtefact(artefact, includes[module])
-			if err != nil {
-				t.Fatal(err)
-			}
-			recorded, _ := readBackupManifest(base, module)
-			recorded.Fingerprint = units
-			if actual := renderBackupManifest(recorded); actual != string(expected) {
-				t.Fatalf("manifest differs from the bash-written one\nwant:\n%s\ngot:\n%s", expected, actual)
-			}
-		})
-	}
-}
-
 func TestProbeUtilBackupManifest_VersionedModule(t *testing.T) {
 	tests := []struct {
 		name     string

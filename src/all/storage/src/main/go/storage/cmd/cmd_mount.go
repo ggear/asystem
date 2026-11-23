@@ -21,9 +21,9 @@ func newMountCmd() *cobra.Command {
 		Long:    mountDescription,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			configPath, _ := cmd.Flags().GetString("config")
-			cfg := config.Load(configPath)
+			loaded := config.Load(configPath)
 			failed := false
-			for _, result := range engine.Mount(cfg) {
+			for _, result := range engine.Mount(loaded) {
 				fmt.Println(result.Message)
 				if result.Failed {
 					failed = true

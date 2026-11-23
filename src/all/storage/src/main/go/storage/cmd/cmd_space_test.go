@@ -12,16 +12,16 @@ func TestCmdSpace_ResolveSymbols(t *testing.T) {
 		name          string
 		symbols       string
 		environment   map[string]string
-		want          bool
+		expected      bool
 		expectedError bool
 	}{
-		{name: "ascii is always ascii", symbols: "ascii", environment: map[string]string{"TERM": "xterm-256color"}, want: false},
-		{name: "unicode is always unicode", symbols: "unicode", environment: map[string]string{"TERM": "linux"}, want: true},
-		{name: "case is not significant", symbols: "UNICODE", environment: map[string]string{"TERM": "linux"}, want: true},
-		{name: "auto on a capable terminal", symbols: "auto", environment: map[string]string{"TERM": "xterm-256color"}, want: true},
-		{name: "auto on a linux console", symbols: "auto", environment: map[string]string{"TERM": "linux"}, want: false},
-		{name: "auto on a dumb terminal", symbols: "auto", environment: map[string]string{"TERM": "dumb"}, want: false},
-		{name: "auto with NO_UTF8 set", symbols: "auto", environment: map[string]string{"TERM": "xterm-256color", "NO_UTF8": "1"}, want: false},
+		{name: "ascii is always ascii", symbols: "ascii", environment: map[string]string{"TERM": "xterm-256color"}, expected: false},
+		{name: "unicode is always unicode", symbols: "unicode", environment: map[string]string{"TERM": "linux"}, expected: true},
+		{name: "case is not significant", symbols: "UNICODE", environment: map[string]string{"TERM": "linux"}, expected: true},
+		{name: "auto on a capable terminal", symbols: "auto", environment: map[string]string{"TERM": "xterm-256color"}, expected: true},
+		{name: "auto on a linux console", symbols: "auto", environment: map[string]string{"TERM": "linux"}, expected: false},
+		{name: "auto on a dumb terminal", symbols: "auto", environment: map[string]string{"TERM": "dumb"}, expected: false},
+		{name: "auto with NO_UTF8 set", symbols: "auto", environment: map[string]string{"TERM": "xterm-256color", "NO_UTF8": "1"}, expected: false},
 		{name: "an unknown value", symbols: "utf7", expectedError: true},
 	}
 	for _, testCase := range tests {
@@ -31,8 +31,8 @@ func TestCmdSpace_ResolveSymbols(t *testing.T) {
 			if (err != nil) != testCase.expectedError {
 				t.Fatalf("error: got %v want error %v", err, testCase.expectedError)
 			}
-			if err == nil && got != testCase.want {
-				t.Errorf("useUnicode: got %v want %v", got, testCase.want)
+			if err == nil && got != testCase.expected {
+				t.Errorf("useUnicode: got %v want %v", got, testCase.expected)
 			}
 		})
 	}
@@ -43,13 +43,13 @@ func TestCmdSpace_ResolveTheme(t *testing.T) {
 		name          string
 		theme         string
 		environment   map[string]string
-		want          bool
+		expected      bool
 		expectedError bool
 	}{
-		{name: "colour is always colour", theme: "colour", environment: map[string]string{"NO_COLOR": "1"}, want: true},
-		{name: "the american spelling is accepted", theme: "color", want: true},
-		{name: "mono is always mono", theme: "mono", environment: map[string]string{"TERM": "xterm-256color"}, want: false},
-		{name: "auto off a terminal", theme: "auto", environment: map[string]string{"TERM": "xterm-256color"}, want: false},
+		{name: "colour is always colour", theme: "colour", environment: map[string]string{"NO_COLOR": "1"}, expected: true},
+		{name: "the american spelling is accepted", theme: "color", expected: true},
+		{name: "mono is always mono", theme: "mono", environment: map[string]string{"TERM": "xterm-256color"}, expected: false},
+		{name: "auto off a terminal", theme: "auto", environment: map[string]string{"TERM": "xterm-256color"}, expected: false},
 		{name: "an unknown value", theme: "ansi", expectedError: true},
 	}
 	for _, testCase := range tests {
@@ -59,8 +59,8 @@ func TestCmdSpace_ResolveTheme(t *testing.T) {
 			if (err != nil) != testCase.expectedError {
 				t.Fatalf("error: got %v want error %v", err, testCase.expectedError)
 			}
-			if err == nil && got != testCase.want {
-				t.Errorf("useColour: got %v want %v", got, testCase.want)
+			if err == nil && got != testCase.expected {
+				t.Errorf("useColour: got %v want %v", got, testCase.expected)
 			}
 		})
 	}
@@ -75,17 +75,17 @@ func TestCmdSpace_RowsFor(t *testing.T) {
 		}},
 		{Label: "max", State: engine.HostStateUnreachable},
 	})
-	want := []display.Row{
+	expected := []display.Row{
 		{Host: "mad", Mount: "/", Size: 400, Used: 100, Free: 300, Percent: 25, NewBlock: true, NewGroup: true},
 		{Mount: "/share/10", Unmeasured: true, NewGroup: true},
 		{Mount: "/backup", Size: 200, Used: 50, Free: 150, Percent: 25, NewGroup: true},
 	}
-	if len(rows) != len(want) {
-		t.Fatalf("rows: got %d want %d, an unreachable host contributes none", len(rows), len(want))
+	if len(rows) != len(expected) {
+		t.Fatalf("rows: got %d want %d, an unreachable host contributes none", len(rows), len(expected))
 	}
 	for i, row := range rows {
-		if row != want[i] {
-			t.Errorf("row %d: got %+v want %+v", i, row, want[i])
+		if row != expected[i] {
+			t.Errorf("row %d: got %+v want %+v", i, row, expected[i])
 		}
 	}
 }
@@ -99,18 +99,18 @@ func TestCmdSpace_RowsFor_ServedBy(t *testing.T) {
 			{Mount: "/", Class: engine.ClassRoot, State: engine.MountStateMeasured, Space: &engine.SpaceFigures{SizeBytes: 400, UsedBytes: 100, FreeBytes: 300}},
 		}},
 	})
-	want := []display.Row{
+	expected := []display.Row{
 		{Host: "mad", Mount: "/share/10", Size: 400, Used: 100, Free: 300, Percent: 25, NewBlock: true, NewGroup: true},
 		{Mount: "/share/11", Size: 400, Used: 100, Free: 300, Percent: 25},
 		{Host: "max", Mount: "/share/20", Size: 400, Used: 100, Free: 300, Percent: 25},
 		{Host: "rue", Mount: "/", Size: 400, Used: 100, Free: 300, Percent: 25, NewGroup: true},
 	}
-	if len(rows) != len(want) {
-		t.Fatalf("rows: got %d want %d, got %+v", len(rows), len(want), rows)
+	if len(rows) != len(expected) {
+		t.Fatalf("rows: got %d want %d, got %+v", len(rows), len(expected), rows)
 	}
 	for i, row := range rows {
-		if row != want[i] {
-			t.Errorf("row %d: got %+v want %+v", i, row, want[i])
+		if row != expected[i] {
+			t.Errorf("row %d: got %+v want %+v", i, row, expected[i])
 		}
 	}
 }
@@ -126,13 +126,13 @@ func TestCmdSpace_EstateRows(t *testing.T) {
 		name          string
 		hosts         []engine.HostDoc
 		filters       []string
-		want          []display.Row
+		expected      []display.Row
 		expectedError bool
 	}{
 		{
-			name:  "a single host renders no estate block",
-			hosts: []engine.HostDoc{host("mad", engine.MountDoc{Mount: "/", Class: engine.ClassRoot, State: engine.MountStateMeasured, Space: measured(100, 50)})},
-			want:  nil,
+			name:     "a single host renders no estate block",
+			hosts:    []engine.HostDoc{host("mad", engine.MountDoc{Mount: "/", Class: engine.ClassRoot, State: engine.MountStateMeasured, Space: measured(100, 50)})},
+			expected: nil,
 		},
 		{
 			name: "only the subtotal row of each class is summed",
@@ -147,7 +147,7 @@ func TestCmdSpace_EstateRows(t *testing.T) {
 					engine.MountDoc{Mount: "/share/20", Class: engine.ClassShare, State: engine.MountStateUnmounted},
 					engine.MountDoc{Mount: "/share", Class: engine.ClassShare, State: engine.MountStateMeasured, Space: measured(400, 100)}),
 			},
-			want: []display.Row{
+			expected: []display.Row{
 				{Mount: "/", Size: 200, Used: 100, Free: 100, Percent: 50, NewBlock: true, NewGroup: true},
 				{Mount: "/share", Size: 1000, Used: 400, Free: 600, Percent: 40, NewGroup: true},
 				{Mount: "/backup", Size: 200, Used: 100, Free: 100, Percent: 50, NewGroup: true},
@@ -163,7 +163,7 @@ func TestCmdSpace_EstateRows(t *testing.T) {
 				host("max",
 					engine.MountDoc{Mount: "/share/20", Class: engine.ClassShare, State: engine.MountStateMeasured, Space: measured(400, 100)}),
 			},
-			want: []display.Row{
+			expected: []display.Row{
 				{Mount: "/share", Size: 1000, Used: 400, Free: 600, Percent: 40, NewBlock: true, NewGroup: true},
 			},
 		},
@@ -177,7 +177,7 @@ func TestCmdSpace_EstateRows(t *testing.T) {
 				host("max",
 					engine.MountDoc{Mount: "/share", Class: engine.ClassShare, State: engine.MountStateMeasured, Space: measured(400, 100)}),
 			},
-			want: []display.Row{
+			expected: []display.Row{
 				{Mount: "/share", Size: 1000, Used: 400, Free: 600, Percent: 40, NewBlock: true, NewGroup: true},
 			},
 		},
@@ -188,7 +188,7 @@ func TestCmdSpace_EstateRows(t *testing.T) {
 				host("mad", engine.MountDoc{Mount: "/share/10", Class: engine.ClassShare, State: engine.MountStateMeasured, Space: measured(600, 300)}),
 				host("max", engine.MountDoc{Mount: "/share/10", Class: engine.ClassShare, State: engine.MountStateMeasured, Space: measured(400, 100)}),
 			},
-			want: nil,
+			expected: nil,
 		},
 		{
 			name: "an unreachable host contributes nothing",
@@ -196,7 +196,7 @@ func TestCmdSpace_EstateRows(t *testing.T) {
 				host("mad", engine.MountDoc{Mount: "/", Class: engine.ClassRoot, State: engine.MountStateMeasured, Space: measured(100, 40)}),
 				{Label: "max", State: engine.HostStateUnreachable},
 			},
-			want: []display.Row{
+			expected: []display.Row{
 				{Mount: "/", Size: 100, Used: 40, Free: 60, Percent: 40, NewBlock: true, NewGroup: true},
 			},
 		},
@@ -208,12 +208,12 @@ func TestCmdSpace_EstateRows(t *testing.T) {
 				filters = engine.DefaultFilters
 			}
 			got := estateRows(testCase.hosts, filters)
-			if len(got) != len(testCase.want) {
-				t.Fatalf("rows: got %d want %d, got %+v", len(got), len(testCase.want), got)
+			if len(got) != len(testCase.expected) {
+				t.Fatalf("rows: got %d want %d, got %+v", len(got), len(testCase.expected), got)
 			}
 			for i, row := range got {
-				if row != testCase.want[i] {
-					t.Errorf("row %d: got %+v want %+v", i, row, testCase.want[i])
+				if row != testCase.expected[i] {
+					t.Errorf("row %d: got %+v want %+v", i, row, testCase.expected[i])
 				}
 			}
 		})
@@ -222,30 +222,30 @@ func TestCmdSpace_EstateRows(t *testing.T) {
 
 func TestCmdSpace_ReportFaults(t *testing.T) {
 	tests := []struct {
-		name            string
-		hosts           []engine.HostDoc
-		wantFault       bool
-		wantUnreachable bool
-		wantMeasured    bool
-		expectedError   bool
+		name                string
+		hosts               []engine.HostDoc
+		expectedFault       bool
+		expectedUnreachable bool
+		expectedMeasured    bool
+		expectedError       bool
 	}{
 		{
-			name:         "every host measured",
-			hosts:        []engine.HostDoc{{Label: "mad", State: engine.HostStateMeasured, Version: "10.200.1725"}},
-			wantMeasured: true,
+			name:             "every host measured",
+			hosts:            []engine.HostDoc{{Label: "mad", State: engine.HostStateMeasured, Version: "10.200.1725"}},
+			expectedMeasured: true,
 		},
 		{
-			name:         "a version skew is reported but is not a fault",
-			hosts:        []engine.HostDoc{{Label: "mad", State: engine.HostStateMeasured, Version: "10.200.1700"}},
-			wantMeasured: true,
+			name:             "a version skew is reported but is not a fault",
+			hosts:            []engine.HostDoc{{Label: "mad", State: engine.HostStateMeasured, Version: "10.200.1700"}},
+			expectedMeasured: true,
 		},
 		{
 			name: "a faulted mount faults the run and leaves the host measured",
 			hosts: []engine.HostDoc{{Label: "mad", State: engine.HostStateMeasured, Version: "10.200.1725", Mounts: []engine.MountDoc{
 				{Mount: "/share/10", State: engine.MountStateTimedout, Error: "statfs failed [/share/10]"},
 			}}},
-			wantFault:    true,
-			wantMeasured: true,
+			expectedFault:    true,
+			expectedMeasured: true,
 		},
 		{
 			name: "one unreachable host among reachable ones",
@@ -253,29 +253,29 @@ func TestCmdSpace_ReportFaults(t *testing.T) {
 				{Label: "mad", State: engine.HostStateMeasured, Version: "10.200.1725"},
 				{Label: "max", State: engine.HostStateUnreachable, Error: "ssh dial failed [macmini-max]"},
 			},
-			wantFault:       true,
-			wantUnreachable: true,
-			wantMeasured:    true,
+			expectedFault:       true,
+			expectedUnreachable: true,
+			expectedMeasured:    true,
 		},
 		{
-			name:            "every host unreachable",
-			hosts:           []engine.HostDoc{{Label: "max", State: engine.HostStateUnreachable, Error: "ssh dial failed [macmini-max]"}},
-			wantFault:       true,
-			wantUnreachable: true,
+			name:                "every host unreachable",
+			hosts:               []engine.HostDoc{{Label: "max", State: engine.HostStateUnreachable, Error: "ssh dial failed [macmini-max]"}},
+			expectedFault:       true,
+			expectedUnreachable: true,
 		},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			silenceStderr(t)
 			fault, unreachable := reportFaults(testCase.hosts, "10.200.1725")
-			if fault != testCase.wantFault {
-				t.Errorf("fault: got %v want %v", fault, testCase.wantFault)
+			if fault != testCase.expectedFault {
+				t.Errorf("fault: got %v want %v", fault, testCase.expectedFault)
 			}
-			if unreachable != testCase.wantUnreachable {
-				t.Errorf("unreachable: got %v want %v", unreachable, testCase.wantUnreachable)
+			if unreachable != testCase.expectedUnreachable {
+				t.Errorf("unreachable: got %v want %v", unreachable, testCase.expectedUnreachable)
 			}
-			if got := anyMeasured(testCase.hosts); got != testCase.wantMeasured {
-				t.Errorf("anyMeasured: got %v want %v", got, testCase.wantMeasured)
+			if got := anyMeasured(testCase.hosts); got != testCase.expectedMeasured {
+				t.Errorf("anyMeasured: got %v want %v", got, testCase.expectedMeasured)
 			}
 		})
 	}

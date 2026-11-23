@@ -52,9 +52,9 @@ TRIM_SETTLE=5
 
 PARSER='
 import sys, json
-d = json.load(sys.stdin)
-j = d["jobs"][0][sys.argv[1]]
-print("%.1f" % (j["bw"] * 1024 / 1000000.0))
+document = json.load(sys.stdin)
+job = document["jobs"][0][sys.argv[1]]
+print("%.1f" % (job["bw"] * 1024 / 1000000.0))
 '
 
 cleanup() {
@@ -66,9 +66,9 @@ read_looped() {
 }
 
 fstype_allowed() {
-  local fs=$1 allowed
+  local fstype=$1 allowed
   for allowed in $ALLOWED_FSTYPES; do
-    [ "$fs" = "$allowed" ] && return 0
+    [ "$fstype" = "$allowed" ] && return 0
   done
   return 1
 }
@@ -83,45 +83,45 @@ drop_caches() {
   return 0
 }
 
-set_col() {
-  if [ "$1" = read ]; then rfield=$2; else wfield=$2; fi
+set_column() {
+  if [ "$1" = read ]; then read_field=$2; else write_field=$2; fi
 }
 
 draw_row() {
-  printf '\r\033[K  %-12s %-12s %-12s %s' "$mount" "$rfield" "$wfield" "$rnote" >&2
+  printf '\r\033[K  %-12s %-12s %-12s %s' "$mount" "$read_field" "$write_field" "$notes" >&2
 }
 
-run_col() {
-  local col=$1 secs=$2
+run_column() {
+  local column=$1 seconds=$2
   shift 2
-  local outfile pid i remaining colour
-  outfile=$(mktemp)
-  "$@" >"$outfile" 2>/dev/null &
+  local output_file pid elapsed remaining colour
+  output_file=$(mktemp)
+  "$@" >"$output_file" 2>/dev/null &
   pid=$!
-  i=0
+  elapsed=0
   while kill -0 "$pid" 2>/dev/null; do
-    remaining=$((secs - i))
+    remaining=$((seconds - elapsed))
     [ "$remaining" -lt 0 ] && remaining=0
-    set_col "$col" "${remaining}s"
+    set_column "$column" "${remaining}s"
     draw_row
     sleep 1
-    i=$((i + 1))
+    elapsed=$((elapsed + 1))
   done
   wait "$pid"
-  col_mbps=$(python3 -c "$PARSER" "$col" <"$outfile" 2>/dev/null)
-  rm -f "$outfile"
-  if [ -n "$col_mbps" ]; then
-    if awk -v v="$col_mbps" 'BEGIN { exit !(v > 300) }'; then
+  column_mbps=$(python3 -c "$PARSER" "$column" <"$output_file" 2>/dev/null)
+  rm -f "$output_file"
+  if [ -n "$column_mbps" ]; then
+    if awk -v v="$column_mbps" 'BEGIN { exit !(v > 300) }'; then
       colour=$'\033[32m'
-    elif awk -v v="$col_mbps" 'BEGIN { exit !(v >= 100) }'; then
+    elif awk -v v="$column_mbps" 'BEGIN { exit !(v >= 100) }'; then
       colour=$'\033[33m'
     else
       colour=$'\033[31m'
     fi
     # shellcheck disable=SC2183
-    set_col "$col" "$(printf '%s%-*.1f\033[0m' "$colour" 12 "$col_mbps")"
+    set_column "$column" "$(printf '%s%-*.1f\033[0m' "$colour" 12 "$column_mbps")"
   else
-    set_col "$col" '--'
+    set_column "$column" '--'
   fi
   draw_row
 }
@@ -181,7 +181,7 @@ while [ $# -gt 0 ]; do
     printf 'and print a per-mount table of MB/s.\n'
     printf '\n'
     printf 'Options:\n'
-    printf '  --filter <share>                 Benchmark only this mount (e.g. /share/media).\n'
+    printf '  --filter <share>                 Benchmark only this mount (e.g. /share/10).\n'
     printf '  --execute read|write|read_write  Which passes to run (default: read_write).\n'
     printf '  --csv                            Emit machine-readable CSV rows on stdout\n'
     printf '                                   ("<mount>","<used%%>","<date>","<time>","<read>","<write>")\n'
@@ -240,15 +240,15 @@ while read -r mount fstype; do
   [ -z "$mount" ] && continue
   [ -n "$FILTER" ] && [ "$mount" != "$FILTER" ] && continue
   fstype_allowed "$fstype" || continue
-  rfield=''
-  wfield=''
-  rnote=''
-  rmbps=''
-  wmbps=''
+  read_field=''
+  write_field=''
+  notes=''
+  read_mbps=''
+  write_mbps=''
   read_extra=''
   read_note=''
   write_note=''
-  usepct=$(df -P "$mount" 2>/dev/null | awk 'NR==2 { gsub(/%/,"",$5); print $5 }')
+  used_percent=$(df -P "$mount" 2>/dev/null | awk 'NR==2 { gsub(/%/,"",$5); print $5 }')
 
   if [ -n "$do_read" ]; then
     media="$mount/media"
@@ -265,45 +265,45 @@ while read -r mount fstype; do
       for entry in "${entries[@]}"; do
         size=${entry%%$'\t'*}
         path=${entry#*$'\t'}
-        esc=${path//:/\\:}
-        [ -z "$read_target" ] && read_target=$esc || read_target="$read_target:$esc"
+        escaped=${path//:/\\:}
+        [ -z "$read_target" ] && read_target=$escaped || read_target="$read_target:$escaped"
         read_bytes=$((read_bytes + size))
         read_count=$((read_count + 1))
         [ "$read_bytes" -ge "$READ_MIN_BYTES" ] && break
       done
     fi
     if [ "$pool_count" -lt "$READ_POOL_MIN" ]; then
-      rfield='--'
+      read_field='--'
       read_note="Read: skipped (pool $pool_count < $READ_POOL_MIN files)"
     elif [ "$read_bytes" -lt "$READ_FLOOR_BYTES" ]; then
-      rfield='--'
+      read_field='--'
       read_note="Read: skipped (<$((READ_FLOOR_BYTES / 1024 / 1024 / 1024)) GiB media)"
     else
       read_hash=$(printf '%s' "$read_target" | md5sum 2>/dev/null | cut -c1-6)
       read_label="$read_count/$pool_count files ($((read_bytes / 1024 / 1024 / 1024)) GiB) #$read_hash"
-      read_rt=$(awk -v s="$read_bytes" -v c="$READ_MAX_MBPS" -v m="$READ_RUNTIME" 'BEGIN { t = int(s / (c * 1000000)); if (t > m) t = m; if (t < 1) t = 1; print t }')
+      read_runtime=$(awk -v s="$read_bytes" -v c="$READ_MAX_MBPS" -v m="$READ_RUNTIME" 'BEGIN { t = int(s / (c * 1000000)); if (t > m) t = m; if (t < 1) t = 1; print t }')
       drop_caches
-      run_col read "$read_rt" run_read "$read_target" "$read_rt"
-      rmbps=$col_mbps
+      run_column read "$read_runtime" run_read "$read_target" "$read_runtime"
+      read_mbps=$column_mbps
       looped=''
-      if [ -n "$rmbps" ] && read_looped "$rmbps" "$read_rt" "$read_bytes"; then
-        read_rt=$(awk -v s="$read_bytes" -v r="$rmbps" 'BEGIN { t = int(s / (r * 1000000) * 0.9); if (t < 1) t = 1; print t }')
+      if [ -n "$read_mbps" ] && read_looped "$read_mbps" "$read_runtime" "$read_bytes"; then
+        read_runtime=$(awk -v s="$read_bytes" -v r="$read_mbps" 'BEGIN { t = int(s / (r * 1000000) * 0.9); if (t < 1) t = 1; print t }')
         drop_caches
-        run_col read "$read_rt" run_read "$read_target" "$read_rt"
-        rmbps=$col_mbps
-        if [ -n "$rmbps" ] && read_looped "$rmbps" "$read_rt" "$read_bytes"; then
+        run_column read "$read_runtime" run_read "$read_target" "$read_runtime"
+        read_mbps=$column_mbps
+        if [ -n "$read_mbps" ] && read_looped "$read_mbps" "$read_runtime" "$read_bytes"; then
           looped=1
         fi
       fi
       if [ -n "$looped" ]; then
-        rfield='--'
-        rmbps=''
-        read_note="Read: failed (looped $((read_bytes / 1024 / 1024 / 1024)) GiB at ${read_rt}s)"
-      elif [ -z "$rmbps" ]; then
-        rfield='--'
+        read_field='--'
+        read_mbps=''
+        read_note="Read: failed (looped $((read_bytes / 1024 / 1024 / 1024)) GiB at ${read_runtime}s)"
+      elif [ -z "$read_mbps" ]; then
+        read_field='--'
         read_note='Read: failed (no parseable output)'
       else
-        [ "$read_rt" -lt "$READ_RUNTIME" ] && read_extra=" (read ${read_rt}s)"
+        [ "$read_runtime" -lt "$READ_RUNTIME" ] && read_extra=" (read ${read_runtime}s)"
         read_note="Read: $read_label$read_extra"
       fi
     fi
@@ -312,18 +312,18 @@ while read -r mount fstype; do
   if [ -n "$do_write" ]; then
     avail=$(df -B1 --output=avail "$mount" 2>/dev/null | tail -1 | tr -d ' ')
     if [ -z "$avail" ] || [ "$avail" -lt "$MIN_FREE_BYTES" ]; then
-      wfield='--'
+      write_field='--'
       write_note="Write: skipped (<$((MIN_FREE_BYTES / 1024 / 1024 / 1024)) GiB free)"
     elif ! mkdir -p "$mount/tmp" 2>/dev/null; then
-      wfield='--'
+      write_field='--'
       write_note="Write: skipped (cannot create $mount/tmp)"
     else
-      testfile="$mount/tmp/$TEST_NAME"
-      run_col write "$WRITE_RUNTIME" run_write "$testfile"
-      wmbps=$col_mbps
-      rm -f "$testfile"
-      if [ -z "$wmbps" ]; then
-        wfield='--'
+      test_file="$mount/tmp/$TEST_NAME"
+      run_column write "$WRITE_RUNTIME" run_write "$test_file"
+      write_mbps=$column_mbps
+      rm -f "$test_file"
+      if [ -z "$write_mbps" ]; then
+        write_field='--'
         write_note='Write: failed (no parseable output)'
       else
         write_note="Write: 01 file (${WRITE_SIZE%G} GiB)"
@@ -331,19 +331,19 @@ while read -r mount fstype; do
     fi
   fi
 
-  [ -n "$usepct" ] && rnote="Used: ${usepct}%"
+  [ -n "$used_percent" ] && notes="Used: ${used_percent}%"
   if [ -n "$read_note" ]; then
-    [ -n "$rnote" ] && rnote="$rnote | "
-    rnote="${rnote}${read_note}"
+    [ -n "$notes" ] && notes="$notes | "
+    notes="${notes}${read_note}"
   fi
   if [ -n "$write_note" ]; then
-    [ -n "$rnote" ] && rnote="$rnote | "
-    rnote="${rnote}${write_note}"
+    [ -n "$notes" ] && notes="$notes | "
+    notes="${notes}${write_note}"
   fi
-  printf '\r\033[K  %-12s %-12s %-12s %s\n' "$mount" "$rfield" "$wfield" "$rnote"
+  printf '\r\033[K  %-12s %-12s %-12s %s\n' "$mount" "$read_field" "$write_field" "$notes"
   if [ -n "$CSV" ]; then
     printf '"%s","%s","%s","%s","%s","%s"\n' \
-      "$mount" "${usepct:-}" "$(date '+%Y/%m/%d')" "$(date '+%H:%M:%S')" "${rmbps:-}" "${wmbps:-}" >&3
+      "$mount" "${used_percent:-}" "$(date '+%Y/%m/%d')" "$(date '+%H:%M:%S')" "${read_mbps:-}" "${write_mbps:-}" >&3
   fi
 
   results+=("$mount")

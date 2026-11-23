@@ -13,23 +13,12 @@ func parseFstab(contents string) []fstabEntry {
 		if len(fields) < 4 {
 			continue
 		}
-		entries = append(entries, fstabEntry{
-			Identifier: fields[0],
-			Mountpoint: fields[1],
-			FSType:     fields[2],
-			Options:    strings.Split(fields[3], ","),
-		})
+		entries = append(entries, fstabEntry{Mountpoint: fields[1], FSType: fields[2]})
 	}
 	return entries
 }
 
-func (e fstabEntry) isCifs() bool {
-	return e.FSType == "cifs"
-}
-
 type fstabEntry struct {
-	Identifier string
 	Mountpoint string
 	FSType     string
-	Options    []string
 }

@@ -13,31 +13,6 @@ SHARE_TOKEN = re.compile(r"(share|backup)_\d+")
 SHARE_MOUNT = re.compile(r"^/share/\d+$")
 
 
-def parse_fstab(path):
-    entries = []
-    with open(path) as fstab_file:
-        for line in fstab_file:
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            fields = line.split()
-            if len(fields) < 4 or fields[2] == "swap":
-                continue
-            entries.append(
-                {
-                    "identifier": fields[0],
-                    "mount": fields[1],
-                    "fstype": fields[2],
-                }
-            )
-    return entries
-
-
-def fstab_path(label):
-    matches = glob.glob(join(REPO_ROOT, "src", label, "_*_" + label, "src/main/resources/fstab"))
-    return matches[0] if matches else None
-
-
 def share_label(identifier):
     match = SHARE_TOKEN.search(identifier)
     return match.group(0) if match else ""
@@ -58,7 +33,19 @@ if __name__ == "__main__":
     write_schema_broker(metadata_storage_df, broker_topic_glob_discovery="homeassistant/+/storage_${STORAGE_HOST}/+/config", broker_topic_glob_data="storage/${STORAGE_HOST}/data/+/+/+")
 
     labels = sorted(label for label, metadata in HOSTS.items() if metadata[4] in FSTAB_FORM_FACTORS)
-    fstabs = {label: parse_fstab(fstab_path(label)) for label in labels if fstab_path(label)}
+    fstabs = {}
+    for label in labels:
+        fstab_paths = glob.glob(join(REPO_ROOT, "src", label, "_*_" + label, "src/main/resources/fstab"))
+        if not fstab_paths:
+            continue
+        entries = []
+        with open(fstab_paths[0]) as fstab_file:
+            for line in fstab_file:
+                fields = line.split()
+                if len(fields) < 4 or fields[0].startswith("#") or fields[2] == "swap":
+                    continue
+                entries.append({"identifier": fields[0], "mount": fields[1], "fstype": fields[2]})
+        fstabs[label] = entries
 
     share_registry = {}
     for label, entries in fstabs.items():

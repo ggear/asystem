@@ -19,7 +19,7 @@ func init() {
 }
 
 func newSpaceCmd() *cobra.Command {
-	opts := &spaceOptions{}
+	options := &spaceOptions{}
 	cmd := &cobra.Command{
 		Use:     "space [filter ...]",
 		Aliases: []string{"aspace"},
@@ -30,46 +30,46 @@ func newSpaceCmd() *cobra.Command {
 			configPath, _ := cmd.Flags().GetString("config")
 			var filters []string
 			if cmd.Flags().Changed("filter") {
-				filters = strings.Split(opts.filter, ",")
+				filters = strings.Split(options.filter, ",")
 			}
 			filters = append(filters, args...)
 			if len(filters) == 0 {
 				filters = engine.DefaultFilters
 			}
-			return executeSpace(configPath, opts, filters)
+			return executeSpace(configPath, options, filters)
 		},
 	}
-	cmd.Flags().StringVarP(&opts.mode, "mode", "m", engine.ModeAuto, "mode to operate in: local, remote, auto")
-	cmd.Flags().StringVarP(&opts.filter, "filter", "f", strings.Join(engine.DefaultFilters, ","), "mounts to include: comma separated list of mount globs, also taken as arguments")
-	cmd.Flags().StringVarP(&opts.symbols, "symbols", "s", "auto", "define output character set: auto, ascii or unicode")
-	cmd.Flags().StringVarP(&opts.theme, "theme", "t", "auto", "colour theme: auto, colour or mono")
-	cmd.Flags().BoolVarP(&opts.json, "json", "j", false, "output json not tabular text")
+	cmd.Flags().StringVarP(&options.mode, "mode", "m", engine.ModeAuto, "mode to operate in: local, remote, auto")
+	cmd.Flags().StringVarP(&options.filter, "filter", "f", strings.Join(engine.DefaultFilters, ","), "mounts to include: comma separated list of mount globs, also taken as arguments")
+	cmd.Flags().StringVarP(&options.symbols, "symbols", "s", "auto", "define output character set: auto, ascii or unicode")
+	cmd.Flags().StringVarP(&options.theme, "theme", "t", "auto", "colour theme: auto, colour or mono")
+	cmd.Flags().BoolVarP(&options.json, "json", "j", false, "output json not tabular text")
 	cmd.Flags().SortFlags = false
 	return cmd
 }
 
-func executeSpace(configPath string, opts *spaceOptions, filters []string) error {
+func executeSpace(configPath string, options *spaceOptions, filters []string) error {
 	started := time.Now()
-	cfg := config.Load(configPath)
-	useUnicode, err := resolveSymbols(opts.symbols)
+	loaded := config.Load(configPath)
+	useUnicode, err := resolveSymbols(options.symbols)
 	if err != nil {
 		return err
 	}
-	useColour, err := resolveTheme(opts.theme)
+	useColour, err := resolveTheme(options.theme)
 	if err != nil {
 		return err
 	}
-	hosts, mode, err := engine.Collect(cfg, filters, opts.mode)
+	hosts, mode, err := engine.Collect(loaded, filters, options.mode)
 	if err != nil {
 		return err
 	}
-	fault, unreachable := reportFaults(hosts, cfg.Version())
+	fault, unreachable := reportFaults(hosts, loaded.Version())
 	if unreachable && !anyMeasured(hosts) {
 		return fmt.Errorf("no reachable hosts")
 	}
-	if opts.json {
+	if options.json {
 		document := engine.Document{
-			Version:   cfg.Version(),
+			Version:   loaded.Version(),
 			Mode:      mode,
 			StartedTS: started.Format(time.RFC3339),
 			DurationS: int(time.Since(started).Seconds()),
@@ -131,8 +131,8 @@ func estateRows(hosts []engine.HostDoc, filters []string) []display.Row {
 	if len(hosts) < 2 {
 		return nil
 	}
-	type total struct{ size, used uint64 }
-	totals := map[string]*total{}
+	type classTotal struct{ size, used uint64 }
+	totals := map[string]*classTotal{}
 	order := []string{engine.ClassRoot, engine.ClassShare, engine.ClassBackup}
 	for _, host := range hosts {
 		subtotalled := false
@@ -149,13 +149,13 @@ func estateRows(hosts []engine.HostDoc, filters []string) []display.Row {
 			if mount.Class == engine.ClassRoot && mount.Mount != "/" {
 				continue
 			}
-			t, ok := totals[mount.Class]
+			total, ok := totals[mount.Class]
 			if !ok {
-				t = &total{}
-				totals[mount.Class] = t
+				total = &classTotal{}
+				totals[mount.Class] = total
 			}
-			t.size += mount.Space.SizeBytes
-			t.used += mount.Space.UsedBytes
+			total.size += mount.Space.SizeBytes
+			total.used += mount.Space.UsedBytes
 		}
 	}
 	var rows []display.Row
@@ -163,14 +163,14 @@ func estateRows(hosts []engine.HostDoc, filters []string) []display.Row {
 	first := true
 	mountName := map[string]string{engine.ClassRoot: "/", engine.ClassShare: "/share", engine.ClassBackup: "/backup"}
 	for _, class := range order {
-		t, ok := totals[class]
+		total, ok := totals[class]
 		if !ok || !engine.Claims(filters, mountName[class], class) {
 			continue
 		}
-		rows = append(rows, display.Row{Mount: mountName[class], Size: t.size, Used: t.used, Free: t.size - t.used, Percent: percentOf(t.used, t.size), NewBlock: first, NewGroup: true})
+		rows = append(rows, display.Row{Mount: mountName[class], Size: total.size, Used: total.used, Free: total.size - total.used, Percent: percentOf(total.used, total.size), NewBlock: first, NewGroup: true})
 		first = false
-		grandSize += t.size
-		grandUsed += t.used
+		grandSize += total.size
+		grandUsed += total.used
 	}
 	if len(rows) < 2 {
 		return rows
@@ -233,8 +233,8 @@ func resolveTheme(theme string) (bool, error) {
 	switch strings.ToLower(theme) {
 	case "auto":
 		isTerminal := term.IsTerminal(int(os.Stdout.Fd()))
-		termVar := os.Getenv("TERM")
-		return isTerminal && termVar != "" && termVar != "dumb" && os.Getenv("NO_COLOR") == "" && os.Getenv("MONO") == "", nil
+		terminal := os.Getenv("TERM")
+		return isTerminal && terminal != "" && terminal != "dumb" && os.Getenv("NO_COLOR") == "" && os.Getenv("MONO") == "", nil
 	case "colour", "color":
 		return true, nil
 	case "mono":

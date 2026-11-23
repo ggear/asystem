@@ -17,58 +17,47 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func collectRemote(cfg *config.Config, filters []string) []HostDoc {
-	hosts := cfg.Hosts()
-	docs := make([]HostDoc, len(hosts))
-	var wg sync.WaitGroup
-	for i, host := range hosts {
-		wg.Add(1)
-		go func(i int, host config.HostEntry) {
-			defer wg.Done()
-			docs[i] = collectOneHost(host, filters)
-		}(i, host)
+func collectRemote(loaded *config.Config, filters []string) []HostDoc {
+	collectHost := func(host config.HostEntry) HostDoc {
+		unreachable := HostDoc{Index: host.Index, Label: host.Label, Name: host.Host, State: HostStateUnreachable}
+		budget := remoteRunMargin + time.Duration(len(host.Shares)+remoteRunExtraMounts)*statfsTimeout
+		output, err := runRemote(host.Host, budget, filters)
+		if err != nil {
+			unreachable.Error = err.Error()
+			return unreachable
+		}
+		var document Document
+		if err := json.Unmarshal(output, &document); err != nil || len(document.Hosts) == 0 {
+			unreachable.Error = fmt.Sprintf("malformed response [%s] [%v]", host.Host, err)
+			return unreachable
+		}
+		remote := document.Hosts[0]
+		remote.Index = host.Index
+		remote.Label = host.Label
+		remote.Name = host.Host
+		if remote.State == "" {
+			remote.State = HostStateMeasured
+		}
+		for index := range remote.Mounts {
+			if remote.Mounts[index].State == "" {
+				remote.Mounts[index].State = MountStateMeasured
+			}
+		}
+		return remote
 	}
-	wg.Wait()
+	hosts := loaded.Hosts()
+	docs := make([]HostDoc, len(hosts))
+	var waitGroup sync.WaitGroup
+	for i, host := range hosts {
+		waitGroup.Go(func() { docs[i] = collectHost(host) })
+	}
+	waitGroup.Wait()
 	sort.Slice(docs, func(i, j int) bool { return docs[i].Label < docs[j].Label })
 	return docs
 }
 
-func collectOneHost(host config.HostEntry, filters []string) HostDoc {
-	base := HostDoc{Index: host.Index, Label: host.Label, Name: host.Host}
-	output, err := runRemote(host.Host, remoteRunBudget(host), filters)
-	if err != nil {
-		base.State = HostStateUnreachable
-		base.Error = err.Error()
-		return base
-	}
-	var document Document
-	if err := json.Unmarshal(output, &document); err != nil || len(document.Hosts) == 0 {
-		base.State = HostStateUnreachable
-		base.Error = fmt.Sprintf("malformed response [%s] [%v]", host.Host, err)
-		return base
-	}
-	remote := document.Hosts[0]
-	remote.Index = host.Index
-	remote.Label = host.Label
-	remote.Name = host.Host
-	if remote.State == "" {
-		remote.State = HostStateMeasured
-	}
-	for index := range remote.Mounts {
-		if remote.Mounts[index].State == "" {
-			remote.Mounts[index].State = MountStateMeasured
-		}
-	}
-	return remote
-}
-
-func remoteRunBudget(host config.HostEntry) time.Duration {
-	mounts := len(host.Shares) + remoteRunExtraMounts
-	return remoteRunMargin + time.Duration(mounts)*statfsTimeout
-}
-
 func runRemote(host string, budget time.Duration, filters []string) ([]byte, error) {
-	client, err := dialHost(host)
+	client, err := dialHost(host, budget)
 	if err != nil {
 		return nil, fmt.Errorf("ssh dial failed [%s] [%w]", host, err)
 	}
@@ -99,22 +88,34 @@ func runRemote(host string, budget time.Duration, filters []string) ([]byte, err
 	}
 }
 
-func dialHost(host string) (*ssh.Client, error) {
-	auth, err := sshAuth()
+func dialHost(host string, budget time.Duration) (*ssh.Client, error) {
+	auth, err := loadSSHAuth()
 	if err != nil {
 		return nil, err
 	}
-	config := &ssh.ClientConfig{
+	address := net.JoinHostPort(host, remoteSSHPort)
+	connection, err := net.DialTimeout("tcp", address, remoteDialTimeout)
+	if err != nil {
+		return nil, err
+	}
+	if err := connection.SetDeadline(time.Now().Add(remoteDialTimeout + budget)); err != nil {
+		_ = connection.Close()
+		return nil, err
+	}
+	clientConfig := &ssh.ClientConfig{
 		User:            "root",
 		Auth:            auth,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		Timeout:         remoteDialTimeout,
 	}
-	address := net.JoinHostPort(host, remoteSSHPort)
-	return ssh.Dial("tcp", address, config)
+	clientConnection, channels, requests, err := ssh.NewClientConn(connection, address, clientConfig)
+	if err != nil {
+		_ = connection.Close()
+		return nil, err
+	}
+	return ssh.NewClient(clientConnection, channels, requests), nil
 }
 
-func sshAuth() ([]ssh.AuthMethod, error) {
+func loadSSHAuth() ([]ssh.AuthMethod, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return nil, err

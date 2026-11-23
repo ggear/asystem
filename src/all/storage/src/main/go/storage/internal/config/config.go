@@ -147,8 +147,8 @@ func (c *Config) own() *HostEntry {
 	return nil
 }
 
-func resolve(env, value string) string {
-	if resolved := os.Getenv(env); resolved != "" {
+func resolve(name, value string) string {
+	if resolved := os.Getenv(name); resolved != "" {
 		return resolved
 	}
 	if strings.HasPrefix(value, "$") {
@@ -160,21 +160,18 @@ func resolve(env, value string) string {
 type Config struct{ asystem configData }
 
 type HostEntry struct {
-	Index      *int
-	Host       string
-	Label      string
-	FormFactor string `json:"form_factor"`
-	OS         string
-	Arch       string
-	Shares     []ShareEntry
-	Backup     *BackupEntry
+	Index  *int
+	Host   string
+	Label  string
+	Shares []ShareEntry
+	Backup *BackupEntry
 }
 
 type ShareEntry struct {
 	Mount    string
 	Label    string
 	ServedBy string `json:"served_by"`
-	Smb      string
+	SMB      string
 }
 
 type BackupEntry struct {
