@@ -1716,7 +1716,6 @@ mod tests {
                         battery_installed: String::new(),
                         ssh_timeout: Duration::from_secs(30),
                         plug_reconnect_poll: Duration::from_millis(10),
-                        plug_reconnect_poll: Duration::from_millis(10),
                     },
                     Parts {
                         source: Box::new(PlugSource {
