@@ -61,7 +61,7 @@ if __name__ == "__main__":
     # Build config and database schema
     write_schema_database(
         document,
-        database_dialect="influxdb3",
+        database_dialect="influxdb",
         database_entities={"supervisor/host": sorted(modules_server.keys()) + ["all"], "supervisor/service": sorted({service for services in modules_server.values() for service in services})},
         database_archive_measures=["warn_temperature_of_max", "spin_fan_speed_of_max", "used_system_space", "failed_backups", "used_disk_ops", "life_used_drives"],
     )

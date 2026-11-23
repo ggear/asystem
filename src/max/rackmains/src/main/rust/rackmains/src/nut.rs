@@ -17,7 +17,7 @@ impl Flow {
             .split_whitespace()
             .filter(|token| *token != TOKEN_CHRG && *token != TOKEN_DISCHRG)
             .collect();
-        if tokens.contains(&TOKEN_OB) {
+        if tokens.contains(&TOKEN_OB) || tokens.contains(&TOKEN_CAL) {
             self.charging = false;
             self.full_for = Duration::ZERO;
             self.discharged_for += elapsed;
@@ -90,7 +90,7 @@ impl Flags {
                 "LB" => flags.low = true,
                 "RB" => flags.replace = true,
                 "OFF" | "OVER" | "BYPASS" | "FSD" | "ALARM" => flags.problem = true,
-                "CAL" => flags.calibrating = true,
+                TOKEN_CAL => flags.calibrating = true,
                 TOKEN_CHRG => flags.charging = true,
                 "BOOST" => flags.boost = true,
                 "TRIM" => flags.trim = true,
@@ -221,6 +221,8 @@ pub const TOKEN_OB: &str = "OB";
 pub const TOKEN_OL: &str = "OL";
 
 pub const TOKEN_CHRG: &str = "CHRG";
+
+pub const TOKEN_CAL: &str = "CAL";
 
 pub const TOKEN_DISCHRG: &str = "DISCHRG";
 
@@ -476,6 +478,9 @@ mod tests {
             ("OL", Some(100.0), "OL"),
             ("OL", None, "OL"),
             ("OL RB TRIM", Some(99.0), "OL RB TRIM CHRG"),
+            ("OL CAL", Some(100.0), "OL CAL DISCHRG"),
+            ("OL BYPASS CAL DISCHRG", Some(77.0), "OL BYPASS CAL DISCHRG"),
+            ("OL BYPASS CAL CHRG", Some(77.0), "OL BYPASS CAL DISCHRG"),
             ("", Some(50.0), "CHRG"),
         ] {
             let mut flow = Flow::default();
@@ -542,6 +547,23 @@ mod tests {
             flow.settle("OB", Some(100.0), second);
         }
         for tick in 1..15 {
+            assert_eq!(flow.settle("OL", Some(100.0), second), "OL CHRG", "tick [{tick}]");
+        }
+        assert_eq!(flow.settle("OL", Some(100.0), second), "OL");
+    }
+
+    #[test]
+    fn a_battery_test_on_mains_discharges_and_then_recharges_for_three_times_its_length() {
+        let second = Duration::from_secs(1);
+        let mut flow = Flow::default();
+        assert_eq!(flow.settle("OL", Some(100.0), second), "OL");
+        for _ in 0..8 {
+            assert_eq!(
+                flow.settle("OL BYPASS CAL DISCHRG", Some(77.0), second),
+                "OL BYPASS CAL DISCHRG"
+            );
+        }
+        for tick in 1..24 {
             assert_eq!(flow.settle("OL", Some(100.0), second), "OL CHRG", "tick [{tick}]");
         }
         assert_eq!(flow.settle("OL", Some(100.0), second), "OL");

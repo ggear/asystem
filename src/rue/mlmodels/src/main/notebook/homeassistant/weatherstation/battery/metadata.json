@@ -2,7 +2,7 @@
   "schema": 2,
   "version": "10.200.2027",
   "content_sha256": "35cdf145cf0639e0b2a3db74634c4d9840dd338ee65ba8e9c781480f9fad9f7b",
-  "inputs_sha256": "ec882e7512ec6644c4ac1f1d1d3d46bf869cda27a153d2b4ae26d765d11491ae",
+  "inputs_sha256": "f1d1af07f6ffbf6116992228c01eec08e63a04a659c59b9e89e53bfbbc8ef37a",
   "target": {"kind": "served"},
   "release": {
     "timestamp": "2026-11-12T09:05:35Z",

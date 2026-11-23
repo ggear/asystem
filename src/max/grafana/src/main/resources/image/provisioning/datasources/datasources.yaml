@@ -7,17 +7,17 @@ datasources:
   editable: false
   isDefault: true
   jsonData:
-    dbName: ${INFLUXDB3_DATABASE_HOME}
+    dbName: ${INFLUXDB_DATABASE_HOME}
     httpMode: POST
     insecureGrpc: true
     timeout: 60
     version: SQL
-  name: InfluxDB3 Home
+  name: InfluxDB Home
   secureJsonData:
-    token: ${INFLUXDB3_TOKEN_HOME}
+    token: ${INFLUXDB_TOKEN_HOME}
   type: influxdb
-  uid: influxdb3-home
-  url: http://${INFLUXDB3_SERVICE}:${INFLUXDB3_API_PORT}
+  uid: influxdb-home
+  url: http://${INFLUXDB_SERVICE}:${INFLUXDB_API_PORT}
 - access: proxy
   editable: false
   jsonData:

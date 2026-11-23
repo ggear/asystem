@@ -24,7 +24,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -153,7 +153,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -228,7 +228,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -303,7 +303,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -378,7 +378,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -468,7 +468,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -549,7 +549,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -632,7 +632,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -714,7 +714,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -795,7 +795,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -959,7 +959,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -1034,7 +1034,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -1116,7 +1116,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -1198,7 +1198,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -1284,7 +1284,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -1359,7 +1359,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -1434,7 +1434,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:

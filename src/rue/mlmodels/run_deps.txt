@@ -1,4 +1,4 @@
 mlflow
 mlserver
-influxdb3
+influxdb
 postgres

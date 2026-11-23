@@ -27,11 +27,11 @@ def capture_source(ws, source, query, database, csv, build):
         return pl.read_csv(csv)
     if query is None:
         raise ValueError(f"source [{source}] needs query")
-    if source == "influxdb3":
+    if source == "influxdb":
         response = post(
-            url="http://{}:{}/api/v3/query_sql".format(ws.env["INFLUXDB3_IP_PROD"], ws.env["INFLUXDB3_API_PORT"]),
-            headers={"Accept": "text/csv", "Content-type": "application/json", "Authorization": "Bearer {}".format(ws.env["INFLUXDB3_TOKEN_ADMIN"])},
-            json={"db": database if database is not None else ws.env["INFLUXDB3_DATABASE_HOME"], "q": query, "format": "csv"},
+            url="http://{}:{}/api/v3/query_sql".format(ws.env["INFLUXDB_IP_PROD"], ws.env["INFLUXDB_API_PORT"]),
+            headers={"Accept": "text/csv", "Content-type": "application/json", "Authorization": "Bearer {}".format(ws.env["INFLUXDB_TOKEN_ADMIN"])},
+            json={"db": database if database is not None else ws.env["INFLUXDB_DATABASE_HOME"], "q": query, "format": "csv"},
             timeout=120,
         )
         if not response.ok:

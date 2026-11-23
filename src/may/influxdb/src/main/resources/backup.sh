@@ -1,0 +1,244 @@
+#!/usr/bin/env bash
+################################################################################
+# WARNING: This file is written by the build process, any manual edits will be lost!
+################################################################################
+
+# shellcheck disable=SC1090,SC2034,SC2329
+
+set -o pipefail
+
+# ./backup.sh [--full | --accept=<run>]
+# The run is `supervisor backup run`, this file holds only the module's hooks. A variable set in .env wins.
+#
+# BACKUP_SOURCE_PATH      data path backed up, defaulting to this module's own
+# BACKUP_SKIP_HOURS       skip when the newest backup is younger than this, zero never skips
+# BACKUP_SERVICE_RESTART  start the service after the copy, false when the caller does
+# BACKUP_TIMEOUT_HOURS    budget before abandoning a backup waiting on its service
+# BACKUP_FORCE_FULL       true takes a full backup, set by --full
+# BACKUP_SHRINK_PERCENT   fall in total marking a run regressed, zero disables, INFLUXDB_BACKUP_SHRINK_PERCENT overrides
+
+BACKUP_INTERNAL_ENV="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.env"
+[ -f "${BACKUP_INTERNAL_ENV}" ] && . "${BACKUP_INTERNAL_ENV}"
+
+BACKUP_MODULE_NAME="influxdb"
+BACKUP_SOURCE_PATH="${BACKUP_SOURCE_PATH:-${SERVICE_DATA_DIR:-/home/asystem/influxdb/latest}}"
+BACKUP_INTERNAL_SOURCE_DIR="$(readlink -f "${BACKUP_SOURCE_PATH}")"
+BACKUP_SOURCE_VERSION="$(basename "${BACKUP_INTERNAL_SOURCE_DIR}")"
+BACKUP_INTERNAL_ROOT_DIR="$(dirname "${BACKUP_INTERNAL_SOURCE_DIR}")/backup"
+BACKUP_RUN_TIMESTAMP="${BACKUP_RUN_TIMESTAMP:-$(date +"%Y-%m-%d_%H-%M-%S")}"
+BACKUP_FULL_SUFFIX="_full"
+BACKUP_DELTA_SUFFIX="_delta"
+BACKUP_VERSIONED_NONE="unversioned"
+BACKUP_SKIP_HOURS="${BACKUP_SKIP_HOURS:-1}"
+BACKUP_FORCE_FULL="${BACKUP_FORCE_FULL:-false}"
+BACKUP_SERVICE_RESTART="${BACKUP_SERVICE_RESTART:-true}"
+BACKUP_TIMEOUT_HOURS="${BACKUP_TIMEOUT_HOURS:-5}"
+BACKUP_SHRINK_PERCENT="${BACKUP_SHRINK_PERCENT:-${INFLUXDB_BACKUP_SHRINK_PERCENT:-20}}"
+BACKUP_TARGET_PATH=""
+BACKUP_NO_EXCLUDES=()
+
+backup_module() {
+  "${BACKUP_SUPERVISOR:-/asystem/bin/supervisor}" backup "${1}" "${BACKUP_MODULE_NAME}" --source "${BACKUP_INTERNAL_SOURCE_DIR}" --run "${BACKUP_RUN_TIMESTAMP}" --state "${BACKUP_STATE_DIR:-}" "${@:2}"
+}
+
+backup_target() {
+  BACKUP_TARGET_PATH="$(backup_module target "${1:-}" "${2:-}")" || return 1
+}
+
+backup_files() {
+  local -n backup_files_includes="${2}"
+  local -n backup_files_excludes="${3:-BACKUP_NO_EXCLUDES}"
+  local arguments=() entry live="INFLUXDB_BACKUP_LIVE"
+  for entry in "${backup_files_includes[@]}"; do arguments+=("--include=${entry}"); done
+  for entry in "${backup_files_excludes[@]}"; do arguments+=("--exclude=${entry}"); done
+  backup_module files --root "${1:-}" --live "${!live:-}" "${arguments[@]}" || return 1
+  BACKUP_TARGET_PATH="$(cat "${BACKUP_STATE_DIR}/target")"
+}
+
+backup_parent() { backup_module parent --run "${1:-${BACKUP_RUN_TIMESTAMP}}"; }
+
+backup_epoch() { "${BACKUP_SUPERVISOR:-/asystem/bin/supervisor}" backup epoch "${1:-}"; }
+
+backup_written() {
+  echo "Nothing to back up, define backup_written in the module snippet" >&2
+  return 1
+}
+
+backup_interrupted() { :; }
+
+backup_completed() { :; }
+
+# The engine (`supervisor backup run`) owns the run, this snippet owns the backup, as hooks each in its own bash.
+# Define backup_written, naming the target with backup_target or backup_files and writing "${BACKUP_TARGET_PATH}.tmp".
+# Optional hooks: backup_interrupted, backup_completed, backup_pruned_store, backup_versioned.
+# No hook relies on a variable another set, own state is prefixed with the module name, .env values expand as "${VAR:?}".
+#
+# BACKUP_MODULE_NAME      this module's name
+# BACKUP_SOURCE_PATH      this module's data path
+# BACKUP_SOURCE_VERSION   the version being backed up
+# BACKUP_TARGET_PATH      this run's artefact path, set by backup_target
+# BACKUP_RUN_TIMESTAMP    this run's timestamp
+# BACKUP_FULL_SUFFIX      suffix of a full backup
+# BACKUP_DELTA_SUFFIX     suffix of a delta backup, which needs a full one before it
+# BACKUP_VERSIONED_NONE   what backup_versioned prints when a restore needs no software version
+# BACKUP_SKIP_HOURS       skip when the newest backup is younger than this, zero never skips
+
+INFLUXDB_BACKUP_CLUSTER="${INFLUXDB3_CLUSTER_ID:-cluster_1}"
+INFLUXDB_BACKUP_STORE="${BACKUP_SOURCE_PATH}/${INFLUXDB_BACKUP_CLUSTER}/backups"
+INFLUXDB_BACKUP_AWAIT_SECONDS="${INFLUXDB_BACKUP_AWAIT_SECONDS:-$((BACKUP_TIMEOUT_HOURS * 3600))}"
+
+backup_stored() {
+  [ -d "${INFLUXDB_BACKUP_STORE}" ] || return 0
+  find "${INFLUXDB_BACKUP_STORE}" -maxdepth 1 -mindepth 1 -type d -printf '%f\n' 2>/dev/null |
+    grep -E '^(full|delta)-[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}$' | sort -t- -k2
+}
+
+backup_status() {
+  docker exec --user root "${BACKUP_MODULE_NAME}" influxdb3 status backup --name "$1" |
+    awk '/^Status:/ {print $2}' | head -1
+}
+
+backup_awaited() {
+  local status deadline=$((SECONDS + INFLUXDB_BACKUP_AWAIT_SECONDS))
+  while true; do
+    status="$(backup_status "$1")"
+    [ "${status}" = "completed" ] && return 0
+    if [ "${status}" = "failed" ]; then
+      echo "Backup failed [$1]" >&2
+      return 1
+    fi
+    if [ "${INFLUXDB_BACKUP_AWAIT_SECONDS}" -gt 0 ] && [ "${SECONDS}" -ge "${deadline}" ]; then
+      echo "Backup timed out [$1] after [${INFLUXDB_BACKUP_AWAIT_SECONDS}] seconds holding status [${status:-unknown}]" >&2
+      return 1
+    fi
+    sleep 5
+  done
+}
+
+backup_eligible() {
+  [ -d "${BACKUP_INTERNAL_ROOT_DIR}/${1#*-}" ]
+}
+
+backup_pruned_store() {
+  local names name live_full dead=() reversed=()
+  mapfile -t names < <(backup_stored)
+  live_full=""
+  for name in "${names[@]}"; do
+    case "${name}" in full-*) live_full="${name}" ;; esac
+  done
+  [ -n "${live_full}" ] || return 0
+  local past_full=""
+  for name in "${names[@]}"; do
+    [ "${name}" = "${live_full}" ] && past_full=1
+    [ -n "${past_full}" ] || dead+=("${name}")
+  done
+  [ "${#dead[@]}" -gt 0 ] || return 0
+  for ((name = ${#dead[@]} - 1; name >= 0; name--)); do reversed+=("${dead[name]}"); done
+  for name in "${reversed[@]}"; do
+    case "${name}" in
+    delta-*) docker exec --user root "${BACKUP_MODULE_NAME}" influxdb3 delete backup --name "${name}" --incremental >/dev/null 2>&1 || echo "Could not delete dead delta backup [${name}]" >&2 ;;
+    esac
+  done
+  for name in "${dead[@]}"; do
+    case "${name}" in
+    full-*) docker exec --user root "${BACKUP_MODULE_NAME}" influxdb3 delete backup --name "${name}" >/dev/null 2>&1 || echo "Could not delete dead full backup [${name}]" >&2 ;;
+    esac
+  done
+}
+
+backup_fingerprinted() {
+  docker exec --user root --interactive "${BACKUP_MODULE_NAME}" bash -s <<'FINGERPRINT'
+set -o pipefail
+query() {
+  influxdb3 query --format json --database "${INFLUXDB_DATABASE_HOME:?}" --token "${INFLUXDB_TOKEN_HOME:?}" "$1"
+}
+tables="$(query "SELECT table_name FROM information_schema.tables WHERE table_schema = 'iox' ORDER BY table_name" | jq -r '.[].table_name')" || exit 1
+for table in ${tables}; do
+  query "SELECT date_trunc('day', time) AS day, count(*) AS n FROM \"${table}\" WHERE time < date_trunc('day', now()) GROUP BY 1" |
+    jq -r --arg table "${table}" '.[] | "\($table)/\(.day[0:10]) \(.n)"' || exit 1
+done | sort
+FINGERPRINT
+}
+
+backup_versioned() {
+  docker exec "${BACKUP_MODULE_NAME}" influxdb3 --version | awk -F', ' '{print $2}'
+}
+
+backup_written() {
+  local names parent full name source
+  mapfile -t names < <(backup_stored)
+  parent=""
+  full=""
+  for name in "${names[@]}"; do
+    backup_eligible "${name}" || continue
+    parent="${name}"
+    case "${name}" in full-*) full="${name}" ;; esac
+  done
+  if [ -n "${full}" ] &&
+    [ "$(date -d "$(date -d "@$(backup_epoch "${full}")" +%F)" +%G-%V)" = "$(date +%G-%V)" ] &&
+    [ "$(jq -r '.source_version // empty' "${BACKUP_INTERNAL_ROOT_DIR}/${full#*-}/.meta/manifest.json" 2>/dev/null)" = "${BACKUP_SOURCE_VERSION}" ] &&
+    [ -n "${parent}" ] && [ "$(backup_status "${parent}")" = "completed" ] &&
+    [ -n "$(backup_parent "${BACKUP_RUN_TIMESTAMP}")" ] && [ "${BACKUP_FORCE_FULL}" != "true" ]; then
+    name="delta-${BACKUP_RUN_TIMESTAMP}"
+    source="${INFLUXDB_BACKUP_STORE}/${parent}/incremental"
+    backup_target "${BACKUP_DELTA_SUFFIX}" "tar.gz" || return 1
+    echo "Creating a delta backup from parent [${parent}]"
+    docker exec --user root "${BACKUP_MODULE_NAME}" \
+      influxdb3 create backup --name "${name}" --incremental --parent "${parent}" >/dev/null || return 1
+  else
+    name="full-${BACKUP_RUN_TIMESTAMP}"
+    source="${INFLUXDB_BACKUP_STORE}"
+    backup_target "${BACKUP_FULL_SUFFIX}" "tar.gz" || return 1
+    if [ "${BACKUP_FORCE_FULL}" = "true" ]; then
+      echo "Starting a new full backup as asked, previous full backup [${full:-none}]"
+    else
+      [ -n "${full}" ] && echo "Starting a new full backup, previous full backup [${full}] cannot parent a delta, it is from an earlier ISO week or another version"
+    fi
+    docker exec --user root "${BACKUP_MODULE_NAME}" \
+      influxdb3 create backup --name "${name}" >/dev/null || return 1
+  fi
+  backup_awaited "${name}" || return 1
+  if [ ! -d "${source}/${name}" ]; then
+    echo "Backup produced no directory [${source}/${name}]" >&2
+    return 1
+  fi
+  tar --create --directory "${source}" --file - -- "${name}" | gzip >"${BACKUP_TARGET_PATH}.tmp"
+}
+
+[ "${BASH_SOURCE[0]}" = "${0}" ] || return 0
+
+BACKUP_INTERNAL_SCRIPT="$(readlink -f "${BASH_SOURCE[0]}")"
+
+backup_supervised() {
+  local container image seconds=$((BACKUP_TIMEOUT_HOURS * 3600 + 7200))
+  if [ -x /asystem/bin/supervisor ]; then
+    exec /asystem/bin/supervisor backup "$@"
+  fi
+  container="$(timeout 30 docker ps --filter name=^/supervisor$ --filter status=running --format '{{.Names}}')"
+  if [ -n "${container}" ]; then
+    exec timeout "${seconds}" docker exec supervisor /asystem/bin/supervisor backup "$@"
+  fi
+  image="$(timeout 30 docker image ls --format '{{.Repository}}:{{.Tag}}' | grep '^supervisor:' | sort -V | tail -n 1)"
+  [ -n "${image}" ] || { echo "No supervisor container is running and no supervisor image is installed, cannot run the backup" >&2; exit 1; }
+  exec timeout "${seconds}" docker run --rm --init --entrypoint /asystem/bin/supervisor \
+    --volume /home/asystem:/home/asystem --volume /var/lib/asystem/install:/var/lib/asystem/install:ro --volume /var/run/docker.sock:/var/run/docker.sock \
+    "${image}" backup "$@"
+}
+
+case "${1:-}" in
+--accept=*)
+  backup_supervised accept "${BACKUP_MODULE_NAME}" "${1#--accept=}" --source "${BACKUP_INTERNAL_SOURCE_DIR}"
+  ;;
+--full)
+  BACKUP_FORCE_FULL="true"
+  BACKUP_SKIP_HOURS=0
+  shift
+  ;;
+esac
+
+BACKUP_INTERNAL_ARGUMENTS=(--source "${BACKUP_INTERNAL_SOURCE_DIR}" --script "${BACKUP_INTERNAL_SCRIPT}" --skip-period "${BACKUP_SKIP_HOURS}h" --timeout-period "${BACKUP_TIMEOUT_HOURS}h" --shrink-percent "${BACKUP_SHRINK_PERCENT}")
+[ "${BACKUP_SERVICE_RESTART}" = "true" ] || BACKUP_INTERNAL_ARGUMENTS+=(--no-restart)
+[ "${BACKUP_FORCE_FULL}" = "true" ] && BACKUP_INTERNAL_ARGUMENTS+=(--force-full)
+[ -n "${BACKUP_LOCK_SECONDS:-}" ] && BACKUP_INTERNAL_ARGUMENTS+=(--lock-period "${BACKUP_LOCK_SECONDS}s")
+
+backup_supervised run "${BACKUP_MODULE_NAME}" "${BACKUP_INTERNAL_ARGUMENTS[@]}"

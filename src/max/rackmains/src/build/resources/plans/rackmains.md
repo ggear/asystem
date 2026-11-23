@@ -1,12 +1,12 @@
 # rackmains
 
-**Status, 2026-11-13.** All code phases are built, reviewed twice and tested (unit tests, clippy and `fab test-sys` in the real container), the 29 workbook rows are in and the battery model is released and embedded. The ssh path is proven: the guard uses the existing shared `id_rsa` and root's `known_hosts`, `rackmains check` passes in the container, and its exact ssh calls ran dry-run to all four hosts (test 3); `asleep --except` is released on all four hosts and a real shallow cycle and `awake` on `max` passed. Built since: per-call logs in `outage/`, a fix to the `RESULT` parsing, and `/asystem/bin` on `PATH` in the five images with executables there; all three wait on the next `rackmains` release. What remains is yours: the R4 sign-off, the dry-run release, hardware tests and trials.
+**Status, 2026-11-23.** Built, released and live. Ten `brownout-shed-wake` drills ran from 2026-11-20 to 11-23 (see "Brownout drills" under the trial log); the 2026-11-23 11:21 run was the first with every shed and wake at status 0, after the `meg` and `mad` failures were traced to a deleted-but-open file holding root writable (the `atop`/`atops`/`abackup`/`abackups` wrappers now `exec`, `asleep` names such files, and the release prune spares a version a process still runs). Tests 2, 4, 11 and 12, gap 4 and Q19 are closed. What remains: the deadman proof (test 8), power on after a cut (test 5, Q22), standby (test 7), trial 5 to the cutoff and the fit it feeds, and the review passes still open.
 
 | Part | State |
 |---|---|
 | Publisher (`rackmains/{data,status}`, mock driver, mock-backed system test) | built on the flat canonical payload; unit tests and the container system test pass |
 | Host setup (`install_prep.sh`, `install_pre.sh`) | built, unit tested |
-| Host side of the shed (`asleep`, `awake`, power-on-after-cut setting, in the `system` module) | built, tested on `max`; a deep run and the power-on-after-cut test are not done |
+| Host side of the shed (`asleep`, `awake`, power-on-after-cut setting, in the `system` module) | built; deep runs on `meg`, `may` and `mad` and shallow on `max` in every drill; the power-on-after-cut test is not done |
 | Battery model (`ups/battery` notebook, `static` project `rackmains_ups_battery`) | built, released, embedded; signature prefixed `rackmains_`, optional inputs (calibrating, battery low, volts, replace due, age, read failures, state) and outputs (runtime and energy remaining, energy used, refit due and reason, state) wired through `serve.rs` and `policy.rs`; the model is called through failed reads; the guard validates the policy at start |
 | Metrics, outage CSV, liveness-file health that does not need MQTT, watchdog, backup enrolment | built, unit tested and run in the container against the mock driver |
 | Guard (shed, restore, state machine), live by default | built as a pure state machine with table tests, called from the poll loop; ssh runner built, calling `asleep` and `awake` by absolute path over an unrestricted root key (`asleep --except` in the `system` module), not run against a host; live by default, dry-run only with `--dry-run` |
@@ -970,21 +970,21 @@ Trial 5 was written as "to the 11.5 V floor or `LB`, not to the UPS cutting out"
 
 **Tests still needed**, from no risk to most; each result decides a branch.
 1. **Baseline**, a day on mains with the recorder: which flags appear unprompted (`BOOST`, `TRIM`). The recorder has since been stopped, so the published entities and the outage CSVs are the record.
-2. **Quick battery test** (`test.battery.start.quick`): the test flag's name and the seconds spent in `OB`, in a quiet hour.
+2. **Quick battery test** (`test.battery.start.quick`): the test flag's name and the seconds spent in `OB`, in a quiet hour. **Done 2026-11-23** (sent as `INSTCMD` on the driver socket): the unit reports `OL CAL`, then `OL BYPASS CAL DISCHRG` for about 8 s with the battery falling 13.2 to 12.2 V at 13% load, then `OL CHRG`. It never reports `OB`, so a quick test opens no outage file and the guard never counts it; `CAL` is the test flag. Two findings: `nut::Flow` shows that window as charging, since it discards the driver's `DISCHRG` and the charge is under 100 on mains, and a second client on the driver socket made one rackmains read fail with `EAGAIN`.
 3. **ssh key** on `may`: the existing shared root key (decided 2026-11-13, simplicity over restriction; the forced-command wrapper was dropped and no key of its own is made), then `/usr/local/bin/asleep --deep --dry-run` run from a container on `max` with `StrictHostKeyChecking=yes` against the pinned `known_hosts`.
-4. **Per-host `asleep` time**, start of the command to its `RESULT` line (`took`), several runs per host and the slowest container stop; order `may`, `mad`, `meg`. Measured so far: `max`, shallow, three containers, about 3 s; no deep run yet.
+4. **Per-host `asleep` time**, start of the command to its `RESULT` line (`took`), several runs per host and the slowest container stop; order `may`, `mad`, `meg`. **Done** from the drills: `max` (shallow) 7 to 8 s, `may` and `mad` (deep) 7 to 10 s, `meg` (deep) 26 to 37 s, its slowest stop Home Assistant at about 18 s; inside the 300 s call timeout and run one host at a time.
 5. **Power on after a cut**, per host, yours. A clean `poweroff` is not the test, the board stays off after one. `max`, `may`, `meg`: `AFTERG3_EN` is already cleared (`1c08`); run `asleep --deep` (on `max`, `--shallow`), pull the cord from the UPS for
    10 s, replace it, and time the boot to ssh. `mad` (Mac mini M2 Pro) needs a macOS step first: boot macOS from the boot picker, turn on "Start up automatically after a power failure" in Energy Saver, check `pmset -g | grep autorestart`
    prints `autorestart 1`, boot back into Linux and run the same cut. The only report that this carries into Linux is on a base M1 ([AsahiLinux/docs#156](https://github.com/AsahiLinux/docs/issues/156)), so the M2 Pro result is part of the test.
 6. **`shutdown.return` on a lamp**, and `shutdown.stop` cancelling it, only if trial 5 shows the outlets do not restore by themselves.
-7. **Standby**, only with the outlets empty: `ups.status` for `OFF`.
+7. **Standby**, only with the outlets empty: `ups.status` for `OFF`. Not run: it needs every load unplugged from the UPS, which takes the rack down, so it waits for a maintenance window or a battery swap.
 8. **Plug deadman**: the on-device restore proven by hand with the plug unreachable. The Tasmota `Delay` honours only 2 to 3600 tenths of a second (`Delay 4200` was ignored), so a cut above 360 s cannot use a single `Delay`; the rule timer in
-   "The guard CLI and the test command" is the design, and it is proven on the spare plug first.
+   "The guard CLI and the test command" is the design, and it is proven on the spare plug first. **Still open (2026-11-23):** every drill armed the rule and read it back (the plug still holds the last one, `RuleTimer1 480`, with `Rule1` off after the tool's `Rule1 0`), but every restore came from the tool's own `Power On`, so the timer has never fired. It closes on one cut where nothing sends `Power On`: the spare plug, or the rack plug with a short timer (`RuleTimer1 20`) inside the shed point. The plug also reads `PowerOnState 1` and has no clock set (its time reads 1970), which the rule timer does not need.
 9. **Reachability**: the plug console and all four hosts are reachable from where the cut is made, and that place is not on the UPS. The plug's API is open without a password on the LAN, so anything on that network can cut the rack, and no password is set or planned, the risk being accepted (decided 2026-11-12); `max` and a
    bridge container both reach it (a bridge container on `max` was confirmed on 2026-11-11).
-10. **Reaction latency and `pollfreq`**: `pollfreq = 1` is set in `ups.conf` (2026-11-15, after trial 1 showed readings refreshing every 5 to 7 s at 4); check the unit and the driver tolerate it, and time the cut to `OB` and the restore to `OL` in the CSV with the next `blip-watch`. This decides whether `pollfreq` stays at 1.
-11. **`awake` on an awake host**: run `awake` on each of the four hosts when it was never put asleep and when it was asleep, and confirm it changes nothing in the first case and returns 0. The guard's restore, which runs `awake` on every host, rests on this.
-12. **Restart policy**: `docker inspect` the restart policy of the running container in every environment, and `kill -9` the process once to confirm Docker restarts it. The watchdog's abort relies on this.
+10. **Reaction latency and `pollfreq`**: `pollfreq = 1` is set in `ups.conf` (2026-11-15, after trial 1 showed readings refreshing every 5 to 7 s at 4); check the unit and the driver tolerate it, and time the cut to `OB` and the restore to `OL` in the CSV with the next `blip-watch`. This decides whether `pollfreq` stays at 1. **Closed 2026-11-15** in the trial log: the cut is seen in 2.5 s and the return in 3 s whatever `pollfreq` is, and `pollfreq 1` stays for the finer data; ten drills since ran at 1 with no read failures.
+11. **`awake` on an awake host**: run `awake` on each of the four hosts when it was never put asleep and when it was asleep, and confirm it changes nothing in the first case and returns 0. The guard's restore, which runs `awake` on every host, rests on this. **Done 2026-11-23:** on all four hosts, never asleep, `awake` returned status 0 with no warnings in 0.4 to 0.9 s, logged "No record at [/run/asleep.state], restoring from fstab only", and left every container's start time and root's mount options unchanged; the asleep case is every drill's restore.
+12. **Restart policy**: `docker inspect` the restart policy of the running container in every environment, and `kill -9` the process once to confirm Docker restarts it. The watchdog's abort relies on this. **Done 2026-11-23** in production: the policy is `always`; `kill -9` of `rackmains serve` on `max` was restarted by Docker within a second and healthy about 6 s later, restart count 1.
 
 The guard's build can begin after tests 3 and 4, with the restart left behind an interface until test 5 is in.
 
@@ -1010,7 +1010,7 @@ and the time cap carries that job.
 | 1 | trials run at average load; the 01:00 backup and service starts raise it | **closed 2026-11-15:** Home Assistant's 68 hours show 74% of the time at 10 to 11% load, 98% at 14% or under and only 0.1% at 18% or over (43 samples, mostly the 01:00 backup, one 26% spike at 19:37 on 11-14); trial 1 already met 17% (11.8 V), so the peak sustained load of 18 to 20% is expected near 11.7 V, above the 11.5 V abort volts, and no artificial load is needed |
 | 2 | a second dip soon after the first finds a partly drained battery (about 6 hours to 90%) | the guard's clock resets after `rackmains_guard_restore_mains_seconds` of mains |
 | 3 | the battery's condition is unknown; its age is assumed, installed 2024-11-12 | `RACKMAINS_BATTERY_INSTALLED` and the `battery_age_*` metrics give the age; condition is not a model input, the fit is of this battery, and a replacement means a new fit |
-| 4 | what else is on the UPS (switch, router, access point, the Mac) is not inventoried | **yours:** list the loads on the UPS; the plug's WiFi and the followers' ssh path both depend on them |
+| 4 | what else is on the UPS (switch, router, access point, the Mac) is not inventoried | **closed 2026-11-23:** only the rack's own devices are on the UPS; `rue` (the Mac) and the access points are not. The ssh path between the hosts stays powered; the plug's WiFi does not, which costs nothing, since a drill cuts only the rack plug and the access points stay up, and a real outage never uses the plug. A real outage takes `rue` down, so anything run by hand runs from a host |
 | 5 | the offline fit's data path is unchecked | Home Assistant's history of the rackmains entities plus the outage CSVs; confirm Home Assistant records the entities at battery cadence |
 
 ### Trial log and the way to the brownout trial (2026-11-15)
@@ -1050,7 +1050,32 @@ Two `blip-watch` runs on `max`, both ended `restored` with no shed, no `LB`, no 
    docker exec -it rackmains rackmains guard drill start brownout-shed-wake
    ```
    Leave `-W` off so the run ends with the end row. Watch `docker logs -f rackmains` on `max` as well, since `meg` is shed and the broker, Home Assistant and InfluxDB go quiet until the wake.
-7. **After it:** `guard outage list` shows `restored` with `SHED 4` (the guard counts every host once the shed starts, `max` included), the summary's `drill hosts shed` is 4, the issue list is `none`, every host is back and its containers healthy, and each `guard command` row has status 0 with the `took` from step 3.
+7. **After it:** `guard outage list` shows `restored` with `SHED 4` (the guard counts each host whose `asleep` succeeded, `max` included), the summary's `drill hosts shed` is 4, the issue list is `none`, every host is back and its containers healthy, and each `guard command` row has status 0 with the `took` from step 3.
+
+### Brownout drills (2026-11-20 to 11-23)
+
+Ten `brownout-shed-wake` runs on `max`, all ending `restored`. `asleep` and `awake` times are each call's `took`, in seconds.
+
+| Run | On battery | Low volts | Peak load | Shed (meg, may, max, mad) | Wake (meg, may, max, mad) | Notes |
+|---|---|---|---|---|---|---|
+| 11-20 09:27 | 242 s | 11.7 | 17% | 112, 7, 4, 6 | 69, 38, 38, 19 | shed in the old order, `mad` first and `meg` last, `meg` took 112 s against a stopped database; the order was reversed after it |
+| 11-20 12:38 | 117 s | 11.5 | 15% | none | none | stopped at the abort volts before the shed |
+| 11-20 13:31 | 182 s | 11.8 | 17% | 29, 8, 8, 8 | 68, 37, 38, 17 | |
+| 11-20 14:17 | 6 s | 12.3 | 13% | none | none | stopped early |
+| 11-20 14:44 | 182 s | 11.8 | 16% | 35, 8, 7, 7 | 38, 21, 19, 17 | first wake with the shorter waits for every host after the first |
+| 11-20 16:09 | 182 s | 11.8 | 18% | 33, 8, 7, 7 | 38, 20, 18, 19 | |
+| 11-20 17:15 | 181 s | 11.8 | 17% | 37, 8, 7, 7 | 38, 20, 19, 18 | |
+| 11-22 13:37 | 182 s | 11.8 | 16% | 30, 11, 8, 8 (`mad` status 1) | 48, 21, 19, 18 | `mad` failed: root and `/var` left writable |
+| 11-23 08:58 | 182 s | 11.8 | 19% | 26 (`meg` status 1), 9, 8, 8 | 38, 20, 19, 18 | `meg` failed: a stray `atops` held a deleted, replaced wrapper open on `/`, the cause the `exec` wrappers fix |
+| 11-23 11:21 | 182 s | 11.8 | 16% | 26, 8, 7, 8 | 38, 20, 19, 17 | every call status 0; issues `none` |
+
+- **The battery is steady.** Every full run reached 11.8 V at 16 to 19% peak load, 0.3 V above the abort volts; there is no sign of decline across the four days.
+- **Shedding saves no power.** `ups.load` stays at 12 to 13% and the plug reads the same 88 to 95 W with all four hosts asleep, so the shed protects the data and buys no runtime.
+- **The wake order leaves shares missing.** The broker host wakes first, but the shares are served by `mad` (10 to 12), `max` (20, 21) and `may` (30 to 32), so `meg` wakes with none and `may` and `max` without `mad`'s. On 11-23 supervisor's restart plugin restarted `homeassistant` and `sonarr` about 2 minutes after the wake, and the rack was settled 5.5 minutes after mains returned rather than at the 96 s wake.
+- **`asleep` warned on every host every run** for avahi's cancelled stop job, from stopping a socket and its service in one `systemctl stop`; fixed on 2026-11-23 to stop sockets then services. `awake` now names a share refused by its sleeping server apart from one that timed out, and quotes only health checks since the container started.
+- **The charging flag cleared a minute after mains returned**, on the voltage-estimated charge reading 100, while the volts took about 9 more minutes to settle to float; it now holds for three times the time on battery.
+- **The plug's retained `stat/POWER` stayed `OFF` after the 11-23 11:21 drill.** The poller asked the plug for `Power` as soon as its own broker connection came back, which republishes the state, but the plug had not yet reconnected to the broker, so the publish was lost; a later `Power` query corrected it. The republish needs to wait for the plug's own reconnect (its `MqttCount` in `Status 11` rises when it does).
+- **The plug sampler missed 5 s** (98 to 102 s) on 11-23: `Status 0` replies take up to about 750 ms against the 500 ms timeout; raised to 900 ms.
 
 ## Yours to do
 
@@ -1064,10 +1089,10 @@ Hands-on steps the code cannot do, in the order they unblock work. Results of th
    4. ~~Release `rackmains` and run `rackmains check` in the container~~ done 2026-11-13: every line ok. The first release failed the key line because `docker-compose.yml` did not pass `RACKMAINS_SSH_KEY` through; fixed and re-released.
    5. ~~Prove it with test 3~~ done 2026-11-13: the guard's exact ssh options from the container, dry-run, exit 0 to `may`, `mad` and `meg` (`asleep --deep`), to `max` (`asleep --shallow --except rackmains`) and `awake` on all four. It exposed that the scripts log `RESULT` as `<timestamp> INFO  RESULT …`, not at the line start, so `parse_result` returned an empty reason; fixed, to ship in the next release.
    Not restricted by the key, and not dedicated: it is the personal key that opens every host, so the guard cannot be revoked without rotating it (accepted, simplicity over security). Kept: strict host key checking and the mode check in `check`.
-3. **Tests 3 and 4** (ssh key, per-host `asleep` time), then the **spare-plug deadman proof** (test 8) and the **retained `cmnd/POWER` check**.
+3. ~~Tests 3 and 4~~ done. The **deadman proof** (test 8) is still open; the ~~retained `cmnd/POWER` check~~ is done (Q19).
 4. **`mad`'s macOS step** for power-on after a cut, then test 5 on all four hosts.
-5. **List what else is on the UPS** (switch, router, access point, the Mac): the plug's WiFi and the followers' ssh path depend on them.
-6. **Releases and trials:** the live release, trial 1 by hand with the guard started `--dry-run`, trials 2 and 3, and trial 5 once per battery.
+5. ~~List what else is on the UPS~~ done 2026-11-23 (gap 4).
+6. **Releases and trials:** ~~the live release, trials 1 to 3~~ done (`blip-watch` 2026-11-15, `brownout-shed-wake` 2026-11-20 to 11-23); **trial 5** (`blackout-shed`) once per battery remains, and test 7 when the rack can go down.
 
 ## Remaining phases
 
@@ -1091,7 +1116,7 @@ Consolidated 2026-11-11 and renumbered Q1 to Q21. Each has the question, why it 
 
 **To observe or check, not to decide**
 - **Q18. Does the PSDR800 supply its outlets again by itself after a depletion cutoff?** Not in the manual; trial 5 observes it. If not, the fallback is a host-side `shutdown.return` helper (see "Residual risk of running to failure").
-- **Q19. Two checks before `guard drill` is trusted:** the rule-timer deadman on the spare plug (test 8), and no retained `cmnd/POWER` for `rack_outlet_plug` on the broker (`mosquitto_sub` from the Mac failed to connect on 2026-11-11, so it needs the broker's credentials or a run from `max`).
+- **Q19, half closed 2026-11-23.** The broker holds no retained `cmnd` topic for the plug (`tasmota/device/rack_outlet_plug/cmnd/#`, checked from the `rackmains` container on `max`); the deadman (test 8) is still open. Originally, **two checks before `guard drill` is trusted:** the rule-timer deadman on the spare plug (test 8), and no retained `cmnd/POWER` for `rack_outlet_plug` on the broker (`mosquitto_sub` from the Mac failed to connect on 2026-11-11, so it needs the broker's credentials or a run from `max`).
 - **Q21. Closed 2026-11-12.** The `effective` fields and `rackmains_guard_failed_hosts` are final with the guard's policy type.
 - **Q22. Power off and on behaviour per model of host.** Observe, on `mad` (Mac mini M2 Pro, Asahi) and on `max`, `may` and `meg` (the 2014 Mac minis, Macmini7,1), what each does when its power is lost and when it returns: after `asleep --deep` (on `max`, `--shallow`), and with the cord pulled from a running host. Record per host whether it boots by itself, the time to ssh, and whether the containers come back healthy. The three 2014 minis are expected to behave the same (`AFTERG3_EN` is cleared on each); `mad` is the one at risk, since the macOS "Start up automatically after a power failure" setting is not known to carry into Linux on an M2 Pro. This is test 5 in "Trials, tests and rollout", run on all four hosts, and its result decides the restart shape.
 

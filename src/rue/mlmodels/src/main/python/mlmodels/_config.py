@@ -19,10 +19,10 @@ PINS_PATH = os.path.abspath(os.path.join(SOURCE_DIR, "../.py_deps_prod.txt"))
 VERSION_PATH = os.path.abspath(os.path.join(SOURCE_DIR, "../.version"))
 
 
-DATA_SOURCES = ("influxdb3", "postgres", "csv", "builder")
+DATA_SOURCES = ("influxdb", "postgres", "csv", "builder")
 
 
-DATA_SOURCES_QUERIED = ("influxdb3", "postgres")
+DATA_SOURCES_QUERIED = ("influxdb", "postgres")
 
 
 DATA_TIMESTAMP_FORMAT = "%Y-%m-%d_%H-%M-%S"

@@ -1,0 +1,1204 @@
+#!/usr/bin/env bash
+################################################################################
+# WARNING: This file is written by the build process, any manual edits will be lost!
+################################################################################
+
+set -uo pipefail
+
+SCHEMA_VERBOSE=${SCHEMA_VERBOSE:-false}
+while [[ $# -gt 0 ]]; do
+  case $1 in
+  -v | --verbose)
+    SCHEMA_VERBOSE=true
+    shift
+    ;;
+  -h | --help | -*)
+    echo "Usage: ${0} [-v|--verbose] [-h|--help]"
+    echo "       influxdb describe print what production actually carries"
+    exit 2
+    ;;
+  *)
+    shift
+    ;;
+  esac
+done
+
+ROOT_DIR="$(dirname "$(readlink -f "$0")")"
+MODULE_DIR="${ROOT_DIR}"
+while [ "${MODULE_DIR}" != "/" ] && [ ! -f "${MODULE_DIR}/.env" ]; do
+  MODULE_DIR="$(dirname "${MODULE_DIR}")"
+done
+
+if [ ! -f "${MODULE_DIR}/.env" ]; then
+  echo "Schema script [supervisor] could not find env file [.env] searching up from [${ROOT_DIR}]" >&2
+  exit 1
+fi
+set -a
+# shellcheck disable=SC1091
+. "${MODULE_DIR}/.env"
+set +a
+
+if [ "${SCHEMA_VERBOSE}" == true ]; then
+  set -x
+fi
+
+DATABASE_NAME="${DATABASE_NAME:-${SUPERVISOR_DATABASE_NAME:-${INFLUXDB_DATABASE_HOME:-}}}"
+DATABASE_TOKEN="${DATABASE_TOKEN:-${SUPERVISOR_DATABASE_TOKEN:-${INFLUXDB_TOKEN_ADMIN:-}}}"
+
+for VARIABLE in DATABASE_NAME DATABASE_TOKEN; do
+  if [ -z "${!VARIABLE}" ]; then
+    echo "Schema script [supervisor] could not resolve [${VARIABLE}] from it or any fallback, declare it in the module env files" >&2
+    exit 1
+  fi
+done
+
+query() {
+  local response status
+  response="$(curl -sS -w '\n%{http_code}' -X POST \
+    "http://${INFLUXDB_SERVICE_PROD}:${INFLUXDB_API_PORT}/api/v3/query_sql" \
+    -H "Authorization: Bearer ${DATABASE_TOKEN}" \
+    -H "Content-Type: application/json" \
+    --data-binary "$(jq -n --arg db "${DATABASE_NAME}" --arg q "$1" --arg format "${2:-json}" \
+      '{db: $db, q: $q, format: $format}')")"
+  status="${response##*$'\n'}"
+  printf '%s' "${response%$'\n'*}"
+  [ "${status}" = "200" ]
+}
+
+write_lp() {
+  local response status
+  response="$(curl -sS -w '\n%{http_code}' -X POST \
+    "http://${INFLUXDB_SERVICE_PROD}:${INFLUXDB_API_PORT}/api/v3/write_lp?db=${DATABASE_NAME}&precision=nanosecond" \
+    -H "Authorization: Bearer ${DATABASE_TOKEN}" \
+    -H "Content-Type: text/plain" \
+    --data-binary @-)"
+  status="${response##*$'\n'}"
+  if [ "${status}" != "204" ] && [ "${status}" != "200" ]; then
+    printf 'write failed with status [%s] body [%s]\n' "${status}" "${response%$'\n'*}" >&2
+    return 1
+  fi
+}
+
+fail() {
+  printf '\n%s\n%s\n%s\n\n%s\n\n%s\n\n' \
+    "################################################################################" \
+    "SCHEMA FAILURE" \
+    "################################################################################" \
+    "$1" "$2" >&2
+}
+
+table() {
+  jq -sr --argjson clip 50 '
+    def title: split("_") | map(if length > 0 then (.[0:1] | ascii_upcase) + .[1:] else . end) | join(" ");
+    def numeric: type == "number" or (type == "string" and test("^-?[0-9]+([.][0-9]+)?$"));
+    def placeholder: . == "-" or . == "";
+    def clip: if $clip > 0 and length > $clip then .[0:($clip - 3)] + "..." else . end;
+    (if length == 1 and (.[0] | type) == "array" then .[0] else . end)
+    | if length == 0 then "no rows" else
+      (.[0] | keys_unsorted) as $columns
+      | [range(0; $columns | length)] as $indexes
+      | (map(. as $row | $columns
+        | map(if $row[.] == null then "" else ($row[.] | tostring | clip) end))) as $body
+      | ([$columns | map(title)] + $body) as $matrix
+      | ($indexes | map(. as $index | $matrix | map(.[$index] | length) | max)) as $widths
+      | ($indexes | map(. as $index | $body | map(.[$index])
+        | (any(numeric) and all(numeric or placeholder)))) as $rights
+      | (def row($cells): "|" + ($cells | to_entries | map(
+           ((" " * ($widths[.key] - (.value | length))) // "") as $fill
+           | if $rights[.key] then " " + $fill + .value + " " else " " + .value + $fill + " " end)
+           | join("|")) + "|";
+         def rule: "+" + ($indexes | map("-" * ($widths[.] + 2)) | join("+")) + "+";
+         [rule, row($matrix[0]), rule] + ($body | map(row(.))) + [rule] | join("\n"))
+    end
+  '
+}
+
+rows() {
+  jq -s '(if length == 1 and (.[0] | type) == "array" then .[0] else . end) | length'
+}
+
+SCHEMA_ECHO=${SCHEMA_ECHO:-true}
+SCHEMA_LABEL=${SCHEMA_LABEL:-}
+
+statements() {
+  sed -e 's/--.*$//' | tr '\n' ' ' | tr ';' '\n' |
+    sed -e 's/[[:space:]][[:space:]]*/ /g' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
+}
+
+query_block() {
+  local block="$1" statement label result
+  statement="$(printf '%s\n' "${block}" | sed -e 's/--.*$//' | tr '\n' ' ' |
+    sed -e 's/[[:space:]][[:space:]]*/ /g' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*;*[[:space:]]*$//')"
+  [ -z "${statement}" ] && return 0
+  label="${SCHEMA_LABEL}"
+  if [ -z "${label}" ]; then
+    label="$(printf '%s\n' "${block}" | sed -n -e 's/^-- //p' | head -1)"
+  fi
+  printf -- '\n-- %s\n\n' "${label}"
+  if [ "${SCHEMA_ECHO}" = true ]; then
+    printf '%s\n\n' "${block}"
+  fi
+  if ! result="$(query "${statement}")"; then
+    fail "${statement}" "${result}"
+    return 1
+  fi
+  printf '%s\n' "${result}" | table
+  printf '\n'
+}
+
+query_one() {
+  local result
+  if ! result="$(query "$1")"; then
+    fail "$1" "${result}"
+    return 1
+  fi
+  printf '%s\n' "${result}" | table
+}
+
+query_sql() {
+  local line block="" faults=0
+  while IFS= read -r line || [ -n "${line}" ]; do
+    case "${line}" in
+    ---*) continue ;;
+    "-- WARNING:"*) continue ;;
+    esac
+    [ -z "${block}" ] && [ -z "${line}" ] && continue
+    block="${block}${line}"$'\n'
+    case "${line}" in
+    *\;)
+      query_block "${block%$'\n'}" || faults=$((faults + 1))
+      block=""
+      ;;
+    esac
+  done
+  if [ -n "${block}" ]; then
+    query_block "${block%$'\n'}" || faults=$((faults + 1))
+  fi
+  [ "${faults}" = 0 ]
+}
+
+describe_sql() {
+  cat <<'SCHEMA_SQL'
+--------------------------------------------------------------------------------
+-- WARNING: This file is written by the build process, any manual edits will be lost!
+--------------------------------------------------------------------------------
+
+-- dimensions
+SELECT
+    'supervisor/host'          AS relation,
+    'host*'                    AS dimension,
+    43                         AS measures,
+    '6s'                       AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/service'       AS relation,
+    'host/service*'            AS dimension,
+    24                         AS measures,
+    '6s'                       AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NOT NULL
+ORDER BY rows DESC;
+
+-- measures
+SELECT
+    'supervisor/host'                                             AS relation,
+    'cluster'                                                     AS measure,
+    'bool'                                                        AS kind,
+    '-'                                                           AS unit,
+    '6s'                                                          AS period,
+    count(cluster)                                                AS rows,
+    CAST(min(time) FILTER (WHERE cluster IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE cluster IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                   AS relation,
+    'cluster_trend'                                                     AS measure,
+    'bool'                                                              AS kind,
+    '-'                                                                 AS unit,
+    '6s'                                                                AS period,
+    count(cluster_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE cluster_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE cluster_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                            AS relation,
+    'status'                                                     AS measure,
+    'bool'                                                       AS kind,
+    '-'                                                          AS unit,
+    '6s'                                                         AS period,
+    count(status)                                                AS rows,
+    CAST(min(time) FILTER (WHERE status IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE status IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                  AS relation,
+    'status_trend'                                                     AS measure,
+    'bool'                                                             AS kind,
+    '-'                                                                AS unit,
+    '6s'                                                               AS period,
+    count(status_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE status_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE status_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                    AS relation,
+    'used_processor'                                                     AS measure,
+    'int'                                                                AS kind,
+    '%'                                                                  AS unit,
+    '6s'                                                                 AS period,
+    count(used_processor)                                                AS rows,
+    CAST(min(time) FILTER (WHERE used_processor IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE used_processor IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                          AS relation,
+    'used_processor_trend'                                                     AS measure,
+    'int'                                                                      AS kind,
+    '%'                                                                        AS unit,
+    '6s'                                                                       AS period,
+    count(used_processor_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE used_processor_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE used_processor_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                 AS relation,
+    'used_memory'                                                     AS measure,
+    'int'                                                             AS kind,
+    '%'                                                               AS unit,
+    '6s'                                                              AS period,
+    count(used_memory)                                                AS rows,
+    CAST(min(time) FILTER (WHERE used_memory IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE used_memory IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                       AS relation,
+    'used_memory_trend'                                                     AS measure,
+    'int'                                                                   AS kind,
+    '%'                                                                     AS unit,
+    '6s'                                                                    AS period,
+    count(used_memory_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE used_memory_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE used_memory_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                      AS relation,
+    'allocated_memory'                                                     AS measure,
+    'int'                                                                  AS kind,
+    '%'                                                                    AS unit,
+    '6s'                                                                   AS period,
+    count(allocated_memory)                                                AS rows,
+    CAST(min(time) FILTER (WHERE allocated_memory IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE allocated_memory IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                            AS relation,
+    'allocated_memory_trend'                                                     AS measure,
+    'int'                                                                        AS kind,
+    '%'                                                                          AS unit,
+    '6s'                                                                         AS period,
+    count(allocated_memory_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE allocated_memory_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE allocated_memory_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                         AS relation,
+    'failed_log_messages'                                                     AS measure,
+    'int'                                                                     AS kind,
+    '%'                                                                       AS unit,
+    '6s'                                                                      AS period,
+    count(failed_log_messages)                                                AS rows,
+    CAST(min(time) FILTER (WHERE failed_log_messages IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE failed_log_messages IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                               AS relation,
+    'failed_log_messages_trend'                                                     AS measure,
+    'int'                                                                           AS kind,
+    '%'                                                                             AS unit,
+    '6s'                                                                            AS period,
+    count(failed_log_messages_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE failed_log_messages_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE failed_log_messages_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                   AS relation,
+    'failed_shares'                                                     AS measure,
+    'int'                                                               AS kind,
+    '%'                                                                 AS unit,
+    '6s'                                                                AS period,
+    count(failed_shares)                                                AS rows,
+    CAST(min(time) FILTER (WHERE failed_shares IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE failed_shares IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                         AS relation,
+    'failed_shares_trend'                                                     AS measure,
+    'int'                                                                     AS kind,
+    '%'                                                                       AS unit,
+    '6s'                                                                      AS period,
+    count(failed_shares_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE failed_shares_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE failed_shares_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                          AS relation,
+    'failed_backup_stages'                                                     AS measure,
+    'int'                                                                      AS kind,
+    '%'                                                                        AS unit,
+    '6s'                                                                       AS period,
+    count(failed_backup_stages)                                                AS rows,
+    CAST(min(time) FILTER (WHERE failed_backup_stages IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE failed_backup_stages IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                                AS relation,
+    'failed_backup_stages_trend'                                                     AS measure,
+    'int'                                                                            AS kind,
+    '%'                                                                              AS unit,
+    '6s'                                                                             AS period,
+    count(failed_backup_stages_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE failed_backup_stages_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE failed_backup_stages_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                      AS relation,
+    'warn_temperature'                                                     AS measure,
+    'int'                                                                  AS kind,
+    '%'                                                                    AS unit,
+    '6s'                                                                   AS period,
+    count(warn_temperature)                                                AS rows,
+    CAST(min(time) FILTER (WHERE warn_temperature IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE warn_temperature IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                            AS relation,
+    'warn_temperature_trend'                                                     AS measure,
+    'int'                                                                        AS kind,
+    '%'                                                                          AS unit,
+    '6s'                                                                         AS period,
+    count(warn_temperature_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE warn_temperature_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE warn_temperature_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                    AS relation,
+    'spin_fan_speed'                                                     AS measure,
+    'int'                                                                AS kind,
+    '%'                                                                  AS unit,
+    '6s'                                                                 AS period,
+    count(spin_fan_speed)                                                AS rows,
+    CAST(min(time) FILTER (WHERE spin_fan_speed IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE spin_fan_speed IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                          AS relation,
+    'spin_fan_speed_trend'                                                     AS measure,
+    'int'                                                                      AS kind,
+    '%'                                                                        AS unit,
+    '6s'                                                                       AS period,
+    count(spin_fan_speed_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE spin_fan_speed_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE spin_fan_speed_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                     AS relation,
+    'used_drive_life'                                                     AS measure,
+    'int'                                                                 AS kind,
+    '%'                                                                   AS unit,
+    '6s'                                                                  AS period,
+    count(used_drive_life)                                                AS rows,
+    CAST(min(time) FILTER (WHERE used_drive_life IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE used_drive_life IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                           AS relation,
+    'used_drive_life_trend'                                                     AS measure,
+    'int'                                                                       AS kind,
+    '%'                                                                         AS unit,
+    '6s'                                                                        AS period,
+    count(used_drive_life_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE used_drive_life_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE used_drive_life_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                     AS relation,
+    'used_home_space'                                                     AS measure,
+    'int'                                                                 AS kind,
+    '%'                                                                   AS unit,
+    '6s'                                                                  AS period,
+    count(used_home_space)                                                AS rows,
+    CAST(min(time) FILTER (WHERE used_home_space IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE used_home_space IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                           AS relation,
+    'used_home_space_trend'                                                     AS measure,
+    'int'                                                                       AS kind,
+    '%'                                                                         AS unit,
+    '6s'                                                                        AS period,
+    count(used_home_space_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE used_home_space_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE used_home_space_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                      AS relation,
+    'used_share_space'                                                     AS measure,
+    'int'                                                                  AS kind,
+    '%'                                                                    AS unit,
+    '6s'                                                                   AS period,
+    count(used_share_space)                                                AS rows,
+    CAST(min(time) FILTER (WHERE used_share_space IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE used_share_space IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                            AS relation,
+    'used_share_space_trend'                                                     AS measure,
+    'int'                                                                        AS kind,
+    '%'                                                                          AS unit,
+    '6s'                                                                         AS period,
+    count(used_share_space_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE used_share_space_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE used_share_space_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                       AS relation,
+    'used_backup_space'                                                     AS measure,
+    'int'                                                                   AS kind,
+    '%'                                                                     AS unit,
+    '6s'                                                                    AS period,
+    count(used_backup_space)                                                AS rows,
+    CAST(min(time) FILTER (WHERE used_backup_space IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE used_backup_space IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                             AS relation,
+    'used_backup_space_trend'                                                     AS measure,
+    'int'                                                                         AS kind,
+    '%'                                                                           AS unit,
+    '6s'                                                                          AS period,
+    count(used_backup_space_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE used_backup_space_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE used_backup_space_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                     AS relation,
+    'used_swap_space'                                                     AS measure,
+    'int'                                                                 AS kind,
+    '%'                                                                   AS unit,
+    '6s'                                                                  AS period,
+    count(used_swap_space)                                                AS rows,
+    CAST(min(time) FILTER (WHERE used_swap_space IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE used_swap_space IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                           AS relation,
+    'used_swap_space_trend'                                                     AS measure,
+    'int'                                                                       AS kind,
+    '%'                                                                         AS unit,
+    '6s'                                                                        AS period,
+    count(used_swap_space_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE used_swap_space_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE used_swap_space_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                    AS relation,
+    'used_disk_time'                                                     AS measure,
+    'int'                                                                AS kind,
+    '%'                                                                  AS unit,
+    '6s'                                                                 AS period,
+    count(used_disk_time)                                                AS rows,
+    CAST(min(time) FILTER (WHERE used_disk_time IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE used_disk_time IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                          AS relation,
+    'used_disk_time_trend'                                                     AS measure,
+    'int'                                                                      AS kind,
+    '%'                                                                        AS unit,
+    '6s'                                                                       AS period,
+    count(used_disk_time_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE used_disk_time_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE used_disk_time_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                  AS relation,
+    'used_network'                                                     AS measure,
+    'int'                                                              AS kind,
+    '%'                                                                AS unit,
+    '6s'                                                               AS period,
+    count(used_network)                                                AS rows,
+    CAST(min(time) FILTER (WHERE used_network IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE used_network IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                        AS relation,
+    'used_network_trend'                                                     AS measure,
+    'int'                                                                    AS kind,
+    '%'                                                                      AS unit,
+    '6s'                                                                     AS period,
+    count(used_network_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE used_network_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE used_network_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                 AS relation,
+    'temperature'                                                     AS measure,
+    'float'                                                           AS kind,
+    '°C'                                                              AS unit,
+    '6s'                                                              AS period,
+    count(temperature)                                                AS rows,
+    CAST(min(time) FILTER (WHERE temperature IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE temperature IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                       AS relation,
+    'temperature_trend'                                                     AS measure,
+    'float'                                                                 AS kind,
+    '°C'                                                                    AS unit,
+    '6s'                                                                    AS period,
+    count(temperature_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE temperature_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE temperature_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                   AS relation,
+    'failed_drives'                                                     AS measure,
+    'int'                                                               AS kind,
+    '%'                                                                 AS unit,
+    '6s'                                                                AS period,
+    count(failed_drives)                                                AS rows,
+    CAST(min(time) FILTER (WHERE failed_drives IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE failed_drives IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                         AS relation,
+    'failed_drives_trend'                                                     AS measure,
+    'int'                                                                     AS kind,
+    '%'                                                                       AS unit,
+    '6s'                                                                      AS period,
+    count(failed_drives_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE failed_drives_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE failed_drives_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                          AS relation,
+    'halted_backup_stages'                                                     AS measure,
+    'int'                                                                      AS kind,
+    '%'                                                                        AS unit,
+    '6s'                                                                       AS period,
+    count(halted_backup_stages)                                                AS rows,
+    CAST(min(time) FILTER (WHERE halted_backup_stages IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE halted_backup_stages IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                                AS relation,
+    'halted_backup_stages_trend'                                                     AS measure,
+    'int'                                                                            AS kind,
+    '%'                                                                              AS unit,
+    '6s'                                                                             AS period,
+    count(halted_backup_stages_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE halted_backup_stages_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE halted_backup_stages_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/service'                                         AS relation,
+    'status'                                                     AS measure,
+    'bool'                                                       AS kind,
+    '-'                                                          AS unit,
+    '6s'                                                         AS period,
+    count(status)                                                AS rows,
+    CAST(min(time) FILTER (WHERE status IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE status IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NOT NULL
+UNION ALL
+SELECT
+    'supervisor/service'                                               AS relation,
+    'status_trend'                                                     AS measure,
+    'bool'                                                             AS kind,
+    '-'                                                                AS unit,
+    '6s'                                                               AS period,
+    count(status_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE status_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE status_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NOT NULL
+UNION ALL
+SELECT
+    'supervisor/service'                                                AS relation,
+    'backup_status'                                                     AS measure,
+    'bool'                                                              AS kind,
+    '-'                                                                 AS unit,
+    '6s'                                                                AS period,
+    count(backup_status)                                                AS rows,
+    CAST(min(time) FILTER (WHERE backup_status IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE backup_status IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NOT NULL
+UNION ALL
+SELECT
+    'supervisor/service'                                                      AS relation,
+    'backup_status_trend'                                                     AS measure,
+    'bool'                                                                    AS kind,
+    '-'                                                                       AS unit,
+    '6s'                                                                      AS period,
+    count(backup_status_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE backup_status_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE backup_status_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NOT NULL
+UNION ALL
+SELECT
+    'supervisor/service'                                                AS relation,
+    'health_status'                                                     AS measure,
+    'bool'                                                              AS kind,
+    '-'                                                                 AS unit,
+    '6s'                                                                AS period,
+    count(health_status)                                                AS rows,
+    CAST(min(time) FILTER (WHERE health_status IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE health_status IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NOT NULL
+UNION ALL
+SELECT
+    'supervisor/service'                                                      AS relation,
+    'health_status_trend'                                                     AS measure,
+    'bool'                                                                    AS kind,
+    '-'                                                                       AS unit,
+    '6s'                                                                      AS period,
+    count(health_status_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE health_status_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE health_status_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NOT NULL
+UNION ALL
+SELECT
+    'supervisor/service'                                                    AS relation,
+    'configured_status'                                                     AS measure,
+    'bool'                                                                  AS kind,
+    '-'                                                                     AS unit,
+    '6s'                                                                    AS period,
+    count(configured_status)                                                AS rows,
+    CAST(min(time) FILTER (WHERE configured_status IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE configured_status IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NOT NULL
+UNION ALL
+SELECT
+    'supervisor/service'                                                          AS relation,
+    'configured_status_trend'                                                     AS measure,
+    'bool'                                                                        AS kind,
+    '-'                                                                           AS unit,
+    '6s'                                                                          AS period,
+    count(configured_status_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE configured_status_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE configured_status_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NOT NULL
+UNION ALL
+SELECT
+    'supervisor/service'                                                 AS relation,
+    'used_processor'                                                     AS measure,
+    'int'                                                                AS kind,
+    '%'                                                                  AS unit,
+    '6s'                                                                 AS period,
+    count(used_processor)                                                AS rows,
+    CAST(min(time) FILTER (WHERE used_processor IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE used_processor IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NOT NULL
+UNION ALL
+SELECT
+    'supervisor/service'                                                       AS relation,
+    'used_processor_trend'                                                     AS measure,
+    'int'                                                                      AS kind,
+    '%'                                                                        AS unit,
+    '6s'                                                                       AS period,
+    count(used_processor_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE used_processor_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE used_processor_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NOT NULL
+UNION ALL
+SELECT
+    'supervisor/service'                                              AS relation,
+    'used_memory'                                                     AS measure,
+    'int'                                                             AS kind,
+    '%'                                                               AS unit,
+    '6s'                                                              AS period,
+    count(used_memory)                                                AS rows,
+    CAST(min(time) FILTER (WHERE used_memory IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE used_memory IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NOT NULL
+UNION ALL
+SELECT
+    'supervisor/service'                                                    AS relation,
+    'used_memory_trend'                                                     AS measure,
+    'int'                                                                   AS kind,
+    '%'                                                                     AS unit,
+    '6s'                                                                    AS period,
+    count(used_memory_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE used_memory_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE used_memory_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NOT NULL
+UNION ALL
+SELECT
+    'supervisor/service'                                                 AS relation,
+    'used_disk_rate'                                                     AS measure,
+    'int'                                                                AS kind,
+    '%'                                                                  AS unit,
+    '6s'                                                                 AS period,
+    count(used_disk_rate)                                                AS rows,
+    CAST(min(time) FILTER (WHERE used_disk_rate IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE used_disk_rate IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NOT NULL
+UNION ALL
+SELECT
+    'supervisor/service'                                                       AS relation,
+    'used_disk_rate_trend'                                                     AS measure,
+    'int'                                                                      AS kind,
+    '%'                                                                        AS unit,
+    '6s'                                                                       AS period,
+    count(used_disk_rate_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE used_disk_rate_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE used_disk_rate_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NOT NULL
+UNION ALL
+SELECT
+    'supervisor/service'                                               AS relation,
+    'used_network'                                                     AS measure,
+    'int'                                                              AS kind,
+    '%'                                                                AS unit,
+    '6s'                                                               AS period,
+    count(used_network)                                                AS rows,
+    CAST(min(time) FILTER (WHERE used_network IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE used_network IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NOT NULL
+UNION ALL
+SELECT
+    'supervisor/service'                                                     AS relation,
+    'used_network_trend'                                                     AS measure,
+    'int'                                                                    AS kind,
+    '%'                                                                      AS unit,
+    '6s'                                                                     AS period,
+    count(used_network_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE used_network_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE used_network_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NOT NULL
+UNION ALL
+SELECT
+    'supervisor/service'                                                AS relation,
+    'restart_count'                                                     AS measure,
+    'float'                                                             AS kind,
+    '-'                                                                 AS unit,
+    '6s'                                                                AS period,
+    count(restart_count)                                                AS rows,
+    CAST(min(time) FILTER (WHERE restart_count IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE restart_count IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NOT NULL
+UNION ALL
+SELECT
+    'supervisor/service'                                                      AS relation,
+    'restart_count_trend'                                                     AS measure,
+    'float'                                                                   AS kind,
+    '-'                                                                       AS unit,
+    '6s'                                                                      AS period,
+    count(restart_count_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE restart_count_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE restart_count_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NOT NULL
+UNION ALL
+SELECT
+    'supervisor/service'                                                   AS relation,
+    'restart_attempts'                                                     AS measure,
+    'int'                                                                  AS kind,
+    '-'                                                                    AS unit,
+    '6s'                                                                   AS period,
+    count(restart_attempts)                                                AS rows,
+    CAST(min(time) FILTER (WHERE restart_attempts IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE restart_attempts IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NOT NULL
+UNION ALL
+SELECT
+    'supervisor/service'                                                         AS relation,
+    'restart_attempts_trend'                                                     AS measure,
+    'int'                                                                        AS kind,
+    '-'                                                                          AS unit,
+    '6s'                                                                         AS period,
+    count(restart_attempts_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE restart_attempts_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE restart_attempts_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NOT NULL
+UNION ALL
+SELECT
+    '-'                   AS relation,
+    column_name           AS measure,
+    '-'                   AS kind,
+    '-'                   AS unit,
+    '-'                   AS period,
+    CAST(NULL AS BIGINT)  AS rows,
+    CAST(NULL AS VARCHAR) AS oldest,
+    CAST(NULL AS VARCHAR) AS newest
+FROM information_schema.columns
+WHERE
+    table_name = 'supervisor'
+    AND column_name NOT IN (
+        'allocated_memory', 'allocated_memory_trend', 'backup_status',
+        'backup_status_trend', 'cluster', 'cluster_trend', 'configured_status',
+        'configured_status_trend', 'failed_backup_stages', 'failed_backup_stages_trend',
+        'failed_backups', 'failed_backups_trend', 'failed_drives', 'failed_drives_trend',
+        'failed_log_messages', 'failed_log_messages_trend', 'failed_shares',
+        'failed_shares_trend', 'halted_backup_stages', 'halted_backup_stages_trend',
+        'health_status', 'health_status_trend', 'host', 'life_used_drives',
+        'life_used_drives_trend', 'max_memory', 'module', 'name', 'restart_attempts',
+        'restart_attempts_trend', 'restart_count', 'restart_count_trend', 'service',
+        'services_max_memory', 'services_status', 'spin_fan_speed', 'spin_fan_speed_of_max',
+        'spin_fan_speed_of_max_trend', 'spin_fan_speed_trend', 'status', 'status_trend',
+        'temperature', 'temperature_trend', 'time', 'up_time', 'used_backup_space',
+        'used_backup_space_trend', 'used_disk_ops', 'used_disk_ops_trend', 'used_disk_rate',
+        'used_disk_rate_trend', 'used_disk_time', 'used_disk_time_trend', 'used_drive_life',
+        'used_drive_life_trend', 'used_home_space', 'used_home_space_trend', 'used_memory',
+        'used_memory_trend', 'used_network', 'used_network_trend', 'used_processor',
+        'used_processor_trend', 'used_share_space', 'used_share_space_trend',
+        'used_swap_space', 'used_swap_space_trend', 'used_system_space',
+        'used_system_space_trend', 'version', 'warn_temperature', 'warn_temperature_of_max',
+        'warn_temperature_of_max_trend', 'warn_temperature_trend'
+    )
+ORDER BY rows DESC NULLS LAST;
+
+-- entities
+SELECT
+    'supervisor/host'          AS relation,
+    'host*'                    AS dimension,
+    host                       AS entity,
+    CASE WHEN host IN (
+        'macmini-mad', 'macmini-max', 'macmini-may', 'macmini-meg', 'raspbpi-jen',
+        'raspbpi-jil', 'all'
+    ) THEN 'yes' ELSE 'no' END AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+GROUP BY host, CASE WHEN host IN (
+    'macmini-mad', 'macmini-max', 'macmini-may', 'macmini-meg', 'raspbpi-jen',
+    'raspbpi-jil', 'all'
+) THEN 'yes' ELSE 'no' END
+UNION ALL
+SELECT
+    'supervisor/service'       AS relation,
+    'host/service*'            AS dimension,
+    concat(host, '/', service) AS entity,
+    CASE WHEN service IN (
+        'cloudflare', 'grafana', 'homeassistant', 'influxdb', 'letsencrypt', 'mariadb',
+        'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains',
+        'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx',
+        'wrangle', 'zigbee2mqtt'
+    ) THEN 'yes' ELSE 'no' END AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NOT NULL
+GROUP BY concat(host, '/', service), CASE WHEN service IN (
+    'cloudflare', 'grafana', 'homeassistant', 'influxdb', 'letsencrypt', 'mariadb',
+    'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains',
+    'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx',
+    'wrangle', 'zigbee2mqtt'
+) THEN 'yes' ELSE 'no' END
+ORDER BY rows DESC;
+SCHEMA_SQL
+}
+
+printf '\nSchema describe [%s] against [%s]\n' "supervisor" "${INFLUXDB_SERVICE_PROD}"
+describe_sql | SCHEMA_ECHO=false query_sql

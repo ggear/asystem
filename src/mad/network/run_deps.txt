@@ -1,4 +1,4 @@
 weewx
 vernemq
-influxdb3
+influxdb
 _unifios_dar

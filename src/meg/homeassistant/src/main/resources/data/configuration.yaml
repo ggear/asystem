@@ -58,11 +58,11 @@ influxdb:
 #######################################################################################
 #  api_version: 2
 #  ssl: false
-#  host: !env_var INFLUXDB3_SERVICE
-#  port: !env_var INFLUXDB3_API_PORT
-#  token: !env_var INFLUXDB3_TOKEN_HOME
+#  host: !env_var INFLUXDB_SERVICE
+#  port: !env_var INFLUXDB_API_PORT
+#  token: !env_var INFLUXDB_TOKEN_HOME
 #  organization: 'asystem'
-#  bucket: !env_var INFLUXDB3_DATABASE_HOME
+#  bucket: !env_var INFLUXDB_DATABASE_HOME
 #######################################################################################
 
 

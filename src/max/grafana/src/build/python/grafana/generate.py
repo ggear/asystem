@@ -498,22 +498,22 @@ ORDER BY time
             "apiVersion": 1,
             "datasources": [
                 {
-                    "name": "InfluxDB3 Home",
-                    "uid": INFLUXDB3,
-                    "type": dialects.influxdb3.GRAFANA,
+                    "name": "InfluxDB Home",
+                    "uid": INFLUXDB,
+                    "type": dialects.influxdb.GRAFANA,
                     "access": "proxy",
-                    "url": "http://${INFLUXDB3_SERVICE}:${INFLUXDB3_API_PORT}",
+                    "url": "http://${INFLUXDB_SERVICE}:${INFLUXDB_API_PORT}",
                     "isDefault": True,
                     "editable": False,
                     "jsonData": {
                         "version": "SQL",
-                        "dbName": "${INFLUXDB3_DATABASE_HOME}",
+                        "dbName": "${INFLUXDB_DATABASE_HOME}",
                         "httpMode": "POST",
                         "insecureGrpc": True,
                         "timeout": 60,
                     },
                     "secureJsonData": {
-                        "token": "${INFLUXDB3_TOKEN_HOME}",
+                        "token": "${INFLUXDB_TOKEN_HOME}",
                     },
                 },
                 {
@@ -1050,10 +1050,10 @@ API_VERSIONS = {
     "preferences.grafana.app/v1",
 }
 
-INFLUXDB3 = "influxdb3-home"
+INFLUXDB = "influxdb-home"
 POSTGRES = "postgres-wrangle"
 DATASOURCES = {
-    "influxdb3": (dialects.influxdb3, INFLUXDB3),
+    "influxdb": (dialects.influxdb, INFLUXDB),
     "postgres": (dialects.postgres, POSTGRES),
 }
 

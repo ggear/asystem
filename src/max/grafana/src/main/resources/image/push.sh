@@ -32,7 +32,7 @@ done
 gcx api /api/admin/stats
 
 echo "Probing every panel ..."
-if [ "${INFLUXDB3_SERVICE}" == "${INFLUXDB3_SERVICE_PROD}" ]; then
+if [ "${INFLUXDB_SERVICE}" == "${INFLUXDB_SERVICE_PROD}" ]; then
   python3 "$(dirname "$(readlink -f "$0")")/probe.py" "${SERVER_URL}" "${DASHBOARDS_HOME}" || true
 else
   echo "Skipped as the datasources are not production"

@@ -1,0 +1,136 @@
+# The engine (`supervisor backup run`) owns the run, this snippet owns the backup, as hooks each in its own bash.
+# Define backup_written, naming the target with backup_target or backup_files and writing "${BACKUP_TARGET_PATH}.tmp".
+# Optional hooks: backup_interrupted, backup_completed, backup_pruned_store, backup_versioned.
+# No hook relies on a variable another set, own state is prefixed with the module name, .env values expand as "${VAR:?}".
+#
+# BACKUP_MODULE_NAME      this module's name
+# BACKUP_SOURCE_PATH      this module's data path
+# BACKUP_SOURCE_VERSION   the version being backed up
+# BACKUP_TARGET_PATH      this run's artefact path, set by backup_target
+# BACKUP_RUN_TIMESTAMP    this run's timestamp
+# BACKUP_FULL_SUFFIX      suffix of a full backup
+# BACKUP_DELTA_SUFFIX     suffix of a delta backup, which needs a full one before it
+# BACKUP_VERSIONED_NONE   what backup_versioned prints when a restore needs no software version
+# BACKUP_SKIP_HOURS       skip when the newest backup is younger than this, zero never skips
+
+INFLUXDB_BACKUP_CLUSTER="${INFLUXDB3_CLUSTER_ID:-cluster_1}"
+INFLUXDB_BACKUP_STORE="${BACKUP_SOURCE_PATH}/${INFLUXDB_BACKUP_CLUSTER}/backups"
+INFLUXDB_BACKUP_AWAIT_SECONDS="${INFLUXDB_BACKUP_AWAIT_SECONDS:-$((BACKUP_TIMEOUT_HOURS * 3600))}"
+
+backup_stored() {
+  [ -d "${INFLUXDB_BACKUP_STORE}" ] || return 0
+  find "${INFLUXDB_BACKUP_STORE}" -maxdepth 1 -mindepth 1 -type d -printf '%f\n' 2>/dev/null |
+    grep -E '^(full|delta)-[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}$' | sort -t- -k2
+}
+
+backup_status() {
+  docker exec --user root "${BACKUP_MODULE_NAME}" influxdb3 status backup --name "$1" |
+    awk '/^Status:/ {print $2}' | head -1
+}
+
+backup_awaited() {
+  local status deadline=$((SECONDS + INFLUXDB_BACKUP_AWAIT_SECONDS))
+  while true; do
+    status="$(backup_status "$1")"
+    [ "${status}" = "completed" ] && return 0
+    if [ "${status}" = "failed" ]; then
+      echo "Backup failed [$1]" >&2
+      return 1
+    fi
+    if [ "${INFLUXDB_BACKUP_AWAIT_SECONDS}" -gt 0 ] && [ "${SECONDS}" -ge "${deadline}" ]; then
+      echo "Backup timed out [$1] after [${INFLUXDB_BACKUP_AWAIT_SECONDS}] seconds holding status [${status:-unknown}]" >&2
+      return 1
+    fi
+    sleep 5
+  done
+}
+
+backup_eligible() {
+  [ -d "${BACKUP_INTERNAL_ROOT_DIR}/${1#*-}" ]
+}
+
+backup_pruned_store() {
+  local names name live_full dead=() reversed=()
+  mapfile -t names < <(backup_stored)
+  live_full=""
+  for name in "${names[@]}"; do
+    case "${name}" in full-*) live_full="${name}" ;; esac
+  done
+  [ -n "${live_full}" ] || return 0
+  local past_full=""
+  for name in "${names[@]}"; do
+    [ "${name}" = "${live_full}" ] && past_full=1
+    [ -n "${past_full}" ] || dead+=("${name}")
+  done
+  [ "${#dead[@]}" -gt 0 ] || return 0
+  for ((name = ${#dead[@]} - 1; name >= 0; name--)); do reversed+=("${dead[name]}"); done
+  for name in "${reversed[@]}"; do
+    case "${name}" in
+    delta-*) docker exec --user root "${BACKUP_MODULE_NAME}" influxdb3 delete backup --name "${name}" --incremental >/dev/null 2>&1 || echo "Could not delete dead delta backup [${name}]" >&2 ;;
+    esac
+  done
+  for name in "${dead[@]}"; do
+    case "${name}" in
+    full-*) docker exec --user root "${BACKUP_MODULE_NAME}" influxdb3 delete backup --name "${name}" >/dev/null 2>&1 || echo "Could not delete dead full backup [${name}]" >&2 ;;
+    esac
+  done
+}
+
+backup_fingerprinted() {
+  docker exec --user root --interactive "${BACKUP_MODULE_NAME}" bash -s <<'FINGERPRINT'
+set -o pipefail
+query() {
+  influxdb3 query --format json --database "${INFLUXDB_DATABASE_HOME:?}" --token "${INFLUXDB_TOKEN_HOME:?}" "$1"
+}
+tables="$(query "SELECT table_name FROM information_schema.tables WHERE table_schema = 'iox' ORDER BY table_name" | jq -r '.[].table_name')" || exit 1
+for table in ${tables}; do
+  query "SELECT date_trunc('day', time) AS day, count(*) AS n FROM \"${table}\" WHERE time < date_trunc('day', now()) GROUP BY 1" |
+    jq -r --arg table "${table}" '.[] | "\($table)/\(.day[0:10]) \(.n)"' || exit 1
+done | sort
+FINGERPRINT
+}
+
+backup_versioned() {
+  docker exec "${BACKUP_MODULE_NAME}" influxdb3 --version | awk -F', ' '{print $2}'
+}
+
+backup_written() {
+  local names parent full name source
+  mapfile -t names < <(backup_stored)
+  parent=""
+  full=""
+  for name in "${names[@]}"; do
+    backup_eligible "${name}" || continue
+    parent="${name}"
+    case "${name}" in full-*) full="${name}" ;; esac
+  done
+  if [ -n "${full}" ] &&
+    [ "$(date -d "$(date -d "@$(backup_epoch "${full}")" +%F)" +%G-%V)" = "$(date +%G-%V)" ] &&
+    [ "$(jq -r '.source_version // empty' "${BACKUP_INTERNAL_ROOT_DIR}/${full#*-}/.meta/manifest.json" 2>/dev/null)" = "${BACKUP_SOURCE_VERSION}" ] &&
+    [ -n "${parent}" ] && [ "$(backup_status "${parent}")" = "completed" ] &&
+    [ -n "$(backup_parent "${BACKUP_RUN_TIMESTAMP}")" ] && [ "${BACKUP_FORCE_FULL}" != "true" ]; then
+    name="delta-${BACKUP_RUN_TIMESTAMP}"
+    source="${INFLUXDB_BACKUP_STORE}/${parent}/incremental"
+    backup_target "${BACKUP_DELTA_SUFFIX}" "tar.gz" || return 1
+    echo "Creating a delta backup from parent [${parent}]"
+    docker exec --user root "${BACKUP_MODULE_NAME}" \
+      influxdb3 create backup --name "${name}" --incremental --parent "${parent}" >/dev/null || return 1
+  else
+    name="full-${BACKUP_RUN_TIMESTAMP}"
+    source="${INFLUXDB_BACKUP_STORE}"
+    backup_target "${BACKUP_FULL_SUFFIX}" "tar.gz" || return 1
+    if [ "${BACKUP_FORCE_FULL}" = "true" ]; then
+      echo "Starting a new full backup as asked, previous full backup [${full:-none}]"
+    else
+      [ -n "${full}" ] && echo "Starting a new full backup, previous full backup [${full}] cannot parent a delta, it is from an earlier ISO week or another version"
+    fi
+    docker exec --user root "${BACKUP_MODULE_NAME}" \
+      influxdb3 create backup --name "${name}" >/dev/null || return 1
+  fi
+  backup_awaited "${name}" || return 1
+  if [ ! -d "${source}/${name}" ]; then
+    echo "Backup produced no directory [${source}/${name}]" >&2
+    return 1
+  fi
+  tar --create --directory "${source}" --file - -- "${name}" | gzip >"${BACKUP_TARGET_PATH}.tmp"
+}

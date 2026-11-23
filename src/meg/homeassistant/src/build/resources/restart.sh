@@ -15,7 +15,7 @@
 restart_policy() {
   echo "requires=tcp:${POSTGRES_SERVICE_PROD:?}:${POSTGRES_API_PORT:?}"
   echo "requires=mqtt:${VERNEMQ_SERVICE_PROD:?}:${VERNEMQ_API_PORT:?}:mqttv5"
-  echo "requires=tcp:${INFLUXDB3_SERVICE_PROD:?}:${INFLUXDB3_API_PORT:?}"
+  echo "requires=tcp:${INFLUXDB_SERVICE_PROD:?}:${INFLUXDB_API_PORT:?}"
   echo "requires_stable=20s"
   echo "settle_min=90s"
 }

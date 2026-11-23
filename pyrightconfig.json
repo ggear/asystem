@@ -35,8 +35,8 @@
     "src/max/rackmains/src/build/python",
     "src/max/rackmains/src/test/python",
     "src/may/_debian_may/src/build/python",
-    "src/may/influxdb3/src/build/python",
-    "src/may/influxdb3/src/test/python",
+    "src/may/influxdb/src/build/python",
+    "src/may/influxdb/src/test/python",
     "src/may/mlflow/src/build/python",
     "src/may/mlflow/src/test/python",
     "src/may/mlserver/src/build/python",
@@ -257,7 +257,7 @@
       ]
     },
     {
-      "root": "src/may/influxdb3/src",
+      "root": "src/may/influxdb/src",
       "extraPaths": [
         "src/all/_/src/build/python",
         "src/rue/mlmodels/src/main/python",

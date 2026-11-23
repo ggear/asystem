@@ -56,7 +56,7 @@ def test_the_org_home_is_the_home_dashboard():
 
 
 def test_both_datasources_are_provisioned():
-    assert {datasource["uid"] for datasource in _get("/api/datasources")} == {generate.INFLUXDB3, generate.POSTGRES}
+    assert {datasource["uid"] for datasource in _get("/api/datasources")} == {generate.INFLUXDB, generate.POSTGRES}
 
 
 def test_dashboards_stay_editable_in_the_ui():

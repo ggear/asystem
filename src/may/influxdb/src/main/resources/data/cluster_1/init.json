@@ -1,0 +1,15 @@
+{
+  "create_databases": [
+    "${INFLUXDB_DATABASE_HOME}"
+  ],
+  "tokens": [
+    {
+      "token": "${INFLUXDB_TOKEN_HOME}",
+      "name": "home",
+      "expiry_millis": 4913324845378,
+      "permissions": [
+        "db:${INFLUXDB_DATABASE_HOME}:read,write"
+      ]
+    }
+  ]
+}

@@ -4,7 +4,7 @@ import sys
 from os.path import abspath, basename, dirname, exists, join
 
 from asystem.bootstrap import load_bootstrap_env_value, load_bootstrap_root
-from asystem.schema.dialects import influxdb3, mariadb, postgres, vernemq
+from asystem.schema.dialects import influxdb, mariadb, postgres, vernemq
 from asystem.schema.document import (
     ARTIFACT,
     SchemaBrokerOptions,
@@ -19,12 +19,12 @@ from asystem.schema.document import (
 ENV = ".env"
 
 DIALECTS = {
-    influxdb3.DIALECT: influxdb3,
+    influxdb.DIALECT: influxdb,
     postgres.DIALECT: postgres,
 }
 
 INSTANCES = {
-    influxdb3.DIALECT: influxdb3,
+    influxdb.DIALECT: influxdb,
     mariadb.DIALECT: mariadb,
     postgres.DIALECT: postgres,
     vernemq.DIALECT: vernemq,
@@ -35,7 +35,7 @@ def write_schema_database(
     document,
     module_name=None,
     schemas_dir=None,
-    database_dialect="influxdb3",
+    database_dialect="influxdb",
     database_time_column="timestamp",
     database_retention=None,
     database_timezone=None,

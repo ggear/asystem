@@ -18,7 +18,7 @@ from grafana_foundation_sdk.builders import stat as stats
 
 sys.path.insert(0, abspath(join(dirname(realpath(__file__)), "../../../../../../../src/all/_/src/build/python")))
 
-from asystem.schema.dialects import influxdb3, postgres
+from asystem.schema.dialects import influxdb, postgres
 from asystem.schema.document import (
     SchemaDatabaseDimension,
     SchemaDatabaseMeasure,
@@ -121,7 +121,7 @@ class SchemaArtifactTest(unittest.TestCase):
         repository = tempfile.mkdtemp()
         try:
             module = join(repository, "src/all/probe")
-            artifact = join(module, "src/build/resources/schema/influxdb3/document.json")
+            artifact = join(module, "src/build/resources/schema/influxdb/document.json")
             source = join(module, "src/main/python/probe/plugin/schema.py")
             for path in (artifact, source):
                 Path(dirname(path)).mkdir(parents=True)
@@ -130,7 +130,7 @@ class SchemaArtifactTest(unittest.TestCase):
                 Path(artifact).write_text(json.dumps({"source": hashed, "module": "probe"}))
                 warnings = io.StringIO()
                 with contextlib.redirect_stderr(warnings):
-                    load_schema_artifact("probe", "influxdb3", repository)
+                    load_schema_artifact("probe", "influxdb", repository)
                 self.assertEqual("older than its source" in warnings.getvalue(), warns, f"{hashed}: warning got wrong")
         finally:
             shutil.rmtree(repository)
@@ -287,15 +287,15 @@ class PanelSqlTest(unittest.TestCase):
 
     def test_transforms_render_into_the_series_statement(self):
         for dialect, relation, document, measures, transforms, wanted in [
-            (influxdb3, HOSTS, SUPERVISOR, ["status"], ("percent", "min"), ["avg(status * 100)", "min(value) AS value", "GROUP BY time, measure", "measure AS metric"]),
-            (influxdb3, HOSTS, SUPERVISOR, ["status"], ("complement", "sum"), ["avg(1 - status)", "sum(value)"]),
-            (influxdb3, HOSTS, SUPERVISOR, ["restart_count"], ("counter",), ["max(restart_count)", "entity AS metric"]),
-            (influxdb3, HOSTS, SUPERVISOR, ["used_processor"], ("peak",), ["max(used_processor)"]),
-            (influxdb3, HOSTS, SUPERVISOR, ["used_processor"], ("trough",), ["min(used_processor)"]),
-            (influxdb3, HOSTS, SUPERVISOR, ["used_processor"], ("bearing",), ["atan2(avg(sin(radians(used_processor))), avg(cos(radians(used_processor))))"]),
-            (influxdb3, HOSTS, SUPERVISOR, ["used_processor"], ("compass",), ["atan2(avg(sin(radians(used_processor)))", "/ 22.5"]),
-            (influxdb3, HOSTS, SUPERVISOR, ["status", "used_processor"], (), ["entity || ' ' || measure AS metric", "UNION ALL", "status IS NOT NULL", "service IS NULL"]),
-            (influxdb3, SERVICES, SUPERVISOR, ["status"], (), ["concat(host, '/', service)", "service IS NOT NULL"]),
+            (influxdb, HOSTS, SUPERVISOR, ["status"], ("percent", "min"), ["avg(status * 100)", "min(value) AS value", "GROUP BY time, measure", "measure AS metric"]),
+            (influxdb, HOSTS, SUPERVISOR, ["status"], ("complement", "sum"), ["avg(1 - status)", "sum(value)"]),
+            (influxdb, HOSTS, SUPERVISOR, ["restart_count"], ("counter",), ["max(restart_count)", "entity AS metric"]),
+            (influxdb, HOSTS, SUPERVISOR, ["used_processor"], ("peak",), ["max(used_processor)"]),
+            (influxdb, HOSTS, SUPERVISOR, ["used_processor"], ("trough",), ["min(used_processor)"]),
+            (influxdb, HOSTS, SUPERVISOR, ["used_processor"], ("bearing",), ["atan2(avg(sin(radians(used_processor))), avg(cos(radians(used_processor))))"]),
+            (influxdb, HOSTS, SUPERVISOR, ["used_processor"], ("compass",), ["atan2(avg(sin(radians(used_processor)))", "/ 22.5"]),
+            (influxdb, HOSTS, SUPERVISOR, ["status", "used_processor"], (), ["entity || ' ' || measure AS metric", "UNION ALL", "status IS NOT NULL", "service IS NULL"]),
+            (influxdb, SERVICES, SUPERVISOR, ["status"], (), ["concat(host, '/', service)", "service IS NOT NULL"]),
             (
                 postgres,
                 RATES,
@@ -325,7 +325,7 @@ class PanelSqlTest(unittest.TestCase):
             dimensions=[SchemaDatabaseDimension(key="entity_id", subject=True), SchemaDatabaseDimension(key="unit_of_measurement")],
             measures=[SchemaDatabaseMeasure(key="value", kind="float")],
         )
-        sql = influxdb3.panel(reading, SchemaDocument(module="homeassistant", relations=[reading], discovered=True), ["value"], ["roof"], (), {"roof": "Roof"})
+        sql = influxdb.panel(reading, SchemaDocument(module="homeassistant", relations=[reading], discovered=True), ["value"], ["roof"], (), {"roof": "Roof"})
         self.assertIn("CASE entity_id WHEN 'roof' THEN 'Roof' ELSE concat(entity_id, '/', unit_of_measurement) END", sql)
         self.assertIn("entity_id IN ('roof')", sql)
 
@@ -348,12 +348,12 @@ class PanelSqlTest(unittest.TestCase):
             ("metrics", ["CASE WHEN count(status) > 0 THEN 1 ELSE 0 END", "AS expected"]),
             ("volume", ["to_unixtime(time) > (3 * to_unixtime($__timeTo()) + to_unixtime($__timeFrom())) / 4", "/ 4.0"]),
         ]:
-            sql = influxdb3.summary([(HOSTS, ["alpha"])], SUPERVISOR, statistic, 300)
+            sql = influxdb.summary([(HOSTS, ["alpha"])], SUPERVISOR, statistic, 300)
             for fragment in wanted:
                 self.assertIn(fragment, sql, f"{statistic}: got no [{fragment}]")
 
     def test_held_weights_each_row_by_the_time_until_the_next(self):
-        sql = influxdb3.held(SERVICES, SUPERVISOR, "status", ["grafana"])
+        sql = influxdb.held(SERVICES, SUPERVISOR, "status", ["grafana"])
         for fragment in [
             "lead(time) OVER (PARTITION BY concat(host, '/', service) ORDER BY time)",
             "coalesce(",
@@ -365,13 +365,13 @@ class PanelSqlTest(unittest.TestCase):
             self.assertIn(fragment, sql, f"held: got no [{fragment}]")
 
     def test_summaries_combine_sources_and_scale_the_lookback_with_the_span(self):
-        self.assertIn("min(value) AS value", influxdb3.summary([(HOSTS, None), (HOSTS, ["beta"])], SUPERVISOR, "newest", 300))
-        self.assertIn("max(value) AS value", influxdb3.summary([(HOSTS, None), (HOSTS, ["beta"])], SUPERVISOR, "oldest", 300))
+        self.assertIn("min(value) AS value", influxdb.summary([(HOSTS, None), (HOSTS, ["beta"])], SUPERVISOR, "newest", 300))
+        self.assertIn("max(value) AS value", influxdb.summary([(HOSTS, None), (HOSTS, ["beta"])], SUPERVISOR, "oldest", 300))
         monthly = postgres.summary([(RATES, None)], WRANGLE, "entities", 45 * 86400)
         self.assertIn("INTERVAL '15552000 seconds'", monthly)
         self.assertIn("count(DISTINCT entity)", monthly)
         with self.assertRaises(ValueError):
-            influxdb3.summary([(HOSTS, None)], SUPERVISOR, "unknown", 300)
+            influxdb.summary([(HOSTS, None)], SUPERVISOR, "unknown", 300)
 
 
 class SeriesTest(unittest.TestCase):
@@ -422,7 +422,7 @@ class SeriesTest(unittest.TestCase):
                 },
             ),
         )
-        query = generate.Series(influxdb3, generate.INFLUXDB3, "SELECT 1", "", "", "", "time_series")
+        query = generate.Series(influxdb, generate.INFLUXDB, "SELECT 1", "", "", "", "time_series")
         widths = {
             build.__name__: build("Plot", query).build(1).build().spec.viz_config.spec.field_config.defaults.custom.axis_width
             for build in (generate.series, generate.steps, generate.points, generate.bars)
@@ -431,7 +431,7 @@ class SeriesTest(unittest.TestCase):
 
     def test_a_unit_maps_to_its_grafana_unit_or_falls_back_to_a_suffix(self):
         for unit, wanted in [("km/h", ("velocitykmh", 1)), ("furlong", ("suffix: furlong", 2)), ("", ("none", 2))]:
-            defaults = generate.stat("Unit", generate.Series(influxdb3, generate.INFLUXDB3, "SELECT 1", unit, "", "", "table")).build(1).build().spec.viz_config.spec.field_config.defaults
+            defaults = generate.stat("Unit", generate.Series(influxdb, generate.INFLUXDB, "SELECT 1", unit, "", "", "table")).build(1).build().spec.viz_config.spec.field_config.defaults
             self.assertEqual((defaults.unit, defaults.decimals), wanted, f"{unit}: unit got wrong")
 
     def test_a_header_over_an_on_change_relation_needs_a_ceiling(self):
@@ -739,7 +739,7 @@ def strip(resource):
 
 
 def panel(width, height):
-    query = generate.Series(influxdb3, generate.INFLUXDB3, "SELECT 1", "", "", "", "table")
+    query = generate.Series(influxdb, generate.INFLUXDB, "SELECT 1", "", "", "", "table")
     return generate.Panel("Panel", query, width, height, stats.VisualizationV2())
 
 

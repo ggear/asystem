@@ -78,7 +78,7 @@ property worth having, but it is un-constraining, not constraining.
 ## What it costs
 
 - **`chattr +C` starts firing estate-wide.** It is currently a no-op on `max`/`may`/`meg` because
-  they are ext4. After conversion the postgres, influxdb3 and plex data become nodatacow — correct,
+  they are ext4. After conversion the postgres, influxdb and plex data become nodatacow — correct,
   already implemented, and it carries a trade worth stating: **nodatacow also disables checksums**,
   so the scrub benefit covers everything *except* the databases.
 - **Docker needs the nocow pattern.** `mad` already does this — `Docker Root Dir:
@@ -201,7 +201,7 @@ this is the **RAID5/6 write hole** (single-device here, so irrelevant) and **pre
 (the estate is on 6.1–6.16).
 
 **But `chattr +C` turns that off for exactly the databases.** nodatacow means in-place overwrites
-and no checksums, so postgres and influxdb3 data files carry the same torn-write exposure as ext4 —
+and no checksums, so postgres and influxdb data files carry the same torn-write exposure as ext4 —
 and btrfs cannot even detect it, having no checksum to compare. The filesystem contributes nothing
 there, so the safety must come from the database, and it does. Measured on `mad`:
 
@@ -219,7 +219,7 @@ WAL plus write-once, then-immutable parquet, which is the ideal shape for CoW.
 
 ### The two risks that are real, and neither is btrfs
 
-1. **`commit=600` was dropped** from the `fstab` sources on `max`/`may`/`meg`/`jil` after the 2026-10-22 influxdb3 loss, where PachaTree's un-fsync'd checkpoints came back zero length. Every mount now runs the 5-second ext4 default; `mad`'s btrfs runs the 30s default.
+1. **`commit=600` was dropped** from the `fstab` sources on `max`/`may`/`meg`/`jil` after the 2026-10-22 influxdb loss, where PachaTree's un-fsync'd checkpoints came back zero length. Every mount now runs the 5-second ext4 default; `mad`'s btrfs runs the 30s default.
 2. **There is no UPS on any host** — no `upsc`, no `apcaccess`, nothing on USB, checked on all four.
    A small UPS with NUT triggering a clean shutdown at low battery deletes the entire class of risk
    and makes this section moot. Against nightly backups, monthly scrubs, per-metric monitoring and a
@@ -231,7 +231,7 @@ WAL plus write-once, then-immutable parquet, which is the ideal shape for CoW.
    clear `/root` and `/media`. Buy a UPS.
 2. **At the next OS reinstall of any server** — build it to the layout above. Do not schedule three
    rebuilds; take each host as it comes up for a distro move it needs anyway.
-3. **Order when it happens** — `may`, then `meg`, then `max`. `may` holds influxdb3, so its outage
+3. **Order when it happens** — `may`, then `meg`, then `max`. `may` holds influxdb, so its outage
    costs the estate's metrics history for the window.
 4. **`jen` stays ext4 — ruled out converting it.** It boots from a 119G USB flash drive. Btrfs
    metadata write amplification on cheap flash is a real cost with none of the benefits, there is no

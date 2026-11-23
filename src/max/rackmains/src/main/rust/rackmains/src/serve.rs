@@ -41,6 +41,7 @@ pub struct Settings {
     pub version: String,
     pub battery_installed: String,
     pub ssh_timeout: Duration,
+    pub plug_reconnect_poll: Duration,
 }
 
 pub struct Parts {
@@ -757,9 +758,35 @@ impl Poller {
             return;
         };
         let plug = Arc::clone(plug);
-        thread::spawn(move || match plug.command("Power", PLUG_COMMAND_TIMEOUT) {
-            Ok(reply) => info!("{}", log_line("plug state republished", &reply.to_string())),
-            Err(err) => warn!("{}", log_line("plug state republish failed", &err)),
+        let poll = self.settings.plug_reconnect_poll;
+        thread::spawn(move || {
+            let connects = || {
+                plug.command("Status 11", PLUG_COMMAND_TIMEOUT)
+                    .ok()
+                    .and_then(|reply| reply["StatusSTS"]["MqttCount"].as_u64())
+            };
+            let mut before = connects();
+            match plug.command("Power", PLUG_COMMAND_TIMEOUT) {
+                Ok(reply) => info!("{}", log_line("plug state republished", &reply.to_string())),
+                Err(err) => warn!("{}", log_line("plug state republish failed", &err)),
+            }
+            for _ in 0..PLUG_RECONNECT_POLLS {
+                thread::sleep(poll);
+                match (before, connects()) {
+                    (Some(was), Some(now)) if now > was => {
+                        match plug.command("Power", PLUG_COMMAND_TIMEOUT) {
+                            Ok(reply) => info!(
+                                "{}",
+                                log_line("plug state republished on its reconnect", &reply.to_string())
+                            ),
+                            Err(err) => warn!("{}", log_line("plug state republish failed", &err)),
+                        }
+                        return;
+                    }
+                    (None, now) => before = now,
+                    _ => {}
+                }
+            }
         });
     }
 
@@ -876,6 +903,7 @@ pub fn run(args: &ServeArgs, data_dir: &Path) -> Result<(), String> {
         version,
         battery_installed: args.battery_installed.clone(),
         ssh_timeout,
+        plug_reconnect_poll: PLUG_RECONNECT_POLL,
     };
     let plug: Option<Arc<dyn Plug>> = (!common.plug_host.is_empty()).then(|| {
         Arc::new(Tasmota {
@@ -970,6 +998,10 @@ struct Session {
 
 static STOP_SIGNAL: AtomicI32 = AtomicI32::new(0);
 
+const PLUG_RECONNECT_POLL: Duration = Duration::from_secs(10);
+
+const PLUG_RECONNECT_POLLS: u32 = 60;
+
 const REPORT_PERIOD: Duration = Duration::from_secs(60);
 
 const REPORT_PERIOD_BATTERY: Duration = Duration::from_secs(10);
@@ -981,7 +1013,7 @@ const SSH_LIMIT_SECONDS: u64 = 300;
 #[cfg(test)]
 mod tests {
     use std::collections::VecDeque;
-    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
     use std::sync::Mutex;
 
     use chrono::TimeZone;
@@ -1073,6 +1105,7 @@ mod tests {
                 rule: Mutex::new(String::new()),
                 refuse: Mutex::new(None),
                 panic_on: Mutex::new(None),
+                connects: AtomicU64::new(2),
             });
             let rig = Rig::at_with(&scratch(name), 0, Some(plug.clone()));
             (rig, plug)
@@ -1103,6 +1136,7 @@ mod tests {
                     version: "test".to_string(),
                     battery_installed: "2024-11-12".to_string(),
                     ssh_timeout: Duration::from_secs(30),
+                    plug_reconnect_poll: Duration::from_millis(10),
                 },
                 Parts {
                     source: Box::new(QueueSource(Arc::clone(&readings))),
@@ -1256,22 +1290,32 @@ mod tests {
     }
 
     #[test]
-    fn the_plug_is_asked_to_republish_its_state_once_the_broker_comes_back() {
-        let (mut rig, plug) = Rig::with_plug("plug-republish");
-        rig.down.store(true, Ordering::SeqCst);
-        rig.run("OL", 3);
+    fn the_plug_is_asked_to_republish_its_state_once_the_broker_comes_back_and_again_on_its_own_reconnect() {
         let sent = |plug: &RigPlug| plug.sent.lock().unwrap().iter().filter(|sent| *sent == "Power").count();
-        assert_eq!(sent(&plug), 0);
-        rig.down.store(false, Ordering::SeqCst);
-        rig.run("OL", 6);
-        let deadline = Instant::now() + Duration::from_secs(3);
-        while sent(&plug) == 0 && Instant::now() < deadline {
-            thread::sleep(Duration::from_millis(20));
+        let wait_for = |plug: &RigPlug, count: usize| {
+            let deadline = Instant::now() + Duration::from_secs(3);
+            while sent(plug) < count && Instant::now() < deadline {
+                thread::sleep(Duration::from_millis(5));
+            }
+        };
+        for (reconnects, expected) in [(false, 1), (true, 2)] {
+            let (mut rig, plug) = Rig::with_plug(&format!("plug-republish-{reconnects}"));
+            rig.down.store(true, Ordering::SeqCst);
+            rig.run("OL", 3);
+            assert_eq!(sent(&plug), 0);
+            rig.down.store(false, Ordering::SeqCst);
+            rig.run("OL", 6);
+            wait_for(&plug, 1);
+            assert_eq!(sent(&plug), 1, "reconnects [{reconnects}]");
+            if reconnects {
+                thread::sleep(Duration::from_millis(30));
+                plug.connects.fetch_add(1, Ordering::SeqCst);
+                wait_for(&plug, 2);
+            }
+            rig.run("OL", 12);
+            thread::sleep(Duration::from_millis(800));
+            assert_eq!(sent(&plug), expected, "reconnects [{reconnects}]");
         }
-        assert_eq!(sent(&plug), 1);
-        rig.run("OL", 12);
-        thread::sleep(Duration::from_millis(100));
-        assert_eq!(sent(&plug), 1);
     }
 
     #[test]
@@ -1565,6 +1609,7 @@ mod tests {
         rule: Mutex<String>,
         refuse: Mutex<Option<&'static str>>,
         panic_on: Mutex<Option<&'static str>>,
+        connects: AtomicU64,
     }
 
     impl Plug for RigPlug {
@@ -1591,6 +1636,7 @@ mod tests {
                 }
                 "Power" => Ok(json!({"POWER": if self.on.load(Ordering::SeqCst) { "ON" } else { "OFF" }})),
                 "Rule1" => Ok(json!({"Rule1": {"State": "ON", "Rules": self.rule.lock().unwrap().clone()}})),
+                "Status 11" => Ok(json!({"StatusSTS": {"MqttCount": self.connects.load(Ordering::SeqCst)}})),
                 other if other.starts_with("Rule1 ON") => {
                     *self.rule.lock().unwrap() = other.to_string();
                     Ok(json!({}))
@@ -1650,6 +1696,7 @@ mod tests {
                 rule: Mutex::new(String::new()),
                 refuse: Mutex::new(None),
                 panic_on: Mutex::new(None),
+                connects: AtomicU64::new(2),
             });
             fs::write(dir.join("hosts.json"), r#"[{"name":"max","address":"macmini-max"}]"#).unwrap();
             let model = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../build/resources/model/battery");
@@ -1668,6 +1715,8 @@ mod tests {
                         version: "test".to_string(),
                         battery_installed: String::new(),
                         ssh_timeout: Duration::from_secs(30),
+                        plug_reconnect_poll: Duration::from_millis(10),
+                        plug_reconnect_poll: Duration::from_millis(10),
                     },
                     Parts {
                         source: Box::new(PlugSource {

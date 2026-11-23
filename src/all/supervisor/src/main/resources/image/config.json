@@ -61,7 +61,7 @@
           "tertiary"
         ],
         "services": [
-          "influxdb3",
+          "influxdb",
           "mlflow",
           "mlserver",
           "sonarr",
@@ -127,7 +127,7 @@
           "keep_weekly": 4,
           "keep_monthly": 1200
         },
-        "influxdb3": {
+        "influxdb": {
           "retain_days": 14,
           "keep_daily": 7,
           "keep_weekly": 8,

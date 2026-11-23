@@ -1,0 +1,4 @@
+{
+  "token": "${INFLUXDB_TOKEN_ADMIN}",
+  "name": "_admin"
+}

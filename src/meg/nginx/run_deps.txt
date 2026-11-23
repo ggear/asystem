@@ -9,6 +9,6 @@ wrangle
 tasmota
 mlserver
 postgres
-influxdb3
+influxdb
 zigbee2mqtt
 homeassistant

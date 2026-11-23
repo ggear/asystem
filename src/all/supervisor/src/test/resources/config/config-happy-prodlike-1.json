@@ -9,7 +9,7 @@
       "token": "prodtoken123"
     },
     "database": {
-      "host": "influxdb3.local.janeandgraham.com",
+      "host": "influxdb.local.janeandgraham.com",
       "port": "2000",
       "name": "supervisor",
       "token": "prodtoken123"
@@ -26,7 +26,7 @@
       {
         "host": "macmini-max",
         "services": [
-          "influxdb3",
+          "influxdb",
           "mlflow",
           "mlserver",
           "monitor",

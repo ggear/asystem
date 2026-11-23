@@ -308,7 +308,7 @@ A split is a use of data. The notebook forms its splits in memory from runs in i
 ### 6.5 Runs
 
 `collect_run(ws, run, *, label, name=None, source=None, query=None, params=None, database=None, csv=None, build=None, live=False)` registers the polars frame of `data/<run>/<name>.csv` as `ws.runs[(run, name)]` and returns nothing, so a cell that ends in it prints no table. The `name` defaults to `<model>_<notebook>`.
-- `source` is one of `influxdb3`, `postgres`, `csv` (copy a local file in) or `builder` (a function the notebook gives, for synthetic data), and is required only when the csv is absent.
+- `source` is one of `influxdb`, `postgres`, `csv` (copy a local file in) or `builder` (a function the notebook gives, for synthetic data), and is required only when the csv is absent.
 - `params` is a dict of the notebook's own literals, such as a time range, formatted into the `{name}` placeholders of `query` before it runs, so one query text serves several runs. It MUST NOT come from outside the notebook. The json records the formatted `query` and the `params`.
 - It MUST read the csv if it is present and the run is not live, and MUST NOT touch the network in that case.
 - It MUST otherwise capture and write the csv through a temporary file renamed into place, so a failed query writes nothing, and then write the json beside it.
@@ -637,7 +637,7 @@ Every run of a notebook, a unit test or a system test, in any flavour and langua
 
 ### 10.1 Ownership
 
-- The module `src/rue/mlmodels` MUST own the notebooks, their data, this specification, `model.sh`, `notebook.sh`, the reference consumers (10.8) and the loaders (10.9). It MUST run-depend on `mlflow`, `mlserver` and `influxdb3`, and release independently of them and of the consumers.
+- The module `src/rue/mlmodels` MUST own the notebooks, their data, this specification, `model.sh`, `notebook.sh`, the reference consumers (10.8) and the loaders (10.9). It MUST run-depend on `mlflow`, `mlserver` and `influxdb`, and release independently of them and of the consumers.
 - `mlflow` and `mlserver` MUST be only a container and its configuration. `mlserver` keeps its `serving` and `registry` packages, which MUST NOT be named `mlserver` or `mlflow`.
 - `mlmodels` MUST use `mlflow` and `mlserver` as production services, through the connection variables of its run dependencies and the `*_PROD` endpoints, as `supervisor` uses `vernemq`. It MUST NOT start, build or test them.
 - Each of `mlflow` and `mlserver` MUST test itself in its own module. `mlserver` MUST test its `serving` and `registry` packages, its sync loop (fallback, a failed reload, an unreachable registry, an alias moved back, a failed version not retried) and its container, and `mlflow` MUST test its container and configuration. The tests of a project belong to `mlmodels`.

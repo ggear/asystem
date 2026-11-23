@@ -226,7 +226,7 @@ def load_schema_document(module_root=None, config=None, args=None):
     omits a key, so a field added here cannot silently take its default because an emitter was not updated.
 
     A [<kind>] is one of [float] [int] [bool] [str]. Which of them a backend carries is the dialect's
-    call, declared as its [KINDS] and read through [carried] — influxdb3 carries all four since line
+    call, declared as its [KINDS] and read through [carried] — influxdb carries all four since line
     protocol has a string field, Postgres carries the numeric three since its long form pivots through
     a numeric [value] column. A measure a backend cannot carry is declared but never written by it, so
     it is reported like any other measure declared and not written.

@@ -24,7 +24,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -41,7 +41,7 @@ spec:
                           AND host IS NOT NULL
                           AND service IS NOT NULL
                           AND service IN (
-                              'cloudflare', 'grafana', 'homeassistant', 'influxdb3', 'letsencrypt', 'mariadb',
+                              'cloudflare', 'grafana', 'homeassistant', 'influxdb', 'letsencrypt', 'mariadb',
                               'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains',
                               'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx',
                               'wrangle', 'zigbee2mqtt'
@@ -98,7 +98,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -124,7 +124,7 @@ spec:
                               AND service IS NOT NULL
                               AND status IS NOT NULL
                               AND service IN (
-                                  'cloudflare', 'grafana', 'homeassistant', 'influxdb3', 'letsencrypt', 'mariadb',
+                                  'cloudflare', 'grafana', 'homeassistant', 'influxdb', 'letsencrypt', 'mariadb',
                                   'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains',
                                   'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx',
                                   'wrangle', 'zigbee2mqtt'
@@ -184,7 +184,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -210,7 +210,7 @@ spec:
                               AND service IS NOT NULL
                               AND health_status IS NOT NULL
                               AND service IN (
-                                  'cloudflare', 'grafana', 'homeassistant', 'influxdb3', 'letsencrypt', 'mariadb',
+                                  'cloudflare', 'grafana', 'homeassistant', 'influxdb', 'letsencrypt', 'mariadb',
                                   'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains',
                                   'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx',
                                   'wrangle', 'zigbee2mqtt'
@@ -270,7 +270,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -296,7 +296,7 @@ spec:
                               AND service IS NOT NULL
                               AND restart_count IS NOT NULL
                               AND service IN (
-                                  'cloudflare', 'grafana', 'homeassistant', 'influxdb3', 'letsencrypt', 'mariadb',
+                                  'cloudflare', 'grafana', 'homeassistant', 'influxdb', 'letsencrypt', 'mariadb',
                                   'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains',
                                   'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx',
                                   'wrangle', 'zigbee2mqtt'
@@ -358,7 +358,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -384,7 +384,7 @@ spec:
                               AND service IS NOT NULL
                               AND used_processor IS NOT NULL
                               AND service IN (
-                                  'cloudflare', 'grafana', 'homeassistant', 'influxdb3', 'letsencrypt', 'mariadb',
+                                  'cloudflare', 'grafana', 'homeassistant', 'influxdb', 'letsencrypt', 'mariadb',
                                   'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains',
                                   'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx',
                                   'wrangle', 'zigbee2mqtt'
@@ -453,7 +453,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -479,7 +479,7 @@ spec:
                               AND service IS NOT NULL
                               AND used_memory IS NOT NULL
                               AND service IN (
-                                  'cloudflare', 'grafana', 'homeassistant', 'influxdb3', 'letsencrypt', 'mariadb',
+                                  'cloudflare', 'grafana', 'homeassistant', 'influxdb', 'letsencrypt', 'mariadb',
                                   'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains',
                                   'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx',
                                   'wrangle', 'zigbee2mqtt'
@@ -548,7 +548,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -574,7 +574,7 @@ spec:
                               AND service IS NOT NULL
                               AND used_disk_rate IS NOT NULL
                               AND service IN (
-                                  'cloudflare', 'grafana', 'homeassistant', 'influxdb3', 'letsencrypt', 'mariadb',
+                                  'cloudflare', 'grafana', 'homeassistant', 'influxdb', 'letsencrypt', 'mariadb',
                                   'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains',
                                   'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx',
                                   'wrangle', 'zigbee2mqtt'
@@ -643,7 +643,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -669,7 +669,7 @@ spec:
                               AND service IS NOT NULL
                               AND used_network IS NOT NULL
                               AND service IN (
-                                  'cloudflare', 'grafana', 'homeassistant', 'influxdb3', 'letsencrypt', 'mariadb',
+                                  'cloudflare', 'grafana', 'homeassistant', 'influxdb', 'letsencrypt', 'mariadb',
                                   'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains',
                                   'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx',
                                   'wrangle', 'zigbee2mqtt'
@@ -738,7 +738,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -764,7 +764,7 @@ spec:
                               AND service IS NOT NULL
                               AND status IS NOT NULL
                               AND service IN (
-                                  'cloudflare', 'grafana', 'homeassistant', 'influxdb3', 'letsencrypt', 'mariadb',
+                                  'cloudflare', 'grafana', 'homeassistant', 'influxdb', 'letsencrypt', 'mariadb',
                                   'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains',
                                   'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx',
                                   'wrangle', 'zigbee2mqtt'
@@ -900,7 +900,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -926,7 +926,7 @@ spec:
                               AND service IS NOT NULL
                               AND health_status IS NOT NULL
                               AND service IN (
-                                  'cloudflare', 'grafana', 'homeassistant', 'influxdb3', 'letsencrypt', 'mariadb',
+                                  'cloudflare', 'grafana', 'homeassistant', 'influxdb', 'letsencrypt', 'mariadb',
                                   'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains',
                                   'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx',
                                   'wrangle', 'zigbee2mqtt'
@@ -1062,7 +1062,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -1088,7 +1088,7 @@ spec:
                               AND service IS NOT NULL
                               AND backup_status IS NOT NULL
                               AND service IN (
-                                  'cloudflare', 'grafana', 'homeassistant', 'influxdb3', 'letsencrypt', 'mariadb',
+                                  'cloudflare', 'grafana', 'homeassistant', 'influxdb', 'letsencrypt', 'mariadb',
                                   'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains',
                                   'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx',
                                   'wrangle', 'zigbee2mqtt'
@@ -1224,7 +1224,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -1244,7 +1244,7 @@ spec:
                               AND host IS NOT NULL
                               AND service IS NOT NULL
                               AND service IN (
-                                  'cloudflare', 'grafana', 'homeassistant', 'influxdb3', 'letsencrypt', 'mariadb',
+                                  'cloudflare', 'grafana', 'homeassistant', 'influxdb', 'letsencrypt', 'mariadb',
                                   'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains',
                                   'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx',
                                   'wrangle', 'zigbee2mqtt'
@@ -1305,7 +1305,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -1380,7 +1380,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -1392,8 +1392,8 @@ spec:
                           100.0 * sum(reported) / NULLIF(sum(expected), 0) AS value
                       FROM (
                           SELECT
-                              (SELECT count(DISTINCT service) FROM supervisor WHERE $__timeFilter(time) AND module = 'supervisor' AND host IS NOT NULL AND service IS NOT NULL AND service IN ( 'cloudflare', 'grafana', 'homeassistant', 'influxdb3', 'letsencrypt', 'mariadb', 'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains', 'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx', 'wrangle', 'zigbee2mqtt' ) AND time > (SELECT max(time) FROM supervisor WHERE $__timeFilter(time) AND module = 'supervisor' AND host IS NOT NULL AND service IS NOT NULL AND service IN ( 'cloudflare', 'grafana', 'homeassistant', 'influxdb3', 'letsencrypt', 'mariadb', 'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains', 'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx', 'wrangle', 'zigbee2mqtt' )) - INTERVAL '600 seconds') AS reported,
-                              (SELECT count(DISTINCT service) FROM supervisor WHERE module = 'supervisor' AND host IS NOT NULL AND service IS NOT NULL AND service IN ( 'cloudflare', 'grafana', 'homeassistant', 'influxdb3', 'letsencrypt', 'mariadb', 'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains', 'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx', 'wrangle', 'zigbee2mqtt' ) AND time <= $__timeTo() AND time > $__timeTo() - INTERVAL '2592000 seconds') AS expected
+                              (SELECT count(DISTINCT service) FROM supervisor WHERE $__timeFilter(time) AND module = 'supervisor' AND host IS NOT NULL AND service IS NOT NULL AND service IN ( 'cloudflare', 'grafana', 'homeassistant', 'influxdb', 'letsencrypt', 'mariadb', 'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains', 'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx', 'wrangle', 'zigbee2mqtt' ) AND time > (SELECT max(time) FROM supervisor WHERE $__timeFilter(time) AND module = 'supervisor' AND host IS NOT NULL AND service IS NOT NULL AND service IN ( 'cloudflare', 'grafana', 'homeassistant', 'influxdb', 'letsencrypt', 'mariadb', 'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains', 'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx', 'wrangle', 'zigbee2mqtt' )) - INTERVAL '600 seconds') AS reported,
+                              (SELECT count(DISTINCT service) FROM supervisor WHERE module = 'supervisor' AND host IS NOT NULL AND service IS NOT NULL AND service IN ( 'cloudflare', 'grafana', 'homeassistant', 'influxdb', 'letsencrypt', 'mariadb', 'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains', 'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx', 'wrangle', 'zigbee2mqtt' ) AND time <= $__timeTo() AND time > $__timeTo() - INTERVAL '2592000 seconds') AS expected
                       ) AS arms
                   version: v0
                 refId: A
@@ -1447,7 +1447,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -1459,8 +1459,8 @@ spec:
                           100.0 * sum(reported) / NULLIF(sum(expected), 0) AS value
                       FROM (
                           SELECT
-                              (SELECT CASE WHEN count(status) > 0 THEN 1 ELSE 0 END + CASE WHEN count(status_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(backup_status) > 0 THEN 1 ELSE 0 END + CASE WHEN count(backup_status_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(health_status) > 0 THEN 1 ELSE 0 END + CASE WHEN count(health_status_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(configured_status) > 0 THEN 1 ELSE 0 END + CASE WHEN count(configured_status_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_processor) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_processor_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_memory) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_memory_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_disk_rate) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_disk_rate_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_network) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_network_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(restart_count) > 0 THEN 1 ELSE 0 END + CASE WHEN count(restart_count_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(restart_attempts) > 0 THEN 1 ELSE 0 END + CASE WHEN count(restart_attempts_trend) > 0 THEN 1 ELSE 0 END FROM supervisor WHERE $__timeFilter(time) AND module = 'supervisor' AND host IS NOT NULL AND service IS NOT NULL AND service IN ( 'cloudflare', 'grafana', 'homeassistant', 'influxdb3', 'letsencrypt', 'mariadb', 'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains', 'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx', 'wrangle', 'zigbee2mqtt' ) AND time > (SELECT max(time) FROM supervisor WHERE $__timeFilter(time) AND module = 'supervisor' AND host IS NOT NULL AND service IS NOT NULL AND service IN ( 'cloudflare', 'grafana', 'homeassistant', 'influxdb3', 'letsencrypt', 'mariadb', 'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains', 'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx', 'wrangle', 'zigbee2mqtt' )) - INTERVAL '600 seconds') AS reported,
-                              (SELECT CASE WHEN count(status) > 0 THEN 1 ELSE 0 END + CASE WHEN count(status_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(backup_status) > 0 THEN 1 ELSE 0 END + CASE WHEN count(backup_status_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(health_status) > 0 THEN 1 ELSE 0 END + CASE WHEN count(health_status_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(configured_status) > 0 THEN 1 ELSE 0 END + CASE WHEN count(configured_status_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_processor) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_processor_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_memory) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_memory_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_disk_rate) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_disk_rate_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_network) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_network_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(restart_count) > 0 THEN 1 ELSE 0 END + CASE WHEN count(restart_count_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(restart_attempts) > 0 THEN 1 ELSE 0 END + CASE WHEN count(restart_attempts_trend) > 0 THEN 1 ELSE 0 END FROM supervisor WHERE $__timeFilter(time) AND module = 'supervisor' AND host IS NOT NULL AND service IS NOT NULL AND service IN ( 'cloudflare', 'grafana', 'homeassistant', 'influxdb3', 'letsencrypt', 'mariadb', 'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains', 'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx', 'wrangle', 'zigbee2mqtt' )) AS expected
+                              (SELECT CASE WHEN count(status) > 0 THEN 1 ELSE 0 END + CASE WHEN count(status_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(backup_status) > 0 THEN 1 ELSE 0 END + CASE WHEN count(backup_status_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(health_status) > 0 THEN 1 ELSE 0 END + CASE WHEN count(health_status_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(configured_status) > 0 THEN 1 ELSE 0 END + CASE WHEN count(configured_status_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_processor) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_processor_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_memory) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_memory_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_disk_rate) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_disk_rate_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_network) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_network_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(restart_count) > 0 THEN 1 ELSE 0 END + CASE WHEN count(restart_count_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(restart_attempts) > 0 THEN 1 ELSE 0 END + CASE WHEN count(restart_attempts_trend) > 0 THEN 1 ELSE 0 END FROM supervisor WHERE $__timeFilter(time) AND module = 'supervisor' AND host IS NOT NULL AND service IS NOT NULL AND service IN ( 'cloudflare', 'grafana', 'homeassistant', 'influxdb', 'letsencrypt', 'mariadb', 'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains', 'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx', 'wrangle', 'zigbee2mqtt' ) AND time > (SELECT max(time) FROM supervisor WHERE $__timeFilter(time) AND module = 'supervisor' AND host IS NOT NULL AND service IS NOT NULL AND service IN ( 'cloudflare', 'grafana', 'homeassistant', 'influxdb', 'letsencrypt', 'mariadb', 'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains', 'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx', 'wrangle', 'zigbee2mqtt' )) - INTERVAL '600 seconds') AS reported,
+                              (SELECT CASE WHEN count(status) > 0 THEN 1 ELSE 0 END + CASE WHEN count(status_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(backup_status) > 0 THEN 1 ELSE 0 END + CASE WHEN count(backup_status_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(health_status) > 0 THEN 1 ELSE 0 END + CASE WHEN count(health_status_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(configured_status) > 0 THEN 1 ELSE 0 END + CASE WHEN count(configured_status_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_processor) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_processor_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_memory) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_memory_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_disk_rate) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_disk_rate_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_network) > 0 THEN 1 ELSE 0 END + CASE WHEN count(used_network_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(restart_count) > 0 THEN 1 ELSE 0 END + CASE WHEN count(restart_count_trend) > 0 THEN 1 ELSE 0 END + CASE WHEN count(restart_attempts) > 0 THEN 1 ELSE 0 END + CASE WHEN count(restart_attempts_trend) > 0 THEN 1 ELSE 0 END FROM supervisor WHERE $__timeFilter(time) AND module = 'supervisor' AND host IS NOT NULL AND service IS NOT NULL AND service IN ( 'cloudflare', 'grafana', 'homeassistant', 'influxdb', 'letsencrypt', 'mariadb', 'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains', 'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx', 'wrangle', 'zigbee2mqtt' )) AS expected
                       ) AS arms
                   version: v0
                 refId: A
@@ -1514,7 +1514,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -1526,8 +1526,8 @@ spec:
                           100.0 * sum(reported) / NULLIF(sum(expected), 0) AS value
                       FROM (
                           SELECT
-                              (SELECT count(*) FROM supervisor WHERE $__timeFilter(time) AND module = 'supervisor' AND host IS NOT NULL AND service IS NOT NULL AND service IN ( 'cloudflare', 'grafana', 'homeassistant', 'influxdb3', 'letsencrypt', 'mariadb', 'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains', 'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx', 'wrangle', 'zigbee2mqtt' ) AND to_unixtime(time) > (3 * to_unixtime($__timeTo()) + to_unixtime($__timeFrom())) / 4) AS reported,
-                              (SELECT count(*) FROM supervisor WHERE $__timeFilter(time) AND module = 'supervisor' AND host IS NOT NULL AND service IS NOT NULL AND service IN ( 'cloudflare', 'grafana', 'homeassistant', 'influxdb3', 'letsencrypt', 'mariadb', 'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains', 'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx', 'wrangle', 'zigbee2mqtt' )) / 4.0 AS expected
+                              (SELECT count(*) FROM supervisor WHERE $__timeFilter(time) AND module = 'supervisor' AND host IS NOT NULL AND service IS NOT NULL AND service IN ( 'cloudflare', 'grafana', 'homeassistant', 'influxdb', 'letsencrypt', 'mariadb', 'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains', 'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx', 'wrangle', 'zigbee2mqtt' ) AND to_unixtime(time) > (3 * to_unixtime($__timeTo()) + to_unixtime($__timeFrom())) / 4) AS reported,
+                              (SELECT count(*) FROM supervisor WHERE $__timeFilter(time) AND module = 'supervisor' AND host IS NOT NULL AND service IS NOT NULL AND service IN ( 'cloudflare', 'grafana', 'homeassistant', 'influxdb', 'letsencrypt', 'mariadb', 'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains', 'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx', 'wrangle', 'zigbee2mqtt' )) / 4.0 AS expected
                       ) AS arms
                   version: v0
                 refId: A
@@ -1585,7 +1585,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -1611,7 +1611,7 @@ spec:
                               AND service IS NOT NULL
                               AND status IS NOT NULL
                               AND service IN (
-                                  'cloudflare', 'grafana', 'homeassistant', 'influxdb3', 'letsencrypt', 'mariadb',
+                                  'cloudflare', 'grafana', 'homeassistant', 'influxdb', 'letsencrypt', 'mariadb',
                                   'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains',
                                   'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx',
                                   'wrangle', 'zigbee2mqtt'
@@ -1669,7 +1669,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -1695,7 +1695,7 @@ spec:
                               AND service IS NOT NULL
                               AND status IS NOT NULL
                               AND service IN (
-                                  'cloudflare', 'grafana', 'homeassistant', 'influxdb3', 'letsencrypt', 'mariadb',
+                                  'cloudflare', 'grafana', 'homeassistant', 'influxdb', 'letsencrypt', 'mariadb',
                                   'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains',
                                   'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx',
                                   'wrangle', 'zigbee2mqtt'
@@ -1755,7 +1755,7 @@ spec:
                 hidden: false
                 query:
                   datasource:
-                    name: influxdb3-home
+                    name: influxdb-home
                   group: influxdb
                   kind: DataQuery
                   spec:
@@ -1781,7 +1781,7 @@ spec:
                               AND service IS NOT NULL
                               AND configured_status IS NOT NULL
                               AND service IN (
-                                  'cloudflare', 'grafana', 'homeassistant', 'influxdb3', 'letsencrypt', 'mariadb',
+                                  'cloudflare', 'grafana', 'homeassistant', 'influxdb', 'letsencrypt', 'mariadb',
                                   'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'rackmains',
                                   'sabnzbd', 'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx',
                                   'wrangle', 'zigbee2mqtt'

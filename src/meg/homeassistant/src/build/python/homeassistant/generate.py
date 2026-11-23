@@ -17,7 +17,7 @@ if __name__ == "__main__":
     write_container_restore()
     write_container_restart()
 
-    hass_document = dialects.influxdb3.Discover(label="Home Assistant").document()
+    hass_document = dialects.influxdb.Discover(label="Home Assistant").document()
     if hass_document is not None:
         levelled_dicts = {row["unique_id"]: row.dropna().to_dict() for _, row in metadata_hass_df[metadata_hass_df["levels_better"].notna() & metadata_hass_df["unique_id"].notna()].iterrows()}
         levelled_found = set()

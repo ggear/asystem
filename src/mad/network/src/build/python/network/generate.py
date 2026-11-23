@@ -21,4 +21,4 @@ if __name__ == "__main__":
     write_schema_broker(metadata_network_df, broker_topic_glob_discovery="homeassistant/+/network/+/config", broker_topic_glob_data="network/#", broker_document=document)
 
     # Build database schema
-    write_schema_database(document, database_dialect="influxdb3", database_archive_measures=["port", "speed_mbps", "full_duplex", "degraded", "errors", "coordinator"])
+    write_schema_database(document, database_dialect="influxdb", database_archive_measures=["port", "speed_mbps", "full_duplex", "degraded", "errors", "coordinator"])

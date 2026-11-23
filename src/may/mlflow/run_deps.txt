@@ -1,2 +1,2 @@
 postgres
-influxdb3
+influxdb

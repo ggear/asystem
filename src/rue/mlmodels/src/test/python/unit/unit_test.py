@@ -46,7 +46,7 @@ class CollectRunTest(unittest.TestCase):
             path=join(tempfile.mkdtemp(), "demo"),
             runs={},
             model_name="homeassistant_demo_run",
-            env={"INFLUXDB3_IP_PROD": "host", "INFLUXDB3_API_PORT": "1", "INFLUXDB3_TOKEN_ADMIN": "token", "INFLUXDB3_DATABASE_HOME": "home"},
+            env={"INFLUXDB_IP_PROD": "host", "INFLUXDB_API_PORT": "1", "INFLUXDB_TOKEN_ADMIN": "token", "INFLUXDB_DATABASE_HOME": "home"},
         )
 
     def response(self, text, ok=True):
@@ -54,7 +54,7 @@ class CollectRunTest(unittest.TestCase):
 
     def query(self, post, query="SELECT 1", run=1000, **kwargs):
         with mock.patch.object(mlmodels._collect, "post", post):
-            collect_run(self.ws, run, label="demo", source="influxdb3", query=query, **kwargs)
+            collect_run(self.ws, run, label="demo", source="influxdb", query=query, **kwargs)
         return self.ws.runs[(run, kwargs.get("name", self.NAME))].frame
 
     def sidecar(self, run=1000):
@@ -69,7 +69,7 @@ class CollectRunTest(unittest.TestCase):
         self.assertEqual(first.to_dicts(), second.to_dicts())
         self.assertEqual(1.5, first["value"][0])
         self.assertTrue(self.ws.runs[(1000, self.NAME)].path.endswith(f"data/1000/{self.NAME}.csv"))
-        self.assertEqual(("influxdb3", "SELECT 1", 1), (self.sidecar()["source"], self.sidecar()["query"], self.sidecar()["rows"]))
+        self.assertEqual(("influxdb", "SELECT 1", 1), (self.sidecar()["source"], self.sidecar()["query"], self.sidecar()["rows"]))
         self.assertNotIn("split", self.sidecar())
 
     def test_a_live_run_is_captured_again_on_every_execution(self):
