@@ -1380,7 +1380,7 @@ pub const MODE_BLACKOUT: &str = "blackout-shed";
 
 pub const PLUG_PORT: u16 = 80;
 
-pub const PLUG_SAMPLE_TIMEOUT: Duration = Duration::from_millis(500);
+pub const PLUG_SAMPLE_TIMEOUT: Duration = Duration::from_millis(900);
 
 pub const PLUG_COMMAND_TIMEOUT: Duration = Duration::from_secs(5);
 

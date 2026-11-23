@@ -1,5 +1,5 @@
 # NOTES: https://docs.influxdata.com/influxdb3/enterprise/release-notes
-FROM influxdb:3.12.2-enterprise AS image_upstream
+FROM influxdb:3.12.3-enterprise AS image_upstream
 USER root
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install bash=5.2.21-2ubuntu4 && \
@@ -10,6 +10,7 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install jq=1.7.1-3ubuntu0.24.04.2 && \
     DEBIAN_FRONTEND=noninteractive apt-get clean && rm -rf /var/lib/apt/lists/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
+ENV PATH=${PATH}:/asystem/bin
 
 FROM image_upstream AS image_base
 

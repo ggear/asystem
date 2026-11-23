@@ -8,6 +8,7 @@ use std::time::Duration;
 pub struct Flow {
     charging: bool,
     full_for: Duration,
+    discharged_for: Duration,
 }
 
 impl Flow {
@@ -19,8 +20,12 @@ impl Flow {
         if tokens.contains(&TOKEN_OB) {
             self.charging = false;
             self.full_for = Duration::ZERO;
+            self.discharged_for += elapsed;
             tokens.push(TOKEN_DISCHRG);
         } else {
+            if !self.discharged_for.is_zero() {
+                self.charging = true;
+            }
             match charge_pct {
                 Some(pct) if pct < 100.0 => {
                     self.charging = true;
@@ -28,8 +33,9 @@ impl Flow {
                 }
                 Some(_) => {
                     self.full_for += elapsed;
-                    if self.full_for >= FULL_HOLD {
+                    if self.full_for >= FULL_HOLD.max(self.discharged_for * RECHARGE_HOLD_PER_DISCHARGE) {
                         self.charging = false;
+                        self.discharged_for = Duration::ZERO;
                     }
                 }
                 None => {}
@@ -219,6 +225,8 @@ pub const TOKEN_CHRG: &str = "CHRG";
 pub const TOKEN_DISCHRG: &str = "DISCHRG";
 
 pub const FULL_HOLD: Duration = Duration::from_secs(15);
+
+pub const RECHARGE_HOLD_PER_DISCHARGE: u32 = 3;
 
 const WORDS: [(&str, &str); 15] = [
     (TOKEN_OL, "on mains"),
@@ -504,9 +512,38 @@ mod tests {
             assert_eq!(flow.settle("OL", Some(pct), second), "OL CHRG", "tick [{tick}]");
         }
         assert_eq!(flow.settle("OB", Some(100.0), second), "OB DISCHRG");
+        assert_eq!(flow.settle("OL", Some(100.0), second), "OL CHRG");
+        assert_eq!(flow.settle("OL", None, second), "OL CHRG");
+        for _ in 0..15 {
+            flow.settle("OL", Some(100.0), second);
+        }
         assert_eq!(flow.settle("OL", Some(100.0), second), "OL");
         assert_eq!(flow.settle("OL", None, second), "OL");
         assert_eq!(flow.settle("OL", Some(90.0), second), "OL CHRG");
         assert_eq!(flow.settle("OL", None, second), "OL CHRG");
+    }
+
+    #[test]
+    fn charging_after_an_outage_holds_at_one_hundred_for_three_times_the_time_on_battery() {
+        let second = Duration::from_secs(1);
+        let mut flow = Flow::default();
+        for _ in 0..182 {
+            assert_eq!(flow.settle("OB", Some(54.0), second), "OB DISCHRG");
+        }
+        for pct in [54.0, 77.0, 96.0] {
+            assert_eq!(flow.settle("OL", Some(pct), second), "OL CHRG");
+        }
+        for tick in 1..546 {
+            assert_eq!(flow.settle("OL", Some(100.0), second), "OL CHRG", "tick [{tick}]");
+        }
+        assert_eq!(flow.settle("OL", Some(100.0), second), "OL");
+        assert_eq!(flow.settle("OL", Some(100.0), second), "OL");
+        for _ in 0..2 {
+            flow.settle("OB", Some(100.0), second);
+        }
+        for tick in 1..15 {
+            assert_eq!(flow.settle("OL", Some(100.0), second), "OL CHRG", "tick [{tick}]");
+        }
+        assert_eq!(flow.settle("OL", Some(100.0), second), "OL");
     }
 }

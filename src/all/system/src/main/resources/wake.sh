@@ -161,14 +161,15 @@ snapshot() {
 }
 
 explain() {
-  local name="$1" line
-  local checks='{{range .State.Health.Log}}{{.End.Format "15:04:05"}} exit [{{.ExitCode}}] '
+  local name="$1" line started
+  local checks='{{range .State.Health.Log}}{{.Start.Unix}} {{.End.Format "15:04:05"}} exit [{{.ExitCode}}] '
   checks+='{{printf "%.100q" .Output}}{{"\n"}}{{end}}'
   log_warn "Container [${name}] health [$(docker inspect --format '{{.State.Health.Status}}' "${name}")]"
   log_warn "Container [${name}] failing streak [$(docker inspect --format '{{.State.Health.FailingStreak}}' "${name}")]"
+  started="$(date -d "$(docker inspect --format '{{.State.StartedAt}}' "${name}")" +%s 2>/dev/null || echo 0)"
   while IFS= read -r line; do
     log_warn "Container [${name}] check ${line}"
-  done < <(docker inspect --format "${checks}" "${name}" | grep . | tail -n 2)
+  done < <(docker inspect --format "${checks}" "${name}" | awk -v started="${started}" 'NF && $1 >= started {sub(/^[^ ]+ /, ""); print}' | tail -n 2)
   docker logs --tail 5 "${name}" 2>&1 | log_out
 }
 
@@ -346,10 +347,15 @@ for TARGET in "${SHARES[@]}"; do
   fi
 done
 for INDEX in "${!SHARE_PIDS[@]}"; do
-  if wait "${SHARE_PIDS[INDEX]}"; then
+  RC=0
+  wait "${SHARE_PIDS[INDEX]}" || RC=$?
+  if ((RC == 0)); then
     log_debug "Share [${SHARES[INDEX]}] ready"
-  else
+  elif ((RC == 124)); then
     log_warn "Share [${SHARES[INDEX]}] not available within [${SHARE_TIMEOUT}] seconds, docker starts without it"
+    WARNED+=("share not available ${SHARES[INDEX]}")
+  else
+    log_warn "Share [${SHARES[INDEX]}] refused, exit code [${RC}], its server may still be asleep, docker starts without it"
     WARNED+=("share not available ${SHARES[INDEX]}")
   fi
 done
