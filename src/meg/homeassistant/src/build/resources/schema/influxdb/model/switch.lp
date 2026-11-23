@@ -48,7 +48,7 @@
 #     service_cloudflare,
 #     service_grafana,
 #     service_homeassistant,
-#     service_influxdb,
+#     service_influxdb3,
 #     service_letsencrypt,
 #     service_mariadb,
 #     service_mlflow,
