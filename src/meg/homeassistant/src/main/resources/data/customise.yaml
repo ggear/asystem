@@ -633,8 +633,8 @@ switch.service_openra:
 switch.service_rackmains:
   friendly_name: 'RackMains'
   icon: 'mdi:heart-pulse'
-switch.service_influxdb3:
-  friendly_name: 'InfluxDB3'
+switch.service_influxdb:
+  friendly_name: 'InfluxDB'
   icon: 'mdi:heart-pulse'
 switch.service_mlflow:
   friendly_name: 'MLFlow'

@@ -1,12 +1,12 @@
 {
-  "default_entity_id": "switch.service_influxdb3",
-  "unique_id": "service_influxdb3",
-  "name": "Service Influxdb3",
+  "default_entity_id": "switch.service_influxdb",
+  "unique_id": "service_influxdb",
+  "name": "Service Influxdb",
   "icon": "mdi:heart-pulse",
   "force_update": false,
-  "state_topic": "supervisor/macmini-may/data/service/influxdb3/health_status",
+  "state_topic": "supervisor/macmini-may/data/service/influxdb/health_status",
   "value_template": "{{ 'ON' if value_json is mapping and (value_json.pulse | default({})).ok | default(false) else 'OFF' }}",
-  "command_topic": "supervisor/macmini-may/command/service/influxdb3",
+  "command_topic": "supervisor/macmini-may/command/service/influxdb",
   "availability_topic": "supervisor/macmini-may/status",
   "qos": 1,
   "device": {

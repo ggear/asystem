@@ -83,8 +83,8 @@
     - entity: switch.service_rackmains
       name: RackMains
       icon: mdi:heart-pulse
-    - entity: switch.service_influxdb3
-      name: InfluxDB3
+    - entity: switch.service_influxdb
+      name: InfluxDB
       icon: mdi:heart-pulse
     - entity: switch.service_mlflow
       name: MLFlow
