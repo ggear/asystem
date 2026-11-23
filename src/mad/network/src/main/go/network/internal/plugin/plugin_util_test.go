@@ -41,17 +41,17 @@ func TestPluginUtilSample_DeltaTracker(t *testing.T) {
 
 func TestPluginUtilGateway_FetchReusedWithinACycle(t *testing.T) {
 	var deviceFetches, clientFetches atomic.Int32
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		switch request.URL.Path {
 		case "/api/auth/login":
 		case "/proxy/network/api/s/default/stat/device":
 			deviceFetches.Add(1)
-			_, _ = w.Write([]byte(`{"data":[{"name":"udm-dar"}]}`))
+			_, _ = writer.Write([]byte(`{"data":[{"name":"udm-dar"}]}`))
 		case "/proxy/network/api/s/default/stat/sta":
 			clientFetches.Add(1)
-			_, _ = w.Write([]byte(`{"data":[{"name":"camera"}]}`))
+			_, _ = writer.Write([]byte(`{"data":[{"name":"camera"}]}`))
 		default:
-			http.NotFound(w, r)
+			http.NotFound(writer, request)
 		}
 	}))
 	defer server.Close()
@@ -80,7 +80,7 @@ func TestPluginUtilGateway_FetchReusedWithinACycle(t *testing.T) {
 
 func TestPluginUtilDevice_Read(t *testing.T) {
 	now := time.Unix(1_800_000_000, 0)
-	satisfaction := func(v int) *int { return &v }
+	satisfaction := func(value int) *int { return &value }
 	gateway := func(cpu, memory string, rx int64) remote.GatewayDevice {
 		return remote.GatewayDevice{Name: "gw", State: 1, LastSeen: now.Unix(), Uptime: 86400,
 			SystemStats: remote.GatewaySystemStats{CPU: cpu, Memory: memory},

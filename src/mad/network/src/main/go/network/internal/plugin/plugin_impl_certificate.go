@@ -96,11 +96,11 @@ func probeCertificate(ctx context.Context, address string) (certificateResult, e
 			scribe.LogDebug("certificate", "close of endpoint [%s] failed [%v]", address, err)
 		}
 	}()
-	certs := connection.(*tls.Conn).ConnectionState().PeerCertificates
-	if len(certs) == 0 {
+	certificates := connection.(*tls.Conn).ConnectionState().PeerCertificates
+	if len(certificates) == 0 {
 		return certificateResult{}, fmt.Errorf("no peer certificates [%s]", address)
 	}
-	leaf := certs[0]
+	leaf := certificates[0]
 	return certificateResult{notBefore: leaf.NotBefore, notAfter: leaf.NotAfter}, nil
 }
 

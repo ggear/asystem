@@ -19,6 +19,6 @@ func DiagnosisPoint(name string, ok bool, score int) schema.Point {
 	return diagnosis.Point(diagnosisPlugin.Of(name), diagnosisOK.Of(ok), diagnosisScore.Of(int64(score)))
 }
 
-func clamp(v int) int {
-	return min(max(v, 0), 100)
+func clamp(value int) int {
+	return min(max(value, 0), 100)
 }

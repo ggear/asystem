@@ -5,46 +5,46 @@ import (
 	"strconv"
 )
 
-func AppendLineProtocol(buf *bytes.Buffer, points []Point, timestamp int64) {
+func AppendLineProtocol(buffer *bytes.Buffer, points []Point, timestamp int64) {
 	timestampText := strconv.FormatInt(timestamp, 10)
 	for _, point := range points {
 		if point.Empty() || !hasPersistedValue(point) {
 			continue
 		}
 		relation := point.builder.relation
-		buf.WriteString(escapeTag(point.builder.Plugin()))
+		buffer.WriteString(escapeTag(point.builder.Plugin()))
 		if module := Module(); module != "" {
-			buf.WriteByte(',')
-			buf.WriteString(TagModule)
-			buf.WriteByte('=')
-			buf.WriteString(escapeTag(module))
+			buffer.WriteByte(',')
+			buffer.WriteString(TagModule)
+			buffer.WriteByte('=')
+			buffer.WriteString(escapeTag(module))
 		}
 		for index, dimension := range relation.Dimensions {
 			if !point.dimensionsSet[index] || point.dimensions[index] == "" {
 				continue
 			}
-			buf.WriteByte(',')
-			buf.WriteString(escapeTag(dimension.Key))
-			buf.WriteByte('=')
-			buf.WriteString(escapeTag(point.dimensions[index]))
+			buffer.WriteByte(',')
+			buffer.WriteString(escapeTag(dimension.Key))
+			buffer.WriteByte('=')
+			buffer.WriteString(escapeTag(point.dimensions[index]))
 		}
-		buf.WriteByte(' ')
+		buffer.WriteByte(' ')
 		first := true
 		for index, measure := range relation.Measures {
 			if !measure.Persist || !point.measuresSet[index] {
 				continue
 			}
 			if !first {
-				buf.WriteByte(',')
+				buffer.WriteByte(',')
 			}
 			first = false
-			buf.WriteString(escapeTag(measure.Key))
-			buf.WriteByte('=')
-			appendFieldValue(buf, point.measures[index])
+			buffer.WriteString(escapeTag(measure.Key))
+			buffer.WriteByte('=')
+			appendFieldValue(buffer, point.measures[index])
 		}
-		buf.WriteByte(' ')
-		buf.WriteString(timestampText)
-		buf.WriteByte('\n')
+		buffer.WriteByte(' ')
+		buffer.WriteString(timestampText)
+		buffer.WriteByte('\n')
 	}
 }
 
@@ -57,30 +57,30 @@ func hasPersistedValue(point Point) bool {
 	return false
 }
 
-func appendFieldValue(buf *bytes.Buffer, value Value) {
+func appendFieldValue(buffer *bytes.Buffer, value Value) {
 	switch value.kind {
 	case KindFloat:
-		buf.WriteString(strconv.FormatFloat(value.number, 'g', -1, 64))
+		buffer.WriteString(strconv.FormatFloat(value.number, 'g', -1, 64))
 	case KindInt:
-		buf.WriteString(strconv.FormatInt(value.integer, 10))
-		buf.WriteByte('i')
+		buffer.WriteString(strconv.FormatInt(value.integer, 10))
+		buffer.WriteByte('i')
 	case KindBool:
 		if value.flag {
-			buf.WriteString("1i")
+			buffer.WriteString("1i")
 		} else {
-			buf.WriteString("0i")
+			buffer.WriteString("0i")
 		}
 	default:
 	}
 }
 
-func escapeTag(s string) string {
-	if !needsTagEscape(s) {
-		return s
+func escapeTag(text string) string {
+	if !needsTagEscape(text) {
+		return text
 	}
 	var out bytes.Buffer
-	for i := 0; i < len(s); i++ {
-		c := s[i]
+	for i := 0; i < len(text); i++ {
+		c := text[i]
 		if c == ' ' || c == ',' || c == '=' {
 			out.WriteByte('\\')
 		}
@@ -89,9 +89,9 @@ func escapeTag(s string) string {
 	return out.String()
 }
 
-func needsTagEscape(s string) bool {
-	for i := 0; i < len(s); i++ {
-		c := s[i]
+func needsTagEscape(text string) bool {
+	for i := 0; i < len(text); i++ {
+		c := text[i]
 		if c == ' ' || c == ',' || c == '=' {
 			return true
 		}

@@ -69,13 +69,13 @@ var rootCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		e := &engine.Engine{Plugins: selected, PollPeriod: poll, AggregatePeriod: aggregate, PublishData: flagDaemon, DaemonLoop: flagDaemon}
-		if err := engine.Create(e); err != nil {
+		runner := &engine.Engine{Plugins: selected, PollPeriod: poll, AggregatePeriod: aggregate, PublishData: flagDaemon, DaemonLoop: flagDaemon}
+		if err := engine.Create(runner); err != nil {
 			return err
 		}
 		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 		defer cancel()
-		if err := e.Run(ctx); err != nil && ctx.Err() == nil {
+		if err := runner.Run(ctx); err != nil && ctx.Err() == nil {
 			return err
 		}
 		return nil

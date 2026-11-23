@@ -144,8 +144,8 @@ func (a Aggregate) MarshalJSON() ([]byte, error) {
 	return out, nil
 }
 
-func (a Aggregate) AppendLineProtocol(buf *bytes.Buffer, timestamp int64) {
-	schema.AppendLineProtocol(buf, a.Points, timestamp)
+func (a Aggregate) AppendLineProtocol(buffer *bytes.Buffer, timestamp int64) {
+	schema.AppendLineProtocol(buffer, a.Points, timestamp)
 }
 
 var (

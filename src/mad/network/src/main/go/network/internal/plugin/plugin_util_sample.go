@@ -25,9 +25,9 @@ func allReadings[T any](samples []Sample) []T {
 	return all
 }
 
-func round(v float64, places int) float64 {
+func round(value float64, places int) float64 {
 	factor := math.Pow(10, float64(places))
-	return math.Round(v*factor) / factor
+	return math.Round(value*factor) / factor
 }
 
 type deltaTracker struct {

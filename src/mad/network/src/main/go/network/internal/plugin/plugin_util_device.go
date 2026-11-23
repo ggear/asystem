@@ -134,19 +134,19 @@ func readDevices(devices []remote.GatewayDevice, names []string, deltas *deltaTr
 		if len(links) == 0 {
 			links = append(links, link{key: "uplink", speed: device.Uplink.Speed, rx: device.Uplink.RxBytes, tx: device.Uplink.TxBytes})
 		}
-		for _, l := range links {
-			key := name + "/" + l.key
+		for _, connection := range links {
+			key := name + "/" + connection.key
 			seen, seenOK := deltas.Delta(key+"/seen", device.LastSeen)
-			rx, rxOK := deltas.Delta(key+"/rx", l.rx)
-			tx, txOK := deltas.Delta(key+"/tx", l.tx)
+			rx, rxOK := deltas.Delta(key+"/rx", connection.rx)
+			tx, txOK := deltas.Delta(key+"/tx", connection.tx)
 			if !seenOK || !rxOK || !txOK || seen <= 0 {
 				continue
 			}
 			seconds := float64(seen)
 			reading.hasTraffic = true
 			reading.throughput = math.Max(reading.throughput, float64(rx+tx)*8/seconds/1e6)
-			if l.speed > 0 {
-				reading.network = math.Max(reading.network, float64(max(rx, tx))*8/seconds/(float64(l.speed)*1e6)*100)
+			if connection.speed > 0 {
+				reading.network = math.Max(reading.network, float64(max(rx, tx))*8/seconds/(float64(connection.speed)*1e6)*100)
 			}
 		}
 		reading.experience = math.Min(headroom(reading.cpu/100, deviceCPUKnee), headroom(reading.memory/100, deviceMemoryKnee))

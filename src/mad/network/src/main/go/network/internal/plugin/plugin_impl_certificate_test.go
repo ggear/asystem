@@ -147,9 +147,9 @@ type endpointSample struct {
 
 func certificatePoll(samples ...endpointSample) Sample {
 	readings := make([]certificateReading, 0, len(samples))
-	for _, s := range samples {
+	for _, sample := range samples {
 		readings = append(readings, certificateReading{
-			endpoint: s.addr, days: s.days, validity: s.pct, verified: s.verified})
+			endpoint: sample.addr, days: sample.days, validity: sample.pct, verified: sample.verified})
 	}
 	return Sample{Readings: readings}
 }

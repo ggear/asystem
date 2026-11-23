@@ -105,16 +105,16 @@ func (e *Engine) Run(ctx context.Context) error {
 		scribe.LogInfo(scribe.Global, "running single check across [%d] plugins", len(e.Plugins))
 	}
 	if e.PublishData {
-		cfg := config.Load()
+		loaded := config.Load()
 		onCommand := func(name string, payload []byte) { go e.handleCommand(ctx, name, payload) }
-		if broker, err := remote.NewBroker(cfg.Broker(), cfg.BrokerToken(), onCommand); err != nil {
+		if broker, err := remote.NewBroker(loaded.Broker(), loaded.BrokerToken(), onCommand); err != nil {
 			scribe.LogError(scribe.Global, "failed to connect to broker [%v]", err)
 		} else {
 			e.broker = broker
 		}
-		if cfg.Database() == "" {
+		if loaded.Database() == "" {
 			scribe.LogWarn(scribe.Global, "database address is empty")
-		} else if database, err := remote.NewDatabase(cfg.Database(), cfg.DatabaseToken(), cfg.DatabaseName()); err != nil {
+		} else if database, err := remote.NewDatabase(loaded.Database(), loaded.DatabaseToken(), loaded.DatabaseName()); err != nil {
 			scribe.LogError(scribe.Global, "failed to connect to database [%v]", err)
 		} else {
 			e.database = database
@@ -122,8 +122,8 @@ func (e *Engine) Run(ctx context.Context) error {
 	}
 	defer e.shutdown()
 	e.PollSamples(ctx)
-	for _, v := range e.AggregateSamples(ctx, e.Plugins) {
-		e.publishAggregate(ctx, v)
+	for _, aggregate := range e.AggregateSamples(ctx, e.Plugins) {
+		e.publishAggregate(ctx, aggregate)
 	}
 	if !e.DaemonLoop {
 		return nil
@@ -142,13 +142,13 @@ func (e *Engine) Run(ctx context.Context) error {
 			if polls == pollsPerAggregate {
 				polls = 0
 				e.publishStatus()
-				for _, v := range e.AggregateSamples(ctx, e.Plugins) {
-					e.publishAggregate(ctx, v)
+				for _, aggregate := range e.AggregateSamples(ctx, e.Plugins) {
+					e.publishAggregate(ctx, aggregate)
 				}
 				continue
 			}
-			for _, v := range e.AggregateChanges() {
-				e.publishAggregate(ctx, v)
+			for _, aggregate := range e.AggregateChanges() {
+				e.publishAggregate(ctx, aggregate)
 			}
 		}
 	}
@@ -159,7 +159,7 @@ func (e *Engine) PollSamples(ctx context.Context) {
 	tick := e.polls
 	e.polls++
 	e.sampleMu.Unlock()
-	var wg sync.WaitGroup
+	var group sync.WaitGroup
 	for _, p := range e.Plugins {
 		tracker := p.State()
 		down := tracker != nil && tracker.Get() == plugin.StateOff
@@ -169,17 +169,17 @@ func (e *Engine) PollSamples(ctx context.Context) {
 		if stride, paced := e.pollStrides[p.Name()]; paced && !down && tick%stride != 0 {
 			continue
 		}
-		wg.Add(1)
+		group.Add(1)
 		go func(p plugin.Plugin) {
-			defer wg.Done()
-			m := e.safePoll(ctx, p)
+			defer group.Done()
+			sample := e.safePoll(ctx, p)
 			e.sampleMu.Lock()
-			e.addSample(p.Name(), m)
+			e.addSample(p.Name(), sample)
 			e.sampleMu.Unlock()
 			scribe.LogDebug(p.Name(), "polled [%s]", p.Name())
 		}(p)
 	}
-	wg.Wait()
+	group.Wait()
 }
 
 func (e *Engine) AggregateSamples(ctx context.Context, plugins []plugin.Plugin) []plugin.Aggregate {
@@ -193,27 +193,27 @@ func (e *Engine) AggregateSamples(ctx context.Context, plugins []plugin.Plugin) 
 			samples = e.copySamples(p.Name())
 			e.sampleMu.Unlock()
 			if len(samples) == 0 {
-				m := e.safePoll(ctx, p)
+				sample := e.safePoll(ctx, p)
 				e.sampleMu.Lock()
-				e.addSample(p.Name(), m)
+				e.addSample(p.Name(), sample)
 				samples = e.copySamples(p.Name())
 				e.sampleMu.Unlock()
 			}
 		} else {
-			m := e.safePoll(ctx, p)
-			samples = []plugin.Sample{m}
+			sample := e.safePoll(ctx, p)
+			samples = []plugin.Sample{sample}
 		}
-		v := e.safeAggregate(p, samples)
+		aggregate := e.safeAggregate(p, samples)
 		took := time.Since(start)
 		state := plugin.StateOff
-		if v.OK {
+		if aggregate.OK {
 			state = plugin.StateOn
 		}
 		if tracker := p.State(); tracker != nil {
 			tracker.Set(state)
 		}
-		aggregates = append(aggregates, v)
-		scribe.LogDiagnosis(p.Name(), string(v.Status), v.Score, took, v.Reason)
+		aggregates = append(aggregates, aggregate)
+		scribe.LogDiagnosis(p.Name(), string(aggregate.Status), aggregate.Score, took, aggregate.Reason)
 	}
 	return aggregates
 }
@@ -232,59 +232,59 @@ func (e *Engine) AggregateChanges() []plugin.Aggregate {
 		if len(samples) == 0 {
 			continue
 		}
-		v := e.safeAggregate(p, samples)
+		aggregate := e.safeAggregate(p, samples)
 		state := plugin.StateOff
-		if v.OK {
+		if aggregate.OK {
 			state = plugin.StateOn
 		}
 		if tracker.Get() == state {
 			continue
 		}
 		tracker.Set(state)
-		aggregates = append(aggregates, v)
-		scribe.LogDiagnosis(p.Name(), string(v.Status), v.Score, time.Since(start), v.Reason)
+		aggregates = append(aggregates, aggregate)
+		scribe.LogDiagnosis(p.Name(), string(aggregate.Status), aggregate.Score, time.Since(start), aggregate.Reason)
 	}
 	return aggregates
 }
 
-func (e *Engine) safePoll(ctx context.Context, p plugin.Plugin) (m plugin.Sample) {
+func (e *Engine) safePoll(ctx context.Context, p plugin.Plugin) (sample plugin.Sample) {
 	pollLock := e.pollLocks[p.Name()]
 	pollLock.Lock()
 	defer pollLock.Unlock()
 	defer func() {
-		if r := recover(); r != nil {
-			scribe.LogError(p.Name(), "panicked during poll [%v]", r)
-			m = plugin.Sample{}
+		if recovered := recover(); recovered != nil {
+			scribe.LogError(p.Name(), "panicked during poll [%v]", recovered)
+			sample = plugin.Sample{}
 		}
-		if m.Timestamp.IsZero() {
-			m.Timestamp = time.Now()
+		if sample.Timestamp.IsZero() {
+			sample.Timestamp = time.Now()
 		}
 	}()
-	sample, err := p.Poll(ctx)
+	polled, err := p.Poll(ctx)
 	if err != nil {
 		scribe.LogWarn(p.Name(), "poll failed [%v]", err)
 	}
-	return sample
+	return polled
 }
 
-func (e *Engine) safeAggregate(p plugin.Plugin, samples []plugin.Sample) (v plugin.Aggregate) {
+func (e *Engine) safeAggregate(p plugin.Plugin, samples []plugin.Sample) (aggregate plugin.Aggregate) {
 	defer func() {
-		if r := recover(); r != nil {
-			scribe.LogError(p.Name(), "panicked during aggregate [%v]", r)
-			v = plugin.Diagnose(plugin.StatusDead, 0, "PLUGIN_PANIC: plugin panicked during aggregate")
+		if recovered := recover(); recovered != nil {
+			scribe.LogError(p.Name(), "panicked during aggregate [%v]", recovered)
+			aggregate = plugin.Diagnose(plugin.StatusDead, 0, "PLUGIN_PANIC: plugin panicked during aggregate")
 		}
-		v.Plugin = p.Name()
-		if v.Timestamp.IsZero() {
-			v.Timestamp = time.Now()
+		aggregate.Plugin = p.Name()
+		if aggregate.Timestamp.IsZero() {
+			aggregate.Timestamp = time.Now()
 		}
-		v.Points = append(v.Points, plugin.DiagnosisPoint(v.Plugin, v.OK, v.Score))
+		aggregate.Points = append(aggregate.Points, plugin.DiagnosisPoint(aggregate.Plugin, aggregate.OK, aggregate.Score))
 	}()
-	aggregate, err := p.Aggregate(samples)
+	diagnosed, err := p.Aggregate(samples)
 	if err != nil {
 		scribe.LogWarn(p.Name(), "aggregate failed [%v]", err)
 		return plugin.Diagnose(plugin.StatusDead, 0, fmt.Sprintf("PLUGIN_ERROR: %s", err))
 	}
-	return aggregate
+	return diagnosed
 }
 
 func (e *Engine) publishStatus() {
@@ -296,26 +296,26 @@ func (e *Engine) publishStatus() {
 	}
 }
 
-func (e *Engine) publishBroker(m plugin.Aggregate) {
+func (e *Engine) publishBroker(aggregate plugin.Aggregate) {
 	if e.broker == nil {
 		return
 	}
-	payload, err := m.MarshalJSON()
+	payload, err := aggregate.MarshalJSON()
 	if err != nil {
-		scribe.LogWarn(m.Plugin, "marshal for broker failed [%v]", err)
+		scribe.LogWarn(aggregate.Plugin, "marshal for broker failed [%v]", err)
 		return
 	}
-	if err := e.broker.Publish(remote.DataTopic(m.Plugin), payload); err != nil {
-		scribe.LogWarn(m.Plugin, "publishing to broker failed [%v]", err)
+	if err := e.broker.Publish(remote.DataTopic(aggregate.Plugin), payload); err != nil {
+		scribe.LogWarn(aggregate.Plugin, "publishing to broker failed [%v]", err)
 	}
 }
 
-func (e *Engine) publishAggregate(ctx context.Context, m plugin.Aggregate) {
-	e.publishBroker(m)
+func (e *Engine) publishAggregate(ctx context.Context, aggregate plugin.Aggregate) {
+	e.publishBroker(aggregate)
 	if e.database != nil {
 		e.lineProtocolMu.Lock()
 		e.lineProtocolBuffer.Reset()
-		m.AppendLineProtocol(&e.lineProtocolBuffer, time.Now().UnixNano())
+		aggregate.AppendLineProtocol(&e.lineProtocolBuffer, time.Now().UnixNano())
 		data := append([]byte(nil), e.lineProtocolBuffer.Bytes()...)
 		e.lineProtocolMu.Unlock()
 		if len(data) > 0 {
@@ -349,21 +349,21 @@ func (e *Engine) handleCommand(ctx context.Context, name string, payload []byte)
 		e.refreshMu.Unlock()
 	}()
 	start := time.Now()
-	m := e.safePoll(ctx, p)
+	sample := e.safePoll(ctx, p)
 	e.sampleMu.Lock()
-	e.addSample(name, m)
+	e.addSample(name, sample)
 	samples := e.copySamples(name)
 	e.sampleMu.Unlock()
-	v := e.safeAggregate(p, samples)
+	aggregate := e.safeAggregate(p, samples)
 	if tracker := p.State(); tracker != nil {
 		state := plugin.StateOff
-		if v.OK {
+		if aggregate.OK {
 			state = plugin.StateOn
 		}
 		tracker.Set(state)
 	}
-	e.publishBroker(v)
-	scribe.LogDiagnosis(name, string(v.Status), v.Score, time.Since(start), v.Reason)
+	e.publishBroker(aggregate)
+	scribe.LogDiagnosis(name, string(aggregate.Status), aggregate.Score, time.Since(start), aggregate.Reason)
 }
 
 func (e *Engine) shutdown() {
@@ -388,12 +388,12 @@ func (e *Engine) findPlugin(name string) (plugin.Plugin, bool) {
 	return nil, false
 }
 
-func (e *Engine) addSample(name string, m plugin.Sample) {
+func (e *Engine) addSample(name string, sample plugin.Sample) {
 	window := e.sampleWindow
 	if paced, ok := e.sampleWindows[name]; ok {
 		window = paced
 	}
-	buffer := append(e.sampleBuffers[name], m)
+	buffer := append(e.sampleBuffers[name], sample)
 	if len(buffer) > window {
 		buffer = buffer[len(buffer)-window:]
 	}

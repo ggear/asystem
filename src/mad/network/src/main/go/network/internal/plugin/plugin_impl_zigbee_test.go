@@ -46,7 +46,7 @@ func TestZigbee_Poll(t *testing.T) {
 	if !slices.Contains(asked[1], "zigbee/Kitchen/Pendant") || slices.Contains(asked[1], "zigbee/+") {
 		t.Errorf("topics: got %v want each catalogued device's exact topics once the catalogue is known", asked[1])
 	}
-	pendant := slices.IndexFunc(second.Readings.(zigbeeSample).devices, func(d zigbeeReading) bool { return d.name == "Kitchen/Pendant" })
+	pendant := slices.IndexFunc(second.Readings.(zigbeeSample).devices, func(device zigbeeReading) bool { return device.name == "Kitchen/Pendant" })
 	if pendant < 0 || !second.Readings.(zigbeeSample).devices[pendant].available || second.Readings.(zigbeeSample).devices[pendant].lqi != 90 {
 		t.Errorf("Kitchen/Pendant: got %+v want available with lqi 90 though its name spans two topic levels", second.Readings)
 	}

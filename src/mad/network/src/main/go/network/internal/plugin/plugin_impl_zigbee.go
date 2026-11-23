@@ -184,18 +184,18 @@ func readZigbee(base string, messages map[string][]byte, catalogue []zigbeeBridg
 			reports[strings.TrimPrefix(topic, base+"/")] = r
 		}
 	}
-	for _, d := range catalogue {
-		if strings.EqualFold(d.Type, "Coordinator") {
+	for _, device := range catalogue {
+		if strings.EqualFold(device.Type, "Coordinator") {
 			continue
 		}
-		r := reports[d.FriendlyName]
+		reported := reports[device.FriendlyName]
 		sample.devices = append(sample.devices, zigbeeReading{
-			name:        d.FriendlyName,
-			available:   availability[d.FriendlyName],
-			lqi:         r.lqi,
-			hasLQI:      r.hasLQI,
-			lastSeen:    r.lastSeen,
-			hasLastSeen: r.hasLastSeen,
+			name:        device.FriendlyName,
+			available:   availability[device.FriendlyName],
+			lqi:         reported.lqi,
+			hasLQI:      reported.hasLQI,
+			lastSeen:    reported.lastSeen,
+			hasLastSeen: reported.hasLastSeen,
 		})
 	}
 	return sample, catalogue

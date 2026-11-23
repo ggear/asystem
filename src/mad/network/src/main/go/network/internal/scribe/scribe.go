@@ -99,17 +99,17 @@ func (h *handler) Enabled(_ context.Context, level slog.Level) bool {
 func (h *handler) Handle(_ context.Context, record slog.Record) error {
 	subject := Global
 	dotted := false
-	var attrs strings.Builder
-	record.Attrs(func(attr slog.Attr) bool {
-		switch attr.Key {
+	var attributes strings.Builder
+	record.Attrs(func(attribute slog.Attr) bool {
+		switch attribute.Key {
 		case subjectKey:
-			subject = attr.Value.String()
+			subject = attribute.Value.String()
 			return true
 		case leaderKey:
-			dotted = attr.Value.Bool()
+			dotted = attribute.Value.Bool()
 			return true
 		}
-		fmt.Fprintf(&attrs, " %s=[%v]", attr.Key, attr.Value.Any())
+		fmt.Fprintf(&attributes, " %s=[%v]", attribute.Key, attribute.Value.Any())
 		return true
 	})
 	var line strings.Builder
@@ -124,7 +124,7 @@ func (h *handler) Handle(_ context.Context, record slog.Record) error {
 		fmt.Fprintf(&line, "%-*s ", subjectWidth, tag)
 	}
 	line.WriteString(record.Message)
-	line.WriteString(attrs.String())
+	line.WriteString(attributes.String())
 	line.WriteByte('\n')
 	scribeMutex.Lock()
 	writer := scribeWriter

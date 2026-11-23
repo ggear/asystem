@@ -76,9 +76,9 @@ func (p *internetPlugin) Poll(ctx context.Context) (Sample, error) {
 		return fmt.Sprintf("%03d.%03d.%03d.%03d", octets[0], octets[1], octets[2], octets[3])
 	}
 	readings := make([]internetReading, len(p.targets))
-	var wg sync.WaitGroup
-	for i, t := range p.targets {
-		wg.Go(func() {
+	var group sync.WaitGroup
+	for i, target := range p.targets {
+		group.Go(func() {
 			roundTrips := make([]float64, 0, internetBurstSize)
 			sent := 0
 			for j := range internetBurstSize {
@@ -86,10 +86,10 @@ func (p *internetPlugin) Poll(ctx context.Context) (Sample, error) {
 					break
 				}
 				sent++
-				if d, err := p.probe(ctx, t.ip); err == nil {
-					roundTrips = append(roundTrips, float64(d)/float64(time.Millisecond))
+				if elapsed, err := p.probe(ctx, target.ip); err == nil {
+					roundTrips = append(roundTrips, float64(elapsed)/float64(time.Millisecond))
 				} else {
-					scribe.LogDebug("internet", "probe of [%s] failed [%v]", padded(t.ip), err)
+					scribe.LogDebug("internet", "probe of [%s] failed [%v]", padded(target.ip), err)
 				}
 				if j < internetBurstSize-1 {
 					select {
@@ -103,8 +103,8 @@ func (p *internetPlugin) Poll(ctx context.Context) (Sample, error) {
 			if sent > 0 {
 				loss = 100 * float64(sent-received) / float64(sent)
 			}
-			scribe.LogDebug("internet", "probed [%s] sent [%d] recv [%d] loss_pct [%v]", padded(t.ip), sent, received, loss)
-			reading := internetReading{target: t.ip, gateway: t.gateway, lossPct: loss}
+			scribe.LogDebug("internet", "probed [%s] sent [%d] recv [%d] loss_pct [%v]", padded(target.ip), sent, received, loss)
+			reading := internetReading{target: target.ip, gateway: target.gateway, lossPct: loss}
 			if received > 0 {
 				reading.rttMs, reading.jitter = readInternet(roundTrips)
 				reading.hasRTT = true
@@ -112,7 +112,7 @@ func (p *internetPlugin) Poll(ctx context.Context) (Sample, error) {
 			readings[i] = reading
 		})
 	}
-	wg.Wait()
+	group.Wait()
 	return Sample{Readings: readings}, nil
 }
 
@@ -136,8 +136,8 @@ func probeInternet(ctx context.Context, ip string) (time.Duration, error) {
 		return 0, err
 	}
 	body := &icmp.Echo{ID: os.Getpid() & 0xffff, Seq: int(internetPingSequence.Add(1)) & 0xffff, Data: []byte("network")}
-	msg := icmp.Message{Type: ipv4.ICMPTypeEcho, Code: 0, Body: body}
-	request, err := msg.Marshal(nil)
+	message := icmp.Message{Type: ipv4.ICMPTypeEcho, Code: 0, Body: body}
+	request, err := message.Marshal(nil)
 	if err != nil {
 		return 0, err
 	}
@@ -161,17 +161,17 @@ func probeInternet(ctx context.Context, ip string) (time.Duration, error) {
 	}
 }
 
-func readInternet(roundTrips []float64) (avg, jitter float64) {
+func readInternet(roundTrips []float64) (mean, jitter float64) {
 	sum := 0.0
-	for _, v := range roundTrips {
-		sum += v
+	for _, roundTrip := range roundTrips {
+		sum += roundTrip
 	}
-	avg = sum / float64(len(roundTrips))
+	mean = sum / float64(len(roundTrips))
 	variance := 0.0
-	for _, v := range roundTrips {
-		variance += (v - avg) * (v - avg)
+	for _, roundTrip := range roundTrips {
+		variance += (roundTrip - mean) * (roundTrip - mean)
 	}
-	return avg, math.Sqrt(variance / float64(len(roundTrips)))
+	return mean, math.Sqrt(variance / float64(len(roundTrips)))
 }
 
 func diagnoseInternet(samples []Sample) Aggregate {
@@ -219,22 +219,22 @@ func diagnoseInternet(samples []Sample) Aggregate {
 	replied := 0
 	for _, ip := range publicIPs {
 		accumulator := accumulators[ip]
-		lossSum += accumulator.avgLoss()
+		lossSum += accumulator.meanLoss()
 		if accumulator.reachable() {
 			reachable++
 		}
 		if accumulator.replied > 0 {
-			rttSum += accumulator.avgRTT()
-			jitterSum += accumulator.avgJitter()
+			rttSum += accumulator.meanRTT()
+			jitterSum += accumulator.meanJitter()
 			replied++
 		}
 	}
-	avgLoss, avgRTT, avgJitter := 0.0, 0.0, 0.0
+	meanLoss, meanRTT, meanJitter := 0.0, 0.0, 0.0
 	if len(publicIPs) > 0 {
-		avgLoss = round(lossSum/float64(len(publicIPs)), 1)
+		meanLoss = round(lossSum/float64(len(publicIPs)), 1)
 	}
 	if replied > 0 {
-		avgRTT, avgJitter = round(rttSum/float64(replied), 1), round(jitterSum/float64(replied), 1)
+		meanRTT, meanJitter = round(rttSum/float64(replied), 1), round(jitterSum/float64(replied), 1)
 	}
 	result := Aggregate{}
 	switch {
@@ -246,21 +246,21 @@ func diagnoseInternet(samples []Sample) Aggregate {
 		result = Diagnose(StatusDead, 0, "ISP_DOWN: all internet targets unreachable in the latest poll")
 	default:
 		latencyPenalty := 0
-		if avgRTT > internetRTTFitMax {
-			latencyPenalty = min(int(math.Round((avgRTT-internetRTTFitMax)/5)), 30)
+		if meanRTT > internetRTTFitMax {
+			latencyPenalty = min(int(math.Round((meanRTT-internetRTTFitMax)/5)), 30)
 		}
 		jitterPenalty := 0
-		if avgJitter > internetJitterFitMax {
-			jitterPenalty = min(int(math.Round((avgJitter-internetJitterFitMax)/2)), 20)
+		if meanJitter > internetJitterFitMax {
+			jitterPenalty = min(int(math.Round((meanJitter-internetJitterFitMax)/2)), 20)
 		}
-		score := clamp(100 - int(math.Round(avgLoss)) - (len(publicIPs)-reachable)*internetTargetDownCost - latencyPenalty - jitterPenalty)
+		score := clamp(100 - int(math.Round(meanLoss)) - (len(publicIPs)-reachable)*internetTargetDownCost - latencyPenalty - jitterPenalty)
 		switch {
-		case avgLoss <= internetLossFitMax && reachable == len(publicIPs) && avgRTT <= internetRTTFitMax && avgJitter <= internetJitterFitMax:
+		case meanLoss <= internetLossFitMax && reachable == len(publicIPs) && meanRTT <= internetRTTFitMax && meanJitter <= internetJitterFitMax:
 			result = Diagnose(StatusFit, score, "UP: internet reachable within normal range")
-		case avgRTT > internetRTTFitMax || avgJitter > internetJitterFitMax:
-			result = Diagnose(StatusSick, score, fmt.Sprintf("HIGH_LATENCY: elevated latency with average RTT %.1fms and average jitter %.1fms", avgRTT, avgJitter))
+		case meanRTT > internetRTTFitMax || meanJitter > internetJitterFitMax:
+			result = Diagnose(StatusSick, score, fmt.Sprintf("HIGH_LATENCY: elevated latency with average RTT %.1fms and average jitter %.1fms", meanRTT, meanJitter))
 		default:
-			result = Diagnose(StatusSick, score, fmt.Sprintf("ELEVATED_LOSS: elevated loss of %.1f%% with %d of %d targets reachable", avgLoss, reachable, len(publicIPs)))
+			result = Diagnose(StatusSick, score, fmt.Sprintf("ELEVATED_LOSS: elevated loss of %.1f%% with %d of %d targets reachable", meanLoss, reachable, len(publicIPs)))
 		}
 	}
 	result.Points = reportInternet(order, accumulators)
@@ -278,9 +278,9 @@ func reportInternet(order []string, accumulators map[string]*internetPingAccumul
 		points = append(points, internetTarget.Point(
 			internetName.Of(name),
 			internetReachable.Of(accumulator.reachable()),
-			internetLoss.Of(round(accumulator.avgLoss(), 0)),
-			internetRTT.Of(round(accumulator.avgRTT(), 1)),
-			internetJitter.Of(round(accumulator.avgJitter(), 1))))
+			internetLoss.Of(round(accumulator.meanLoss(), 0)),
+			internetRTT.Of(round(accumulator.meanRTT(), 1)),
+			internetJitter.Of(round(accumulator.meanJitter(), 1))))
 	}
 	return points
 }
@@ -310,18 +310,18 @@ func internetPingTargets(gateway string) []internetPingTarget {
 	return targets
 }
 
-func (a *internetPingAccumulator) avgLoss() float64 { return a.lossSum / float64(a.polls) }
+func (a *internetPingAccumulator) meanLoss() float64 { return a.lossSum / float64(a.polls) }
 
-func (a *internetPingAccumulator) reachable() bool { return a.avgLoss() < 100 }
+func (a *internetPingAccumulator) reachable() bool { return a.meanLoss() < 100 }
 
-func (a *internetPingAccumulator) avgRTT() float64 {
+func (a *internetPingAccumulator) meanRTT() float64 {
 	if a.replied == 0 {
 		return 0
 	}
 	return a.rttSum / float64(a.replied)
 }
 
-func (a *internetPingAccumulator) avgJitter() float64 {
+func (a *internetPingAccumulator) meanJitter() float64 {
 	if a.replied == 0 {
 		return 0
 	}

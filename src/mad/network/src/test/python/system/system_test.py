@@ -25,19 +25,14 @@ DIR_SCHEMA = join(DIR_ROOT, "src/build/resources/schema/vernemq")
 SCHEMA_LEAF = "payload"
 
 
-def _client():
-    return mqtt.Client(CallbackAPIVersion.VERSION2, client_id="".join(random.choice(string.ascii_lowercase) for _ in range(10)), clean_session=True)
-
-
-def _assert_vitals(payload):
-    body = json.loads(payload)
-    assert isinstance(body["timestamp"], int)
-    assert isinstance(body["ok"], bool)
-    assert body["status"] in TRIAD
-    assert isinstance(body["score"], int) and 0 <= body["score"] <= 100
-
-
 def test_publishes_vitals_and_accepts_switch_command():
+    def assert_vitals(payload):
+        body = json.loads(payload)
+        assert isinstance(body["timestamp"], int)
+        assert isinstance(body["ok"], bool)
+        assert body["status"] in TRIAD
+        assert isinstance(body["score"], int) and 0 <= body["score"] <= 100
+
     def test():
         received = {}
 
@@ -50,7 +45,7 @@ def test_publishes_vitals_and_accepts_switch_command():
             received[message.topic] = message.payload
             print(f"Message [{message.topic}] {message.payload}")
 
-        client = _client()
+        client = mqtt.Client(CallbackAPIVersion.VERSION2, client_id="".join(random.choice(string.ascii_lowercase) for _ in range(10)), clean_session=True)
         client.on_connect = on_connect
         client.on_message = on_message
         client.connect(HOST, PORT)
@@ -58,7 +53,7 @@ def test_publishes_vitals_and_accepts_switch_command():
         while ({STATUS_TOPIC, DATA_TOPIC} - received.keys()) and (time.time() - time_start) < TIMEOUT and client.loop(1) == 0:
             pass
         assert received.get(STATUS_TOPIC) == b"online"
-        _assert_vitals(received[DATA_TOPIC])
+        assert_vitals(received[DATA_TOPIC])
         client.publish(COMMAND_TOPIC, "OFF", 1)
         client.publish(COMMAND_TOPIC, "ON", 1)
         time_start = time.time()
@@ -66,7 +61,7 @@ def test_publishes_vitals_and_accepts_switch_command():
             pass
         client.disconnect()
         assert received.get(STATUS_TOPIC) == b"online"
-        _assert_vitals(received[DATA_TOPIC])
+        assert_vitals(received[DATA_TOPIC])
 
     success = False
     time_start_warmup = time.time()
@@ -81,17 +76,11 @@ def test_publishes_vitals_and_accepts_switch_command():
 
 
 def test_declares_every_published_topic():
-    declared = set(_schema_topics())
+    topics_dir = join(DIR_SCHEMA, "model")
+    declared = {os.path.relpath(directory, topics_dir) for directory, _, files in os.walk(topics_dir) if SCHEMA_LEAF in files}
     assert declared, f"no declared topics under [{DIR_SCHEMA}]"
     for topic in (STATUS_TOPIC, DATA_TOPIC, COMMAND_TOPIC):
         assert topic in declared, f"published topic [{topic}] is not declared"
-
-
-def _schema_topics():
-    topics_dir = join(DIR_SCHEMA, "model")
-    for directory, _, files in os.walk(topics_dir):
-        if SCHEMA_LEAF in files:
-            yield os.path.relpath(directory, topics_dir)
 
 
 if __name__ == "__main__":

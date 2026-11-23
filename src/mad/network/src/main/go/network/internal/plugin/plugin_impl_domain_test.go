@@ -151,9 +151,9 @@ type resolverSample struct {
 
 func domainPoll(samples ...resolverSample) Sample {
 	readings := make([]domainReading, 0, len(samples))
-	for _, s := range samples {
+	for _, sample := range samples {
 		readings = append(readings, domainReading{
-			resolver: s.name, addresses: s.addresses, resolved: s.resolved, latencyMs: s.latency})
+			resolver: sample.name, addresses: sample.addresses, resolved: sample.resolved, latencyMs: sample.latency})
 	}
 	return Sample{Readings: readings}
 }

@@ -28,8 +28,8 @@ func (s *gatewaySession) fetch(ctx context.Context) ([]remote.GatewayDevice, []r
 		return s.devices, s.clients, nil
 	}
 	if s.gateway == nil {
-		cfg := config.Load()
-		gateway, err := remote.NewGateway(cfg.UnifiURL(), cfg.UnifiSite(), cfg.UnifiUser(), cfg.UnifiToken())
+		loaded := config.Load()
+		gateway, err := remote.NewGateway(loaded.UnifiURL(), loaded.UnifiSite(), loaded.UnifiUser(), loaded.UnifiToken())
 		if err != nil {
 			return nil, nil, err
 		}

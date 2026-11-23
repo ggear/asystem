@@ -43,7 +43,7 @@ fi
 shopt -s expand_aliases
 
 if
-  ps -ef | grep "[/]asystem/bin/network" >/dev/null
+  pgrep -f "^/asystem/bin/network" >/dev/null
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && exec {HEALTHCHECK_TRACE}>&- && wait "${HEALTHCHECK_TRACER}"
