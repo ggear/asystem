@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/InfluxCommunity/influxdb3-go v0.14.0
-	github.com/eclipse/paho.mqtt.golang v1.5.1
+	github.com/eclipse/paho.mqtt.golang v1.5.2
 	github.com/spf13/cobra v1.10.2
 	golang.org/x/net v0.63.0
 )

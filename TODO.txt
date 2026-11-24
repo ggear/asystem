@@ -11,7 +11,6 @@ Make smart physical light switch
 Repair TPLink KP115 smart plugs and deploy
 Google home remediation
 Add compensators for all batteries, calibrated to lifetime of rechargables, add push notifcations, load data from files with query creating csv, select polynomial order by using BIC, polars test, maybe just ensure non noisy data by averaging bins and removing outliers
-Isolate TV from internet
 Hack Telstra modem to get 5g backup, add aerial
 Rename Basement Netatmo module to Deck
 Fix fedora resolution so screen works on reboot
@@ -23,11 +22,12 @@ Install door cameras, use for gates?
 Setup outdoor air quality monitor
 Implement Coral/Frigate
 Add big ass temps for deck
-Retire nginx and use cloudflared for homeasistant?
-Improve sys tests with datbase/broker asserts for all modules
 
 
-Review complete patch
+
+###############################################################################################################################################################
+# Grafana
+###############################################################################################################################################################
 Review updateability of dashbaords, generate.py locally collect each definition nicely? inline consts/queries etc?
 Validate Conditions, Diagnostics, electcirty, Rain
 Validte Currency, Equity, Interest
@@ -37,25 +37,13 @@ Validate Containers, Internet, Network, Servers
 ###############################################################################################################################################################
 # Supervisor
 ###############################################################################################################################################################
-
 Increase Aloc RAM to warn at 90, error at 95 and increase supervisor mem
 Chnage yellow on rack screen to better colour
-
-code review what is not in git yet
-Make sure project guidleines are followed.
-Check all logic.
-No comments except for clear excpetions eg document interface/complicated process.
-Check for simplications, dead code, unit tests gaps, unit tests that arent valuable (eg test log statements).
-reorganise struct/var/funcs by project guidleines 
-
 check all metrics working 
 adjust memeory allocs
 check metric attribution works by metric filter when multiple probe_* feed single metric
 verify caching hour and all metrics performance, increase poll frequency?
 add restore.sh and test 
-
-
-
 display_terminal.go: hide tcell namespace completely - tcell.Event?
 Make database persistance off-loop so not using loop budget on database
 Why a reconcile in 10s detail=observed [raspbpi-jen], status [online], trigger [restart], resubscribed [47] topics, reconcile in [10000] ms?
@@ -124,7 +112,7 @@ Issues today: mounts all work, mlflow creates a share/1, sonarr requires mad to 
 
 
 ###############################################################################################################################################################
-# InfluxDB3
+# InfluxDB
 ###############################################################################################################################################################
 Enable explorer
 Tune influxdb compactor given real world inputs
@@ -171,7 +159,6 @@ Add additional local tests
 ###############################################################################################################################################################
 # Network
 ###############################################################################################################################################################
-Recover from weex/zigbee2mtt/* outage quickly like internet - what needs to change?
 Validate all plugins logic against grafana
 test internet when downloading
 have certs check letsnecrypt cert actually deployed to all targets, amke deployment nice
@@ -243,7 +230,7 @@ Improve cert renewal and dissemination
 
 
 ###############################################################################################################################################################
-# MLFlow/MLServer
+# MLModels
 ###############################################################################################################################################################
 Implement hot water real world temp
 Implement a mad temp based on what I have, ssd temp + ambient + model of M2 Pro temp gradient/fan speeds

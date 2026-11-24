@@ -8,7 +8,7 @@ require (
 	github.com/divan/num2words v1.0.3
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/docker/go-units v0.5.0
-	github.com/eclipse/paho.mqtt.golang v1.5.1
+	github.com/eclipse/paho.mqtt.golang v1.5.2
 	github.com/gdamore/tcell/v3 v3.6.0
 	github.com/mattn/go-runewidth v0.0.31
 	github.com/moby/moby/api v1.57.0
