@@ -35,15 +35,7 @@ EQUITY_SPOT_TYPES = [
 
 
 def database_schema():
-    return [_currency(), _interest(), _equity()]
-
-
-def table_name(relation):
-    return relation.path.split("/", 1)[0]
-
-
-def _currency():
-    measures_all = [
+    currency_measures = [
         _measure(
             "snapshot",
             "1d",
@@ -58,45 +50,41 @@ def _currency():
             ),
         )
     ]
-    measures_all += [_measure("delta", f"{days:0.0f}d", "%", f"change in the rate across [{label}]") for label, days in CURRENCY_PERIODS.items()]
-    return SchemaDatabaseRelation(
-        path="currency/rate",
-        description="foreign exchange rates published by the Reserve Bank of Australia",
-        cadence=CADENCE,
-        entities=list(CURRENCY_PAIRS),
-        dimensions=[SchemaDatabaseDimension(key="entity", description="currency pair", subject=True)],
-        measures=measures_all,
-    )
-
-
-def _interest():
-    measures_all = [_measure("mean", "1mo", "%", "mean rate across the month")]
-    measures_all += [_measure("mean", f"{months / 12:0.0f}y", "%", f"mean rate across [{label}]") for label, months in INTEREST_PERIODS.items()]
-    return SchemaDatabaseRelation(
-        path="interest/rate",
-        description="interest and inflation rates published by the Reserve Bank of Australia",
-        cadence=CADENCE,
-        entities=list(INTEREST_LABELS),
-        dimensions=[SchemaDatabaseDimension(key="entity", description="rate series", subject=True)],
-        measures=measures_all,
-    )
-
-
-def _equity():
-    measures_all = [_measure(metric_type, "1d", "$", "daily {} reading".format(metric_type.replace("-", " "))) for metric_type in EQUITY_SPOT_TYPES]
+    currency_measures += [_measure("delta", f"{days:0.0f}d", "%", f"change in the rate across [{label}]") for label, days in CURRENCY_PERIODS.items()]
+    interest_measures = [_measure("mean", "1mo", "%", "mean rate across the month")]
+    interest_measures += [_measure("mean", f"{months / 12:0.0f}y", "%", f"mean rate across [{label}]") for label, months in INTEREST_PERIODS.items()]
+    equity_measures = [_measure(metric_type, "1d", "$", "daily {} reading".format(metric_type.replace("-", " "))) for metric_type in EQUITY_SPOT_TYPES]
     for change_period in DIMENSIONS_CHANGE_PERIODS:
-        measures_all.extend(
+        equity_measures.extend(
             _measure(f"{price_type}-{change_period}d-change-percentage", f"{change_period}d", "%", "change in {} across [{}] days".format(price_type.replace("-", " "), change_period))
             for price_type in ("price-close", "price-close-base", "price-close-spot")
         )
-    return SchemaDatabaseRelation(
-        path="equity/ticker",
-        description="equity prices and volumes downloaded per ticker",
-        cadence=CADENCE,
-        entities=EQUITY_TICKERS,
-        dimensions=[SchemaDatabaseDimension(key="entity", description="ticker symbol", subject=True)],
-        measures=measures_all,
-    )
+    return [
+        SchemaDatabaseRelation(
+            path="currency/rate",
+            description="foreign exchange rates published by the Reserve Bank of Australia",
+            cadence=CADENCE,
+            entities=list(CURRENCY_PAIRS),
+            dimensions=[SchemaDatabaseDimension(key="entity", description="currency pair", subject=True)],
+            measures=currency_measures,
+        ),
+        SchemaDatabaseRelation(
+            path="interest/rate",
+            description="interest and inflation rates published by the Reserve Bank of Australia",
+            cadence=CADENCE,
+            entities=list(INTEREST_LABELS),
+            dimensions=[SchemaDatabaseDimension(key="entity", description="rate series", subject=True)],
+            measures=interest_measures,
+        ),
+        SchemaDatabaseRelation(
+            path="equity/ticker",
+            description="equity prices and volumes downloaded per ticker",
+            cadence=CADENCE,
+            entities=EQUITY_TICKERS,
+            dimensions=[SchemaDatabaseDimension(key="entity", description="ticker symbol", subject=True)],
+            measures=equity_measures,
+        ),
+    ]
 
 
 def _measure(metric_type, period, unit, description, levels=None):

@@ -25,7 +25,7 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::Mqtt(msg) => write!(f, "mqtt error [{msg}]"),
+            Error::Mqtt(message) => write!(f, "mqtt error [{message}]"),
             Error::Timeout => write!(f, "timed out connecting to broker"),
         }
     }
@@ -48,8 +48,7 @@ pub struct MqttPublisher {
 impl MqttPublisher {
     pub fn new(host: &str, port: u16, token: &str, status_topic: &str) -> Result<Self> {
         let mut options = MqttOptions::new("tempstat", host, port);
-        let has_token = !token.is_empty();
-        if has_token {
+        if !token.is_empty() {
             options.set_credentials("tempstat", token);
         }
         options.set_last_will(LastWill::new(status_topic, "offline", QoS::AtLeastOnce, true));
@@ -143,8 +142,9 @@ impl MqttPublisher {
         }
     }
 
-    pub fn close(&mut self, status_topic: &str) -> Result<()> {
-        let published = self.publish(status_topic, b"offline");
+    pub fn close(&mut self) -> Result<()> {
+        let status_topic = self.status_topic.clone();
+        let published = self.publish(&status_topic, b"offline");
         self.shutdown.store(true, Ordering::SeqCst);
         let disconnected = self.client.disconnect().map_err(|err| Error::Mqtt(err.to_string()));
         if let Some(handle) = self.handle.take() {

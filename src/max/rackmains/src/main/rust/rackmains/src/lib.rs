@@ -133,6 +133,7 @@ mod tests {
             ("cli", include_str!("cli.rs")),
             ("drill", include_str!("drill.rs")),
             ("guard", include_str!("guard.rs")),
+            ("hostswitch", include_str!("hostswitch.rs")),
             ("liveness", include_str!("liveness.rs")),
             ("main", include_str!("main.rs")),
             ("mock", include_str!("mock.rs")),

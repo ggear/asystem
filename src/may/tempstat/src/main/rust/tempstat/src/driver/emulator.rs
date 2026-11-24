@@ -63,10 +63,8 @@ impl MockDs2480b {
             }
         }
         out.push(byte);
-        match byte {
-            0xBE => self.pending = scratchpad().into_iter().collect(),
-            0x33 => self.pending = rom().into_iter().collect(),
-            _ => {}
+        if byte == 0xBE {
+            self.pending = scratchpad().into_iter().collect();
         }
     }
 }
@@ -136,7 +134,6 @@ impl MockDs9097 {
     fn dispatch(&mut self, command: u8) {
         match command {
             0x55 => self.state = State::MatchRom(64),
-            0x33 => self.output = bit_queue(&rom()),
             0xF0 => {
                 self.state = State::Search {
                     index: 0,
@@ -316,9 +313,9 @@ mod tests {
 
     #[test]
     fn mock_drives_real_driver_end_to_end() {
-        let mut bus = Ds2480b::new(FsmUart::new(MockDs2480b::new())).unwrap();
+        let mut bus = Ds2480b::from_uart(FsmUart::new(MockDs2480b::new()));
+        bus.redetect().unwrap();
         let device = Ds18b20::attach(&mut bus, None).unwrap();
-        assert!(!device.parasitic());
         assert_eq!(device.resolution(), Resolution::Bits12);
         let temperature = device.get_temperature(&mut bus).unwrap();
         assert!((temperature - 25.0625).abs() < 0.001);
@@ -346,7 +343,6 @@ mod tests {
     fn mock_drives_ds9097_driver_end_to_end() {
         let mut bus = Ds9097::new(FsmUart::new(MockDs9097::new())).unwrap();
         let device = Ds18b20::attach(&mut bus, None).unwrap();
-        assert!(!device.parasitic());
         assert_eq!(device.resolution(), Resolution::Bits12);
         let temperature = device.get_temperature(&mut bus).unwrap();
         assert!((temperature - 25.0625).abs() < 0.001);
@@ -365,12 +361,6 @@ mod tests {
     fn mock_ds9097_answers_rom_search() {
         let mut bus = Ds9097::new(FsmUart::new(MockDs9097::new())).unwrap();
         assert_eq!(bus.get_connected_roms().unwrap(), vec![Rom(rom())]);
-    }
-
-    #[test]
-    fn mock_ds9097_reads_rom() {
-        let mut bus = Ds9097::new(FsmUart::new(MockDs9097::new())).unwrap();
-        assert_eq!(bus.read_rom().unwrap(), Rom(rom()));
     }
 
     #[test]
@@ -402,7 +392,7 @@ mod tests {
 
     #[test]
     fn ds2480b_detect_fails_against_passive_mock() {
-        assert!(Ds2480b::new(FsmUart::new(MockDs9097::new())).is_err());
+        assert!(Ds2480b::from_uart(FsmUart::new(MockDs9097::new())).redetect().is_err());
     }
 
     #[test]

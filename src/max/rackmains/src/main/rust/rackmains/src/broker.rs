@@ -23,7 +23,7 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::Mqtt(msg) => write!(f, "mqtt error [{msg}]"),
+            Error::Mqtt(message) => write!(f, "mqtt error [{message}]"),
             Error::Down => write!(f, "broker down"),
             Error::Timeout => write!(f, "timed out connecting to broker"),
         }

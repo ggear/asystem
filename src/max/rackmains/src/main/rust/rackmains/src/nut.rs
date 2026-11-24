@@ -112,7 +112,7 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Error::Stale => write!(f, "device data stale"),
-            Error::Read(msg) => write!(f, "device read error [{msg}]"),
+            Error::Read(message) => write!(f, "device read error [{message}]"),
         }
     }
 }

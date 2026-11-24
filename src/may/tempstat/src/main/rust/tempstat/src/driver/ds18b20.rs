@@ -17,7 +17,7 @@ const WRITE_SCRATCHPAD: u8 = 0x4E;
 const READ_SCRATCHPAD: u8 = 0xBE;
 const COPY_SCRATCHPAD: u8 = 0x48;
 const READ_POWER_SUPPLY: u8 = 0xB4;
-const SCRATCHPAD_LEN: usize = 9;
+const SCRATCHPAD_LENGTH: usize = 9;
 const READ_ATTEMPTS: usize = 3;
 const COMPLETION_POLL_PERIOD: Duration = Duration::from_millis(10);
 const COMPLETION_MARGIN: u32 = 2;
@@ -95,14 +95,6 @@ impl Ds18b20 {
         Ok(device)
     }
 
-    pub fn rom(&self) -> Option<&Rom> {
-        self.rom.as_ref()
-    }
-
-    pub fn parasitic(&self) -> bool {
-        self.parasitic
-    }
-
     pub fn resolution(&self) -> Resolution {
         self.resolution
     }
@@ -146,13 +138,13 @@ impl Ds18b20 {
         }
     }
 
-    pub fn read_scratchpad(&self, bus: &mut (impl OneWire + ?Sized)) -> Result<[u8; SCRATCHPAD_LEN]> {
+    pub fn read_scratchpad(&self, bus: &mut (impl OneWire + ?Sized)) -> Result<[u8; SCRATCHPAD_LENGTH]> {
         self.select(bus)?;
         bus.write_byte(READ_SCRATCHPAD)?;
-        let data = bus.read_bytes(SCRATCHPAD_LEN)?;
-        let mut scratchpad = [0u8; SCRATCHPAD_LEN];
+        let data = bus.read_bytes(SCRATCHPAD_LENGTH)?;
+        let mut scratchpad = [0u8; SCRATCHPAD_LENGTH];
         scratchpad.copy_from_slice(&data);
-        if crc8(&scratchpad[..SCRATCHPAD_LEN - 1]) != scratchpad[SCRATCHPAD_LEN - 1] {
+        if crc8(&scratchpad[..SCRATCHPAD_LENGTH - 1]) != scratchpad[SCRATCHPAD_LENGTH - 1] {
             return Err(Error::Crc);
         }
         Ok(scratchpad)
@@ -205,7 +197,7 @@ impl Ds18b20 {
     }
 }
 
-fn decode_temperature(scratchpad: &[u8; SCRATCHPAD_LEN]) -> f32 {
+fn decode_temperature(scratchpad: &[u8; SCRATCHPAD_LENGTH]) -> f32 {
     f32::from(i16::from_le_bytes([scratchpad[0], scratchpad[1]])) / 16.0
 }
 
@@ -221,7 +213,9 @@ mod tests {
     fn make_bus() -> Ds2480b<MockUart> {
         let mut uart = MockUart::new();
         uart.queue_read(&[0x16, 0x44, 0x5A, 0x00, 0x93]);
-        Ds2480b::new(uart).unwrap()
+        let mut bus = Ds2480b::from_uart(uart);
+        bus.redetect().unwrap();
+        bus
     }
 
     fn written(bus: &Ds2480b<MockUart>) -> &[u8] {
@@ -291,7 +285,7 @@ mod tests {
         queue_passive_write(&mut bus.uart, &[0xCC, 0xBE]);
         queue_passive_write(&mut bus.uart, &data);
         let device = Ds18b20::attach(&mut bus, None).unwrap();
-        assert!(!device.parasitic());
+        assert!(!device.parasitic);
         assert_eq!(device.resolution(), Resolution::Bits9);
         bus.uart.queue_read(&[0xE0]);
         queue_passive_write(&mut bus.uart, &[0xCC, 0x44]);
@@ -306,9 +300,9 @@ mod tests {
     fn attach_detects_power_and_resolution() {
         let mut bus = make_bus();
         let device = make_device(&mut bus);
-        assert!(!device.parasitic());
+        assert!(!device.parasitic);
         assert_eq!(device.resolution(), Resolution::Bits12);
-        assert!(device.rom().is_none());
+        assert!(device.rom.is_none());
         assert!(bus.uart.reads.is_empty());
     }
 
@@ -318,7 +312,7 @@ mod tests {
         queue_power(&mut bus.uart, true);
         queue_scratchpad(&mut bus.uart, &scratchpad([0x91, 0x01], 0x4B, 0x46, 0x7F));
         let device = Ds18b20::attach(&mut bus, None).unwrap();
-        assert!(device.parasitic());
+        assert!(device.parasitic);
     }
 
     #[test]
@@ -352,7 +346,7 @@ mod tests {
         bus.uart.queue_read(&[0xBE]);
         bus.uart.queue_read(&scratchpad([0x91, 0x01], 0x4B, 0x46, 0x7F));
         let device = Ds18b20::attach(&mut bus, Some(rom)).unwrap();
-        assert_eq!(device.rom(), Some(&rom));
+        assert_eq!(device.rom, Some(rom));
         let expected_select: Vec<u8> = select_echo;
         assert!(written(&bus)
             .windows(expected_select.len())
@@ -386,7 +380,7 @@ mod tests {
         queue_power(&mut bus.uart, true);
         queue_scratchpad(&mut bus.uart, &scratchpad([0x91, 0x01], 0x4B, 0x46, 0x1F));
         let device = Ds18b20::attach(&mut bus, None).unwrap();
-        assert!(device.parasitic());
+        assert!(device.parasitic);
         queue_skip_select(&mut bus.uart);
         bus.uart
             .queue_read(&[0x3E, 0x94, 0x94, 0x97, 0x94, 0x94, 0x94, 0x97, 0x94]);

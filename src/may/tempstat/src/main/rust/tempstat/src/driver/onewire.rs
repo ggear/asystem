@@ -10,7 +10,6 @@ use super::rom::Rom;
 use super::{Error, Result};
 
 const ROM_SEARCH: u8 = 0xF0;
-const ROM_READ: u8 = 0x33;
 const ROM_MATCH: u8 = 0x55;
 const ROM_SKIP: u8 = 0xCC;
 
@@ -47,20 +46,6 @@ pub trait OneWire {
             Presence::Absent => Err(Error::NoDevice),
             Presence::Shorted => Err(Error::Shorted),
         }
-    }
-
-    fn read_rom(&mut self) -> Result<Rom> {
-        self.reset_expecting_device()?;
-        self.write_byte(ROM_READ)?;
-        let data = self.read_bytes(8)?;
-        let mut code = [0u8; 8];
-        code.copy_from_slice(&data);
-        let rom = Rom(code);
-        if !rom.is_valid() {
-            return Err(Error::Crc);
-        }
-        debug!("read ROM [{rom}]");
-        Ok(rom)
     }
 
     fn match_rom(&mut self, rom: &Rom) -> Result<()> {

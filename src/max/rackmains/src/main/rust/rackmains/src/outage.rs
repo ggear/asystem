@@ -76,7 +76,7 @@ pub struct Stats {
 }
 
 impl Stats {
-    pub fn observe(&mut self, frame: &Frame, flags: Flags, stamp: &str, dt: Duration) {
+    pub fn observe(&mut self, frame: &Frame, flags: Flags, stamp: &str, elapsed: Duration) {
         if !flags.raw_on_battery {
             if self.seconds_on_battery.is_zero() {
                 if let Some(charge) = frame.number(metrics::BATTERY_CHARGE_PCT) {
@@ -85,7 +85,7 @@ impl Stats {
             }
             return;
         }
-        self.seconds_on_battery += dt;
+        self.seconds_on_battery += elapsed;
         self.low_raised |= flags.low;
         if let Some(volts) = frame.number(metrics::BATTERY_VOLTS) {
             self.last_volts = Some(volts);
@@ -372,54 +372,59 @@ pub fn prune(dir: &Path, keep: usize, current_stem: &str) {
     }
 }
 
-pub fn recover(dir: &Path) -> Vec<PathBuf> {
+pub fn recover(dir: &Path) {
     for entry in fs::read_dir(dir).into_iter().flatten().flatten() {
         if entry.path().extension().is_some_and(|extension| extension == "tmp") {
             let _ = fs::remove_file(entry.path());
         }
     }
     let all = files(dir);
-    let mut closed = Vec::new();
-    for file in all.iter().filter(|file| {
-        all.iter()
-            .filter(|other| other.stem == file.stem)
-            .map(|other| other.number)
-            .max()
-            == Some(file.number)
-    }) {
-        let Ok(table) = Table::read(&file.path) else { continue };
-        if table.ended() || table.rows.is_empty() {
+    let mut stems: Vec<&str> = all.iter().map(|file| file.stem.as_str()).collect();
+    stems.dedup();
+    for stem in stems {
+        let table = read_run(dir, stem);
+        if table.ended() {
             continue;
         }
-        let Some(last) = table.rows.last() else { continue };
+        let (Some(last), Some(file)) = (table.rows.last(), all.iter().rfind(|file| file.stem == stem)) else {
+            continue;
+        };
         let mut end = last.clone();
         for (name, value) in [(COLUMN_EVENT, EVENT_END), (COLUMN_DETAIL, END_INTERRUPTED)] {
             if let Some(index) = table.column(name) {
                 end[index] = value.to_string();
             }
         }
-        let mut text = fs::read_to_string(&file.path).unwrap_or_default();
+        let Ok(mut text) = fs::read_to_string(&file.path) else {
+            continue;
+        };
         text.push_str(&encode_row(&end));
         text.push('\n');
         match write_atomic(&file.path, text.as_bytes()) {
-            Ok(()) => {
-                warn!(
-                    "{}",
-                    log_line(&format!("outage file closed {END_INTERRUPTED}"), &base_name(&file.path))
-                );
-                closed.push(file.path.clone());
-            }
+            Ok(()) => warn!(
+                "{}",
+                log_line(&format!("outage file closed {END_INTERRUPTED}"), &base_name(&file.path))
+            ),
             Err(err) => warn!("{}", log_line("outage file recovery failed", &err)),
         }
     }
-    closed
+}
+
+pub fn read_run(dir: &Path, stem: &str) -> Table {
+    let mut merged = Table::default();
+    for part in files(dir).into_iter().filter(|part| part.stem == stem) {
+        if let Ok(table) = Table::read(&part.path) {
+            merged.header = table.header;
+            merged.rows.extend(table.rows);
+        }
+    }
+    merged
 }
 
 pub fn open_file(dir: &Path) -> Option<(OutageFile, Table)> {
-    let all = files(dir);
-    let newest = all.last()?;
-    let table = Table::read(&newest.path).ok()?;
-    (!table.ended() && !table.rows.is_empty()).then(|| (newest.clone(), table))
+    let newest = files(dir).pop()?;
+    let table = read_run(dir, &newest.stem);
+    (!table.ended() && !table.rows.is_empty()).then_some((newest, table))
 }
 
 pub fn last_outage(dir: &Path) -> Frame {
@@ -782,7 +787,7 @@ mod tests {
         text.push('\n');
         fs::write(&path, text).unwrap();
         fs::write(dir.join("rackmains_outage_x_1.csv.tmp"), "junk").unwrap();
-        assert_eq!(recover(&dir), vec![path.clone()]);
+        recover(&dir);
         let table = Table::read(&path).unwrap();
         let last = table.rows.last().unwrap();
         assert_eq!(
@@ -791,7 +796,8 @@ mod tests {
         );
         assert_eq!(table.cell(last, "time"), "2026-01-01_00-00-05");
         assert!(!dir.join("rackmains_outage_x_1.csv.tmp").exists());
-        assert!(recover(&dir).is_empty());
+        recover(&dir);
+        assert_eq!(Table::read(&path).unwrap(), table);
     }
 
     #[test]
@@ -799,9 +805,73 @@ mod tests {
         let dir = directory("recover-parts");
         let header = encode_row(&metrics::header());
         let body = |event: &str| format!("{header}\n{}\n", encode_row(&cells("2026-01-01_00-00-05", event, "")));
-        fs::write(dir.join(file_name("2026-01-01_00-00-00", 1)), body("")).unwrap();
-        fs::write(dir.join(file_name("2026-01-01_00-00-00", 2)), body(EVENT_END)).unwrap();
-        assert!(recover(&dir).is_empty());
+        let (first, second) = (
+            dir.join(file_name("2026-01-01_00-00-00", 1)),
+            dir.join(file_name("2026-01-01_00-00-00", 2)),
+        );
+        fs::write(&first, body("")).unwrap();
+        fs::write(&second, body(EVENT_END)).unwrap();
+        recover(&dir);
+        assert_eq!(fs::read_to_string(&first).unwrap(), body(""));
+        assert_eq!(fs::read_to_string(&second).unwrap(), body(EVENT_END));
+    }
+
+    #[test]
+    fn recovery_closes_a_rotated_run_whose_last_part_holds_only_the_header() {
+        let dir = directory("recover-header");
+        let header = encode_row(&metrics::header());
+        fs::write(
+            dir.join(file_name("2026-01-01_00-00-00", 1)),
+            format!("{header}\n{}\n", encode_row(&cells("2026-01-01_00-00-05", "start", ""))),
+        )
+        .unwrap();
+        let last = dir.join(file_name("2026-01-01_00-00-00", 2));
+        fs::write(&last, format!("{header}\n")).unwrap();
+        recover(&dir);
+        let table = Table::read(&last).unwrap();
+        assert_eq!(table.rows.len(), 1);
+        assert_eq!(table.cell(&table.rows[0], "detail"), END_INTERRUPTED);
+        assert!(read_run(&dir, "2026-01-01_00-00-00").ended());
+    }
+
+    #[test]
+    fn an_open_run_is_read_across_its_parts_so_a_shed_in_an_earlier_part_is_still_on_record() {
+        let dir = directory("open-parts");
+        let header = encode_row(&metrics::header());
+        let mut on = Frame::default();
+        on.set_text(STATUS, "OB");
+        let mut off = Frame::default();
+        off.set_text(STATUS, "OL");
+        let stem = "2026-01-01_00-00-00";
+        fs::write(
+            dir.join(file_name(stem, 1)),
+            format!(
+                "{header}\n{}\n{}\n",
+                encode_row(&row(stem, 0, "start", "", &on)),
+                encode_row(&row(
+                    "2026-01-01_00-02-00",
+                    120,
+                    EVENT_DECISION,
+                    "shed shed time reached",
+                    &on
+                )),
+            ),
+        )
+        .unwrap();
+        fs::write(
+            dir.join(file_name(stem, 2)),
+            format!(
+                "{header}\n{}\n",
+                encode_row(&row("2026-01-01_00-03-00", 180, "", "", &off))
+            ),
+        )
+        .unwrap();
+        let (file, table) = open_file(&dir).unwrap();
+        assert_eq!((file.number, table.rows.len()), (2, 3));
+        assert_eq!(
+            clocks(&table, parse_stamp("2026-01-01_00-04-00").unwrap()),
+            Some((Duration::from_secs(180), Duration::from_secs(120), true))
+        );
     }
 
     #[test]

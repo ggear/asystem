@@ -30,7 +30,7 @@ class LogsMixin(ContractMixin):
                 "Detail": detail,
             }
         )
-        self.print_log(f"{self.name} {kind.lower()} [{code}] tab [{tab}] key [{key}] {detail}", level={LOG_KIND_ERROR: "error", LOG_KIND_WARNING: "warn"}.get(kind, "info"))
+        self.print_log(f"{self.name} {kind.lower()} [{code}] tab [{tab}] key [{key}] {detail}", level={LOG_KIND_ERROR: "error", LOG_KIND_WARNING: "warning"}.get(kind, "info"))
 
     def logs_merged(self, errors, today):
         started_time = time.time()

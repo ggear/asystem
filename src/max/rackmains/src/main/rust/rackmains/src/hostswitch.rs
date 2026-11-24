@@ -16,7 +16,7 @@ pub struct HostSwitch {
     commands: Option<Receiver<(String, Vec<u8>)>>,
     results: Receiver<Finished>,
     sender: Sender<Finished>,
-    busy: Option<String>,
+    running: bool,
     state: HashMap<String, bool>,
 }
 
@@ -27,7 +27,7 @@ impl HostSwitch {
             commands,
             results,
             sender,
-            busy: None,
+            running: false,
             state: HashMap::new(),
         }
     }
@@ -35,7 +35,7 @@ impl HostSwitch {
     pub fn tick(&mut self, idle: bool, runner: &Arc<dyn Runner>, hosts: &[Host]) -> Vec<(String, Vec<u8>)> {
         let mut published = Vec::new();
         while let Ok(finished) = self.results.try_recv() {
-            self.busy = None;
+            self.running = false;
             published.extend(self.observe(&finished.host, finished.command, finished.outcome.status));
         }
         let Some(commands) = self.commands.take() else {
@@ -48,16 +48,16 @@ impl HostSwitch {
                     warn!("{}", log_line("host switch command for unknown host", &host));
                 }
                 Ok((host, _)) if !idle => {
-                    warn!("{}", log_line("host switch command refused, guard busy", &host));
+                    warn!("{}", log_line("host switch command refused guard busy", &host));
                 }
-                Ok((host, _)) if self.busy.is_some() => {
-                    warn!("{}", log_line("host switch command refused, one in flight", &host));
+                Ok((host, _)) if self.running => {
+                    warn!("{}", log_line("host switch command refused call in flight", &host));
                 }
                 Ok((host, on)) if self.state.get(&host) == Some(&on) => {
                     info!(
                         "{}",
                         log_line(
-                            "host switch command skipped, already",
+                            "host switch command skipped already in state",
                             &format!("{host} {}", payload_of(on))
                         )
                     );
@@ -69,7 +69,7 @@ impl HostSwitch {
                         "{}",
                         log_line("host switch command accepted", &format!("{host} {}", payload_of(on)))
                     );
-                    self.busy = Some(host.clone());
+                    self.running = true;
                     shed::spawn(runner, hosts, Call { host, command }, &self.sender);
                 }
             }
@@ -181,7 +181,7 @@ mod tests {
             let mut published = Vec::new();
             while started.elapsed() < Duration::from_secs(5) {
                 published.extend(self.tick(true));
-                if self.switch.busy.is_none() {
+                if !self.switch.running {
                     break;
                 }
                 thread::sleep(Duration::from_millis(10));
@@ -310,7 +310,7 @@ mod tests {
         switch.tick(true, &runner, &hosts());
         release.send(()).unwrap();
         let started = Instant::now();
-        while switch.busy.is_some() && started.elapsed() < Duration::from_secs(5) {
+        while switch.running && started.elapsed() < Duration::from_secs(5) {
             switch.tick(true, &runner, &hosts());
             thread::sleep(Duration::from_millis(10));
         }
@@ -338,7 +338,7 @@ mod tests {
         rig.send("nobody", "OFF");
         rig.send("mad", "RESTART");
         assert!(rig.tick(true).is_empty());
-        assert!(rig.switch.busy.is_none());
+        assert!(!rig.switch.running);
         assert!(rig.settle().is_empty());
         assert!(rig.calls().is_empty());
     }

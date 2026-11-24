@@ -31,7 +31,7 @@ class StateMixin(ContractMixin):
                     resolved = ["Date"]
                 missing = [column for column in key_columns if column not in available_columns]
                 if len(missing) > 0:
-                    self.print_log(f"State cache key columns unavailable and ignored: [{', '.join(missing)}]", level="debug")
+                    self.print_log(f"State cache key columns unavailable and ignored [{', '.join(missing)}]", level="debug")
                 return resolved
 
             aggregate_function_wrapped = (lambda _data_df: _data_df) if aggregate_func is None else (lambda _data_df: aggregate_func(_data_df) if len(_data_df) > 0 else _data_df)
@@ -93,23 +93,23 @@ class StateMixin(ContractMixin):
             if replace is not None:
                 data_df_deleted = data_df_current.filter(replace).select(state_key_columns).join(data_df_update.select(state_key_columns), on=state_key_columns, how="anti")
                 data_df_current = data_df_current.filter(~replace)
-            data_df_previous_value_columns = [c for c in data_df_previous.columns if c not in state_key_columns]
+            data_df_previous_value_columns = [column for column in data_df_previous.columns if column not in state_key_columns]
             self.add_counter(CTR_SRC_DATA, CTR_ACT_PREVIOUS_COLUMNS, len(data_df_previous.columns) - len(state_key_columns))
             self.add_counter(
                 CTR_SRC_DATA,
                 CTR_ACT_PREVIOUS_ROWS,
-                len(data_df_previous.filter(pl.any_horizontal([pl.col(c).is_not_null() for c in data_df_previous_value_columns])) if data_df_previous_value_columns else data_df_previous),
+                len(data_df_previous.filter(pl.any_horizontal([pl.col(column).is_not_null() for column in data_df_previous_value_columns])) if data_df_previous_value_columns else data_df_previous),
             )
-            value_columns = [c for c in data_schema if c not in state_key_columns]
-            coalesce_cols = [c for c in value_columns if c in update_original_columns]
-            overwrite_cols = [c for c in value_columns if c not in update_original_columns]
-            merge_exprs = [pl.coalesce([f"{c}_upd", c]).alias(c) for c in coalesce_cols] + [
-                pl.when(pl.col("__in_update").is_not_null()).then(pl.col(f"{c}_upd")).otherwise(pl.col(c)).alias(c) for c in overwrite_cols
+            value_columns = [column for column in data_schema if column not in state_key_columns]
+            coalesce_columns = [column for column in value_columns if column in update_original_columns]
+            overwrite_columns = [column for column in value_columns if column not in update_original_columns]
+            merge_expressions = [pl.coalesce([f"{column}_upd", column]).alias(column) for column in coalesce_columns] + [
+                pl.when(pl.col("__in_update").is_not_null()).then(pl.col(f"{column}_upd")).otherwise(pl.col(column)).alias(column) for column in overwrite_columns
             ]
             data_df_current = (
                 data_df_current.lazy()
                 .join(data_df_update.lazy(), on=state_key_columns, how="full", coalesce=True, suffix="_upd")
-                .with_columns(merge_exprs)
+                .with_columns(merge_expressions)
                 .select(list(data_schema.keys()))
                 .sort(state_key_columns)
                 .collect()
@@ -127,12 +127,12 @@ class StateMixin(ContractMixin):
             elif isfile(file_previous):
                 os.remove(file_previous)
             self.csv_write(data_df_current, file_current)
-            data_df_current_value_columns = [c for c in data_df_current.columns if c not in state_key_columns]
+            data_df_current_value_columns = [column for column in data_df_current.columns if column not in state_key_columns]
             self.add_counter(CTR_SRC_DATA, CTR_ACT_CURRENT_COLUMNS, len(data_df_current.columns) - len(state_key_columns))
             self.add_counter(
                 CTR_SRC_DATA,
                 CTR_ACT_CURRENT_ROWS,
-                len(data_df_current.filter(pl.any_horizontal([pl.col(c).is_not_null() for c in data_df_current_value_columns])) if data_df_current_value_columns else data_df_current),
+                len(data_df_current.filter(pl.any_horizontal([pl.col(column).is_not_null() for column in data_df_current_value_columns])) if data_df_current_value_columns else data_df_current),
             )
             data_df_delta = pl.concat([data_df_previous, data_df_current]).select(data_schema.keys())
             data_df_delta = (

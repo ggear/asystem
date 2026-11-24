@@ -1,6 +1,7 @@
 import collections
 import concurrent.futures
 import contextlib
+import email.utils
 import fnmatch
 import functools
 import glob
@@ -126,9 +127,8 @@ class SourcesMixin(ContractMixin):
         }
 
         def get_modified(headers):
-            modified_header = headers.get("Last-Modified")
-            if modified_header:
-                return int(datetime.strptime(modified_header, "%a, %d %b %Y %H:%M:%S GMT").replace(tzinfo=UTC).timestamp())
+            with contextlib.suppress(TypeError, ValueError):
+                return int(email.utils.parsedate_to_datetime(headers.get("Last-Modified")).timestamp())
             return None
 
         if not effective_force and check and isfile(local_path):
@@ -351,116 +351,115 @@ class SourcesMixin(ContractMixin):
             self.print_log(f"File [{label}] stock query skipped, empty date range [{start}] to [{end}]", level="debug")
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_SKIPPED)
             return DownloadResult(DownloadStatus.SKIPPED, [])
-        if start_date < end_exclusive:
-            if not effective_force and not check and isfile(local_path):
-                self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time, level="debug")
-                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
-                return DownloadResult(DownloadStatus.CACHED, [local_path])
-            try:
-                if not effective_force and check and isfile(local_path):  # noqa: SIM102
-                    if now.year == int(end.split("-")[0]) and now.month == int(end.split("-")[1]):
-                        data_df = self.csv_read(local_path)
-                        if len(data_df) > 0:
-                            end_data = data_df.row(-1)[0]
-                            end_data = date.fromisoformat(end_data) if isinstance(end_data, str) else end_data
-                            end_expected = (now - timedelta(days=max(0, now.weekday() - 4))).date()
-                            if now.date() == end_expected:
-                                if -1 < now.weekday() < 5:
-                                    if now.strftime("%H:%M") < end_of_day:
-                                        end_expected = end_expected - timedelta(days=3 if now.weekday() == 0 else 1)
-                                else:
-                                    end_expected = end_expected - timedelta(days=2 if now.weekday() == 5 else 1)
-                            if end_data == end_expected:
-                                self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time, level="debug")
-                                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
-                                return DownloadResult(DownloadStatus.CACHED, [local_path])
-                        else:
-                            self.print_log(f"File [{label}] cached (but empty) at [{local_path}]", started=started_time)
-                            self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
-                            return DownloadResult(DownloadStatus.CACHED, [local_path])
-                data_df = self._throttled("yahoo", lambda: yf.Ticker(ticker).history(start=start, end=end_exclusive, timeout=TIMEOUT_NETWORK_SECONDS), yahoo_failed)
-                if len(data_df) > 0:
-                    if hasattr(data_df.index, "tz_localize"):
-                        data_df.index = data_df.index.tz_localize(None)  # type: ignore[union-attr]
-                    if "Capital Gains" in data_df.columns:
-                        data_df = data_df.drop(columns=["Capital Gains"])
-                    in_range = (data_df.index.date >= start_date) & (data_df.index.date < end_exclusive)  # type: ignore[union-attr]
-                    if not in_range.all():
-                        self.print_log(f"File [{label}] stock query returned [{(~in_range).sum()}] rows outside [{start}] to [{end_exclusive}] for ticker [{ticker}], dropped", level="warn")
-                        data_df = data_df.loc[in_range]
-                if now.year == int(end.split("-")[0]) and now.month == int(end.split("-")[1]) and len(data_df) > 0 and data_df.index[-1].date() == now.date() and now.strftime("%H:%M") < end_of_day:
-                    data_df = data_df[:-1]
-                if len(data_df) == 0:
-                    if not ignore:
-                        self.print_log(f"File [{label}] stock query returned no data for ticker [{ticker}] between [{start}] and [{end_exclusive}]", level="error")
-                        self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
-                        return DownloadResult(DownloadStatus.FAILED, [])
-                    self.print_log(f"File [{label}] stock query returned no data for ticker [{ticker}] between [{start}] and [{end_exclusive}]", level="warn")
-                    if isfile(local_path):
-                        self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
-                        return DownloadResult(DownloadStatus.CACHED, [local_path])
-                    self.add_counter(CTR_SRC_SOURCES, CTR_ACT_SKIPPED)
-                    return DownloadResult(DownloadStatus.SKIPPED, [])
-                if len(data_df.columns) == 0:
-                    self.print_log(f"File [{label}] stock query returned only dates (no price columns) for ticker [{ticker}] between [{start}] and [{end_exclusive}]", level="warn")
-                if not exists(dirname(local_path)):
-                    os.makedirs(dirname(local_path))
-                data_df.insert(loc=0, column="Date", value=data_df.index.strftime("%Y-%m-%d"))  # type: ignore[union-attr]
-                if len(data_df) > 0:
-                    last_date = date.fromisoformat(data_df["Date"].iloc[-1])
-                    end_date = date.fromisoformat(end)
-                    reference_date = end_date
-                    if now.year == end_date.year and now.month == end_date.month:
-                        reference_date = (now - timedelta(days=1)).date() if now.strftime("%H:%M") < end_of_day else now.date()
-                    expected_date = reference_date
-                    while expected_date.weekday() >= 5:
-                        expected_date -= timedelta(days=1)
-                    missing_weekdays = []
-                    check_day = last_date + timedelta(days=1)
-                    while check_day <= expected_date:
-                        if check_day.weekday() < 5:
-                            missing_weekdays.append(check_day)
-                        check_day += timedelta(days=1)
-                    weekday_gap = len(missing_weekdays)
-                    warn_threshold = 2 if ticker.startswith("^") else 1
-                    error_threshold = 3 if ticker.startswith("^") else 2
-                    dec_25_26 = weekday_gap == 2 and {(d.month, d.day) for d in missing_weekdays} == {(12, 25), (12, 26)} and missing_weekdays[0].year == missing_weekdays[1].year
-                    day_word = "trading day" if weekday_gap == 1 else "trading days"
-                    if weekday_gap >= error_threshold and not dec_25_26:
-                        self.print_log(
-                            f"File [{label}] stock query for ticker [{ticker}] missing data: last date [{last_date}] is [{weekday_gap}] {day_word} before expected [{expected_date}]", level="error"
-                        )
-                    elif weekday_gap >= warn_threshold and not dec_25_26:
-                        self.print_log(
-                            f"File [{label}] stock query for ticker [{ticker}] missing data: last date [{last_date}] is [{weekday_gap}] {day_word} before expected [{expected_date}]", level="warn"
-                        )
-                if len(data_df) > 0 and isfile(local_path):
-                    prior_df = self.csv_read(local_path)
-                    if len(prior_df) == len(data_df):
-                        prior_last = prior_df.row(-1)[0]
-                        prior_last = date.fromisoformat(prior_last) if isinstance(prior_last, str) else prior_last
-                        new_last = date.fromisoformat(data_df["Date"].iloc[-1])
-                        if prior_last == new_last:
+        if not effective_force and not check and isfile(local_path):
+            self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time, level="debug")
+            self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
+            return DownloadResult(DownloadStatus.CACHED, [local_path])
+        try:
+            if not effective_force and check and isfile(local_path):  # noqa: SIM102
+                if now.year == int(end.split("-")[0]) and now.month == int(end.split("-")[1]):
+                    data_df = self.csv_read(local_path)
+                    if len(data_df) > 0:
+                        end_data = data_df.row(-1)[0]
+                        end_data = date.fromisoformat(end_data) if isinstance(end_data, str) else end_data
+                        end_expected = (now - timedelta(days=max(0, now.weekday() - 4))).date()
+                        if now.date() == end_expected:
+                            if now.weekday() < 5:
+                                if now.strftime("%H:%M") < end_of_day:
+                                    end_expected = end_expected - timedelta(days=3 if now.weekday() == 0 else 1)
+                            else:
+                                end_expected = end_expected - timedelta(days=2 if now.weekday() == 5 else 1)
+                        if end_data == end_expected:
                             self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time, level="debug")
                             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                             return DownloadResult(DownloadStatus.CACHED, [local_path])
-                self.csv_write(pl.from_pandas(data_df), local_path, print_verb="downloaded", started=started_time)
-                if len(data_df) > 0:
-                    modified = date.fromisoformat(str(data_df.values[-1][0]))
-                    modified_timestamp = int((modified + timedelta(hours=8) - date(1970, 1, 1)).total_seconds())
-                    try:
-                        os.utime(local_path, (modified_timestamp, modified_timestamp))
-                    except Exception as exception:
-                        self.print_log(f"File [{label}] stock query file [{local_path}] modified timestamp set failed [{modified_timestamp}]", exception=exception)
-                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
-                return DownloadResult(DownloadStatus.DOWNLOADED, [local_path])
-            except Exception as exception:
-                self.print_log(
-                    f"File [{label}] stock query failed for ticker [{ticker}] between [{start}] and [{end_exclusive}]",
-                    exception=exception,
-                )
+                    else:
+                        self.print_log(f"File [{label}] cached (but empty) at [{local_path}]", started=started_time)
+                        self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
+                        return DownloadResult(DownloadStatus.CACHED, [local_path])
+            data_df = self._throttled("yahoo", lambda: yf.Ticker(ticker).history(start=start, end=end_exclusive, timeout=TIMEOUT_NETWORK_SECONDS), yahoo_failed)
+            if len(data_df) > 0:
+                if hasattr(data_df.index, "tz_localize"):
+                    data_df.index = data_df.index.tz_localize(None)  # type: ignore[union-attr]
+                if "Capital Gains" in data_df.columns:
+                    data_df = data_df.drop(columns=["Capital Gains"])
+                in_range = (data_df.index.date >= start_date) & (data_df.index.date < end_exclusive)  # type: ignore[union-attr]
+                if not in_range.all():
+                    self.print_log(f"File [{label}] stock query returned [{(~in_range).sum()}] rows outside [{start}] to [{end_exclusive}] for ticker [{ticker}], dropped", level="warning")
+                    data_df = data_df.loc[in_range]
+            if now.year == int(end.split("-")[0]) and now.month == int(end.split("-")[1]) and len(data_df) > 0 and data_df.index[-1].date() == now.date() and now.strftime("%H:%M") < end_of_day:
+                data_df = data_df[:-1]
+            if len(data_df) == 0:
                 if not ignore:
+                    self.print_log(f"File [{label}] stock query returned no data for ticker [{ticker}] between [{start}] and [{end_exclusive}]", level="error")
                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
+                    return DownloadResult(DownloadStatus.FAILED, [])
+                self.print_log(f"File [{label}] stock query returned no data for ticker [{ticker}] between [{start}] and [{end_exclusive}]", level="warning")
+                if isfile(local_path):
+                    self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
+                    return DownloadResult(DownloadStatus.CACHED, [local_path])
+                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_SKIPPED)
+                return DownloadResult(DownloadStatus.SKIPPED, [])
+            if len(data_df.columns) == 0:
+                self.print_log(f"File [{label}] stock query returned only dates (no price columns) for ticker [{ticker}] between [{start}] and [{end_exclusive}]", level="warning")
+            if not exists(dirname(local_path)):
+                os.makedirs(dirname(local_path))
+            data_df.insert(loc=0, column="Date", value=data_df.index.strftime("%Y-%m-%d"))  # type: ignore[union-attr]
+            if len(data_df) > 0:
+                last_date = date.fromisoformat(data_df["Date"].iloc[-1])
+                end_date = date.fromisoformat(end)
+                reference_date = end_date
+                if now.year == end_date.year and now.month == end_date.month:
+                    reference_date = (now - timedelta(days=1)).date() if now.strftime("%H:%M") < end_of_day else now.date()
+                expected_date = reference_date
+                while expected_date.weekday() >= 5:
+                    expected_date -= timedelta(days=1)
+                missing_weekdays = []
+                check_day = last_date + timedelta(days=1)
+                while check_day <= expected_date:
+                    if check_day.weekday() < 5:
+                        missing_weekdays.append(check_day)
+                    check_day += timedelta(days=1)
+                weekday_gap = len(missing_weekdays)
+                warn_threshold = 2 if ticker.startswith("^") else 1
+                error_threshold = 3 if ticker.startswith("^") else 2
+                dec_25_26 = weekday_gap == 2 and {(day.month, day.day) for day in missing_weekdays} == {(12, 25), (12, 26)} and missing_weekdays[0].year == missing_weekdays[1].year
+                day_word = "trading day" if weekday_gap == 1 else "trading days"
+                if weekday_gap >= error_threshold and not dec_25_26:
+                    self.print_log(
+                        f"File [{label}] stock query for ticker [{ticker}] missing data, last date [{last_date}] is [{weekday_gap}] {day_word} before expected [{expected_date}]", level="error"
+                    )
+                elif weekday_gap >= warn_threshold and not dec_25_26:
+                    self.print_log(
+                        f"File [{label}] stock query for ticker [{ticker}] missing data, last date [{last_date}] is [{weekday_gap}] {day_word} before expected [{expected_date}]", level="warning"
+                    )
+            if len(data_df) > 0 and isfile(local_path):
+                prior_df = self.csv_read(local_path)
+                if len(prior_df) == len(data_df):
+                    prior_last = prior_df.row(-1)[0]
+                    prior_last = date.fromisoformat(prior_last) if isinstance(prior_last, str) else prior_last
+                    new_last = date.fromisoformat(data_df["Date"].iloc[-1])
+                    if prior_last == new_last:
+                        self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time, level="debug")
+                        self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
+                        return DownloadResult(DownloadStatus.CACHED, [local_path])
+            self.csv_write(pl.from_pandas(data_df), local_path, print_verb="downloaded", started=started_time)
+            if len(data_df) > 0:
+                modified = date.fromisoformat(str(data_df.values[-1][0]))
+                modified_timestamp = int((modified - date(1970, 1, 1)).total_seconds())
+                try:
+                    os.utime(local_path, (modified_timestamp, modified_timestamp))
+                except Exception as exception:
+                    self.print_log(f"File [{label}] stock query file [{local_path}] modified timestamp set failed [{modified_timestamp}]", exception=exception)
+            self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
+            return DownloadResult(DownloadStatus.DOWNLOADED, [local_path])
+        except Exception as exception:
+            self.print_log(
+                f"File [{label}] stock query failed for ticker [{ticker}] between [{start}] and [{end_exclusive}]",
+                exception=exception,
+            )
+            if not ignore:
+                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
         return DownloadResult(DownloadStatus.FAILED, [])
 
     @_timed(CTR_ACT_MARSHALL_MILLIS)
@@ -479,7 +478,7 @@ class SourcesMixin(ContractMixin):
                 return DownloadResult(DownloadStatus.CACHED, [local_path])
             self.print_log(f"File [{query_name}] query skipped, downloads disabled and no cache available")
             return DownloadResult(DownloadStatus.FAILED, [])
-        if database.database_conn is None:
+        if database.database_connection is None:
             if isfile(local_path):
                 self.print_log(f"File [{query_name}] cached at [{local_path}]", started=started_time, level="debug")
                 return DownloadResult(DownloadStatus.CACHED, [local_path])
@@ -498,7 +497,7 @@ class SourcesMixin(ContractMixin):
                     self.print_log(f"File [{query_name}] cached at [{local_path}]", started=started_time, level="debug")
                     return DownloadResult(DownloadStatus.CACHED, [local_path])
         try:
-            data_df = pl.read_database(query=query_string, connection=database.database_conn)
+            data_df = pl.read_database(query=query_string, connection=database.database_connection)
             if data_df is None or len(data_df) == 0:
                 self.print_log(f"File [{query_name}] query returned no data")
                 self.add_counter(CTR_SRC_DATA, CTR_ACT_ERRORED)
@@ -509,7 +508,7 @@ class SourcesMixin(ContractMixin):
             self.print_log(f"File [{query_name}] query failed", exception=exception, started=started_time)
             self.add_counter(CTR_SRC_DATA, CTR_ACT_ERRORED)
             with contextlib.suppress(Exception):
-                database.database_conn.rollback()
+                database.database_connection.rollback()
         return DownloadResult(DownloadStatus.FAILED, [])
 
     @_timed(CTR_ACT_EGRESS_MILLIS)
@@ -522,11 +521,11 @@ class SourcesMixin(ContractMixin):
         started_time = time.time()
         if len(data_df.columns) <= 1 or len(data_df) == 0:
             return
-        date_col = data_df.columns[0]
+        date_column = data_df.columns[0]
         table_name = table_name or self.name.lower()
         csv_path = abspath(f"{self.local_cache}/_database_{self.name.lower()}.csv")
         long_df = (
-            data_df.rename({date_col: "time"})
+            data_df.rename({date_column: "time"})
             .unpivot(index="time", variable_name="_col", value_name="value")
             .filter(pl.col("value").is_not_null())
             .with_columns(pl.col("_col").str.split(" ").list.first().alias("entity"), pl.lit(metric_type).alias("type"), pl.lit(period).alias("period"), pl.lit(unit).alias("unit"))
@@ -536,43 +535,42 @@ class SourcesMixin(ContractMixin):
             return
         self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_COLUMNS, len(data_df.columns) - 1)
         self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_ROWS, len(data_df))
-        if config.disable_database_uploads or database.database_conn is None:
-            pk = ["time", "entity", "type", "period", "unit"]
+        if config.disable_database_uploads or database.database_connection is None:
+            keys = ["time", "entity", "type", "period", "unit"]
             if csv_path in self._db_cache_dfs:
-                kept = self._db_cache_dfs[csv_path].join(long_df.select(pk), on=pk, how="anti")
+                kept = self._db_cache_dfs[csv_path].join(long_df.select(keys), on=keys, how="anti")
                 long_df = pl.concat([kept, long_df]).sort("time")
             self._db_cache_dfs[csv_path] = long_df
             dataframe_print(self.name, long_df, print_label=print_label, print_verb="cached", print_suffix=f"to [{csv_path}]", started=started_time)
             return
         try:
-            database.database_ensure_table(table_name, database.database_conn)
-            database.database_upsert(long_df, table_name, database.database_conn, database.DSN)
+            database.database_ensure_table(table_name, database.database_connection)
+            database.database_upsert(long_df, table_name, database.database_connection, database.DSN)
             dataframe_print(self.name, long_df, print_label=print_label, print_verb="uploaded", print_suffix=f"to [{table_name}]", started=started_time)
         except Exception as exception:
             self.print_log(f"DataFrame{'' if print_label is None else f' [{print_label}]'} write failed", exception=exception)
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_ERRORED)
             with contextlib.suppress(Exception):
-                database.database_conn.rollback()
+                database.database_connection.rollback()
 
     def _sheets_credentials(self):
         if self._sheet_credentials is None:
-            cred_path = os.path.expanduser("~/.config/gspread_pandas/creds/default")
-            with open(cred_path) as cred_file:
-                cred_data = json.load(cred_file)
-            creds = google.oauth2.credentials.Credentials(
+            with open(os.path.expanduser("~/.config/gspread_pandas/creds/default")) as credentials_file:
+                credentials_data = json.load(credentials_file)
+            credentials = google.oauth2.credentials.Credentials(
                 token=None,
-                refresh_token=cred_data["refresh_token"],
-                token_uri=cred_data["token_uri"],
-                client_id=cred_data["client_id"],
-                client_secret=cred_data["client_secret"],
-                scopes=cred_data.get("scopes"),
+                refresh_token=credentials_data["refresh_token"],
+                token_uri=credentials_data["token_uri"],
+                client_id=credentials_data["client_id"],
+                client_secret=credentials_data["client_secret"],
+                scopes=credentials_data.get("scopes"),
             )
             timeout_session = requests.Session()
             timeout_adapter = DefaultTimeoutHTTPAdapter(TIMEOUT_NETWORK_SECONDS)
             timeout_session.mount("https://", timeout_adapter)
             timeout_session.mount("http://", timeout_adapter)
-            creds.refresh(google.auth.transport.requests.Request(session=timeout_session))
-            self._sheet_credentials = creds
+            credentials.refresh(google.auth.transport.requests.Request(session=timeout_session))
+            self._sheet_credentials = credentials
         return self._sheet_credentials
 
     def sheet_cached(self, workbook_name, sheet_name=None) -> pl.DataFrame | None:
@@ -587,7 +585,7 @@ class SourcesMixin(ContractMixin):
         try:
             return pl.read_csv(cache_path, infer_schema=False, raise_if_empty=False)
         except Exception as exception:
-            self.print_log(f"File [{label}] cache unreadable at [{cache_path}]", exception=exception, level="warn")
+            self.print_log(f"File [{label}] cache unreadable at [{cache_path}]", exception=exception, level="warning")
             return None
 
     def sheet_typed(self, tab_df, schema) -> pl.DataFrame:
@@ -695,7 +693,7 @@ class SourcesMixin(ContractMixin):
                     data_dfs.clear()
                     for title in sheet_names:
                         if title not in cells_by_title:
-                            self.print_log(f"File [{workbook_name}:{title}] read empty, no such tab at [{drive_url}]", level="warn")
+                            self.print_log(f"File [{workbook_name}:{title}] read empty, no such tab at [{drive_url}]", level="warning")
                         cells = cells_by_title.get(title, [])[sheet_start_row - 1 :]
                         width = max((len(row) for row in cells), default=0)
                         data_dfs.append(_tab_dataframe([[*row, *([""] * (width - len(row)))] for row in cells], f"{workbook_name}:{title}"))
@@ -826,12 +824,12 @@ class SourcesMixin(ContractMixin):
             self.print_log(f"Sheet [{label}] status [{UploadStatus.UNCHANGED.name}] since cached", started=started_time, level="debug")
             return UploadStatus.UNCHANGED
         if guard and cached_df is not None and self._sheet_moved(drive_key, workbook_name, sheet_name, schema):
-            self.print_log(f"Sheet [{label}] status [{UploadStatus.MOVED.name}] edited since cached", started=started_time, level="warn")
+            self.print_log(f"Sheet [{label}] status [{UploadStatus.MOVED.name}] edited since cached", started=started_time, level="warning")
             return UploadStatus.MOVED
         try:
-            date_cols = [c for c in data_df.columns if data_df[c].dtype == pl.Date]
-            values_df = data_df.with_columns([pl.col(c).dt.strftime("%Y-%m-%d") for c in date_cols])
-            all_values = [values_df.columns] + [["" if v is None else str(v) for v in row] for row in values_df.iter_rows()]
+            date_columns = [column for column in data_df.columns if data_df[column].dtype == pl.Date]
+            values_df = data_df.with_columns([pl.col(column).dt.strftime("%Y-%m-%d") for column in date_columns])
+            all_values = [values_df.columns] + [["" if value is None else str(value) for value in row] for row in values_df.iter_rows()]
             for column, template in formulas.items():
                 column_index = columns.index(column)
                 for row_index in range(1, len(all_values)):
@@ -972,7 +970,7 @@ class SourcesMixin(ContractMixin):
                             google_failed,
                         )
                         continue
-                    for input_option, input_columns in (("USER_ENTERED", [c for c in columns if c not in raw_set]), ("RAW", [c for c in columns if c in raw_set])):
+                    for input_option, input_columns in (("USER_ENTERED", [column for column in columns if column not in raw_set]), ("RAW", [column for column in columns if column in raw_set])):
                         if input_columns:
                             self._throttled(
                                 "google_sheets",
@@ -1030,7 +1028,7 @@ class SourcesMixin(ContractMixin):
             return UploadStatus.UNCHANGED
         cached_df = self.sheet_cached(workbook_name, sheet_name)
         if guard and cached_df is not None and self._sheet_moved(drive_key, workbook_name, sheet_name, schema):
-            self.print_log(f"Sheet [{label}] status [{UploadStatus.MOVED.name}] edited since cached", started=started_time, level="warn")
+            self.print_log(f"Sheet [{label}] status [{UploadStatus.MOVED.name}] edited since cached", started=started_time, level="warning")
             return UploadStatus.MOVED
         header = list(cached_df.columns) if cached_df is not None else []
         unresolved = sorted({column for _, column in cells if column not in header})
@@ -1254,7 +1252,7 @@ class SourcesMixin(ContractMixin):
                 with open(manifest_path) as manifest_file:
                     manifest = json.load(manifest_file)
             except Exception as exception:
-                self.print_log(f"Directory [{basename(local_dir).title()}] manifest unreadable at [{manifest_path}], newer side wins", exception=exception, level="warn")
+                self.print_log(f"Directory [{basename(local_dir).title()}] manifest unreadable at [{manifest_path}], newer side wins", exception=exception, level="warning")
 
         def _problem(_name, _code, _detail):
             if errors is not None and _code in self.error_codes:
@@ -1341,9 +1339,9 @@ class SourcesMixin(ContractMixin):
                             for _listing in _listings:
                                 if _listing is not _kept:
                                     self._throttled("google_drive", service.files().update(fileId=_listing["id"], body={"trashed": True}).execute, google_failed)
-                            self.print_log(f"File [{_name}] listed [{len(_listings)}] times on Drive with one content, all but the oldest [{_kept['id']}] trashed", level="warn")
+                            self.print_log(f"File [{_name}] listed [{len(_listings)}] times on Drive with one content, all but the oldest [{_kept['id']}] trashed", level="warning")
                         except Exception as exception:
-                            self.print_log(f"File [{_name}] listed [{len(_listings)}] times on Drive with one content, trash failed, oldest [{_kept['id']}] used", exception=exception, level="warn")
+                            self.print_log(f"File [{_name}] listed [{len(_listings)}] times on Drive with one content, trash failed, oldest [{_kept['id']}] used", exception=exception, level="warning")
                 else:
                     duplicates.add(_name)
                     if download:

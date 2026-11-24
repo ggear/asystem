@@ -963,7 +963,7 @@ fn drive(
         )
     })?;
     let stem = file.stem.clone();
-    let reload = || -> Table { follow_run(outage_dir, &stem) };
+    let reload = || -> Table { outage::read_run(outage_dir, &stem) };
     say(
         Level::Info,
         &log_line(
@@ -1248,7 +1248,7 @@ fn abort(env: &Env, marker: &Marker, marker_path: &Path, outage_dir: &Path, stem
     );
     let started = Instant::now();
     while started.elapsed() < env.timing.after_cap {
-        if follow_run(outage_dir, stem).ended() {
+        if outage::read_run(outage_dir, stem).ended() {
             break;
         }
         thread::sleep(env.timing.poll);
@@ -1259,7 +1259,7 @@ fn abort(env: &Env, marker: &Marker, marker_path: &Path, outage_dir: &Path, stem
 fn verify_restored(env: &Env, outage_dir: &Path, stem: &str) -> Result<(), ExitError> {
     let started = Instant::now();
     while started.elapsed() < env.timing.restore_verify {
-        let table = follow_run(outage_dir, stem);
+        let table = outage::read_run(outage_dir, stem);
         if table.rows.last().is_some_and(|row| {
             table
                 .cell(row, crate::metrics::STATUS)
@@ -1288,17 +1288,6 @@ fn wait_for_ack(outage_dir: &Path, id: &str, timing: &Timing) -> Option<(OutageF
     None
 }
 
-fn follow_run(outage_dir: &Path, stem: &str) -> Table {
-    let mut merged = Table::default();
-    for part in outage::files(outage_dir).into_iter().filter(|part| part.stem == stem) {
-        if let Ok(table) = Table::read(&part.path) {
-            merged.header = table.header;
-            merged.rows.extend(table.rows);
-        }
-    }
-    merged
-}
-
 fn stale(env: &Env) -> bool {
     Liveness::read(&env.run_dir.join(FILE_LIVENESS)).map_or(true, |liveness| {
         boot_ms().saturating_sub(liveness.guard_boot_ms) > env.timing.guard_stale_ms
@@ -1308,16 +1297,16 @@ fn stale(env: &Env) -> bool {
 fn gather(env: &Env, liveness: &Liveness, outage_dir: &Path, marker_path: &Path) -> Assessment {
     let now = (env.clock)();
     let newest = outage::files(outage_dir)
-        .into_iter()
-        .last()
-        .and_then(|file| Table::read(&file.path).ok());
+        .pop()
+        .map(|file| outage::read_run(outage_dir, &file.stem));
     let last_end = outage::files(outage_dir)
         .into_iter()
         .rev()
         .find_map(|file| deep_outage_end(&Table::read(&file.path).ok()?));
     let marker_run_open = Marker::read(marker_path).is_some_and(|marker| {
         marker.live(now)
-            && find_ack(outage_dir, &marker.id).is_some_and(|(file, _)| !follow_run(outage_dir, &file.stem).ended())
+            && find_ack(outage_dir, &marker.id)
+                .is_some_and(|(file, _)| !outage::read_run(outage_dir, &file.stem).ended())
     });
     let unreachable_hosts = load_hosts(&env.hosts_file).map_or_else(
         |_| vec!["hosts file".to_string()],

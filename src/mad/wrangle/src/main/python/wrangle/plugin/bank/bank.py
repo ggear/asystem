@@ -1004,7 +1004,7 @@ class Bank(plugin.Plugin):
                 file_name, file_year = basename(path), _bank_file(path)[1]
                 if not accounts_usable:
                     years_held.add(file_year)
-                    self.print_log(f"File [{file_name}] left as is, unchecked with the Accounts tab unusable", level="warn")
+                    self.print_log(f"File [{file_name}] left as is, unchecked with the Accounts tab unusable", level="warning")
                     continue
                 try:
                     rows_df = _bank_operator_rows(path, list(TRANSACTIONS_SCHEMA))
@@ -1067,7 +1067,7 @@ class Bank(plugin.Plugin):
                     normalised_counts["invalid"] += 1
                     years_held.add(file_year)
                     files_invalid.add(path)
-                    self.print_log(f"File [{file_name}] left as is, invalid rows", level="warn")
+                    self.print_log(f"File [{file_name}] left as is, invalid rows", level="warning")
                     continue
                 for row in rows_df.filter(pl.col("Category Manual").is_not_null()).iter_rows(named=True):
                     if classifier_usable and row["Category Manual"] not in classifier_categories:
@@ -1126,7 +1126,7 @@ class Bank(plugin.Plugin):
                 file_name, file_year = basename(path), _bank_file(path)[1]
                 if not accounts_usable:
                     balances_held.add(file_year)
-                    self.print_log(f"File [{file_name}] left as is, unchecked with the Accounts tab unusable", level="warn")
+                    self.print_log(f"File [{file_name}] left as is, unchecked with the Accounts tab unusable", level="warning")
                     continue
                 try:
                     rows_df = _bank_operator_rows(path, list(BALANCES_SCHEMA))
@@ -1160,7 +1160,7 @@ class Bank(plugin.Plugin):
                     normalised_counts["invalid"] += 1
                     balances_held.add(file_year)
                     files_invalid.add(path)
-                    self.print_log(f"File [{file_name}] left as is, invalid rows", level="warn")
+                    self.print_log(f"File [{file_name}] left as is, invalid rows", level="warning")
                     continue
                 last_by_account: dict[str, float] = {}
                 for row in rows_df.sort(["__date", "__time"]).iter_rows(named=True):
@@ -1449,7 +1449,7 @@ class Bank(plugin.Plugin):
             if len(linked_ids) == 0:
                 self.print_log("Balances check skipped, no linked accounts", level="debug")
             elif balances_year_df is None:
-                self.print_log(f"Balances check skipped, file [{basename(balances_year_path)}] unreadable", level="warn")
+                self.print_log(f"Balances check skipped, file [{basename(balances_year_path)}] unreadable", level="warning")
             else:
                 readings_df = _bank_balances_fetched(linked_ids)
                 if len(readings_df):
@@ -1787,7 +1787,7 @@ class Bank(plugin.Plugin):
                     and basename(path) not in self.drive_ids
                     and any(exports_md5[path] == exports_md5[other] for other, (_, other_id) in exports.items() if other_id is not None)
                 ):
-                    self.print_log(f"File [{basename(path)}] skipped, a stale copy of an export renamed on Drive", level="warn")
+                    self.print_log(f"File [{basename(path)}] skipped, a stale copy of an export renamed on Drive", level="warning")
                     continue
                 account_id, reason = bank_export_account(export_df, cards_known, exports_accounts_df.select("Account ID"), _bank_held().select(["Account ID", "Date", "Amount", "Description"]))
                 if account_id is None:
@@ -2219,7 +2219,7 @@ class Bank(plugin.Plugin):
                 if not isfile(balances_current_file):
                     self.csv_write(pl.DataFrame(schema=BALANCES_STATE_SCHEMA), balances_current_file, print_rows=0)
             for year in sorted(balances_held & set(balances_years)):
-                self.print_log(f"Balances [{year}] left as committed, a file of the year unreadable or invalid", level="warn")
+                self.print_log(f"Balances [{year}] left as committed, a file of the year unreadable or invalid", level="warning")
             self.print_log(f"DataFrame [Balances] committed years [{', '.join(str(year) for year in balances_committed)}] with [{len(balances_df)}] rows", started=started_time)
 
             # 6.2 Commit Transactions
@@ -2229,7 +2229,7 @@ class Bank(plugin.Plugin):
                 year_paths = [path for path in (_bank_path("redbark_transactions", year), _bank_path("manual_transactions", year)) if isfile(path)]
                 if year in years_held or any(_bank_collected(path, TRANSACTIONS_SCHEMA) is None for path in year_paths) or (year_df := _bank_year_frame(year)) is None:
                     years_held.add(year)
-                    self.print_log(f"Year [{year}] left as committed, a file of it unreadable or invalid", level="warn")
+                    self.print_log(f"Year [{year}] left as committed, a file of it unreadable or invalid", level="warning")
                     continue
                 transactions_committed.append(year)
                 transactions_frames.append(_bank_bucketed(_bank_accounts_applied(year_df.filter(pl.col("Transaction ID").is_not_null()), accounts_df)).select(list(TRANSACTIONS_STATE_SCHEMA)))
@@ -2504,9 +2504,9 @@ class Bank(plugin.Plugin):
             # 9.2 Upload Balances Tab
             tabs_status: dict[str, plugin.UploadStatus] = {}
             if balances_held or tab_edited.get("Balances", set()) & files_conflicted:
-                self.print_log("Sheet [Bank:Balances] skipped, a balances file conflicted on Drive or was left as committed", level="warn")
+                self.print_log("Sheet [Bank:Balances] skipped, a balances file conflicted on Drive or was left as committed", level="warning")
             elif not accounts_usable and "Balances" in sheet_files:
-                self.print_log("Sheet [Bank:Balances] skipped, its edits unmerged with the Accounts tab unusable", level="warn")
+                self.print_log("Sheet [Bank:Balances] skipped, its edits unmerged with the Accounts tab unusable", level="warning")
             elif len(balances_current_df):
                 started_time = time.time()
                 manual_ids = _bank_manual_readings()["Balance ID"].implode()
@@ -2537,10 +2537,10 @@ class Bank(plugin.Plugin):
             for year in transactions_tab_years:
                 tab = f"Transactions_{year}"
                 if year in years_conflicted or year in years_held:
-                    self.print_log(f"Sheet [Bank:{tab}] skipped, a file of its year conflicted on Drive or was left as committed", level="warn")
+                    self.print_log(f"Sheet [Bank:{tab}] skipped, a file of its year conflicted on Drive or was left as committed", level="warning")
                     continue
                 if not accounts_usable and tab in sheet_files:
-                    self.print_log(f"Sheet [Bank:{tab}] skipped, its edits unmerged with the Accounts tab unusable", level="warn")
+                    self.print_log(f"Sheet [Bank:{tab}] skipped, its edits unmerged with the Accounts tab unusable", level="warning")
                     continue
                 started_time = time.time()
                 year_sheet_df = _bank_tab_rendered(transactions_current_df.filter(pl.col("Date").dt.year() == year))

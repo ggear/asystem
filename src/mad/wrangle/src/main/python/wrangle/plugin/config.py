@@ -87,29 +87,27 @@ class Repos:
         valid: set[str] = {scope.name.lower() for scope in RepoScope}
         for name in scopes:
             if name not in valid:
-                raise ValueError(f"unknown scope '{name}'; valid: {sorted(valid)}")
+                raise ValueError(f"unknown scope [{name}] valid {sorted(valid)}")
         required: set[str] = {scope.name.lower() for scope in RepoScope if scope != RepoScope.LOCAL}
         missing_scopes = required - set(scopes)
         if missing_scopes:
-            raise ValueError(f"missing required scopes: {sorted(missing_scopes)}")
+            raise ValueError(f"missing required scopes {sorted(missing_scopes)}")
         all_keys: set[str] = set()
         for keys in scopes.values():
             all_keys.update(keys.keys())
         for scope_name, keys in scopes.items():
             missing_keys = all_keys - set(keys.keys())
             if missing_keys:
-                raise ValueError(f"scope '{scope_name}' missing keys: {sorted(missing_keys)}")
+                raise ValueError(f"scope [{scope_name}] missing keys {sorted(missing_keys)}")
         self._scopes = scopes
 
     def __getattr__(self, name: str) -> str | None:
-        scope = config.repo_scope
-        if scope == RepoScope.LOCAL:
+        if config.repo_scope == RepoScope.LOCAL:
             return None
-        scope: RepoScope = config.repo_scope
-        scope_name = scope.value
+        scope_name = config.repo_scope.value
         keys = self._scopes[scope_name]
         if name not in keys:
-            raise AttributeError(f"RepoScope has no key '{name}' for scope '{scope_name}'")
+            raise AttributeError(f"RepoScope has no key [{name}] for scope [{scope_name}]")
         return keys[name]
 
 

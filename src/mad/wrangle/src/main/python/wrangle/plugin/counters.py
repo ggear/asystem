@@ -126,8 +126,8 @@ class Counter:
 
 
 COUNTERS: dict[tuple[str, str], Counter] = {
-    (c.source, c.action): c
-    for c in [
+    (counter.source, counter.action): counter
+    for counter in [
         Counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED, "Sources Downloaded", AGG_SUM, "count"),
         Counter(CTR_SRC_SOURCES, CTR_ACT_CACHED, "Sources Cached", AGG_SUM, "count"),
         Counter(CTR_SRC_SOURCES, CTR_ACT_SKIPPED, "Sources Skipped", AGG_SUM, "count"),
@@ -247,7 +247,7 @@ _SRC_ENC = {
     CTR_SRC_EGRESS: "eg",
     CTR_SRC_TIMING: "ti",
 }
-_SRC_DEC = {v: k for k, v in _SRC_ENC.items()}
+_SRC_DEC = {encoded: source for source, encoded in _SRC_ENC.items()}
 
 _ACT_ENC = {
     CTR_ACT_ERRORED: "er",
@@ -274,7 +274,7 @@ _ACT_ENC = {
     CTR_ACT_EGRESS_MILLIS: "ems",
     CTR_ACT_TOTAL_MILLIS: "tms",
 }
-_ACT_DEC = {v: k for k, v in _ACT_ENC.items()}
+_ACT_DEC = {encoded: action for action, encoded in _ACT_ENC.items()}
 
 _CELL_ENC = {
     "sum": "s",
@@ -282,7 +282,7 @@ _CELL_ENC = {
     "max": "x",
     "count": "c",
 }
-_CELL_DEC = {v: k for k, v in _CELL_ENC.items()}
+_CELL_DEC = {encoded: cell for cell, encoded in _CELL_ENC.items()}
 
 _SCHEMA = {
     "raw_entry": ["ts", "bucket", "plugins", "errored"],
@@ -636,8 +636,8 @@ class RunHistory:
                 result = run_fn()
             current.result = result
             return result
-        except BaseException as exc:
-            current.error = exc
+        except BaseException as exception:
+            current.error = exception
             raise
         finally:
             with self._adhoc_coord:
@@ -652,14 +652,14 @@ class RunHistory:
         with self._lock:
             counters_dict = {
                 f"{source}|{action}": {
-                    "source": c.source,
-                    "action": c.action,
-                    "label": c.label,
-                    "aggregator": c.aggregator,
-                    "format": c.format,
-                    "error": c.error,
+                    "source": counter.source,
+                    "action": counter.action,
+                    "label": counter.label,
+                    "aggregator": counter.aggregator,
+                    "format": counter.format,
+                    "error": counter.error,
                 }
-                for (source, action), c in COUNTERS.items()
+                for (source, action), counter in COUNTERS.items()
             }
             views = [
                 self._build_raw_view(),
@@ -676,7 +676,7 @@ class RunHistory:
     def is_errored(self, plugin: str = "summary") -> bool | None:
         with self._lock:
             if plugin not in self._all_plugins:
-                raise KeyError(f"unknown plugin: {plugin}")
+                raise KeyError(f"unknown plugin [{plugin}]")
             if not self._raw:
                 return None
             latest = self._raw[-1]
@@ -897,8 +897,8 @@ class RunHistory:
                     decoded = collections.deque((_decode_raw_entry(e) for e in state.get("raw", [])), maxlen=HISTORY_RAW_RUN_LENGTH)
                 else:
                     decoded = collections.deque((_decode_day_entry(e) for e in state.get("day", [])), maxlen=HISTORY_AGG_DAY_LENGTH)
-            except Exception as exc:
-                print_log("Wrangle", f"{filename} unreadable, starting fresh: {exc}", level="warning")
+            except Exception as exception:
+                print_log("Wrangle", f"File [{filename}] unreadable, starting fresh", exception=exception, level="warning")
                 continue
             elapsed_ms = int((time.perf_counter() - started) * 1000)
             if kind == "raw":
@@ -924,7 +924,7 @@ class RunHistory:
                         self._adhoc = _decode_raw_entry(entry)
                         elapsed_ms = int((time.perf_counter() - started) * 1000)
                         print_log("Wrangle", f"File [{_ADHOC_FILENAME}] loaded, [{len(file_bytes):,}] bytes, in [{elapsed_ms}ms]", level="info")
-            except Exception as exc:
-                print_log("Wrangle", f"{_ADHOC_FILENAME} unreadable, ignoring: {exc}", level="warning")
+            except Exception as exception:
+                print_log("Wrangle", f"File [{_ADHOC_FILENAME}] unreadable, ignoring", exception=exception, level="warning")
         else:
             print_log("Wrangle", f"File [{_ADHOC_FILENAME}] not found, starting fresh", level="info")

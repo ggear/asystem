@@ -158,13 +158,13 @@ impl Guard {
         self.asleep.len()
     }
 
-    pub fn step(&mut self, flags: Option<Flags>, dt: Duration) -> Output {
+    pub fn step(&mut self, flags: Option<Flags>, elapsed: Duration) -> Output {
         let mut out = Output::default();
         match flags {
             Some(flags) if flags.raw_on_battery => {
                 self.mains = Duration::ZERO;
                 self.blind = Duration::ZERO;
-                self.battery += dt;
+                self.battery += elapsed;
                 self.outage = true;
                 if self.sequence == Some(Sequence::Restore) {
                     self.shed_after_restore = true;
@@ -180,16 +180,16 @@ impl Guard {
                 self.last_flags = flags;
                 self.blind = Duration::ZERO;
                 if self.outage {
-                    self.mains += dt;
+                    self.mains += elapsed;
                     if self.mains >= self.policy.restore_mains {
                         self.want_restore(&mut out, "mains restore");
                     }
                 }
             }
             None => {
-                self.blind += dt;
+                self.blind += elapsed;
                 if self.outage && self.last_flags.raw_on_battery {
-                    self.battery += dt;
+                    self.battery += elapsed;
                     self.check_shed(self.last_flags, &mut out);
                 }
                 if self.shed_started && self.blind >= self.policy.restore_mains * BLIND_RESTORE_FACTOR {

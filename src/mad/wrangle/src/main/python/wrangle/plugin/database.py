@@ -19,21 +19,21 @@ DATABASE_ENV_VARS = (
     "WRANGLE_DATABASE_PASSWORD",
 )
 
-database_conn: psycopg.Connection | None = None
+database_connection: psycopg.Connection | None = None
 DSN: str | None = None
 
 
 def database_open():
-    global database_conn, DSN
-    if database_conn is not None:
+    global database_connection, DSN
+    if database_connection is not None:
         database_close()
     if config.disable_database_uploads and config.disable_database_downloads:
         return
     missing = [name for name in DATABASE_ENV_VARS if not os.environ.get(name)]
     if missing:
         print_log(
-            "wrangle",
-            f"Database disabled: missing environment variable(s) [{', '.join(missing)}]",
+            "Wrangle",
+            f"Database disabled, missing environment variables [{', '.join(missing)}]",
             level="warning",
         )
         return
@@ -45,7 +45,7 @@ def database_open():
             f"@{os.environ['WRANGLE_DATABASE_HOST']}:{os.environ['WRANGLE_DATABASE_PORT']}"
             f"/{os.environ['WRANGLE_DATABASE_USER']}"
         )
-        database_conn = psycopg.connect(
+        database_connection = psycopg.connect(
             DSN, autocommit=False, connect_timeout=connect_timeout, keepalives=1, keepalives_idle=30, keepalives_interval=10, keepalives_count=5, options=f"-c statement_timeout={statement_timeout_ms}"
         )
         print_log(
@@ -54,52 +54,52 @@ def database_open():
             level="debug",
         )
     except Exception as exception:
-        database_conn = None
+        database_connection = None
         DSN = None
         print_log(
-            "wrangle",
-            "Database disabled: connection failed",
+            "Wrangle",
+            "Database disabled, connection failed",
             exception=exception,
             level="warning",
         )
 
 
 def database_close():
-    global database_conn, DSN
-    if database_conn is None:
+    global database_connection, DSN
+    if database_connection is None:
         return
     try:
-        database_conn.close()
+        database_connection.close()
         print_log(
-            "wrangle",
+            "Wrangle",
             "Database connection closed",
             level="debug",
         )
     except Exception as exception:
         print_log(
-            "wrangle",
+            "Wrangle",
             "Database close failed",
             exception=exception,
         )
-    database_conn = None
+    database_connection = None
     DSN = None
     _ensured_tables.clear()
 
 
 def database_drop(table_name):
-    if database_conn is None:
+    if database_connection is None:
         return False
     try:
-        with database_conn.cursor() as cursor:
+        with database_connection.cursor() as cursor:
             cursor.execute(sql.SQL("DROP TABLE IF EXISTS {} CASCADE").format(sql.Identifier(table_name)))
-        database_conn.commit()
+        database_connection.commit()
         _ensured_tables.discard(table_name)
         print_log("Wrangle", f"Database dropped table [{table_name}]", level="debug")
         return True
     except Exception as exception:
-        print_log("wrangle", f"Database drop of table [{table_name}] failed", exception=exception, level="warning")
+        print_log("Wrangle", f"Database drop of table [{table_name}] failed", exception=exception, level="warning")
         with contextlib.suppress(Exception):
-            database_conn.rollback()
+            database_connection.rollback()
         return False
 
 
@@ -118,18 +118,18 @@ def database_schema_columns(table_name):
     return _schema_columns[table_name]
 
 
-def database_ensure_table(table_name, conn):
+def database_ensure_table(table_name, connection):
     if table_name in _ensured_tables:
         return
     with open(database_schema_path(table_name)) as schema_file:
         schema_sql = schema_file.read()
-    with conn.cursor() as cur:
-        cur.execute(schema_sql)
-        conn.commit()
+    with connection.cursor() as cursor:
+        cursor.execute(schema_sql)
+        connection.commit()
     _ensured_tables.add(table_name)
 
 
-def database_upsert(long_df, table_name, conn, dsn):
+def database_upsert(long_df, table_name, connection, dsn):
     columns = database_schema_columns(table_name)
     time_column, value_column = columns["time"], columns["value"]
     key = [time_column["column"], *columns["dimensions"]]
@@ -139,46 +139,46 @@ def database_upsert(long_df, table_name, conn, dsn):
         for name, column_type in [(time_column["column"], time_column["type"])] + [(dimension, "TEXT") for dimension in columns["dimensions"]] + [(value_column["column"], value_column["type"])]
     )
     stage = f"{table_name}_stage"
-    with conn.cursor() as cur:
-        cur.execute(f"""
+    with connection.cursor() as cursor:
+        cursor.execute(f"""
             CREATE UNLOGGED TABLE IF NOT EXISTS {stage} (
                 {stage_columns}
             )
         """)
-        cur.execute(f"TRUNCATE {stage}")
-        conn.commit()
+        cursor.execute(f"TRUNCATE {stage}")
+        connection.commit()
     try:
         long_df.write_database(stage, connection=dsn, if_table_exists="append", engine="adbc")
-        with conn.cursor() as cur:
-            cur.execute(f"""
+        with connection.cursor() as cursor:
+            cursor.execute(f"""
                 INSERT INTO {table_name} ({", ".join(all_columns)})
                 SELECT {", ".join(all_columns)} FROM {stage}
                 ON CONFLICT ({", ".join(key)})
                 DO UPDATE SET {value_column["column"]} = EXCLUDED.{value_column["column"]}
                 WHERE {table_name}.{value_column["column"]} IS DISTINCT FROM EXCLUDED.{value_column["column"]}
             """)
-            conn.commit()
+            connection.commit()
     except Exception:
         with contextlib.suppress(Exception):
-            conn.rollback()
+            connection.rollback()
         raise
     finally:
-        with contextlib.suppress(Exception), conn.cursor() as cur:
-            cur.execute(f"TRUNCATE {stage}")
-            conn.commit()
+        with contextlib.suppress(Exception), connection.cursor() as cursor:
+            cursor.execute(f"TRUNCATE {stage}")
+            connection.commit()
 
 
 def database_reconnect():
-    global database_conn
+    global database_connection
     if config.disable_database_uploads and config.disable_database_downloads:
         return False
-    if database_conn is not None and not database_conn.closed:
+    if database_connection is not None and not database_connection.closed:
         try:
-            with database_conn.cursor() as cursor:
+            with database_connection.cursor() as cursor:
                 cursor.execute("SELECT 1")
-            database_conn.rollback()
+            database_connection.rollback()
             return True
         except Exception as exception:
-            print_log("wrangle", "Database connection lost, reconnecting", exception=exception, level="warning")
+            print_log("Wrangle", "Database connection lost, reconnecting", exception=exception, level="warning")
     database_open()
-    return database_conn is not None
+    return database_connection is not None

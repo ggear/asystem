@@ -95,7 +95,7 @@ def _priced(symbol: str) -> dict:
     try:
         info = dict(yf.Ticker(symbol).fast_info)
     except RequestException as error:
-        raise FeedError("upstream_error", f"quote failed for [{symbol}] [{error}]", 502) from error
+        raise FeedError("upstream_error", f"quote failed for [{symbol}]", 502) from error
     except Exception as error:
         raise FeedError("unknown_symbol", f"no price for [{symbol}]", 404) from error
     price = info.get("lastPrice")

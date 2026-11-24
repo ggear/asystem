@@ -202,7 +202,7 @@ impl Poller {
     //    11. Publish: the retained payload, on battery every poll
     //    12. Record Rows: the CSV rows for the writer thread
     //    13. Finish: close the session, send rows, liveness and progress
-    pub fn tick(&mut self, dt: Duration, wall: DateTime<Local>) -> Result<(), String> {
+    pub fn tick(&mut self, elapsed: Duration, wall: DateTime<Local>) -> Result<(), String> {
         let wall_second = (wall + chrono::Duration::milliseconds(500))
             .with_nanosecond(0)
             .unwrap_or(wall);
@@ -210,7 +210,7 @@ impl Poller {
         let naive = wall_second.naive_local();
         let epoch = SystemTime::from(wall)
             .duration_since(SystemTime::UNIX_EPOCH)
-            .map_or(0.0, |elapsed| elapsed.as_secs_f64());
+            .map_or(0.0, |since_epoch| since_epoch.as_secs_f64());
         // 1. Collect Calls
         let mut rows: Vec<(&'static str, String)> = Vec::new();
         let mut ended = false;
@@ -270,7 +270,7 @@ impl Poller {
                 .iter()
                 .find(|(key, _)| *key == metrics::BATTERY_CHARGE_PCT)
                 .map(|(_, value)| *value);
-            reading.status = reading.status.map(|status| self.flow.settle(&status, charge, dt));
+            reading.status = reading.status.map(|status| self.flow.settle(&status, charge, elapsed));
             reading
         });
         // 3. Build Frame
@@ -315,7 +315,7 @@ impl Poller {
             if self.session.is_none() && !self.guard.in_outage() {
                 start_detail = Some(self.open_session(&stamp, naive, Some(&marker), pollfreq.as_deref()));
                 self.acked = Some(marker.id);
-            } else if self.rejected.as_deref() != Some(marker.id.as_str()) {
+            } else {
                 rows.push((
                     EVENT_NOTE,
                     format!("drill [{}] rejected, outage in progress", marker.id),
@@ -335,7 +335,7 @@ impl Poller {
             }
         }
         // 6. Step Guard
-        let out = self.guard.step(flags, dt);
+        let out = self.guard.step(flags, elapsed);
         ended |= self.apply(out, &mut rows);
         self.guard.metrics(&mut frame);
         frame.set_bool(
@@ -352,7 +352,7 @@ impl Poller {
         if let Some(session) = &mut self.session {
             session.hosts_shed = session.hosts_shed.max(self.guard.hosts_shed());
             if let Some(flags) = flags {
-                session.stats.observe(&frame, flags, &stamp, dt);
+                session.stats.observe(&frame, flags, &stamp, elapsed);
             }
         }
         // 8. End Drill
@@ -386,11 +386,16 @@ impl Poller {
         }
         // 11. Publish
         let forced = ended || status_change.is_some();
-        self.tick_publish(&published, dt, flags.is_some_and(|flags| flags.raw_on_battery), forced)?;
+        self.tick_publish(
+            &published,
+            elapsed,
+            flags.is_some_and(|flags| flags.raw_on_battery),
+            forced,
+        )?;
         // 12. Record Rows
         let mut commands = Vec::new();
         if let Some(session) = &self.session {
-            let elapsed = (naive - session.started).num_seconds().max(0) as u64;
+            let elapsed_seconds = (naive - session.started).num_seconds().max(0) as u64;
             let mut sample = self.last.clone();
             if let Some(sampler) = &self.sampler {
                 sampler.fill(&mut sample);
@@ -403,10 +408,10 @@ impl Poller {
                 (None, Some(change)) => (EVENT_STATUS, change.clone()),
                 (None, None) => ("", String::new()),
             };
-            let sample_row = WriterCommand::Row(outage::row(&stamp, elapsed, event, &detail, &sample));
-            let event_rows = rows
-                .into_iter()
-                .map(|(event, detail)| WriterCommand::Row(outage::row(&stamp, elapsed, event, &detail, &sample)));
+            let sample_row = WriterCommand::Row(outage::row(&stamp, elapsed_seconds, event, &detail, &sample));
+            let event_rows = rows.into_iter().map(|(event, detail)| {
+                WriterCommand::Row(outage::row(&stamp, elapsed_seconds, event, &detail, &sample))
+            });
             if start_detail.is_some() {
                 commands.push(sample_row);
                 commands.extend(event_rows);
@@ -443,7 +448,11 @@ impl Poller {
                     );
                 }
                 commands.push(WriterCommand::Row(outage::row(
-                    &stamp, elapsed, EVENT_END, &detail, &end,
+                    &stamp,
+                    elapsed_seconds,
+                    EVENT_END,
+                    &detail,
+                    &end,
                 )));
                 commands.push(WriterCommand::Close);
             }
@@ -659,9 +668,9 @@ impl Poller {
         }
     }
 
-    fn tick_publish(&mut self, frame: &Frame, dt: Duration, on_battery: bool, forced: bool) -> Result<(), String> {
-        self.since_publish += dt;
-        self.report_since += dt;
+    fn tick_publish(&mut self, frame: &Frame, elapsed: Duration, on_battery: bool, forced: bool) -> Result<(), String> {
+        self.since_publish += elapsed;
+        self.report_since += elapsed;
         if self.report_since
             >= if on_battery {
                 REPORT_PERIOD_BATTERY
@@ -730,7 +739,7 @@ impl Poller {
             KEY_TIMESTAMP.to_string(),
             json!(humantime::format_rfc3339_seconds(SystemTime::now()).to_string()),
         );
-        payload.insert(KEY_PERIOD_MS.to_string(), json!(dt.as_millis() as u64));
+        payload.insert(KEY_PERIOD_MS.to_string(), json!(elapsed.as_millis() as u64));
         payload.extend(frame.payload());
         let bytes = serde_json::to_vec(&payload).map_err(|err| format!("failed to serialize payload [{err}]"))?;
         match self.publisher.publish(STATE_TOPIC, &bytes) {
@@ -813,9 +822,9 @@ impl Poller {
             guard_shed_battery_seconds: self.policy.shed_battery.as_secs(),
             guard_restore_mains_seconds: self.policy.restore_mains.as_secs(),
             guard_abort_battery_volts: self.policy.abort_battery,
-            poll_s: self.settings.period.as_secs(),
-            ssh_timeout_s: self.settings.ssh_timeout.as_secs(),
-            shed_order: shed::shed_order(&self.hosts),
+            poll_seconds: self.settings.period.as_secs(),
+            ssh_timeout_seconds: self.settings.ssh_timeout.as_secs(),
+            shed_order: self.hosts.iter().map(|host| host.name.clone()).collect(),
         }
     }
 }
@@ -944,9 +953,9 @@ pub fn run(args: &ServeArgs, data_dir: &Path) -> Result<(), String> {
             return Ok(());
         }
         let now = Instant::now();
-        let dt = if period.is_zero() { Duration::ZERO } else { now - last };
+        let elapsed = if period.is_zero() { Duration::ZERO } else { now - last };
         last = now;
-        poller.tick(dt, Local::now())?;
+        poller.tick(elapsed, Local::now())?;
         if period.is_zero() {
             let failed = poller.failures() > 0;
             poller.stop();

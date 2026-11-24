@@ -61,10 +61,6 @@ pub fn load_hosts(path: &Path) -> Result<Vec<Host>, String> {
     Ok(hosts)
 }
 
-pub fn shed_order(hosts: &[Host]) -> Vec<String> {
-    hosts.iter().map(|host| host.name.clone()).collect()
-}
-
 pub fn spawn(runner: &Arc<dyn Runner>, hosts: &[Host], call: Call, results: &Sender<Finished>) {
     let Some(host) = hosts.iter().find(|host| host.name == call.host).cloned() else {
         warn!("{}", log_line("call for unknown host", &call.host));
@@ -204,7 +200,7 @@ impl Runner for Ssh {
                         "{CALL_LOG_PREFIX}{}_{}_{}{CALL_LOG_SUFFIX}",
                         outage::stamp(Local::now()),
                         host.name,
-                        command.remote().split(' ').next().unwrap_or_default()
+                        command.remote()
                     );
                     fs::write(
                         self.log_dir.join(name),
@@ -329,10 +325,9 @@ mod tests {
     }
 
     #[test]
-    fn hosts_load_in_reverse_alphabetical_order_whatever_the_file_order_and_the_shed_runs_in_that_order() {
+    fn hosts_load_in_reverse_alphabetical_order_whatever_the_file_order() {
         let hosts = load_hosts(&write("ok", THREE_HOSTS)).unwrap();
         assert_eq!(names(&hosts), vec!["meg", "max", "mad"]);
-        assert_eq!(shed_order(&hosts), vec!["meg", "max", "mad"]);
     }
 
     #[test]

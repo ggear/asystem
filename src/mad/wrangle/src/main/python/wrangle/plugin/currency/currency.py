@@ -89,7 +89,7 @@ class Currency(plugin.Plugin):
             rba_files_cached_count = 0
             for years in RBA_YEARS:
                 years_file = join(self.local_cache, f"rba_fx_{years}.xls")
-                file_status = self.http_download(f"https://www.rba.gov.au/statistics/tables/xls-hist/{years}.xls", years_file, check="current" in years)
+                file_status = self.http_download(RBA_URL.format(years), years_file, check="current" in years)
                 if file_status.file_status in (plugin.DownloadStatus.CACHED, plugin.DownloadStatus.DOWNLOADED):
                     if file_status.file_status == plugin.DownloadStatus.DOWNLOADED:
                         rba_files_downloaded_count += 1
@@ -125,7 +125,7 @@ class Currency(plugin.Plugin):
 
             # 5.1 Process Rate Data
             try:
-                if new_data:
+                if new_data and len(rba_df) > 0:
                     started_time_inner = time.time()
                     rba_df = rba_df.unique(subset=["Date"], keep="first")
                     rba_df = rba_df.drop_nulls().sort("Date").set_sorted("Date")
@@ -139,6 +139,7 @@ class Currency(plugin.Plugin):
                     dataframe_print(self.name, rba_df, print_label="Currency", print_verb="post up-sample", started=started_time_inner)
             except Exception as exception:
                 self.print_log("Unexpected error processing currency dataframe", exception=exception)
+                self.counters_set_all_errored(plugin.CTR_SRC_FILES)
 
         try:
 

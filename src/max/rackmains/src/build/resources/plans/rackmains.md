@@ -352,7 +352,7 @@ the container), so it is on the host's disk and survives Docker stopping.
   never torn. A write happens once per tick (1 s on battery), carrying every row since the last one. A run to failure therefore loses at most the rows since the last rename.
 - **Write budget.** On battery each tick costs one CSV rewrite and fsync (up to 1 MB); `liveness.json` is a rename on tmpfs, and `drill.json` is written rarely. The combined load is measured in the resource check (review pass 10); if the SSD wear is judged too high the CSV becomes an fsynced append of whole lines, the one reader tolerating a partial last line.
 - **Small.** About 300 bytes a row, so 1 MB holds about 3,300 rows, or about 55 minutes at one row every second. Past 1 MB the file continues
-  in the next numbered file, so no rewrite is ever larger than that.
+  in the next numbered file, so no rewrite is ever larger than that. Every reader of an open outage (the restart, the drill) reads all its parts.
 - **Works with everything else asleep.** It needs only this container and a writable data dir. `asleep --shallow` on `max` leaves
   `/home` writable and unmounts only what no running container holds; confirm `${SERVICE_DATA_DIR}` is under `/home`. The broker on
   `meg` is shed with the other servers, so MQTT publishing is best effort (a bounded client queue that drops when disconnected) and
@@ -582,7 +582,7 @@ stays writable under `asleep --shallow`, and the tool runs in the same container
 
 **Request and reply over files, without a listener.** A file has no reply, so the reply is an echo the tool checks.
 - The marker carries an `id`. The guard reads it on its next poll (at most 1 s) and, when it accepts, opens the run's CSV, whose `start` row carries the marker's `id`: that row is the ack. The tool waits at most 10 s for a file whose `start` row carries its own `id` and **will not arm or cut without one**. A rejection (an outage in progress, the guard not ready) is a `note` row in the open file naming the `id` and the reason, or, with no file to write it in, no ack within 10 s, which means no cut.
-- `rackmains guard drill plan` prints the `effective` block of `liveness.json`, which the guard writes once at start (`rackmains_guard_live`, the model name, version and hash, `rackmains_guard_shed_battery_seconds`, `rackmains_guard_restore_mains_seconds`, `rackmains_guard_abort_battery_volts`, `poll_s`, `ssh_timeout_s`, the shed order), so what the operator reads is what the process that will act has loaded, not a recomputation by the tool.
+- `rackmains guard drill plan` prints the `effective` block of `liveness.json`, which the guard rewrites every poll (`rackmains_guard_live`, the model name, version and hash, `rackmains_guard_shed_battery_seconds`, `rackmains_guard_restore_mains_seconds`, `rackmains_guard_abort_battery_volts`, `poll_seconds`, `ssh_timeout_seconds`, the shed order), so what the operator reads is what the process that will act has loaded, not a recomputation by the tool.
 - Liveness is the `guard_boot_ms` stamp in `liveness.json`, replaced every poll with no fsync. The tool refuses to arm or cut if it is more than 3 s old, which is the proof a socket would give.
 
 **Marker staleness.** The guard honours a marker only if it acked that `id` **before** the first `OB` of the outage and the marker is unexpired; a marker that appears after `OB`, was never acked, or has expired marks nothing.

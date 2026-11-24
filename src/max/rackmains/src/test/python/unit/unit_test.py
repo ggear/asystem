@@ -197,7 +197,7 @@ class CheckHealthyShellTest(ShellHookTest):
     def liveness(self, boot=0, read=0, guard=0, problem=False):
         with open(join(self.run_dir, "liveness.json"), "w") as handle:
             handle.write(
-                '{{"boot_ms":{},"last_read_boot_ms":{},"guard_boot_ms":{},"ups_problem":{},"effective":{{"poll_s":1}}}}'.format(
+                '{{"boot_ms":{},"last_read_boot_ms":{},"guard_boot_ms":{},"ups_problem":{},"effective":{{"poll_seconds":1}}}}'.format(
                     self.NOW_MS - boot, self.NOW_MS - read, self.NOW_MS - guard, "true" if problem else "false"
                 )
             )

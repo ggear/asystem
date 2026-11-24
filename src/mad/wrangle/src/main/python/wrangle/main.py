@@ -30,16 +30,6 @@ except Exception:
 warnings.filterwarnings("ignore", category=pandas.errors.Pandas4Warning, module=r"yfinance(\.|$)")
 
 
-def _release_memory():
-    gc.collect()
-    if pyarrow is not None:
-        with contextlib.suppress(Exception):
-            pyarrow.default_memory_pool().release_unused()
-    if sys.platform.startswith("linux"):
-        with contextlib.suppress(Exception):
-            ctypes.CDLL("libc.so.6").malloc_trim(0)
-
-
 def configure(argv=None):
     parser = argparse.ArgumentParser(
         prog="wrangle",
@@ -47,7 +37,6 @@ def configure(argv=None):
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
-    # Common switches
     parser.add_argument(
         "-p",
         "--filter-plugins",
@@ -62,7 +51,6 @@ def configure(argv=None):
         help="enable all upload targets",
     )
 
-    # Uncommon switches
     parser.add_argument(
         "--disable-reprocessing",
         action="store_true",
@@ -119,7 +107,6 @@ def configure(argv=None):
         help="skip sheet downloads and read from local cache only",
     )
 
-    # System switches
     parser.add_argument(
         "--poll-period",
         type=int,
@@ -183,8 +170,6 @@ def configure(argv=None):
     plugin.config.log_level = args.log_level
     plugin.config.poll_period = args.poll_period
     plugin.config.repo_scope = plugin.RepoScope(args.repo_scope)
-    # The user-facing flag is the opt-out --disable-reprocessing (default off), so a bare CLI run
-    # reprocesses; the internal config field stays force_reprocessing, set as its inverse here.
     plugin.config.force_reprocessing = not args.disable_reprocessing
     plugin.config.force_downloads = args.force_downloads
     plugin.config.force_uploads = args.force_uploads
@@ -221,7 +206,7 @@ def main(argv=None):
             try:
                 http_port = int(http_port_str)
             except ValueError:
-                print_log("wrangle", f"WRANGLE_HTTP_PORT '{http_port_str}' is not a valid port number, HTTP server disabled", level="warning")
+                print_log("Wrangle", f"WRANGLE_HTTP_PORT [{http_port_str}] is not a valid port number, HTTP server disabled", level="warning")
                 http_port = None
             if http_port is not None:
                 poll_period_minutes = args.poll_period or 30
@@ -255,7 +240,7 @@ def main(argv=None):
                     try:
                         return bound_history.execute_adhoc(_do_run)
                     except TimeoutError as exception:
-                        print_log("wrangle", "Timed out acquiring run lock, recording errored run", exception=exception, level="error")
+                        print_log("Wrangle", "Timed out acquiring run lock, recording errored run", exception=exception, level="error")
                         failed_results = _failed_run_results(active_plugins)
                         callback_counters, _ = _record_plugin_run(
                             failed_results,
@@ -304,7 +289,7 @@ def main(argv=None):
                         )
                         success = not history.is_errored()
             except TimeoutError as exception:
-                print_log("wrangle", "Timed out acquiring run lock, recording errored run", exception=exception, level="error")
+                print_log("Wrangle", "Timed out acquiring run lock, recording errored run", exception=exception, level="error")
                 success, plugin_results, plugin_count, plugin_errored_count = False, _failed_run_results(active_plugins), len(active_plugins), len(active_plugins)
                 if history is not None and args.poll_period > 0:
                     _, prev_add_run_ms = _record_plugin_run(
@@ -317,7 +302,7 @@ def main(argv=None):
                         extra_overhead_ms=prev_add_run_ms,
                     )
             except Exception as exception:
-                print_log("wrangle", "Unexpected error during run cycle, continuing to next poll", exception=exception, level="error")
+                print_log("Wrangle", "Unexpected error during run cycle, continuing to next poll", exception=exception, level="error")
                 success, plugin_results, plugin_count, plugin_errored_count = False, _failed_run_results(active_plugins), len(active_plugins), len(active_plugins)
                 if history is not None and args.poll_period > 0:
                     with contextlib.suppress(Exception):
@@ -345,12 +330,18 @@ def main(argv=None):
             elapsed_seconds = time.perf_counter() - cycle_start
             sleep_seconds = poll_period_seconds - elapsed_seconds
             if sleep_seconds <= 0:
-                print_log("wrangle", f"Run took [{elapsed_seconds:.0f}s] which exceeds poll period [{poll_period_seconds:.0f}s], starting next cycle immediately", level="warning")
+                print_log("Wrangle", f"Run took [{elapsed_seconds:.0f}s] which exceeds poll period [{poll_period_seconds:.0f}s], starting next cycle immediately", level="warning")
             else:
-                _release_memory()
+                gc.collect()
+                if pyarrow is not None:
+                    with contextlib.suppress(Exception):
+                        pyarrow.default_memory_pool().release_unused()
+                if sys.platform.startswith("linux"):
+                    with contextlib.suppress(Exception):
+                        ctypes.CDLL("libc.so.6").malloc_trim(0)
                 time.sleep(sleep_seconds)
     except KeyboardInterrupt as exception:
-        print_log("wrangle", "Interrupted, exiting", exception=exception)
+        print_log("Wrangle", "Interrupted, exiting", exception=exception)
         sys.exit(0)
     finally:
         plugin.database_close()

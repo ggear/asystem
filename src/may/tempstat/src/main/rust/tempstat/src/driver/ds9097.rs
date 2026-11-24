@@ -2,12 +2,11 @@
 //!
 //! - [DigiTemp DS9097 driver](https://github.com/bcl/digitemp/blob/master/userial/ds9097/linuxlnk.c)
 //! - [AN214: Using a UART to Implement a 1-Wire Bus Master](https://www.analog.com/en/resources/technical-articles/using-a-uart-to-implement-a-1wire-bus-master.html)
-use std::time::Duration;
 
 use log::debug;
 
 use super::onewire::{OneWire, Presence};
-use super::uart::{SerialUart, Uart};
+use super::uart::Uart;
 use super::{Error, Result};
 
 pub(crate) const BAUD_RESET: u32 = 9_600;
@@ -20,13 +19,6 @@ const UART_FIFO_SIZE: usize = 160;
 
 pub struct Ds9097<U: Uart> {
     pub(crate) uart: U,
-}
-
-impl Ds9097<SerialUart> {
-    pub fn open(path: &str, timeout: Duration) -> Result<Self> {
-        debug!("opening DS9097 on [{path}]");
-        Ds9097::new(SerialUart::open(path, timeout)?)
-    }
 }
 
 impl<U: Uart> Ds9097<U> {

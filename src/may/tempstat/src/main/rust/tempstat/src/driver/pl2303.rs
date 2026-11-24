@@ -36,9 +36,9 @@ const FLOW_CONTROL_REGISTER: u16 = 0x0002;
 const MAX_PACKET_SIZE_0_HX: u8 = 64;
 const STARTUP_FLOW_HX: u16 = 0x0044;
 const STARTUP_FLOW_LEGACY: u16 = 0x0024;
-const VENDOR_READ_LEN: u16 = 1;
+const VENDOR_READ_LENGTH: u16 = 1;
 
-const LINE_CODING_LEN: usize = 7;
+const LINE_CODING_LENGTH: usize = 7;
 const LINE_STOP_BITS_ONE: u8 = 0;
 const LINE_PARITY_NONE: u8 = 0;
 const LINE_DATA_BITS_EIGHT: u8 = 8;
@@ -108,7 +108,7 @@ impl<T: UsbTransport> Pl2303Uart<T> {
         for step in &STARTUP {
             match step {
                 Startup::Read(value) => {
-                    let data = self.transport.control_in(vendor_setup(*value, 0), VENDOR_READ_LEN)?;
+                    let data = self.transport.control_in(vendor_setup(*value, 0), VENDOR_READ_LENGTH)?;
                     debug!("PL2303 vendor read [{value:#06X}] returned [{data:02X?}]");
                 }
                 Startup::Write(value, index) => self.vendor_write(*value, *index)?,
@@ -191,7 +191,7 @@ impl<T: UsbTransport> Uart for Pl2303Uart<T> {
     }
 
     fn set_baud(&mut self, baud: u32) -> Result<()> {
-        let mut coding = [0u8; LINE_CODING_LEN];
+        let mut coding = [0u8; LINE_CODING_LENGTH];
         coding[..4].copy_from_slice(&baud.to_le_bytes());
         coding[4] = LINE_STOP_BITS_ONE;
         coding[5] = LINE_PARITY_NONE;
@@ -249,7 +249,7 @@ mod tests {
             .iter()
             .all(|(setup, length)| setup.kind == UsbRequest::Vendor
                 && setup.request == REQUEST_VENDOR
-                && *length == VENDOR_READ_LEN));
+                && *length == VENDOR_READ_LENGTH));
     }
 
     #[test]

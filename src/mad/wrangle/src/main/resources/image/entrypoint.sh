@@ -3,7 +3,7 @@
 set -Eeuo pipefail
 
 error() {
-  echo "entrypoint.sh: $*" >&2
+  echo "Entrypoint failed [$*]" >&2
   exit 2
 }
 
@@ -33,7 +33,7 @@ append_bool_arg() {
   0 | [Ff][Aa][Ll][Ss][Ee] | [Nn][Oo] | [Nn] | [Oo][Ff][Ff])
     ;;
   *)
-    error "${env_name} must be a boolean value, got '${value}'"
+    error "Variable [${env_name}] must be a boolean, found [${value}]"
     ;;
   esac
 }

@@ -6,7 +6,6 @@ use crate::config::SensorConfig;
 
 pub const MODULE: &str = "tempstat";
 
-#[allow(dead_code)]
 #[derive(Serialize, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
 pub enum Kind {
@@ -16,7 +15,6 @@ pub enum Kind {
     Str,
 }
 
-#[allow(dead_code)]
 #[derive(Serialize, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
 pub enum Role {

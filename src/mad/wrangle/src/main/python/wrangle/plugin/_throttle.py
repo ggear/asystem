@@ -60,7 +60,7 @@ class Throttle:
                 return False
             self.waited += seconds
             left = self.backoff.budget_seconds - self.waited
-        self.print_log(f"Throttle [{self.name}] waiting [{seconds:.1f}s] for [{reason}] with [{left:.1f}s] of the run's budget left", level="warn")
+        self.print_log(f"Throttle [{self.name}] waiting [{seconds:.1f}s] for [{reason}] with [{left:.1f}s] of the run's budget left", level="warning")
         time.sleep(seconds)
         return True
 

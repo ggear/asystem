@@ -3,7 +3,9 @@ from os.path import dirname
 
 sys.path.insert(0, dirname(__file__))
 
+import calendar
 import collections
+import contextlib
 import copy
 import csv
 import dataclasses
@@ -46,6 +48,7 @@ import pytest
 import requests
 import yfinance.exceptions
 from googleapiclient.discovery import build
+from requests.exceptions import RequestException
 
 sys.path.append("../../../main/python")
 
@@ -79,7 +82,7 @@ from wrangle.plugin.currency import COLUMNS as CURRENCY_COLUMNS
 from wrangle.plugin.currency import REPOS_CURRENCY
 from wrangle.plugin.equity import (
     DIMENSIONS_STATE,
-    PORTFOLIO_TICKERS_ACTIVE,
+    PORTFOLIO_TICKER_MAP,
     PORTFOLIO_TICKERS_MANUAL,
     PORTFOLIO_TICKERS_NODATA,
     REPOS_EQUITY,
@@ -87,7 +90,7 @@ from wrangle.plugin.equity import (
 )
 from wrangle.plugin.interest import COLUMNS as INTEREST_COLUMNS
 from wrangle.plugin.interest import REPOS_INTEREST
-from wrangle.plugin.logger import dataframe_print, print_log
+from wrangle.plugin.logger import LOG_LEVELS, dataframe_print, print_log
 from wrangle.server import feeds
 from wrangle.server.server import CHART_SPEC, STATIC_ROOT_DIR, TEMPLATE, THEMES
 
@@ -3520,6 +3523,12 @@ class WrangleTest(unittest.TestCase):
         self.assertNotIn("exchangeTimezoneName", raised.exception.message)
         _print_assert_pass("feeds_errors_unknown", f"actual={raised.exception.code}", f"actual={raised.exception.status}")
 
+        with mock.patch.object(feeds.yf, "Ticker", side_effect=RequestException("upstream secret detail")), self.assertRaises(feeds.FeedError) as raised:
+            feeds.equity_prices("UPSTREAM.AX", {})
+        self.assertEqual(("upstream_error", 502), (raised.exception.code, raised.exception.status))
+        self.assertNotIn("upstream secret detail", raised.exception.message)
+        _print_assert_pass("feeds_errors_upstream", f"actual={raised.exception.code}", f"actual={raised.exception.status}")
+
     def test_feeds_routing(self):
         self.assertEqual({"equity.prices": "feed/equity/prices"}, feeds.paths())
         _resource, argument = feeds.resolve("equity/prices/BHP.AX")
@@ -3570,8 +3579,8 @@ class WrangleTest(unittest.TestCase):
         plugin.config.log_level = "info"
         empty = test.sheet_download("1nPtCOciS81Y-FWJZ8pi5-9Fd6RZ6_EqyfweBekFH6s4", "empty")
         self.assertEqual(DownloadStatus.DOWNLOADED, empty.file_status)
-        self.assertEqual("[]", test.dataframe_to_str(_sheet_read(empty)))
-        self.assertEqual("[]", test.dataframe_to_str(_sheet_read(empty, schema={"My Column": pl.Utf8})))
+        self.assertEqual("[]", _schema_text(_sheet_read(empty)))
+        self.assertEqual("[]", _schema_text(_sheet_read(empty, schema={"My Column": pl.Utf8})))
 
         test_type_number = {
             "Integer": pl.Int64,
@@ -3586,10 +3595,10 @@ class WrangleTest(unittest.TestCase):
         typed = test.sheet_download("18MBAIWaQNVQBMESAISHIqLD11sRBz003x5OTH_Vt4SY", "test", sheet_start_row=3)
         self.assertEqual(DownloadStatus.DOWNLOADED, typed.file_status)
         typed_number = _sheet_read(typed, schema=test_type_number)
-        self.assertEqual(test_str.format(*[test.dataframe_type_to_str(dtype) for dtype in test_type_number.values()]), test.dataframe_to_str(typed_number))
+        self.assertEqual(test_str.format(*[test.dataframe_type_to_str(dtype) for dtype in test_type_number.values()]), _schema_text(typed_number))
         self.assertEqual(4, len(typed_number))
         typed_utf = _sheet_read(typed, schema=test_type_utf)
-        self.assertEqual(test_str.format(*["String" for _ in test_type_utf]), test.dataframe_to_str(typed_utf))
+        self.assertEqual(test_str.format(*["String" for _ in test_type_utf]), _schema_text(typed_utf))
         self.assertEqual(4, len(typed_utf))
 
         data_key = "1Kf9-Gk7aD4aBdq2JCfz5zVUMWAtvJo2ZfqmSQyo8Bjk"
@@ -3605,10 +3614,10 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(DownloadResult(DownloadStatus.CACHED, download.file_paths), forced)
         plugin.config.force_downloads = False
         data_df = _sheet_read(download)
-        self.assertEqual(data_str.format("Float64"), test.dataframe_to_str(data_df))
+        self.assertEqual(data_str.format("Float64"), _schema_text(data_df))
         self.assertEqual(24, len(data_df))
         data_df = _sheet_read(download, schema={"Port Quantity": pl.Utf8})
-        self.assertEqual(data_str.format(test.dataframe_type_to_str(pl.Utf8)), test.dataframe_to_str(data_df))
+        self.assertEqual(data_str.format(test.dataframe_type_to_str(pl.Utf8)), _schema_text(data_df))
         self.assertEqual(24, len(data_df))
 
         batch = test.sheet_download(data_key, "Index_weights", ["Indexes", "Absent"], 2, schema={"Exchange Symbol": pl.Utf8, "Unit Price": pl.Float64})
@@ -4290,15 +4299,64 @@ class WrangleTest(unittest.TestCase):
             self.assertEqual(ddl, Path(join(image_dir, f"{plugin_name}.sql")).read_text())
             self.assertEqual(join(image_dir, f"{plugin_name}.sql"), database.database_schema_path(plugin_name))
 
+    def test_library_log_levels(self):
+        written = set()
+        for source_path in glob.glob(join(DIR_ROOT, "src/main/python/**/*.py"), recursive=True):
+            written |= set(re.findall(r'level="(\w+)"', Path(source_path).read_text()))
+        self.assertGreater(len(written), 1)
+        self.assertEqual(set(), written - set(LOG_LEVELS))
+        test = PluginStub("Test", "SOME_NON_EXISTANT_GUID")
+        test.error_codes = {"SOME_WARNING": (plugin.LOG_KIND_WARNING, False, False, plugin.CTR_SRC_DATA)}
+        plugin.config.log_level = "warning"
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            test.print_log("some warning", level="warning")
+            test.error([], "Tab", "key", "SOME_WARNING", "some detail")
+        self.assertEqual(["WARNING", "WARNING"], [line.split()[0] for line in output.getvalue().splitlines()])
+        _print_assert_pass("library_log_levels", f"actual={sorted(written)}")
+
+    def test_library_http_download(self):
+        test = PluginStub("Test", "SOME_NON_EXISTANT_GUID")
+        local_path = join(DIR_ROOT, "target", "data", "_http_thing.csv")
+        stamped = calendar.timegm((2026, 2, 2, 3, 4, 5))
+        tests = [
+            ("valid", "Mon, 02 Feb 2026 03:04:05 GMT", stamped, DownloadStatus.CACHED),
+            ("unparseable", "Monday the second of February", None, DownloadStatus.DOWNLOADED),
+            ("absent", None, None, DownloadStatus.DOWNLOADED),
+        ]
+        plugin.config.disable_source_downloads = False
+        plugin.config.force_downloads = False
+        plugin.config.force_reprocessing = False
+        for name, modified, expected_mtime, expected_rechecked in tests:
+            with self.subTest(name):
+
+                def _urlopen(request, *_args, modified=modified, **_kwargs):
+                    headers = Message()
+                    if modified is not None:
+                        headers["Last-Modified"] = modified
+                    return urllib.response.addinfourl(io.BytesIO(b"a,b\n1,2\n"), headers, request.full_url, 200)
+
+                if isfile(local_path):
+                    os.remove(local_path)
+                with mock.patch("wrangle.plugin._sources.urllib.request.urlopen", _urlopen):
+                    downloaded = test.http_download("https://example.com/thing.csv", local_path)
+                    if expected_mtime is not None:
+                        self.assertEqual(expected_mtime, int(getmtime(local_path)))
+                    rechecked = test.http_download("https://example.com/thing.csv", local_path)
+                self.assertEqual(DownloadStatus.DOWNLOADED, downloaded.file_status)
+                self.assertEqual(expected_rechecked, rechecked.file_status)
+        self.assertEqual(0, test.get_counter(plugin.CTR_SRC_SOURCES, plugin.CTR_ACT_ERRORED))
+        _print_assert_pass("library_http_download", f"actual={test.get_counter(plugin.CTR_SRC_SOURCES, plugin.CTR_ACT_DOWNLOADED)}")
+
     def test_library_dataframe(self):
         test = PluginStub("Test", "SOME_NON_EXISTANT_GUID")
 
         df_empty_str = "[{}]"
         df_empty_type = {"C1": pl.Int16}
-        self.assertEqual(df_empty_str.format(""), test.dataframe_to_str(test.dataframe_new()))
-        self.assertEqual(df_empty_str.format(""), test.dataframe_to_str(test.dataframe_new([])))
-        self.assertEqual(df_empty_str.format(""), test.dataframe_to_str(test.dataframe_new([], {})))
-        self.assertEqual(df_empty_str.format("C1(Int16)"), test.dataframe_to_str(test.dataframe_new([], df_empty_type)))
+        self.assertEqual(df_empty_str.format(""), _schema_text(test.dataframe_new()))
+        self.assertEqual(df_empty_str.format(""), _schema_text(test.dataframe_new([])))
+        self.assertEqual(df_empty_str.format(""), _schema_text(test.dataframe_new([], {})))
+        self.assertEqual(df_empty_str.format("C1(Int16)"), _schema_text(test.dataframe_new([], df_empty_type)))
 
         df_data_str = "[C1({}), C2({}), C3({})]"
         df_data_type = {
@@ -4307,22 +4365,14 @@ class WrangleTest(unittest.TestCase):
             "C3": pl.Utf8,
         }
         df_data = [{"C1": 1, "C2": 1.1, "C3": "1"}, {"C1": 2, "C2": 2.2, "C3": "2"}, {"C1": None, "C2": None, "C3": None}]
-        self.assertEqual(df_data_str.format("Int64", "Float64", "String"), test.dataframe_to_str(test.dataframe_new(df_data)))
-        self.assertEqual(df_data_str.format("Int64", "Float64", "String"), test.dataframe_to_str(test.dataframe_new(df_data, {})))
-        self.assertEqual(df_data_str.format("Int64", "String", "String"), test.dataframe_to_str(test.dataframe_new(df_data, df_data_type)))
+        self.assertEqual(df_data_str.format("Int64", "Float64", "String"), _schema_text(test.dataframe_new(df_data)))
+        self.assertEqual(df_data_str.format("Int64", "Float64", "String"), _schema_text(test.dataframe_new(df_data, {})))
+        self.assertEqual(df_data_str.format("Int64", "String", "String"), _schema_text(test.dataframe_new(df_data, df_data_type)))
         self.assertEqual(3, len(test.dataframe_new(df_data, schema=dict.fromkeys(df_data[0], pl.Utf8))))
 
         df_lots_cols = 50
         df_lots_rows = 100
         df_lots = [{f"C{c}": v * v / 0.2 for c in range(1, df_lots_cols + 1)} for v in range(1, df_lots_rows + 1)]
-        self.assertEqual(True, isinstance(test.dataframe_to_str(test.dataframe_new(df_lots, print_label="lots")), str))
-        self.assertEqual(True, isinstance(test.dataframe_to_str(test.dataframe_new(schema=df_data_type, print_label="lots")), str))
-        self.assertEqual(False, isinstance(test.dataframe_to_str(test.dataframe_new(df_lots, print_label="lots")), list))
-        self.assertEqual(True, isinstance(test.dataframe_to_str(test.dataframe_new(df_lots, print_label="lots"), False), list))
-        self.assertEqual(df_lots_rows + 6, len(test.dataframe_to_str(test.dataframe_new(df_lots, print_label="lots"), False, -1)))
-        self.assertEqual(df_lots_rows + 6, len(test.dataframe_to_str(test.dataframe_new(df_lots, print_label="lots"), False, 100)))
-        self.assertEqual(5 + 7, len(test.dataframe_to_str(test.dataframe_new(df_lots, print_label="lots"), False, 5)))
-        self.assertEqual(0 + 7, len(test.dataframe_to_str(test.dataframe_new(df_lots, print_label="lots"), False, 0)))
         self.assertEqual(df_lots_rows, len(test.dataframe_new(df_lots)))
         self.assertEqual(df_lots_rows, len(test.dataframe_new(df_lots, schema={"SOME UNKNOWN COLUMN": pl.Utf8})))
         self.assertEqual(df_lots_rows, len(test.dataframe_new(df_lots, schema=dict.fromkeys(df_data[0], pl.Utf8))))
@@ -6292,6 +6342,10 @@ class _FakeDrive:
         mock.patch.object(Plugin, "_google_authorized_http", staticmethod(lambda _credentials: None)).start()
 
 
+def _schema_text(data_df):
+    return "[" + ", ".join(f"{column}({dtype})" for column, dtype in data_df.schema.items()) + "]"
+
+
 class PluginStub(Plugin):
     def _run(self):
         pass
@@ -6315,7 +6369,7 @@ def _load_fixture(scope: str, plugin_name: str, test_name: str) -> dict:
         "bank": len(BANK_BALANCES_STATE_SCHEMA) - len(BANK_BALANCES_KEY_COLUMNS) + len(BANK_TRANSACTIONS_STATE_SCHEMA) - len(BANK_TRANSACTIONS_KEY_COLUMNS),
         "currency": len(CURRENCY_COLUMNS),
         "interest": len(INTEREST_COLUMNS),
-        "equity": (len(STOCK) + len(PORTFOLIO_TICKERS_ACTIVE) + len(PORTFOLIO_TICKERS_MANUAL) - len(PORTFOLIO_TICKERS_NODATA)) * len(DIMENSIONS_STATE),
+        "equity": (len(STOCK) + len(set(PORTFOLIO_TICKER_MAP.values()) - PORTFOLIO_TICKERS_MANUAL) + len(PORTFOLIO_TICKERS_MANUAL) - len(PORTFOLIO_TICKERS_NODATA)) * len(DIMENSIONS_STATE),
     }
     if int(fixture.get("cols_data", -1)) < 0 and plugin_name in cols_full:
         fixture["cols_data"] = cols_full[plugin_name]

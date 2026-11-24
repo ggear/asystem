@@ -60,7 +60,7 @@ def dataframe_print(
         messages[-1] = messages[-1] + f" in [{time.time() - started:.3f}s]"
     if print_rows != 0:
         if compact:
-            data_str = "[" + ", ".join(f"{c}({t})" for c, t in zip(data_df.columns, data_df.dtypes, strict=False)) + "]"
+            data_str = "[" + ", ".join(f"{column}({dtype})" for column, dtype in zip(data_df.columns, data_df.dtypes, strict=False)) + "]"
             messages[-1] = messages[-1] + ": "
             messages.append(data_str)
         else:

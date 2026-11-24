@@ -76,10 +76,10 @@ class _Handler(BaseHTTPRequestHandler):
         try:
             parsed = urlparse(self.path)
             path = parsed.path.rstrip("/") or "/"
-            params = {k: v[0] for k, v in parse_qs(parsed.query).items()}
+            params = {name: values[0] for name, values in parse_qs(parsed.query).items()}
             routes = self._routes_for(path, params)
             if routes is None:
-                self._send_error_json(404, "not_found", f"unknown resource: {path}")
+                self._send_error_json(404, "not_found", f"unknown resource [{path}]")
                 return
             self._head = method == "HEAD"
             effective_method = "GET" if method == "HEAD" else method
@@ -88,7 +88,7 @@ class _Handler(BaseHTTPRequestHandler):
                 allowed = set(routes.keys())
                 if "GET" in allowed:
                     allowed.add("HEAD")
-                self._send_error_json(405, "method_not_allowed", f"method {method} not allowed for {path}", allow=sorted(allowed))
+                self._send_error_json(405, "method_not_allowed", f"method [{method}] not allowed for [{path}]", allow=sorted(allowed))
                 return
             handler()
         except Exception:
@@ -152,7 +152,7 @@ class _Handler(BaseHTTPRequestHandler):
         self._send_json({"plugins": self._history.plugins})
 
     def _serve_counters(self):
-        self._send_json({"counters": {f"{src}|{act}": dataclasses.asdict(counter) for (src, act), counter in COUNTERS.items()}})
+        self._send_json({"counters": {f"{source}|{action}": dataclasses.asdict(counter) for (source, action), counter in COUNTERS.items()}})
 
     def _serve_run(self):
         if self._run_callback is None:
@@ -172,8 +172,8 @@ class _Handler(BaseHTTPRequestHandler):
         def _run() -> None:
             try:
                 run_result[0] = self._run_callback(force_reprocessing=bool(params.get("force_reprocessing", False)))
-            except BaseException as exc:
-                run_error[0] = exc
+            except BaseException as exception:
+                run_error[0] = exception
             finally:
                 completed.set()
 
@@ -248,7 +248,7 @@ class _Handler(BaseHTTPRequestHandler):
         snapshot = self._history.snapshot()
         plugin_sections = [
             {"id": "summary", "title": "Summary", "theme": "ghost-gray"},
-            *({"id": name, "title": name.capitalize(), "theme": THEMES[index % len(THEMES)]} for index, name in enumerate(p for p in snapshot.plugins if p != "summary")),
+            *({"id": name, "title": name.capitalize(), "theme": THEMES[index % len(THEMES)]} for index, name in enumerate(plugin for plugin in snapshot.plugins if plugin != "summary")),
         ]
         snapshot_json = json.dumps(dataclasses.asdict(snapshot))
         latest_run = self._history.latest_run_entry()
@@ -258,7 +258,7 @@ class _Handler(BaseHTTPRequestHandler):
             latest_run_json=latest_run_json,
             run_timeout_ms=TIMEOUT_RUN_SECONDS * 1000,
             api_root=API_ROOT,
-            views=[{"name": v.name, "label": v.label} for v in snapshot.views],
+            views=[{"name": view.name, "label": view.label} for view in snapshot.views],
             chart_spec=CHART_SPEC,
             plugin_sections=plugin_sections,
         ).encode("utf-8")
@@ -276,12 +276,12 @@ class _Handler(BaseHTTPRequestHandler):
         if last_str is None:
             return None, None
         try:
-            last_n = int(last_str)
-            if last_n < 1:
+            last_count = int(last_str)
+            if last_count < 1:
                 raise ValueError()
         except ValueError:
             return None, (400, "invalid_last", "last must be integer >= 1")
-        return last_n, None
+        return last_count, None
 
     @staticmethod
     def _parse_plugin_param(params, snapshot):
@@ -289,73 +289,75 @@ class _Handler(BaseHTTPRequestHandler):
         if plugin_name is None:
             return None, None
         if plugin_name not in snapshot.plugins:
-            return None, (404, "unknown_plugin", f"unknown plugin: {plugin_name}")
+            return None, (404, "unknown_plugin", f"unknown plugin [{plugin_name}]")
         return plugin_name, None
 
     def _apply_filters(self, snapshot, params):
-        last_n, err = self._parse_last_param(params)
-        if err:
-            return None, err
-        plugin_name, err = self._parse_plugin_param(params, snapshot)
-        if err:
-            return None, err
+        last_count, error = self._parse_last_param(params)
+        if error:
+            return None, error
+        plugin_name, error = self._parse_plugin_param(params, snapshot)
+        if error:
+            return None, error
         result = dataclasses.asdict(snapshot)
         if plugin_name is not None:
-            filtered_plugins = [p for p in result["plugins"] if p == "summary" or p == plugin_name]
+            filtered_plugins = [plugin for plugin in result["plugins"] if plugin == "summary" or plugin == plugin_name]
             result["plugins"] = filtered_plugins
             for view in result["views"]:
-                view["series"] = {p: v for p, v in view["series"].items() if p in filtered_plugins}
-                view["errored"] = {p: v for p, v in view["errored"].items() if p in filtered_plugins}
-        if last_n is not None:
+                view["series"] = {plugin: series for plugin, series in view["series"].items() if plugin in filtered_plugins}
+                view["errored"] = {plugin: errored for plugin, errored in view["errored"].items() if plugin in filtered_plugins}
+        if last_count is not None:
             for view in result["views"]:
                 timestamps = view["timestamps"]
                 real_bins = len(timestamps)
                 while real_bins > 0 and not timestamps[real_bins - 1]:
                     real_bins -= 1
-                start = max(0, real_bins - last_n)
+                start = max(0, real_bins - last_count)
                 end = real_bins
                 in_progress = view["in_progress_bin"]
                 view["timestamps"] = timestamps[start:end]
-                view["series"] = {p: {src: {act: vals[start:end] for act, vals in actions.items()} for src, actions in srcs.items()} for p, srcs in view["series"].items()}
-                view["errored"] = {p: vals[start:end] for p, vals in view["errored"].items()}
+                view["series"] = {
+                    plugin: {source: {action: values[start:end] for action, values in actions.items()} for source, actions in sources.items()} for plugin, sources in view["series"].items()
+                }
+                view["errored"] = {plugin: values[start:end] for plugin, values in view["errored"].items()}
                 view["bins"] = end - start
                 view["in_progress_bin"] = in_progress - start if start <= in_progress < end else -1
         return result, None
 
     def _serve_snapshot_filtered(self, params):
         snapshot = self._history.snapshot()
-        result, err = self._apply_filters(snapshot, params)
-        if err:
-            self._send_error_json(*err)
+        result, error = self._apply_filters(snapshot, params)
+        if error:
+            self._send_error_json(*error)
             return
         self._send_json(result)
 
     def _serve_views_filtered(self, params):
         snapshot = self._history.snapshot()
-        result, err = self._apply_filters(snapshot, params)
-        if err:
-            self._send_error_json(*err)
+        result, error = self._apply_filters(snapshot, params)
+        if error:
+            self._send_error_json(*error)
             return
         assert result is not None
         self._send_json({"views": result["views"]})
 
     def _serve_single_view(self, view_name: str, params):
         snapshot = self._history.snapshot()
-        result, err = self._apply_filters(snapshot, params)
-        if err:
-            self._send_error_json(*err)
+        result, error = self._apply_filters(snapshot, params)
+        if error:
+            self._send_error_json(*error)
             return
         assert result is not None
-        matched = next((v for v in result["views"] if v["name"] == view_name), None)
+        matched = next((view for view in result["views"] if view["name"] == view_name), None)
         if matched is None:
-            self._send_error_json(404, "unknown_view", f"unknown view: {view_name}")
+            self._send_error_json(404, "unknown_view", f"unknown view [{view_name}]")
             return
         self._send_json(matched)
 
     def _serve_static(self, relative_path: str):
         safe_path = os.path.normpath(os.path.join(STATIC_ROOT_DIR, relative_path))
         if not safe_path.startswith(STATIC_ROOT_DIR + os.sep) or not os.path.isfile(safe_path):
-            self._send_error_json(404, "not_found", f"unknown static asset: {relative_path}")
+            self._send_error_json(404, "not_found", f"unknown static asset [{relative_path}]")
             return
         stat_result = os.stat(safe_path)
         etag = f'"{stat_result.st_mtime_ns:x}-{stat_result.st_size:x}"'
