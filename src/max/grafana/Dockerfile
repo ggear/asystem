@@ -9,10 +9,11 @@ RUN apk update && \
     apk add --upgrade --no-cache curl=8.23.0-r0 && \
     apk add --upgrade --no-cache vim=9.2.1352-r0 && \
     apk add --upgrade --no-cache jq=1.8.2-r0 && \
-    apk add --upgrade --no-cache python3=3.14.10-r1 && \
+    apk add --upgrade --no-cache python3=3.14.10-r2 && \
     apk add --upgrade --no-cache py3-pip=26.1.2-r1 && \
     (apk cache clean || true) && rm -rf /var/cache/apk/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
+ENV PATH=${PATH}:/asystem/bin
 
 FROM image_upstream AS image_base
 # DEFINED: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)

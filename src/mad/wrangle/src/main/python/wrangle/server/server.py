@@ -9,7 +9,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from wrangle.plugin.config import TIMEOUT_RUN_SECONDS
+from wrangle.plugin.config import TIMEOUT_REPROCESS_SECONDS, TIMEOUT_RUN_SECONDS
 from wrangle.plugin.counters import COUNTERS, aggregate_summary
 from wrangle.server.feeds import FEED_ROOT, FeedError, paths, resolve
 
@@ -257,6 +257,7 @@ class _Handler(BaseHTTPRequestHandler):
             snapshot_json=snapshot_json,
             latest_run_json=latest_run_json,
             run_timeout_ms=TIMEOUT_RUN_SECONDS * 1000,
+            reprocess_timeout_ms=TIMEOUT_REPROCESS_SECONDS * 1000,
             api_root=API_ROOT,
             views=[{"name": view.name, "label": view.label} for view in snapshot.views],
             chart_spec=CHART_SPEC,

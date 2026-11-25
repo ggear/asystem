@@ -15,7 +15,8 @@
 #        5.2  Collect Stock Data: read the price files
 #        5.3  Collect Fund Data: parse the fund statements
 #        5.4  Process Fund Data: the statements' positions
-#        5.5  Process Stock and Fund Data: join prices and positions by day
+#        5.5  Process Stock and Fund Data: join prices and positions by day,
+#             positions filled to the last day held
 #        5.6  Process Manual Data: the manual prices tab and the bank rate
 #        5.7  Normalise Data: every ticker's columns present
 #        5.8  Enrich Rate Data: spot prices from the currency rates
@@ -638,6 +639,7 @@ class Equity(plugin.Plugin):
 
         fx_rates = {}
         statement_tickers = []
+        existing_current_file = abspath(f"{self.local_cache}/__equity_current.csv")
         try:
             if new_data:
                 # 5.4 Process Fund Data
@@ -720,6 +722,12 @@ class Equity(plugin.Plugin):
                 started_time = time.time()
                 equity_df = equity_df.join(statement_df, on="Date", how="full", coalesce=True)
                 equity_df = equity_df.unique(subset=["Date"], keep="first").sort("Date").set_sorted("Date")
+                if statement_tickers and not plugin.config.force_reprocessing and isfile(existing_current_file):
+                    current_end = pl.read_csv(existing_current_file, columns=["Date"], schema_overrides={"Date": pl.Date}).get_column("Date").max()
+                    update_end = equity_df.get_column("Date").max()
+                    if current_end is not None and update_end is not None and current_end > update_end:
+                        current_dates_df = pl.DataFrame({"Date": pl.date_range(update_end + timedelta(days=1), current_end, eager=True)})  # type: ignore[operator]
+                        equity_df = pl.concat([equity_df, current_dates_df], how="diagonal").sort("Date").set_sorted("Date")
                 if statement_tickers:
                     equity_df = _equity_forward_fill(equity_df, DIMENSIONS_PRICE_AUX, _tickers=statement_tickers)
                 _equity_print(equity_df, print_label="Equity", print_verb="concatenated", started=started_time)
@@ -957,7 +965,6 @@ ORDER BY time
             # 5.13 Normalise Data
             if len(equity_df):
                 equity_df = equity_df.filter(pl.any_horizontal([pl.col(column).is_not_null() for column in equity_df.columns if column != "Date"]))
-            existing_current_file = abspath(f"{self.local_cache}/__equity_current.csv")
             if not plugin.config.force_reprocessing and isfile(existing_current_file) and len(equity_df) > 0:
                 existing_schema = pl.read_csv(existing_current_file, n_rows=0).schema
                 index_prefixes = set(indexes)

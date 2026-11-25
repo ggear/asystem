@@ -122,6 +122,7 @@
     window.WRANGLE_DATA = {{ snapshot_json | safe }};
     window.WRANGLE_LATEST_RUN = {{ latest_run_json | safe }};
     window.WRANGLE_RUN_TIMEOUT_MS = {{ run_timeout_ms }};
+    window.WRANGLE_REPROCESS_TIMEOUT_MS = {{ reprocess_timeout_ms }};
     window.WRANGLE_API_ROOT = "{{ api_root }}";
 
     function formatDuration(ms) {
@@ -776,12 +777,13 @@
             button.classList.add('pulsing');
             setAutoRefreshDisabled(true);
             window.playRunSound();
+            var timeoutMs = forceReprocessing ? window.WRANGLE_REPROCESS_TIMEOUT_MS : window.WRANGLE_RUN_TIMEOUT_MS;
             if (location.protocol === 'file:') {
-                setTimeout(function () { markFailed(button); }, window.WRANGLE_RUN_TIMEOUT_MS);
+                setTimeout(function () { markFailed(button); }, timeoutMs);
                 return;
             }
             var controller = new AbortController();
-            var timeoutId = setTimeout(function () { controller.abort(); }, window.WRANGLE_RUN_TIMEOUT_MS);
+            var timeoutId = setTimeout(function () { controller.abort(); }, timeoutMs);
             fetch(window.WRANGLE_API_ROOT + '/run', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},

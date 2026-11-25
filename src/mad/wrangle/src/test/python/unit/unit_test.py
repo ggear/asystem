@@ -3368,6 +3368,7 @@ class WrangleTest(unittest.TestCase):
                 snapshot_json=snapshot_json,
                 latest_run_json=latest_run_json,
                 run_timeout_ms=10000,
+                reprocess_timeout_ms=10000,
                 views=[{"name": v.name, "label": v.label} for v in snapshot.views],
                 chart_spec=CHART_SPEC,
                 plugin_sections=plugin_sections,

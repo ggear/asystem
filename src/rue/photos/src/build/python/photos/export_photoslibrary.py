@@ -150,7 +150,7 @@ if __name__ == "__main__":
         return loaded_db, [album for folder in loaded_db.folder_info if folder.title == "Draft" for album in folder.album_info]
 
     def is_not_downloaded(photo):
-        return not photo.path or (photo.hasadjustments and not photo.path_edited)
+        return not photo.path or (photo.hasadjustments and not photo.slow_mo and not photo.path_edited)
 
     def not_downloaded(album):
         return [photo for photo in album.photos if not photo.intrash and is_not_downloaded(photo)]
